@@ -49,7 +49,7 @@ namespace polyscip {
         return weighted_obj_val_;
     }
 
-    WeightSpaceVertex::WeightSpaceVertex(SCIP* scip,
+    WeightSpaceVertex::WeightSpaceVertex(double convCombVal,
                                          const WeightSpaceVertex *obs,
                                          const WeightSpaceVertex *non_obs,
                                          const OutcomeType &outcome,
@@ -71,12 +71,8 @@ namespace polyscip {
                                          end(incident_facets_),
                                          new_facet, WeightSpaceFacet::compare_facet_ptr);
         incident_facets_.insert(upper_it, std::move(new_facet));
-        auto h = calculateCombinationValue(non_obs, obs, outcome, outcome_is_ray);
-        assert (SCIPisGE(scip, h, 0.) && SCIPisLE(scip, h, 1.));
-        if (outcome_is_ray) // shift combination towards non-obsolete vertex
-            h += 1e-7;
-        weight_ = calculateWeightCombination(non_obs->weight_, obs->weight_, h);
-        weighted_obj_val_ = h*non_obs->getCurrentWOV() + (1.0-h)*obs->getCurrentWOV();
+        weight_ = calculateWeightCombination(convCombVal, non_obs->weight_, obs->weight_);
+        weighted_obj_val_ = convCombVal*non_obs->getCurrentWOV() + (1.0-convCombVal)*obs->getCurrentWOV();
     }
 
 
@@ -92,49 +88,16 @@ namespace polyscip {
                                   0.);
     }
 
-//    bool WeightSpaceVertex::isMadeObsolete(SCIP* scip, const OutcomeType& outcome) const {
-//        return isMadeObsolete(scip, outcome, weighted_obj_val_);
-//    }
-//
-//    bool WeightSpaceVertex::isMadeObsolete(SCIP* scip, const OutcomeType& outcome, ValueType rhs) const {
-//        assert (outcome.size() == weight_.size());
-//        ValueType result = std::inner_product(begin(outcome),
-//                                              end(outcome),
-//                                              begin(weight_),
-//                                              0.);
-//        return SCIPisLT(scip, result, rhs) == TRUE;
-//    }
-
-    long double WeightSpaceVertex::calculateCombinationValue(const WeightSpaceVertex* non_obs,
-                                                           const WeightSpaceVertex* obs,
-                                                           const OutcomeType& outcome,
-                                                           bool outcome_is_ray) {
-        auto wov_obs = outcome_is_ray ? 0. : obs->getCurrentWOV();
-        auto wov_non_obs = outcome_is_ray ? 0. : non_obs->getCurrentWOV();
-        long double numerator = wov_obs - std::inner_product(begin(obs->weight_),
-                                                             end(obs->weight_),
-                                                             begin(outcome),
-                                                             0.);
-        long double denominator = numerator - wov_non_obs + std::inner_product(begin(non_obs->weight_),
-                                                                               end(non_obs->weight_),
-                                                                               begin(outcome),
-                                                                               0.);
-        assert (denominator != 0.);
-        return numerator / denominator;
-    }
-
-    WeightType WeightSpaceVertex::calculateWeightCombination(const WeightType& weight1,
-                                                             const WeightType& weight2,
-                                                             ValueType h) {
+    const WeightType WeightSpaceVertex::calculateWeightCombination(double h,
+                                                                   const WeightType& weight1,
+                                                                   const WeightType& weight2) {
         assert (weight1.size() == weight2.size());
         auto new_weight = WeightType(weight1.size(),0.);
         // set new_weight = h*weight1 + (1-h)*weight2
         transform(begin(weight1), end(weight1), begin(weight2),
-                  begin(new_weight), [h](ValueType w1, ValueType w2){return h*w1 + (1-h)*w2;});
+                  begin(new_weight), [h](ValueType w1, ValueType w2){return h*w1 + (1.-h)*w2;});
         return new_weight;
     }
-
-
 
     bool WeightSpaceVertex::hasSameWeight(const WeightType& weight) const {
         return weight_ == weight;

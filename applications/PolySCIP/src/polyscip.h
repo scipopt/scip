@@ -45,7 +45,7 @@ namespace polyscip {
 
         SCIP_RETCODE computeNondomPoints();
 
-        void printSupportedResults(std::ostream& os = std::cout);
+        void printSupportedResults(std::ostream& os = std::cout, bool withSolution = true);
 
     private:
 

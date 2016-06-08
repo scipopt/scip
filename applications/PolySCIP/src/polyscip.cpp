@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "double_description_method.h"
-#include "objscip/objscip.h"
+#include "scip/scip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
 #include "global_functions.h"
@@ -85,6 +85,7 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::computeNondomPoints() {
         SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
         SCIP_CALL( computeSupported() );
+        std::cout << "supported computation done\n";
         if (!cmd_line_args_.withUnsupported())
             std::cerr << "NOT IMPLEMENTED.\n";
         SCIP_CALL( SCIPstopClock(scip_, clock_total_) );
@@ -123,17 +124,18 @@ namespace polyscip {
         SCIP_CALL( computeUnitWeightOutcomes() ); // computes optimal outcomes for all unit weights
         if (polyscip_status_ == PolyscipStatus::InitPhase) {
             if (supported_.empty()) {
-                polyscip_status_ = PolyscipStatus::Finished;
+                polyscip_status_ = PolyscipStatus::Finished; // all outcomes for unit weights are unbounded
             }
             else {
                 auto v_rep = DoubleDescription(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
-                v_rep.printVRep();
+                v_rep.printVRep(std::cout);
+                std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
                                                                                 v_rep.getVRep(),
-                                                                                v_rep.getHRep(),
-                                                                                v_rep.getVRepAdjacencies());
+                                                                                v_rep.getHRep());
                 polyscip_status_ = PolyscipStatus::WeightSpacePhase;
+                std::cout << "FINISHED INIT WEIGHTSPACE\n";
             }
         }
         return SCIP_OKAY;
@@ -288,22 +290,17 @@ namespace polyscip {
         if (polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
             while (weight_space_poly_->hasUntestedWeight()) {
                 auto untested_weight = weight_space_poly_->getUntestedWeight();
+                global::print(untested_weight, "NEW WEIGHT: ");
                 SCIP_CALL( setWeightedObjective(untested_weight) );
                 SCIP_CALL( solve() );
                 auto scip_status = SCIPgetStatus(scip_);
                 if (scip_status == SCIP_STATUS_INFORUNBD)
                     scip_status = separateINFORUNBD(untested_weight);
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
-                    auto new_wov = SCIPgetPrimalbound(scip_);
-                    //todo is it getUntestVertexWOV( weight ) oder nur getUntestedVertexWOV
-                    if (SCIPisLT(scip_, new_wov, weight_space_poly_->getUntestedVertexWOV(untested_weight))) {
-                    //todo
-                        //if (new_wov < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
-                        std::cout << "new wov = " << new_wov << std::endl;
+                    if (SCIPgetPrimalbound(scip_)+cmd_line_args_.getEpsilon() < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
                         SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
                         auto last_added_outcome = supported_.back().second; //was added by handleStatus
-                        weight_space_poly_->incorporateNewOutcome(scip_, cmd_line_args_.withCompleteLoopForObsolete(),
-                                                                  untested_weight, last_added_outcome);
+                        weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(), untested_weight, last_added_outcome);
                     }
                     else {
                         weight_space_poly_->incorporateKnownOutcome(untested_weight);
@@ -312,33 +309,31 @@ namespace polyscip {
                 else if (scip_status == SCIP_STATUS_UNBOUNDED) {
                     SCIP_CALL( handleUnboundedStatus() ); //adds unbounded result to unbounded_
                     auto last_added_outcome = unbounded_.back().second; //was added by handleStatus
-                    weight_space_poly_->incorporateNewOutcome(scip_, cmd_line_args_.withCompleteLoopForObsolete(),
-                                                              untested_weight, last_added_outcome, true);
+                    weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(), untested_weight, last_added_outcome, true);
                 }
                 else {
                     SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) ); //polyscip_status_ is set to finished or time limit reached
                     return SCIP_OKAY;
                 }
             }
-            weight_space_poly_->printNoVertices();
-            weight_space_poly_->printUnmarkedVertices(std::cout, true);
-            weight_space_poly_->printMarkedVertices(std::cout, true);
-            weight_space_poly_->printObsoleteVertices(std::cout, true);
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
         return SCIP_OKAY;
     }
 
-    void Polyscip::printSupportedResults(ostream& os) {
-        os << std::setprecision(6);
+    void Polyscip::printSupportedResults(ostream& os, bool withSolutions) {
+        os << "Number of supported bounded results: " << supported_.size() << "\n";
+        os << "Number of supported unbounded results: " << unbounded_.size() << "\n";
         for (const auto& result : supported_) {
             printPoint(result.second, os);
-            printSol(result.first, os);
+            if (withSolutions)
+                printSol(result.first, os);
             os << "\n";
         }
         for (const auto& result : unbounded_) {
             printRay(result.second, os);
-            printSol(result.first, os);
+            if (withSolutions)
+                printSol(result.first, os);
             os << "\n";
         }
     }

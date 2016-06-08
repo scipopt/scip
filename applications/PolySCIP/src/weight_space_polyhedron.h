@@ -65,12 +65,9 @@ namespace polyscip {
         * a unit weight; if unit_weight_info.first is true, then unit_weight_info.second contains the
         * index with value 1; note: first index is 0
         */
-        explicit WeightSpacePolyhedron(std::size_t num_objs, const OutcomeType& point) = delete;
-
         explicit WeightSpacePolyhedron(SCIP* scip,
                                        DoubleDescription::V_RepContainer v_rep,
-                                       DoubleDescription::H_RepContainer h_rep,
-                                       DoubleDescription::V_RepAdjacencyContainer adjacencies);
+                                       DoubleDescription::H_RepContainer h_rep);
 
         /** Destructor */
         ~WeightSpacePolyhedron();
@@ -88,43 +85,18 @@ namespace polyscip {
 
         ValueType getUntestedVertexWOV(const WeightType& untested_weight) const;
 
-        ValueType getMarkedVertexWOV(std::size_t unit_weight_index) const = delete;
-
         /** Incorporates an newly found unbounded non-dominated ray
          * into the (partial) weight space polyhedron
          //todo
          */
-        void incorporateNewOutcome(SCIP* scip,
-                                   bool completeLoopForObsolete,
+        void incorporateNewOutcome(double epsilon,
                                    const WeightType& used_weight,
                                    const OutcomeType& outcome,
                                    bool outcome_is_ray = false);
 
         void incorporateKnownOutcome(const WeightType& weight);
 
-        /** Makes unmarked vertex with unit weight (1 in unit weight is at
-         *  unit_weight_index) an marked vertex
-         *  @param unit_weight_index index of 1 in unit weight
-         */
-        void markVertex(std::size_t unit_weight_index) = delete;
-
-        void printNoVertices() const {
-            std::cout << "no of vertices = " << unmarked_vertices_.size() + marked_vertices_.size() + obsolete_vertices_.size() << "\n";
-        }
-
-        //TODO adjust documentation
-        /** The initial weight space vertex v* having weight which coincides with
-         * given ray_weight is changed, i.e., for each adjacent vertex of v* a new vertex/node with weight
-         * slightly leaning towards the adjacent vertex is added and connected via an edge in the
-         * 1-Skeleton; then edges among all new nodes are added in the 1-Skeleton such that the subgraph
-         * of the new nodes is a complete graph; finally the initial weight space vertex v* is made
-         * obsolete and its corresponding node is deleted from the 1-Skeleton graph
-         * @param ray computed ray
-         * @return true if weight space polyhedron changed
-         */
-        void updateInitialWSP(SCIP* scip, std::size_t unit_weight_index, const OutcomeType& outcome, bool outcome_is_ray = false) = delete;
-
-        void addCliqueEdgesToSkeleton() {addCliqueEdgesToSkeleton(unmarked_vertices_);};
+        //void addEdgesToSkeleton() = delete {addEdgesToSkeleton(unmarked_vertices_);};
 
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
@@ -141,9 +113,12 @@ namespace polyscip {
          */
         void printObsoleteVertices(std::ostream& os = std::cout, bool printFacets = false) const;
 
-        bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w) const;
+        double calculateConvexCombValue(const WeightSpaceVertex* obsolete,
+                                        const WeightSpaceVertex* non_obsolete,
+                                        const OutcomeType& outcome,
+                                        bool outcome_is_ray);
 
-        std::size_t getNumberOfGraphNodes() const;
+        bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
 
     private:
         using Graph = lemon::ListGraph;
@@ -162,67 +137,35 @@ namespace polyscip {
         using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
         using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
 
-
-
-
-        /** Checks whether outcome is newly found (non-dominated) outcome, i.e,
-         * whether weighted objective value of outcome with respect to the weight of the currently
-         * considered weight space vertex is less than previously known weighted objective value
-         * @param outcome computed outcome
-         * @param outcome_is_ray true if computed outcome corresponds to unbounded ray; false otherwise
-         */
-        //bool isNewOutcome(const OutcomeType& outcome, bool outcome_is_ray);
-
-        bool isVertexObsolete(SCIP* scip,
+        bool vertexIsObsolete(double epsilon,
                               const WeightSpaceVertex* vertex,
                               const OutcomeType& outcome,
-                              bool outcome_is_ray = false);
+                              bool outcome_is_ray) const;
+
+
 
         void createInitialFacets(DoubleDescription::H_RepContainer h_rep);
 
         void createInitialVerticesAndSkeleton(SCIP* scip,
-                                              DoubleDescription::V_RepContainer v_rep,
-                                              DoubleDescription::V_RepAdjacencyContainer adjacencies);
+                                              DoubleDescription::V_RepContainer v_rep);
 
         FacetContainer computeIncidentFacets(SCIP* scip,
                                              const DoubleDescription::V_RepT& v) const;
 
-        /** Creates initial weight space vertices
-         *  @param num_objs number of objectives of given problem
-         *  @param point first computed (weakly non-dominated) point
-         *	@param weighted_obj_val weighted objective value of given point
-         *  @param boundary_facets initial boundary facets of the weight space polyhedron
-        */
-        void createInitialVertices(std::size_t num_objs,
-                                   const OutcomeType& point,
-                                   FacetContainer boundary_facets) = delete;
-
-        /** Creates initial 1-skeleton of complete graph with number of
-         * objectives many vertices
-         */
-        void createInitialSkeleton() = delete;
-
-        void updateWeightSpacePolyhedron(SCIP* scip, const std::vector<WeightSpaceVertex*>& obsolete_vertices,
+        void updateWeightSpacePolyhedron(double epsilon,
                                          const OutcomeType& outcome,
                                          bool outcome_is_ray);
 
-        std::vector<WeightSpaceVertex*> computeObsoleteVerticesCompleteLoop(SCIP* scip,
-                                                                            const OutcomeType& outcome,
-                                                                            bool outcome_is_ray);
-
-        std::vector<WeightSpaceVertex*> computeObsoleteVertices(SCIP* scip,
-                                                                const OutcomeType& outcome,
-                                                                bool outcome_is_ray);
 
         void resetCurrentInvestigatedVertex() {
             curr_investigated_vertex_ = nullptr;
         }
 
         void addToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
-                           const std::vector< std::pair<WeightSpaceVertex*, Node> >& new_edges);
+                           const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >& new_edges);
 
         template <typename Container>
-        void addCliqueEdgesToSkeleton(const Container& vertices);
+        void addEdgesOfAdjacentVerticesToSkeleton(const Container& vertices);
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
@@ -264,13 +207,13 @@ namespace polyscip {
 
     };
 
-    //todo make sure it is correct
     template <typename Container>
-    void WeightSpacePolyhedron::addCliqueEdgesToSkeleton(const Container& vertices) {
+    void WeightSpacePolyhedron::addEdgesOfAdjacentVerticesToSkeleton(const Container& vertices) {
         for (auto it = std::begin(vertices); it!=std::end(vertices); ++it ) {
-            for (auto succ_it = std::begin(vertices); succ_it!=it; ++succ_it) {
+            for (auto succ_it = std::begin(vertices); succ_it<it; ++succ_it) {
                 if (areAdjacent(*it, *succ_it))
                     skeleton_.addEdge(getNode(*it), getNode(*succ_it));
+
             }
         }
     };
@@ -280,7 +223,7 @@ namespace polyscip {
                                               std::string description,
                                               std::ostream &os,
                                               bool printFacets) const {
-        os << std::setprecision(9) << description << "\n";
+        os << description << "\n";
         for (const auto& elem : container) {
             elem->print(os, printFacets);
             os << "\n";

@@ -33,8 +33,6 @@ namespace polyscip {
         version_no_ = std::to_string(POLYSCIP_VERSION_MAJOR) + string(".") + std::to_string(POLYSCIP_VERSION_MINOR);
         CmdLine cmd(executable_name_,' ', version_no_);
         cmd.setExceptionHandling(false); // set internal exception handling
-        SwitchArg complete_loop_obsolete_arg("c", "complete", "loops over all vertices to find obsolete vertices", false);
-        cmd.add(complete_loop_obsolete_arg);
         SwitchArg with_unsupported_arg("u", "unsupported", "switch off computation of unsupported non-dominated points", true);
         cmd.add(with_unsupported_arg);
         SwitchArg be_verbose_arg("v", "verbose", "verbose PolySCIP cmd line output ", false);
@@ -45,6 +43,9 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, TIME_LIMIT_INF, "seconds");
         cmd.add(time_limit_arg);
+        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of obsolete and non-obsolete vertices",
+                                     false, 1e-6, "double");
+        cmd.add(epsilon_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
                                              "PATH for -w",
                                              false, "./", "PATH");
@@ -58,7 +59,7 @@ namespace polyscip {
         cmd.parse(argc, argv);
 
         with_unsupported_ = with_unsupported_arg.getValue();
-        complete_loop_for_obsolete_ = complete_loop_obsolete_arg.getValue();
+        epsilon_ = epsilon_arg.getValue();
         be_verbose_ = be_verbose_arg.getValue();
         write_sols_ = write_sols_arg.getValue();
         time_limit_ = time_limit_arg.getValue();

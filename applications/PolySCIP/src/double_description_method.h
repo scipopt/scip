@@ -39,25 +39,28 @@ namespace polyscip {
         using V_RepT = std::pair<WeightType, ValueType>;
         using V_RepContainer = std::vector<V_RepT>;
         using H_RepContainer = std::vector<H_RepT>;
-        using V_RepAdjacencyContainer = std::vector<std::vector<std::size_t>>; // index i is mapped to set of indices {j^i_1, ..., j^i_n_i} meaning that i-th element is adjacent to element corresponding to indices in set
+
+        const double kLimitForNormalization = 1e+6;
+
+        //todo computedAdjacency!!!
 
         DoubleDescription(SCIP* scip, const ResultContainer& bounded, const ResultContainer& unbounded);
 
         void computeVRep();
 
         void printVRep(std::ostream &os = std::cout) const {printRep(v_rep_, os);};
+        std::size_t size() const {return v_rep_.size();};
 
         V_RepContainer getVRep() const {return v_rep_;};
         H_RepContainer getHRep() const {return h_rep_;};
-        V_RepAdjacencyContainer getVRepAdjacencies() const {return adj_;};
 
         V_RepContainer&& moveVRep() {return std::move(v_rep_);};
         H_RepContainer&& moveHRep() {return std::move(h_rep_);};
-        V_RepAdjacencyContainer&& moveVRepAdjacencies() {return std::move(adj_);};
 
     private:
         using SlackContainer = std::vector<std::vector<std::size_t>>;
 
+        bool shouldNormalize(const H_RepT& constraint, const V_RepContainer& current_v_rep) const;
 
         /** Computes initial v-representation for the following h-representation:
          * 1) bounded \cdot (w_1,...,w_k) - a >= 0
@@ -87,8 +90,7 @@ namespace polyscip {
 
         V_RepT computeNewRay(const V_RepT& plus_ray, const V_RepT& minus_ray, const H_RepT& new_constraint) const;
 
-        void computeAdjacencies();
-        void normalizeVRep();
+        void normalizeVRep(V_RepContainer& v_rep);
         void deleteZeroWeightRay();
 
         template<typename ContainerOfPairs>
@@ -100,7 +102,6 @@ namespace polyscip {
         H_RepContainer h_rep_;
         V_RepContainer initial_v_rep_;
         V_RepContainer v_rep_;
-        V_RepAdjacencyContainer adj_;
 
     };
 

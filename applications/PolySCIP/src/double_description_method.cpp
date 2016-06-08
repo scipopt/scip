@@ -45,34 +45,49 @@ namespace polyscip {
         auto current_v_rep = initial_v_rep_;
         for (auto bd = std::next(begin(bounded_)); bd != end(bounded_); ++bd) {
             auto new_constraint = H_RepT(*bd,1);
+            if (shouldNormalize(new_constraint, current_v_rep))
+                normalizeVRep(current_v_rep);
             current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
             h_rep_.push_back(new_constraint);
         }
         for (auto unbd = begin(unbounded_); unbd != end(unbounded_); ++unbd) {
             auto new_constraint = H_RepT(*unbd, 0.);
+            if (shouldNormalize(new_constraint, current_v_rep))
+                normalizeVRep(current_v_rep);
             current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
             h_rep_.push_back(new_constraint);
         }
-        v_rep_ = current_v_rep;
-        deleteZeroWeightRay();
-        computeAdjacencies();
-        normalizeVRep();
+        normalizeVRep(current_v_rep);
+        auto scip_ptr = scip_;
+        std::remove_copy_if(begin(current_v_rep),   // copy all elements from current_v_rep with non-zero weights to v_rep_
+                            end(current_v_rep),
+                            std::back_inserter(v_rep_),
+                            [scip_ptr](const V_RepT& v){return SCIPisZero(scip_ptr, std::accumulate(begin(v.first),
+                                                                                                    end(v.first),
+                                                                                                    0.0));});
+        assert (v_rep_.size() + 1 == current_v_rep.size());
     }
 
-    /* compute the adjacency relationships
-     * NOTE: if i-th elem is adjacent to j-th elem with i < j, then j is inserted into adj_[i], but
-     * not i in adj_[j]; in other words, no redundant information is saved
-     */
-    void DoubleDescription::computeAdjacencies() {
-        auto zero_slacks = SlackContainer {};
-        for (const auto& ray : v_rep_)
-            zero_slacks.emplace_back(computeZeroSlackSet(ray));
-        for (size_t i=0; i<v_rep_.size(); ++i) {
-            adj_.emplace_back();
-            for (size_t j=i+1; j<v_rep_.size(); ++j) {
-                if (rayPairIsAdjacent(i,j,zero_slacks,v_rep_))
-                    adj_[i].push_back(j);
+    //todo make simpler
+    bool DoubleDescription::shouldNormalize(const H_RepT& constraint, const V_RepContainer& current_v_rep) const {
+        if (constraint.second > kLimitForNormalization) {
+            return true;
+        }
+        else if (std::upper_bound(begin(constraint.first), // check whether value in constraint.first > kLimitForNormalization
+                                  end(constraint.first),
+                                  kLimitForNormalization) != end(constraint.first)) {
+            return true;
+        }
+        else {
+            for (const auto& vrep : current_v_rep) {
+                if (vrep.second > kLimitForNormalization)
+                    return true;
+                else if (std::upper_bound(begin(vrep.first), // check whether value in v > kLimitForNormalization
+                                          end(vrep.first),
+                                          kLimitForNormalization) != end(vrep.first))
+                    return true;
             }
+            return false;
         }
     }
 
@@ -191,13 +206,14 @@ namespace polyscip {
         return zeroSet;
     }
 
-    void DoubleDescription::normalizeVRep() {
-        for (auto &v : v_rep_) {
+    void DoubleDescription::normalizeVRep(V_RepContainer& v_rep) {
+        for (auto &v : v_rep) {
             auto weight_length = std::accumulate(begin(v.first), end(v.first), 0.);
-            assert (!SCIPisZero(scip_, weight_length));
-            std::transform(begin(v.first), end(v.first), begin(v.first),
-                           [weight_length](const ValueType &val) { return val / weight_length; });
-            v.second /= weight_length;
+            if (SCIPisPositive(scip_, weight_length)) {
+                std::transform(begin(v.first), end(v.first), begin(v.first),
+                               [weight_length](const ValueType &val) { return val / weight_length; });
+                v.second /= weight_length;
+            }
         }
     }
 
@@ -206,19 +222,21 @@ namespace polyscip {
         auto size = plus_ray.first.size();
         assert (size == minus_ray.first.size());
         assert (size == ineq.first.size());
-        // m_coeff = ineq \cdot ray_plus
-        auto m_coeff = std::inner_product(begin(ineq.first), end(ineq.first),
-                                          begin(plus_ray.first), -(ineq.second * plus_ray.second));
-        // p_coeff = ineq \cdot ray_minus
-        auto p_coeff = std::inner_product(begin(ineq.first), end(ineq.first),
-                                          begin(minus_ray.first), -(ineq.second * minus_ray.second));
-        // return m_coeff * ray_minus - p_coeff * ray_plus
+        auto m_coeff = std::inner_product(begin(ineq.first),  // m_coeff = ineq \cdot ray_plus
+                                          end(ineq.first),
+                                          begin(plus_ray.first),
+                                          -(ineq.second * plus_ray.second));
+        auto p_coeff = std::inner_product(begin(ineq.first),  // p_coeff = ineq \cdot ray_minus
+                                          end(ineq.first),
+                                          begin(minus_ray.first),
+                                          -(ineq.second * minus_ray.second));
         auto new_weight = WeightType(size, 0.);
         std::transform(begin(minus_ray.first), end(minus_ray.first),
                        begin(plus_ray.first), begin(new_weight),
                        [m_coeff, p_coeff](ValueType m_val, ValueType p_val) {
                            return m_coeff * m_val - p_coeff * p_val;
                        });
+        // return m_coeff * ray_minus - p_coeff * ray_plus
         return {new_weight, m_coeff * minus_ray.second - p_coeff * plus_ray.second};
     }
 
@@ -236,12 +254,14 @@ namespace polyscip {
     }
 
     void DoubleDescription::deleteZeroWeightRay() {
+        std::size_t count {0};
         for (auto it = begin(v_rep_); it != end(v_rep_); ++it) {
             auto weight_length = std::accumulate(begin(it->first), end(it->first), 0.);
             if (SCIPisZero(scip_, weight_length)) {
                 v_rep_.erase(it);
-                break;
+                ++count;
             }
         }
+        assert (count == 1);
     }
 }
