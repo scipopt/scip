@@ -214,7 +214,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
          SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
 
          /* check memory and reallocate */
-         if( nsols > allocmem )
+         if( nsols >= allocmem )
          {
             allocmem = nsols;
             SCIP_CALL( SCIPreallocBufferArray(scip, &sols, allocmem) );

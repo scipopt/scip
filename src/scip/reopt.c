@@ -5104,7 +5104,7 @@ SCIP_RETCODE SCIPreoptAddSol(
       reopt->noptsolsbyreoptsol = 0;
 
    /* check memory */
-   SCIP_CALL( ensureSolsSize(reopt, set, blkmem, reopt->soltree->nsols[run-1], run-1) );
+   SCIP_CALL( ensureSolsSize(reopt, set, blkmem, reopt->soltree->nsols[run-1]+1, run-1) );
 
    /* add solution to solution tree */
    SCIP_CALL( soltreeAddSol(reopt, set, stat, origprimal, blkmem, vars, sol, &solnode, nvars, bestsol, added) );
@@ -5297,7 +5297,7 @@ SCIP_RETCODE SCIPreoptGetSolsRun(
    (*nsols) = 0;
    for( s = 0; s < reopt->soltree->nsols[run-1]; s++ )
    {
-      if( ! reopt->soltree->sols[run-1][s]->updated )
+      if( !reopt->soltree->sols[run-1][s]->updated )
       {
          sols[*nsols] = reopt->soltree->sols[run-1][s]->sol;
          reopt->soltree->sols[run-1][s]->updated = TRUE;
