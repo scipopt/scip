@@ -121,9 +121,9 @@ SCIP_RETCODE createSubproblem(
    assert(subscip != NULL);
    assert(subvars != NULL);
 
-   /* get binary variables; all continuous variables remain unfixed */
+   /* get all integer variables; all continuous variables remain unfixed */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNBinVars(scip);
+   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
 
    /* get optimal solution of the last iteration */
    sol = SCIPgetReoptLastOptSol(scip);
@@ -660,7 +660,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
       goto TERMINATE;
 
    /* run the heuristic, if not too many coefficients have changed */
-   if( nchgcoefs/((SCIP_Real)SCIPgetNBinVars(scip)) > heurdata->maxchangerate )
+   if( nchgcoefs/((SCIP_Real)nvars) > heurdata->maxchangerate )
       goto TERMINATE;
 
    SCIP_CALL( applyOfins(scip, heur, heurdata, result, nstallnodes, chgcoeffs) );
