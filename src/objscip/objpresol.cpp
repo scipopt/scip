@@ -215,8 +215,7 @@ SCIP_RETCODE SCIPincludeObjPresol(
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_,
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_timing_,
-         presolCopyObj,
-         presolFreeObj, presolInitObj, presolExitObj,
+         presolCopyObj, presolFreeObj, presolInitObj, presolExitObj,
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) ); /*lint !e429*/
 
