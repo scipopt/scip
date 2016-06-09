@@ -780,6 +780,7 @@ SCIP_RETCODE solnodeAddChild(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SOLNODE*         curnode,            /**< current node in the solution tree */
    SCIP_SOLNODE**        child,              /**< pointer to store the node representing the solution value */
+   SCIP_VAR*             var,                /**< variable represented by this node */
    SCIP_Real             val,                /**< value the child shell represent */
    SCIP_Bool*            added               /**< TRUE iff we created a new node, i.e, we have not seen this solution so far */
    )
@@ -807,6 +808,10 @@ SCIP_RETCODE solnodeAddChild(
       solnode->child = NULL;
       solnode->sibling = NULL;
       solnode->value = val;
+#ifndef NDEBUG
+      assert(var != NULL);
+      solnode->var = var;
+#endif
 
       *added = TRUE;
       *child = solnode;
@@ -841,6 +846,10 @@ SCIP_RETCODE solnodeAddChild(
             solnode->father = curnode;
             solnode->child = NULL;
             solnode->value = val;
+#ifndef NDEBUG
+            assert(var != NULL);
+            solnode->var = var;
+#endif
             *added = TRUE;
 
             /* we have to append the new node at the end of the list. but we have to check whether the insertion before
@@ -903,6 +912,10 @@ SCIP_RETCODE solnodeAddChild(
             solnode->child = NULL;
             solnode->sibling = (*child)->sibling;
             solnode->value = val;
+#ifndef NDEBUG
+            assert(var != NULL);
+            solnode->var = var;
+#endif
             *added = TRUE;
 
             /* change the poiter of the next sibling to the new node */
@@ -982,7 +995,7 @@ SCIP_RETCODE soltreeAddSol(
 
             purelp = FALSE;
             child = NULL;
-            SCIP_CALL( solnodeAddChild(set, blkmem, cursolnode, &child, SCIPsolGetVal(sol, set, stat, vars[varid]), added) );
+            SCIP_CALL( solnodeAddChild(set, blkmem, cursolnode, &child, vars[varid], SCIPsolGetVal(sol, set, stat, vars[varid]), added) );
             assert(child != NULL);
             cursolnode = child;
          }

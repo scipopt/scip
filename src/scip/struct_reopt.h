@@ -35,6 +35,9 @@ extern "C" {
 struct SCIP_SolNode
 {
    SCIP_SOL*             sol;                /**< the stored solution */
+#ifndef NDEBUG
+   SCIP_VAR*             var;                /**< variable represented by this node */
+#endif
    SCIP_SOLNODE*         father;             /**< pointer to the parent node */
    SCIP_SOLNODE*         child;              /**< pointer to left most child node, i.e., node representing the variable
                                                *  with smallest solution value
