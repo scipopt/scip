@@ -28,6 +28,7 @@
 #include "scip/pub_reopt.h"
 #include "scip/type_primal.h"
 #include "scip/type_sepastore.h"
+#include "scip/type_cutpool.h"
 #include "scip/type_retcode.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
@@ -357,6 +358,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_NODE*            node,               /**< current focus node */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -446,6 +448,7 @@ extern
 SCIP_RETCODE SCIPreoptSaveOpenNodes(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE**           leaves,             /**< array of open leave nodes */
    int                   nleaves,            /**< number of open leave nodes */

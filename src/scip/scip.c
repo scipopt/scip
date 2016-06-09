@@ -14714,7 +14714,8 @@ SCIP_RETCODE SCIPsolve(
          SCIP_CALL( SCIPgetSiblings(scip, &siblings, &nsiblings) );
 
          /* add all open node to the reoptimization tree */
-         SCIP_CALL( SCIPreoptSaveOpenNodes(scip->reopt, scip->set, scip->mem->probmem, leaves, nleaves, children, nchildren, siblings, nsiblings) );
+         SCIP_CALL( SCIPreoptSaveOpenNodes(scip->reopt, scip->set, scip->lp, scip->mem->probmem, leaves, nleaves,
+               children, nchildren, siblings, nsiblings) );
       }
    }
 
@@ -26456,7 +26457,7 @@ SCIP_RETCODE SCIPconstructLP(
    SCIP_CALL( checkStage(scip, "SCIPconstructLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, FALSE, cutoff) );
 
    return SCIP_OKAY;
@@ -27275,7 +27276,7 @@ SCIP_RETCODE SCIPwriteLP(
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue,
+            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand, scip->eventqueue,
             scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
    }
 
@@ -32825,7 +32826,7 @@ SCIP_RETCODE solveProbingLP(
    }
    assert(SCIPtreeGetCurrentDepth(scip->tree) > 0);
 
-   SCIP_CALL( SCIPinitConssLP(scip->mem->probmem, scip->set, scip->sepastore, scip->stat, scip->transprob,
+   SCIP_CALL( SCIPinitConssLP(scip->mem->probmem, scip->set, scip->sepastore, scip->cutpool, scip->stat, scip->transprob,
          scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, FALSE, FALSE, &initcutoff) );
 
@@ -32862,11 +32863,11 @@ SCIP_RETCODE solveProbingLP(
          int npricedcolvars;
          SCIP_Bool result;
 
-         mustsepa = FALSE;
-         SCIP_CALL( SCIPpriceLoop(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
-               scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore,
-               scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, pretendroot, displayinfo,
-               maxpricerounds, &npricedcolvars, &mustsepa, lperror, &result) );
+            mustsepa = FALSE;
+            SCIP_CALL( SCIPpriceLoop(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
+                  scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
+                  scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, pretendroot, displayinfo,
+                  maxpricerounds, &npricedcolvars, &mustsepa, lperror, &result) );
 
          /* mark the probing node again to update the LP size in the node and the tree path */
          if( !(*lperror) )

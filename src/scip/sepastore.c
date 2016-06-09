@@ -982,6 +982,7 @@ SCIP_RETCODE sepastoreApplyCut(
             SCIPsepaIncNAppliedCuts((SCIP_SEPA*) cut->origin);
             break;
          case SCIP_ROWORIGINTYPE_UNSPEC:
+         case SCIP_ROWORIGINTYPE_REOPT:
             /* do nothing - cannot update statistics */
             break;
          default:
