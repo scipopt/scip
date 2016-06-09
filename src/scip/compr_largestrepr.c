@@ -117,6 +117,7 @@ SCIP_RETCODE constructCompression(
    SCIP_VAR*** vars;
    SCIP_Real** vals;
    SCIP_BOUNDTYPE** bounds;
+   SCIP_Real* lowerbounds;
    SCIP_Bool* covered;
    const char** varnames;
    SCIP_Real score;
@@ -165,6 +166,7 @@ SCIP_RETCODE constructCompression(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nleaveids) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nleaveids) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nvars, nleaveids) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lowerbounds, nleaveids) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, SCIPgetNOrigVars(scip)) );
 
    /* allocate memory to store the signatures */
@@ -189,7 +191,7 @@ SCIP_RETCODE constructCompression(
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
       SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], bounds[k], mem_vars, &nvars2, &nafterdualvars);
-
+      lowerbounds[k] = SCIPreoptnodeGetLowerbound(reoptnode);
       nvars[k] = nvars2 + nafterdualvars;
 
       /* calculate the signature*/
@@ -201,11 +203,14 @@ SCIP_RETCODE constructCompression(
       nreps = -1;
       score = 0.0;
 
-      /* initialize the covered-array with FALSE */
-      SCIP_CALL( SCIPallocBufferArray(scip, &covered, nleaveids) );
+      /* we want to find an intersection that merges at least 3 nodes */
+      if( nvars[start_id] <= comprdata->mincomvars + 1 )
+         continue;
 
-      for( k = 0; k < nleaveids; k++ )
-         covered[k] = FALSE;
+      /* initialize the covered-array with FALSE */
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, nleaveids) );
+//      for( k = 0; k < nleaveids; k++ )
+//         covered[k] = FALSE;
 
       current_id = start_id;
 
@@ -253,6 +258,10 @@ SCIP_RETCODE constructCompression(
 
          if( next_id == current_id )
             goto TERMINATE;
+
+         /* we want to find an intersection that merges at least 3 nodes */
+         if( nvars[next_id] <= comprdata->mincomvars + 1 )
+            continue;
 
          /* get a clear array of size SCIPgetNOrigVars */
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip)) );
@@ -357,7 +366,8 @@ SCIP_RETCODE constructCompression(
                covered[next_id] = TRUE;
                nnemptyinters++;
 
-               SCIPdebugMessage("-> found intersection with ID %u, %d common variables\n", leaveids[next_id], nnon_zero_vars);
+               SCIPdebugMessage("-> found intersection with ID %u, %d/%d common variables\n", leaveids[next_id],
+                     nnon_zero_vars, MAX(nvars[current_id], nvars[next_id]));
 
                covered_ids[ncovered] = next_id;
                ncovered++;
@@ -399,7 +409,7 @@ SCIP_RETCODE constructCompression(
          /* calculate the score */
          score += ncovered * nnon_zero_vars;
 
-         SCIPdebugMessage("-> current representation is of size %d with loi = %.1f\n", nreps, score);
+         SCIPdebugMessage("-> current representation is of size %d with score = %.1f\n", nreps, score);
 
          current_id = (current_id + 1) % nleaveids;
 
@@ -569,6 +579,7 @@ SCIP_RETCODE constructCompression(
    SCIPfreeBufferArray(scip, &signature0);
 
    SCIPfreeBufferArray(scip, &varnames);
+   SCIPfreeBufferArray(scip, &lowerbounds);
    SCIPfreeBufferArray(scip, &nvars);
    SCIPfreeBufferArray(scip, &bounds);
    SCIPfreeBufferArray(scip, &vals);
