@@ -1491,6 +1491,7 @@ SCIP_RETCODE getLastSavedNode(
 
       (*nbndchgs) = (*nbndchgs) + nbranchings + nconsprop;
       (*parent) = SCIPnodeGetParent(*parent);
+      (*parentid) = SCIPnodeGetReoptID(*parent);
 
       if( SCIPnodeGetDepth(*parent) == 0)
       {
@@ -1499,10 +1500,21 @@ SCIP_RETCODE getLastSavedNode(
       }
       else if( SCIPnodeGetReopttype((*parent)) >= SCIP_REOPTTYPE_TRANSIT )
       {
-         assert(SCIPnodeGetReoptID((*parent)) < reopt->reopttree->reoptnodessize);
-         (*parentid) = SCIPnodeGetReoptID((*parent));
-         assert((*parentid) && (*parentid) < reopt->reopttree->reoptnodessize);
-         break;
+         /* this is a special case: due to re-propagation the node could be already deleted. We need to reset reoptid
+          * and reopttype and continue upto we have found the last stored node
+          */
+         if( reopt->reopttree->reoptnodes[*parentid] == NULL )
+         {
+            SCIPnodeSetReoptID(*parent, 0);
+            SCIPnodeSetReopttype(*parent, SCIP_REOPTTYPE_NONE);
+         }
+         else
+         {
+            assert(reopt->reopttree->reoptnodes[*parentid] != NULL);
+            assert(SCIPnodeGetReoptID((*parent)) < reopt->reopttree->reoptnodessize);
+            assert((*parentid) && (*parentid) < reopt->reopttree->reoptnodessize);
+            break;
+         }
       }
    }
 
@@ -2418,7 +2430,7 @@ SCIP_RETCODE addNode(
       assert(id < reopt->reopttree->reoptnodessize);
 
       /* this is a special case:
-       *   due to re-propagation of the parent node it can happen that we try to update a node that was created by
+       *   due to re-propagation of the an anchester node it can happen that we try to update a node that was created by
        *   reoptimization and already removed by deleteChildrenBelow. In this case we do not want to save the current
        *   node
        */
@@ -2429,15 +2441,32 @@ SCIP_RETCODE addNode(
 
          parentid = SCIPnodeGetReoptID(parent);
 
-         /* the parent node has to be part of the reoptimization tree and marked to be a leaf, pruned or feasible */
+         /* travers along the branching path until reaching a node that is part of the reoptimization tree or the root node */
+         while( SCIPnodeGetDepth(parent) > 0 && reopt->reopttree->reoptnodes[parentid] == NULL )
+         {
+            /* the parent node is not part of the reoptimization, reset the reoptid and reopttype of the parent node */
+            SCIPnodeSetReoptID(parent, 0);
+            SCIPnodeSetReopttype(parent, SCIP_REOPTTYPE_NONE);
+
+            parent = SCIPnodeGetParent(parent);
+            assert(parent != NULL);
+
+            parentid = SCIPnodeGetReoptID(parent);
+         }
+
+         /* the anchestor node has to be part of the reoptimization tree. either the parent is the root itself or
+          * marked to be a leaf, pruned or feasible
+          */
          assert(reopt->reopttree->reoptnodes[parentid] != NULL);
-         assert(reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_FEASIBLE
+         assert(parentid == 0
+             || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_FEASIBLE
              || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_INFSUBTREE
              || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_LEAF
              || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_PRUNED);
 
-         SCIPdebugMessage(" -> skip saving (parent is already part of the reoptimization tree with status:%d)\n",
-               reopt->reopttree->reoptnodes[parentid]->reopttype);
+         SCIPdebugMessage(" -> skip saving\n");
+         SCIPnodeSetReoptID(node, 0);
+         SCIPnodeSetReopttype(node, SCIP_REOPTTYPE_NONE);
 
          /* stop clock */
          SCIPclockStop(reopt->savingtime, set);

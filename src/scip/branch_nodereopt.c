@@ -276,11 +276,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpNodereopt)
          if( nbranchcands > 0 )
          {
             SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
-            assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
+            assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED);
          }
       }
 
-      if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM)
+      if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
       {
          assert((SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)) == 0 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
               || 1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
