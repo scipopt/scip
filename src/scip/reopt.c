@@ -2970,9 +2970,9 @@ SCIP_RETCODE addNode(
 
       SCIPdebugMessage("save node #%lld successful\n", SCIPnodeGetNumber(node));
       SCIPdebugMessage(" -> nvars: %d, ncons: %d, parentID: %u, reopttype: %d, lowerbound: %g\n",
-         id, reopt->reopttree->reoptnodes[id]->nvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
-         reopt->reopttree->reoptnodes[id]->nconss, reopt->reopttree->reoptnodes[id]->parentID, reopttype,
-         reopt->reopttree->reoptnodes[id]->lowerbound);
+         reopt->reopttree->reoptnodes[id]->nvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
+         reopt->reopttree->reoptnodes[id]->nconss, reopt->reopttree->reoptnodes[id]->parentID,
+         reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 #ifdef SCIP_MORE_DEBUG
       {
          int varnr;
@@ -5245,9 +5245,21 @@ SCIP_RETCODE SCIPreoptFree(
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
 
+   /* clean addedconss array */
+   if( (*reopt)->addedconss != NULL )
+   {
+      int c;
+      for( c = 0; c < (*reopt)->naddedconss; c++)
+      {
+         assert((*reopt)->addedconss[c] != NULL);
+
+         SCIP_CALL( SCIPconsRelease(&(*reopt)->addedconss[c], blkmem, set) );
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
+   }
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
-   BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
    BMSfreeMemoryArray(&(*reopt)->objs);
    BMSfreeMemory(reopt);
 
@@ -8196,7 +8208,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    return SCIP_OKAY;
 }
 
-/** add a consraint to the reoptimization data structure */
+/** add a constraint to the reoptimization data structure */
 SCIP_RETCODE SCIPreoptAddCons(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
