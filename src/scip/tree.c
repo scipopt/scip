@@ -1788,7 +1788,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-   if( node->depth <= tree->effectiverootdepth )
+   if( (int) node->depth <= tree->effectiverootdepth )
    {
       oldlb = SCIPvarGetLbGlobal(var);
       oldub = SCIPvarGetUbGlobal(var);
@@ -7160,7 +7160,7 @@ void SCIPnodeGetNDomchg(
 
    if( node->domchg != NULL )
    {
-      for( i = 0; i < node->domchg->domchgbound.nboundchgs; i++ )
+      for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; i++ )
       {
          if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             (*nbranchings)++;

@@ -10484,7 +10484,7 @@ void exprgraphNodePropagateBounds(
          {
             if( i == j )
                continue;
-            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[i]->bounds);
+            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[j]->bounds);
 
             /* if there is 0.0 in the product, then later division will hardly give useful bounds, so giveup for this i */
             if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
