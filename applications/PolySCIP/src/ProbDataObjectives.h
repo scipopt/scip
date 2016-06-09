@@ -68,7 +68,7 @@ class ProbDataObjectives : public scip::ObjProbData {
   std::unordered_map<std::string,unsigned>* objNameToObjNo_; /**< maps objective identifier 
 								 to objective number */
   
-  std::unordered_map<SCIP_VAR*,std::vector<SCIP_Real> >* varToObjVals_; /**< maps problem variable to
+  std::unordered_map<SCIP_VAR*,std::vector<SCIP_Real>>* varToObjVals_; /**< maps problem variable to
 									   objective coefficients */
 
   std::vector<std::string> objNoToObjName_; /**< maps objective number to objective identifier */

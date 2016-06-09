@@ -72,9 +72,9 @@ namespace polyscip {
 
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
-        SCIP_RETCODE handleOptimalStatus(bool check_if_new_result=true);
+        SCIP_RETCODE handleOptimalStatus(bool check_if_new_result=false);
 
-        SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=true);
+        SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=false);
 
         bool outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const;
 

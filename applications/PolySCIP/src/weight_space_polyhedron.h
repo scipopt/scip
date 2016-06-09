@@ -38,15 +38,17 @@
 #include <vector>
 
 
-#include "double_description_method.h"
 #undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
 #include "lemon/list_graph.h"
 #include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
+#include "polytope_representation.h"
 
 namespace polyscip {
 
+    using V_RepC = polytoperepresentation::V_RepContainer;
+    using H_RepC = polytoperepresentation::H_RepContainer;
     class WeightSpaceVertex;
 
     /** 1-skeleton of the (partial) weight space polyhedron. */
@@ -66,8 +68,9 @@ namespace polyscip {
         * index with value 1; note: first index is 0
         */
         explicit WeightSpacePolyhedron(SCIP* scip,
-                                       DoubleDescription::V_RepContainer v_rep,
-                                       DoubleDescription::H_RepContainer h_rep);
+                                       std::size_t expected_no_of_incident_facets,
+                                       V_RepC v_rep,
+                                       H_RepC h_rep);
 
         /** Destructor */
         ~WeightSpacePolyhedron();
@@ -144,13 +147,15 @@ namespace polyscip {
 
 
 
-        void createInitialFacets(DoubleDescription::H_RepContainer h_rep);
+        void createInitialFacets(H_RepC h_rep);
 
         void createInitialVerticesAndSkeleton(SCIP* scip,
-                                              DoubleDescription::V_RepContainer v_rep);
+                                              std::size_t expected_no_of_incident_facets,
+                                              V_RepC v_rep);
 
         FacetContainer computeIncidentFacets(SCIP* scip,
-                                             const DoubleDescription::V_RepT& v) const;
+                                             std::size_t expected_no_of_incident_facets,
+                                             const polytoperepresentation::V_RepT& v) const;
 
         void updateWeightSpacePolyhedron(double epsilon,
                                          const OutcomeType& outcome,

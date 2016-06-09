@@ -30,7 +30,7 @@
 #include <utility> //std::make_pair
 #include <vector>
 
-#include "double_description_method.h"
+#include "polytope_representation.h"
 #include "scip/scip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
@@ -47,10 +47,10 @@ using std::ostream;
 using std::pair;
 using std::string;
 using std::vector;
-using polyscip::OutcomeType;
-using polyscip::ValueType;
 
 namespace polyscip {
+
+    using DDMethod = polytoperepresentation::DoubleDescriptionMethod;
 
     Polyscip::Polyscip(int argc, const char *const *argv)
             : cmd_line_args_(argc, argv),
@@ -104,10 +104,10 @@ namespace polyscip {
             if (scip_status == SCIP_STATUS_INFORUNBD)
                 scip_status = separateINFORUNBD(weight);
             if (scip_status == SCIP_STATUS_OPTIMAL) {
-                SCIP_CALL( handleOptimalStatus() );
+                SCIP_CALL( handleOptimalStatus(true) );
             }
             else if (scip_status == SCIP_STATUS_UNBOUNDED) {
-                SCIP_CALL( handleUnboundedStatus() );
+                SCIP_CALL( handleUnboundedStatus(true) );
             }
             else {
                 SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) );
@@ -127,15 +127,19 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Finished; // all outcomes for unit weights are unbounded
             }
             else {
-                auto v_rep = DoubleDescription(scip_, supported_, unbounded_);
+                std::cout << "Size bounded + unbounded: " << supported_.size() + unbounded_.size() << "\n";
+                auto v_rep = DDMethod(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
-                v_rep.printVRep(std::cout);
+                std::cout << "DD method finished\n";
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
+                v_rep.printVRep(std::cout);
+                std::cout << "Initiating WSP\n";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
+                                                                                supported_.size()+unbounded_.size(),
                                                                                 v_rep.getVRep(),
                                                                                 v_rep.getHRep());
+                std::cout << "WSP initialized\n";
                 polyscip_status_ = PolyscipStatus::WeightSpacePhase;
-                std::cout << "FINISHED INIT WEIGHTSPACE\n";
             }
         }
         return SCIP_OKAY;
@@ -256,9 +260,9 @@ namespace polyscip {
     }
 
     bool Polyscip::outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const {
-        auto it_beg = outcome_is_bounded ? begin(supported_) : begin(unbounded_);
-        auto it_end = outcome_is_bounded ? begin(supported_) : end(unbounded_);
-        return std::find_if(it_beg, it_end, [&outcome](const Result& res){return outcome == res.second;}) == it_end;
+        auto beg_it = outcome_is_bounded ? begin(supported_) : begin(unbounded_);
+        auto end_it = outcome_is_bounded ? end(supported_) : end(unbounded_);
+        return std::find_if(beg_it, end_it, [&outcome](const Result& res){return outcome == res.second;}) == end_it;
     }
 
     SCIP_RETCODE Polyscip::solve() {

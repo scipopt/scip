@@ -26,7 +26,7 @@
 #include <utility> // std::move, std::pair
 #include <vector>
 
-#include "double_description_method.h"
+#include "polytope_representation.h"
 #include "global_functions.h"
 #include "lemon/list_graph.h"
 #include "objscip/objscip.h"
@@ -45,31 +45,36 @@ using std::vector;
 
 namespace polyscip {
 
-    using DD = DoubleDescription;
-
     WeightSpacePolyhedron::WeightSpacePolyhedron(SCIP* scip,
-                                                 DD::V_RepContainer v_rep,
-                                                 DD::H_RepContainer h_rep)
+                                                 size_t expected_no_of_incident_facets,
+                                                 V_RepC v_rep,
+                                                 H_RepC h_rep)
             : curr_investigated_vertex_(nullptr),
               skeleton_(),
               nodes_to_vertices_(skeleton_) {
         createInitialFacets(h_rep);
-        createInitialVerticesAndSkeleton(scip, v_rep);
+        std::cout << "FACETS: \n";
+        for (const auto& f : facets_)
+            f->print(std::cout);
+        std::cout << "END FACETS: \n";
+        createInitialVerticesAndSkeleton(scip, expected_no_of_incident_facets, v_rep);
     }
 
-    void WeightSpacePolyhedron::createInitialFacets(DD::H_RepContainer h_rep) {
+    void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepContainer h_rep) {
         for (auto& h : h_rep) {
             facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
         }
     }
 
     void WeightSpacePolyhedron::createInitialVerticesAndSkeleton(SCIP* scip,
-                                                                 DD::V_RepContainer v_rep) {
+                                                                 size_t expected_no_of_incident_facets,
+                                                                 V_RepC v_rep) {
         for (auto& v : v_rep) {
-            auto inc_facets = computeIncidentFacets(scip, v);
+            auto inc_facets = computeIncidentFacets(scip, expected_no_of_incident_facets, v);
             auto vertex = new WeightSpaceVertex(std::move(inc_facets),
-                                                std::move(v.first),
-                                                std::move(v.second));
+                                                v.moveWeight(),
+                                                v.getWov());
+
             auto node = skeleton_.addNode();
             nodes_to_vertices_[node] = vertex;
             vertices_to_nodes_.insert({vertex, node});
@@ -88,12 +93,18 @@ namespace polyscip {
     }
 
     WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
-                                                                                       const DD::V_RepT& v) const {
+                                                                                       size_t expected_no_of_incident_facets,
+                                                                                       const polytoperepresentation::V_RepT& v) const {
         auto facets = FacetContainer {};
         for (const auto& f : facets_) {
-            if (SCIPisEQ(scip, f->getWeightedWeight(v.first), f->getWOVCoeff()*v.second))
+            if (SCIPisEQ(scip, f->getWeightedWeight(v.getWeight()), f->getWOVCoeff()*v.getWov()))
                 facets.push_back(f);
         }
+        if (facets.size() != expected_no_of_incident_facets) {
+            std::cerr << "Expected no of inc facets: " << expected_no_of_incident_facets << "\n";
+            std::cerr << "Computed no of inc facets: " << facets.size() << "\n";
+        }
+        assert (facets.size() == expected_no_of_incident_facets);
         return facets;
     }
 

@@ -1,9 +1,9 @@
 set(HEADERS_FILES
         cmd_line_args.h
-        double_description_method.h
         global_functions.h
         polyscip.h
         polyscip_types.h
+        polytope_representation.h
         prob_data_objectives.h
         ReaderMOP.h
         weight_space_facet.h
@@ -13,9 +13,9 @@ set(HEADERS_FILES
 
 set(SOURCE_FILES
         cmd_line_args.cpp
-        double_description_method.cpp
         new_main.cpp
         polyscip.cpp
+        polytope_representation.cpp
         prob_data_objectives.cpp
         ReaderMOP.cpp
         weight_space_facet.cpp
