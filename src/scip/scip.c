@@ -14373,7 +14373,7 @@ SCIP_RETCODE freeReoptSolve(
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
 
    /* reset original variable's local and global bounds to their original values */
-   SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
+   SCIP_CALL( SCIPprobResetBounds(scip->transprob, scip->mem->probmem, scip->set, scip->stat) );
 
    scip->transprob->objoffset *= scip->transprob->objscale;
    scip->transprob->objscale = 1.0;

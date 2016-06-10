@@ -8735,22 +8735,15 @@ SCIP_RETCODE SCIPvarResetLocalBounds(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(SCIPvarIsOriginal(var));
-   /* resetting of bounds on original variables which have a transformed counterpart easily fails if, e.g.,
-    * the transformed variable has been fixed */
-   assert(SCIPvarGetTransVar(var) == NULL);
+   assert(SCIPvarIsTransformed(var));
 
-   /* copy the original bounds back to the global and local bounds */
-   SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, NULL, var->data.original.origdom.lb) );
-   SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, NULL, var->data.original.origdom.ub) );
-   SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.lb) );
-   SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.ub) );
+   /* copy the original bounds back to the local bounds if the */
+   SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->glbdom.lb) );
+   SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->glbdom.ub) );
 
    /* free the global and local holelists and duplicate the original ones */
    /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
-   holelistFree(&var->glbdom.holelist, blkmem);
    holelistFree(&var->locdom.holelist, blkmem);
-   SCIP_CALL( holelistDuplicate(&var->glbdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
    SCIP_CALL( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
 
    return SCIP_OKAY;
