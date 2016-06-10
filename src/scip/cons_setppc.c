@@ -1862,6 +1862,15 @@ SCIP_RETCODE applyFixings(
 
                SCIPdebugMessage("added linear constraint: ");
                SCIPdebugPrintCons(scip, newcons, NULL);
+
+               /* we want to link the original and the new constraint */
+               if( SCIPconsGetTransorig(cons) != NULL )
+               {
+                  assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+
+                  SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+               }
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
                SCIPfreeBufferArray(scip, &consvals);
@@ -7244,14 +7253,14 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
 static
 SCIP_DECL_CONSINITLP(consInitlpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
-      /* ignore cutoff, cannot return value */
+      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;

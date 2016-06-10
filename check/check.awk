@@ -203,6 +203,8 @@ BEGIN {
       lpsname = "spx";
    else if( $13 == "SoPlex2" )
       lpsname = "spx2";
+   else if( $13 == "SoPlex1" )
+      lpsname = "spx1";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
    else if( $13 == "NONE]" )

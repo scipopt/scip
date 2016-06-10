@@ -33,7 +33,7 @@ VERSION			=	3.2.1
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc
-LPS				=	spx
+LPS			=	spx
 SHARED			=	false
 LEGACY			=	false
 

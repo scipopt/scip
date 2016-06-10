@@ -1,6 +1,43 @@
 SCIP version 3.2.2
 ==================
 
+features:
+- new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
+- new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
+- added leaf statistics about LP objective limit|feasible|infeasible leaves to the statistics output and
+  to the callable library: SCIPgetNObjlimLeaves(), SCIPgetNFeasibleLeaves(), SCIPgetNInfeasibleLeaves()
+- added adaptive solving behavior of SCIP based on solving phases and heuristic transitions, if enabled via "solvingphases/enabled"
+- new presolving step for variables contained in a single quadratic constraint with proper square coefficients
+- can now solve relaxations within probing
+- can now separate perspective cuts for indicator constraints
+- added write callback for reader_bnd
+- new target "dll" to build Windows dlls with MSVC
+- added possibility to use a reference value for advanced analysis of the tree search. If a finite reference value
+  (an objective value in original objective space) is passed via misc/referencevalue, SCIP keeps track of the
+  number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
+  a child node with lower bound smaller than the reference value was available.
+
+parameters:
+- new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
+  in the solvingphases-section to control how to switch the parameters, and whether a restart should be performed between the phases.
+- new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
+- new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
+- new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
+- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
+- new parameter lp/randomseed to set the initial seed of the LP solver
+
+performance improvements:
+
+interface:
+- spx2 is the new default LP solver interface
+- new function SCIPsolveProbingRelax() to solve a relaxation within probing
+- new function SCIPgetIntVarXor() to access integer variable of XOR constraints
+- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
+- next to the number of found solution, also the number of new best solutions is now printed for each heuristic
+  (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
+- CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
+  was detected while building the initial LP relaxation
+
 fixed bugs:
 - fixed bug in XML reader concerning comments
 - fixed wrong representation of SOC constraints in NLP
@@ -15,6 +52,7 @@ interface:
 Makefile:
 - revise sub-makefiles for MSVC on MinGW
 - fix bug in 'dll' target
+
 
 SCIP version 3.2.1
 ==================

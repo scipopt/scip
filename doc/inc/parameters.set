@@ -1,4 +1,4 @@
-# SCIP version 3.2.1
+# SCIP version 3.2.1.1
 
 # branching score function ('s'um, 'p'roduct, 'q'uotient)
 # [type: char, range: {spq}, default: p]
@@ -32,8 +32,8 @@ branching/divingpscost = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/forceallchildren = FALSE
 
-# child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic
-# [type: char, range: {adu}, default: a]
+# child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, 'h'istory-based, or 'a'utomatic
+# [type: char, range: {aduh}, default: a]
 branching/firstsbchild = a
 
 # should LP solutions during strong branching with propagation be checked for feasibility?
@@ -403,6 +403,10 @@ lp/resolveiterfac = -1
 # minimum number of iterations that are allowed for LP resolve
 # [type: int, range: [1,2147483647], default: 1000]
 lp/resolveitermin = 1000
+
+# random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)
+# [type: int, range: [0,2147483647], default: 0]
+lp/randomseed = 0
 
 # solver to use for solving NLPs; leave empty to select NLPI with highest priority
 # [type: string, default: ""]
@@ -1019,6 +1023,10 @@ constraints/quadratic/checkcurvature = TRUE
 # whether constraint functions should be checked to be factorable
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/quadratic/checkfactorable = TRUE
+
+# whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)
+# [type: char, range: {bdt}, default: t]
+constraints/quadratic/checkquadvarlocks = t
 
 # whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1792,13 +1800,21 @@ constraints/indicator/addcouplingcons = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/sepacouplingcuts = FALSE
 
-# Allow to use local bounds in order to separated coupling inequalities?
+# Allow to use local bounds in order to separate coupling inequalities?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/sepacouplinglocal = FALSE
 
 # maximum coefficient for binary variable in separated coupling constraint
 # [type: real, range: [0,1000000000], default: 10000]
 constraints/indicator/sepacouplingvalue = 10000
+
+# Separate cuts based on perspective formulation?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepaperspective = FALSE
+
+# Allow to use local bounds in order to separate perspective cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/indicator/sepapersplocal = TRUE
 
 # Update bounds of original variables for separation?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2952,6 +2968,18 @@ presolving/dualagg/maxrounds = 0
 # [type: int, range: [4,28], default: 16]
 presolving/dualagg/timing = 16
 
+# priority of presolver <dualcomp>
+# [type: int, range: [-536870912,536870911], default: -50]
+presolving/dualcomp/priority = -50
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/dualcomp/maxrounds = -1
+
+# timing mask of presolver <dualcomp> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/dualcomp/timing = 16
+
 # priority of presolver <dualinfer>
 # [type: int, range: [-536870912,536870911], default: -200]
 presolving/dualinfer/priority = -200
@@ -3568,6 +3596,10 @@ branching/relpscost/confidencelevel = 2
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/relpscost/randinitorder = FALSE
 
+# should smaller weights be used for pseudo cost updates after hitting the LP iteration limit?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+branching/relpscost/usesmallweightsitlim = FALSE
+
 # start seed for random number generation
 # [type: int, range: [0,2147483647], default: 12345]
 branching/relpscost/startrandseed = 12345
@@ -3884,6 +3916,10 @@ heuristics/crossover/copycuts = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/crossover/permute = FALSE
 
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/crossover/bestsollimit = -1
+
 # priority of heuristic <dins>
 # [type: int, range: [-536870912,536870911], default: -1105000]
 heuristics/dins/priority = -1105000
@@ -3947,6 +3983,10 @@ heuristics/dins/uselprows = FALSE
 # if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/dins/copycuts = TRUE
+
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: 3]
+heuristics/dins/bestsollimit = 3
 
 # priority of heuristic <distributiondiving>
 # [type: int, range: [-536870912,536870911], default: -1003300]
@@ -4584,6 +4624,10 @@ heuristics/localbranching/uselprows = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/localbranching/copycuts = TRUE
 
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: 3]
+heuristics/localbranching/bestsollimit = 3
+
 # priority of heuristic <nlpdiving>
 # [type: int, range: [-536870912,536870911], default: -1003000]
 heuristics/nlpdiving/priority = -1003000
@@ -4727,6 +4771,10 @@ heuristics/mutation/uselprows = FALSE
 # if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/mutation/copycuts = TRUE
+
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/mutation/bestsollimit = -1
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1004000]
@@ -5147,6 +5195,10 @@ heuristics/rens/addallsols = FALSE
 # should the RENS sub-CIP be solved with cuts, conflicts, strong branching,... This is only for tesing and not recommended!
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/rens/fullscale = FALSE
+
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rens/bestsollimit = -1
 
 # priority of heuristic <reoptsols>
 # [type: int, range: [-536870912,536870911], default: 40000]
@@ -6108,15 +6160,15 @@ propagating/pseudoobj/maxprerounds = -1
 # [type: int, range: [2,28], default: 4]
 propagating/pseudoobj/presoltiming = 4
 
-# minimal number of successive none binary variable propagator whithout a bound reduction before aborted
+# minimal number of successive nonbinary variable propagator whithout a bound reduction before aborted
 # [type: int, range: [0,2147483647], default: 100]
 propagating/pseudoobj/minuseless = 100
 
-# maximal fraction of none binary variables with non-zero objective without a bound reduction before aborted
+# maximal fraction of nonbinary variables with non-zero objective without a bound reduction before aborted
 # [type: real, range: [0,1], default: 0.1]
 propagating/pseudoobj/maxvarsfrac = 0.1
 
-# do we want to propagate all none binary variables if we are propagating the root node
+# do we want to propagate all nonbinary variables if we are propagating the root node
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/propfullinroot = TRUE
 

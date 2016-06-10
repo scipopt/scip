@@ -1385,7 +1385,7 @@ SCIP_RETCODE collectMinactVar(
          SCIP_BOUNDTYPE_LOWER, 0, nlbcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
-       * this covered by that implied variable
+       * this is covered by that implied variable
        */
       if( !(*collect) && nlbcontributors == 1 )
       {
@@ -1405,7 +1405,7 @@ SCIP_RETCODE collectMinactVar(
          SCIP_BOUNDTYPE_UPPER, 0, nubcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
-       * this covered by that implied variable
+       * this is covered by that implied variable
        */
       if( !(*collect) && nubcontributors == 1 )
       {
@@ -3253,7 +3253,7 @@ SCIP_RETCODE propagateLowerbound(
             /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
              * contribution w.r.t. maximum activity of the objective function; These values are the decrease we would
              * get with the maximum pseudo objective activity if we fix the variable to its best bound; hence, we can
-             * stop if for a variable this potential decrease is not enough anymore too fall below the lower bound.
+             * stop if for a variable this potential decrease is not enough anymore to fall below the lower bound.
              *
              * @note In case a fixing was performed. The variable might not be globally fixed right away since this would
              *       destroy the local internal data structure of a search node; the bound change is in that case pending;

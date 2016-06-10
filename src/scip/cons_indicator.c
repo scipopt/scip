@@ -246,9 +246,11 @@
 #define DEFAULT_MAXCOUPLINGVALUE      1e4    /**< maximum coefficient for binary variable in coupling constraint */
 #define DEFAULT_ADDCOUPLINGCONS     FALSE    /**< Add initial coupling inequalities as linear constraints, if 'addcoupling' is true? */
 #define DEFAULT_SEPACOUPLINGCUTS    FALSE    /**< Should the coupling inequalities be separated dynamically? */
-#define DEFAULT_SEPACOUPLINGLOCAL   FALSE    /**< Allow to use local bounds in order to separated coupling inequalities? */
+#define DEFAULT_SEPACOUPLINGLOCAL   FALSE    /**< Allow to use local bounds in order to separate coupling inequalities? */
 #define DEFAULT_SEPACOUPLINGVALUE     1e4    /**< maximum coefficient for binary variable in separated coupling constraint */
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
+#define DEFAULT_SEPAPERSPECTIVE     FALSE    /**< Separate cuts based on perspective formulation? */
+#define DEFAULT_SEPAPERSPLOCAL       TRUE    /**< Allow to use local bounds in order to separate perspectice cuts? */
 #define DEFAULT_TRYSOLFROMCOVER     FALSE    /**< Try to construct a feasible solution from a cover? */
 #define DEFAULT_UPGRADELINEAR       FALSE    /**< Try to upgrade linear constraints to indicator constraints? */
 #define DEFAULT_USEOTHERCONSS       FALSE    /**< Collect other constraints to alternative LP? */
@@ -311,6 +313,7 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         binvarhash;         /**< hash map from binary indicator variable to indicator constraint */
    int                   nslackvars;         /**< # slack variables */
    int                   niiscutsgen;        /**< number of IIS-cuts generated */
+   int                   nperspcutsgen;      /**< number of cuts based on perspective formulation generated */
    int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
    SCIP_Real             objupperbound;      /**< best upper bound on objective known */
    SCIP_Real             objaltlpbound;      /**< upper objective bound stored in alternative LP (infinity if not added) */
@@ -323,7 +326,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             addcoupling;        /**< whether the coupling inequalities should be added at the beginning */
    SCIP_Bool             addcouplingcons;    /**< whether coupling inequalities should be variable bounds, if 'addcoupling' is true*/
    SCIP_Bool             sepacouplingcuts;   /**< Should the coupling inequalities be separated dynamically? */
-   SCIP_Bool             sepacouplinglocal;  /**< Allow to use local bounds in order to separated coupling inequalities? */
+   SCIP_Bool             sepacouplinglocal;  /**< Allow to use local bounds in order to separate coupling inequalities? */
+   SCIP_Bool             sepaperspective;    /**< Separate cuts based on perspective formulation? */
+   SCIP_Bool             sepapersplocal;     /**< Allow to use local bounds in order to separate perspectice cuts? */
    SCIP_Bool             removeindicators;   /**< Remove indicator constraint if corresponding variable bound constraint has been added? */
    SCIP_Bool             updatebounds;       /**< whether the bounds of the original variables should be changed for separation */
    SCIP_Bool             trysolutions;       /**< Try to make solutions feasible by setting indicator variables? */
@@ -4328,6 +4333,231 @@ SCIP_RETCODE separateIISRounding(
 }
 
 
+
+/** separate cuts based on perspective formulation
+ *
+ *  Hijazi, Bonami, and Ouorou (2014) introduced the following cuts: We consider an indicator constraint
+ *  \f[
+ *  y = 1 \rightarrow \alpha^T x \leq \beta
+ *  \f]
+ *  and assume finite bounds \f$\ell \leq x \leq u\f$. Then for \f$I \subseteq \{1, \dots, n\}\f$ define
+ *  \f[
+ *    \Sigma(I,x,y) = \sum_{i \notin I} \alpha_i x_i +
+ *    y \Big(\sum_{i \in I, \alpha_i < 0} \alpha_i u_i + \sum_{i \in I, \alpha_i > 0} \alpha_i \ell_i +
+ *    \sum_{i \notin I, \alpha_i < 0} \alpha_i \ell_i + \sum_{i \notin I, \alpha_i > 0} \alpha_i u_i - \beta\Big).
+ *  \f]
+ *  Then the cuts
+ *  \f[
+ *  \Sigma(I,x,y) \leq \sum_{i \notin I, \alpha_i < 0} \alpha_i \ell_i + \sum_{i \notin I, \alpha_i > 0} \alpha_i u_i
+ *  \f]
+ *  are valid for the disjunction
+ *  \f[
+ *  \{y = 0,\; \ell \leq x \leq u\} \cup \{y = 1,\; \ell \leq x \leq u,\; \alpha^T x \leq \beta\}.
+ *  \f]
+ *  These cuts can easily be separated for a given point \f$(x^*, y^*)\f$ by checking for each \f$i \in \{1, \dots, n\}\f$ whether
+ *  \f[
+ *  y^*(\alpha_i\, u_i\, [\alpha_i < 0] + \alpha_i\, \ell_i\, [\alpha_i > 0]) >
+ *  \alpha_i x_i^* + y^* )\alpha_i \ell_i [\alpha_i < 0] + \alpha_i u_i [\alpha_i > 0]),
+ *  \f]
+ *  where \f$[C] = 1\f$ if condition \f$C\f$ is satisfied, otherwise it is 0.
+ *  If the above inequality holds, \f$i\f$ is included in \f$I\f$, otherwise not.
+ */
+static
+SCIP_RETCODE separatePerspective(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   int                   nconss,             /**< number of constraints */
+   SCIP_CONS**           conss,              /**< indicator constraints */
+   int                   maxsepacuts,        /**< maximal number of cuts to be generated */
+   int*                  nGen                /**< number of generated cutss */
+   )
+{  /*lint --e{850}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VAR** cutvars;
+   SCIP_Real* cutvals;
+   int nvars;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( nGen != NULL );
+
+   if ( *nGen >= maxsepacuts )
+      return SCIP_OKAY;
+
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars+1) );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONS* lincons;
+      SCIP_VAR* slackvar;
+      SCIP_VAR* binvar;
+      SCIP_Real binval;
+
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+      slackvar = consdata->slackvar;
+
+      lincons = consdata->lincons;
+      assert( lincons != NULL );
+
+      binvar = consdata->binvar;
+      assert( binvar != NULL );
+      binval = SCIPgetSolVal(scip, sol, binvar);
+
+      if ( SCIPconsIsActive(lincons) )
+      {
+         SCIP_VAR** linvars;
+         SCIP_Real* linvals;
+         SCIP_Real linrhs;
+         SCIP_Bool finitebound = TRUE;
+         SCIP_Real cutrhs = 0.0;
+         SCIP_Real cutval;
+         SCIP_Real signfactor = 1.0;
+         SCIP_Real ypart;
+         SCIP_Bool islocal = FALSE;
+         int nlinvars;
+         int cnt = 0;
+         int j;
+
+         linvars = SCIPgetVarsLinear(scip, lincons);
+         linvals = SCIPgetValsLinear(scip, lincons);
+         nlinvars = SCIPgetNVarsLinear(scip, lincons);
+
+         linrhs = SCIPgetRhsLinear(scip, lincons);
+         if ( SCIPisInfinity(scip, linrhs) )
+         {
+            if ( ! SCIPisInfinity(scip, SCIPgetLhsLinear(scip, lincons)) )
+            {
+               linrhs = -SCIPgetLhsLinear(scip, lincons);
+               signfactor = -1.0;
+            }
+            else
+               continue;
+         }
+         ypart = -linrhs;
+         cutval = binval * ypart;
+
+         for (j = 0; j < nlinvars; ++j)
+         {
+            SCIP_Real linval;
+            SCIP_Real lb;
+            SCIP_Real ub;
+            SCIP_Real din = 0.0;
+            SCIP_Real dout = 0.0;
+            SCIP_Real xpart;
+            SCIP_Real xval;
+
+            if ( linvars[j] == slackvar )
+               continue;
+
+            if ( conshdlrdata->sepapersplocal )
+            {
+               lb = SCIPvarGetLbLocal(linvars[j]);
+               ub = SCIPvarGetUbLocal(linvars[j]);
+
+               if ( lb > SCIPvarGetLbGlobal(linvars[j]) )
+                  islocal = TRUE;
+               if ( ub < SCIPvarGetUbGlobal(linvars[j]) )
+                  islocal = TRUE;
+            }
+            else
+            {
+               lb = SCIPvarGetLbGlobal(linvars[j]);
+               ub = SCIPvarGetUbGlobal(linvars[j]);
+            }
+
+            /* skip cases with unbounded variables */
+            if ( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+            {
+               finitebound = FALSE;
+               break;
+            }
+
+            /* compute rest parts for i in the set (din) or not in the set (dout) */
+            linval = signfactor * linvals[j];
+            if ( SCIPisNegative(scip, linval) )
+            {
+               din += linval * ub;
+               dout += linval * lb;
+            }
+            else if ( SCIPisPositive(scip, linval) )
+            {
+               din += linval * lb;
+               dout += linval * ub;
+            }
+
+            xval = SCIPgetSolVal(scip, sol, linvars[j]);
+            xpart = linval * xval;
+
+            /* if din > dout, we want to include i in the set */
+            if ( SCIPisGT(scip, binval * din, binval * dout + xpart) )
+            {
+               ypart += din;
+               cutval += binval * din;
+            }
+            else
+            {
+               /* otherwise i is not in the set */
+               ypart += dout;
+
+               cutrhs += dout;
+               cutval += binval * dout + xpart;
+
+               cutvars[cnt] = linvars[j];
+               cutvals[cnt++] = linval;
+            }
+         }
+
+         if ( ! finitebound )
+            continue;
+
+         if ( SCIPisEfficacious(scip, cutval - cutrhs) )
+         {
+            SCIP_ROW* row;
+            SCIP_Bool infeasible;
+            char name[50];
+
+            /* add y-variable */
+            cutvars[cnt] = binvar;
+            cutvals[cnt] = ypart;
+            ++cnt;
+
+            SCIPdebugMessage("Found cut of lhs value %f > %f.\n", cutval, cutrhs);
+            (void) SCIPsnprintf(name, 50, "persp%d", conshdlrdata->nperspcutsgen + *nGen);
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, cutvars, cutvals) );
+#ifdef SCIP_OUTPUT
+            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            assert( ! infeasible );
+            SCIP_CALL( SCIPreleaseRow(scip, &row));
+            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+            ++(*nGen);
+         }
+      }
+      if ( *nGen >= maxsepacuts )
+         break;
+   }
+
+   SCIPfreeBufferArray(scip, &cutvals);
+   SCIPfreeBufferArray(scip, &cutvars);
+
+   return SCIP_OKAY;
+}
+
+
 /** separation method
  *
  *  We first check whether coupling inequalities can be separated (if required). If not enough of
@@ -4434,6 +4664,7 @@ SCIP_RETCODE separateIndicators(
                SCIP_CALL( SCIPreleaseRow(scip, &row));
 
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+               *result = SCIP_SEPARATED;
 
                ++ncuts;
             }
@@ -4442,7 +4673,7 @@ SCIP_RETCODE separateIndicators(
       SCIPdebugMessage("Number of separated coupling inequalities: %d.\n", ncuts);
    }
 
-   /* separated cuts from the alternative lp (if required) */
+   /* separate cuts from the alternative lp (if required) */
    if ( conshdlrdata->sepaalternativelp && ncuts < SEPAALTTHRESHOLD )
    {
       SCIP_Bool cutoff;
@@ -4472,8 +4703,33 @@ SCIP_RETCODE separateIndicators(
       }
    }
 
+   /* separate cuts based on perspective formulation */
+   if ( conshdlrdata->sepaperspective && ncuts < SEPAALTTHRESHOLD )
+   {
+      int noldcuts;
+
+      SCIPdebugMessage("Separating inequalities based on perspective formulation.\n");
+
+      noldcuts = ncuts;
+      if ( *result == SCIP_DIDNOTRUN )
+         *result = SCIP_DIDNOTFIND;
+
+      /* start separation */
+      SCIP_CALL( separatePerspective(scip, conshdlr, sol, nconss, conss, maxsepacuts, &ncuts) );
+      SCIPdebugMessage("Separated %d cuts from perspective formulation.\n", ncuts - noldcuts);
+
+      if ( ncuts > noldcuts )
+      {
+         conshdlrdata->nperspcutsgen += ncuts;
+
+         /* possibly overwrite result from separation above */
+         *result = SCIP_SEPARATED;
+      }
+   }
+
    return SCIP_OKAY;
 }
+
 
 /** initializes the constraint handler data */
 static
@@ -4511,6 +4767,7 @@ void initConshdlrData(
    conshdlrdata->minabsobj = 0.0;
    conshdlrdata->normtype = 'e';
    conshdlrdata->niiscutsgen = 0;
+   conshdlrdata->nperspcutsgen = 0;
 }
 
 
@@ -5645,6 +5902,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   *infeasible = FALSE;
+
    /* check whether coupling constraints should be added */
    if ( ! conshdlrdata->addcoupling )
       return SCIP_OKAY;
@@ -5656,7 +5915,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    SCIPdebugMessage("Handle initial rows for %d indicator constraints.\n", nconss);
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && !(*infeasible); ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_Real ub;
@@ -5703,7 +5962,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          else
          {
             SCIP_ROW* row;
-            SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -5716,10 +5974,12 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-            assert( ! infeasible );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
 
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            if( !(*infeasible) )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            }
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
@@ -6824,13 +7084,23 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/sepacouplinglocal",
-         "Allow to use local bounds in order to separated coupling inequalities?",
+         "Allow to use local bounds in order to separate coupling inequalities?",
          &conshdlrdata->sepacouplinglocal, TRUE, DEFAULT_SEPACOUPLINGLOCAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/indicator/sepacouplingvalue",
          "maximum coefficient for binary variable in separated coupling constraint",
          &conshdlrdata->sepacouplingvalue, TRUE, DEFAULT_SEPACOUPLINGVALUE, 0.0, 1e9, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/sepaperspective",
+         "Separate cuts based on perspective formulation?",
+         &conshdlrdata->sepaperspective, TRUE, DEFAULT_SEPAPERSPECTIVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/sepapersplocal",
+         "Allow to use local bounds in order to separate perspective cuts?",
+         &conshdlrdata->sepapersplocal, TRUE, DEFAULT_SEPAPERSPLOCAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/updatebounds",

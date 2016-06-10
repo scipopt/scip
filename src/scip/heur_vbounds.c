@@ -57,7 +57,7 @@
 #define DEFAULT_COPYCUTS      TRUE      /**< should all active cuts from the cutpool of the original scip be copied to
                                          *   constraints of the subscip
                                          */
-
+#define DEFAULT_COPYLPBASIS  FALSE      /**< should a LP starting basis copyied from the source SCIP? */
 
 /*
  * Data structures
@@ -82,6 +82,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
+   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
 };
 
 /**@name Propagator defines
@@ -546,12 +547,15 @@ SCIP_RETCODE applyVbounds(
 
    if( !SCIPisLPConstructed(scip) && solvelp )
    {
-      SCIP_Bool nodecutoff;
+      SCIP_Bool cutoff;
 
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
-      if( nodecutoff )
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
 
@@ -677,7 +681,11 @@ SCIP_RETCODE applyVbounds(
       SCIP* subscip;
       SCIP_VAR** subvars;
       SCIP_HASHMAP* varmap;
+      SCIP_HASHMAP* consmap;
+      SCIP_ROW** sourcerows = NULL;
+      SCIP_CONS** targetconss = NULL;
       SCIP_Bool valid;
+      int nsourcerows = 0;
       int i;
 
       valid = FALSE;
@@ -688,21 +696,63 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, TRUE, &valid) );
+      if( heurdata->copylpbasis )
+      {
+         /* create the constraint mapping hash map */
+         SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+      }
+      else
+         consmap = NULL;
+
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, consmap, "_vbounds", FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
+         if( heurdata->copylpbasis )
+         {
+            int sourcerowssize = SCIPgetNLPRows(scip);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, consmap, sourcerows, targetconss, sourcerowssize, FALSE, &nsourcerows) );
+            assert(nsourcerows <= sourcerowssize);
+         }
+         else
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, FALSE, NULL) );
+         }
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+      if( heurdata->copylpbasis )
+      {
+         /* use the last LP basis as starting basis */
+         SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, sourcerows, targetconss, nsourcerows, FALSE) );
+      }
+
+      if( sourcerows != NULL )
+      {
+         assert(targetconss != NULL);
+         SCIPfreeBufferArray(scip, &targetconss);
+         SCIPfreeBufferArray(scip, &sourcerows);
+      }
+      else
+         assert(targetconss == NULL);
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
 
       /* free hash map */
       SCIPhashmapFree(&varmap);
+      if( heurdata->copylpbasis )
+      {
+         assert(consmap != NULL);
+         SCIPhashmapFree(&consmap);
+      }
 
       /* do not abort subproblem on CTRL-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -1066,6 +1116,10 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

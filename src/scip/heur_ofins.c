@@ -50,6 +50,7 @@
 #define DEFAULT_NODESOFS      500LL     /**< number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1       /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_LPLIMFAC      2.0       /**< factor by which the limit on the number of LP depends on the node limit */
+#define DEFAULT_COPYLPBASIS   FALSE     /**< should a LP starting basis copyied from the source SCIP? */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Ofins"
@@ -70,6 +71,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
+   SCIP_Bool             copylpbasis;             /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 /* ---------------- Callback methods of event handler ---------------- */
@@ -219,13 +221,17 @@ SCIP_RETCODE applyOfins(
 {
    SCIP* subscip;                                 /* the subproblem created by OFINS */
    SCIP_HASHMAP* varmapfw;                        /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP* consmapfw;
    SCIP_VAR** vars;                               /* source problem's variables */
    SCIP_VAR** subvars;                            /* subproblem's variables */
    SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
 
    SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
    SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
 
+   int nsourcerows = 0;
    int nvars;                                     /* number of source problem's variables */
    int i;
 
@@ -286,17 +292,39 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
+   if( heurdata->copylpbasis )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+      consmapfw = NULL;
+
    eventhdlr = NULL;
 
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "ofins", TRUE, FALSE, TRUE, &valid) );
 
    if( heurdata->copycuts )
    {
-      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
+      if( heurdata->copylpbasis )
+      {
+         int sourcerowssize = SCIPgetNLPRows(scip);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+         assert(nsourcerows <= sourcerowssize);
+      }
+      else
+      {
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+      }
    }
 
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -314,8 +342,6 @@ SCIP_RETCODE applyOfins(
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
      assert(subvars[i] != NULL);
    }
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs, &success) );
@@ -324,6 +350,29 @@ SCIP_RETCODE applyOfins(
       goto TERMINATE;
 
    SCIPdebugMessage("OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+
+   if( heurdata->copylpbasis )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, FALSE) );
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &targetconss);
+      SCIPfreeBufferArray(scip, &sourcerows);
+   }
+   else
+      assert(targetconss == NULL);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+   if( heurdata->copylpbasis )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -718,6 +767,10 @@ SCIP_RETCODE SCIPincludeHeurOfins(
          &heurdata->maxchange, FALSE, DEFAULT_MAXCHANGE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 

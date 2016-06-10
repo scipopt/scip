@@ -25,6 +25,7 @@
 
 #include "scip/heur_distributiondiving.h"
 #include "scip/branch_distribution.h"
+
 #include "pub_dive.h"
 
 #define HEUR_NAME             "distributiondiving"
@@ -70,7 +71,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler pointer */
    SCIP_VAR**            updatedvars;        /**< variables to process bound change events for */
    SCIP_Real*            rowmeans;           /**< row activity mean values for all rows */
@@ -400,7 +400,6 @@ SCIP_RETCODE calcBranchScore(
       newlb = 1.0;
       newub = 0.0;
    }
-
 
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
@@ -1073,6 +1072,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitDistributiondiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitDistributiondiving) );
 
+   /* add diveset with the defined scoring function */
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH,
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,

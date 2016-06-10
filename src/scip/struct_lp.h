@@ -322,6 +322,7 @@ struct SCIP_Lp
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
    int                   lpitiming;          /**< current timing type in LPI */
+   int                   lpirandomseed;      /**< current initial random seed in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */

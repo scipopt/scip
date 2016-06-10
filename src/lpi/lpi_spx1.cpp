@@ -44,7 +44,7 @@
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
 #define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
 #define CHECK_START                     0    /**< skip first CHECK_START number of checks */
-#define EXIT_AT_WRONG_RESULT            false/**< shall program be exited if CPLEX returns different result than SoPlex? */
+#define EXIT_AT_WRONG_RESULT            true /**< shall program be exited if CPLEX returns different result than SoPlex? */
 #define EXIT_AT_CPXERROR                false/**< shall program be exited if CPLEX returns an error? */
 
 #define CPX_CALL(x)                     do                                                                                  \
@@ -1584,9 +1584,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   sprintf(spxname, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
 #else
-   sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   sprintf(spxname, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
 #endif
    return spxname;
 }
@@ -4777,6 +4777,31 @@ SCIP_RETCODE SCIPlpiWriteState(
    return SCIP_OKAY;
 }
 
+void SCIPlpiUnpack(
+   SCIP_LPISTATE*        lpistate,
+   int*                  cstat,
+   int*                  rstat,
+   int*                  ncols,
+   int*                  nrows,
+   int                   ncolsize,
+   int                   nrowsize
+   )
+{
+   assert(lpistate != NULL);
+   assert(lpistate->ncols <= ncolsize);
+   assert(lpistate->nrows <= nrowsize);
+   assert(cstat != NULL);
+   assert(rstat != NULL);
+   assert(ncolsize >= 0);
+   assert(nrowsize >= 0);
+
+   (*ncols) = lpistate->ncols;
+   (*nrows) = lpistate->nrows;
+
+   lpistateUnpack(lpistate, cstat, rstat);
+
+   return;
+}
 /**@} */
 
 
@@ -4949,6 +4974,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->spx->getTiming();
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      *ival = (int) lpi->spx->random.getSeed();
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -5023,6 +5053,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setTiming((Timer::TYPE) ival);
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      lpi->spx->random.setSeed((unsigned int) ival);
+      break;
+#endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

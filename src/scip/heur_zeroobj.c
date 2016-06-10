@@ -49,6 +49,8 @@
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem             */
 #define DEFAULT_ADDALLSOLS    FALSE     /* should all subproblem solutions be added to the original SCIP?            */
 #define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< should heuristic only be executed if no primal solution was found, yet? */
+#define DEFAULT_COPYLPBASIS   FALSE     /**< should a LP starting basis copyied from the source SCIP? */
+#define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -66,6 +68,8 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
    SCIP_Bool             onlywithoutsol;     /**< should heuristic only be executed if no primal solution was found, yet? */
+   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip?          */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -271,6 +275,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
 {
    SCIP*                 subscip;            /* the subproblem created by zeroobj              */
    SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP*         consmapfw;          /* mapping of SCIP constraints to sub-SCIP constraints */
    SCIP_VAR**            vars;               /* original problem's variables                    */
    SCIP_VAR**            subvars;            /* subproblem's variables                          */
    SCIP_HEURDATA*        heurdata;           /* heuristic's private data structure              */
@@ -340,13 +345,22 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+
+   if( heurdata->copylpbasis )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+      consmapfw = NULL;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* different methods to create sub-problem: either copy LP relaxation or the CIP with all constraints */
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "zeroobj", TRUE, FALSE, TRUE, &valid) );
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
@@ -395,8 +409,19 @@ SCIP_RETCODE SCIPapplyZeroobj(
       }
    }
 
+   if( heurdata->copylpbasis )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, NULL, NULL, 0, FALSE) );
+   }
+
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
+   if( heurdata->copylpbasis )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -428,12 +453,17 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
    }
 
-   /* use dfs node selection */
+   /* use restart dfs node selection */
    if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
    }
 
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
+   }
    /* use least infeasible branching */
    if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
    {
@@ -617,6 +647,14 @@ SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlywithoutsol",
          "should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -43,9 +43,9 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/basisstore.h"
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
-
 
 #define MAXREPROPMARK       511  /**< maximal subtree repropagation marker; must correspond to node data structure */
 
@@ -3402,12 +3402,15 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BASISSTORE*      basestore           /**< starting basis storage */
    )
 {
    SCIP_NODE* lpstatefork;
    SCIP_Bool updatefeas;
    SCIP_Bool checkbdchgs;
+   SCIP_Bool loadedbasis;
    int lpstateforkdepth;
    int d;
 
@@ -3431,6 +3434,40 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 
    lpstatefork = tree->focuslpstatefork;
 
+   loadedbasis = FALSE;
+
+   if( SCIPbasisstoreGetNBasis(basestore) > 0 && stat->npresoladdconss == 0 )
+   {
+      SCIP_BASIS* basis;
+      SCIP_VAR** vars = NULL;
+      SCIP_CONS** conss = NULL;
+      int* vstat = NULL;
+      int* cstat = NULL;
+      SCIP_Bool success;
+      int nvars = 0;
+      int nconss = 0;
+
+      /* get the basis */
+      basis = SCIPbasistoreGetBasis(basestore);
+      assert(basis != NULL);
+
+      /* get variables, constraints and the corresponding basis status */
+      SCIPbasisGetData(basis, &vars, &conss, &vstat, &cstat, &nvars, &nconss);
+      assert(vars != NULL);
+      assert(conss != NULL);
+      assert(vstat != NULL);
+      assert(cstat != NULL);
+
+      SCIP_CALL( SCIPlpSetBasis(lp, set, blkmem, eventqueue, eventfilter, vars, conss, vstat, cstat, nvars, nconss,
+            (int)(tree->focusnode->depth), &success) );
+
+      SCIPdebugMessage("%sset starting basis\n", success ? "" : "cannot ");
+      loadedbasis = success;
+
+      /* delete the stored basis */
+      SCIPbasistoreRemoveBasis(basestore);
+   }
+
    /* if there is no LP state defining fork, nothing can be done */
    if( lpstatefork == NULL )
       return SCIP_OKAY;
@@ -3446,7 +3483,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    assert(tree->pathnlprows[tree->correctlpdepth] >= tree->pathnlprows[lpstateforkdepth]); /* LP can only grow */
 
    /* load LP state */
-   if( tree->focuslpstateforklpcount != stat->lpcount )
+   if( tree->focuslpstateforklpcount != stat->lpcount && !loadedbasis )
    {
       if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
       {
@@ -4455,6 +4492,21 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
 
+         /* encounter an early backtrack if there is a child which does not exceed given reference bound */
+         if( !SCIPsetIsInfinity(set, stat->referencebound) )
+         {
+            int c;
+
+            /* loop over children and stop if we find a child with a lower bound below given reference bound */
+            for( c = 0; c < tree->nchildren; ++c )
+            {
+               if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(tree->children[c]), stat->referencebound) )
+               {
+                  ++stat->nearlybacktracks;
+                  break;
+               }
+            }
+         }
          /* move children to the queue, make them LEAFs */
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, childrenlpstatefork,
                primal->cutoffbound) );
@@ -6989,6 +7041,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetEstimate
 #undef SCIPnodeGetDomchg
 #undef SCIPnodeGetParent
+#undef SCIPnodeGetConssetchg
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -7797,6 +7850,16 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    assert(node != NULL);
 
    return node->reprop;
+}
+
+/* returns the set of changed constraints for a particular node */
+SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
+   SCIP_NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->conssetchg;
 }
 
 /** gets number of children of the focus node */

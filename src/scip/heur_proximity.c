@@ -60,6 +60,8 @@
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
 #define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
+#define DEFAULT_COPYLPBASIS   FALSE      /**< should a LP starting basis copyied from the source SCIP? */
+#define DEFAULT_USEUCT        FALSE      /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -84,8 +86,14 @@ struct SCIP_HeurData
 
    SCIP*                 subscip;            /**< the subscip used by the heuristic                                   */
    SCIP_HASHMAP*         varmapfw;           /**< map between scip variables and subscip variables                    */
+   SCIP_HASHMAP*         consmapfw;          /**< map between scip constraints and subscip constraints                */
+   SCIP_ROW**            sourcerows;         /**< rows of original SCIP */
+   SCIP_CONS**           targetconss;        /**< constraints of target SCIP */
    SCIP_VAR**            subvars;            /**< variables in subscip                                                */
    SCIP_CONS*            objcons;            /**< the objective cutoff constraint of the subproblem                   */
+
+   int                   sourcerowssize;     /**< size of sourcerows and targetconss arrays */
+   int                   nsourcerows;        /**< number of rows / created constraints */
 
    int                   nsubvars;           /**< the number of subvars                                               */
    int                   lastsolidx;         /**< index of last solution on which the heuristic was processed         */
@@ -94,6 +102,8 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
    SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
    SCIP_Bool             usefinallp;         /* should the heuristic solve a final LP in case of continuous objective variables? */
+   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -284,6 +294,7 @@ SCIP_RETCODE createNewSol(
 /** sets solving parameters for the subproblem created by the heuristic */
 static
 SCIP_RETCODE setupSubproblem(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP*                 subscip             /**< copied SCIP data structure */
    )
 {
@@ -298,10 +309,16 @@ SCIP_RETCODE setupSubproblem(
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   /* use restart dfs node selection */
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* disable expensive presolving
@@ -320,9 +337,9 @@ SCIP_RETCODE setupSubproblem(
 
 
    /* todo: check branching rule in sub-SCIP */
-   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
-	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
+	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable feasibility pump and fractional diving */
@@ -364,7 +381,12 @@ static
 SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
+   SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
+   SCIP_Bool             copylpbasis,        /**< should a starting basis should be copied into the subscip? */
+   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays */
+   int*                  nsourcerows         /**< number of rows / created constraints */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -382,8 +404,15 @@ SCIP_RETCODE createRows(
    int i;
    int j;
 
+   assert(!copylpbasis || nsourcerows != NULL);
+   assert(!copylpbasis || sourcerows != NULL);
+   assert(!copylpbasis || targetconss != NULL);
+
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   assert(!copylpbasis || nrows <= sourcerowssize);
+
+   *nsourcerows = 0;
 
    /* copy all rows to linear constraints */
    for( i = 0; i < nrows; i++ )
@@ -411,7 +440,23 @@ SCIP_RETCODE createRows(
       SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+      if( copylpbasis )
+      {
+         assert(targetconss != NULL);
+         assert(*nsourcerows <= sourcerowssize);
+
+         /* store the added cons and the corresponding row */
+         sourcerows[(*nsourcerows)] = rows[i];
+         targetconss[(*nsourcerows)] = cons;
+
+         /* capture the row (the constraint was already captured twice: create, add)
+          * both will be released at the end of copyBasis in scip.c
+          */
+         SCIP_CALL( SCIPcaptureRow(scip, sourcerows[(*nsourcerows)]) );
+
+         ++(*nsourcerows);
+      }
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &consvars);
@@ -432,19 +477,31 @@ SCIP_RETCODE deleteSubproblem(
    {
 
       assert(heurdata->varmapfw != NULL);
+      assert(heurdata->consmapfw != NULL);
+      assert(heurdata->sourcerows != NULL);
+      assert(heurdata->targetconss != NULL);
       assert(heurdata->subvars != NULL);
       assert(heurdata->objcons != NULL);
 
       SCIPdebugMessage("Freeing subproblem of proximity heuristic\n");
       SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
       SCIPhashmapFree(&heurdata->varmapfw);
+      SCIPhashmapFree(&heurdata->consmapfw);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->sourcerows, heurdata->sourcerowssize);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->targetconss, heurdata->sourcerowssize);
       SCIP_CALL( SCIPreleaseCons(heurdata->subscip, &heurdata->objcons) );
       SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
       heurdata->subscip = NULL;
       heurdata->varmapfw = NULL;
+      heurdata->consmapfw = NULL;
+      heurdata->sourcerows = NULL;
+      heurdata->targetconss = NULL;
       heurdata->subvars = NULL;
       heurdata->objcons = NULL;
+
+      heurdata->sourcerowssize = 0;
+      heurdata->nsourcerows = 0;
    }
    return SCIP_OKAY;
 }
@@ -533,9 +590,14 @@ SCIP_DECL_HEURINIT(heurInitProximity)
    heurdata->lastsolidx = -1;
    heurdata->nusedlpiters = 0LL;
    heurdata->subprobidx = 0;
+   heurdata->sourcerowssize = 0;
+   heurdata->nsourcerows = 0;
 
    heurdata->subscip = NULL;
    heurdata->varmapfw = NULL;
+   heurdata->consmapfw = NULL;
+   heurdata->sourcerows = NULL;
+   heurdata->targetconss = NULL;
    heurdata->subvars = NULL;
    heurdata->objcons = NULL;
 
@@ -559,8 +621,9 @@ SCIP_DECL_HEUREXITSOL(heurExitsolProximity)
 
    SCIP_CALL( deleteSubproblem(scip, heurdata) );
 
-   assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL
-         && heurdata->subvars == NULL && heurdata->objcons == NULL);
+   assert(heurdata->subscip == NULL && heurdata->varmapfw == NULL && heurdata->consmapfw == NULL
+         && heurdata->sourcerows == NULL && heurdata->targetconss == NULL && heurdata->subvars == NULL
+         && heurdata->objcons == NULL);
 
    return SCIP_OKAY;
 }
@@ -587,6 +650,12 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
 
    /* do not run heuristic when there are only few binary varables */
    if( SCIPgetNBinVars(scip) < heurdata->binvarquot * SCIPgetNVars(scip) )
+      return SCIP_OKAY;
+
+   *result = SCIP_DELAYED;
+
+   /* return if the node is infeasible and the current LP is not constructed */
+   if( nodeinfeasible && !SCIPisLPConstructed(scip) && heurdata->uselprows )
       return SCIP_OKAY;
 
    /* calculate branching node limit for sub problem */
@@ -712,10 +781,13 @@ SCIP_RETCODE SCIPapplyProximity(
 {
    SCIP*                 subscip;            /* the subproblem created by proximity              */
    SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP*         consmapfw;          /* mapping of SCIP constraints to sub-SCIP constraints */
    SCIP_VAR**            vars;               /* original problem's variables                    */
    SCIP_VAR**            subvars;            /* subproblem's variables                          */
    SCIP_HEURDATA*        heurdata;           /* heuristic's private data structure              */
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
 
    SCIP_SOL* incumbent;
    SCIP_CONS* objcons;
@@ -732,6 +804,8 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_Real objcutoff;
    SCIP_Real lowerbound;
 
+   int nsourcerows = 0;
+   int sourcerowssize = 0;
    int nvars;                                /* number of original problem's variables          */
    int nfixedvars;
    int nsubsols;
@@ -802,7 +876,7 @@ SCIP_RETCODE SCIPapplyProximity(
 
    /* use integrality of the objective function to round down (and thus strengthen) the objective cutoff */
    if( SCIPisObjIntegral(scip) )
-	   objcutoff = SCIPfeasFloor(scip, objcutoff);
+      objcutoff = SCIPfeasFloor(scip, objcutoff);
 
    if( SCIPisFeasLT(scip, objcutoff, lowerbound) )
       objcutoff = lowerbound;
@@ -842,6 +916,7 @@ SCIP_RETCODE SCIPapplyProximity(
    if( heurdata->subscip == NULL )
    {
       assert(heurdata->varmapfw == NULL);
+      assert(heurdata->consmapfw == NULL);
       assert(heurdata->objcons == NULL);
 
       /* initialize the subproblem */
@@ -849,13 +924,31 @@ SCIP_RETCODE SCIPapplyProximity(
 
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+
+      if( heurdata->copylpbasis )
+      {
+         sourcerowssize = SCIPgetNLPRows(scip);
+
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &sourcerows, sourcerowssize) );
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &targetconss, sourcerowssize) );
+
+         /* create the constraint mapping hash map */
+         SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+      }
+      else
+      {
+         consmapfw = NULL;
+         sourcerows = NULL;
+         targetconss = NULL;
+      }
+
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &subvars, nvars) );
 
       /* copy complete SCIP instance */
       valid = FALSE;
       if( !heurdata->uselprows )
       {
-         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
+         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "proximity", TRUE, FALSE, TRUE, &valid) );
       }
       else
       {
@@ -869,7 +962,8 @@ SCIP_RETCODE SCIPapplyProximity(
          for( i = 0; i < nvars; i++ )
             subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-         SCIP_CALL( createRows(scip, subscip, subvars) );
+         SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, heurdata->copylpbasis, sourcerowssize,
+               &nsourcerows) );
       }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
@@ -883,7 +977,7 @@ SCIP_RETCODE SCIPapplyProximity(
       }
 
       /* set up parameters for the copied instance */
-      SCIP_CALL( setupSubproblem(subscip) );
+      SCIP_CALL( setupSubproblem(heurdata, subscip) );
 
       /* create the objective constraint in the sub scip, first without variables and values which will be added later */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
@@ -940,11 +1034,17 @@ SCIP_RETCODE SCIPapplyProximity(
        * and stored in heuristic data
        */
       assert(heurdata->varmapfw != NULL);
+      assert(heurdata->consmapfw != NULL);
       assert(heurdata->subvars != NULL);
       assert(heurdata->objcons != NULL);
 
       subscip = heurdata->subscip;
       varmapfw = heurdata->varmapfw;
+      consmapfw = heurdata->consmapfw;
+      sourcerows = heurdata->sourcerows;
+      targetconss = heurdata->targetconss;
+      nsourcerows = heurdata->nsourcerows;
+      sourcerowssize = heurdata->sourcerowssize;
       subvars = heurdata->subvars;
       objcons = heurdata->objcons;
 
@@ -972,6 +1072,15 @@ SCIP_RETCODE SCIPapplyProximity(
       {
          SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], -1.0) );
       }
+   }
+
+   if( heurdata->copylpbasis )
+   {
+      assert(varmapfw != NULL);
+      assert(consmapfw != NULL);
+
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
    }
 
    /* disable statistic timing inside sub SCIP */
@@ -1063,6 +1172,11 @@ SCIP_RETCODE SCIPapplyProximity(
    /* save subproblem in heuristic data for subsequent runs if it has been successful, otherwise free subproblem */
    heurdata->subscip = subscip;
    heurdata->varmapfw = varmapfw;
+   heurdata->consmapfw = consmapfw;
+   heurdata->sourcerows = sourcerows;
+   heurdata->targetconss = targetconss;
+   heurdata->nsourcerows = nsourcerows;
+   heurdata->sourcerowssize = sourcerowssize;
    heurdata->subvars = subvars;
    heurdata->objcons = objcons;
    heurdata->nsubvars = nvars;
@@ -1111,6 +1225,9 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usefinallp", "should the heuristic solve a final LP in case of continuous objective variables?",
          &heurdata->usefinallp, TRUE, DEFAULT_USEFINALLP, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis", "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
+
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
@@ -1152,6 +1269,11 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
          &heurdata->mingap, TRUE, DEFAULT_MINGAP, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

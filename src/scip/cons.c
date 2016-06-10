@@ -2676,15 +2676,19 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+   SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    assert(conshdlr != NULL);
+   assert(cutoff != NULL);
 #ifdef MORE_DEBUG
    assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0 || SCIPtreeProbing(tree));
 #endif
+
+   *cutoff = FALSE;
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -2728,7 +2732,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 
       /* call external method */
       SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &conshdlr->initconss[conshdlr->ninitconsskept],
-            conshdlr->ninitconss - conshdlr->ninitconsskept) );
+            conshdlr->ninitconss - conshdlr->ninitconsskept, cutoff) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->sepatime, set);
@@ -5189,6 +5193,20 @@ SCIP_RETCODE conssetchgDelDisabledCons(
    return SCIP_OKAY;
 }
 
+/** gets added constraints data for a constraint set change */
+void SCIPconssetchgGetAddedConsData(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
+   SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
+   int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   )
+{
+   assert(conssetchg != NULL);
+   if( conss != NULL )
+      *conss = conssetchg->addedconss;
+   if( nconss != NULL )
+      *nconss = conssetchg->naddedconss;
+}
+
 /** applies constraint set change */
 SCIP_RETCODE SCIPconssetchgApply(
    SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
@@ -6361,6 +6379,23 @@ void SCIPconsSetNamePointer(
    cons->name = (char*)name;
 }
 
+/* link the original and the upgraded constraint */
+void SCIPconsSetUpgradedCons(
+   SCIP_CONS*            origcons,
+   SCIP_CONS*            upgdcons
+   )
+{
+   assert(origcons != NULL);
+   assert(upgdcons != NULL);
+
+   /* set the current link to the original to NULL */
+   origcons->transorigcons->transorigcons = NULL;
+
+   /* link the constraints */
+   origcons->transorigcons = upgdcons;
+   upgdcons->transorigcons = origcons;
+}
+
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
  *  exists
  */
@@ -6370,6 +6405,16 @@ SCIP_CONS* SCIPconsGetTransformed(
 {
    assert(cons->original);
 
+   return cons->transorigcons;
+}
+
+/** gets associated transformed or original constraint, or NULL if no associated constraint
+ *  exists
+ */
+SCIP_CONS* SCIPconsGetTransorig(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
    return cons->transorigcons;
 }
 
@@ -7115,13 +7160,15 @@ SCIP_RETCODE SCIPconsEnfolp(
 /** calls LP initialization method for single constraint */
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    SCIP_CONSHDLR* conshdlr;
 
    assert(cons != NULL);
    assert(set != NULL);
+   assert(infeasible != NULL);
    assert(cons->scip == set->scip);
 
    conshdlr = cons->conshdlr;
@@ -7130,7 +7177,7 @@ SCIP_RETCODE SCIPconsInitlp(
    /* call external method */
    if( conshdlr->consinitlp != NULL )
    {
-      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1, infeasible) );
    }
 
    return SCIP_OKAY;

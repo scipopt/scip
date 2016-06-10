@@ -97,7 +97,7 @@ compilation settings:
               "dbg", "opt", or "prf" 
 
 - $(LPS):     the LP solver to use
-              "spx", "spx2", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+              "spx2", "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
 
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
@@ -123,8 +123,8 @@ Here is what you have to do to get SCIP running:
    - "OPT=prf"         to use performance analysis compilation mode
    - "OPT=opt-gccold"  to use optimized compilation mode and gnu gcc compiler version less than 4.2
 
-   - "LPS=spx"         to use SoPlex as LP solver (based on the old interface for versions >= 1.4, default)
-   - "LPS=spx2"        to use SoPlex as LP solver (based on the new interface available since version 2.0)
+   - "LPS=spx"         to use SoPlex as LP solver (based on the new interface available since version 2.0, default)
+   - "LPS=spx1"        to use SoPlex as LP solver (based on the old interface for versions >= 1.4)
    - "LPS=cpx"         to use CPLEX as LP solver
    - "LPS=xprs"        to use XPRESS as LP solver
    - "LPS=msk"         to use MOSEK as LP solver

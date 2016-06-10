@@ -1680,27 +1680,28 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infeasible;
    int r;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(infeasible != NULL);
+   assert(!(*infeasible));
 
    if( consdata->rows[0] == NULL )
    {
       SCIP_CALL( createRelaxation(scip, cons) );
    }
    assert(consdata->rows[0] != NULL);
-   for( r = 0; r < NROWS; ++r )
+   for( r = 0; r < NROWS && !(*infeasible); ++r )
    {
       if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
-         assert( ! infeasible );   /* function is only called from initlp -> row should be feasible */
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, infeasible) );
       }
    }
 
@@ -4540,10 +4541,14 @@ SCIP_DECL_CONSINITLP(consInitlpXor)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -5533,6 +5538,27 @@ SCIP_VAR** SCIPgetVarsXor(
    assert(consdata != NULL);
 
    return consdata->vars;
+}
+
+/** gets integer variable in xor constraint */
+SCIP_VAR* SCIPgetIntVarXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an xor constraint\n");
+      SCIPABORT();
+      return NULL;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->intvar;
 }
 
 /** gets the right hand side of the xor constraint */

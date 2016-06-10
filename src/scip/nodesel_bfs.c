@@ -131,7 +131,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
-   if( plungedepth > maxplungedepth )
+   if( plungedepth >= maxplungedepth )
    {
       /* we don't want to plunge again: select best node from the tree */
       SCIPdebugMessage("plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);

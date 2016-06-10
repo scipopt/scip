@@ -1457,12 +1457,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_Bool nodecutoff;
-
-      nodecutoff = FALSE;
       /* @note this call can have the side effect that variables are created */
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
       SCIP_CALL( SCIPflushLP(scip) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
+         return SCIP_OKAY;
    }
 
    SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
@@ -1827,6 +1828,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
 
    cutoff = FALSE;
+
    lastindexofsusp = -1;
    probing = heurdata->probing;
    infeasible = FALSE;
@@ -2165,6 +2167,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPwriteLP(scip, "shiftandpropagatelp.mps") );
+#endif
          /* solve LP;
           * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.

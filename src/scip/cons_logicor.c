@@ -1031,6 +1031,15 @@ SCIP_RETCODE applyFixings(
 
             SCIPdebugMessage("added linear constraint: ");
             SCIPdebugPrintCons(scip, newcons, NULL);
+
+            /* we want to link the original and the new constraint */
+            if( SCIPconsGetTransorig(cons) != NULL )
+            {
+               assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+
+               SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+            }
+
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -2830,7 +2839,7 @@ SCIP_RETCODE prepareCons(
  *
  *     => c2: x1 + x2 + x4 >= 1
  *
- *  @see "Effective Preprocessing in SAT through Variable and Clause Elimination" by Niklas En and Armin Biere
+ *  @see "Effective Preprocessing in SAT through Variable and Clause Elimination" by Niklas Eén and Armin Biere
  */
 static
 SCIP_RETCODE removeRedundantConssAndNonzeros(
@@ -3504,6 +3513,17 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugPrintCons(scip, newcons, NULL);
 
+               /* we want to link the original and the new constraint, if the constraint
+                * does not arise from a conflict or is generated while presolving, e.g., by presol_gateextraction */
+               if( SCIPconsGetTransorig(cons) != NULL && SCIPconsIsOriginal(SCIPconsGetTransorig(cons)) )
+               {
+                  SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+               }
+#ifndef NDEBUG
+               else
+                  SCIPwarningMessage(scip, "cons <%s> has no origin cons linked\n", SCIPconsGetName(cons));
+#endif
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
                SCIPdebugMessage("logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n", SCIPconsGetName(cons));
@@ -3645,6 +3665,16 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
 
+         /* we want to link the original and the new constraint, if the constraint does not
+          * arise from a conflict or is generated while presolving, e.g., by presol_gateextraction */
+         if( SCIPconsGetTransorig(cons) != NULL && SCIPconsIsOriginal(SCIPconsGetTransorig(cons)) )
+         {
+            SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+         }
+#ifndef NDEBUG
+         else
+            SCIPwarningMessage(scip, "cons <%s> has no linked original cons\n", SCIPconsGetName(cons));
+#endif
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
          SCIPdebugMessage("logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
@@ -3708,6 +3738,15 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
 
          /* add constraint */
          SCIP_CALL( SCIPaddCons(scip, conslinear) );
+
+         /* we want to link the original and the new constraint */
+         if( SCIPconsGetTransorig(cons) != NULL )
+         {
+            assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+
+            SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), conslinear);
+         }
+
          SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
@@ -4035,14 +4074,14 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 static
 SCIP_DECL_CONSINITLP(consInitlpLogicor)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
-      /* ignore cutoff, cannot return value */
+      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;

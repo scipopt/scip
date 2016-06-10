@@ -5408,7 +5408,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 0  with x1, x2 free and 1 <= x3 <= 2
  *
- *  x3 needs to be a multiple of 3, so the instance is infeasibile.
+ *  x3 needs to be a multiple of 3, so the instance is infeasible.
  *
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
@@ -14363,17 +14363,17 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
    int c;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-      /* cannot use cutoff here, since initlp has no return value */
+      SCIP_CALL( addRelaxation(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -15159,6 +15159,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             {
                /* add the upgraded constraint to the problem */
                SCIP_CALL( SCIPaddCons(scip, upgdcons) );
+
+               /* link the original constraint and the upgraded constraint */
+               if( SCIPconsGetTransorig(cons) != NULL && SCIPconsIsOriginal(SCIPconsGetTransorig(cons)) )
+               {
+                  SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), upgdcons);
+               }
+
                SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
                (*nupgdconss)++;
 
@@ -16943,7 +16950,6 @@ SCIP_ROW* SCIPgetRowLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

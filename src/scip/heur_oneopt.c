@@ -43,6 +43,7 @@
 #define DEFAULT_DURINGROOT    TRUE           /**< should the heuristic be called before and during the root node? */
 #define DEFAULT_BEFOREPRESOL  FALSE          /**< should the heuristic be called before presolving */
 #define DEFAULT_FORCELPCONSTRUCTION FALSE    /**< should the construction of the LP be forced even if LP solving is deactivated? */
+#define DEFAULT_COPYLPBASIS   FALSE          /**< should a LP starting basis copyied from the source SCIP? */
 
 /*
  * Data structures
@@ -56,6 +57,7 @@ struct SCIP_HeurData
    SCIP_Bool             duringroot;         /**< should the heuristic be called before and during the root node? */
    SCIP_Bool             forcelpconstruction;/**< should the construction of the LP be forced even if LP solving is deactivated? */
    SCIP_Bool             beforepresol;       /**< should the heuristic be called before presolving */
+   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 
@@ -410,6 +412,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    {
       SCIP*                 subscip;            /* the subproblem created by zeroobj              */
       SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
+      SCIP_HASHMAP*         consmapfw;          /* mapping of SCIP constraints to sub-SCIP constraints */
       SCIP_VAR**            subvars;            /* subproblem's variables                          */
       SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
 
@@ -449,9 +452,24 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
+      if( heurdata->copylpbasis )
+      {
+         /* create the constraint mapping hash map */
+         SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+      }
+      else
+         consmapfw = NULL;
+
       /* copy complete SCIP instance */
       valid = FALSE;
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "oneopt", TRUE, FALSE, TRUE, &valid) );
+
+      if( heurdata->copylpbasis )
+      {
+         /* use the last LP basis as starting basis */
+         SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, NULL, NULL, 0, FALSE) );
+      }
+
       SCIP_CALL( SCIPtransformProb(subscip) );
 
       /* get variable image */
@@ -471,6 +489,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );
       SCIPfreeBufferArray(scip, &subsolvals);
       SCIPhashmapFree(&varmapfw);
+      if( heurdata->copylpbasis )
+      {
+         assert(consmapfw != NULL);
+         SCIPhashmapFree(&consmapfw);
+      }
 
       /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
@@ -562,8 +585,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    if( heurtiming == SCIP_HEURTIMING_BEFORENODE && (SCIPhasCurrentNodeLP(scip) || heurdata->forcelpconstruction) )
    {
       SCIP_Bool cutoff;
-      cutoff = FALSE;
+
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
+         return SCIP_OKAY;
+
       SCIP_CALL( SCIPflushLP(scip) );
 
       /* get problem variables again, SCIPconstructLP() might have added new variables */
@@ -902,6 +930,10 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/beforepresol",
          "should the heuristic be called before presolving?",
          &heurdata->beforepresol, TRUE, DEFAULT_BEFOREPRESOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

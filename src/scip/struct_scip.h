@@ -37,6 +37,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
+#include "scip/type_basisstore.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_cutpool.h"
@@ -82,6 +83,7 @@ struct Scip
    SCIP_PROB*            transprob;          /**< transformed problem after presolve */
 
    /* SOLVING */
+   SCIP_BASISSTORE*      basisstore;         /**< storage for starting basis */
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
