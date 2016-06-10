@@ -35,13 +35,11 @@
 /** initialize the basis storage */
 static
 SCIP_RETCODE initializeBasisstore(
-   SCIP_BASISSTORE*      basisstore,         /**< basis storage */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_BASISSTORE*      basisstore          /**< basis storage */
    )
 {
    assert(basisstore != NULL);
    assert(basisstore->basessize == 0);
-   assert(blkmem != NULL);
 
    SCIPdebugMessage("initialize basisstore %p\n", (void*) basisstore);
 
@@ -54,12 +52,10 @@ SCIP_RETCODE initializeBasisstore(
 /** ensure that the store is large enoug */
 static
 SCIP_RETCODE checkMem(
-   SCIP_BASISSTORE*      basisstore,         /**< basis storage */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_BASISSTORE*      basisstore          /**< basis storage */
    )
 {
    assert(basisstore != NULL);
-   assert(blkmem != NULL);
 
    if( basisstore->nbases == basisstore->basessize )
    {
@@ -117,7 +113,6 @@ SCIP_RETCODE SCIPbasisstoreFree(
 /** add a basis to the storage */
 SCIP_RETCODE SCIPbasisstoreAddBasis(
    SCIP_BASISSTORE*      basisstore,          /**< basis storage */
-   BMS_BLKMEM*           blkmem,              /**< block memory */
    SCIP_VAR**            vars,                /**< array of problem variables */
    SCIP_CONS**           conss,               /**< array of problem constraints */
    int*                  varstat,             /**< array of variable basis status */
@@ -127,7 +122,6 @@ SCIP_RETCODE SCIPbasisstoreAddBasis(
    )
 {
    assert(basisstore != NULL);
-   assert(blkmem != NULL);
    assert(vars != NULL);
    assert(conss != NULL);
    assert(varstat != NULL);
@@ -136,13 +130,13 @@ SCIP_RETCODE SCIPbasisstoreAddBasis(
    /* initialize the storage */
    if( basisstore->basessize == 0 )
    {
-      SCIP_CALL( initializeBasisstore(basisstore, blkmem) );
+      SCIP_CALL( initializeBasisstore(basisstore) );
    }
 
    /* ensure that the storage is large enough */
    if( basisstore->nbases == basisstore->basessize )
    {
-      SCIP_CALL( checkMem(basisstore, blkmem) );
+      SCIP_CALL( checkMem(basisstore) );
    }
 
    SCIPdebugMessage("add basis to basisstore %p: pos %d, nvars %d, nconss %d\n", (void*) basisstore, basisstore->nbases,
@@ -186,8 +180,7 @@ SCIP_BASIS* SCIPbasistoreGetBasis(
 /** copy basis storage */
 SCIP_RETCODE SCIPbasisstoreCopy(
    SCIP_BASISSTORE*      basisstore,         /**< source basis storage */
-   SCIP_BASISSTORE*      targetbasisstore,   /**< target basis storage */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_BASISSTORE*      targetbasisstore    /**< target basis storage */
    )
 {
    int b;
@@ -202,7 +195,7 @@ SCIP_RETCODE SCIPbasisstoreCopy(
       assert(basisstore->bases[b]->varstat != NULL);
       assert(basisstore->bases[b]->consstat != NULL);
 
-      SCIP_CALL( SCIPbasisstoreAddBasis(targetbasisstore, blkmem,
+      SCIP_CALL( SCIPbasisstoreAddBasis(targetbasisstore,
             basisstore->bases[b]->vars, basisstore->bases[b]->conss, basisstore->bases[b]->varstat,
             basisstore->bases[b]->consstat, basisstore->bases[b]->nvars, basisstore->bases[b]->nconss) );
    }

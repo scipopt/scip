@@ -52,7 +52,6 @@ SCIP_RETCODE SCIPbasisstoreFree(
 extern
 SCIP_RETCODE SCIPbasisstoreAddBasis(
    SCIP_BASISSTORE*      basisstore,          /**< basis storage */
-   BMS_BLKMEM*           blkmem,              /**< block memory */
    SCIP_VAR**            vars,                /**< array of problem variables */
    SCIP_CONS**           conss,               /**< array of problem constraints */
    int*                  varstat,             /**< array of variable basis status */
@@ -77,8 +76,7 @@ SCIP_BASIS* SCIPbasistoreGetBasis(
 extern
 SCIP_RETCODE SCIPbasisstoreCopy(
    SCIP_BASISSTORE*      basisstore,         /**< source basis storage */
-   SCIP_BASISSTORE*      targetbasisstore,   /**< target basis storage */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_BASISSTORE*      targetbasisstore    /**< target basis storage */
    );
 
 /** remove last added basis */

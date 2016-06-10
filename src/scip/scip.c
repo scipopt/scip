@@ -1670,7 +1670,7 @@ SCIP_RETCODE copyBasis(
    }
 
    /* add the basis to the storage */
-   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetscip->mem->probmem, targetvars, targetconss, varstat,
+   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetvars, targetconss, varstat,
          consstat, nvars, ntargetconss) );
    SCIPdebugMessage("basis copied\n");
 

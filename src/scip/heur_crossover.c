@@ -496,10 +496,10 @@ SCIP_RETCODE setupSubproblem(
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    int*                  selection,          /**< pool of solutions crossover will use */
    SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   sourcerowssize,
-   int*                  nsourcerows,
+   SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
+   SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
+   int                   sourcerowssize,     /**< size of sourcerows aeeay */
+   int*                  nsourcerows,        /**< pointer to store number of source rows */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -987,8 +987,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( sourcerows != NULL )
    {
       assert(targetconss != NULL);
-      SCIPfreeBufferArray(scip, &sourcerows);
       SCIPfreeBufferArray(scip, &targetconss);
+      SCIPfreeBufferArray(scip, &sourcerows);
    }
    else
       assert(targetconss == NULL);

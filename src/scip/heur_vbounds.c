@@ -737,8 +737,8 @@ SCIP_RETCODE applyVbounds(
       if( sourcerows != NULL )
       {
          assert(targetconss != NULL);
-         SCIPfreeBufferArray(scip, &sourcerows);
          SCIPfreeBufferArray(scip, &targetconss);
+         SCIPfreeBufferArray(scip, &sourcerows);
       }
       else
          assert(targetconss == NULL);
