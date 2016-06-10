@@ -36185,6 +36185,7 @@ SCIP_RETCODE SCIPretransformSol(
       SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
       break;
    }
+   case SCIP_SOLORIGIN_PARTIAL:
    case SCIP_SOLORIGIN_UNKNOWN:
       SCIPerrorMessage("unkown solution origin.\n");
       return SCIP_INVALIDCALL;
