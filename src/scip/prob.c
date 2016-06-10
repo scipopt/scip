@@ -320,6 +320,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
+   (*prob)->compressedcopy = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2097,6 +2098,8 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+#undef SCIPisCompressedCopy
+#undef SCIPprobEnableCompression
 
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
@@ -2253,6 +2256,26 @@ SCIP_Real SCIPprobGetObjscale(
 {
    assert(prob != NULL);
    return prob->objscale;
+}
+
+/** is the problem a compressed copy, i.e., a problem copy with variable fixings? */
+SCIP_Bool SCIPprobIsCompressedCopy(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->compressedcopy;
+}
+
+/** enable problem compression, i.e., a problem copy with variable fixings */
+void SCIPprobEnableCompression(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->compressedcopy = TRUE;
 }
 
 #endif

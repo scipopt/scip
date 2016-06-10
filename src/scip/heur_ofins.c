@@ -282,7 +282,7 @@ SCIP_RETCODE applyOfins(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", NULL, NULL, 0, TRUE, FALSE, TRUE, &valid) );
 
    if( heurdata->copycuts )
    {

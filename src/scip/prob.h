@@ -626,6 +626,18 @@ SCIP_Real SCIPprobGetObjscale(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** is the problem a compressed copy, i.e., a problem copy with variable fixings? */
+extern
+SCIP_Bool SCIPprobIsCompressedCopy(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** enable problem compression, i.e., a problem copy with variable fixings */
+extern
+void SCIPprobEnableCompression(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -650,6 +662,8 @@ SCIP_Real SCIPprobGetObjscale(
 #define SCIPprobGetVars(prob)           ((prob)->vars)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
+#define SCIPprobIsCompressedCopy(prob)  ((prob)->compressedcopy)
+#define SCIPprobEnableCompression(prob)  ((prob)->compressedcopy = TRUE)
 #endif
 
 

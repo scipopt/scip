@@ -24,8 +24,6 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_dins.h"
 
 #define HEUR_NAME             "dins"
@@ -105,8 +103,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                    */
    int                   nbinvars,           /**< number of binary variables of problem and subproblem           */
    int                   nintvars,           /**< number of general integer variables of problem and subproblem  */
-   int*                  fixingcounter,      /**< number of integer variables that get fixed */
-   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
+   int*                  fixingcounter       /**< number of integer variables that get fixed */
    )
 {
    SCIP_SOL* bestsol;
@@ -197,58 +194,6 @@ SCIP_RETCODE createSubproblem(
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], mipsol) );
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], mipsol) );
          (*fixingcounter)++;
-      }
-   }
-
-   if( uselprows )
-   {
-      SCIP_ROW** rows;                          /* original scip rows                         */
-      int nrows;
-
-      /* get the rows and their number */
-      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-      /* copy all rows to linear constraints */
-      for( i = 0; i < nrows; i++ )
-      {
-         SCIP_CONS* cons;
-         SCIP_VAR** consvars;
-         SCIP_COL** cols;
-         SCIP_Real constant;
-         SCIP_Real lhs;
-         SCIP_Real rhs;
-         SCIP_Real* vals;
-
-         int nnonz;
-         int j;
-
-         /* ignore rows that are only locally valid */
-         if( SCIProwIsLocal(rows[i]) )
-            continue;
-
-         /* get the row's data */
-         constant = SCIProwGetConstant(rows[i]);
-         lhs = SCIProwGetLhs(rows[i]) - constant;
-         rhs = SCIProwGetRhs(rows[i]) - constant;
-         vals = SCIProwGetVals(rows[i]);
-         nnonz = SCIProwGetNNonz(rows[i]);
-         cols = SCIProwGetCols(rows[i]);
-
-         assert(lhs <= rhs);
-
-         /* allocate memory array to be filled with the corresponding subproblem variables */
-         SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, nnonz) );
-         for( j = 0; j < nnonz; j++ )
-            consvars[j] = subvars [ SCIPvarGetProbindex(SCIPcolGetVar(cols[j])) ];
-
-         /* create a new linear constraint and add it to the subproblem */
-         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-         SCIP_CALL( SCIPaddCons(subscip, cons) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-         /* free temporary memory */
-         SCIPfreeBufferArray(subscip, &consvars);
       }
    }
 
@@ -626,42 +571,18 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    success = FALSE;
    eventhdlr = NULL;
 
-   if( heurdata->uselprows )
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPheuristicsInstanceCopy(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+
+   /* create event handler for LP events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );
+   if( eventhdlr == NULL )
    {
-      char probname[SCIP_MAXSTRLEN];
-
-      /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-      /* get name of the original problem and add the string "_dinssub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip));
-
-      /* create the subproblem */
-      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-      /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
+      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
+      return SCIP_PLUGINNOTFOUND;
    }
-   else
-   {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "dins", TRUE, FALSE, TRUE, &success) );
 
-      if( heurdata->copycuts )
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
-      }
-
-      /* create event handler for LP events */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );
-      if( eventhdlr == NULL )
-      {
-         SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
-
-      SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
-   }
+   SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
 
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -671,7 +592,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* create variables and rebound them if their bounds differ by more than 0.5 */
    fixingcounter = 0;
-   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, &fixingcounter, heurdata->uselprows) );
+   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, &fixingcounter) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 

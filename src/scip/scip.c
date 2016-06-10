@@ -1743,6 +1743,74 @@ SCIP_RETCODE SCIPcopyOrigProb(
    return SCIP_OKAY;
 }
 
+/** enables problem copy compression.
+ *
+ *  If copy compression is enabled, fixed variables will be treated as constants
+ *  by all constraints that are copied after calling this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPenableProblemCompression(
+   SCIP*                 scip                /**< source SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->origprob != NULL);
+
+
+   /* check stage */
+   SCIP_CALL( checkStage(scip, "SCIPenableProblemCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* enable problem compression */
+   SCIPprobEnableCompression(scip->origprob);
+
+   return SCIP_OKAY;
+}
+
+/** is problem copy compression enabled?
+ *
+ *  If copy compression is enabled, fixed variables can be treated as constants
+ *  by all constraints that are copied after calling this method.
+ *
+ *  @return TRUE if problem copy compression is enabled, otherwise FALSE
+ *
+ *  @pre This method can be called if scip is in one of the following stages:
+  *      - \ref SCIP_STAGE_PROBLEM
+  *      - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisProblemCompressionEnabled(
+   SCIP*                 scip                /**< source SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->origprob != NULL);
+
+
+   /* check stage */
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisProblemCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   /* is problem compression enabled */
+   return SCIPprobIsCompressedCopy(scip->origprob);
+}
+
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
  *  it is just returned as target variable; otherwise a new variable will be created and added to the target SCIP; this
  *  created variable is added to the variable hash map and returned as target variable
@@ -2015,6 +2083,9 @@ SCIP_RETCODE copyVars(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             original,           /**< should original variables be copied? */
    SCIP_Bool             global              /**< should global or local bounds be used? (for original=FALSE) */
    )
@@ -2029,6 +2100,8 @@ SCIP_RETCODE copyVars(
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
+   assert(nfixedvars == 0 || fixedvars != NULL);
+   assert(nfixedvars == 0 || fixedvals != NULL);
 
    if( original )
    {
@@ -2072,6 +2145,31 @@ SCIP_RETCODE copyVars(
       assert(targetvar != NULL);
    }
 
+   /* fix the variables that should be fixed right away */
+   for( i = 0; i < nfixedvars; ++i )
+   {
+      SCIP_VAR* targetvar;
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+
+      /* retrieve target variable as image of the source variable */
+      targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, (void *)fixedvars[i]);
+      assert(targetvar != NULL);
+
+      /* fix the variable to the specified value */
+      infeasible = fixed = FALSE;
+      SCIP_CALL( SCIPfixVar(targetscip, targetvar, fixedvals[i], &infeasible, &fixed) );
+
+      assert(!infeasible);
+      assert(fixed);
+   }
+
+   /* if there were fixed variables during the copy stage, copy compression is enabled */
+   if( nfixedvars > 0 )
+   {
+      SCIP_CALL( SCIPenableProblemCompression(targetscip) );
+   }
+
    /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
 #ifndef NDEBUG
    if( original )
@@ -2083,24 +2181,24 @@ SCIP_RETCODE copyVars(
    }
    else
    {
-      SCIP_VAR** fixedvars;
-      int nfixedvars;
+      SCIP_VAR** sourcefixedvars;
+      int nsourcefixedvars;
       int nfixedbinvars;
       int nfixedintvars;
       int nfixedimplvars;
       int nfixedcontvars;
 
-      fixedvars = SCIPgetFixedVars(sourcescip);
-      nfixedvars = SCIPgetNFixedVars(sourcescip);
+      sourcefixedvars = SCIPgetFixedVars(sourcescip);
+      nsourcefixedvars = SCIPgetNFixedVars(sourcescip);
       nfixedbinvars = 0;
       nfixedintvars = 0;
       nfixedimplvars = 0;
       nfixedcontvars = 0;
 
       /* count number of fixed variables for all variable types */
-      for( i = 0; i < nfixedvars; ++i )
+      for( i = 0; i < nsourcefixedvars; ++i )
       {
-         switch( SCIPvarGetType(fixedvars[i]) )
+         switch( SCIPvarGetType(sourcefixedvars[i]) )
          {
          case SCIP_VARTYPE_BINARY:
             nfixedbinvars++;
@@ -2119,7 +2217,7 @@ SCIP_RETCODE copyVars(
             return SCIP_INVALIDDATA;
          }
       }
-      assert(nfixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
+      assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
       assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip));
       assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)
          && SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip) <= SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) + nfixedbinvars + nfixedintvars );
@@ -2147,7 +2245,7 @@ SCIP_RETCODE copyVars(
 
 /** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
  *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
- *  variables do not get copied
+ *  variables are not copied
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
@@ -2184,6 +2282,9 @@ SCIP_RETCODE SCIPcopyVars(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
@@ -2194,7 +2295,7 @@ SCIP_RETCODE SCIPcopyVars(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, FALSE, global) );
+   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, fixedvars, fixedvals, nfixedvars, FALSE, global) );
 
    return SCIP_OKAY;
 }
@@ -2247,7 +2348,7 @@ SCIP_RETCODE SCIPcopyOrigVars(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, TRUE, TRUE) );
+   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, NULL, NULL, 0, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -3260,6 +3361,9 @@ SCIP_RETCODE SCIPcopy(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
@@ -3342,7 +3446,7 @@ SCIP_RETCODE SCIPcopy(
    SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
 
    /* copy all original variables */
-   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, localvarmap, localconsmap, global) );
+   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, localvarmap, localconsmap, fixedvars, fixedvals, nfixedvars, global) );
 
    /* copy all original constraints */
    SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
