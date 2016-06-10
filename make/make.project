@@ -148,7 +148,13 @@ FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
+
+ifeq ($(COMP),msvc)
+LDFLAGS		=
+else
 LDFLAGS		=	$(LINKCC_l)m$(LINKLIBSUFFIX)
+endif
+
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -246,7 +252,8 @@ LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)dl$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),grb)

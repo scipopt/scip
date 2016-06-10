@@ -4428,6 +4428,7 @@ SCIP_RETCODE correctLocksAndCaptures(
 
    /* delete old and-coefficients and consanddata objects */
    SCIPfreeBlockMemoryArray(scip, &(consdata->andcoefs), consdata->sconsanddatas);
+   SCIPfreeBlockMemoryArray(scip, &(consdata->andnegs), consdata->sconsanddatas);
    SCIPfreeBlockMemoryArray(scip, &(consdata->consanddatas), consdata->sconsanddatas);
 
    if( !SCIPisEQ(scip, consdata->lhs, newlhs) || !SCIPisEQ(scip, consdata->rhs, newrhs) )
