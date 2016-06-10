@@ -838,6 +838,7 @@ SCIP_RETCODE consdataCreate(
    )
 {
    int v;
+   SCIP_Real constant;
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -862,50 +863,91 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-   (*consdata)->varssize = nvars;
+   (*consdata)->varssize = 0;
    (*consdata)->nvars = nvars;
    (*consdata)->hascontvar = FALSE;
    (*consdata)->hasnonbinvar = FALSE;
    (*consdata)->hasnonbinvalid = TRUE;
+   (*consdata)->vars = NULL;
+   (*consdata)->vals = NULL;
+
+   constant = 0.0;
    if( nvars > 0 )
    {
       int k;
 
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, vals, nvars) );
+      SCIP_VAR** varsbuffer;
+      SCIP_Real* valsbuffer;
+
+      /* copy variables into temporary buffer */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &varsbuffer, vars, nvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &valsbuffer, vals, nvars) );
       k = 0;
+
+      /* loop over variables and sort out fixed ones */
       for( v = 0; v < nvars; ++v )
       {
-         assert((*consdata)->vars[v] != NULL);
-         if( !SCIPisZero(scip, (*consdata)->vals[v]) )
+         SCIP_VAR* var;
+         SCIP_Real val;
+
+         var = varsbuffer[v];
+         val = valsbuffer[v];
+
+         assert(var != NULL);
+         if( !SCIPisZero(scip, val) )
          {
-            (*consdata)->vars[k] = (*consdata)->vars[v];
-            (*consdata)->vals[k] = (*consdata)->vals[v];
-            k++;
-
-            /* update hascontvar and hasnonbinvar flags */
-            if( !(*consdata)->hascontvar )
+            /* treat fixed variable as a constant if problem compression is enabled */
+            if( SCIPisProblemCompressionEnabled(scip) && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
             {
-               SCIP_VARTYPE vartype = SCIPvarGetType((*consdata)->vars[v]);
+               constant += SCIPvarGetLbGlobal(var) * val;
+            }
+            else
+            {
+               varsbuffer[k] = var;
+               valsbuffer[k] = val;
+               k++;
 
-               if( vartype != SCIP_VARTYPE_BINARY )
+               /* update hascontvar and hasnonbinvar flags */
+               if( !(*consdata)->hascontvar )
                {
-                  (*consdata)->hasnonbinvar = TRUE;
+                  SCIP_VARTYPE vartype = SCIPvarGetType(var);
 
-                  if( vartype == SCIP_VARTYPE_CONTINUOUS )
-                     (*consdata)->hascontvar = TRUE;
+                  if( vartype != SCIP_VARTYPE_BINARY )
+                  {
+                     (*consdata)->hasnonbinvar = TRUE;
+
+                     if( vartype == SCIP_VARTYPE_CONTINUOUS )
+                        (*consdata)->hascontvar = TRUE;
+                  }
                }
             }
          }
       }
       (*consdata)->nvars = k;
+
+      if( k > 0 )
+      {
+         /* copy the possibly reduced buffer arrays into block */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, valsbuffer, k) );
+         (*consdata)->varssize = k;
+      }
+      /* free temporary buffer */
+      SCIPfreeBufferArray(scip, &valsbuffer);
+      SCIPfreeBufferArray(scip, &varsbuffer);
    }
-   else
-   {
-      (*consdata)->vars = NULL;
-      (*consdata)->vals = NULL;
-   }
+
    (*consdata)->eventdata = NULL;
+
+   /* due to compressed copying, we may have fixed variables contributing to the left and right hand side */
+   if( !SCIPisZero(scip, constant) )
+   {
+      if( !SCIPisInfinity(scip, REALABS(lhs)) )
+         lhs -= constant;
+
+      if( !SCIPisInfinity(scip, REALABS(rhs)) )
+         rhs -= constant;
+   }
 
    (*consdata)->row = NULL;
    (*consdata)->lhs = lhs;
@@ -16169,75 +16211,75 @@ SCIP_RETCODE SCIPcreateConsLinear(
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
       {
-	 if( constant < 0.0 )
-	 {
-	    if( SCIPisInfinity(scip, lhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+         if( constant < 0.0 )
+         {
+            if( SCIPisInfinity(scip, lhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
-	    if( SCIPisInfinity(scip, rhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+            if( SCIPisInfinity(scip, rhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
 
-	    lhs = -SCIPinfinity(scip);
-	    rhs = -SCIPinfinity(scip);
-	 }
-	 else
-	 {
-	    if( SCIPisInfinity(scip, -lhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+            lhs = -SCIPinfinity(scip);
+            rhs = -SCIPinfinity(scip);
+         }
+         else
+         {
+            if( SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
-	    if( SCIPisInfinity(scip, -rhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+            if( SCIPisInfinity(scip, -rhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
 
-	    lhs = SCIPinfinity(scip);
-	    rhs = SCIPinfinity(scip);
-	 }
+            lhs = SCIPinfinity(scip);
+            rhs = SCIPinfinity(scip);
+         }
       }
       else
       {
-	 if( !SCIPisInfinity(scip, REALABS(lhs)) )
-	    lhs -= constant;
-	 if( !SCIPisInfinity(scip, REALABS(rhs)) )
-	    rhs -= constant;
+         if( !SCIPisInfinity(scip, REALABS(lhs)) )
+            lhs -= constant;
+         if( !SCIPisInfinity(scip, REALABS(rhs)) )
+            rhs -= constant;
 
-	 if( SCIPisInfinity(scip, -lhs) )
-	    lhs = -SCIPinfinity(scip);
-	 else if( SCIPisInfinity(scip, lhs) )
-	    lhs = SCIPinfinity(scip);
+         if( SCIPisInfinity(scip, -lhs) )
+            lhs = -SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, lhs) )
+            lhs = SCIPinfinity(scip);
 
-	 if( SCIPisInfinity(scip, rhs) )
-	    rhs = SCIPinfinity(scip);
-	 else if( SCIPisInfinity(scip, -rhs) )
-	    rhs = -SCIPinfinity(scip);
+         if( SCIPisInfinity(scip, rhs) )
+            rhs = SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, -rhs) )
+            rhs = -SCIPinfinity(scip);
       }
 
       /* create constraint data */
