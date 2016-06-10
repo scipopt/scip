@@ -12972,12 +12972,9 @@ SCIP_RETCODE SCIPtransformProb(
    {
       int v;
 
-      for( v = 0; v < scip->origprob->nvars; v++ )
+      for( v = 0; v < scip->transprob->nvars; v++ )
       {
-         SCIP_VAR* transvar;
-         transvar =  SCIPvarGetTransVar(scip->origprob->vars[v]);
-         SCIP_CALL( SCIPcaptureVar(scip, transvar) );
-         SCIP_CALL( SCIPaddVarLocks(scip, transvar, 1, 1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], 1, 1) );
       }
    }
 
@@ -14277,6 +14274,114 @@ SCIP_RETCODE freeSolve(
    return SCIP_OKAY;
 }
 
+/** frees solution process data structures */
+static
+SCIP_RETCODE freeReoptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(scip->set != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->set->stage == SCIP_STAGE_SOLVING || scip->set->stage == SCIP_STAGE_SOLVED);
+
+   /* remove focus from the current focus node */
+   if( SCIPtreeGetFocusNode(scip->tree) != NULL )
+   {
+      SCIP_NODE* node = NULL;
+      SCIP_Bool cutoff;
+
+      SCIP_CALL( SCIPnodeFocus(&node, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
+            scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter,
+            scip->eventqueue, scip->cliquetable, &cutoff, TRUE) );
+      assert(!cutoff);
+   }
+
+   /* switch stage to EXITSOLVE */
+   scip->set->stage = SCIP_STAGE_EXITSOLVE;
+
+   /* inform plugins that the branch and bound process is finished */
+   SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, FALSE) );
+
+   /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
+   if( scip->nlp != NULL )
+   {
+      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+   }
+   scip->transprob->nlpenabled = FALSE;
+
+   /* clear the LP, and flush the changes to clear the LP of the solver */
+   SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+   SCIPlpInvalidateRootObjval(scip->lp);
+
+   /* resets the debug environment */
+   SCIP_CALL( SCIPdebugReset(scip->set) ); /*lint !e506 !e774*/
+
+   /* clear all row references in internal data structures */
+   SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPcutpoolClear(scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+
+   /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
+    * subroots have to be released
+    */
+   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   /* deinitialize transformed problem */
+   SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, FALSE) );
+
+   /* free solution process data structures */
+   SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
+   SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
+
+   /* possibly close visualization output file */
+   SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
+
+   /* reset statistics for current branch and bound run */
+   SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
+
+   /* switch stage to PRESOLVED */
+   scip->set->stage = SCIP_STAGE_PRESOLVED;
+
+   /* restart finished */
+   scip->stat->inrestart = FALSE;
+
+   /* reset solving specific paramters */
+   if( scip->set->reopt_enable )
+   {
+      assert(scip->reopt != NULL);
+      SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
+   }
+
+   /* free the debug solution which might live in transformed primal data structure */
+   SCIP_CALL( SCIPprimalClear(&scip->primal, scip->mem->probmem) );
+
+   if( FALSE && scip->set->misc_resetstat )
+   {
+      /* reset statistics to the point before the problem was transformed */
+      SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
+   }
+   else
+   {
+      /* even if statistics are not completely reset, a partial reset of the primal-dual intgeral is necessary */
+      SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
+   }
+
+   /* reset objective limit */
+   SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
+
+   /* reset original variable's local and global bounds to their original values */
+   SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
+
+   scip->transprob->objoffset *= scip->transprob->objscale;
+   scip->transprob->objscale = 1.0;
+   scip->transprob->objisintegral = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** free transformed problem */
 static
 SCIP_RETCODE freeTransform(
@@ -14382,13 +14487,10 @@ SCIP_RETCODE freeTransform(
    {
       int v;
 
-      /* release and unlock all variables */
-      for(v = 0; v < scip->origprob->nvars; v++)
+      /* unlock all variables */
+      for(v = 0; v < scip->transprob->nvars; v++)
       {
-         SCIP_VAR* transvar;
-         transvar =  SCIPvarGetTransVar(scip->origprob->vars[v]);
-         SCIP_CALL( SCIPaddVarLocks(scip, transvar, -1, -1) );
-         SCIP_CALL( SCIPreleaseVar(scip, &transvar) );
+         SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], -1, -1) );
       }
    }
 
@@ -14875,8 +14977,19 @@ SCIP_RETCODE SCIPsolve(
          if( scip->set->stage == SCIP_STAGE_SOLVED )
             statsprinted = TRUE;
 
+         if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
+            break;
+         assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+
+         /*lint -fallthrough*/
+
+      case SCIP_STAGE_PRESOLVED:
+         /* check if reoptimization is enabled and global constraints are saved */
          if( scip->set->reopt_enable )
          {
+            SCIP_Bool reoptrestart;
+            /* @ todo: we could check if the problem is feasible, eg, by backtracking */
+
             /* increase number of reopt_runs */
             ++scip->stat->nreoptruns;
 
@@ -14889,23 +15002,22 @@ SCIP_RETCODE SCIPsolve(
                assert(scip->transprob != NULL);
                SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob, scip->origprob->vars, scip->origprob->nvars) );
             }
-         }
 
-         if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
-            break;
-         assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+            if( scip->stat->nreoptruns > 1 )
+            {
+               SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
+                     scip->transprob->nvars, &reoptrestart) );
 
-         /*lint -fallthrough*/
+               /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+                * cutoff bound if primal solution is already known
+                */
+               SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+                scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
 
-      case SCIP_STAGE_PRESOLVED:
-         /* check if reoptimization is enabled and global constraints are saved */
-         if( scip->stat->nreoptruns > 1 && scip->set->reopt_enable )
-         {
-            SCIP_Bool reoptrestart;
-            /* @ todo: we could check if the problem is feasible, eg, by backtracking */
-
-            SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
-                  scip->transprob->nvars, &reoptrestart) );
+               /* if possible, scale objective function such that it becomes integral with gcd 1 */
+               SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+                     scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
+            }
          }
 
          /* try to compress the search tree if reoptimization is enabled */
@@ -15673,6 +15785,54 @@ SCIP_RETCODE SCIPfreeSolve(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
+}
+
+SCIP_RETCODE SCIPfreeReoptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPfreeReoptSolve", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PROBLEM:
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+   {
+      SCIP_Bool infeasible;
+
+      assert(scip->stat->status != SCIP_STATUS_INFEASIBLE);
+      assert(scip->stat->status != SCIP_STATUS_INFORUNBD);
+      assert(scip->stat->status != SCIP_STATUS_UNBOUNDED);
+      assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
+
+      /* exit presolving */
+      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+   }
+
+   /*lint -fallthrough*/
+   case SCIP_STAGE_PRESOLVED:
+      /* switch stage to TRANSFORMED */
+      scip->set->stage = SCIP_STAGE_TRANSFORMED;
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      /* free solution process data structures */
+      SCIP_CALL( freeReoptSolve(scip) );
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
 }
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
@@ -19950,6 +20110,7 @@ SCIP_RETCODE SCIPunlockVarCons(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPchgVarObj(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19957,7 +20118,7 @@ SCIP_RETCODE SCIPchgVarObj(
    SCIP_Real             newobj              /**< new objective value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -19977,6 +20138,7 @@ SCIP_RETCODE SCIPchgVarObj(
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
@@ -19995,6 +20157,8 @@ SCIP_RETCODE SCIPchgVarObj(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPaddVarObj(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -20002,7 +20166,7 @@ SCIP_RETCODE SCIPaddVarObj(
    SCIP_Real             addobj              /**< additional objective value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -20017,6 +20181,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
             scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;

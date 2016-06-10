@@ -876,8 +876,12 @@ SCIP_RETCODE readObjective(
    SCIP_Real* coefs;
    int ncoefs;
    SCIP_Bool newsection;
+   SCIP_Real scalar = 1.0;
 
    assert(lpinput != NULL);
+
+   if( lpinput->objsense != SCIPgetObjsense(scip) )
+      scalar = -1.0;
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &vars, &coefs, &ncoefs, &newsection) );
@@ -887,8 +891,8 @@ SCIP_RETCODE readObjective(
       SCIP_VAR** oldvars;
 
       /* set all linear coefficients to 0 */
-      oldvars = SCIPgetVars(scip);
-      for( i = 0; i < SCIPgetNVars(scip); i++ )
+      oldvars = SCIPgetOrigVars(scip);
+      for( i = 0; i < SCIPgetNOrigVars(scip); i++ )
       {
          SCIP_CALL( SCIPchgVarObj(scip, oldvars[i], 0.0) );
       }
@@ -896,7 +900,7 @@ SCIP_RETCODE readObjective(
       /* set the linear objective values */
       for( i = 0; i < ncoefs; ++i )
       {
-         SCIP_CALL( SCIPchgVarObj(scip, vars[i], coefs[i]) );
+         SCIP_CALL( SCIPaddVarObj(scip, vars[i], scalar * coefs[i]) );
       }
    }
 
@@ -929,7 +933,8 @@ SCIP_RETCODE readDiffFile(
    /* free transformed problem */
    if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
    {
-      SCIP_CALL( SCIPfreeTransform(scip) );
+      SCIP_CALL( SCIPfreeReoptSolve(scip) );
+//      SCIP_CALL( SCIPfreeTransform(scip) );
    }
 
    /* parse the file */
@@ -1066,12 +1071,8 @@ SCIP_RETCODE SCIPreadDiff(
    /* evaluate the result */
    if( lpinput.haserror )
       return SCIP_READERROR;
-   else
-   {
-      /* set objective sense */
-      SCIP_CALL( SCIPsetObjsense(scip, lpinput.objsense) );
-      *result = SCIP_SUCCESS;
-   }
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

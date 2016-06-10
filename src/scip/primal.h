@@ -57,6 +57,13 @@ SCIP_RETCODE SCIPprimalFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** clears primal data */
+extern
+SCIP_RETCODE SCIPprimalClear(
+   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** sets the cutoff bound in primal data and in LP solver */
 extern
 SCIP_RETCODE SCIPprimalSetCutoffbound(

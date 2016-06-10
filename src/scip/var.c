@@ -5800,15 +5800,17 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
-            /* @todo: shouldn't we take into account objsense and objfactor here? */
-            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, newobj) );
+            assert(SCIPprobIsTransformed(prob));
+
+            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
+                  newobj/prob->objscale) );
          }
          else
-         {
             assert(set->stage == SCIP_STAGE_PROBLEM);
-            var->obj = newobj;
-            var->unchangedobj = newobj;
-         }
+
+         var->obj = newobj;
+         var->unchangedobj = newobj;
+
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -5879,17 +5881,16 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
-            /* @todo: shouldn't we take into account objsense and objfactor here? */
             SCIP_CALL( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, transprob, origprob, primal, tree,
-                  reopt, lp, eventqueue, addobj) );
+                  reopt, lp, eventqueue, addobj/transprob->objscale) );
          }
          else
-         {
             assert(set->stage == SCIP_STAGE_PROBLEM);
-            var->obj += addobj;
-            var->unchangedobj += addobj;
-            assert(SCIPsetIsEQ(set, var->obj, var->unchangedobj));
-         }
+
+         var->obj += addobj;
+         var->unchangedobj += addobj;
+         assert(SCIPsetIsEQ(set, var->obj, var->unchangedobj));
+
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -8719,6 +8720,38 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
+
+   return SCIP_OKAY;
+}
+
+/** resets the global and local bounds of transformed variable to their original values */
+SCIP_RETCODE SCIPvarResetLocalBounds(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(SCIPvarIsOriginal(var));
+   /* resetting of bounds on original variables which have a transformed counterpart easily fails if, e.g.,
+    * the transformed variable has been fixed */
+   assert(SCIPvarGetTransVar(var) == NULL);
+
+   /* copy the original bounds back to the global and local bounds */
+   SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, NULL, var->data.original.origdom.lb) );
+   SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, NULL, var->data.original.origdom.ub) );
+   SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.lb) );
+   SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.ub) );
+
+   /* free the global and local holelists and duplicate the original ones */
+   /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
+   holelistFree(&var->glbdom.holelist, blkmem);
+   holelistFree(&var->locdom.holelist, blkmem);
+   SCIP_CALL( holelistDuplicate(&var->glbdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
+   SCIP_CALL( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
 
    return SCIP_OKAY;
 }
