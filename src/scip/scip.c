@@ -727,7 +727,7 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->tree = NULL;
    (*scip)->conflict = NULL;
    (*scip)->transprob = NULL;
-   (*scip)->basesstore = NULL;
+   (*scip)->basisstore = NULL;
    (*scip)->pricestore = NULL;
    (*scip)->sepastore = NULL;
    (*scip)->cutpool = NULL;
@@ -784,7 +784,7 @@ SCIP_RETCODE SCIPfree(
 
    SCIP_CALL( SCIPfreeProb(*scip) );
    assert((*scip)->set->stage == SCIP_STAGE_INIT);
-   assert((*scip)->basesstore == NULL);
+   assert((*scip)->basisstore == NULL);
 
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
@@ -1670,7 +1670,7 @@ SCIP_RETCODE copyBasis(
    }
 
    /* add the basis to the storage */
-   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetvars, targetconss, varstat,
+   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basisstore, targetvars, targetconss, varstat,
          consstat, nvars, ntargetconss) );
    SCIPdebugMessage("basis copied\n");
 
@@ -1832,8 +1832,8 @@ SCIP_RETCODE copyProb(
    SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
 
    /* initialize the basisstore of SCIP */
-   assert(targetscip->basesstore == NULL);
-   SCIPbasisstoreCreate(&targetscip->basesstore);
+   assert(targetscip->basisstore == NULL);
+   SCIPbasisstoreCreate(&targetscip->basisstore);
 
    if( uselocalvarmap )
    {
@@ -9291,8 +9291,8 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
 
    /* initialize the basisstore of SCIP */
-   assert(scip->basesstore == NULL);
-   SCIPbasisstoreCreate(&scip->basesstore);
+   assert(scip->basisstore == NULL);
+   SCIPbasisstoreCreate(&scip->basisstore);
 
    /* initialize reoptimization structure, if needed */
    SCIP_CALL( SCIPenableReoptimization(scip, scip->set->reopt_enable) );
@@ -9874,8 +9874,8 @@ SCIP_RETCODE SCIPfreeProb(
       assert(scip->set->nactivepricers == 0);
 
       /* free the basisstore of SCIP */
-      assert(scip->basesstore != NULL);
-      SCIPbasisstoreFree(&scip->basesstore);
+      assert(scip->basisstore != NULL);
+      SCIPbasisstoreFree(&scip->basisstore);
 
 
       /* free original primal solution candidate pool, original problem and problem statistics data structures */
@@ -9897,7 +9897,7 @@ SCIP_RETCODE SCIPfreeProb(
       scip->set->stage = SCIP_STAGE_INIT;
    }
    assert(scip->set->stage == SCIP_STAGE_INIT);
-   assert(scip->basesstore == NULL);
+   assert(scip->basisstore == NULL);
 
    return SCIP_OKAY;
 }
@@ -14914,7 +14914,7 @@ SCIP_RETCODE SCIPsolve(
 
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->basesstore, scip->pricestore, scip->sepastore,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->basisstore, scip->pricestore, scip->sepastore,
                scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, scip->cliquetable, &restart) );
 
          /* detect, whether problem is solved */
@@ -26694,7 +26694,7 @@ SCIP_RETCODE SCIPconstructLP(
    SCIP_CALL( checkStage(scip, "SCIPconstructLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->basesstore, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->tree, scip->reopt, scip->lp, scip->basisstore, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, FALSE, cutoff) );
 
    return SCIP_OKAY;
@@ -27458,7 +27458,7 @@ SCIP_RETCODE SCIPwriteLP(
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->basesstore, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue,
+            scip->tree, scip->reopt, scip->lp, scip->basisstore, scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue,
             scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
    }
 
@@ -27551,8 +27551,8 @@ int SCIPgetNBasis(
 {
    assert(scip != NULL);
 
-   if( scip->basesstore != NULL )
-      return SCIPbasisstoreGetNBasis(scip->basesstore);
+   if( scip->basisstore != NULL )
+      return SCIPbasisstoreGetNBasis(scip->basisstore);
 
    return 0;
 }
