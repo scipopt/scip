@@ -880,8 +880,8 @@ SCIP_RETCODE consdataCreate(
       SCIP_Real* valsbuffer;
 
       /* copy variables into temporary buffer */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &varsbuffer, vars, nvars) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &valsbuffer, vals, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &valsbuffer, nvars) );
       k = 0;
 
       /* loop over variables and sort out fixed ones */
@@ -890,8 +890,8 @@ SCIP_RETCODE consdataCreate(
          SCIP_VAR* var;
          SCIP_Real val;
 
-         var = varsbuffer[v];
-         val = valsbuffer[v];
+         var = vars[v];
+         val = vals[v];
 
          assert(var != NULL);
          if( !SCIPisZero(scip, val) )
