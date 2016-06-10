@@ -308,7 +308,6 @@ SCIP_RETCODE consdataCreate(
 
    if( nvars > 0 )
    {
-
       if( SCIPisProblemCompressionEnabled(scip) )
       {
          int k;
@@ -3171,7 +3170,7 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    return SCIP_OKAY;
 }
 
-/** creates and captures an and constraint
+/** creates and captures a bound disjunction constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
  *  method SCIPcreateConsBounddisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *
