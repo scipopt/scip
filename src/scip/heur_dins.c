@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/scip.h"
+#include "scip/cons_linear.h"
 #include "scip/heur_dins.h"
 
 #define HEUR_NAME             "dins"
