@@ -545,14 +545,55 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->signature = 0;
    (*consdata)->row = NULL;
    (*consdata)->existmultaggr = FALSE;
+   (*consdata)->nfixedzeros = 0;
+   (*consdata)->nfixedones = 0;
 
    if( nvars > 0 )
    {
       int v;
 
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      (*consdata)->varssize = nvars;
-      (*consdata)->nvars = nvars;
+      if( SCIPisProblemCompressionEnabled(scip) )
+      {
+         SCIP_VAR** varsbuffer;
+         int k;
+
+         /* allocate temporary buffer storage for active variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
+
+         k = 0;
+         /* collect fixed variables to compress the required memory */
+         for( v = 0; v < nvars; ++v )
+         {
+            assert(SCIPvarIsBinary(vars[v]));
+
+            /* already fixed variables account as fixed ones or zero, only unfixed are appended */
+            if( SCIPvarGetLbGlobal(vars[v]) > 0.5 )
+               (*consdata)->nfixedones++;
+            else if( SCIPvarGetUbGlobal(vars[v]) < 0.5 )
+               (*consdata)->nfixedzeros++;
+            else
+               varsbuffer[k++] = vars[v];
+         }
+
+         (*consdata)->varssize = k;
+         (*consdata)->nvars = k;
+         /* copy unfixed variables into constraint data */
+         if( k > 0 )
+         {
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
+         }
+
+         /* free temporary storage */
+         SCIPfreeBufferArray(scip, &varsbuffer);
+      }
+      else
+      {
+         /* for uncompressed copies, simply duplicate the whole array */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+         (*consdata)->varssize = nvars;
+         (*consdata)->nvars = nvars;
+      }
+
 
       if( SCIPisTransformed(scip) )
       {
@@ -585,8 +626,6 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->varssize = 0;
       (*consdata)->nvars = 0;
    }
-   (*consdata)->nfixedzeros = 0;
-   (*consdata)->nfixedones = 0;
    (*consdata)->setppctype = setppctype; /*lint !e641*/
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->cliqueadded = FALSE;
