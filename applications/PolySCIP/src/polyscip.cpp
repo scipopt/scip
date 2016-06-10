@@ -129,13 +129,12 @@ namespace polyscip {
             else {
                 std::cout << "Size bounded + unbounded: " << supported_.size() + unbounded_.size() << "\n";
                 auto v_rep = DDMethod(scip_, supported_, unbounded_);
-                v_rep.computeVRep();
+                v_rep.computeVRep_new();
                 std::cout << "DD method finished\n";
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
-                v_rep.printVRep(std::cout);
+                v_rep.printVRep(std::cout, true);
                 std::cout << "Initiating WSP\n";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
-                                                                                supported_.size()+unbounded_.size(),
                                                                                 v_rep.getVRep(),
                                                                                 v_rep.getHRep());
                 std::cout << "WSP initialized\n";
@@ -294,7 +293,6 @@ namespace polyscip {
         if (polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
             while (weight_space_poly_->hasUntestedWeight()) {
                 auto untested_weight = weight_space_poly_->getUntestedWeight();
-                global::print(untested_weight, "NEW WEIGHT: ");
                 SCIP_CALL( setWeightedObjective(untested_weight) );
                 SCIP_CALL( solve() );
                 auto scip_status = SCIPgetStatus(scip_);

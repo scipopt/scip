@@ -46,7 +46,6 @@ using std::vector;
 namespace polyscip {
 
     WeightSpacePolyhedron::WeightSpacePolyhedron(SCIP* scip,
-                                                 size_t expected_no_of_incident_facets,
                                                  V_RepC v_rep,
                                                  H_RepC h_rep)
             : curr_investigated_vertex_(nullptr),
@@ -57,7 +56,7 @@ namespace polyscip {
         for (const auto& f : facets_)
             f->print(std::cout);
         std::cout << "END FACETS: \n";
-        createInitialVerticesAndSkeleton(scip, expected_no_of_incident_facets, v_rep);
+        createInitialVerticesAndSkeleton(scip, v_rep);
     }
 
     void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepContainer h_rep) {
@@ -67,10 +66,9 @@ namespace polyscip {
     }
 
     void WeightSpacePolyhedron::createInitialVerticesAndSkeleton(SCIP* scip,
-                                                                 size_t expected_no_of_incident_facets,
                                                                  V_RepC v_rep) {
         for (auto& v : v_rep) {
-            auto inc_facets = computeIncidentFacets(scip, expected_no_of_incident_facets, v);
+            auto inc_facets = computeIncidentFacets(scip, v);
             auto vertex = new WeightSpaceVertex(std::move(inc_facets),
                                                 v.moveWeight(),
                                                 v.getWov());
@@ -93,18 +91,12 @@ namespace polyscip {
     }
 
     WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
-                                                                                       size_t expected_no_of_incident_facets,
                                                                                        const polytoperepresentation::V_RepT& v) const {
         auto facets = FacetContainer {};
         for (const auto& f : facets_) {
             if (SCIPisEQ(scip, f->getWeightedWeight(v.getWeight()), f->getWOVCoeff()*v.getWov()))
                 facets.push_back(f);
         }
-        if (facets.size() != expected_no_of_incident_facets) {
-            std::cerr << "Expected no of inc facets: " << expected_no_of_incident_facets << "\n";
-            std::cerr << "Computed no of inc facets: " << facets.size() << "\n";
-        }
-        assert (facets.size() == expected_no_of_incident_facets);
         return facets;
     }
 

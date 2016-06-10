@@ -68,7 +68,6 @@ namespace polyscip {
         * index with value 1; note: first index is 0
         */
         explicit WeightSpacePolyhedron(SCIP* scip,
-                                       std::size_t expected_no_of_incident_facets,
                                        V_RepC v_rep,
                                        H_RepC h_rep);
 
@@ -150,11 +149,9 @@ namespace polyscip {
         void createInitialFacets(H_RepC h_rep);
 
         void createInitialVerticesAndSkeleton(SCIP* scip,
-                                              std::size_t expected_no_of_incident_facets,
                                               V_RepC v_rep);
 
         FacetContainer computeIncidentFacets(SCIP* scip,
-                                             std::size_t expected_no_of_incident_facets,
                                              const polytoperepresentation::V_RepT& v) const;
 
         void updateWeightSpacePolyhedron(double epsilon,

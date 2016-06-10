@@ -36,13 +36,45 @@ namespace polyscip {
 
     namespace polytoperepresentation {
 
+        using H_RepT = std::pair<OutcomeType, ValueType>;
+        using H_RepContainer = std::vector<H_RepT>;
+
         class V_RepT {
         public:
-            V_RepT(WeightType weight_, ValueType wov);
-            V_RepT(WeightType weight, ValueType wov, std::size_t index);
-            void addIncFacetInd(std::size_t index);
-            void print(std::ostream& os, bool withIncidentFacets) const;
             friend class DoubleDescriptionMethod;
+            using SlackContainer = std::map<std::size_t, double>;  // maps keep keys sorted in contrast to unordered_maps!
+
+            explicit V_RepT(WeightType weight, ValueType wov);
+
+            explicit V_RepT(SCIP* scip, WeightType weight, ValueType wov, const H_RepContainer& current_h_rep);
+
+            explicit V_RepT(WeightType weight,
+                            ValueType wov,
+                            SlackContainer minus_inds,
+                            SlackContainer plus_inds,
+                            std::vector<std::size_t> zero_inds) = delete;
+
+            explicit V_RepT(SCIP* scip,
+                            const V_RepT& v,
+                            const V_RepT& w,
+                            const H_RepT& constraint,
+                            std::size_t index_of_constraint_in_hrep,
+                            const H_RepContainer& current_h_rep);
+
+            void addZeroSlackIndex(std::size_t index);
+            void addMinusSlack(std::size_t index, double value);
+            void addPlusSlack(std::size_t index, double value);
+            void print(std::ostream& os, bool withIncidentFacets) const;
+            double getPlusSlack(std::size_t index) const;
+            double getMinusSlack(std::size_t index) const;
+            bool hasValidSlackSets(std::size_t no_of_constraints) const;
+
+            //todo incorporate way for facets when WSP is not full-dimensional
+
+            /** Checks whether given parameter is a subset of member zero_slack_indices_
+             * @Return true if member zero_slack_indices_ is superset of given parameter; false otherwise
+             */
+            bool hasZeroSlackSuperSet(const std::vector<std::size_t>& indices) const;
 
             WeightType&& moveWeight() {return std::move(weight_);};
             WeightType getWeight() const {return weight_;};
@@ -51,12 +83,15 @@ namespace polyscip {
         private:
             WeightType weight_;
             ValueType wov_;
-            std::vector<std::size_t> zero_slack_hrep_indices_; // indices in h_rep_ which this object fulfills with equality
+            SlackContainer minus_slacks_;
+            SlackContainer plus_slacks_;
+            std::vector<std::size_t> zero_slacks_; // indices in h_rep_ which this object fulfills with equality
+
+            //std::vector<std::size_t> zero_slack_indices_; // indices in h_rep_ which this object fulfills with equality
         };
 
         using V_RepContainer = std::vector<V_RepT>;
-        using H_RepT = std::pair<OutcomeType, ValueType>;
-        using H_RepContainer = std::vector<H_RepT>;
+
 
         class DoubleDescriptionMethod {
         public:
@@ -67,6 +102,8 @@ namespace polyscip {
 
             void computeVRep();
 
+            void computeVRep_new();
+
             void printVRep(std::ostream &os = std::cout, bool withIncidentFacets = false) const;
 
             std::size_t size() const { return v_rep_.size(); };
@@ -75,9 +112,9 @@ namespace polyscip {
 
             H_RepContainer getHRep() const { return h_rep_; };
 
-            V_RepContainer &&moveVRep() { return std::move(v_rep_); };
+            //V_RepContainer &&moveVRep() { return std::move(v_rep_); };
 
-            H_RepContainer &&moveHRep() { return std::move(h_rep_); };
+            //H_RepContainer &&moveHRep() { return std::move(h_rep_); };
 
         private:
             using SlackContainer = std::vector<std::vector<std::size_t>>;
@@ -92,25 +129,39 @@ namespace polyscip {
              */
             void computeInitialRep(const OutcomeType &bounded);
 
+            void computeInitialRep_new(const OutcomeType &bounded);
+
             std::vector<std::size_t> computeZeroSlackSet(const V_RepT &ray) const;
+
+            std::vector<std::size_t> getCommonZeroSlacks(const V_RepT& v, const V_RepT& w) const;
 
             bool rayPairIsAdjacent(std::size_t plus_index,
                                    std::size_t minus_index,
                                    const SlackContainer &zero_slacks,
                                    const std::vector<V_RepT> &current_v_rep) const;
 
+            bool rayPairIsAdjacent_new(std::size_t plus_index,
+                                       std::size_t minus_index,
+                                       const std::vector<V_RepT> &current_v_rep) const;
+
             /** Check whether first parameter is multiple of second or third parameter
              */
-            bool isMultiple(const V_RepT &ray, const V_RepT &ray2) const;
+            bool isMultiple(const V_RepT& v, const V_RepT& w) const;
+            bool weightIsMultiple(SCIP* scip, double v_multiple, const V_RepT& v, const V_RepT& w) const;
 
-            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs(
-                    const std::vector<std::size_t> &plus_indices,
-                    const std::vector<std::size_t> &minus_indices,
-                    const SlackContainer &zero_slacks,
-                    const std::vector<V_RepT> &current_v_rep) const;
+            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs(const std::vector<std::size_t> &plus_indices,
+                                                                                  const std::vector<std::size_t> &minus_indices,
+                                                                                  const SlackContainer &zero_slacks,
+                                                                                  const std::vector<V_RepT> &current_v_rep) const;
+
+            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs_new(const std::vector<std::size_t>& plus_inds,
+                                                                                      const std::vector<std::size_t>& minus_inds,
+                                                                                      const std::vector<V_RepT>& current_rep) const;
 
             std::vector<V_RepT> extendVRep(std::vector<V_RepT> current_v_rep, const H_RepT &new_constraint);
-
+            std::vector<V_RepT> extendVRep_new(std::vector<V_RepT> current_rep,
+                                               const H_RepT &constraint,
+                                               std::size_t index_of_constraint_in_hrep);
             V_RepT computeNewRay(const V_RepT &plus_ray, const V_RepT &minus_ray, const H_RepT &new_constraint) const;
 
             void normalizeVRep(V_RepContainer &v_rep);
