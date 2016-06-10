@@ -1131,8 +1131,6 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real oldlowerbound;
-
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);

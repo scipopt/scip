@@ -209,8 +209,6 @@ SCIP_RETCODE constructCompression(
 
       /* initialize the covered-array with FALSE */
       SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, nleaveids) );
-//      for( k = 0; k < nleaveids; k++ )
-//         covered[k] = FALSE;
 
       current_id = start_id;
 
