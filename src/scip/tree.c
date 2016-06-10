@@ -3436,7 +3436,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
 
    loadedbasis = FALSE;
 
-   if( SCIPbasisstoreGetNBasis(basestore) > 0 && stat->npresoladdconss == 0 )
+   if( SCIPbasisstoreGetNBasis(basestore) > 0 )// && stat->npresoladdconss == 0 )
    {
       SCIP_BASIS* basis;
       SCIP_VAR** vars = NULL;

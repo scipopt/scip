@@ -1598,8 +1598,12 @@ static
 SCIP_RETCODE copyBasis(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< hashmap mapping source to target variables */
-   SCIP_HASHMAP*         consmap,            /**< hashmap mapping source to target constraints */
+   SCIP_HASHMAP*         varmap,             /**< hashmap mapping source to target variables, or NULL if both SCIPs are
+                                               *  equal (currently, this is only useful during reoptimization)
+                                               */
+   SCIP_HASHMAP*         consmap,            /**< hashmap mapping source to target constraints, or NULL if both SCIPs are
+                                               *  equal (currently, this is only useful during reoptimization)
+                                               */
    SCIP_ROW**            sourcecuts,         /**< array of source rows corresponding to a cut */
    SCIP_CONS**           targetcuts,         /**< array of target constraints corresponding to a cut */
    int                   nsourcecuts,        /**< number of source rows corresponding to a cut */
@@ -1620,7 +1624,9 @@ SCIP_RETCODE copyBasis(
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
-   assert(sourcescip != targetscip);
+   assert(varmap != NULL || sourcescip == targetscip);
+   assert(consmap != NULL || sourcescip == targetscip);
+   assert((varmap != NULL) == (consmap != NULL));
 
    /* get the variable and constraint data of the source scip */
    vars = sourcescip->transprob->vars;
@@ -1632,16 +1638,20 @@ SCIP_RETCODE copyBasis(
 
    /* allocate buffer */
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &varstat, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consstat, nconss + nsourcecuts) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetconss, nconss + nsourcecuts) );
 
    /* match the basis status of source-variables */
    for( i = 0; i < nvars; i++ )
    {
-      assert(SCIPhashmapExists(varmap, vars[i]));
+      assert(varmap == NULL || SCIPhashmapExists(varmap, vars[i]));
 
-      targetvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      if( varmap != NULL )
+         targetvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      else
+         targetvars[i] = vars[i];
+
       varstat[i] = getBasestatVar(vars[i]);
    }
 
@@ -1649,9 +1659,13 @@ SCIP_RETCODE copyBasis(
    for( i = 0; i < nconss; ++i )
    {
       assert(!uselprows);
-      assert(SCIPhashmapExists(consmap, conss[i]));
+      assert(consmap == NULL || SCIPhashmapExists(consmap, conss[i]));
 
-      targetconss[ntargetconss] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
+      if( consmap != NULL )
+         targetconss[ntargetconss] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
+      else
+         targetconss[ntargetconss] = conss[i];
+
       consstat[ntargetconss] = getBasestatCons(sourcescip, conss[i], &success);
 
       if( success )
@@ -27688,8 +27702,8 @@ SCIP_RETCODE SCIPcopyBasis(
    assert(!uselprows || targetcuts != NULL);
 
    /* return if source and target scip are the same */
-   if( sourcescip == targetscip )
-      return SCIP_OKAY;
+//   if( sourcescip == targetscip )
+//      return SCIP_OKAY;
 
    SCIP_CALL( copyBasis(sourcescip, targetscip, varmap, consmap, sourcecuts, targetcuts, nsourcerows, uselprows) );
 

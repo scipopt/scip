@@ -6061,6 +6061,8 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
     */
    if( isrootnode )
    {
+      SCIP_CALL( SCIPcopyBasis(set->scip, set->scip, NULL, NULL, NULL, NULL, 0, FALSE) );
+
       if( SCIPreoptGetNDualBndchgs(reopt, node) > 0 )
       {
          goto CHECK;
