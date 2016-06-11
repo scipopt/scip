@@ -154,6 +154,68 @@ SCIP_RETCODE calculateWeight(SCIP* scip, SCIP_Real lowerbounddiff, SCIP_Real upp
    return SCIP_OKAY;
 }
 
+static SCIP_RETCODE executeDeeperBranching(
+   SCIP* scip,
+   SCIP_Real lpobjval,
+   SCIP_VAR* deepbranchvar,
+   SCIP_Real deepbranchvarsolval,
+   SCIP_Real* highestweight,
+   SCIP_Real* sumweights,
+   SCIP_Real* nweights,
+   int* ncutoffs)
+{
+   SCIP_Bool deepdowncutoff;
+   SCIP_Bool deepupcutoff;
+   SCIP_Real deepdownobjval;
+   SCIP_Real deepupobjval;
+   SCIP_Real upperbounddiff;
+   SCIP_Real lowerbounddiff;
+   SCIP_Real currentweight;
+
+   assert(deepbranchvar != NULL);
+
+   SCIPdebugMessage("Going to branch on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+
+   /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
+   SCIP_CALL(executeBranchingOnUpperBound(scip, deepbranchvar, deepbranchvarsolval, &deepdownobjval, &deepdowncutoff));
+
+   /* go back one layer (we are currently in depth 2) */
+   SCIP_CALL(SCIPbacktrackProbing(scip, 1));
+
+   /* NOTE CS: Start of the probe branching on x <= floor(x') and y >= ceil(y') */
+   SCIP_CALL(executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, &deepupobjval, &deepupcutoff));
+
+   if( !deepdowncutoff && !deepupcutoff )
+   {
+      upperbounddiff = lpobjval - deepdownobjval;
+      lowerbounddiff = lpobjval - deepupobjval;
+
+      assert(SCIPisFeasPositive(scip, upperbounddiff));
+      assert(SCIPisFeasPositive(scip, lowerbounddiff));
+
+      SCIP_CALL(calculateWeight(scip, lowerbounddiff, upperbounddiff, &currentweight));
+      if( SCIPisFeasGE(scip, currentweight, *highestweight) )
+      {
+         *highestweight = currentweight;
+      }
+      *sumweights = *sumweights + currentweight;
+      *nweights = *nweights + 1;
+   }
+   if( deepdowncutoff )
+   {
+      *ncutoffs = *ncutoffs + 1;
+   }
+   if( deepdowncutoff )
+   {
+      *ncutoffs = *ncutoffs + 1;
+   }
+
+   /* go back one layer (we are currently in depth 2) */
+   SCIP_CALL(SCIPbacktrackProbing(scip, 1));
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*          scip,    /**< original SCIP data structure */
@@ -191,19 +253,15 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       for( i = 0; i < nlpcands; i++ )
       {
-         SCIP_Real deepdownobjval;
-         SCIP_Bool deepdowncutoff;
-         SCIP_Real deepupobjval;
-         SCIP_Bool deepupcutoff;
          SCIP_Real sumweightupperbound = 0;
          SCIP_Real sumweightsupperbound = 0;
          SCIP_Real sumweightlowerbound = 0;
          SCIP_Real sumweightslowerbound = 0;
          SCIP_Real highestweightupperbound = 0;
          SCIP_Real highestweightlowerbound = 0;
-         SCIP_Real ncutoffs = 0;
          SCIP_Real lambda;
          SCIP_Real totalweight;
+         int ncutoffs = 0;
 
          assert(lpcands[i] != NULL);
          assert(lpcandssol[i] != NULL);
@@ -234,52 +292,12 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                for( j = 0; j < ubnlpcands; j++ )
                {
-                  SCIP_Real upperbounddiff;
-                  SCIP_Real lowerbounddiff;
-                  SCIP_Real currentweight;
 
-                  assert( ublpcands[j] != NULL );
+                  SCIP_VAR* deepbranchvar = ublpcands[j];
+                  SCIP_Real deepbranchvarsolval = ublpcandssol[j];
 
-                  SCIPdebugMessage("Going to branch on variable <%s>\n", SCIPvarGetName(ublpcands[j]));
-
-                  /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
-                  SCIP_CALL( executeBranchingOnUpperBound(scip, ublpcands[j], ublpcandssol[j], &deepdownobjval,
-                     &deepdowncutoff) );
-
-                  /* go back one layer (we are currently in depth 2) */
-                  SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
-
-                  /* NOTE CS: Start of the probe branching on x <= floor(x') and y >= ceil(y') */
-                  SCIP_CALL( executeBranchingOnLowerBound(scip, ublpcands[j], ublpcandssol[j], &deepupobjval,
-                     &deepupcutoff) );
-
-                  if( !deepdowncutoff && !deepupcutoff )
-                  {
-                     upperbounddiff = lpobjval - deepdownobjval;
-                     lowerbounddiff = lpobjval - deepupobjval;
-
-                     assert( SCIPisFeasPositive(scip, upperbounddiff) );
-                     assert( SCIPisFeasPositive(scip, lowerbounddiff) );
-
-                     SCIP_CALL( calculateWeight(scip, lowerbounddiff, upperbounddiff, &currentweight) );
-                     if( SCIPisFeasGE(scip, currentweight, highestweightupperbound) )
-                     {
-                        highestweightupperbound = currentweight;
-                     }
-                     sumweightupperbound = sumweightupperbound + currentweight;
-                     sumweightsupperbound = sumweightsupperbound + 1;
-                  }
-                  if( deepdowncutoff )
-                  {
-                     ncutoffs = ncutoffs + 1;
-                  }
-                  if( deepdowncutoff )
-                  {
-                     ncutoffs = ncutoffs + 1;
-                  }
-
-                  /* go back one layer (we are currently in depth 2) */
-                  SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+                  SCIP_CALL( executeDeeperBranching(scip, lpobjval, deepbranchvar, deepbranchvarsolval,
+                     &highestweightupperbound, &sumweightupperbound, &sumweightsupperbound, &ncutoffs) );
                }
             }
             SCIPfreeBufferArray(scip, &ublpcandssol);
@@ -313,51 +331,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                for( k = 0; k < lbnlpcands; k++ )
                {
-                  SCIP_Real upperbounddiff;
-                  SCIP_Real lowerbounddiff;
-                  SCIP_Real currentweight;
+                  SCIP_VAR* deepbranchvar = lblpcands[k];
+                  SCIP_Real deepbranchvarsolval = lblpcandssol[k];
 
-                  assert( lblpcands[k] != NULL );
-
-                  /* NOTE CS: Start of the probe branching on x >= ceil(x') and y <= floor(y') */
-                  SCIP_CALL( executeBranchingOnUpperBound(scip, lblpcands[k], lblpcandssol[k], &deepdownobjval,
-                     &deepdowncutoff) );
-
-                  /* go back one layer (we are currently in depth 2) */
-                  SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
-
-                  /* NOTE CS: Start of the probe branching on x >= ceil(x') and y >= ceil(y') */
-                  SCIP_CALL( executeBranchingOnLowerBound(scip, lblpcands[k], lblpcandssol[k], &deepupobjval,
-                     &deepupcutoff) );
-
-
-                  if( !deepdowncutoff && !deepupcutoff )
-                  {
-                     upperbounddiff = lpobjval - deepdownobjval;
-                     lowerbounddiff = lpobjval - deepupobjval;
-
-                     assert( SCIPisFeasPositive(scip, upperbounddiff) );
-                     assert( SCIPisFeasPositive(scip, lowerbounddiff) );
-
-                     SCIP_CALL( calculateWeight(scip, lowerbounddiff, upperbounddiff, &currentweight) );
-                     if( SCIPisFeasGE(scip, currentweight, highestweightlowerbound) )
-                     {
-                        highestweightlowerbound = currentweight;
-                     }
-                     sumweightlowerbound = sumweightlowerbound + currentweight;
-                     sumweightslowerbound = sumweightslowerbound + 1;
-                  }
-                  if( deepdowncutoff )
-                  {
-                     ncutoffs = ncutoffs + 1;
-                  }
-                  if( deepdowncutoff )
-                  {
-                     ncutoffs = ncutoffs + 1;
-                  }
-
-                  /* go back one layer (we are currently in depth 2) */
-                  SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+                  SCIP_CALL( executeDeeperBranching(scip, lpobjval, deepbranchvar, deepbranchvarsolval,
+                     &highestweightlowerbound, &sumweightlowerbound, &sumweightslowerbound, &ncutoffs) );
                }
             }
          }
@@ -448,7 +426,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIP_Real* lpcandsfrac;
    int nlpcands;
    int npriolpcands;
-   int bestcand;
+   int bestcand = -1;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
