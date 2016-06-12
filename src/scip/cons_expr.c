@@ -789,7 +789,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
 
          currentchild = SCIPgetConsExprExprWalkCurrentChild(expr);
 
-         SCIP_CALL( SCIPsetConsExprExprChild(scip, expr, currentchild,
+         SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, currentchild,
                      (SCIP_CONSEXPR_EXPR*)expr->children[currentchild]->walkio.ptrval) );
 
          /* continue */
@@ -5125,7 +5125,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 }
 
 /** overwrites/replaces a child of an expressions */
-SCIP_RETCODE SCIPsetConsExprExprChild(
+SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
    int                     childidx,         /**< index of child being replaced */

@@ -609,7 +609,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    );
 
 /** overwrites/replaces a child of an expressions */
-SCIP_RETCODE SCIPsetConsExprExprChild(
+SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
    int                     childidx,         /**< index of child being replaced */
