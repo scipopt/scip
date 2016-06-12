@@ -1895,7 +1895,7 @@ int SCIPcompareConsExprExprs(
    exprhdlr1 = SCIPgetConsExprExprHdlr(expr1);
    exprhdlr2 = SCIPgetConsExprExprHdlr(expr2);
 
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2)) == 0 )
+   if( exprhdlr1 == exprhdlr2 )
    { /* expressions are of the same kind/type */
       if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
       {
@@ -2054,7 +2054,7 @@ int SCIPcompareConsExprExprs(
          return -1;
       }
       if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "val") == 0 )
-         return -1 * SCIPcompareConsExprExprs(expr2, expr1);
+         return -SCIPcompareConsExprExprs(expr2, expr1);
 
       if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
       {
@@ -2075,7 +2075,7 @@ int SCIPcompareConsExprExprs(
          return 1;
       }
       if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
-         return -1 * SCIPcompareConsExprExprs(expr2, expr1);
+         return -SCIPcompareConsExprExprs(expr2, expr1);
 
       if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
       {
@@ -2096,7 +2096,7 @@ int SCIPcompareConsExprExprs(
          return 1;
       }
       if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "sum") == 0 )
-         return -1 * SCIPcompareConsExprExprs(expr2, expr1);
+         return -SCIPcompareConsExprExprs(expr2, expr1);
 
       /* at this point we know type(expr1) != type(expr2) and neither is value, product nor sum;
        * if type(expr2) is var, then exp1 is some function */
