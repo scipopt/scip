@@ -701,18 +701,18 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
          type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
          /* use depth of expression to align output */
-         printf("%*s[%s]: ", nspaces, "", type);
+         SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
 
          if(strcmp(type, "var") == 0)
-            printf("%s\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)));
+            SCIPinfoMessage(scip, NULL, "%s\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)));
          else if(strcmp(type, "sum") == 0)
-            printf("%g\n", SCIPgetConsExprExprSumConstant(expr));
+            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
          else if(strcmp(type, "prod") == 0)
-            printf("%g\n", SCIPgetConsExprExprProductCoef(expr));
+            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
          else if(strcmp(type, "val") == 0)
-            printf("%g\n", SCIPgetConsExprExprValueValue(expr));
+            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
          else
-            printf("NOT IMPLEMENTED YET\n");
+            SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
          break;
       }
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
@@ -727,13 +727,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
 
          if( strcmp(type, "sum") == 0 )
          {
-            printf("%*s   ", nspaces, "");
-            printf("[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+            SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
+            SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
          }
          else if( strcmp(type, "prod") == 0 )
          {
-            printf("%*s   ", nspaces, "");
-            printf("[expo]: %g\n", SCIPgetConsExprExprProductExponents(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+            SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
+            SCIPinfoMessage(scip, NULL, "[expo]: %g\n", SCIPgetConsExprExprProductExponents(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
          }
          break;
       }
