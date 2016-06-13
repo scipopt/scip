@@ -326,7 +326,7 @@ SCIP_RETCODE selectSolsRandomized(
 }
 
 
-/** creates the all variables of the subproblem */
+/** determines the fixings for the CROSSOVER subproblem and checks whether enough fixings were found */
 static
 SCIP_RETCODE fixVariables(
    SCIP*                 scip,               /**< original SCIP data structure */
