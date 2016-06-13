@@ -838,11 +838,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * In particular Chapter 3
  * The other fountain of inspiration is the current simplifying methods in expr.c.
  *
- * Note: 1) some parts might not apply to what we want to do. This is just for recording
- *          the information and discussion
- *       2) one can think that a child of a product with a non integer exponent is another
- *          operator
- *
  * ============================================
  * Definition of simplified expressions
  * ============================================
@@ -877,76 +872,31 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * ? the exponent of an exponential is always 1
  *
  * ============================================
- * ORDER
+ * ORDERING RULES
  * ============================================
- * This is a partial order for *simplified* expressions. Just a copy of the order from
- * the book so feel very free to modify.
- *
+ * These rules define a total order on *simplified* expressions.
+ * There are two groups of rules, when comparing equal type expressions and different type expressions
  * Equal type expressions:
- * - u,v value expressions: u < v <=> val(u) < val(v)
- * - u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v)) <=> SCIPvarCompare(var(u),var(v))
- * - u,v are both sum or product expression: < is a lexicographical order on the terms,
- *    starting from the _last_ finds the first index i where they differ and u < v <=> u_i < v_i
- *    If they are the same in all indices, then u < v <=> nchildren(u) < nchildren(v)
- *       Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
- *       Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
- *       Question: Quadratics are one of the most important cases, does this make sense for quadratics?
- * - u, v expressions p,q numbers: u^q < v^p <=> u < v, and in case they are equal, q < p
- * - u, v are functional expressions (exp, log, etc): u < v <=> Kind(u) < Kind(v), or if they are equal, args(u) < args(v)
- *    (the first argument and so on), if all common arguments are equal, then the one with less arguments < other one
- *       Example: f(x) < f(y), g(x) < g(x,y)
- *       Note: Kind is the type of operator
+ * OR1: u,v value expressions: u < v <=> val(u) < val(v)
+ * OR2: u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v))
+ * OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
+ * OR4: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
+ *      or if such a k doesn't exist, then n < m.
  *
  * Different type expressions:
- * - u value expr, v other: u < v always
- * - u product, v sum, var or func: u < v <=> u < 1*v
- *       Note: This means we compare u with the 1*v product. Though 1*v is unsimplified, the rule applies.
- *       Example: 2*x^0.5 < x [Note that x is a var expression]
- * - u^p, v sum, var or func: u^p < v <=> u^p < v^1 (I think this is the same as the previous one)
- * - u sum, v var or func: u < v <=> u < 0+v
- * - u sum, v var or func: u < v <=> u < 0+v
- * - u var, v func: u < v always
- * - u, v and none of the rules apply: u < v <=> ! v < u
- *    Example: is x < x^2 ? x is var and x^2 product, so none applies, then
- *    we try to answer if x^2 < x <=> x^2 < x^1 <=> 2 < 1 <=> False, so x < x^2 is True
- *
- * ============================================
- * RULES
- * ============================================
- * - Distributive: sums up identical terms (a*u + b*u -> (a+b)*u)
- *                 multiplies up identical factors ( u^a * u^b -> u^(a+b) )
- *    Note: 1 + x + (1 + x) is not transformed into 2(1 + x), since the tree is
- *          +--------
- *          |   |   |
- *          1   x   +----
- *                  |   |
- *                  1   x
- *          and no two children are identical
- *
- * - Simple associative: sums/products don't have sums/products as children with coefficient/exponent 1
- *    Example: 1) x + (y + z) = x + y + z
- *             2) x * (y * z) = x * y * z
- *
- * - Associative: sums don't have sums as children
- *                products don't have products with integer exponent as children
- *    Example: 1) x + 2*(y + z) = x + 2*y + 2*z (if represented correctly)
- *             2) x * (y * z)^n = x * y^n * z^n
- *
- * - Commutative: sorts operands in sums and products in a specified order
- *    Example: 1) x*z*3*y = 3*x*y*z
- *
- * - Basic identities: u * 0 -> 0
- *                     u + 0 -> u
- *                     u * 1 -> u
- *                     0^p   -> 0 where p positive otherwise invalid expr (= infeasible?)
- *                     1^w   -> 1 with w whatever (!= infinity)
- *                     v^0   -> 1 (this is actually tricky, because v has to be != 0)
- *                     v^1   -> v
- *
- * - Numerical: no sum/product has more than one constant operand
- *              no function has only constant arguments
- *
- * - Unary: no sum/product has only one child with 1 as coefficient/exponent
+ * OR5: u value, v other: u < v always
+ * OR6: u sum, v product, var or func: u < v <=> u < 0+v
+ *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ * OR7: u product, v var or func: u < v <=> u < 1*v
+ *      In other words, u = \Pi_{i = 1}^n u_i ^ \alpha_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
+ *             do *not* have constant coefficients
+ * OR8: u var, v func: u < v always
+ * OR9: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
+ * OR10: none of the rules apply: u < v <=> ! v < u
+ * Examples:
+ * OR10: x < x^2 ?:  x is var and x^2 product, so none applies.
+ *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
  *
  * ============================================
  * Algorithm
@@ -1291,6 +1241,7 @@ SCIP_RETCODE buildExprSumFromExprlist(SCIP* scip, EXPRNODE* exprlist, SCIP_Real 
 }
 
 /* TODO: both functions are the same (buildExprSum|ProductFromExprlist), do something about it */
+/** builds a product expression with the elements of exprlist as its children */
 static
 SCIP_RETCODE buildExprProductFromExprlist(SCIP* scip, EXPRNODE* exprlist, SCIP_Real coef, SCIP_CONSEXPR_EXPR** expr)
 {
