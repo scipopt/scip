@@ -17,11 +17,26 @@
  * @brief  variable expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
+ * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/cons_expr_var.h"
+
+/** the order of two variable is given by their indices
+ * @note: this is affected by permutations in the problem! */
+static
+SCIP_DECL_CONSEXPR_EXPRCMP(compareVar)
+{
+   int index1;
+   int index2;
+
+   index1 = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr1));
+   index2 = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr2));
+
+   return index1 < index2 ? -1 : index1 == index2 ? 0 : 1;
+}
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
@@ -130,6 +145,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
 

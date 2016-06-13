@@ -17,6 +17,7 @@
  * @brief  sum and product expression handlers
  * @author Stefan Vigerske
  * @author Benjamin Mueller
+ * @author Felipe Serrano
  *
  * Implementation of the sum expression, representing a summation of a constant
  * and the arguments, each multiplied by a coefficients, i.e., sum_i a_i*x_i + constant.
@@ -103,11 +104,99 @@ SCIP_RETCODE createData(
    return SCIP_OKAY;
 }
 
+/* helper function to compare two sums or two products; see compareSum or compareProduct */
+static
+int compareSumProduct(
+   SCIP_Real                const1,          /**< expr1's constant/factor */
+   SCIP_Real*               coefs1,          /**< expr1's coefficients/exponents */
+   SCIP_CONSEXPR_EXPR**     children1,       /**< expr1's children */
+   int                      nchildren1,      /**< number of expr1's children */
+   SCIP_Real                const2,          /**< expr2's constant/factor */
+   SCIP_Real*               coefs2,          /**< expr2's coefficients/exponents */
+   SCIP_CONSEXPR_EXPR**     children2,       /**< expr2's children */
+   int                      nchildren2       /**< number of expr2's children */
+   )
+{
+   int compareresult;
+   int i;
+   int j;
+
+   for( i = nchildren1 - 1, j = nchildren2 - 1; i >= 0 && j >= 0; --i, --j )
+   {
+      compareresult = SCIPcompareConsExprExprs(children1[i], children2[j]);
+      if( compareresult != 0 )
+         return compareresult;
+      else
+      {
+         /* expressions are equal, compare coefficient/exponent */
+         if( coefs1[i] < coefs2[j] )
+            return -1;
+         if( coefs1[i] > coefs2[j] )
+            return 1;
+
+         /* coefficients are equal, continue */
+      }
+   }
+
+   /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
+   if( i < j )
+   {
+      assert(i == -1);
+      /* expr1 has less elements, hence expr1 < expr2 */
+      return -1;
+   }
+   if( i > j )
+   {
+      assert(j == -1);
+      /* expr1 has more elements, hence expr1 > expr2 */
+      return 1;
+   }
+
+   /* everything is equal, use constant/coefficient as tie-breaker */
+   assert(i == -1 && j == -1);
+   if( const1 < const2 )
+      return -1;
+   if( const1 > const2 )
+      return 1;
+
+   /* they are equal */
+   return 0;
+}
 
 /*
  * Callback methods of expression handler
  */
 
+/** the order of two sum expressions is a lexicographical order on the terms.
+ *  So, starting from the *last*, we find the first children where they differ.
+ *  Suppose that is children is the i-th children, then u < v <=> u_i < v_i.
+ *  If case there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
+ *  Otherwise, they are the same
+ *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
+ *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
+{
+   return compareSumProduct(
+         SCIPgetConsExprExprSumConstant(expr1), SCIPgetConsExprExprSumCoefs(expr1),
+         SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
+         SCIPgetConsExprExprSumConstant(expr2), SCIPgetConsExprExprSumCoefs(expr2),
+         SCIPgetConsExprExprChildren(expr2), SCIPgetConsExprExprNChildren(expr2));
+}
+
+/** the order of two product expressions is a lexicographical order on the terms. See compareSum
+ *  Example: y * z < x * y * z, x^2 * y^3 < x^3 * y^3
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
+{
+   return compareSumProduct(
+         SCIPgetConsExprExprProductCoef(expr1), SCIPgetConsExprExprProductExponents(expr1),
+         SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
+         SCIPgetConsExprExprProductCoef(expr2), SCIPgetConsExprExprProductExponents(expr2),
+         SCIPgetConsExprExprChildren(expr2), SCIPgetConsExprExprNChildren(expr2));
+}
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSum)
@@ -478,6 +567,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
 
@@ -566,6 +656,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
 

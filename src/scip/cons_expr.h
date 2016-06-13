@@ -70,6 +70,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
    SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata))  /**< expression data free callback (can be NULL if data does not need to be freed) */
 );
 
+/** set the compare callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCMP((*compare))    /**< compare callback (can be NULL) */
+);
+
 /** set the print callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
