@@ -1697,18 +1697,19 @@ SCIP_RETCODE testCompare(void)
 
    /* x+y < x*y*(x+y) */
    {
-      SCIP_CONSEXPR_EXPR* expr_x;
-      SCIP_CONSEXPR_EXPR* expr_y;
-      SCIP_CONSEXPR_EXPR* expr_z;
-      SCIP_CONSEXPR_EXPR* expr_posvalue;
-      SCIP_CONSEXPR_EXPR* expr_negvalue;
-      SCIP_CONSEXPR_EXPR* expr_sum;
-      SCIP_CONSEXPR_EXPR* expr_prod;
-      SCIP_CONSEXPR_EXPR* expr_halfx;
-      SCIP_CONSEXPR_EXPR* expr_sqrtx;
-      SCIP_CONSEXPR_EXPR* expr_sqrx;
-      SCIP_CONSEXPR_EXPR* expr_sum_fracpow;
-      SCIP_CONSEXPR_EXPR* expr_subprod_fracpow;
+      SCIP_CONSEXPR_EXPR* expr_x; /* x */
+      SCIP_CONSEXPR_EXPR* expr_y; /* y */
+      SCIP_CONSEXPR_EXPR* expr_z; /* z */
+      SCIP_CONSEXPR_EXPR* expr_posvalue; /* 1.3 */
+      SCIP_CONSEXPR_EXPR* expr_negvalue; /* -12.58 */
+      SCIP_CONSEXPR_EXPR* expr_sum; /* x + y */
+      SCIP_CONSEXPR_EXPR* expr_prod; /* x */
+      SCIP_CONSEXPR_EXPR* expr_halfx; /* 0.5 * x */
+      SCIP_CONSEXPR_EXPR* expr_sqrtx; /* \sqrt x */
+      SCIP_CONSEXPR_EXPR* expr_half_sqrx; /* 0.5 * x^2 */
+      SCIP_CONSEXPR_EXPR* expr_sqrx; /* x^2 */
+      SCIP_CONSEXPR_EXPR* expr_sum_fracpow; /* (x+y)^3.2 */
+      SCIP_CONSEXPR_EXPR* expr_subprod_fracpow; /* x*(y*(x+y))^2.8 */
       SCIP_CONSEXPR_EXPR* lin_expr1;
       SCIP_CONSEXPR_EXPR* lin_expr2;
       SCIP_CONSEXPR_EXPR* tmp;
@@ -1743,6 +1744,10 @@ SCIP_RETCODE testCompare(void)
       /* create expression x^2 */
       aux = 2.0;
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_sqrx, 1, &expr_x, &aux, 1.0) );
+
+      /* create expression 0.5*x^2 */
+      aux = 0.5;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_half_sqrx, 1, &expr_sqrx, &aux, 0.0) );
 
       /* create expression x*y*(x+y) */
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_x, NULL, 1.0) );
@@ -1812,6 +1817,8 @@ SCIP_RETCODE testCompare(void)
       ASSERT( SCIPcompareConsExprExprs(expr_subprod_fracpow, expr_subprod_fracpow) == 0 );
       ASSERT( SCIPcompareConsExprExprs(expr_subprod_fracpow, expr_z) == -1 );
       ASSERT( SCIPcompareConsExprExprs(expr_z, expr_subprod_fracpow) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sqrx, expr_half_sqrx) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_half_sqrx, expr_sqrx) == -1 );
 
       /* release */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
@@ -1825,6 +1832,7 @@ SCIP_RETCODE testCompare(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum_fracpow) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_halfx) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sqrx) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_half_sqrx) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sqrtx) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &tmp) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &lin_expr1) );
