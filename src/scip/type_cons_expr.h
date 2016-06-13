@@ -31,6 +31,21 @@
 extern "C" {
 #endif
 
+/** expression simplify callback
+ *
+ * the method receives the expression to be simplified and a pointer to store the simplified expression
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : expression to simplify
+ * output:
+ *  - simplifiedexpr : the simplified expression
+ */
+#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) int x (\
+   SCIP*                 scip,               \
+   SCIP_CONSEXPR_EXPR*   expr,               \
+   SCIP_CONSEXPR_EXPR**  simplifiedexpr)
+
 /** expression compare callback
  *
  * the method receives two expressions, expr1 and expr2. Must return
