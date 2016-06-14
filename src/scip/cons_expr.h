@@ -377,7 +377,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool*              cutoff            /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings (NULL if not needed) */
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */

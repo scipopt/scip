@@ -1092,7 +1092,7 @@ SCIP_RETCODE forwardPropCons(
 
    /* compare root interval with constraint sides; store the result in the root expression */
    SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
-   SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, cutoff);
+   SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, cutoff, NULL);
 
 #ifdef SCIP_DEBUG
    if( *cutoff )
@@ -3954,12 +3954,12 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
 }
 
 /** tightens the bounds of an expression; the new bounds are stored in the interval variable */
-EXTERN
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool*              cutoff            /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings (NULL if not needed) */
    )
 {
    assert(scip != NULL);
@@ -3978,17 +3978,47 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-   /* @todo use something similar to the minstrength in expr.c */
-   if( SCIPisGT(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)))
-      || SCIPisLT(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
+   /* do not consider very small tightenings */
+   if( SCIPisLbBetter(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))
+      || SCIPisUbBetter(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
    {
-      /* store new bounds */
+      /* intersect old bound with the found one */
       SCIPdebugMessage("tighten bounds from [%e, %e] -> ", expr->interval.inf, expr->interval.sup);
       SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
       SCIPdebugMessage("[%e, %e]\n", expr->interval.inf, expr->interval.sup);
 
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions*/
       expr->hastightened = TRUE;
+
+      /* do not thighten variable in problem stage (important for unittests) */
+      if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
+         return SCIP_OKAY;
+
+      /* @todo use here a faster comparison */
+      /* apply bound tightening directly for variable expressions */
+      if( strcmp(expr->exprhdlr->name, "var") == 0 )
+      {
+         SCIP_VAR* var;
+         SCIP_Bool tightened;
+
+         var = SCIPgetConsExprExprVarVar(expr);
+         assert(var != NULL);
+
+         /* tighten lower bound */
+         SCIP_CALL( SCIPtightenVarLb(scip, var, SCIPintervalGetInf(expr->interval), FALSE, cutoff, &tightened) );
+
+         if( ntightenings != NULL && tightened )
+            *ntightenings += 1;
+
+         /* tighten lower bound */
+         if( !cutoff )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, var, SCIPintervalGetSup(expr->interval), FALSE, cutoff, &tightened) );
+
+            if( ntightenings != NULL && tightened )
+               *ntightenings += 1;
+         }
+      }
    }
 
    return SCIP_OKAY;
