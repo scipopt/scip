@@ -2299,6 +2299,8 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
    SCIPdebugMessage("created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
 
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
    return SCIP_OKAY;
 }
 
