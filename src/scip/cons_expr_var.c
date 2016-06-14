@@ -229,12 +229,10 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    }
    else
    {
-      /* it is very important to capture the variable only once since there will be only one variable expression
-       * representing this variable
-       */
+      /* important to capture variable once since there will be only one variable expression representing this variable */
       SCIP_CALL( SCIPcaptureVar(scip, var) );
 
-      SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*) var, 0, NULL) );
 
       /* store the variable expression */
       SCIP_CALL( SCIPhashmapInsert(var2expr, (void*) var, (void*) *expr) );
