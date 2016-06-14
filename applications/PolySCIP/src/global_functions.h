@@ -25,6 +25,7 @@
 #include <iostream>
 #include <ostream>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -73,6 +74,19 @@ namespace polyscip {
                 os << elem << " ";
             os << "]";
         };
+
+        /** todo Doc - Stroustroup page 299
+         * /todo test narrow_cast
+         */
+        template<typename Target, typename Source>
+        Target narrow_cast(Source v) {
+            auto r = static_cast<Target>(v);
+            if (static_cast<Source>(r)!=v)
+                throw std::runtime_error("narrow_cast<>() failed\n");
+            return r;
+        };
+
+
     }
 }
 #endif //POLYSCIP_SRC_GLOBAL_FUNCTIONS_H_INCLUDED

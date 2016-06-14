@@ -80,7 +80,9 @@ namespace polyscip {
 
         void addResult(bool check_if_new_result, bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
 
+        void computeNonRedundantObjectives();
 
+        bool objIsRedundant(size_t index) const;
 
         /** Computes the supported solutions/rays and corresponding non-dominated points */
         SCIP_RETCODE computeSupported();
@@ -102,7 +104,8 @@ namespace polyscip {
         /**< objective sense of given problem */
         SCIP_Objsense obj_sense_;
         /**< number of objectives */
-        std::size_t no_objs_;
+        //std::size_t no_objs_;
+        std::vector<std::size_t> non_redundant_objs_;
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;
 

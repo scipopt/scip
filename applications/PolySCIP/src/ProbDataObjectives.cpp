@@ -111,6 +111,19 @@ SCIP_Real ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const polyscip::W
     return 0.0;
 }
 
+SCIP_Real ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const vector<size_t>& non_redund_objs, const polyscip::WeightType& weight) {
+  if (varToObjVals_->count(var)) {
+
+      for (auto i : non_redund_objs) {
+
+      }
+      return inner_product(weight.begin(), weight.end(), (*varToObjVals_)[var].begin(), 0.0);
+  }
+  else {
+      return 0.0;
+  }
+}
+
 /** return product of given solution value and objective coefficient w.r.t. given 
     objective number and variable */
 SCIP_Real ProbDataObjectives::getObjVal(SCIP_VAR* var, unsigned objNo, SCIP_Real varSolVal) {

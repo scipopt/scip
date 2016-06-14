@@ -15,6 +15,7 @@
 #include "polyscip.h"
 
 #include <algorithm> //std::transform, std::max
+#include <array>
 #include <cmath> //std::abs
 #include <fstream>
 #include <functional> //std::plus
@@ -41,6 +42,7 @@
 #include "weight_space_polyhedron.h"
 
 using std::addressof;
+using std::array;
 using std::cout;
 using std::get;
 using std::ostream;
@@ -57,7 +59,6 @@ namespace polyscip {
               polyscip_status_(PolyscipStatus::Unsolved),
               scip_(nullptr),
               obj_sense_(SCIP_OBJSENSE_MINIMIZE), // default objective sense is minimization
-              no_objs_(0),
               clock_total_(nullptr)
     {
         if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0)
@@ -94,9 +95,12 @@ namespace polyscip {
 
     SCIP_RETCODE Polyscip::computeUnitWeightOutcomes() {
         polyscip_status_ = PolyscipStatus::InitPhase;
-        auto weight = WeightType(no_objs_,0.);
-        std::size_t unit_weight_index=0;
-        while (unit_weight_index<no_objs_ && polyscip_status_==PolyscipStatus::InitPhase) {
+        auto weight = WeightType(non_redundant_objs_.size(),0.);
+        //std::size_t unit_weight_index=0;
+        //while (unit_weight_index<no_objs_ && polyscip_status_==PolyscipStatus::InitPhase) {
+        for (auto unit_weight_index : non_redundant_objs_) {
+            if (polyscip_status_ != PolyscipStatus::InitPhase)
+                break;
             weight[unit_weight_index] = 1.;
             SCIP_CALL(setWeightedObjective(weight));
             SCIP_CALL(solve());
@@ -113,7 +117,7 @@ namespace polyscip {
                 SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) );
             }
             weight[unit_weight_index] = 0.;
-            ++unit_weight_index;
+            //++unit_weight_index;
         }
         return SCIP_OKAY;
     }
@@ -149,7 +153,7 @@ namespace polyscip {
     SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight, bool with_presolving) {
         if (!with_presolving)
             SCIPsetPresolving(scip_, SCIP_PARAMSETTING_OFF, TRUE);
-        auto zero_weight = WeightType(no_objs_, 0.);
+        auto zero_weight = WeightType(non_redundant_objs_.size(), 0.);
         setWeightedObjective(zero_weight);
         solve(); // re-compute with zero objective
         if (!with_presolving)
@@ -224,7 +228,7 @@ namespace polyscip {
 
     void Polyscip::addResult(bool check_if_new_result, bool outcome_is_bounded, SCIP_SOL* primal_sol) {
         SolType sol;
-        auto outcome = OutcomeType(no_objs_,0.);
+        auto outcome = OutcomeType(non_redundant_objs_.size(),0.);
         auto no_vars = SCIPgetNOrigVars(scip_);
         auto vars = SCIPgetOrigVars(scip_);
         auto objs_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
@@ -234,9 +238,10 @@ namespace polyscip {
 
             if (!SCIPisZero(scip_, var_sol_val)) {
                 sol.emplace_back(SCIPvarGetName(vars[i]), var_sol_val);
-                auto var_obj_vals = OutcomeType(no_objs_,0.);
-                for (decltype(no_objs_) j=0; j<no_objs_; ++j)
-                    var_obj_vals[j] = objs_probdata->getObjVal(vars[i], j, var_sol_val);
+                auto var_obj_vals = OutcomeType(non_redundant_objs_.size(), 0.);
+                //for (decltype(no_objs_) j=0; j<no_objs_; ++j)
+                for (auto index : non_redundant_objs_)
+                    var_obj_vals[index] = objs_probdata->getObjVal(vars[i], index, var_sol_val);
                 std::transform(begin(outcome), end(outcome),
                                begin(var_obj_vals),
                                begin(outcome),
@@ -282,7 +287,7 @@ namespace polyscip {
         auto vars = SCIPgetOrigVars(scip_);
         auto no_vars = SCIPgetNOrigVars(scip_);
         for (auto i=0; i<no_vars; ++i) {
-            auto val = obj_probdata->getWeightedObjVal(vars[i], weight);
+            auto val = obj_probdata->getWeightedObjVal(vars[i], weight, non_redundant_objs_);
             SCIP_CALL( SCIPchgVarObj(scip_, vars[i], val) );
         }
         return SCIP_OKAY;
@@ -359,12 +364,100 @@ namespace polyscip {
         return file.good();
     }
 
+    void Polyscip::computeNonRedundantObjectives() {
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        assert (obj_probdata != nullptr);
+        auto vars = SCIPgetVars(scip_);
+        auto no_objs = obj_probdata->getNoAllObjs();
+        auto obj_to_nonzero_inds = vector<vector<size_t>>(no_objs);
+        auto obj_to_nonzero_vals = vector<vector<SCIP_Real>>(no_objs);
+        for (size_t obj_index=0; obj_index<no_objs; ++obj_index) {
+            auto nonzero_vars = obj_probdata->getNonZeroCoeffVars(obj_index);
+            auto nonzero_inds = vector<size_t>(nonzero_vars.size());
+            auto nonzero_vals = vector<SCIP_Real>(nonzero_vars.size());
+
+            std::transform(begin(nonzero_vars),
+                           end(nonzero_vars),
+                           begin(nonzero_inds),
+                           [](SCIP_VAR* var){return SCIPvarGetProbindex(var);});
+            std::sort(begin(nonzero_inds), end(nonzero_inds));
+            obj_to_nonzero_inds[obj_index] = nonzero_inds;
+
+            std::transform(begin(nonzero_inds),
+                           end(nonzero_inds),
+                           begin(nonzero_vals),
+                           [&obj_index, &obj_probdata, &vars](size_t var_ind){return obj_probdata->getObjCoeff(vars[var_ind], obj_index);});
+            obj_to_nonzero_vals[obj_index] = nonzero_vals;
+        }
+    }
+
+    bool Polyscip::objIsRedundant(size_t checked_obj) const {
+        bool is_redundant = false;
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        assert (obj_probdata != nullptr);
+        assert (checked_obj >= 1 && checked_obj < obj_probdata->getNoAllObjs());
+
+        SCIP_LPI* lpi;
+        auto retcode = SCIPlpiCreate(addressof(lpi), nullptr, "check objective redundancy", SCIP_OBJSEN_MINIMIZE);
+        assert (retcode == SCIP_OKAY);
+
+        auto no_cols = global::narrow_cast<int>(checked_obj);
+        auto obj = vector<SCIP_Real>(no_cols, 0.);
+        auto lb = vector<SCIP_Real>(no_cols, 0.);
+        auto ub = vector<SCIP_Real>(no_cols, SCIPinfinity(scip_));
+        auto beg = vector<int>(no_cols, 0);
+        size_t no_nonzero = 0;
+        for (size_t i = 0; i<checked_obj; ++i)
+            no_nonzero += obj_probdata->getNumberNonzeroCoeffs(i);
+
+        auto ind = vector<int>(no_nonzero, 0);
+        auto val = vector<SCIP_Real>(no_nonzero, 0.);
+
+        auto no_rows = SCIPgetNOrigVars(scip_);
+        auto vars = SCIPgetOrigVars(scip_);
+        auto lhs = vector<SCIP_Real>(no_rows, 0.);
+        auto rhs = vector<SCIP_Real>(no_rows, 0.);
+        for (auto i=0; i<no_rows; ++i) {
+            lhs[i] = obj_probdata->getObjCoeff(vars[i], checked_obj);
+            rhs[i] = lhs[i];
+        }
+        retcode =  SCIPlpiLoadColLP(lpi,
+                                    SCIP_OBJSEN_MINIMIZE,
+                                    no_cols,
+                                    obj.data(),
+                                    lb.data(),
+                                    ub.data(),
+                                    nullptr,
+                                    no_rows,
+                                    lhs.data(),
+                                    rhs.data(),
+                                    nullptr,
+                                    global::narrow_cast<int>(no_nonzero),
+                                    beg.data(),
+                                    ind.data(),
+                                    val.data());
+        assert (retcode == SCIP_OKAY);
+        retcode = SCIPlpiSolvePrimal(lpi);
+        assert (retcode == SCIP_OKAY);
+        if (SCIPlpiIsPrimalFeasible(lpi))
+            is_redundant = true;
+        else
+            assert (SCIPlpiIsPrimalInfeasible(lpi));
+
+        retcode = SCIPlpiFree(addressof(lpi));
+        assert (retcode == SCIP_OKAY);
+        return is_redundant;
+    }
+
     SCIP_RETCODE Polyscip::readProblem() {
         auto filename = cmd_line_args_.getProblemFile();
         SCIP_CALL( SCIPreadProb(scip_, filename.c_str(), "mop") );
         auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
         assert (obj_probdata != nullptr);
-        no_objs_ = obj_probdata->getNObjs();
+
+        for (size_t i=0; i<obj_probdata->getNoAllObjs(); ++i)
+            non_redundant_objs_.push_back(i);
+
         if (SCIPgetObjsense(scip_) == SCIP_OBJSENSE_MAXIMIZE) {
             obj_sense_ = SCIP_OBJSENSE_MAXIMIZE;
             // internally we treat problem as min problem and negate objective coefficients
@@ -372,14 +465,14 @@ namespace polyscip {
             obj_probdata->negateAllCoeffs();
         }
         if (cmd_line_args_.beVerbose()) {
-            cout << "No of objectives: " << no_objs_;
             cout << "\nObjective sense: ";
             if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE)
                 cout << "MAXIMIZE\n";
             else
                 cout << "MINIMIZE\n";
+            cout << "Overall number of objectives: " << obj_probdata->getNoAllObjs() << "\n";
+            cout << "Number of non-redundant objectives: " << non_redundant_objs_.size() << "\n";
         }
-        obj_probdata = nullptr;
         return SCIP_OKAY;
     }
 

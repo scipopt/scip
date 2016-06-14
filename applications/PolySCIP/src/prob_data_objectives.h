@@ -35,10 +35,12 @@ public:
 
     virtual ~ProbDataObjectives() {};
 
+    //TODO const correctness for getter
+
     /** Get number of objectives of given problem
      * @return number of objectives
      */
-    std::size_t getNObjs() {return name_to_no_.size();};
+    std::size_t getNoAllObjs() const {return name_to_no_.size();};
 
     /** Adds objective identifier */
     void addObjName(const char* name);
@@ -46,20 +48,27 @@ public:
     /** Adds objective coefficient w.r.t. given variable and objective */
     void addObjCoeff(SCIP_VAR *var, const char* obj_name, polyscip::ValueType val);
 
+    polyscip::ValueType getObjCoeff(SCIP_VAR* var, std::size_t obj_no);
+
     /** Returns scalar product of given weight and objectives w.r.t. given variable;
         if given variable is unknown, return 0.0 (since var can only have zero objective
         coefficients in given problem) */
-    polyscip::ValueType getWeightedObjVal(SCIP_VAR* var, const polyscip::WeightType& weight);
+    polyscip::ValueType getWeightedObjVal(SCIP_VAR* var, const polyscip::WeightType& weight) = delete;
+
+    polyscip::ValueType getWeightedObjVal(SCIP_VAR* var,
+                                          const polyscip::WeightType& weight,
+                                          const std::vector<std::size_t>& non_redundant_objs);
 
     /** Returns product of given solution value and objective coefficient w.r.t. given
         variable and objective number */
     polyscip::ValueType getObjVal(SCIP_VAR* var, std::size_t obj_no, polyscip::ValueType sol_val);
 
-    /** Returns identifier of given objective number */
-    std::string getName(std::size_t i) {return no_to_name_.at(i);};
+    std::vector<SCIP_VAR*> getNonZeroCoeffVars(std::size_t obj_index) const;
 
     /** Negates all objective coefficients of all variables */
     void negateAllCoeffs();
+
+    std::size_t getNumberNonzeroCoeffs(std::size_t obj_index) const;
 
     /** SCIP function for releasing memory */
     virtual SCIP_RETCODE scip_delorig(SCIP* scip) {return SCIP_OKAY;};
@@ -70,6 +79,8 @@ private:
 
     /**< maps SCIP variable to objective coefficients */
     std::unordered_map<SCIP_VAR*, polyscip::OutcomeType> var_to_coeffs_;
+
+    std::unordered_map<std::string, std::vector<SCIP_VAR*>> name_to_nonzero_coeffs_;
 
     /**< maps objective number to objective identifier */
     std::vector<std::string> no_to_name_;
