@@ -622,25 +622,16 @@ SCIP_RETCODE SCIPapplyRens(
       int nsubsols;
 
       /* catch LP events of sub-SCIP */
-      if( !heurdata->uselprows )
-      {
-         assert(eventhdlr != NULL);
-
-         SCIP_CALL( SCIPtransformProb(subscip) );
-         SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
-      }
+      assert(eventhdlr != NULL);
+      SCIP_CALL( SCIPtransformProb(subscip) );
+      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
       /* solve the subproblem */
       SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, maxnodes);
       retcode = SCIPsolve(subscip);
 
       /* drop LP events of sub-SCIP */
-      if( !heurdata->uselprows )
-      {
-         assert(eventhdlr != NULL);
-
-         SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-      }
+      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
       /* errors in solving the subproblem should not kill the overall solving process;
        * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.

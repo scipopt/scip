@@ -580,7 +580,7 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-   constant = 0l;
+   constant = 0L;
    (*consdata)->vars = NULL;
    (*consdata)->weights = NULL;
    (*consdata)->nvars = 0;
@@ -636,8 +636,8 @@ SCIP_RETCODE consdataCreate(
    }
 
    /* capacity has to be greater or equal to zero */
-   assert(capacity >= 0l);
-   assert(constant >= 0l);
+   assert(capacity >= 0);
+   assert(constant >= 0);
 
    (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity - constant;

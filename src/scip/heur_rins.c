@@ -564,24 +564,14 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* catch LP events of sub-SCIP */
-   if( !heurdata->uselprows )
-   {
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPtransformProb(subscip) );
-      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
-   }
+   SCIP_CALL( SCIPtransformProb(subscip) );
+   SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
-   if( !heurdata->uselprows )
-   {
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-   }
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.

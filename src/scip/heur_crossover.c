@@ -831,8 +831,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
@@ -864,6 +862,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #ifdef SCIP_DEBUG
    /* for debugging crossover, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
@@ -967,13 +967,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
 
    /* catch LP events of sub-SCIP */
-   if( !heurdata->uselprows )
-   {
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPtransformProb(subscip) );
-      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
-   }
+   SCIP_CALL( SCIPtransformProb(subscip) );
+   SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
    /* this code can be enabled whenever the subproblem should be written out */
 #ifdef SCIP_DISABLED_CODE
@@ -984,12 +979,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
-   if( !heurdata->uselprows )
-   {
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-   }
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* Errors in solving the subproblem should not kill the overall solving process.
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
