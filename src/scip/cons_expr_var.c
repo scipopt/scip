@@ -34,6 +34,23 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
    return SCIP_OKAY;
 }
 
+/** expression handler free callback */
+static
+SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrVar)
+{
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(exprhdlr != NULL);
+   assert(exprhdlrdata != NULL);
+
+   /* free variable to variable expression map */
+   assert(SCIPhashmapGetNEntries((SCIP_HASHMAP*) (*exprhdlrdata)) == 0);
+   SCIPhashmapFree((SCIP_HASHMAP**) exprhdlrdata);
+   *exprhdlrdata = NULL;
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
 {
@@ -63,12 +80,20 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataVar)
 {
+   SCIP_HASHMAP* var2expr;
    SCIP_VAR* var;
 
    assert(expr != NULL);
 
+   var2expr = (SCIP_HASHMAP*) SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlr(expr));
+   assert(var2expr != NULL);
+
    var = (SCIP_VAR*)SCIPgetConsExprExprData(expr);
    assert(var != NULL);
+   assert(SCIPhashmapExists(var2expr, (void*) var));
+
+   /* remove variable expression from the hashmap */
+   SCIP_CALL( SCIPhashmapRemove(var2expr, (void*) var) );
 
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
@@ -157,11 +182,16 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    )
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_HASHMAP* var2expr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, NULL) );
+
+   /* initialize hash map to reuse variable expressions for the same variables */
+   SCIP_CALL( SCIPhashmapCreate(&var2expr, SCIPblkmem(scip), 100) );
+
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, (SCIP_CONSEXPR_EXPRHDLRDATA*) var2expr) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, freehdlrVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
@@ -179,13 +209,36 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    SCIP_VAR*             var                 /**< variable to be stored */
    )
 {
+   SCIP_HASHMAP* var2expr;
+
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( SCIPcaptureVar(scip, var) );
+   var2expr = (SCIP_HASHMAP*) SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
+   assert(var2expr != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
+   /* check if we have already created a variable expression representing the given variable */
+   if( SCIPhashmapExists(var2expr, (void*) var) )
+   {
+      *expr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(var2expr, (void*) var);
+      assert(*expr != NULL);
+
+      /* we need to capture the variable expression */
+      SCIPcaptureConsExprExpr(*expr);
+   }
+   else
+   {
+      /* it is very important to capture the variable only once since there will be only one variable expression
+       * representing this variable
+       */
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
+
+      /* store the variable expression */
+      SCIP_CALL( SCIPhashmapInsert(var2expr, (void*) var, (void*) *expr) );
+   }
 
    return SCIP_OKAY;
 }
