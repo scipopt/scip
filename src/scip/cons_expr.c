@@ -359,10 +359,37 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
          }
          assert(targetexprhdlr != NULL);
 
-         /* copy expression data */
-         if( expr->exprhdlr->copydata != NULL )
+         /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
+         if( strcmp(expr->exprhdlr->name, "var") == 0 )
          {
-            SCIP_CALL( expr->exprhdlr->copydata(
+            SCIP_VAR* sourcevar;
+            SCIP_VAR* targetvar;
+
+            sourcevar = SCIPgetConsExprExprVarVar(expr);
+            assert(sourcevar != NULL);
+            targetvar = NULL;
+
+            /* get corresponding variable in the target SCIP */
+            if( scip != copydata->targetscip )
+            {
+               SCIP_CALL( copydata->mapvar(copydata->targetscip, &targetvar, scip, sourcevar, copydata->mapvardata) );
+               SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
+
+               /* we need to release once since it has been captured by the mapvar() and SCIPcreateConsExprExprVar() call */
+               SCIP_CALL( SCIPreleaseVar(copydata->targetscip, &targetvar) );
+            }
+            else
+            {
+               targetvar = sourcevar;
+               SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
+            }
+         }
+         else
+         {
+            /* copy expression data */
+            if( expr->exprhdlr->copydata != NULL )
+            {
+               SCIP_CALL( expr->exprhdlr->copydata(
                      copydata->targetscip,
                      targetexprhdlr,
                      &targetexprdata,
@@ -370,25 +397,26 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
                      expr,
                      copydata->mapvar,
                      copydata->mapvardata) );
-            assert(targetexprdata != NULL);
-         }
-         else if( expr->exprdata != NULL )
-         {
-            /* no copy callback for expression data implemented -> abort
-             * (we could also just copy the exprdata pointer, but for now let's say that
-             *  an expression handler should explicitly implement this behavior, if desired)
-             */
-            expr->walkio.ptrval = NULL;
-            *result = SCIP_CONSEXPREXPRWALK_SKIP;
-            return SCIP_OKAY;
-         }
-         else
-         {
-            targetexprdata = NULL;
-         }
+               assert(targetexprdata != NULL);
+            }
+            else if( expr->exprdata != NULL )
+            {
+               /* no copy callback for expression data implemented -> abort
+                * (we could also just copy the exprdata pointer, but for now let's say that
+                *  an expression handler should explicitly implement this behavior, if desired)
+                */
+               expr->walkio.ptrval = NULL;
+               *result = SCIP_CONSEXPREXPRWALK_SKIP;
+               return SCIP_OKAY;
+            }
+            else
+            {
+               targetexprdata = NULL;
+            }
 
-         /* create in targetexpr an expression of the same type as expr, but without children for now */
-         SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr, targetexprhdlr, targetexprdata, 0, NULL) );
+            /* create in targetexpr an expression of the same type as expr, but without children for now */
+            SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr, targetexprhdlr, targetexprdata, 0, NULL) );
+         }
 
          /* store targetexpr */
          expr->walkio.ptrval = targetexpr;
@@ -1010,7 +1038,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    assert(getvarsdata != NULL);
 
    /* @todo use faster check */
-   /* add variable expression if not seen so far */
+   /* add variable expression if not seen so far; note that there is exactly one variable expression representing a
+    * varible which means that we either can hash the expression or the coressponding variable
+    */
    if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
       assert(SCIPgetNVars(scip) >= getvarsdata->nvarexprs + 1);
