@@ -111,6 +111,7 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds in this constraint? */
+   unsigned int          isdatacreated:1;    /**< did we store needed data for this constraint so far? */
 };
 
 /** constraint handler data */
@@ -1108,44 +1109,6 @@ SCIP_RETCODE forwardPropCons(
 }
 
 /* export this function here, so it can be used by unittests but is not really part of the API */
-/** stores all variable expressions contained in a given expression */
-SCIP_RETCODE getVarExprs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
-   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
-   );
-SCIP_RETCODE getVarExprs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
-   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
-   )
-{
-   GETVARS_DATA getvarsdata;
-
-   assert(expr != NULL);
-   assert(varexprs != NULL);
-   assert(nvarexprs != NULL);
-
-   getvarsdata.nvarexprs = 0;
-   getvarsdata.varexprs = varexprs;
-
-   /* use a hash map to dicide (fast) whether we have seen a variable expression already */
-   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
-
-   /* collect all variable expressions */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
-   *nvarexprs = getvarsdata.nvarexprs;
-
-   /* @todo sort variable expressions here? */
-
-   SCIPhashmapFree(&getvarsdata.varexprsmap);
-
-   return SCIP_OKAY;
-}
-
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** propagates bounds for each sub-expression of a given set of constraints by starting from the root expressions; the
  *  expression will be traversed in breadth first search by using a queue
  *
@@ -1283,6 +1246,110 @@ SCIP_RETCODE reversePropConss(
          last = NULL;
    }
    assert(first == NULL && last == NULL);
+
+   return SCIP_OKAY;
+}
+
+/* export this function here, so it can be used by unittests but is not really part of the API */
+/** stores all variable expressions contained in a given expression */
+SCIP_RETCODE getVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   );
+SCIP_RETCODE getVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   )
+{
+   GETVARS_DATA getvarsdata;
+
+   assert(expr != NULL);
+   assert(varexprs != NULL);
+   assert(nvarexprs != NULL);
+
+   getvarsdata.nvarexprs = 0;
+   getvarsdata.varexprs = varexprs;
+
+   /* use a hash map to dicide (fast) whether we have seen a variable expression already */
+   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+
+   /* collect all variable expressions */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
+   *nvarexprs = getvarsdata.nvarexprs;
+
+   /* @todo sort variable expressions here? */
+
+   SCIPhashmapFree(&getvarsdata.varexprsmap);
+
+   return SCIP_OKAY;
+}
+
+/** stores all needed data into the constraint */
+static
+SCIP_RETCODE createData(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS*              cons              /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED);
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!consdata->isdatacreated);
+   assert(consdata->varexprs == NULL);
+   assert(consdata->nvarexprs == 0);
+
+   /* allocate (enough) memory to store all variable expressions */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip)) );
+
+   SCIP_CALL( getVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
+   assert(SCIPgetNVars(scip) >= consdata->nvarexprs);
+
+   if( SCIPgetNVars(scip) > consdata->nvarexprs )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip), consdata->nvarexprs) );
+   }
+
+   /* mark that data have been created */
+   consdata->isdatacreated = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees all the data created in createData() */
+static
+SCIP_RETCODE freeData(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS*              cons              /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED);
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* skip constraint since there is nothing to free */
+   if( !consdata->isdatacreated )
+      return SCIP_OKAY;
+
+   assert(consdata->varexprs != NULL);
+   assert(consdata->nvarexprs >= 0);
+
+   /* free variable expressions */
+   SCIPfreeBlockMemoryArrayNull(scip, &consdata->varexprs, consdata->nvarexprs);
+   consdata->varexprs = NULL;
+   consdata->nvarexprs = 0;
+
+   /* mark that data have been freed */
+   consdata->isdatacreated = TRUE;
 
    return SCIP_OKAY;
 }
