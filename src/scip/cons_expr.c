@@ -93,6 +93,7 @@ typedef struct
 {
    SCIP_CONS*            cons;               /**< constraint */
    SCIP_CONSEXPR_EXPR*   varexpr;            /**< variable expression */
+   int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 } SCIP_VAREVENTDATA;
 
 /** constraint data for expr constraints */
@@ -108,6 +109,8 @@ struct SCIP_ConsData
 
    SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution (used temporarily inside constraint handler) */
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
+
+   unsigned int          ispropagated:1;     /**< did we propagate the current bounds in this constraint? */
 };
 
 /** constraint handler data */
@@ -1328,13 +1331,42 @@ SCIP_RETCODE catchVarEvents(
    SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
    )
 {
+   SCIP_EVENTTYPE eventtype;
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   int i;
 
    assert(eventhdlr != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->varexprs != NULL);
+   assert(consdata->nvarexprs >= 0);
+   assert(consdata->vareventdata == NULL);
+
+   printf("catchVarEvents for %s\n", SCIPconsGetName(cons));
+
+   eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+
+   /* allocate enough memory to store all event data structs */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vareventdata, consdata->nvarexprs) );
+
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      assert(consdata->varexprs[i] != NULL);
+      assert(strcmp(consdata->varexprs[i]->exprhdlr->name, "var") == 0);
+
+      var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+      assert(var != NULL);
+
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(consdata->vareventdata[i])) );
+      consdata->vareventdata[i]->cons = cons;
+      consdata->vareventdata[i]->varexpr = consdata->varexprs[i];
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) consdata->vareventdata[i],
+            &(consdata->vareventdata[i]->filterpos)) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1347,13 +1379,42 @@ SCIP_RETCODE dropVarEvents(
    SCIP_CONS*            cons                /**< constraint for which to drop bound change events */
    )
 {
+   SCIP_EVENTTYPE eventtype;
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   int i;
 
    assert(eventhdlr != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->vareventdata != NULL);
+   assert(consdata->varexprs != NULL);
+   assert(consdata->nvarexprs >= 0);
+
+   eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+
+   printf("dropVarEvents for %s\n", SCIPconsGetName(cons));
+
+   for( i = consdata->nvarexprs - 1; i >= 0; --i )
+   {
+      var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+      assert(var != NULL);
+
+      assert(SCIPgetConsExprExprVarVar(consdata->vareventdata[i]->varexpr) == var);
+      assert(consdata->vareventdata[i]->cons == cons);
+      assert(consdata->vareventdata[i]->varexpr == consdata->varexprs[i]);
+      assert(consdata->vareventdata[i]->filterpos >= 0);
+
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) consdata->vareventdata[i], consdata->vareventdata[i]->filterpos) );
+
+      SCIPfreeBlockMemory(scip, &consdata->vareventdata[i]);
+      consdata->vareventdata[i] = NULL;
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &consdata->vareventdata, consdata->nvarexprs);
+   consdata->vareventdata = NULL;
 
    return SCIP_OKAY;
 }
@@ -1362,9 +1423,40 @@ SCIP_RETCODE dropVarEvents(
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
+   SCIP_EVENTTYPE eventtype;
+   SCIP_CONSEXPR_EXPR* varexpr;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS* cons;
+   SCIP_VAR* var;
+
+   assert(eventdata != NULL);
+
+   cons = ((SCIP_VAREVENTDATA*) eventdata)->cons;
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(cons != NULL);
+
+   varexpr = ((SCIP_VAREVENTDATA*) eventdata)->varexpr;
+   assert(varexpr != NULL);
+   assert(strcmp(varexpr->exprhdlr->name, "var") == 0);
+
+   var = SCIPgetConsExprExprVarVar(varexpr);
+   assert(var != NULL);
+
+   eventtype = SCIPeventGetType(event);
+   assert((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 || (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0);
+
+   SCIPdebugMessage("exec event %d for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
+
+   /* mark constraint to be propagated again */
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+   {
+      SCIPdebugMessage("propagate %s again\n", SCIPconsGetName(cons));
+      consdata->ispropagated = FALSE;
+   }
+
    return SCIP_OKAY;
 }
-
 
 /** get key of hash element */
 static
