@@ -1292,16 +1292,15 @@ SCIP_RETCODE getVarExprs(
 static
 SCIP_RETCODE createData(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS*              cons              /**< constraint */
+   SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
-   SCIP_CONSDATA* consdata;
-
-   assert(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED);
-   assert(cons != NULL);
-   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(!consdata->isdatacreated);
+
+   /* skip if we have created the constraint data already*/
+   if( consdata->isdatacreated )
+      return SCIP_OKAY;
+
    assert(consdata->varexprs == NULL);
    assert(consdata->nvarexprs == 0);
 
@@ -1326,17 +1325,12 @@ SCIP_RETCODE createData(
 static
 SCIP_RETCODE freeData(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS*              cons              /**< constraint */
+   SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
-   SCIP_CONSDATA* consdata;
-
-   assert(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED);
-   assert(cons != NULL);
-   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* skip constraint since there is nothing to free */
+   /* skip constraint since we have freed the data already */
    if( !consdata->isdatacreated )
       return SCIP_OKAY;
 
@@ -1349,7 +1343,7 @@ SCIP_RETCODE freeData(
    consdata->nvarexprs = 0;
 
    /* mark that data have been freed */
-   consdata->isdatacreated = TRUE;
+   consdata->isdatacreated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2441,33 +2435,33 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_CONSINIT(consInitExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   int i;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( createData(scip, SCIPconsGetData(conss[i])) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consInitExpr NULL
-#endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_CONSEXIT(consExitExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   int i;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( freeData(scip, SCIPconsGetData(conss[i])) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitExpr NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
@@ -2537,14 +2531,10 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert(consdata != NULL);
    assert(*consdata != NULL);
    assert((*consdata)->expr != NULL);
+   assert((*consdata)->nvarexprs == 0);
+   assert((*consdata)->varexprs == NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
-
-   /* free variable expression array */
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->varexprs, (*consdata)->nvarexprs);
-
-   /* free variable event data array */
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vareventdata, (*consdata)->nvarexprs);
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -2788,34 +2778,31 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 
 
 /** constraint activation notification method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSACTIVE(consActiveExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CALL( createData(scip, SCIPconsGetData(cons)) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consActiveExpr NULL
-#endif
 
 
 /** constraint deactivation notification method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CALL( freeData(scip, SCIPconsGetData(cons)) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consDeactiveExpr NULL
-#endif
-
 
 /** constraint enabling notification method of constraint handler */
 #if 0
