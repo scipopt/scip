@@ -4307,7 +4307,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
                *ntightenings += 1;
          }
 
+#ifdef SCIP_DEBUG
          SCIPdebugMessage("tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+#endif
       }
    }
 
