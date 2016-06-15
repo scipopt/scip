@@ -60,7 +60,8 @@ SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether the current node can be cutoff */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    );
 
 /* declaration as in cons_expr.c */
@@ -2201,6 +2202,7 @@ SCIP_RETCODE testPropagation(void)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONS* cons;
    SCIP_Bool cutoff;
+   int ntightenings;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -2237,7 +2239,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( forwardPropCons(scip, cons, FALSE, &cutoff) );
       assert(!cutoff);
-      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
 
       assert(SCIPisEQ(scip, expr->interval.inf, 0.5));
@@ -2273,7 +2275,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( forwardPropCons(scip, cons, FALSE, &cutoff) );
       assert(!cutoff);
-      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
 
       assert(SCIPisEQ(scip, expr->interval.inf, 1.0 / 8.0));
@@ -2301,7 +2303,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( forwardPropCons(scip, cons, FALSE, &cutoff) );
       assert(!cutoff);
-      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
 
       assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -2.5));
@@ -2323,7 +2325,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( forwardPropCons(scip, cons, FALSE, &cutoff) );
       assert(!cutoff);
-      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
 
       assert(SCIPisEQ(scip, expr->interval.inf, exp(-1)));
@@ -2347,7 +2349,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( forwardPropCons(scip, cons, FALSE, &cutoff) );
       assert(!cutoff);
-      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
 
       assert(SCIPisEQ(scip, expr->interval.inf, -1.0));
@@ -2427,7 +2429,7 @@ SCIP_RETCODE testPropagation(void)
       assert(CHECK_EXPRINTERVAL(scip, rootexpr, 0, log(3)));
 
       /* apply reverse propagation */
-      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -2627,13 +2629,13 @@ SCIP_RETCODE testPropagation(void)
       assert(CHECK_EXPRINTERVAL(scip, expr2, 3.5, 4.0));
 
       /* reverse propagation of cons2 should lead to new bounds on x and y */
-      SCIP_CALL( reversePropConss(scip, &cons2, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons2, 1, &cutoff, &ntightenings) );
       assert(!cutoff);
       assert(CHECK_EXPRINTERVAL(scip, expr2->children[0], 1.5, 2.0));
       assert(CHECK_EXPRINTERVAL(scip, expr2->children[1], 1.5, 2.0));
 
       /* reverse propagation of cons1 should lead to an empty interval for x */
-      SCIP_CALL( reversePropConss(scip, &cons1, 1, &cutoff) );
+      SCIP_CALL( reversePropConss(scip, &cons1, 1, &cutoff, &ntightenings) );
       assert(cutoff);
       assert(SCIPintervalIsEmpty(SCIPinfinity(scip), expr1->children[0]->interval));
 

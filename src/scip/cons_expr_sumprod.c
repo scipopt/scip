@@ -505,7 +505,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       SCIPintervalDivScalar(SCIPinfinity(scip), &childbounds, childbounds, exprdata->coefficients[c]);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff, NULL) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff, nreds) );
    }
 
    SCIPintervalSetRoundingMode(prevroundmode);
@@ -684,7 +684,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
             SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]), exprdata->coefficients[i], childbounds);
 
          /* try to tighten the bounds of the expression */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, cutoff, NULL) );
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, cutoff, nreds) );
       }
    }
 

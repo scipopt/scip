@@ -130,6 +130,8 @@ struct SCIP_ConshdlrData
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
 
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
+
+   int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -1120,13 +1122,15 @@ SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether the current node can be cutoff */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    );
 SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether the current node can be cutoff */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1139,8 +1143,10 @@ SCIP_RETCODE reversePropConss(
    assert(conss != NULL);
    assert(nconss >= 0);
    assert(cutoff != NULL);
+   assert(ntightenings != NULL);
 
    *cutoff = FALSE;
+   *ntightenings = 0;
    first = NULL;
    last = NULL;
 
@@ -1204,6 +1210,8 @@ SCIP_RETCODE reversePropConss(
          SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
          assert(nreds >= 0);
 
+         *ntightenings += nreds;
+
          /* add tightened children with at least one children to the queue */
          for( i = 0; i < expr->nchildren; ++i )
          {
@@ -1229,7 +1237,7 @@ SCIP_RETCODE reversePropConss(
                }
                else
                {
-                  /* @todo put child to the end of the queue */
+                  /* @todo put child to the end of the queue? */
                }
             }
          }
@@ -1247,6 +1255,94 @@ SCIP_RETCODE reversePropConss(
          last = NULL;
    }
    assert(first == NULL && last == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** calls domain propagation for a set of constraints */
+static
+SCIP_RETCODE propConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the propagation calls */
+   int*                  nchgbds             /**< buffer where to add the number of changed bounds */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool cutoff;
+   SCIP_Bool success;
+   int ntightenings;
+   int roundnr;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+   assert(result != NULL);
+   assert(nchgbds != NULL);
+   assert(*nchgbds >= 0);
+
+   /* no constraints to propagate */
+   if( nconss == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+   roundnr = 0;
+   ntightenings = 0;
+   cutoff = FALSE;
+
+   /* main propagation loop */
+   do
+   {
+      SCIPdebugMessage("start propagation round %d\n", roundnr);
+      success = FALSE;
+
+      /* apply forward propagation; recompute expression intervals if it is called for the first time */
+      for( i = 0; i < nconss; ++i )
+      {
+         consdata = SCIPconsGetData(conss[i]);
+         assert(consdata != NULL);
+
+         if( SCIPconsIsActive(conss[i]) && !consdata->ispropagated )
+         {
+            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff) );
+
+            if( cutoff )
+            {
+               SCIPdebugMessage(" -> cutoff\n");
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+
+            /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
+            consdata->ispropagated = TRUE;
+         }
+      }
+
+      /* apply backward propagation; mark constraint as propagated */
+      SCIP_CALL( reversePropConss(scip, conss, nconss, &cutoff, &ntightenings) );
+
+      /* @todo add parameter for the minimum number of tightenings to trigger a new propagation 1round */
+      success = ntightenings > 0;
+
+      if( cutoff )
+      {
+         SCIPdebugMessage(" -> cutoff\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+   }
+   while( success && ++roundnr < conshdlrdata->maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -1520,12 +1616,12 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    eventtype = SCIPeventGetType(event);
    assert((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 || (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0);
 
-   SCIPdebugMessage("exec event %d for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
+   SCIPdebugMessage("  exec event %d for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
    /* mark constraint to be propagated again */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
    {
-      SCIPdebugMessage("propagate %s again\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("  propagate %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
    }
 
@@ -2730,26 +2826,28 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   int nchgbds;
+
+   nchgbds = 0;
+
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, &nchgbds) );
+   assert(nchgbds >= 0);
 
    return SCIP_OKAY;
 }
-#else
-#define consPropExpr NULL
-#endif
 
 
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
-
    SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds) );
+   assert(*nchgbds >= 0);
 
    return SCIP_OKAY;
 }
@@ -4168,9 +4266,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       || SCIPisUbBetter(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
    {
       /* intersect old bound with the found one */
-      SCIPdebugMessage("tighten bounds from [%e, %e] -> ", expr->interval.inf, expr->interval.sup);
       SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
-      SCIPdebugMessage("[%e, %e]\n", expr->interval.inf, expr->interval.sup);
 
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions*/
       expr->hastightened = TRUE;
@@ -4185,6 +4281,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       {
          SCIP_VAR* var;
          SCIP_Bool tightened;
+
+#ifdef SCIP_DEBUG
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+         oldlb = SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(expr));
+         oldub = SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(expr));
+#endif
 
          var = SCIPgetConsExprExprVarVar(expr);
          assert(var != NULL);
@@ -4203,6 +4306,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
             if( ntightenings != NULL && tightened )
                *ntightenings += 1;
          }
+
+         SCIPdebugMessage("tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       }
    }
 
@@ -4678,7 +4783,9 @@ SCIP_RETCODE includeConshdlrExprBasic(
    }
 
    /* add expr constraint handler parameters */
-   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
+         "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
+         &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
