@@ -112,7 +112,7 @@ struct SCIP_ConsData
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds in this constraint? */
    unsigned int          eventscatched:1;    /**< did we already catched variable events? */
-   unsigned int          isdatacreated:1;    /**< did we store needed data for this constraint so far? */
+   unsigned int          isvarexprsstored:1; /**< did we store all variable exressions for this constraint? */
 };
 
 /** constraint handler data */
@@ -1289,17 +1289,17 @@ SCIP_RETCODE getVarExprs(
    return SCIP_OKAY;
 }
 
-/** stores all needed data into the constraint */
+/** stores all variable expressions into a given constraint */
 static
-SCIP_RETCODE createData(
+SCIP_RETCODE storeVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
    assert(consdata != NULL);
 
-   /* skip if we have created the constraint data already*/
-   if( consdata->isdatacreated )
+   /* skip if we have stored the variable expressions already*/
+   if( consdata->isvarexprsstored )
       return SCIP_OKAY;
 
    assert(consdata->varexprs == NULL);
@@ -1316,23 +1316,22 @@ SCIP_RETCODE createData(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip), consdata->nvarexprs) );
    }
 
-   /* mark that data have been created */
-   consdata->isdatacreated = TRUE;
+   consdata->isvarexprsstored = TRUE;
 
    return SCIP_OKAY;
 }
 
-/** frees all the data created in createData() */
+/** frees all variable expression stored in storeVarExprs() */
 static
-SCIP_RETCODE freeData(
+SCIP_RETCODE freeVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
    assert(consdata != NULL);
 
-   /* skip constraint since we have freed the data already */
-   if( !consdata->isdatacreated )
+   /* skip if we have stored the variable expressions already*/
+   if( !consdata->isvarexprsstored )
       return SCIP_OKAY;
 
    assert(consdata->varexprs != NULL);
@@ -1343,8 +1342,7 @@ SCIP_RETCODE freeData(
    consdata->varexprs = NULL;
    consdata->nvarexprs = 0;
 
-   /* mark that data have been freed */
-   consdata->isdatacreated = FALSE;
+   consdata->isvarexprsstored = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2461,7 +2459,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
 
    for( i = 0; i < nconss; ++i )
    {
-      SCIP_CALL( createData(scip, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
@@ -2482,7 +2480,7 @@ SCIP_DECL_CONSEXIT(consExitExpr)
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-      SCIP_CALL( freeData(scip, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
    }
 
    return SCIP_OKAY;
@@ -2813,7 +2811,7 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
 
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
-      SCIP_CALL( createData(scip, SCIPconsGetData(cons)) );
+      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(cons)) );
    }
 
    return SCIP_OKAY;
@@ -2832,7 +2830,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
-      SCIP_CALL( freeData(scip, SCIPconsGetData(cons)) );
+      SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(cons)) );
    }
 
    return SCIP_OKAY;
