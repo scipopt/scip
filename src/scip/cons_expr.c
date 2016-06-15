@@ -2902,10 +2902,6 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 static
 SCIP_DECL_CONSACTIVE(consActiveExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
