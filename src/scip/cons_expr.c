@@ -3204,6 +3204,16 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** gets the number of times the expression is currently captured */
+int SCIPgetConsExprExprNUses(
+   SCIP_CONSEXPR_EXPR*   expr               /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->nuses;
+}
+
 /** captures an expression (increments usage count) */
 void SCIPcaptureConsExprExpr(
    SCIP_CONSEXPR_EXPR*   expr               /**< expression */

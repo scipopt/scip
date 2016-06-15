@@ -220,6 +220,12 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
    SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
    );
 
+/** gets the number of times the expression is currently captured */
+EXTERN
+int SCIPgetConsExprExprNUses(
+   SCIP_CONSEXPR_EXPR*   expr               /**< expression */
+   );
+
 /** captures an expression (increments usage count) */
 EXTERN
 void SCIPcaptureConsExprExpr(
