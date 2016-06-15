@@ -142,7 +142,7 @@ int listLength(
    return length;
 }
 
-/** creates expression node and captures expression */
+/** creates expression node and capture expression */
 static
 SCIP_RETCODE createExprNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -167,21 +167,23 @@ SCIP_RETCODE createExprlistFromExprs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions stored in list */
    SCIP_Real*            coefs,              /**< coefficients/exponents of expression */
+   SCIP_Real             coef,               /**< coefficient/exponent to multiply coefs (distributing) */
    int                   nexprs,             /**< number of expressiosn */
    EXPRNODE**            list                /**< pointer to store list */
    )
 {
    int i;
 
-   assert(nexprs > 0);
    assert(*list == NULL);
+   assert(nexprs > 0);
+   assert(coef != 0);
 
    debugSimplify("building expr list from %d expressions\n", nexprs);
    for( i = nexprs - 1; i >= 0; --i )
    {
       EXPRNODE* newnode;
 
-      SCIP_CALL( createExprNode(scip, exprs[i], coefs[i], &newnode) );
+      SCIP_CALL( createExprNode(scip, exprs[i], coef*coefs[i], &newnode) );
       insertFirstList(newnode, list);
    }
    assert(nexprs > 1 || (*list)->next == NULL);
@@ -189,7 +191,7 @@ SCIP_RETCODE createExprlistFromExprs(
    return SCIP_OKAY;
 }
 
-/** frees expression node and releases expression */
+/** frees expression node and release expressions */
 static
 SCIP_RETCODE freeExprNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -219,12 +221,11 @@ SCIP_RETCODE freeExprlist(
    current = *exprlist;
    while( current != NULL )
    {
-      EXPRNODE* aux;
+      EXPRNODE* tofree;
 
-      aux = current->next;
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(current->expr)) );
-      SCIPfreeBuffer(scip, &current);
-      current = aux;
+      tofree = current;
+      current = current->next;
+      SCIP_CALL( freeExprNode(scip, &tofree) );
    }
    assert(current == NULL);
    *exprlist = NULL;
@@ -471,45 +472,41 @@ SCIP_RETCODE simplifyTerm(
       return SCIP_OKAY;
    }
 
-   /* enforces SS2 */
+   /* enforces SS2
+    * In contrast with simplifyFactor, we do not need to modify `expr`: we still need to distribute `coef` over `expr`
+    * and this operation can still render `expr` unsimplified, e.g., (sum 0 2 (sum 0 1/2 x)) -> (sum 0 1 (sum 0 1 x)),
+    * which is unsimplified. However, this is the only case. To see this, notice that we can regard `expr` as a sum
+    * with constant 0 (because the constant will be passed to the parent), so `expr` = (sum 0 coef1 expr1 coef2 expr2...)
+    * and after distributing `coef`, expr' = (sum coef1' expr1 coef2' expr2...) which will clearly satisfy SS1-SS4, SS6 and
+    * SS8. SS5 is satisfied, because if coef1 expr1 < coef2 expr2 are children in a simplified sum, then expr1 != expr2.
+    * Therefore expr1 < expr2, which implies that C1 * expr1 < C2 * expr2 for any C1, C2 different from 0
+    * So the only condition that can fail is SS7. In that case, expr = (sum coef1 expr1) and expr' = (sum 1 expr1)
+    * and so simplifying expr' gives expr1.
+    * All this can be done and checked without modifying expr
+    */
    if( strcmp(exprtype, "sum") == 0 )
    {
+      /* pass constant to parent */
       *simplifiedconstant += coef * SCIPgetConsExprExprSumConstant(expr);
-      SCIPsetConsExprExprSumConstant(expr, 0.0);
 
-      /* if the coef of this expr is not 1.0, we have to multiply (distribute) it with coef;
-       * this can render expr unsimplified (e.g., 2 * (1/2 * x) -> x)
-       * we simplify it and re-call the method with the simplified expr since its type could have changed
-       * Otherwise, just build a list with the children to merge it to the finalchildren
-       */
-      if( coef != 1.0 )
+      /* check if SS7 could fail after distributing */
+      if( SCIPgetConsExprExprNChildren(expr) == 1 && coef * SCIPgetConsExprExprSumCoefs(expr)[0] == 1.0 )
       {
-         /* at this point, expr is a simplified sum with constant 0: expr = (sum coef1 expr1 coef2 expr2...). We have to
-          * multiply expr by coef before grabbing its children for merging (SS2). After multiplying we obtain
-          * expr' = (sum coef1' expr1 coef2' expr2...) which will clearly satisfy SS1-SS4, SS6 and SS8.
-          * SS5 is satisfied, because if coef1 expr1 < coef2 expr2 are children in a simplified sum, then expr1 != expr2.
-          * Therefore expr1 < expr2, which implies that C1 * expr1 < C2 * expr2 for any C1, C2 different from 0
-          * So the only condition that can fail is SS7. In that case, expr = (sum coef1 expr1) and expr' = (sum 1 expr1)
-          * and so simplifying expr' gives  expr1
-          */
-         SCIPmultiplyConsExprExprSumByConstant(expr, coef);
-         if( SCIPgetConsExprExprNChildren(expr) == 1 && SCIPgetConsExprExprSumCoefs(expr)[0] == 1.0 )
-         {
-            /* child of expr (a simplified sum expression) cannot be another sum */
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0])), "sum") != 0);
-            /* this is not really a recursive call */
-            SCIP_CALL( simplifyTerm(scip, SCIPgetConsExprExprChildren(expr)[0], 1.0, simplifiedconstant, simplifiedterm) );
-            return SCIP_OKAY;
-         }
+         /* this is a one level recursion: expr is sum -> no child of expr is sum */
+         assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0])), "sum") != 0);
+         SCIP_CALL( simplifyTerm(scip, SCIPgetConsExprExprChildren(expr)[0], 1.0, simplifiedconstant, simplifiedterm) );
+         return SCIP_OKAY;
       }
+
+      /* distribute */
       SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
-               SCIPgetConsExprExprSumCoefs(expr), SCIPgetConsExprExprNChildren(expr), simplifiedterm) );
+               SCIPgetConsExprExprSumCoefs(expr), coef, SCIPgetConsExprExprNChildren(expr), simplifiedterm) );
 
       return SCIP_OKAY;
    }
    else
    {
-      /* other types of (simplified) expressions can be children of a simplified sum */
+      /* other types of (simplified) expressions can be a child of a simplified sum */
       assert(strcmp(exprtype, "sum") != 0);
       assert(strcmp(exprtype, "val") != 0);
 
@@ -601,7 +598,7 @@ SCIP_RETCODE simplifyFactor(
       else
       {
          SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(base),
-                  SCIPgetConsExprExprProductExponents(base), SCIPgetConsExprExprNChildren(base), simplifiedfactor) );
+                  SCIPgetConsExprExprProductExponents(base), 1.0, SCIPgetConsExprExprNChildren(base), simplifiedfactor) );
       }
 
       return SCIP_OKAY;
@@ -974,7 +971,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
     * children of a product expression they might be unsimplified) */
    unsimplifiedchildren = NULL;
    SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
-            SCIPgetConsExprExprProductExponents(expr), SCIPgetConsExprExprNChildren(expr), &unsimplifiedchildren) );
+            SCIPgetConsExprExprProductExponents(expr), 1.0, SCIPgetConsExprExprNChildren(expr), &unsimplifiedchildren) );
 
    /* while there are still children to process */
    finalchildren  = NULL;
