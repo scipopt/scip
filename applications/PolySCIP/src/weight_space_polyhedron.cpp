@@ -46,16 +46,16 @@ using std::vector;
 namespace polyscip {
 
     WeightSpacePolyhedron::WeightSpacePolyhedron(SCIP* scip,
+                                                 std::size_t dimension,
                                                  V_RepC v_rep,
                                                  H_RepC h_rep)
-            : curr_investigated_vertex_(nullptr),
+            : wsp_dimension_(dimension),
+              curr_investigated_vertex_(nullptr),
               skeleton_(),
               nodes_to_vertices_(skeleton_) {
+        assert (!v_rep.empty());
+        assert (!h_rep.empty());
         createInitialFacets(h_rep);
-        std::cout << "FACETS: \n";
-        for (const auto& f : facets_)
-            f->print(std::cout);
-        std::cout << "END FACETS: \n";
         createInitialVerticesAndSkeleton(scip, v_rep);
     }
 
@@ -161,14 +161,13 @@ namespace polyscip {
 
     bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w) {
         auto inc_facets = FacetContainer {};
-        assert (v->incident_facets_.size() == w->incident_facets_.size());
         std::set_intersection(v->incident_facets_.cbegin(),
                               v->incident_facets_.cend(),
                               w->incident_facets_.cbegin(),
                               w->incident_facets_.cend(),
                               std::back_inserter(inc_facets),
                               WeightSpaceFacet::compare_facet_ptr);
-        return inc_facets.size() + 1 == w->incident_facets_.size();
+        return inc_facets.size() >= wsp_dimension_-1;
     }
 
     void WeightSpacePolyhedron::updateWeightSpacePolyhedron(double epsilon,
@@ -209,7 +208,7 @@ namespace polyscip {
             auto convCombVal = calculateConvexCombValue(obs_vertex, non_obs_vertex, outcome, outcome_is_ray);
             assert (convCombVal > -0.001 && convCombVal < 1.001);
             auto new_vertex = new WeightSpaceVertex(convCombVal, obs_vertex, non_obs_vertex, outcome,
-                                                    outcome_is_ray);
+                                                    outcome_is_ray, wsp_dimension_);
             assert (std::find(begin(unmarked_vertices_), end(unmarked_vertices_), new_vertex) == end(unmarked_vertices_));
             unmarked_vertices_.push_back(new_vertex);
             new_vertices.push_back(new_vertex);
@@ -222,7 +221,8 @@ namespace polyscip {
             setStatusToObsolete(obs_vertex);
             deleteFromSkeleton(obs_vertex);
         }
-
+        std::cout << "NO UNMARKED VERTICES: " << unmarked_vertices_.size() << "\n";
+        std::cout << "NO MARKED VERTICES: " << marked_vertices_.size() << "\n";
     }
 
     double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,

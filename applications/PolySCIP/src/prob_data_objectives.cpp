@@ -35,26 +35,28 @@ void ProbDataObjectives::addObjName(const char* name)  {
     string obj_name(name);
     if (name_to_no_.count(obj_name) != 0)
         throw std::runtime_error("Name of objective already encountered: " + obj_name);
-    name_to_no_.insert({obj_name, getNoAllObjs()});
-    name_to_nonzero_coeffs_.insert({obj_name, {}});
+    name_to_no_.emplace(obj_name, getNoAllObjs());
+    name_to_nonzero_coeffs_.emplace(obj_name, vector<SCIP_VAR*>{});
     no_to_name_.push_back(obj_name);
 }
 
 void ProbDataObjectives::addObjCoeff(SCIP_VAR *var, const char* obj_name, ValueType val) {
-    if (val != 0.) {
+    if (val != 0) {
         if (var_to_coeffs_.count(var) == 0)
-            var_to_coeffs_.emplace(var, OutcomeType(getNoAllObjs(), 0.));
+            var_to_coeffs_.emplace(var, OutcomeType(getNoAllObjs(), 0));
         auto obj_no = name_to_no_.at(obj_name);
         var_to_coeffs_[var].at(obj_no) = val;
         name_to_nonzero_coeffs_.at(obj_name).push_back(var);
     }
+    else
+        std::cout << "addObjCoeff with zero value\n";
 }
 
 ValueType ProbDataObjectives::getObjCoeff(SCIP_VAR* var, size_t obj_no) {
     if (var_to_coeffs_.count(var))
         return (var_to_coeffs_[var]).at(obj_no);
     else
-        return 0.;
+        return 0;
 }
 
 std::size_t ProbDataObjectives::getNumberNonzeroCoeffs(std::size_t obj_index) const {
@@ -88,7 +90,7 @@ ValueType ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const WeightType&
                                   [&coeffs](ValueType w, size_t index) { return w * coeffs.at(index); });
     }
     else {
-        return 0.0;
+        return 0;
     }
 }
 
@@ -102,7 +104,7 @@ ValueType ProbDataObjectives::getObjVal(SCIP_VAR* var, size_t obj_no, ValueType 
     if (var_to_coeffs_.count(var))
         return var_to_coeffs_[var].at(obj_no) * sol_val;
     else
-        return 0.0;
+        return 0;
 }
 
 void ProbDataObjectives::negateAllCoeffs() {

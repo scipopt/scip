@@ -53,7 +53,8 @@ namespace polyscip {
                                          const WeightSpaceVertex *obs,
                                          const WeightSpaceVertex *non_obs,
                                          const OutcomeType &outcome,
-                                         bool outcome_is_ray)
+                                         bool outcome_is_ray,
+                                         size_t wsp_dimension)
     {
         assert (obs != non_obs);
         // get intersection of facets of obs and non_obs
@@ -63,7 +64,7 @@ namespace polyscip {
                               non_obs->incident_facets_.cend(),
                               std::back_inserter(incident_facets_),
                               WeightSpaceFacet::compare_facet_ptr);
-        assert(incident_facets_.size() + 1 == obs->incident_facets_.size());
+        assert(incident_facets_.size() >= wsp_dimension-1);
         // add additional facet with respect to outcome
         auto wov_coeff = outcome_is_ray ? 0.0 : 1.0;
         auto new_facet = std::make_shared<const WeightSpaceFacet>(outcome, wov_coeff);

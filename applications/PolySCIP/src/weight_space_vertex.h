@@ -56,7 +56,8 @@ namespace polyscip {
                                    const WeightSpaceVertex* obs,
                                    const WeightSpaceVertex* non_obs,
                                    const OutcomeType& outcome,
-                                   bool outcome_is_ray);
+                                   bool outcome_is_ray,
+                                   std::size_t wsp_dimension);
 
         /** Return associated weight of weight space vertex
          * @return weight of vertex

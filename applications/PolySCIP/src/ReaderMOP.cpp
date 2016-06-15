@@ -2159,6 +2159,8 @@ SCIP* scip /**< SCIP data structure */
       {
          /* row is objective */
          probdata->addObjCoeff(var, mpsinputField2(mpsi), val);
+         //std::cout << "obj : " << mpsinputField2(mpsi) << " val : " << val << "\n";
+
       }
       else if( !SCIPisZero(scip, val) )
       {
@@ -2176,6 +2178,7 @@ SCIP* scip /**< SCIP data structure */
          {
             /* row is objective */
             probdata->addObjCoeff(var, mpsinputField4(mpsi), val);
+            //std::cout << "obj : " << mpsinputField4(mpsi) << " val : " << val << "\n";
          }
          else if( !SCIPisZero(scip, val) )
          {

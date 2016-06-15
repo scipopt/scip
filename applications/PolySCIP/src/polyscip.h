@@ -80,9 +80,16 @@ namespace polyscip {
 
         void addResult(bool check_if_new_result, bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
 
-        void computeNonRedundantObjectives();
+        void computeNonRedundantObjectives(bool printObjectives);
 
-        bool objIsRedundant(size_t index) const;
+        void printObjective(std::size_t obj_no,
+                            const std::vector<int>& nonzero_indices,
+                            const std::vector<SCIP_Real>& nonzero_vals) const;
+
+        bool objIsRedundant(const std::vector<int>& begin_nonzeros,
+                            const std::vector< std::vector<int> >& obj_to_nonzero_indices,
+                            const std::vector< std::vector<SCIP_Real> >& obj_to_nonzero_values,
+                            std::size_t index) const;
 
         /** Computes the supported solutions/rays and corresponding non-dominated points */
         SCIP_RETCODE computeSupported();

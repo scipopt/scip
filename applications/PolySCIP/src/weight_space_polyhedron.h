@@ -68,6 +68,7 @@ namespace polyscip {
         * index with value 1; note: first index is 0
         */
         explicit WeightSpacePolyhedron(SCIP* scip,
+                                       std::size_t wsp_dimension,
                                        V_RepC v_rep,
                                        H_RepC h_rep);
 
@@ -190,6 +191,7 @@ namespace polyscip {
                            std::ostream& os,
                            bool printFacets) const;
 
+        std::size_t wsp_dimension_;
         /**< all marked weight space vertices */
         MarkedVertexContainer marked_vertices_;
         /**< all unmarked weight space vertices */
@@ -215,7 +217,6 @@ namespace polyscip {
             for (auto succ_it = std::begin(vertices); succ_it<it; ++succ_it) {
                 if (areAdjacent(*it, *succ_it))
                     skeleton_.addEdge(getNode(*it), getNode(*succ_it));
-
             }
         }
     };
