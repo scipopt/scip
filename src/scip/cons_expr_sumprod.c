@@ -539,7 +539,6 @@ SCIP_RETCODE simplifyFactor(
    )
 {
    const char* basetype;
-   SCIP_CONSEXPR_EXPR* simplifiedbase;
 
    assert(simplifiedfactor != NULL);
    assert(*simplifiedfactor == NULL);
@@ -556,8 +555,22 @@ SCIP_RETCODE simplifyFactor(
       return SCIP_OKAY;
    }
 
+#ifdef FOR_LATER
+   /* (expr^2)^0.5 = |expr| */
+   if( exponent == 0.5 && strcmp(basetype, "prod") == 0 && SCIPgetConsExprExprNChildren(base) == 1
+         && SCIPgetConsExprExprProductExponents(base)[0] == 2 )
+   {
+      SCIP_CONSEXPR_EXPR* simplifiedbase;
+
+      SCIP_CALL( SCIPcreateConsExprExprAbs(scip, SCIPfindConshdlr(scip, "expr"), &simplifiedbase, SCIPgetConsExprExprChildren(base)[0]) );
+      SCIP_CALL( createExprNode(scip, simplifiedbase, 1.0, simplifiedfactor) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedbase) );
+      return SCIP_OKAY;
+   }
+#endif
    /* currently, for a non-value base, we only try to do something for integer exponents
-    * TODO: maybe put this as an extra condition in each sub-case so that later is easier to extend */
+    * TODO: maybe put this as an extra condition in each sub-case so that later is easier to extend
+    * eg. SP3 below might still be applicable even with non-integer exponents */
    if( !SCIPisIntegral(scip, exponent) )
    {
       debugSimplify("[simplifyFactor] seeing some expr with non-integer exponent %g -> potential child\n", exponent);
@@ -582,17 +595,45 @@ SCIP_RETCODE simplifyFactor(
       assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
       debugSimplify("[simplifyFactor] seing a product with exponent %g: include its children\n", exponent);
 
-      /* if base is a product and exponent is not 1, we distribute the exponent among the base children.
-       * this operation can render base unsimplified (e.g., ((x^0.5 * y^0.5)^0.5)^4 -> (x^0.5 * y^0.5)^2).
-       * we simplify it and re-call the method with the simplified base since its type could have changed
-       * e.g., (<any_expr>^0.5)^2 is a product -> <any_expr> which is any expression
+      /* if `base` is a product and exponent is not 1, we have to duplicate the expression if someone else is pointing to it
+       * because we will modify it; we distribute the exponent among the children of `base`. this operation can render `base`
+       * unsimplified (e.g., ((x^0.5 * y^0.5)^0.5)^4 -> (x^0.5 * y^0.5)^2; in "functional" notation:
+       * (prod 4 (prod 0.5 (prod 0.5 x 0.5 y))) -> (prod 2 (prod 0.5 x 0.5 y)) which is unsimplified)
+       * we simplify it and re-call the method with the simplified base since its the factor we are actually interested in
+       * and its type could have changed e.g., (<any_expr>^0.5)^2 is a product, while <any_expr> is any expression
        */
       if( exponent != 1.0 )
       {
-         /* copy expression here! */
-         SCIPexponentiateConsExprExprProductByConstant(base, exponent);
-         SCIP_CALL( simplifyProduct(scip, base, &simplifiedbase) );
+         SCIP_CONSEXPR_EXPR* simplifiedbase;
+         SCIP_CONSEXPR_EXPR* basecopy;
+
+         /* copy: if simplifyFactor was called from a simplifyFactor, then `base` was created inside simplifyFactor
+          * and so has a nuses = 1. Otherwise, if it was called from simplifyProduct, then it as *at least* nuses = 2,
+          * one from whoever its father is and another from the nodeexpr that contains `base`. That's the reason why
+          * we know it has another parent only when nuses >= 3
+          * FIXME: THIS IS INCREDIBLE HORRIBLE. a possible fix is to release the nodeexpr before calling simplifyFactor
+          * from simplifyProduct. Sadly, that solution is also horrible...
+          */
+         if( SCIPgetConsExprExprNUses(base) > 2 )
+         {
+            SCIP_CALL( SCIPduplicateConsExprExpr(scip, base, &basecopy) );
+            /* distribute exponent */
+            SCIPexponentiateConsExprExprProductByConstant(basecopy, exponent);
+            /* simplify after distribution */
+            SCIP_CALL( simplifyProduct(scip, basecopy, &simplifiedbase) );
+            /* release copy */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &basecopy) );
+         }
+         else
+         {
+            /* distribute exponent */
+            SCIPexponentiateConsExprExprProductByConstant(base, exponent);
+            /* simplify after distribution */
+            SCIP_CALL( simplifyProduct(scip, base, &simplifiedbase) );
+         }
+         /* process factor again */
          SCIP_CALL( simplifyFactor(scip, simplifiedbase, 1.0, simplifiedcoef, simplifiedfactor) );
+         /* release simplifiedbase */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedbase) );
       }
       else
@@ -625,7 +666,7 @@ SCIP_RETCODE simplifyFactor(
    }
    else
    {
-      /* other types of (simplified) expressions can be children of a simplified sum */
+      /* other types of (simplified) expressions can be children of a simplified product */
       assert(strcmp(basetype, "prod") != 0);
       assert(strcmp(basetype, "val") != 0);
       SCIP_CALL( createExprNode(scip, base, exponent, simplifiedfactor) );
@@ -981,7 +1022,9 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       EXPRNODE* tomerge;
       EXPRNODE* first;
 
-      /* if the simplified coefficient is 0, we can return value 0 */
+      /* if the simplified coefficient is 0, we can return value 0
+       * TODO: there might be some domain error in the unprocessed expressions. should we take care of this?
+       */
       if( simplifiedcoef == 0.0 )
       {
          freeExprlist(scip, &finalchildren);
@@ -998,7 +1041,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       SCIP_CALL( simplifyFactor(scip, first->expr, first->coef, &simplifiedcoef, &tomerge) );
 
       /* enforces SP4 and SP5
-       * note: merge frees (or uses) the nodes of the list tomerge */
+       * note: merge frees (or uses) the nodes of the tomerge list */
       SCIP_CALL( mergeProductExprlist(scip, tomerge, &finalchildren, &unsimplifiedchildren) );
 
       /* free first */
@@ -1011,18 +1054,16 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    /* enforces SP10: if list is empty, return value */
    if( finalchildren == NULL )
    {
-      debugSimplify("got empty list, return value\n");
+      debugSimplify("got empty list, return value %g\n", simplifiedcoef);
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
    }
-   /* enforces SP9
-    * if finalchildren has only one expr and its exponent is 1.0 and coef 1.0, return that expr */
+   /* enforces SP9: if finalchildren has only one expr with exponent 1.0 and coef 1.0, return that expr */
    else if( finalchildren->next == NULL && finalchildren->coef == 1.0 && simplifiedcoef == 1.0 )
    {
       *simplifiedexpr = finalchildren->expr;
       SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
-   /* enforces SP8 and SP9
-    * if finalchildren has only one expr and its exponent is 1.0, but coef != 1.0, return sum with the expr as unique child */
+   /* enforces SP8 and SP9: if finalchildren has only one expr with exponent 1.0 and coef != 1.0, return (sum 0 coef expr) */
    else if( finalchildren->next == NULL && finalchildren->coef == 1.0 )
    {
       SCIP_CONSEXPR_EXPR* aux;
@@ -1030,14 +1071,13 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &aux,
                1, &(finalchildren->expr), &simplifiedcoef, 0.0) );
 
-      /* simplifying here is necessary, the product could have sums as children
-       * e.g., (prod 2 (sum 1 <x>)) -> (sum 2 (sum 1 <x>)) and that needs to be simplified
+      /* simplifying here is necessary, the product could have had sums as children
+       * e.g., (prod 2 1 (sum 1 <x>)) -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified
        */
       SCIP_CALL( simplifySum(scip, aux, simplifiedexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
    }
-   /* enforces SP8
-    * if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
+   /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
    else if( simplifiedcoef != 1.0 )
    {
       SCIP_CONSEXPR_EXPR* aux;
