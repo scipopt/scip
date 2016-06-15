@@ -375,7 +375,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
             targetvar = NULL;
 
             /* get corresponding variable in the target SCIP */
-            if( scip != copydata->targetscip )
+            if( copydata->mapvar != NULL )
             {
                SCIP_CALL( copydata->mapvar(copydata->targetscip, &targetvar, scip, sourcevar, copydata->mapvardata) );
                SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
