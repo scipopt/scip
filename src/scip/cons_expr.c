@@ -111,6 +111,7 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds in this constraint? */
+   unsigned int          eventscatched:1;    /**< did we already catched variable events? */
    unsigned int          isdatacreated:1;    /**< did we store needed data for this constraint so far? */
 };
 
@@ -1404,6 +1405,11 @@ SCIP_RETCODE catchVarEvents(
    assert(consdata != NULL);
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+
+   /* check if we have catched variable events already */
+   if( consdata->eventscatched )
+      return SCIP_OKAY;
+
    assert(consdata->vareventdata == NULL);
 
    printf("catchVarEvents for %s\n", SCIPconsGetName(cons));
@@ -1429,6 +1435,8 @@ SCIP_RETCODE catchVarEvents(
             &(consdata->vareventdata[i]->filterpos)) );
    }
 
+   consdata->eventscatched = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -1450,9 +1458,14 @@ SCIP_RETCODE dropVarEvents(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->vareventdata != NULL);
+
+   /* check if we have catched variable events already */
+   if( !consdata->eventscatched )
+      return SCIP_OKAY;
+
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+   assert(consdata->vareventdata != NULL);
 
    eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
 
@@ -1476,6 +1489,8 @@ SCIP_RETCODE dropVarEvents(
 
    SCIPfreeBlockMemoryArray(scip, &consdata->vareventdata, consdata->nvarexprs);
    consdata->vareventdata = NULL;
+
+   consdata->eventscatched = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2438,11 +2453,16 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 static
 SCIP_DECL_CONSINIT(consInitExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( createData(scip, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
    return SCIP_OKAY;
@@ -2453,10 +2473,15 @@ SCIP_DECL_CONSINIT(consInitExpr)
 static
 SCIP_DECL_CONSEXIT(consExitExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    for( i = 0; i < nconss; ++i )
    {
+      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
       SCIP_CALL( freeData(scip, SCIPconsGetData(conss[i])) );
    }
 
@@ -2781,8 +2806,12 @@ SCIP_DECL_CONSLOCK(consLockExpr)
 static
 SCIP_DECL_CONSACTIVE(consActiveExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
       SCIP_CALL( createData(scip, SCIPconsGetData(cons)) );
    }
@@ -2795,9 +2824,14 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
+      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       SCIP_CALL( freeData(scip, SCIPconsGetData(cons)) );
    }
 
@@ -2805,33 +2839,38 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
 }
 
 /** constraint enabling notification method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSENABLE(consEnableExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consEnableExpr NULL
-#endif
-
 
 /** constraint disabling notification method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSDISABLE(consDisableExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consDisableExpr NULL
-#endif
 
 /** variable deletion of constraint handler */
 #if 0
