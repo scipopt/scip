@@ -9944,7 +9944,7 @@ SCIP_RETCODE SCIPvarAddVub(
          assert(SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_COLUMN);
          assert(vubcoef != 0.0);
 
-         minvub = SCIPsetInfinity(set);
+         minvub = -SCIPsetInfinity(set);
          maxvub = SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
@@ -10105,7 +10105,7 @@ SCIP_RETCODE SCIPvarAddVub(
              * b < 0: x <= (minvub - maxvub) * z + maxvub
              */
 
-            assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
+            assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, -minvub));
 
             if( vubcoef >= 0.0 )
             {

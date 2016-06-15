@@ -467,7 +467,7 @@ SCIP_RETCODE dfs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int                   startnode,          /**< node to start the depth-first-search */
-   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  visited,            /**< array to store for each node, whether it was already visited */
    int*                  dfsstack,           /**< array of size number of nodes to store the stack;
                                               *   only needed for performance reasons */
    int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
@@ -486,11 +486,12 @@ SCIP_RETCODE dfs(
    int curridx;
    int nimpls;
    int idx;
+   int visitedflag = startnode + 1;
 
    assert(startnode >= 0);
    assert(startnode < propdata->nbounds);
    assert(visited != NULL);
-   assert(visited[startnode] == FALSE);
+   assert(visited[startnode] == 0);
    assert(dfsstack != NULL);
    assert(dfsnodes != NULL);
    assert(ndfsnodes != NULL);
@@ -510,8 +511,8 @@ SCIP_RETCODE dfs(
       curridx = dfsstack[stacksize - 1];
 
       /* mark current node as visited */
-      assert(visited[curridx] == (stacknextedge[stacksize - 1] != 0));
-      visited[curridx] = TRUE;
+      assert((visited[curridx] != 0) == (stacknextedge[stacksize - 1] != 0));
+      visited[curridx] = visitedflag;
 
       startvar = vars[getVarIndex(curridx)];
       lower = isIndexLowerbound(curridx);
@@ -558,6 +559,9 @@ SCIP_RETCODE dfs(
                   idx = varGetUbIndex(propdata, cliquevars[i]);
                else
                   idx = varGetLbIndex(propdata, cliquevars[i]);
+
+               if( idx >= 0 && visited[idx] == visitedflag )
+                  printf("found cycle\n");
 
                /* break when the first unvisited node is reached */
                if( idx >= 0 && !visited[idx] )
@@ -630,6 +634,9 @@ SCIP_RETCODE dfs(
 
                idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
+               if( idx >= 0 && visited[idx] == visitedflag )
+                  printf("found cycle\n");
+
                /* break when the first unvisited node is reached */
                if( idx >= 0 && !visited[idx] )
                   break;
@@ -677,6 +684,9 @@ SCIP_RETCODE dfs(
          {
             idx = vboundidx[i];
             assert(idx >= 0);
+
+            if( visited[idx] == visitedflag )
+               printf("found cycle\n");
 
             /* break when the first unvisited node is reached */
             if( !visited[idx] )
@@ -727,6 +737,7 @@ SCIP_RETCODE topologicalSort(
 {
    int* dfsstack;
    int* stacknextedge;
+   int* visited;
    int nsortednodes;
    int nbounds;
    int i;
@@ -738,13 +749,9 @@ SCIP_RETCODE topologicalSort(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stacknextedge, nbounds) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
 
    nsortednodes = 0;
-
-#ifndef NDEBUG
-   for( i = 0; i < nbounds; ++i )
-      assert(!propdata->inqueue[i]);
-#endif
 
    /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
     * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
@@ -752,15 +759,14 @@ SCIP_RETCODE topologicalSort(
     */
    for( i = 0; i < nbounds; ++i )
    {
-      if( !propdata->inqueue[i] )
+      if( !visited[i] )
       {
-         SCIP_CALL( dfs(scip, propdata, i, propdata->inqueue, dfsstack, stacknextedge, propdata->topoorder, &nsortednodes) );
+         SCIP_CALL( dfs(scip, propdata, i, visited, dfsstack, stacknextedge, propdata->topoorder, &nsortednodes) );
       }
    }
    assert(nsortednodes == nbounds);
 
-   BMSclearMemoryArray(propdata->inqueue, nbounds);
-
+   SCIPfreeBufferArray(scip, &visited);
    SCIPfreeBufferArray(scip, &stacknextedge);
    SCIPfreeBufferArray(scip, &dfsstack);
 
