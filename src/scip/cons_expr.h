@@ -371,7 +371,9 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    unsigned int            boxtag            /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    );
 
-/** tightens the bounds of an expression; the new bounds are stored in the interval variable */
+/** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
+ *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+ */
 EXTERN
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
