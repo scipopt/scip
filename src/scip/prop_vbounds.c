@@ -866,7 +866,7 @@ SCIP_RETCODE topologicalSort(
          SCIP_CALL( dfs(scip, propdata, i, visited, dfsstack, stacknextedge, propdata->topoorder, &nsortednodes, infeasible) );
       }
    }
-   assert(nsortednodes == nbounds);
+   assert((nsortednodes == nbounds) || (*infeasible));
 
    SCIPfreeBufferArray(scip, &visited);
    SCIPfreeBufferArray(scip, &stacknextedge);
