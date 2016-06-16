@@ -475,8 +475,9 @@ SCIP_RETCODE dfs(
                                               *   performance reasons */
    int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse
                                               *   dfs order */
-   int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at
+   int*                  ndfsnodes,          /**< pointer to store number of nodes that can be reached starting at
                                               *   startnode */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_VAR** vars;
@@ -486,7 +487,7 @@ SCIP_RETCODE dfs(
    int curridx;
    int nimpls;
    int idx;
-   int visitedflag = startnode + 1;
+   int visitedflag = startnode + 2;
 
    assert(startnode >= 0);
    assert(startnode < propdata->nbounds);
@@ -495,6 +496,9 @@ SCIP_RETCODE dfs(
    assert(dfsstack != NULL);
    assert(dfsnodes != NULL);
    assert(ndfsnodes != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    vars = propdata->vars;
 
@@ -669,7 +673,7 @@ SCIP_RETCODE dfs(
       }
       assert(stacknextedge[stacksize - 1] >= nimpls);
 
-      /* go over edges corresponding by varbounds */
+      /* go over edges corresponding to varbounds */
       if( propdata->usevbounds )
       {
          int nvbounds;
@@ -686,12 +690,106 @@ SCIP_RETCODE dfs(
             assert(idx >= 0);
 
             if( visited[idx] == visitedflag )
+            {
+               int* tmpvboundidx;
+               int ntmpvbounds;
+               int j;
+               int k;
+               SCIP_Real coef = 1.0;
+               SCIP_Real constant = 0.0;
+               SCIP_Bool islower;
+               SCIP_Real newbound;
+
                printf("found cycle\n");
+
+               for( j = stacksize - 1; dfsstack[j] != idx && j >= 0; --j );
+               assert(j >= 0);
+
+               for( ; j < stacksize - 1; ++j )
+               {
+                  tmpvboundidx = propdata->vboundboundedidx[dfsstack[j]];
+                  ntmpvbounds = propdata->nvbounds[dfsstack[j]];
+
+                  for( k = 0; k < ntmpvbounds; ++k )
+                  {
+                     if( tmpvboundidx[k] == dfsstack[j+1] )
+                     {
+                        printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+                           indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
+                           propdata->vboundcoefs[dfsstack[j]][k], propdata->vboundconstants[dfsstack[j]][k],
+                           indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
+
+                        coef = coef * propdata->vboundcoefs[dfsstack[j]][k];
+                        constant = constant * propdata->vboundcoefs[dfsstack[j]][k] + propdata->vboundconstants[dfsstack[j]][k];
+
+                        break;
+                     }
+                  }
+               }
+
+               printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+                  indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
+                  propdata->vboundcoefs[curridx][i], propdata->vboundconstants[curridx][i],
+                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+               coef = coef * propdata->vboundcoefs[curridx][i];
+               constant = constant * propdata->vboundcoefs[curridx][i] + propdata->vboundconstants[curridx][i];
+
+
+               printf("==> %s(%s) -- (*%g + %g) --> %s(%s)\n",
+                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]),
+                  coef, constant,
+                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+               islower = isIndexLowerbound(idx);
+
+               if( SCIPisEQ(scip, coef, 1.0) )
+               {
+                  if( islower && SCIPisFeasNegative(scip, constant) )
+                  {
+                     printf("-> infeasible aggregated variable bound relation 0 >= %g\n", constant);
+                     *infeasible = TRUE;
+                  }
+                  else if( !islower && SCIPisFeasPositive(scip, constant) )
+                  {
+                     printf("-> infeasible aggregated variable bound relation 0 <= %g\n", constant);
+                     *infeasible = TRUE;
+                  }
+               }
+               else
+               {
+                  SCIP_Bool tightened;
+
+                  newbound = constant / (1.0 - coef);
+
+                  if( SCIPisGT(scip, coef, 1.0) )
+                     islower = !islower;
+
+                  if( islower )
+                  {
+                     printf("-> found new lower bound: <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[getVarIndex(idx)]),
+                        SCIPvarGetLbLocal(vars[getVarIndex(idx)]), SCIPvarGetUbLocal(vars[getVarIndex(idx)]), newbound);
+                     SCIP_CALL( SCIPtightenVarLb(scip, vars[getVarIndex(idx)], newbound, FALSE, infeasible, &tightened) );
+                  }
+                  else
+                  {
+                     printf("-> found new upper bound: <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[getVarIndex(idx)]),
+                        SCIPvarGetLbLocal(vars[getVarIndex(idx)]), SCIPvarGetUbLocal(vars[getVarIndex(idx)]), newbound);
+                     SCIP_CALL( SCIPtightenVarUb(scip, vars[getVarIndex(idx)], newbound, FALSE, infeasible, &tightened) );
+                  }
+               }
+               if( *infeasible )
+                  break;
+            }
 
             /* break when the first unvisited node is reached */
             if( !visited[idx] )
                break;
          }
+
+         if( *infeasible )
+            break;
+
 
          /* we stopped because we found an unhandled node and not because we reached the end of the list */
          if( i < nvbounds )
@@ -721,6 +819,8 @@ SCIP_RETCODE dfs(
 
       /* store node in the sorted nodes array */
       dfsnodes[(*ndfsnodes)] = curridx;
+      assert(visited[curridx]);
+      visited[curridx] = 1;
       (*ndfsnodes)++;
    }
 
@@ -732,7 +832,8 @@ SCIP_RETCODE dfs(
 static
 SCIP_RETCODE topologicalSort(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    int* dfsstack;
@@ -744,6 +845,7 @@ SCIP_RETCODE topologicalSort(
 
    assert(scip != NULL);
    assert(propdata != NULL);
+   assert(infeasible != NULL);
 
    nbounds = propdata->nbounds;
 
@@ -757,11 +859,11 @@ SCIP_RETCODE topologicalSort(
     * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
     * reverse topological order
     */
-   for( i = 0; i < nbounds; ++i )
+   for( i = 0; i < nbounds && !(*infeasible); ++i )
    {
       if( !visited[i] )
       {
-         SCIP_CALL( dfs(scip, propdata, i, visited, dfsstack, stacknextedge, propdata->topoorder, &nsortednodes) );
+         SCIP_CALL( dfs(scip, propdata, i, visited, dfsstack, stacknextedge, propdata->topoorder, &nsortednodes, infeasible) );
       }
    }
    assert(nsortednodes == nbounds);
@@ -777,7 +879,8 @@ SCIP_RETCODE topologicalSort(
 static
 SCIP_RETCODE initData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop                /**< vbounds propagator */
+   SCIP_PROP*            prop,               /**< vbounds propagator */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -790,6 +893,7 @@ SCIP_RETCODE initData(
 
    assert(scip != NULL);
    assert(prop != NULL);
+   assert(infeasible != NULL);
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -801,6 +905,8 @@ SCIP_RETCODE initData(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    nbounds = 2 * nvars;
+
+   *infeasible = FALSE;
 
    /* store size of the bounds of variables array */
    propdata->nbounds = nbounds;
@@ -932,7 +1038,7 @@ SCIP_RETCODE initData(
    /* sort the bounds topologically */
    if( propdata->dotoposort )
    {
-      SCIP_CALL( topologicalSort(scip, propdata) );
+      SCIP_CALL( topologicalSort(scip, propdata, infeasible) );
    }
 
    /* catch variable events */
@@ -1428,7 +1534,15 @@ SCIP_RETCODE propagateVbounds(
    /* initialize propagator data needed for propagation, if not done yet */
    if( !propdata->initialized )
    {
-      SCIP_CALL( initData(scip, prop) );
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( initData(scip, prop, &infeasible) );
+
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
    }
    assert(propdata->nbounds == 0 || propdata->propqueue != NULL);
 

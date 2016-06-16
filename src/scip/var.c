@@ -9571,7 +9571,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          assert(vlbcoef != 0.0);
 
          minvlb = -SCIPsetInfinity(set);
-         maxvlb = -SCIPsetInfinity(set);
+         maxvlb = SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
@@ -9740,7 +9740,7 @@ SCIP_RETCODE SCIPvarAddVlb(
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
              */
 
-            assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
+            assert(!SCIPsetIsInfinity(set, maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
 
             if( vlbcoef >= 0.0 )
             {
