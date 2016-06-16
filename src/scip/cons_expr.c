@@ -191,14 +191,6 @@ struct SCIP_ConsExpr_PrintDotData
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
 
-/** data to represent elements of a queue */
-typedef struct Queueelem QUEUEELEM;
-struct Queueelem
-{
-   SCIP_CONSEXPR_EXPR*     expr;             /**< expression of the queue element */
-   QUEUEELEM*              next;             /**< pointer to access the next element of the queue */
-};
-
 /*
  * Local methods
  */
@@ -1131,9 +1123,7 @@ SCIP_RETCODE reversePropConss(
    )
 {
    SCIP_CONSDATA* consdata;
-   QUEUEELEM* first;
-   QUEUEELEM* last;
-   QUEUEELEM* tuple;
+   SCIP_QUEUE* queue;
    int i;
 
    assert(scip != NULL);
@@ -1144,11 +1134,12 @@ SCIP_RETCODE reversePropConss(
 
    *cutoff = FALSE;
    *ntightenings = 0;
-   first = NULL;
-   last = NULL;
 
    if( nconss == 0 )
       return SCIP_OKAY;
+
+   /* create queue */
+   SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2) );
 
    /* create tuples for root expressions */
    for( i = 0; i < nconss; ++i )
@@ -1164,39 +1155,23 @@ SCIP_RETCODE reversePropConss(
       /* add expressions which are not in the queue so far */
       if( !consdata->expr->inqueue )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &tuple) );
-         tuple->expr = consdata->expr;
-         tuple->next = NULL;
-
-         /* mark that the expression is in the queue */
+         SCIP_CALL( SCIPqueueInsert(queue, (void*) consdata->expr) );
          consdata->expr->inqueue = TRUE;
-
-         if( first == NULL )
-         {
-            assert(last == NULL);
-            first = tuple;
-            last = tuple;
-         }
-         else
-         {
-            assert(last != NULL);
-            assert(last->next == NULL);
-            last->next = tuple;
-            last = tuple;
-         }
       }
    }
-   assert((first != NULL) == (last != NULL));
 
    /* main loop */
-   while( first != NULL )
+   while( !SCIPqueueIsEmpty(queue) )
    {
       SCIP_CONSEXPR_EXPR* expr;
       int nreds;
 
-      expr = first->expr;
+      expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
       assert(expr != NULL);
       assert(expr->exprhdlr->reverseprop != NULL);
+
+      /* mark that the expression is not in the queue anymore */
+      expr->inqueue = FALSE;
 
       /* stop propagating if we have found a cutoff; do not leave the loop until all elements have been released */
       if( !(*cutoff) )
@@ -1217,41 +1192,19 @@ SCIP_RETCODE reversePropConss(
             child = expr->children[i];
             assert(child != NULL);
 
-            if( child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
+            /* add children to the queue */
+            /* @todo put children which are in the queue to the end of it? */
+            if( !child->inqueue && child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
             {
-               if( !child->inqueue )
-               {
-                  SCIP_CALL( SCIPallocBlockMemory(scip, &tuple) );
-                  tuple->expr = child;
-                  tuple->next = NULL;
-
-                  assert(last != NULL);
-                  last->next = tuple;
-                  last = tuple;
-
-                  /* mark that the child is in the queue */
-                  child->inqueue = TRUE;
-               }
-               else
-               {
-                  /* @todo put child to the end of the queue? */
-               }
+               SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
+               child->inqueue = TRUE;
             }
          }
       }
-
-      /* remove first element in the queue */
-      tuple = first->next;
-      SCIPfreeBlockMemory(scip, &first);
-      first = tuple;
-
-      /* mark that the expression is not in the queue anymore */
-      expr->inqueue = FALSE;
-
-      if( first == NULL )
-         last = NULL;
    }
-   assert(first == NULL && last == NULL);
+
+   /* free the queue */
+   SCIPqueueFree(&queue);
 
    return SCIP_OKAY;
 }
