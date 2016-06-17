@@ -398,225 +398,10 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 /* put your local methods here, and declare them static */
-
-
-/*
- * Callback methods of primal heuristic
- */
-
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-#if 0
+/** reads a given SCIP solution file, problem has to be transformed in advance */
 static
-SCIP_DECL_HEURCOPY(heurCopyRepair)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of repair primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurCopyRepair NULL
-#endif
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeRepair)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-
-   assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
-
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitRepair)
-{  /*lint --e{715}*/
-
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-
-   heurdata->subiters = -1;
-   heurdata->subnodes = -1;
-   heurdata->subpresoltime = 0;
-
-   heurdata->nviolatedvars = 0;
-   heurdata->norvars = 0;
-   heurdata->relviolatedvars = 0;
-   heurdata->nviolatedcons = 0;
-   heurdata->norcons = 0;
-   heurdata->relviolatedcons = 0;
-
-   heurdata->orsolval = SCIP_INVALID;
-
-   heurdata->improovedoldsol = SCIP_REAL_MAX;
-
-   return SCIP_OKAY;
-}
-
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitRepair)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SCIP_Real time;
-   SCIP_Real relvars;
-   SCIP_Real relcons;
-   char solval[1024];
-   char message[1024];
-   int violateds;
-   int ninvars;
-   int ninvcons;
-   int nvars;
-   int ncons;
-   int iterations;
-   int nodes;
-   int runs;
-
-   heurdata = SCIPheurGetData(heur);
-   violateds = heurdata->nviolatedvars+heurdata->nviolatedcons;
-   ninvars = heurdata->nviolatedvars;
-   ninvcons = heurdata->nviolatedcons;
-   nvars = heurdata->norvars;
-   ncons = heurdata->norcons;
-   iterations = heurdata->subiters;
-   nodes = heurdata->subnodes;
-   time = heurdata->subpresoltime;
-   runs = heurdata->runs;
-
-   if( SCIP_INVALID == heurdata->orsolval )
-   {
-      sprintf(solval,"--");
-   }
-   else
-   {
-      sprintf(solval,"%15.9g",heurdata->orsolval);
-   }
-
-   /* TODO remove this from heuristic data */
-   heurdata->relviolatedvars = MAX((SCIP_Real)heurdata->norvars, 1.0);
-   heurdata->relviolatedvars = heurdata->nviolatedvars/heurdata->relviolatedvars;
-   heurdata->relviolatedcons = MAX((SCIP_Real)heurdata->norcons, 1.0);
-   heurdata->relviolatedcons = heurdata->nviolatedcons/heurdata->relviolatedcons;
-
-   relvars = heurdata->relviolatedvars;
-   relcons = heurdata->relviolatedcons;
-
-
-   /* Prints all statistic data for an user*/
-   SCIPstatistic(
-      sprintf(message, "<repair> \n\t total violateds: %d\n\n\t violated variables: %d\n\t total variables: %d\n\t relative violated variables: %.2f%%\n", violateds, ninvars, nvars, 100 * relvars);
-      sprintf(message, "%s  \n\n\t violated constraints: %d\n\t total constraints: %d\n\t relative violated constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
-      sprintf(message, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
-      sprintf(message, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
-   )
-   return SCIP_OKAY;
-}
-
-#ifdef REPAIRWRITEPROB
-static
-SCIP_RETCODE writeDebugInformation(
-   SCIP*                 scip,
-   SCIP*                 subscip,
-   SCIP_SOL*             subsol,
-   SCIP_HEURDATA*        heurdata
-   )
+SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 {
-   SCIPdebugMessage("Print files:\n");
-   {
-      FILE* solfile;
-      FILE* probfile;
-      char* bfilename;
-      char solfilename[SCIP_MAXSTRLEN];
-      char probfilename[SCIP_MAXSTRLEN];
-
-      bfilename = basename(heurdata->filename);
-
-      sprintf(solfilename, "%s.sol", bfilename);
-      sprintf(probfilename, "%s.cip", bfilename);
-
-      SCIPdebugMessage("All temp vars initialized");
-
-      solfile = fopen(solfilename, "w");
-
-
-
-      /* test if file exists */
-      if( NULL != solfile )
-      {
-         SCIP_CALL(SCIPprintSol(scip, subsol, solfile, TRUE));
-         fclose(solfile);
-       }
-       else
-       {
-          SCIPwarningMessage(scip, "Could not open file <%s> for storing infeasible repair solution\n", solfilename);
-       }
-
-      probfile = fopen(probfilename, "w");
-      /* test if file exists */
-      if( NULL != probfile )
-      {
-         SCIP_CALL(SCIPprintOrigProblem(subscip, probfile, "cip", FALSE));
-         fclose(solfile);
-      }
-      else
-      {
-         SCIPwarningMessage(scip, "Could not open file <%s> for storing infeasible repair subproblem\n", probfilename);
-      }
-   }
-}
-#else
-#define writeDebugInformation(scip, subscip, subsol, heurdata) SCIP_OKAY
-#endif
-
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_HEURINITSOL(heurInitsolRepair)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of repair primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitsolRepair NULL
-#endif
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolRepair)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of repair primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitsolRepair NULL
-#endif
-
-
-/** execution method of primal heuristic.
- * Repair needs an incorrect solution, in which all variables are in their bound. */
-static
-SCIP_DECL_HEUREXEC(heurExecRepair)
-{ /*lint --e{715}*/
    SCIP* subscip = NULL;
    SCIP_VAR** vars;
    SCIP_VAR** subvars = NULL;
@@ -866,7 +651,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
          consvars[j] = subvars[pos];
       }
 
-      /* todo comment */
+      /* create a new linear constraint, representing the old one */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &cons, SCIProwGetName(rows[i]),
                nnonz, consvars, vals, lhs, rhs) );
 
@@ -917,7 +702,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }*/
 
    /*todo*/
-   SCIP_CALL( writeDebugInformation(scip, subscip, subsol, heurdata) );
+   /*SCIP_CALL( writeDebugInformation(scip, subscip, subsol, heurdata) );*/
 
    /*Adds the given solution to the subscip. */
    heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, subsol);
@@ -986,7 +771,6 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       return SCIP_OKAY;
    }
 
-   SCIPwriteOrigProblem(subscip,"stein27_inf_friday.cip",NULL,FALSE);
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
    heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
@@ -1043,6 +827,576 @@ TERMINATE:
    }
 
    return SCIP_OKAY;
+}
+
+/**
+ *
+ */
+
+static
+SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
+{
+   SCIP* subscip = NULL;
+   SCIP_VAR** vars = NULL;
+   SCIP_VAR** subvars = NULL;
+   SCIP_ROW** rows = NULL;
+   int* nviolatedrows = NULL;
+   SCIP_SOL* sol = NULL;
+   SCIP_SOL* subsol = NULL;
+   SCIP_HEURDATA* heurdata = NULL;
+   SCIP_RETCODE retcode = SCIP_OKAY;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+   char probname[SCIP_MAXSTRLEN];
+   int i;
+   int nbinvars;
+   int nintvars;
+   int nvars;
+   int nrows;
+   SCIP_Bool cutoff;
+   SCIP_Bool success;
+
+   /* if repair allready run, stop*/
+   if(0 < SCIPheurGetNCalls(heur)){
+      *result = SCIP_DIDNOTFIND;
+      return SCIP_OKAY;
+   }
+
+   /* checks the result pointer*/
+   assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_CALL(SCIPconstructLP(scip, &cutoff));
+
+      if( cutoff )
+         return SCIP_OKAY;
+   }
+
+   /* create zero solution */
+   SCIP_CALL( SCIPcreateOrigSol(scip, &sol, heur) );
+
+   heurdata = SCIPheurGetData(heur);
+
+   /* use read method to enter solution from a file */
+   retcode = readSol(scip, sol, heurdata->filename);
+
+   if( SCIP_NOFILE == retcode )
+   {
+      if( strcmp(heurdata->filename, DEFAULT_FILENAME) != 0 )
+         SCIPwarningMessage(scip, "cannot open file <%s> for reading\n",
+               heurdata->filename);
+
+      goto TERMINATE;
+   }
+   else if( retcode != SCIP_OKAY )
+   {
+      goto TERMINATE;
+   }
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+         "Repair: Solution file read.\n");
+
+   /* checks the integrality of all discrete variable */
+   SCIP_CALL( checkCands(scip, sol, heurdata->roundit, &success) );
+   if( !success )
+   {
+      SCIPdebugMessage("Hello Termination\n");
+      goto TERMINATE;
+   }
+   *result = SCIP_DIDNOTFIND;
+   /* initializes the subscip */
+   SCIP_CALL( SCIPcreate(&subscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+   SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+    }
+
+   /* get name of the original problem and add the string "_repairsub" */
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub",
+         SCIPgetProbName(scip));
+
+   SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
+
+   /* Gets all original variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedrows, nvars) );
+
+   /* Adds all original variables and decides which variables should be fixed */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real objval;
+      SCIP_Real value;
+      SCIP_VARTYPE vartype;
+      char varname[1024];
+
+      /*TODO to be fixed*/
+      heurdata->norvars++;
+      lb = SCIPvarGetLbGlobal(vars[i]);
+      ub = SCIPvarGetUbGlobal(vars[i]);
+      value = SCIPgetSolVal(scip, sol, vars[i]);
+      vartype = SCIPvarGetType(vars[i]);
+      objval = SCIPvarGetObj(vars[i]);
+
+      sprintf(varname, "sub_%s", SCIPvarGetName(vars[i]));
+
+      /* if the value of x is lower than the lower bound, sets the slack to an correcting value*/
+      if( SCIPisFeasLT(scip, value, lb) )
+      {
+         nviolatedrows[i]++;
+      }
+
+      /* if the value of x is bigger than the upper bound, sets the slack to an correcting value*/
+      if( SCIPisFeasGT(scip, value, ub) )
+      {
+         nviolatedrows[i]++;
+      }
+
+      /* Adds the sub representing variable to the subscip. */
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
+      SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
+      SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
+   }
+
+   /* check solution for feasibility regarding the LP rows (SCIPgetRowSolActivity()) */
+   rows = SCIPgetLPRows(scip);
+   nrows = SCIPgetNLPRows(scip);
+
+   /* Adds all original constraints and decides which variables should be fixed */
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_COL** cols;
+      SCIP_VAR** consvars;
+      SCIP_CONS* cons;
+      SCIP_Real* vals;
+      SCIP_Real slack;
+      int nnonz;
+      SCIP_Real constant;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      SCIP_Real rowsolact;
+      int j;
+
+      heurdata->norcons++;
+
+      /* gets the values to check the constraint */
+      constant = SCIProwGetConstant(rows[i]);
+      lhs = SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) ?
+            SCIProwGetLhs(rows[i]) : SCIProwGetLhs(rows[i]) - constant;
+      rhs = SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) ?
+            SCIProwGetRhs(rows[i]) : SCIProwGetRhs(rows[i]) - constant;
+      rowsolact = SCIPgetRowSolActivity(scip, rows[i], sol) - constant;
+      vals = SCIProwGetVals(rows[i]);
+
+      assert(SCIPisFeasLE(scip, lhs, rhs));
+
+      nnonz = SCIProwGetNNonz(rows[i]);
+      cols = SCIProwGetCols(rows[i]);
+      SCIP_CALL(SCIPallocBufferArray(scip, &consvars, nnonz));
+
+      /* Sets the slack if its necessary */
+      if( SCIPisFeasLT(scip, rowsolact, lhs) )
+      {
+         slack = lhs - rowsolact;
+      }
+      else if( SCIPisFeasGT(scip, rowsolact, rhs) )
+      {
+         slack = rhs - rowsolact;
+      }
+      else
+      {
+         slack = 0.0;
+      }
+
+      /* translate all variables from the original scip to the subscip with subscip variables. */
+      for (j = 0; j < nnonz; ++j)
+      {
+         int pos;
+
+         pos = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
+         consvars[j] = subvars[pos];
+
+         if( !SCIPisZero(scip, slack) ){
+            /* todo ask if probindex or index!!!*/
+            nviolatedrows[pos]++;
+         }
+      }
+
+      /* create a new linear constraint, representing the old one */
+      SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &cons, SCIProwGetName(rows[i]),
+               nnonz, consvars, vals, lhs, rhs) );
+
+      /*Adds the Constraint and release it.*/
+      SCIP_CALL( SCIPaddCons(subscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+
+   /* todo loop over variables and fix all which appear in no violated row */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( 0 == nviolatedrows[i] )
+      {
+         SCIP_Bool infeasible = FALSE;
+         SCIP_Bool fixed = TRUE;
+         SCIP_CALL( SCIPfixVar(subscip, subvars[i], SCIPgetSolVal(scip, sol, vars[i]), &infeasible, &fixed) );
+         assert(!infeasible && fixed);
+      }
+   }
+
+   /*todo*/
+   /*SCIP_CALL( writeDebugInformation(scip, subscip, subsol, heurdata) );*/
+
+   /*Adds the given solution to the subscip. */
+   heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, subsol);
+   SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
+
+   if( !success )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Repair was not good enough.\n");
+   }
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &timelimit));
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL(SCIPgetRealParam(scip, "limits/memory", &memorylimit));
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip) / 1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip) / 1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0
+         || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+      goto TERMINATE;
+
+   /* set limits for the subproblem */
+   /*heurdata->nodelimit = nstallnodes;
+   SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes));*/
+   SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
+   SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
+   /*SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", 1));*/
+
+   /* forbid recursive call of heuristics and separators solving sub-SCIPs */
+   SCIP_CALL(SCIPsetSubscipsOff(subscip, TRUE));
+
+   /* disable output to console */
+   SCIP_CALL(SCIPsetIntParam(subscip, "display/verblevel", 0));
+
+#ifdef SCIP_DEBUG
+   /* for debugging Repair, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
+
+   /* presolve the subproblem */
+   retcode = SCIPpresolve(subscip);
+
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   if( retcode != SCIP_OKAY )
+   {
+#ifndef NDEBUG
+      SCIP_CALL(retcode);
+#endif
+      SCIPwarningMessage(scip,
+            "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
+            retcode);
+
+      /* free */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL(SCIPfree(&subscip));
+      return SCIP_OKAY;
+   }
+
+   /* solve the subproblem */
+   retcode = SCIPsolve(subscip);
+
+   if( retcode != SCIP_OKAY )
+   {
+#ifndef NDEBUG
+      SCIP_CALL(retcode);
+#endif
+      SCIPwarningMessage(scip,
+            "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
+            retcode);
+
+      /* free */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL(SCIPfree(&subscip));
+      return SCIP_OKAY;
+   }
+
+   if( SCIPgetBestSol(subscip) != NULL )
+   {
+      heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
+      /* print solving statistics of subproblem if we are in SCIP's debug mode */
+      SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+
+      assert(SCIPgetNSols(subscip) > 0);
+      SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
+
+      *result = SCIP_FOUNDSOL;
+   }
+
+   heurdata->subiters = SCIPgetNLPIterations(subscip);
+   heurdata->subnodes = SCIPgetNTotalNodes(subscip);
+   heurdata->subpresoltime = SCIPgetPresolvingTime(subscip);
+   heurdata->runs = SCIPgetNRuns(subscip);
+
+   /* terminates the solving process  */
+TERMINATE:
+   SCIPfreeSol(scip, &sol);
+   /*SCIPfreeSol(subscip, &subsol);*/
+   SCIPfreeBufferArrayNull(scip, &nviolatedrows);
+   SCIPfreeBufferArrayNull(scip, &subvars);
+   if( NULL != subscip )
+   {
+      SCIPfree(&subscip);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Callback methods of primal heuristic
+ */
+
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_HEURCOPY(heurCopyRepair)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of repair primal heuristic not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define heurCopyRepair NULL
+#endif
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeRepair)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+
+   assert(heurdata != NULL);
+   SCIPfreeMemory(scip, &heurdata);
+
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitRepair)
+{  /*lint --e{715}*/
+
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+
+   heurdata->subiters = -1;
+   heurdata->subnodes = -1;
+   heurdata->subpresoltime = 0;
+
+   heurdata->nviolatedvars = 0;
+   heurdata->norvars = 0;
+   heurdata->relviolatedvars = 0;
+   heurdata->nviolatedcons = 0;
+   heurdata->norcons = 0;
+   heurdata->relviolatedcons = 0;
+
+   heurdata->orsolval = SCIP_INVALID;
+
+   heurdata->improovedoldsol = SCIP_REAL_MAX;
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitRepair)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_Real time;
+   SCIP_Real relvars;
+   SCIP_Real relcons;
+   char solval[1024];
+   char message[1024];
+   int violateds;
+   int ninvars;
+   int ninvcons;
+   int nvars;
+   int ncons;
+   int iterations;
+   int nodes;
+   int runs;
+
+   heurdata = SCIPheurGetData(heur);
+   violateds = heurdata->nviolatedvars+heurdata->nviolatedcons;
+   ninvars = heurdata->nviolatedvars;
+   ninvcons = heurdata->nviolatedcons;
+   nvars = heurdata->norvars;
+   ncons = heurdata->norcons;
+   iterations = heurdata->subiters;
+   nodes = heurdata->subnodes;
+   time = heurdata->subpresoltime;
+   runs = heurdata->runs;
+
+   if( SCIP_INVALID == heurdata->orsolval )
+   {
+      sprintf(solval,"--");
+   }
+   else
+   {
+      sprintf(solval,"%15.9g",heurdata->orsolval);
+   }
+
+   /* TODO remove this from heuristic data */
+   heurdata->relviolatedvars = MAX((SCIP_Real)heurdata->norvars, 1.0);
+   heurdata->relviolatedvars = heurdata->nviolatedvars/heurdata->relviolatedvars;
+   heurdata->relviolatedcons = MAX((SCIP_Real)heurdata->norcons, 1.0);
+   heurdata->relviolatedcons = heurdata->nviolatedcons/heurdata->relviolatedcons;
+
+   relvars = heurdata->relviolatedvars;
+   relcons = heurdata->relviolatedcons;
+
+
+   /* Prints all statistic data for an user*/
+   SCIPstatistic(
+      sprintf(message, "<repair> \n\t total violateds: %d\n\n\t violated variables: %d\n\t total variables: %d\n\t relative violated variables: %.2f%%\n", violateds, ninvars, nvars, 100 * relvars);
+      sprintf(message, "%s  \n\n\t violated constraints: %d\n\t total constraints: %d\n\t relative violated constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
+      sprintf(message, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
+      sprintf(message, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
+   )
+   return SCIP_OKAY;
+}
+
+#ifdef REPAIRWRITEPROB
+static
+SCIP_RETCODE writeDebugInformation(
+   SCIP*                 scip,
+   SCIP*                 subscip,
+   SCIP_SOL*             subsol,
+   SCIP_HEURDATA*        heurdata
+   )
+{
+   SCIPdebugMessage("Print files:\n");
+   {
+      FILE* solfile;
+      FILE* probfile;
+      char* bfilename;
+      char solfilename[SCIP_MAXSTRLEN];
+      char probfilename[SCIP_MAXSTRLEN];
+
+      bfilename = basename(heurdata->filename);
+
+      sprintf(solfilename, "%s.sol", bfilename);
+      sprintf(probfilename, "%s.cip", bfilename);
+
+      SCIPdebugMessage("All temp vars initialized");
+
+      solfile = fopen(solfilename, "w");
+
+
+
+      /* test if file exists */
+      if( NULL != solfile )
+      {
+         SCIP_CALL(SCIPprintSol(scip, subsol, solfile, TRUE));
+         fclose(solfile);
+       }
+       else
+       {
+          SCIPwarningMessage(scip, "Could not open file <%s> for storing infeasible repair solution\n", solfilename);
+       }
+
+      probfile = fopen(probfilename, "w");
+      /* test if file exists */
+      if( NULL != probfile )
+      {
+         SCIP_CALL(SCIPprintOrigProblem(subscip, probfile, "cip", FALSE));
+         fclose(solfile);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "Could not open file <%s> for storing infeasible repair subproblem\n", probfilename);
+      }
+   }
+}
+#else
+#define writeDebugInformation(scip, subscip, subsol, heurdata) SCIP_OKAY
+#endif
+
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+#if 0
+static
+SCIP_DECL_HEURINITSOL(heurInitsolRepair)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of repair primal heuristic not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define heurInitsolRepair NULL
+#endif
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+#if 0
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolRepair)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of repair primal heuristic not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define heurExitsolRepair NULL
+#endif
+
+
+/** execution method of primal heuristic.
+ * Repair needs an incorrect solution, in which all variables are in their bound. */
+static
+SCIP_DECL_HEUREXEC(heurExecRepair)
+{ /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+   /*retcode = extendedProgramm(scip, heur, result);*/
+   retcode = varFixings(scip, heur, result);
+   return retcode;
 }
 
 
