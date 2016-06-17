@@ -4270,7 +4270,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
             *ntightenings += 1;
 
          /* tighten lower bound */
-         if( !cutoff )
+         if( !(*cutoff) )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, SCIPintervalGetSup(expr->interval), FALSE, cutoff, &tightened) );
 
