@@ -396,7 +396,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
                      expr,
                      copydata->mapvar,
                      copydata->mapvardata) );
-               assert(targetexprdata != NULL);
             }
             else if( expr->exprdata != NULL )
             {
