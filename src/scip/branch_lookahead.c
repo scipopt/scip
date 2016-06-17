@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+/*#define SCIP_DEBUG*/
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -53,11 +53,11 @@ struct SCIP_BranchruleData
 /* put your local methods here, and declare them static */
 
 static SCIP_RETCODE executeBranchingOnUpperBound(
-   SCIP* scip,
-   SCIP_VAR* branchingvar,
-   SCIP_Real branchingvarsolvalue,
-   SCIP_Real* objval,
-   SCIP_Bool* cutoff
+   SCIP*                 scip,
+   SCIP_VAR*             branchingvar,
+   SCIP_Real             branchingvarsolvalue,
+   SCIP_Real*            objval,
+   SCIP_Bool*            cutoff
    )
 {
    SCIP_Bool lperror;
@@ -71,6 +71,7 @@ static SCIP_RETCODE executeBranchingOnUpperBound(
    SCIPdebugMessage("Started branching on upper bound.\n");
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
+
    SCIP_CALL( SCIPchgVarUbProbing(scip, branchingvar, SCIPfeasFloor(scip, branchingvarsolvalue)) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, cutoff) );
@@ -93,11 +94,11 @@ static SCIP_RETCODE executeBranchingOnUpperBound(
 }
 
 static SCIP_Bool executeBranchingOnLowerBound(
-   SCIP* scip,
-   SCIP_VAR* fixedvar,
-   SCIP_Real fixedvarsol,
-   SCIP_Real* upobjval,
-   SCIP_Bool* cutoff
+   SCIP*                 scip,
+   SCIP_VAR*             fixedvar,
+   SCIP_Real             fixedvarsol,
+   SCIP_Real*            upobjval,
+   SCIP_Bool*            cutoff
    )
 {
    SCIP_Bool lperror;
@@ -134,10 +135,10 @@ static SCIP_Bool executeBranchingOnLowerBound(
 
 static
 SCIP_RETCODE calculateWeight(
-   SCIP* scip,
-   SCIP_Real lowerbounddiff,
-   SCIP_Real upperbounddiff,
-   SCIP_Real* result
+   SCIP*                 scip,
+   SCIP_Real             lowerbounddiff,
+   SCIP_Real             upperbounddiff,
+   SCIP_Real*            result
 )
 {
    SCIP_Real min;
@@ -167,14 +168,14 @@ SCIP_RETCODE calculateWeight(
 }
 
 static SCIP_RETCODE executeDeepBranchingOnVar(
-   SCIP* scip,
-   SCIP_Real lpobjval,
-   SCIP_VAR* deepbranchvar,
-   SCIP_Real deepbranchvarsolval,
-   SCIP_Real* highestweight,
-   SCIP_Real* sumweights,
-   int* nweights,
-   int* ncutoffs
+   SCIP*                 scip,
+   SCIP_Real             lpobjval,
+   SCIP_VAR*             deepbranchvar,
+   SCIP_Real             deepbranchvarsolval,
+   SCIP_Real*            highestweight,
+   SCIP_Real*            sumweights,
+   int*                  nweights,
+   int*                  ncutoffs
 )
 {
    SCIP_Bool deepdowncutoff;
@@ -245,12 +246,12 @@ static SCIP_RETCODE executeDeepBranchingOnVar(
 
 static
 SCIP_RETCODE executeDeepBranching(
-   SCIP* scip,
-   SCIP_Real lpobjval,
-   SCIP_Real* highestweight,
-   SCIP_Real* sumweights,
-   int* nweights,
-   int* ncutoffs
+   SCIP*                 scip,
+   SCIP_Real             lpobjval,
+   SCIP_Real*            highestweight,
+   SCIP_Real*            sumweights,
+   int*                  nweights,
+   int*                  ncutoffs
 )
 {
    SCIP_VAR**  lpcands;
@@ -293,17 +294,17 @@ SCIP_RETCODE executeDeepBranching(
 
 static
 SCIP_RETCODE calculateCurrentWeight(
-   SCIP* scip,
-   int currentvarindex,
-   SCIP_Real highestweightupperbound,
-   SCIP_Real sumweightsupperbound,
-   int nweightsupperbound,
-   SCIP_Real highestweightlowerbound,
-   SCIP_Real sumweightslowerbound,
-   int nweightslowerbound,
-   int ncutoffs,
-   SCIP_Real* highestweight,
-   int* highestweightindex
+   SCIP*                 scip,
+   int                   currentvarindex,
+   SCIP_Real             highestweightupperbound,
+   SCIP_Real             sumweightsupperbound,
+   int                   nweightsupperbound,
+   SCIP_Real             highestweightlowerbound,
+   SCIP_Real             sumweightslowerbound,
+   int                   nweightslowerbound,
+   int                   ncutoffs,
+   SCIP_Real*            highestweight,
+   int*                  highestweightindex
 )
 {
    SCIP_Real lambdaupperbound = 0;
@@ -347,12 +348,12 @@ SCIP_RETCODE calculateCurrentWeight(
 
 static
 SCIP_RETCODE selectVarLookaheadBranching(
-   SCIP*          scip,    /**< original SCIP data structure */
-   SCIP_VAR**     lpcands,
-   SCIP_Real*     lpcandssol,
-   int            nlpcands,
-   int*           bestcand,
-   SCIP_RESULT*   result   /**< pointer to store results of branching */){
+   SCIP*                 scip,    /**< original SCIP data structure */
+   SCIP_VAR**            lpcands,
+   SCIP_Real*            lpcandssol,
+   int                   nlpcands,
+   int*                  bestcand,
+   SCIP_RESULT*          result   /**< pointer to store results of branching */){
 
    assert(scip != NULL);
    assert(lpcands != NULL);
