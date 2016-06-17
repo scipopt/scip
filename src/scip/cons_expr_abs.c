@@ -176,9 +176,18 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 
    *nreds = 0;
 
+   /* handle absolute expression as identity if child expression is already non-negative */
+   if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf >= 0.0 )
+   {
+      SCIPintervalSetBounds(&childbound, SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+   }
    /* f = abs(c0) => c0 = -f union f */
-   SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
-      SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+   else
+   {
+      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+   }
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, cutoff, nreds) );
