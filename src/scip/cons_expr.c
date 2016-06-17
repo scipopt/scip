@@ -4236,8 +4236,20 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    if( SCIPisLbBetter(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))
       || SCIPisUbBetter(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
    {
+
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "tighten bounds of ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "");
+      SCIPinfoMessage(scip, NULL, " from [%e,%e] to ", SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+#endif
+
       /* intersect old bound with the found one */
       SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
+
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "[%e,%e]\n", SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+#endif
 
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions*/
       expr->hastightened = TRUE;
