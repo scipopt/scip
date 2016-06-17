@@ -2658,6 +2658,107 @@ SCIP_RETCODE testPropagation(void)
    return SCIP_OKAY;
 }
 
+/** test presolve callback */
+static
+SCIP_RETCODE testPresolve(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_VAR* var;
+   int i;
+
+   const char* cons1str[4] = {"<x>^2 + <x>", "<x>^(0.5) - <y>", "exp(<x>) - <y>", "log(abs(<x> + 1)) - <y>"};
+   const char* cons2str[4] = {"<x>^2 - 1.0", "<x> - 1.0 - <y>", "4.0 * <x>^(1.5) - <y>", "abs(<x>)^1.5 - <y>"};
+   SCIP_Real targetlb[4]   = {-1.0, 2.618033988749895, 0.58687228932071, 0.0};
+   SCIP_Real targetub[4]   = {-1.0, 2.618033988749895, 3.06767359040726, 0.6096527513};
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* let propagation run for enough rounds */
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/expr/maxproprounds", 100) );
+
+   /* apply tiny bound changes */
+   SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", 1e-06) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* add a node selector */
+   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+
+   /* set variable bounds */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, y, -100.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, y, 100.0) );
+
+   for( i = 0; i < 4; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "test constraints: %s == 0 and %s == 0 \n", cons1str[i], cons2str[i]);
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, cons1str[i], NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPaddCons(scip, cons1) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, cons2str[i], NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPaddCons(scip, cons2) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( SCIPtransformProb(scip) );
+      SCIP_CALL( SCIPpresolve(scip) );
+
+      /* get the transformed variable */
+      var = SCIPvarGetTransVar(x);
+      assert(var != NULL);
+
+      /* check bounds */
+      assert(SCIPvarGetLbLocal(var) <= targetlb[i]);
+      assert(SCIPvarGetUbLocal(var) >= targetub[i]);
+      assert(REALABS(SCIPvarGetLbLocal(var) - targetlb[i]) <= 0.001);
+      assert(REALABS(SCIPvarGetUbLocal(var) - targetub[i]) <= 0.001);
+
+      /* free transformed problem and remove constraints */
+      SCIP_CALL( SCIPfreeTransform(scip) );
+      SCIP_CALL( SCIPdelCons(scip, cons1) );
+      SCIP_CALL( SCIPdelCons(scip, cons2) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+   }
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** test collecting of variable expression */
 static
 SCIP_RETCODE testGetVarExprs(void)
@@ -2792,6 +2893,8 @@ main(
    CHECK_TEST( testPropagation() );
 
    CHECK_TEST( testGetVarExprs() );
+
+   CHECK_TEST( testPresolve() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
