@@ -1035,7 +1035,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    getvarsdata = (GETVARS_DATA*) data;
    assert(getvarsdata != NULL);
 
-   /* add variable expression if not seen so far; there is only one variable expression representing a varible */
+   /* add variable expression if not seen so far; there is only one variable expression representing a variable */
    if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
       assert(SCIPgetNVars(scip) >= getvarsdata->nvarexprs + 1);
@@ -1095,6 +1095,10 @@ SCIP_RETCODE forwardPropCons(
       SCIPdebugMessage(" -> found cutoff during forward propagation of constraint %s\n", SCIPconsGetName(cons));
    }
 #endif
+
+   /* TODO if the root expression interval could not be tightened by constraint sides,
+    * then the constraint is redundant and should be deleted (locally)
+    */
 
    return SCIP_OKAY;
 }
@@ -1183,7 +1187,7 @@ SCIP_RETCODE reversePropConss(
 
          *ntightenings += nreds;
 
-         /* add tightened children with at least one children to the queue */
+         /* add tightened children with at least one child to the queue */
          for( i = 0; i < expr->nchildren; ++i )
          {
             SCIP_CONSEXPR_EXPR* child;
@@ -1191,8 +1195,8 @@ SCIP_RETCODE reversePropConss(
             child = expr->children[i];
             assert(child != NULL);
 
-            /* add children to the queue */
-            /* @todo put children which are in the queue to the end of it? */
+            /* add child to the queue */
+            /* @todo put children which are in the queue to the end of it! */
             if( !child->inqueue && child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
             {
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
@@ -1208,7 +1212,7 @@ SCIP_RETCODE reversePropConss(
    return SCIP_OKAY;
 }
 
-/** calls domain propagation for a given set of constraints; the algorithm alternating calls the forward and reverse
+/** calls domain propagation for a given set of constraints; the algorithm alternates calls of forward and reverse
  *  propagation; the latter only for nodes which have been tightened during the propagation loop;
  *
  *  the propagation algorithm works as follows:
@@ -1219,13 +1223,13 @@ SCIP_RETCODE reversePropConss(
  *       have been changed after intersecting with the constraint sides
  *
  *   2.) apply reverse propagation to each root expression which has been marked as tightened; don't explore
- *       sub-expressions which did not have changed since the beginning of the propagation loop
+ *       sub-expressions which have not changed since the beginning of the propagation loop
  *
  *   3.) if we have found enough tightenings go to 1.) otherwise leave propagation loop
  *
  *  @note after calling forward propagation for a constraint we mark this constraint as propagated; this flag might be
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
- *  constraint; resetting this flag is done int the EVENTEXEC callback of the event handler
+ *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
  */
 static
 SCIP_RETCODE propConss(
@@ -1301,7 +1305,7 @@ SCIP_RETCODE propConss(
       /* apply backward propagation; mark constraint as propagated */
       SCIP_CALL( reversePropConss(scip, conss, nconss, &cutoff, &ntightenings) );
 
-      /* @todo add parameter for the minimum number of tightenings to trigger a new propagation 1round */
+      /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
 
       if( cutoff )
