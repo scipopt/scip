@@ -184,12 +184,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
 
    *nreductions = 0;
 
-   if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) < 0 )
-   {
-      *cutoff = TRUE;
-      return SCIP_OKAY;
-   }
-
    /* f = log(c0) -> c0 = exp(f) */
    SCIPintervalExp(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
 
