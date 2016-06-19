@@ -180,9 +180,9 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(nreds != NULL);
+   assert(nreductions != NULL);
 
-   *nreds = 0;
+   *nreductions = 0;
 
    if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) < 0 )
    {
@@ -194,7 +194,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
    SCIPintervalExp(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, cutoff, nreds) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, cutoff, nreductions) );
 
    return SCIP_OKAY;
 }

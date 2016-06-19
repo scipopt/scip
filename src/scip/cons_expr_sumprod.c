@@ -408,13 +408,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) > 0);
    assert(cutoff != NULL);
-   assert(nreds != NULL);
+   assert(nreductions != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
    *cutoff = FALSE;
-   *nreds = 0;
+   *nreductions = 0;
 
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
    if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
@@ -505,7 +505,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       SCIPintervalDivScalar(SCIPinfinity(scip), &childbounds, childbounds, exprdata->coefficients[c]);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff, nreds) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff, nreductions) );
    }
 
    SCIPintervalSetRoundingMode(prevroundmode);
@@ -640,9 +640,9 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) > 0);
    assert(cutoff != NULL);
-   assert(nreds != NULL);
+   assert(nreductions != NULL);
 
-   *nreds = 0;
+   *nreductions = 0;
    *cutoff = FALSE;
 
    /* too expensive (runtime here is quadratic in number of children) */
@@ -684,7 +684,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
             SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]), exprdata->coefficients[i], childbounds);
 
          /* try to tighten the bounds of the expression */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, cutoff, nreds) );
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, cutoff, nreductions) );
       }
    }
 
