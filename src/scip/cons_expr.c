@@ -4268,7 +4268,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions*/
       expr->hastightened = TRUE;
 
-      /* do not thighten variable in problem stage (important for unittests) */
+      /* do not tighten variable in problem stage (important for unittests)
+       * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)? */
       if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
          return SCIP_OKAY;
 
@@ -4292,15 +4293,15 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          SCIP_CALL( SCIPtightenVarLb(scip, var, SCIPintervalGetInf(expr->interval), FALSE, cutoff, &tightened) );
 
          if( ntightenings != NULL && tightened )
-            *ntightenings += 1;
+            ++*ntightenings;
 
-         /* tighten lower bound */
+         /* tighten upper bound */
          if( !(*cutoff) )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, SCIPintervalGetSup(expr->interval), FALSE, cutoff, &tightened) );
 
             if( ntightenings != NULL && tightened )
-               *ntightenings += 1;
+               ++*ntightenings;
          }
 
 #ifdef SCIP_DEBUG

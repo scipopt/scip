@@ -176,7 +176,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
 
    *nreductions = 0;
 
-   if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) < 0 )
+   if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 0.0 )
    {
       *cutoff = TRUE;
       return SCIP_OKAY;

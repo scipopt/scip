@@ -189,7 +189,7 @@ extern "C" {
 
 /** expression callback for reverse propagation
  *
- * The method propagates each children of an expression by taking the intervals of all other children into account. The
+ * The method propagates each child of an expression by taking the intervals of all other children into account. The
  * tighter interval is stored inside the interval variable of the corresponding child expression.
  *
  * input:

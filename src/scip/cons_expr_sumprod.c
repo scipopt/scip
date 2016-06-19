@@ -391,7 +391,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagaton callback */
+/** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
 {
@@ -419,6 +419,8 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
    if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
       return SCIP_OKAY;
+
+   /* TODO handle cases nchildren = 1, 2 separately to be more efficient */
 
    prevroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
@@ -459,7 +461,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       ( maxlinactivityinf >= 2 || SCIPisInfinity(scip, -SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr))))
       )
    {
-      SCIPintervalSetRoundingMode(prevroundmode);
       goto TERMINATE;
    }
 
@@ -508,9 +509,8 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff, nreductions) );
    }
 
-   SCIPintervalSetRoundingMode(prevroundmode);
-
 TERMINATE:
+   SCIPintervalSetRoundingMode(prevroundmode);
    SCIPfreeBufferArray(scip, &bounds);
 
    return SCIP_OKAY;
@@ -626,7 +626,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagaton callback */
+/** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
 {
@@ -656,7 +656,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   /* f = const * prod_i c_i ^ n_i => c_i = (f / const * prod_{j:j!=i} c_j ^ n_j )^ (-n_i) */
+   /* f = const * prod_i c_i ^ n_i => c_i = (f / (const * prod_{j:j!=i} c_j ^ n_j) )^ (1/n_i) */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*cutoff); ++i )
    {
       SCIPintervalSet(&childbounds, exprdata->constant);
@@ -677,9 +677,10 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
 
       if( j == SCIPgetConsExprExprNChildren(expr) )
       {
-         /* f / const * prod_{j:j!=i} c_j ^ n_j */
+         /* f / (const * prod_{j:j!=i} c_j ^ n_j) */
          SCIPintervalDiv(SCIPinfinity(scip), &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
 
+         /* ^(1/n_i) */
          SCIPintervalPowerScalarInverse(SCIPinfinity(scip), &childbounds,
             SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]), exprdata->coefficients[i], childbounds);
 

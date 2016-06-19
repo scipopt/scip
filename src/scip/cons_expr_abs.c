@@ -162,7 +162,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagaton callback */
+/** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 {
