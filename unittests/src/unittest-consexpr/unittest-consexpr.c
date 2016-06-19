@@ -65,6 +65,16 @@ SCIP_RETCODE reversePropConss(
    );
 
 /* declaration as in cons_expr.c */
+SCIP_RETCODE propConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to propagate */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   );
+
+/* declaration as in cons_expr.c */
 SCIP_RETCODE getVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
@@ -2660,7 +2670,7 @@ SCIP_RETCODE testPropagation(void)
 
 /** test presolve callback */
 static
-SCIP_RETCODE testPresolve(void)
+SCIP_RETCODE testPropConss(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
@@ -2671,6 +2681,8 @@ SCIP_RETCODE testPresolve(void)
    SCIP_VAR* y;
    SCIP_VAR* z;
    SCIP_VAR* var;
+   SCIP_RESULT result;
+   int nchgbds;
    int i;
 
    const char* cons1str[4] = {"<x>^2 + <x>", "<x>^(0.5) - <y>", "exp(<x>) - <y>", "log(abs(<x> + 1)) - <y>"};
@@ -2728,7 +2740,13 @@ SCIP_RETCODE testPresolve(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
       SCIP_CALL( SCIPtransformProb(scip) );
-      SCIP_CALL( SCIPpresolve(scip) );
+
+      /* call propConss() for all transformed constraints */
+      assert(SCIPconshdlrGetConss(conshdlr) != NULL);
+      assert(SCIPconshdlrGetNConss(conshdlr) == 2);
+      SCIP_CALL( propConss(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), &result, &nchgbds) );
+      assert(result == SCIP_REDUCEDDOM);
+      assert(nchgbds > 0);
 
       /* get the transformed variable */
       var = SCIPvarGetTransVar(x);
@@ -2894,7 +2912,7 @@ main(
 
    CHECK_TEST( testGetVarExprs() );
 
-   CHECK_TEST( testPresolve() );
+   CHECK_TEST( testPropConss() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

@@ -1212,6 +1212,7 @@ SCIP_RETCODE reversePropConss(
    return SCIP_OKAY;
 }
 
+/* export this function here, so it can be used by unittests but is not really part of the API */
 /** calls domain propagation for a given set of constraints; the algorithm alternates calls of forward and reverse
  *  propagation; the latter only for nodes which have been tightened during the propagation loop;
  *
@@ -1231,7 +1232,14 @@ SCIP_RETCODE reversePropConss(
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
  */
-static
+SCIP_RETCODE propConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to propagate */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   );
 SCIP_RETCODE propConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -1314,6 +1322,9 @@ SCIP_RETCODE propConss(
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
+
+      if( success )
+         *result = SCIP_REDUCEDDOM;
    }
    while( success && ++roundnr < conshdlrdata->maxproprounds );
 
