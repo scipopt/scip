@@ -1053,9 +1053,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
 /* export this function here, so it can be used by unittests but is not really part of the API */
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
  *  root expression will be intersected with the [lhs,rhs] which might lead to a cutoff
- *
- *  @note when using forward and reverse propagation alternatingly we reuse expression intervals computed in previous
- *  iterations
  */
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -1144,14 +1141,14 @@ SCIP_RETCODE reversePropConss(
    /* create queue */
    SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2) );
 
-   /* create tuples for root expressions */
+   /* add root expressions to the queue */
    for( i = 0; i < nconss; ++i )
    {
       assert(conss[i] != NULL);
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* skip expression that could not have been tightened or not implement the reverseprop callback */
+      /* skip expressions that could not have been tightened or do not implement the reverseprop callback */
       if( !consdata->expr->hastightened || consdata->expr->exprhdlr->reverseprop == NULL )
          continue;
 
@@ -1164,7 +1161,7 @@ SCIP_RETCODE reversePropConss(
    }
 
    /* main loop */
-   while( !SCIPqueueIsEmpty(queue) )
+   while( !SCIPqueueIsEmpty(queue) && !(*cutoff) )
    {
       SCIP_CONSEXPR_EXPR* expr;
       int nreds;
@@ -1173,35 +1170,34 @@ SCIP_RETCODE reversePropConss(
       assert(expr != NULL);
       assert(expr->exprhdlr->reverseprop != NULL);
 
+      nreds = 0;
+
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
 
-      /* stop propagating if we have found a cutoff; do not leave the loop until all elements have been released */
-      if( !(*cutoff) )
+      /* call reverse propagation callback */
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
+      assert(nreds >= 0);
+      *ntightenings += nreds;
+
+      /* stop propagation if we have found a cutoff */
+      if( *cutoff )
+         break;
+
+      /* add tightened children with at least one child to the queue */
+      for( i = 0; i < expr->nchildren; ++i )
       {
-         nreds = 0;
+         SCIP_CONSEXPR_EXPR* child;
 
-         /* call reverse propagation callback */
-         SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
-         assert(nreds >= 0);
+         child = expr->children[i];
+         assert(child != NULL);
 
-         *ntightenings += nreds;
-
-         /* add tightened children with at least one child to the queue */
-         for( i = 0; i < expr->nchildren; ++i )
+         /* add child to the queue */
+         /* @todo put children which are in the queue to the end of it! */
+         if( !child->inqueue && child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
          {
-            SCIP_CONSEXPR_EXPR* child;
-
-            child = expr->children[i];
-            assert(child != NULL);
-
-            /* add child to the queue */
-            /* @todo put children which are in the queue to the end of it! */
-            if( !child->inqueue && child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
-            {
-               SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
-               child->inqueue = TRUE;
-            }
+            SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
+            child->inqueue = TRUE;
          }
       }
    }
@@ -1231,6 +1227,9 @@ SCIP_RETCODE reversePropConss(
  *  @note after calling forward propagation for a constraint we mark this constraint as propagated; this flag might be
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
+ *
+ *  @note when using forward and reverse propagation alternatingly we reuse expression intervals computed in previous
+ *  iterations
  */
 SCIP_RETCODE propConss(
    SCIP*                 scip,               /**< SCIP data structure */
