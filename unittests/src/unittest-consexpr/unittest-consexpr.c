@@ -47,6 +47,40 @@ SCIP_RETCODE replaceCommonSubexpressions(
    int                   nconss              /**< total number of constraints */
    );
 
+/* declaration as in cons_expr.c */
+SCIP_RETCODE forwardPropCons(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
+   SCIP_Bool*              infeasible        /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   );
+
+/* declaration as in cons_expr.c */
+SCIP_RETCODE reversePropConss(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS**             conss,            /**< constraints to propagate */
+   int                     nconss,           /**< total number of constraints to propagate */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
+   );
+
+/* declaration as in cons_expr.c */
+SCIP_RETCODE propConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to propagate */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   );
+
+/* declaration as in cons_expr.c */
+SCIP_RETCODE getVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   );
 
 /** macro to check the return of tests
  *
@@ -66,6 +100,9 @@ SCIP_RETCODE replaceCommonSubexpressions(
       printf("-----Finish test " #x "\n\n");     \
    }                                             \
    while( FALSE )
+
+/** macro to check interval of an expression */
+#define CHECK_EXPRINTERVAL(scip,expr,a,b) (SCIPisEQ((scip), SCIPgetConsExprExprInterval((expr)).inf, (a)) && SCIPisEQ((scip), SCIPgetConsExprExprInterval((expr)).sup, (b)))
 
 /* BIG = 75000 produces a seg fault because of stack overflow */
 #define BIG 100
@@ -1032,15 +1069,15 @@ SCIP_RETCODE testExprinteval(void)
     * check interval evaluation method for constant expressions
     */
    printf("check interval-evaluation of constant expressions\n");
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, const_expr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, const_expr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, const_expr, 5.0, 5.0, FALSE, 0) );
 
    /*
     * check interval evaluation method for variable expressions
     */
    printf("check interval-evaluation of variable expressions\n");
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, xexpr, 0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, yexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, xexpr, FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, yexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 10.0, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, yexpr, -5.0, 5.0, FALSE, 0) );
 
@@ -1050,7 +1087,7 @@ SCIP_RETCODE testExprinteval(void)
    printf("check interval-evaluation of sum expression\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, 2.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 7.5) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 5.0, 16.0, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 2.0, 7.5, FALSE, 0) );
 
@@ -1062,7 +1099,7 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 2.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, pow(5,-4.0) / 8.0 , pow(5,-4.0), FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.5, 1.0, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 2.0, FALSE, 0) );
@@ -1091,7 +1128,7 @@ SCIP_RETCODE testExprinteval(void)
                inf *= b < 0 ? b : a;
                sup *= b < 0 ? a : b;
 
-               SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+               SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
 
                /* check all expressions */
                SCIP_CALL( checkExprIntEval(scip, mainexpr, MIN(inf,sup), MAX(inf,sup), FALSE, 0) );
@@ -1112,17 +1149,17 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 0.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] */
@@ -1130,7 +1167,7 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] but because of 1/(1+2*x)^3 we should get [-inf,inf] */
@@ -1138,7 +1175,7 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /*
@@ -1147,23 +1184,23 @@ SCIP_RETCODE testExprinteval(void)
    printf("check interval-evaluation for undefined expressions like (-1)^2\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, 0, TRUE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, 0, TRUE, 0) );
 
    /* the result of sqrt([-1,2]) should be [0,sqrt(2)] and not an empty interval */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 2.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, sqrt(2), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0.0, 1.0, FALSE, 0) );
 
    /*
@@ -1179,7 +1216,7 @@ SCIP_RETCODE testExprinteval(void)
    for( i = 0; i < 10; ++i )
    {
       int tag = i % 3;
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, tag) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, tag) );
       SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, tag) );
       SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, tag) );
       SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, tag) );
@@ -1189,25 +1226,25 @@ SCIP_RETCODE testExprinteval(void)
    }
 
    /* set another tag for some subexpression; result should not change */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 1) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 1) );
 
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 2) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, 2) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 1) ); /* this should not trigger a reevaluation */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, FALSE, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 1) ); /* this should not trigger a reevaluation */
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 2) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 2) );
 
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 3) ); /* this should trigger a reevaluation */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 3) ); /* this should trigger a reevaluation */
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 3) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 3) );
 
    /* manipulate evaluation interval */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 1) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 1.0, FALSE, 1) );
@@ -1215,10 +1252,10 @@ SCIP_RETCODE testExprinteval(void)
    /* set bounds of x to [1,1] in xexpr */
    SCIPintervalSetBounds(&interval, 1.0, 1.0);
    SCIPsetConsExprExprEvalInterval(xexpr, &interval, 2);
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 2) ); /* should use [1,1] for xexpr */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 2) ); /* should use [1,1] for xexpr */
    SCIP_CALL( checkExprIntEval(scip, prodexpr, pow(5.0,-4), pow(5.0,-4), FALSE, 2) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 1.0, 1.0, FALSE, 2) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 3) ); /* should use [0,0] for xexpr */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 3) ); /* should use [0,0] for xexpr */
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, 3) );
 
@@ -1624,7 +1661,7 @@ SCIP_RETCODE testExp(void)
          /* propagate expression */
          SCIP_CALL( SCIPchgVarLb(scip, x, i) );
          SCIP_CALL( SCIPchgVarUb(scip, x, i + 1.0 / (ABS(i) + 1)) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 2*exp(i)));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2*exp(i + 1.0 / (ABS(i) + 1))));
@@ -1658,7 +1695,7 @@ SCIP_RETCODE testExp(void)
          SCIP_CALL( SCIPchgVarUb(scip, x,  1.0 / i) );
          SCIP_CALL( SCIPchgVarLb(scip, y, i) );
          SCIP_CALL( SCIPchgVarUb(scip, y, i + 1.0 / i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), exp(exp(-1.0 / i)) * exp(2*i)));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), exp(exp(1.0 / i)) * exp(2*i + 2.0 / i)));
@@ -1740,7 +1777,7 @@ SCIP_RETCODE testLog(void)
          xub = i + 1.0 / (ABS(i) + 1);
          SCIP_CALL( SCIPchgVarLb(scip, x, xlb) );
          SCIP_CALL( SCIPchgVarUb(scip, x, xub) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
 
          /* interval is empty if both bounds are non-positive */
@@ -1785,7 +1822,7 @@ SCIP_RETCODE testLog(void)
          SCIP_CALL( SCIPchgVarUb(scip, x,  2.0 / i) );
          SCIP_CALL( SCIPchgVarLb(scip, y,  3.0 / i) );
          SCIP_CALL( SCIPchgVarUb(scip, y,  4.0 / i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), log(1.0 / i + 3.0 / i)));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), log(2.0 / i + 4.0 / i)));
@@ -1860,7 +1897,7 @@ SCIP_RETCODE testAbs(void)
          /* propagate expression */
          SCIP_CALL( SCIPchgVarLb(scip, x, -REALABS(i)) );
          SCIP_CALL( SCIPchgVarUb(scip, x, i*i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
 
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 0));
@@ -1895,7 +1932,7 @@ SCIP_RETCODE testAbs(void)
          SCIP_CALL( SCIPchgVarUb(scip, x, REALABS(i)) );
          SCIP_CALL( SCIPchgVarLb(scip, y, -REALABS(i)) );
          SCIP_CALL( SCIPchgVarUb(scip, y, REALABS(i)) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 0));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2 * pow(REALABS(i),5)));
@@ -2162,6 +2199,674 @@ SCIP_RETCODE testCommonSubexpr(void)
    return SCIP_OKAY;
 }
 
+
+/** test forward and reverse propagation */
+static
+SCIP_RETCODE testPropagation(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   int ntightenings;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* sum */
+   {
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coeffs[2] = {2.0, -1.0};
+
+      SCIPinfoMessage(scip, NULL, "test sum expression\n");
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[0], x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], y) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr, 2, exprs, coeffs, 0.5) );
+
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+
+      assert(SCIPisEQ(scip, expr->interval.inf, 0.5));
+      assert(SCIPisEQ(scip, expr->interval.sup, 1.5));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -1.5));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 1.0));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.inf, -3.0));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 1.0));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* prod */
+   {
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coeffs[2] = {2.0, -1.0};
+
+      SCIPinfoMessage(scip, NULL, "test prod expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 2.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 4.0) );
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[0], x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], y) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 2, exprs, coeffs, 0.5) );
+
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.0, 1.0) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+
+      assert(SCIPisEQ(scip, expr->interval.inf, 1.0 / 8.0));
+      assert(SCIPisEQ(scip, expr->interval.sup, 1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, 1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, SQRT(8)));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.inf, 2.0));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 4.0));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* abs */
+   {
+      SCIPinfoMessage(scip, NULL, "test abs expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, -3.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 4.0) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -2.5));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 2.5));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* exp */
+   {
+      SCIPinfoMessage(scip, NULL, "test exp expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "exp(<x>)", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 2.0) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+
+      assert(SCIPisEQ(scip, expr->interval.inf, exp(-1)));
+      assert(SCIPisEQ(scip, expr->interval.sup, 2.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, log(2.0)));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* log */
+   {
+      SCIPinfoMessage(scip, NULL, "test log expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 7.0) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+
+      assert(SCIPisEQ(scip, expr->interval.inf, -1.0));
+      assert(SCIPisEQ(scip, expr->interval.sup, 1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, exp(-1.0)));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, exp(1.0)));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* more complicated expression */
+   {
+      SCIP_CONSEXPR_EXPR* xexpr;
+      SCIP_CONSEXPR_EXPR* yexpr;
+      SCIP_CONSEXPR_EXPR* zexpr;
+      SCIP_CONSEXPR_EXPR* rootexpr;
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_CONSEXPR_EXPR* logexpr;
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coeffs[2];
+
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 2.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 3.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, z, 1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, z, 2.0) );
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
+
+      /*
+       * create constraint 0 <= (-x^2 + log(y)) / z <= 2
+       */
+
+      /* log(y) */
+      SCIP_CALL( SCIPcreateConsExprExprLog(scip, conshdlr, &logexpr, yexpr) );
+
+      /* x^2 */
+      coeffs[0] = 2.0;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexpr, 1, &xexpr, coeffs, 1.0) );
+
+      /* log(y) - x^2 */
+      coeffs[0] = 1.0;
+      exprs[0] = logexpr;
+      coeffs[1] = -1.0;
+      exprs[1] = prodexpr;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 2, exprs, coeffs, 0.0) );
+
+      /* (-x^2 + log(y)) / z */
+      coeffs[0] = 1.0;
+      exprs[0] = sumexpr;
+      coeffs[1] = -1.0;
+      exprs[1] = zexpr;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &rootexpr, 2, exprs, coeffs, 1.0) );
+
+      SCIPinfoMessage(scip, NULL, "test more complicated expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, rootexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* create constraint */
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, 0.0, 2.0) );
+
+      /* apply forward propagation */
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, xexpr, -1, 1));
+      assert(CHECK_EXPRINTERVAL(scip, yexpr, 2, 3));
+      assert(CHECK_EXPRINTERVAL(scip, zexpr, 1, 2));
+      assert(CHECK_EXPRINTERVAL(scip, logexpr, log(2), log(3)));
+      assert(CHECK_EXPRINTERVAL(scip, prodexpr, 0, 1));
+      assert(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)));
+      assert(CHECK_EXPRINTERVAL(scip, rootexpr, 0, log(3)));
+
+      /* apply reverse propagation */
+      SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   }
+
+   /* test expressions with unbounded sub-expressions */
+   {
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, -SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, -SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 0.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, z, 1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, z, 2.0) );
+
+      /*
+       *  -5 <= x * y
+       */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 * <x> * <y>", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -5.0, SCIPinfinity(scip)) );
+
+      SCIPinfoMessage(scip, NULL, "test expressions with unbounded sub-expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr, -5.0, SCIPinfinity(scip)));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      /*
+       *  -inf <= 2 + x - y <= inf
+       */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 + <x> - <y>", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
+
+      SCIPinfoMessage(scip, NULL, "test expressions with unbounded sub-expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr, -SCIPinfinity(scip), SCIPinfinity(scip)));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      /*
+       *  -inf <= x * y * z <= inf
+       */
+      SCIP_CALL( SCIPchgVarUb(scip, x, 0.0) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y> * <z>", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
+
+      SCIPinfoMessage(scip, NULL, "test expressions with unbounded sub-expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, SCIPinfinity(scip)));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
+   /* test if forward propagation uses stored expression bounds */
+   {
+      SCIPinfoMessage(scip, NULL, "test if forward propagation uses stored bounds\n");
+
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.5));
+
+      /* change variable expressions */
+      expr->children[0]->interval.inf = -1.0;
+      expr->children[0]->interval.sup = 0.2;
+      expr->children[1]->interval.inf = -1.0;
+      expr->children[1]->interval.sup = 0.2;
+
+      /* new interval should be [0,1] intersected with [-2, 0.4] */
+      SCIP_CALL( forwardPropCons(scip, cons, TRUE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.4));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
+   /* infeasible after forward propagation */
+   {
+      SCIPinfoMessage(scip, NULL, "test expressions leading to an empty interval after forward propagation\n");
+
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 3.0) );
+
+      /*
+       * -7.0 <= 2 * x * y <= -6.1
+       */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 * <x> * <y>", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -7.0, -6.1) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(infeasible);
+      assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      /*
+       * -1.0 <= 1 + x / (1 + y) <= -0.1
+       */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + <x> / (1 + <y>)", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, -0.1) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
+      assert(infeasible);
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      /*
+       * 0.0 <= 1 + expr(-5 * x + y^2) <= 0.9
+       */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + exp(-5 * <x> + <y>^2)", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -10.0, -0.1) );
+
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
+      assert(infeasible);
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
+   /* infeasible after reverse propagation */
+   {
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_CONSEXPR_EXPR* expr1;
+      SCIP_CONSEXPR_EXPR* expr2;
+      SCIP_CONSEXPR_EXPR* xexpr;
+      SCIP_CONSEXPR_EXPR* yexpr;
+      SCIP_CONS* cons1;
+      SCIP_CONS* cons2;
+
+      SCIPinfoMessage(scip, NULL, "test expressions leading to an empty interval after reverse propagation\n");
+
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 2.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 2.0) );
+
+      /*
+       * -1.0 <= x * y <= 1.0 and 3.5 <= x + y <= 5.0
+       */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+      exprs[0] = xexpr;
+      exprs[1] = yexpr;
+
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr1, 2, exprs, NULL, 1.0) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr2, 2, exprs, NULL, 0.0) );
+
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", expr1, -1.0, 1.0) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", expr2, 3.5, 5.0) );
+
+      /* apply forward propagation for both constraints */
+      SCIP_CALL( forwardPropCons(scip, cons1, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr1, 0.0, 1.0));
+      SCIP_CALL( forwardPropCons(scip, cons2, FALSE, &infeasible) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr2, 3.5, 4.0));
+
+      /* reverse propagation of cons2 should lead to new bounds on x and y */
+      SCIP_CALL( reversePropConss(scip, &cons2, 1, &infeasible, &ntightenings) );
+      assert(!infeasible);
+      assert(CHECK_EXPRINTERVAL(scip, expr2->children[0], 1.5, 2.0));
+      assert(CHECK_EXPRINTERVAL(scip, expr2->children[1], 1.5, 2.0));
+
+      /* reverse propagation of cons1 should lead to an empty interval for x */
+      SCIP_CALL( reversePropConss(scip, &cons1, 1, &infeasible, &ntightenings) );
+      assert(infeasible);
+      assert(SCIPintervalIsEmpty(SCIPinfinity(scip), expr1->children[0]->interval));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   }
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+/** test presolve callback */
+static
+SCIP_RETCODE testPropConss(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_VAR* var;
+   SCIP_RESULT result;
+   int nchgbds;
+   int i;
+
+   const char* cons1str[4] = {"<x>^2 + <x>", "<x>^(0.5) - <y>", "exp(<x>) - <y>", "log(abs(<x> + 1)) - <y>"};
+   const char* cons2str[4] = {"<x>^2 - 1.0", "<x> - 1.0 - <y>", "4.0 * <x>^(1.5) - <y>", "abs(<x>)^1.5 - <y>"};
+   SCIP_Real targetlb[4]   = {-1.0, 2.618033988749895, 0.58687228932071, 0.0};
+   SCIP_Real targetub[4]   = {-1.0, 2.618033988749895, 3.06767359040726, 0.6096527513};
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* let propagation run for enough rounds */
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/expr/maxproprounds", 100) );
+
+   /* apply tiny bound changes */
+   SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", 1e-06) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* add a node selector */
+   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+
+   /* set variable bounds */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, y, -100.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, y, 100.0) );
+
+   for( i = 0; i < 4; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "test constraints: %s == 0 and %s == 0 \n", cons1str[i], cons2str[i]);
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, cons1str[i], NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPaddCons(scip, cons1) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, cons2str[i], NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPaddCons(scip, cons2) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( SCIPtransformProb(scip) );
+
+      /* call propConss() for all transformed constraints */
+      assert(SCIPconshdlrGetConss(conshdlr) != NULL);
+      assert(SCIPconshdlrGetNConss(conshdlr) == 2);
+      SCIP_CALL( propConss(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), &result, &nchgbds) );
+      assert(result == SCIP_REDUCEDDOM);
+      assert(nchgbds > 0);
+
+      /* get the transformed variable */
+      var = SCIPvarGetTransVar(x);
+      assert(var != NULL);
+
+      /* check bounds */
+      assert(SCIPvarGetLbLocal(var) <= targetlb[i]);
+      assert(SCIPvarGetUbLocal(var) >= targetub[i]);
+      assert(REALABS(SCIPvarGetLbLocal(var) - targetlb[i]) <= 0.001);
+      assert(REALABS(SCIPvarGetUbLocal(var) - targetub[i]) <= 0.001);
+
+      /* free transformed problem and remove constraints */
+      SCIP_CALL( SCIPfreeTransform(scip) );
+      SCIP_CALL( SCIPdelCons(scip, cons1) );
+      SCIP_CALL( SCIPdelCons(scip, cons2) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+   }
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+/** test collecting of variable expression */
+static
+SCIP_RETCODE testGetVarExprs(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* w;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* wexpr;
+   SCIP_CONSEXPR_EXPR* sumexpr;
+   SCIP_CONSEXPR_EXPR** varexprs;
+   int nvarexprs;
+   int i;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_getvars") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
+
+   /*
+    * test expression not containing all variables
+    */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3", NULL, &expr) );
+
+   SCIP_CALL( getVarExprs(scip, expr, varexprs, &nvarexprs) );
+   assert(nvarexprs == 3);
+
+   for( i = 0; i < nvarexprs; ++i )
+   {
+      assert(varexprs[i] != NULL);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(varexprs[i])), "var") == 0);
+   }
+
+   /*
+    * test expression containing all variables
+    */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 0, NULL, NULL, 0) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, wexpr, 1.0) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, expr, 1.0) );
+
+   SCIP_CALL( getVarExprs(scip, sumexpr, varexprs, &nvarexprs) );
+   assert(nvarexprs == 4);
+   assert(strcmp(SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])), "w") == 0);
+
+   for( i = 0; i < nvarexprs; ++i )
+   {
+      assert(varexprs[i] != NULL);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(varexprs[i])), "var") == 0);
+   }
+
+   SCIPfreeBufferArray(scip, &varexprs);
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** main function */
 int
 main(
@@ -2202,6 +2907,12 @@ main(
    CHECK_TEST( testHash() );
 
    CHECK_TEST( testCommonSubexpr() );
+
+   CHECK_TEST( testPropagation() );
+
+   CHECK_TEST( testGetVarExprs() );
+
+   CHECK_TEST( testPropConss() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

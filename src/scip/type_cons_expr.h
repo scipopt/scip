@@ -187,6 +187,23 @@ extern "C" {
    SCIP_Real* val, \
    SCIP_SOL* sol)
 
+/** expression callback for reverse propagation
+ *
+ * The method propagates each child of an expression by taking the intervals of all other children into account. The
+ * tighter interval is stored inside the interval variable of the corresponding child expression.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be evaluated
+ *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
+ *  - nreductions : buffer to store the number of interval reductions of all children
+ */
+#define SCIP_DECL_CONSEXPR_REVERSEPROP(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* infeasible, \
+   int* nreductions)
+
 /** expression (interval-) evaluation callback
  *
  * The method evaluates an expression by taking the intervals of its children into account.

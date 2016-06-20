@@ -162,6 +162,46 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    return SCIP_OKAY;
 }
 
+/** expression reverse propagation callback */
+static
+SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
+{
+   SCIP_INTERVAL childbound;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(nreductions != NULL);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= 0.0);
+
+   *nreductions = 0;
+
+   /* handle absolute expression as identity if child expression is already non-negative */
+   if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf >= 0.0 )
+   {
+      SCIPintervalSetBounds(&childbound, SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+   }
+   /* handle absolute expression as -identity if child expression is already non-positive */
+   else if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup <= 0.0 )
+   {
+      assert(-SCIPgetConsExprExprInterval(expr).sup <= -SCIPgetConsExprExprInterval(expr).inf);
+      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
+         -SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)));
+   }
+   /* f = abs(c0) => c0 = -f union f */
+   else
+   {
+      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+   }
+
+   /* try to tighten the bounds of the child node */
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, infeasible, nreductions) );
+
+   return SCIP_OKAY;
+}
+
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
@@ -202,6 +242,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
 
    return SCIP_OKAY;
 }

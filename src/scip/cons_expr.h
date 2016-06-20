@@ -97,6 +97,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
+/** set the reverse propagation callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop))/**< reverse propagation callback (can be NULL) */
+);
+
 /** set the hash callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
@@ -358,7 +367,20 @@ EXTERN
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    unsigned int            boxtag            /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   );
+
+/** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
+ *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+ */
+EXTERN
+SCIP_RETCODE SCIPtightenConsExprExprInterval(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
+   SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings (NULL if not needed) */
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
