@@ -111,8 +111,6 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
-   unsigned int          eventscatched:1;    /**< did we already catch variable events? */
-   unsigned int          isvarexprsstored:1; /**< did we store all variable exressions? */
 };
 
 /** constraint handler data */
@@ -1381,7 +1379,7 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata != NULL);
 
    /* skip if we have stored the variable expressions already*/
-   if( consdata->isvarexprsstored )
+   if( consdata->varexprs != NULL )
       return SCIP_OKAY;
 
    assert(consdata->varexprs == NULL);
@@ -1399,8 +1397,6 @@ SCIP_RETCODE storeVarExprs(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip), consdata->nvarexprs) );
    }
 
-   consdata->isvarexprsstored = TRUE;
-
    return SCIP_OKAY;
 }
 
@@ -1414,7 +1410,7 @@ SCIP_RETCODE freeVarExprs(
    assert(consdata != NULL);
 
    /* skip if we have stored the variable expressions already*/
-   if( !consdata->isvarexprsstored )
+   if( consdata->varexprs == NULL )
       return SCIP_OKAY;
 
    assert(consdata->varexprs != NULL);
@@ -1424,8 +1420,6 @@ SCIP_RETCODE freeVarExprs(
    SCIPfreeBlockMemoryArrayNull(scip, &consdata->varexprs, consdata->nvarexprs);
    consdata->varexprs = NULL;
    consdata->nvarexprs = 0;
-
-   consdata->isvarexprsstored = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1488,7 +1482,7 @@ SCIP_RETCODE catchVarEvents(
    assert(consdata->nvarexprs >= 0);
 
    /* check if we have catched variable events already */
-   if( consdata->eventscatched )
+   if( consdata->vareventdata != NULL )
       return SCIP_OKAY;
 
    assert(consdata->vareventdata == NULL);
@@ -1516,8 +1510,6 @@ SCIP_RETCODE catchVarEvents(
             &(consdata->vareventdata[i]->filterpos)) );
    }
 
-   consdata->eventscatched = TRUE;
-
    return SCIP_OKAY;
 }
 
@@ -1541,7 +1533,7 @@ SCIP_RETCODE dropVarEvents(
    assert(consdata != NULL);
 
    /* check if we have catched variable events already */
-   if( !consdata->eventscatched )
+   if( consdata->vareventdata == NULL )
       return SCIP_OKAY;
 
    assert(consdata->varexprs != NULL);
@@ -1570,8 +1562,6 @@ SCIP_RETCODE dropVarEvents(
 
    SCIPfreeBlockMemoryArray(scip, &consdata->vareventdata, consdata->nvarexprs);
    consdata->vareventdata = NULL;
-
-   consdata->eventscatched = FALSE;
 
    return SCIP_OKAY;
 }
