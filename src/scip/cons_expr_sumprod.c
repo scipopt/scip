@@ -407,13 +407,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) > 0);
-   assert(cutoff != NULL);
+   assert(infeasible != NULL);
    assert(nreductions != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   *cutoff = FALSE;
+   *infeasible = FALSE;
    *nreductions = 0;
 
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
@@ -464,7 +464,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       goto TERMINATE;
    }
 
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr) && !(*cutoff); ++c )
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr) && !(*infeasible); ++c )
    {
       /* upper bounds of c_i is
        *   node->bounds.sup - (minlinactivity - c_i.inf), if c_i.inf > -infinity and minlinactivityinf == 0
@@ -506,7 +506,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       SCIPintervalDivScalar(SCIPinfinity(scip), &childbounds, childbounds, exprdata->coefficients[c]);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff, nreductions) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, infeasible, nreductions) );
    }
 
 TERMINATE:
@@ -639,11 +639,11 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) > 0);
-   assert(cutoff != NULL);
+   assert(infeasible != NULL);
    assert(nreductions != NULL);
 
    *nreductions = 0;
-   *cutoff = FALSE;
+   *infeasible = FALSE;
 
    /* too expensive (runtime here is quadratic in number of children) */
    if( SCIPgetConsExprExprNChildren(expr) > 10 )
@@ -657,7 +657,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    assert(exprdata != NULL);
 
    /* f = const * prod_i c_i ^ n_i => c_i = (f / (const * prod_{j:j!=i} c_j ^ n_j) )^ (1/n_i) */
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*cutoff); ++i )
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*infeasible); ++i )
    {
       SCIPintervalSet(&childbounds, exprdata->constant);
 
@@ -685,7 +685,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
             SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]), exprdata->coefficients[i], childbounds);
 
          /* try to tighten the bounds of the expression */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, cutoff, nreductions) );
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, infeasible, nreductions) );
       }
    }
 

@@ -178,7 +178,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
 
    if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 0.0 )
    {
-      *cutoff = TRUE;
+      *infeasible = TRUE;
       return SCIP_OKAY;
    }
 
@@ -186,7 +186,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
    SCIPintervalLog(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, cutoff, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

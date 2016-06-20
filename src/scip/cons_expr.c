@@ -1050,19 +1050,19 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
 
 /* export this function here, so it can be used by unittests but is not really part of the API */
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
- *  root expression will be intersected with the [lhs,rhs] which might lead to a cutoff
+ *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
  */
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              infeasible        /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    );
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              infeasible        /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    )
 {
    SCIP_INTERVAL interval;
@@ -1070,24 +1070,25 @@ SCIP_RETCODE forwardPropCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(cutoff != NULL);
+   assert(infeasible != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   *cutoff = FALSE;
+   *infeasible = FALSE;
 
    /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
 
    /* compare root expression interval with constraint sides; store the result in the root expression */
    SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
-   SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, cutoff, NULL);
+   SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL);
 
 #ifdef SCIP_DEBUG
-   if( *cutoff )
+   if( *infeasible )
    {
-      SCIPdebugMessage(" -> found cutoff during forward propagation of constraint %s\n", SCIPconsGetName(cons));
+      SCIPdebugMessage(" -> found empty bound for an expression during forward propagation of constraint %s\n",
+         SCIPconsGetName(cons));
    }
 #endif
 
@@ -1109,14 +1110,14 @@ SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool*              cutoff,           /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    );
 SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool*              cutoff,           /**< buffer to store whether the current node can be cutoff */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
 {
@@ -1127,10 +1128,10 @@ SCIP_RETCODE reversePropConss(
    assert(scip != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
-   assert(cutoff != NULL);
+   assert(infeasible != NULL);
    assert(ntightenings != NULL);
 
-   *cutoff = FALSE;
+   *infeasible = FALSE;
    *ntightenings = 0;
 
    if( nconss == 0 )
@@ -1159,7 +1160,7 @@ SCIP_RETCODE reversePropConss(
    }
 
    /* main loop */
-   while( !SCIPqueueIsEmpty(queue) && !(*cutoff) )
+   while( !SCIPqueueIsEmpty(queue) && !(*infeasible) )
    {
       SCIP_CONSEXPR_EXPR* expr;
       int nreds;
@@ -1174,12 +1175,12 @@ SCIP_RETCODE reversePropConss(
       expr->inqueue = FALSE;
 
       /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds) );
       assert(nreds >= 0);
       *ntightenings += nreds;
 
-      /* stop propagation if we have found a cutoff */
-      if( *cutoff )
+      /* stop propagation if the problem is infeasible */
+      if( *infeasible )
          break;
 
       /* add tightened children with at least one child to the queue */
