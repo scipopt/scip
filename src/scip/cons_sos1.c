@@ -6417,7 +6417,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
             break;
 
          /* store variable if relevant for bound inequality */
-         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
+         if ( ! SCIPisInfinity(scip, -val) && ! SCIPisZero(scip, val) )
          {
             vars[cnt] = var;
 
