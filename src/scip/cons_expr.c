@@ -1077,6 +1077,10 @@ SCIP_RETCODE forwardPropCons(
 
    *infeasible = FALSE;
 
+   /* propagate active constraints only */
+   if( !SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+      return SCIP_OKAY;
+
    /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
 
@@ -1147,7 +1151,11 @@ SCIP_RETCODE reversePropConss(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* skip expressions that could not have been tightened or do not implement the reverseprop callback */
+      /* propagate active constraints only */
+      if( !SCIPconsIsActive(conss[i]) && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+         return SCIP_OKAY;
+
+      /* skip expressions that could not have been tightened or do not implement the reverseprop callback; */
       if( !consdata->expr->hastightened || consdata->expr->exprhdlr->reverseprop == NULL )
          continue;
 
