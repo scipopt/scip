@@ -682,7 +682,6 @@ SCIP_RETCODE consdataCreate(
       /* capture variables */
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
-
    return SCIP_OKAY;
 }
 
@@ -11093,6 +11092,8 @@ SCIP_RETCODE greedyCliqueAlgorithm(
    int thisnbdchgs;
 
    if( nitems <= 1 )
+      return SCIP_OKAY;
+
    /* sort possible gain per substitution of the clique members */
    if( ! sorteditems )
       SCIPsortDownLongPtr(weights,(void**) items, nitems);
