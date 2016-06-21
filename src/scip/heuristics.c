@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPheuristicsInstanceCopy(
    }
    else
    {
-      SCIP_CALL( SCIPcopy(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars, TRUE, FALSE, TRUE, success) );
+      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars, TRUE, FALSE, TRUE, success) );
 
       if( copycuts )
       {

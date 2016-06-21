@@ -552,7 +552,7 @@ SCIP_RETCODE consdataCreate(
    {
       int v;
 
-      if( SCIPisProblemCompressionEnabled(scip) )
+      if( SCIPisConsCompressionEnabled(scip) )
       {
          SCIP_VAR** varsbuffer;
          int k;

@@ -605,7 +605,7 @@ SCIP_RETCODE consdataCreate(
          if( weights[v] > 0 )
          {
             /* treat fixed variables as constants if problem compression is enabled */
-            if( SCIPisProblemCompressionEnabled(scip) && SCIPvarGetLbGlobal(vars[v]) > SCIPvarGetUbGlobal(vars[v]) - 0.5 )
+            if( SCIPisConsCompressionEnabled(scip) && SCIPvarGetLbGlobal(vars[v]) > SCIPvarGetUbGlobal(vars[v]) - 0.5 )
             {
                /* only if the variable is fixed to 1, we add its weight to the constant */
                if( SCIPvarGetUbGlobal(vars[v]) > 0.5 )

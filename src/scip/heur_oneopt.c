@@ -451,7 +451,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* copy complete SCIP instance */
       valid = FALSE;
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", NULL, NULL, 0, TRUE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, &valid) );
       SCIP_CALL( SCIPtransformProb(subscip) );
 
       /* get variable image */

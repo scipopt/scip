@@ -897,7 +897,7 @@ SCIP_RETCODE consdataCreate(
          if( !SCIPisZero(scip, val) )
          {
             /* treat fixed variable as a constant if problem compression is enabled */
-            if( SCIPisProblemCompressionEnabled(scip) && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            if( SCIPisConsCompressionEnabled(scip) && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
             {
                constant += SCIPvarGetLbGlobal(var) * val;
             }

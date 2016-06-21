@@ -1743,9 +1743,9 @@ SCIP_RETCODE SCIPcopyOrigProb(
    return SCIP_OKAY;
 }
 
-/** enables problem copy compression.
+/** enables constraint compression.
  *
- *  If copy compression is enabled, fixed variables will be treated as constants
+ *  If constraint compression is enabled, fixed variables will be treated as constants
  *  by all constraints that are copied after calling this method.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1756,7 +1756,7 @@ SCIP_RETCODE SCIPcopyOrigProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_RETCODE SCIPenableProblemCompression(
+SCIP_RETCODE SCIPenableConsCompression(
    SCIP*                 scip                /**< source SCIP data structure */
    )
 {
@@ -1768,17 +1768,17 @@ SCIP_RETCODE SCIPenableProblemCompression(
    SCIP_CALL( checkStage(scip, "SCIPenableProblemCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* enable problem compression */
-   SCIPprobEnableCompression(scip->origprob);
+   SCIPprobEnableConsCompression(scip->origprob);
 
    return SCIP_OKAY;
 }
 
-/** is problem copy compression enabled?
+/** is constraint compression enabled?
  *
- *  If copy compression is enabled, fixed variables can be treated as constants
+ *  If constraint compression is enabled, fixed variables can be treated as constants
  *  by all constraints that are copied after calling this method.
  *
- *  @return TRUE if problem copy compression is enabled, otherwise FALSE
+ *  @return TRUE if problem constraint compression is enabled, otherwise FALSE
  *
  *  @pre This method can be called if scip is in one of the following stages:
   *      - \ref SCIP_STAGE_PROBLEM
@@ -1796,19 +1796,18 @@ SCIP_RETCODE SCIPenableProblemCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_Bool SCIPisProblemCompressionEnabled(
+SCIP_Bool SCIPisConsCompressionEnabled(
    SCIP*                 scip                /**< source SCIP data structure */
    )
 {
    assert(scip != NULL);
    assert(scip->origprob != NULL);
 
-
    /* check stage */
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisProblemCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    /* is problem compression enabled */
-   return SCIPprobIsCompressedCopy(scip->origprob);
+   return SCIPprobIsConsCompressionEnabled(scip->origprob);
 }
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
@@ -2164,12 +2163,6 @@ SCIP_RETCODE copyVars(
       assert(fixed);
    }
 
-   /* if there were fixed variables during the copy stage, copy compression is enabled */
-   if( nfixedvars > 0 )
-   {
-      SCIP_CALL( SCIPenableProblemCompression(targetscip) );
-   }
-
    /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
 #ifndef NDEBUG
    if( original )
@@ -2337,8 +2330,11 @@ SCIP_RETCODE SCIPcopyOrigVars(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
                                               *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars          /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    )
 {
    assert(sourcescip != NULL);
@@ -2348,7 +2344,7 @@ SCIP_RETCODE SCIPcopyOrigVars(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, NULL, NULL, 0, TRUE, TRUE) );
+   SCIP_CALL( copyVars(sourcescip, targetscip, varmap, consmap, fixedvars, fixedvals, nfixedvars, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -3316,61 +3312,36 @@ int SCIPgetSubscipDepth(
    return scip->stat->subscipdepth;
 }
 
-/** copies source SCIP to target SCIP; the copying process is done in the following order:
- *  1) copy the plugins
- *  2) copy the settings
- *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
- *  5) copy all constraints
+/* copies source SCIP data into target SCIP data structure
  *
- *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ * distinguishes between
+ * - local and global copies
+ * - copies of the original or transformed problem
  *
- *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
- *        Also, 'passmessagehdlr' should be set to FALSE.
- *  @note Do not change the source SCIP environment during the copying process
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if sourcescip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @pre This method can be called if targetscip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_FREE
- *
- *  @note sourcescip stage does not get changed
- *
- *  @note targetscip stage does not get changed
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ * allows for constraint compression by specifying a number of source variables
+ * and values that should be fixed in the copy
  */
-SCIP_RETCODE SCIPcopy(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
-   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
-   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
-   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
-   SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
-                                              *   plugins will be copied and activated, and the modifiable flag of
-                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
-                                              *   there are pricers present */
-   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+static
+SCIP_RETCODE doCopy(
+      SCIP*                 sourcescip,         /**< source SCIP data structure */
+      SCIP*                 targetscip,         /**< target SCIP data structure */
+      SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                                 *   target variables, or NULL */
+      SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                                 *   target constraints, or NULL */
+      const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+      SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+      SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+      int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+      SCIP_Bool             useconscompression, /**< should constraint compression be used when constraints are created? */
+      SCIP_Bool             global,             /**< create a global or a local copy? */
+      SCIP_Bool             original,           /**< copy original or transformed problem? if TRUE, a copy using local bounds is not possible */
+      SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                                 *   plugins will be copied and activated, and the modifiable flag of
+                                                 *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                                 *   there are pricers present */
+      SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+      SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_HASHMAP* localvarmap;
@@ -3387,10 +3358,7 @@ SCIP_RETCODE SCIPcopy(
    assert(targetscip != NULL);
    assert(suffix != NULL);
    assert(valid != NULL);
-
-   /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   assert(global || !original);
 
    /* get time before start of copy procedure */
    startcopytime = SCIPclockGetTime(sourcescip->stat->copyclock);
@@ -3442,17 +3410,40 @@ SCIP_RETCODE SCIPcopy(
    /* restore original quiet state */
    SCIPsetMessagehdlrQuiet(targetscip, msghdlrquiet);
 
-   /* create problem in the target SCIP and copying the source original problem data */
-   SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
+   /* create problem in the target SCIP copying the source original or transformed problem data */
+   if( original )
+   {
+      SCIP_CALL( SCIPcopyOrigProb(sourcescip, targetscip, localvarmap, localconsmap, name) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
+   }
 
-   /* copy all original variables */
-   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, localvarmap, localconsmap, fixedvars, fixedvals, nfixedvars, global) );
+   /* copy original or transformed variables and perform fixings if needed */
+   SCIP_CALL( copyVars(sourcescip, targetscip, localvarmap, localconsmap, fixedvars, fixedvals, nfixedvars, original, global) );
 
-   /* copy all original constraints */
-   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
-   (*valid) = *valid && consscopyvalid;
+   /* if fixed variables are directly specified or inferred from local bounds,
+    * enable constraint compression
+    */
+   if( useconscompression && (nfixedvars > 0 || !global) )
+   {
+      SCIP_CALL( SCIPenableConsCompression(targetscip) );
+   }
+
+   /* copy all (original) constraints */
+   if( original )
+   {
+      SCIP_CALL( SCIPcopyOrigConss(sourcescip, targetscip, localvarmap, localconsmap, enablepricing, &consscopyvalid) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
+   }
 
    SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
+
+   (*valid) = *valid && consscopyvalid;
 
    if( uselocalvarmap )
    {
@@ -3479,6 +3470,166 @@ SCIP_RETCODE SCIPcopy(
 
    /* increase copy counter */
    ++(sourcescip->stat->ncopies);
+
+   return SCIP_OKAY;
+}
+
+/** copies source SCIP to target SCIP; the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all active variables
+ *  5) copy all constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   )
+{
+   SCIP_VAR** fixedvars = NULL;
+   SCIP_Real* fixedvals = NULL;
+   int nfixedvars = 0;
+   SCIP_Bool original = FALSE;
+   SCIP_Bool useconscompression = FALSE;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(suffix != NULL);
+   assert(valid != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyConsCompression", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   /* copy source SCIP data into target SCIP data structure */
+   SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
+         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
+
+   return SCIP_OKAY;
+}
+
+/** copies source SCIP to target SCIP but compresses constraints
+ *
+ *  constraint compression is performed by removing fixed variables immediately
+ *  during constraint creation if the involved constraint handlers support
+ *  compression
+ *
+ *  the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all active variables
+ *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
+ *     b) enable constraint compression
+ *  5) copy all constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyConsCompression(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   )
+{
+   SCIP_Bool original = FALSE;
+   SCIP_Bool useconscompression = TRUE;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(suffix != NULL);
+   assert(valid != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyConsCompression", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   /* copy the source problem data */
+   SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
+         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -3537,14 +3688,12 @@ SCIP_RETCODE SCIPcopyOrig(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
-   SCIP_HASHMAP* localvarmap;
-   SCIP_HASHMAP* localconsmap;
-   SCIP_Real startcopytime;
-   SCIP_Real copytime;
-   SCIP_Bool uselocalvarmap;
-   SCIP_Bool uselocalconsmap;
-   SCIP_Bool consscopyvalid;
-   char name[SCIP_MAXSTRLEN];
+   SCIP_VAR** fixedvars = NULL;
+   SCIP_Real* fixedvals = NULL;
+   int nfixedvars = 0;
+   SCIP_Bool global = TRUE;
+   SCIP_Bool original = TRUE;
+   SCIP_Bool useconscompression = FALSE;
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
@@ -3555,85 +3704,92 @@ SCIP_RETCODE SCIPcopyOrig(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyOrig", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
-   /* get time before start of copy procedure */
-   startcopytime = SCIPclockGetTime(sourcescip->stat->copyclock);
+   SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
+         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
 
-   /* start time measuring */
-   SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
+   return SCIP_OKAY;
+}
 
-   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP
-    */
-   (*valid) = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
+/** copies source SCIP original problem to target SCIP but compresses constraints
+ *
+ *  constraint compression is performed by removing fixed variables immediately
+ *  during constraint creation if the involved constraint handlers support
+ *  compression
+ *
+ *  the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all original variables
+ *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
+ *     b) enable constraint compression
+ *  5) copy all constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyOrigConsCompression(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   )
+{
+   SCIP_Bool original = TRUE;
+   SCIP_Bool global = TRUE;
+   SCIP_Bool useconscompression = TRUE;
 
-   /* copy all plugins */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, valid) );
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(suffix != NULL);
+   assert(valid != NULL);
 
-   SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
+   /* check stages for both, the source and the target SCIP data structure */
+    SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+    SCIP_CALL( checkStage(targetscip, "SCIPcopyOrigConsCompression", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
-   uselocalvarmap = (varmap == NULL);
-   uselocalconsmap = (consmap == NULL);
-
-   if( uselocalvarmap )
-   {
-      /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
-   }
-   else
-      localvarmap = varmap;
-
-   if( uselocalconsmap )
-   {
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
-   }
-   else
-      localconsmap = consmap;
-
-   /* construct name for the target SCIP using the source problem name and the given suffix string */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
-
-   /* copy all settings */
-   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
-
-   /* create problem in the target SCIP and copying the source problem data */
-   SCIP_CALL( SCIPcopyOrigProb(sourcescip, targetscip, localvarmap, localconsmap, name) );
-
-   /* copy all active variables */
-   SCIP_CALL( SCIPcopyOrigVars(sourcescip, targetscip, localvarmap, localconsmap) );
-
-   /* copy all constraints */
-   SCIP_CALL( SCIPcopyOrigConss(sourcescip, targetscip, localvarmap, localconsmap, enablepricing, &consscopyvalid) );
-   (*valid) = *valid && consscopyvalid;
-
-   SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
-
-   if( uselocalvarmap )
-   {
-      /* free hash map */
-      SCIPhashmapFree(&localvarmap);
-   }
-
-   if( uselocalconsmap )
-   {
-      /* free hash map */
-      SCIPhashmapFree(&localconsmap);
-   }
-
-   /* stop time measuring */
-   SCIPclockStop(sourcescip->stat->copyclock, sourcescip->set);
-
-   /* get time after copying procedure */
-   copytime = SCIPclockGetTime(sourcescip->stat->copyclock) - startcopytime;
-
-   if( copytime > sourcescip->stat->maxcopytime )
-      sourcescip->stat->maxcopytime = copytime;
-   if( copytime < sourcescip->stat->mincopytime )
-      sourcescip->stat->mincopytime = copytime;
-
-   /* increase copy counter */
-   ++(sourcescip->stat->ncopies);
+   /* copy the source problem data */
+   SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
+         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }

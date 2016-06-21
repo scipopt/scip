@@ -626,15 +626,15 @@ SCIP_Real SCIPprobGetObjscale(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** is the problem a compressed copy, i.e., a problem copy with variable fixings? */
+/** is constraint compression enabled for this problem? */
 extern
-SCIP_Bool SCIPprobIsCompressedCopy(
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** enable problem compression, i.e., a problem copy with variable fixings */
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
 extern
-void SCIPprobEnableCompression(
+void SCIPprobEnableConsCompression(
    SCIP_PROB*            prob                /**< problem data */
    );
 
@@ -662,8 +662,8 @@ void SCIPprobEnableCompression(
 #define SCIPprobGetVars(prob)           ((prob)->vars)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
-#define SCIPprobIsCompressedCopy(prob)  ((prob)->compressedcopy)
-#define SCIPprobEnableCompression(prob)  ((prob)->compressedcopy = TRUE)
+#define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
+#define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
 
 

@@ -308,7 +308,7 @@ SCIP_RETCODE consdataCreate(
 
    if( nvars > 0 )
    {
-      if( SCIPisProblemCompressionEnabled(scip) )
+      if( SCIPisConsCompressionEnabled(scip) )
       {
          int k;
          int v;

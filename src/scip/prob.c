@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
-   (*prob)->compressedcopy = FALSE;
+   (*prob)->conscompression = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2098,8 +2098,8 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
-#undef SCIPisCompressedCopy
-#undef SCIPprobEnableCompression
+#undef SCIPisConsCompressedEnabled
+#undef SCIPprobEnableConsCompression
 
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
@@ -2258,24 +2258,24 @@ SCIP_Real SCIPprobGetObjscale(
    return prob->objscale;
 }
 
-/** is the problem a compressed copy, i.e., a problem copy with variable fixings? */
-SCIP_Bool SCIPprobIsCompressedCopy(
+/** is constraint compression enabled for this problem? */
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
    SCIP_PROB*            prob                /**< problem data */
    )
 {
    assert(prob != NULL);
 
-   return prob->compressedcopy;
+   return prob->conscompression;
 }
 
-/** enable problem compression, i.e., a problem copy with variable fixings */
-void SCIPprobEnableCompression(
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
+void SCIPprobEnableConsCompression(
    SCIP_PROB*            prob                /**< problem data */
    )
 {
    assert(prob != NULL);
 
-   prob->compressedcopy = TRUE;
+   prob->conscompression = TRUE;
 }
 
 #endif
