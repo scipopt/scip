@@ -16,6 +16,7 @@
 
 #include <algorithm> // std::transform
 #include <cstddef> // std::size_t
+#include <iomanip> // std::setprecision
 #include <iostream>
 #include <forward_list>
 #include <functional> // std::negate
@@ -216,7 +217,7 @@ namespace polyscip {
                 new_edges.push_back({new_vertex, non_obs_vertex});
             }
             else {
-                std::cerr << "Encountered combinaiton values = " << convCombVal << "\n";
+                std::cout << std::setprecision(9) << "Encountered combination value = " << convCombVal << "\n";
             }
         }
 
