@@ -3858,6 +3858,29 @@ SCIP_RETCODE solveNode(
             stat->nnodes, stat->nlps, nlperrors);
       }
 
+      if( pricingaborted && !(*cutoff) && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         assert(SCIPsolveIsStopped(set, stat, FALSE));
+
+         SCIPtreeSetFocusNodeLP(tree, FALSE);
+
+/* if the above assert holds, this is not really a numerical trouble but we just ran into the time limit;
+ * however, if the assert proves to be wrong, we should activate the code below
+ */
+#ifdef SCIP_DISABLED_CODE
+         if( forcedlpsolve )
+         {
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
+               stat->nnodes, stat->nlps);
+            return SCIP_LPERROR;
+         }
+         nlperrors++;
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
+            stat->nnodes, stat->nlps, nlperrors);
+#endif
+      }
+
       /* if an improved solution was found, propagate and solve the relaxations again */
       if( foundsol )
       {
