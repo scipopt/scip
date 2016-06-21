@@ -305,7 +305,11 @@ do
     fi
 
     GMSFILE=`basename $i`
-    INPUTDIR=`pwd`/`dirname $i`
+    if test "${i:0:1}" == "/" ; then
+       INPUTDIR=`dirname $i`
+    else
+       INPUTDIR=`pwd`/`dirname $i`
+    fi
     case $GMSFILE in
       *.gms )
         ;;
