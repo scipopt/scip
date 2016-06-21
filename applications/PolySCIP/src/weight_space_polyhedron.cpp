@@ -215,6 +215,9 @@ namespace polyscip {
                 new_vertices.push_back(new_vertex);
                 new_edges.push_back({new_vertex, non_obs_vertex});
             }
+            else {
+                std::cerr << "Encountered combinaiton values = " << convCombVal << "\n";
+            }
         }
 
         addToSkeleton(new_vertices, new_edges);
