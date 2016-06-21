@@ -45,7 +45,11 @@ namespace polyscip {
 
         SCIP_RETCODE computeNondomPoints();
 
-        void printSupportedResults(std::ostream& os = std::cout, bool withSolution = true);
+        bool writeResults() const {return cmd_line_args_.writeSolutions();};
+
+        void writeSupportedResults() const;
+
+        void printSupportedResults(std::ostream& os = std::cout, bool withSolution = true) const;
 
     private:
 
@@ -97,13 +101,13 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         void computeUnsupported() = delete;
 
-        void printSol(const SolType& sol, std::ostream& os);
+        void printSol(const SolType& sol, std::ostream& os) const;
 
         /** Prints given ray to given output stream */
-        void printRay(const OutcomeType &ray, std::ostream &os = std::cout);
+        void printRay(const OutcomeType &ray, std::ostream &os = std::cout) const;
 
         /** Prints given point to given output stream */
-        void printPoint(const OutcomeType &point, std::ostream& os);
+        void printPoint(const OutcomeType &point, std::ostream& os) const;
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;

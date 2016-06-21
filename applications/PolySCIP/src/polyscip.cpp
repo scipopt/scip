@@ -328,7 +328,7 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    void Polyscip::printSupportedResults(ostream& os, bool withSolutions) {
+    void Polyscip::printSupportedResults(ostream& os, bool withSolutions) const {
         os << "Number of supported bounded results: " << supported_.size() << "\n";
         os << "Number of supported unbounded results: " << unbounded_.size() << "\n";
         for (const auto& result : supported_) {
@@ -345,17 +345,17 @@ namespace polyscip {
         }
     }
 
-    void Polyscip::printSol(const SolType& sol, ostream& os) {
+    void Polyscip::printSol(const SolType& sol, ostream& os) const {
         os << " Non-zero solution variables: ";
         for (const auto& elem : sol)
             os << elem.first << "=" << elem.second << " ";
     }
 
-    void Polyscip::printPoint(const OutcomeType& point, ostream& os) {
+    void Polyscip::printPoint(const OutcomeType& point, ostream& os) const {
         global::print(point, {"Point = "}, os);
     }
 
-    void Polyscip::printRay(const OutcomeType& ray, ostream& os) {
+    void Polyscip::printRay(const OutcomeType& ray, ostream& os) const {
         global::print(ray, {"Ray = "}, os);
     }
 
@@ -514,5 +514,28 @@ namespace polyscip {
         }
         return SCIP_OKAY;
     }
+
+    void Polyscip::writeSupportedResults() const {
+        auto probFile = cmd_line_args_.getProblemFile();
+        size_t prefix = probFile.find_last_of("/"), //separate path/ and filename.mop
+                suffix = probFile.find_last_of("."),      //separate filename and .mop
+                startInd = (prefix == string::npos) ? 0 : prefix + 1,
+                endInd = (suffix != string::npos) ? suffix : string::npos;
+        string solFileName = "solutions_" +
+                             probFile.substr(startInd, endInd - startInd) + ".txt";
+        auto writePath = cmd_line_args_.getWritePath();
+        if (writePath.back() != '/')
+            writePath.push_back('/');
+        std::ofstream solfs(writePath + solFileName);
+        if (solfs.is_open()) {
+            printSupportedResults(solfs);
+            solfs.close();
+            cout << "#Solution file " << solFileName
+            << " written to: " << writePath << "\n";
+        }
+        else
+            std::cerr << "ERROR writing solution file\n.";
+    }
+
 
 }

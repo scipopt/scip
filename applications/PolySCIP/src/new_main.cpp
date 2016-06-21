@@ -32,7 +32,10 @@ int main(int argc, char** argv) {
         Polyscip polyscip(argc, (const char *const *) argv);
         SCIP_CALL( polyscip.readProblem() );
         SCIP_CALL( polyscip.computeNondomPoints() );
-        polyscip.printSupportedResults(std::cout, false);
+        if (polyscip.writeResults())
+            polyscip.writeSupportedResults();
+        else
+            polyscip.printSupportedResults(std::cout, false);
     }
     catch (TCLAP::ArgException& e) {
         std::cerr << "ERROR: " << e.error() << " " << e.argId() << "\n";

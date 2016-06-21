@@ -41,7 +41,7 @@ namespace polyscip {
         double getEpsilon() const {return epsilon_;};
         std::string getParameterFile() const {return param_file_;};
         std::string getProblemFile() const {return prob_file_;};
-        std::string getSolutionsPath() const {return write_sols_path_;};
+        std::string getWritePath() const {return write_sols_path_;};
 
     private:
         std::string executable_name_;

@@ -206,13 +206,15 @@ namespace polyscip {
             auto obs_vertex= pair.first;
             auto non_obs_vertex = pair.second;
             auto convCombVal = calculateConvexCombValue(obs_vertex, non_obs_vertex, outcome, outcome_is_ray);
-            assert (convCombVal > -0.001 && convCombVal < 1.001);
-            auto new_vertex = new WeightSpaceVertex(convCombVal, obs_vertex, non_obs_vertex, outcome,
-                                                    outcome_is_ray, wsp_dimension_);
-            assert (std::find(begin(unmarked_vertices_), end(unmarked_vertices_), new_vertex) == end(unmarked_vertices_));
-            unmarked_vertices_.push_back(new_vertex);
-            new_vertices.push_back(new_vertex);
-            new_edges.push_back({new_vertex, non_obs_vertex});
+            if (convCombVal >= 0 && convCombVal <= 1) {
+                auto new_vertex = new WeightSpaceVertex(convCombVal, obs_vertex, non_obs_vertex, outcome,
+                                                        outcome_is_ray, wsp_dimension_);
+                assert (std::find(begin(unmarked_vertices_), end(unmarked_vertices_), new_vertex) ==
+                        end(unmarked_vertices_));
+                unmarked_vertices_.push_back(new_vertex);
+                new_vertices.push_back(new_vertex);
+                new_edges.push_back({new_vertex, non_obs_vertex});
+            }
         }
 
         addToSkeleton(new_vertices, new_edges);
