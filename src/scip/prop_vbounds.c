@@ -745,12 +745,12 @@ SCIP_RETCODE dfs(
 
                if( SCIPisEQ(scip, coef, 1.0) )
                {
-                  if( islower && SCIPisFeasNegative(scip, constant) )
+                  if( islower && SCIPisFeasPositive(scip, constant) )
                   {
                      printf("-> infeasible aggregated variable bound relation 0 >= %g\n", constant);
                      *infeasible = TRUE;
                   }
-                  else if( !islower && SCIPisFeasPositive(scip, constant) )
+                  else if( !islower && SCIPisFeasNegative(scip, constant) )
                   {
                      printf("-> infeasible aggregated variable bound relation 0 <= %g\n", constant);
                      *infeasible = TRUE;
