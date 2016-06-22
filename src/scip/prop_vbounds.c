@@ -691,39 +691,53 @@ SCIP_RETCODE dfs(
 
             if( visited[idx] == visitedflag )
             {
+               SCIP_VAR* currvar;
                int* tmpvboundidx;
                int ntmpvbounds;
+               int ntmpimpls;
                int j;
                int k;
                SCIP_Real coef = 1.0;
                SCIP_Real constant = 0.0;
                SCIP_Bool islower;
                SCIP_Real newbound;
+               SCIP_Bool currlower;
 
                printf("found cycle\n");
-#if 0
+
                for( j = stacksize - 1; dfsstack[j] != idx && j >= 0; --j );
                assert(j >= 0);
 
                for( ; j < stacksize - 1; ++j )
                {
+                  currvar = vars[getVarIndex(dfsstack[j])];
+                  currlower = isIndexLowerbound(dfsstack[j]);
                   tmpvboundidx = propdata->vboundboundedidx[dfsstack[j]];
                   ntmpvbounds = propdata->nvbounds[dfsstack[j]];
+                  ntmpimpls = SCIPvarGetNImpls(currvar, currlower);
 
-                  for( k = 0; k < ntmpvbounds; ++k )
+                  if( stacknextedge[j] <= 0 )
                   {
-                     if( tmpvboundidx[k] == dfsstack[j+1] )
-                     {
-                        printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
-                           indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
-                           propdata->vboundcoefs[dfsstack[j]][k], propdata->vboundconstants[dfsstack[j]][k],
-                           indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
+                     assert(0);
+                  }
+                  else if( stacknextedge[j] <= ntmpimpls )
+                  {
+                     assert(0);
+                  }
+                  else
+                  {
+                     assert(stacknextedge[j] > ntmpimpls);
+                     k = stacknextedge[j] - nimpls - 1;
+                     assert(k < ntmpvbounds);
+                     assert(tmpvboundidx[k] == dfsstack[j+1]);
 
-                        coef = coef * propdata->vboundcoefs[dfsstack[j]][k];
-                        constant = constant * propdata->vboundcoefs[dfsstack[j]][k] + propdata->vboundconstants[dfsstack[j]][k];
+                     printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+                        indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
+                        propdata->vboundcoefs[dfsstack[j]][k], propdata->vboundconstants[dfsstack[j]][k],
+                        indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
 
-                        break;
-                     }
+                     coef = coef * propdata->vboundcoefs[dfsstack[j]][k];
+                     constant = constant * propdata->vboundcoefs[dfsstack[j]][k] + propdata->vboundconstants[dfsstack[j]][k];
                   }
                }
 
@@ -780,7 +794,6 @@ SCIP_RETCODE dfs(
                }
                if( *infeasible )
                   break;
-#endif
             }
 
             /* break when the first unvisited node is reached */
