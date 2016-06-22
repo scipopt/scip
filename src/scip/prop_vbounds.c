@@ -684,7 +684,7 @@ SCIP_RETCODE dfs(
          vboundidx = propdata->vboundboundedidx[curridx];
 
          /* iterate over all vbounds for the given bound */
-         for( i = 0; i < nvbounds; ++i )
+         for( i = stacknextedge[stacksize - 1] - nimpls; i < nvbounds; ++i )
          {
             idx = vboundidx[i];
             assert(idx >= 0);
@@ -701,7 +701,7 @@ SCIP_RETCODE dfs(
                SCIP_Real newbound;
 
                printf("found cycle\n");
-
+#if 0
                for( j = stacksize - 1; dfsstack[j] != idx && j >= 0; --j );
                assert(j >= 0);
 
@@ -780,6 +780,7 @@ SCIP_RETCODE dfs(
                }
                if( *infeasible )
                   break;
+#endif
             }
 
             /* break when the first unvisited node is reached */
