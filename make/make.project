@@ -142,13 +142,20 @@ BLIS            =       blis
 SHELL		= 	bash
 READ		=	read -e
 LN_s		= 	ln -s
+LN_sf		=	ln -sf
 
 #initial compiler and linker flags
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
+
+ifeq ($(COMP),msvc)
+LDFLAGS		=
+else
 LDFLAGS		=	$(LINKCC_l)m$(LINKLIBSUFFIX)
+endif
+
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 

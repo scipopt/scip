@@ -731,7 +731,7 @@ SCIP_Bool checkOptimalSolution(
 static
 SCIP_Bool transitionPhase3(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
    if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
