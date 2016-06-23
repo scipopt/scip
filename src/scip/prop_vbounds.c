@@ -461,6 +461,253 @@ SCIP_DECL_SORTPTRCOMP(compVarboundIndices)
    return idx2 - idx1;
 }
 
+
+static
+SCIP_RETCODE extractCycle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
+                                              *   already visited for each node on the stack; only needed for
+                                              *   performance reasons */
+   int                   stacksize,          /**< current stack size */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR* currvar;
+   SCIP_Bool currlower;
+
+   SCIP_Real coef = 1.0;
+   SCIP_Real constant = 0.0;
+   SCIP_Bool islower;
+   SCIP_Real newbound;
+   int cycleidx = dfsstack[stacksize - 1];
+   int ntmpimpls;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+
+   vars = propdata->vars;
+
+   for( j = stacksize - 2; dfsstack[j] != cycleidx && j >= 0; --j );
+   assert(j >= 0);
+
+   for( ; j < stacksize - 1; ++j )
+   {
+      currvar = vars[getVarIndex(dfsstack[j])];
+      currlower = isIndexLowerbound(dfsstack[j]);
+
+      /* if we do not use implications, we assume the number of implications to be 0 (as we did before) */
+      ntmpimpls = (propdata->useimplics ? SCIPvarGetNImpls(currvar, currlower) : 0);
+
+      if( stacknextedge[j] <= 0 )
+      {
+         SCIP_Bool nextlower = isIndexLowerbound(dfsstack[j+1]);
+         /* @todo since the coefficient and constant only depend on the type of bounds of the two nodes (see
+          * below), we could skip searching for the variable in the clique
+          */
+         SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
+         int ntmpcliques = SCIPvarGetNCliques(currvar, currlower);
+         SCIP_CLIQUE** tmpcliques = SCIPvarGetCliques(currvar, currlower);
+         SCIP_VAR** cliquevars;
+         SCIP_Bool* cliquevals;
+         int ncliquevars;
+         int v;
+
+         if( stacknextedge[j] == 0 )
+         {
+            k = ntmpcliques - 1;
+         }
+         else
+         {
+            /* we processed at least one edge, so the next one should be -2 or smaller (we have a -1 offset) */
+            assert(stacknextedge[j] <= -2);
+
+            k = -stacknextedge[j] - 2;
+
+            assert(k < ntmpcliques);
+         }
+
+         cliquevars = SCIPcliqueGetVars(tmpcliques[k]);
+         cliquevals = SCIPcliqueGetValues(tmpcliques[k]);
+         ncliquevars = SCIPcliqueGetNVars(tmpcliques[k]);
+
+         // printf("clique: ");
+         // for( v = 0; v < ncliquevars; ++v )
+         // {
+         //    printf("%s%s ", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+         // }
+         // printf("(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
+
+         for( v = 0; v < ncliquevars; ++v )
+         {
+            if( cliquevars[v] != nextvar )
+               continue;
+
+            if( cliquevals[v] == !nextlower )
+               break;
+         }
+         assert(v < ncliquevars);
+
+         /* there are four cases:
+          * a) lb(x) -> ub(y)   ==>   clique(x,y,...)    ==>   y <= 1 - x
+          * b) lb(x) -> lb(y)   ==>   clique(x,~y,...)   ==>   y >= x
+          * c) ub(x) -> ub(y)   ==>   clique(~x,y,...)   ==>   y <= x
+          * d) ub(x) -> lb(y)   ==>   clique(~x,~y,...)  ==>   y >= 1 - x
+          *
+          * in cases b) and c), coef=1.0 and constant=0.0; these are the cases where both nodes represent
+          * the same type of bound
+          * in cases a) and d), coef=-1.0 and constant=1.0; both nodes represent different types of bounds
+          *
+          * we do not need to change the overall coef and constant in cases b) and c), but for the others
+          */
+         if( currlower != nextlower )
+         {
+            coef = -coef;
+            constant = -constant + 1.0;
+         }
+
+         printf("%s(%s) -- (*%g + %g)[clique(<%s%s>,<%s%s>,...)] --> %s(%s)\n",
+            indexGetBoundString(dfsstack[j]), SCIPvarGetName(currvar),
+            (currlower != nextlower ? -1.0 : 1.0),
+            (currlower != nextlower ? 1.0 : 0.0),
+            (currlower ? "" : "~"), SCIPvarGetName(currvar),
+            (nextlower ? "~" : ""), SCIPvarGetName(nextvar),
+            indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(currvar));
+
+      }
+      else if( stacknextedge[j] <= ntmpimpls )
+      {
+         SCIP_VAR** implvars;
+         SCIP_BOUNDTYPE* impltypes;
+         SCIP_Real* implbounds;
+         SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
+         SCIP_Real newconstant;
+         SCIP_Real newcoef;
+         int* implids;
+
+         implvars = SCIPvarGetImplVars(currvar, currlower);
+         impltypes = SCIPvarGetImplTypes(currvar, currlower);
+         implbounds = SCIPvarGetImplBounds(currvar, currlower);
+         implids = SCIPvarGetImplIds(currvar, currlower);
+
+         k = stacknextedge[j] - 1;
+
+         assert(dfsstack[j+1] == (impltypes[k] == SCIP_BOUNDTYPE_LOWER ?
+               varGetLbIndex(propdata, implvars[k]) : varGetUbIndex(propdata, implvars[k])));
+
+         if( impltypes[k] == SCIP_BOUNDTYPE_LOWER )
+         {
+            newcoef = implbounds[k] - SCIPvarGetLbLocal(nextvar);
+
+            if( currlower )
+            {
+               newconstant = SCIPvarGetLbLocal(nextvar);
+            }
+            else
+            {
+               newconstant = implbounds[k];
+               newcoef *= -1.0;
+            }
+         }
+         else
+         {
+            assert(impltypes[k] == SCIP_BOUNDTYPE_UPPER);
+
+            newcoef = SCIPvarGetUbLocal(nextvar) - implbounds[k];
+
+            if( currlower )
+            {
+               newconstant = SCIPvarGetUbLocal(nextvar);
+               newcoef *= -1.0;
+            }
+            else
+            {
+               newconstant = implbounds[k];
+            }
+         }
+
+         coef = coef * newcoef;
+         constant = constant * newcoef + newconstant;
+
+         printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+            indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
+            newcoef, newconstant,
+            indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
+      }
+      /* the edge was given by a variable bound relation */
+      else
+      {
+         assert(stacknextedge[j] > ntmpimpls);
+
+         k = stacknextedge[j] - ntmpimpls - 1;
+         assert(k < propdata->nvbounds[dfsstack[j]]);
+         assert(propdata->vboundboundedidx[dfsstack[j]][k] == dfsstack[j+1]);
+
+         printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+            indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
+            propdata->vboundcoefs[dfsstack[j]][k], propdata->vboundconstants[dfsstack[j]][k],
+            indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
+
+         coef = coef * propdata->vboundcoefs[dfsstack[j]][k];
+         constant = constant * propdata->vboundcoefs[dfsstack[j]][k] + propdata->vboundconstants[dfsstack[j]][k];
+      }
+   }
+
+   printf("==> %s(%s) -- (*%g + %g) --> %s(%s)\n",
+      indexGetBoundString(cycleidx), SCIPvarGetName(vars[getVarIndex(cycleidx)]),
+      coef, constant,
+      indexGetBoundString(cycleidx), SCIPvarGetName(vars[getVarIndex(cycleidx)]));
+
+   islower = isIndexLowerbound(cycleidx);
+
+   if( SCIPisEQ(scip, coef, 1.0) )
+   {
+      if( islower && SCIPisFeasPositive(scip, constant) )
+      {
+         printf("-> infeasible aggregated variable bound relation 0 >= %g\n", constant);
+         *infeasible = TRUE;
+      }
+      else if( !islower && SCIPisFeasNegative(scip, constant) )
+      {
+         printf("-> infeasible aggregated variable bound relation 0 <= %g\n", constant);
+         *infeasible = TRUE;
+      }
+   }
+   else
+   {
+      SCIP_Bool tightened;
+
+      newbound = constant / (1.0 - coef);
+
+      if( SCIPisGT(scip, coef, 1.0) )
+         islower = !islower;
+
+      if( islower )
+      {
+         printf("-> found new lower bound: <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[getVarIndex(cycleidx)]),
+            SCIPvarGetLbLocal(vars[getVarIndex(cycleidx)]), SCIPvarGetUbLocal(vars[getVarIndex(cycleidx)]), newbound);
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[getVarIndex(cycleidx)], newbound, FALSE, infeasible, &tightened) );
+      }
+      else
+      {
+         printf("-> found new upper bound: <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[getVarIndex(cycleidx)]),
+            SCIPvarGetLbLocal(vars[getVarIndex(cycleidx)]), SCIPvarGetUbLocal(vars[getVarIndex(cycleidx)]), newbound);
+         SCIP_CALL( SCIPtightenVarUb(scip, vars[getVarIndex(cycleidx)], newbound, FALSE, infeasible, &tightened) );
+      }
+
+      if( tightened )
+         printf("---> applied new bound\n");
+   }
+
+   return SCIP_OKAY;
+}
+
 /** performs depth-first-search in the implicitly given directed graph from the given start index */
 static
 SCIP_RETCODE dfs(
@@ -541,7 +788,7 @@ SCIP_RETCODE dfs(
          cliques = SCIPvarGetCliques(startvar, lower);
          found = FALSE;
 
-         assert(stacknextedge[stacksize - 1] == -1 || -stacknextedge[stacksize - 1] - 1 < ncliques);
+         assert(stacknextedge[stacksize - 1] == -1 || -stacknextedge[stacksize - 1] - 1 <= ncliques);
 
          /* iterate over all not yet handled cliques and search for an unvisited node */
          for( j = -stacknextedge[stacksize - 1] - 1; j < ncliques; ++j )
@@ -565,7 +812,17 @@ SCIP_RETCODE dfs(
                   idx = varGetLbIndex(propdata, cliquevars[i]);
 
                if( idx >= 0 && visited[idx] == visitedflag )
+               {
                   printf("found cycle\n");
+
+                  dfsstack[stacksize] = idx;
+                  stacknextedge[stacksize - 1] = -j - 2;
+
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, infeasible) );
+
+                  if( *infeasible )
+                     break;
+               }
 
                /* break when the first unvisited node is reached */
                if( idx >= 0 && !visited[idx] )
@@ -591,7 +848,7 @@ SCIP_RETCODE dfs(
             /* put the adjacent node onto the stack */
             dfsstack[stacksize] = idx;
             stacknextedge[stacksize] = 0;
-            stacknextedge[stacksize - 1] = -j - 1;
+            stacknextedge[stacksize - 1] = -j - 2;
             stacksize++;
             assert(stacksize <= propdata->nbounds);
 
@@ -639,7 +896,17 @@ SCIP_RETCODE dfs(
                idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
                if( idx >= 0 && visited[idx] == visitedflag )
+               {
                   printf("found cycle\n");
+
+                  dfsstack[stacksize] = idx;
+                  stacknextedge[stacksize - 1] = i + 1;
+
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, infeasible) );
+
+                  if( *infeasible )
+                     break;
+               }
 
                /* break when the first unvisited node is reached */
                if( idx >= 0 && !visited[idx] )
@@ -690,217 +957,13 @@ SCIP_RETCODE dfs(
 
             if( visited[idx] == visitedflag )
             {
-               SCIP_VAR* currvar;
-               int ntmpimpls;
-               int j;
-               int k;
-               SCIP_Real coef = 1.0;
-               SCIP_Real constant = 0.0;
-               SCIP_Bool islower;
-               SCIP_Real newbound;
-               SCIP_Bool currlower;
-
                printf("found cycle\n");
 
-               for( j = stacksize - 1; dfsstack[j] != idx && j >= 0; --j );
-               assert(j >= 0);
+               dfsstack[stacksize] = idx;
+               stacknextedge[stacksize - 1] = nimpls + i + 1;
 
-               for( ; j < stacksize - 1; ++j )
-               {
-                  currvar = vars[getVarIndex(dfsstack[j])];
-                  currlower = isIndexLowerbound(dfsstack[j]);
+               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, infeasible) );
 
-                  /* if we do not use implications, we assume the number of implications to be 0 (as we did before) */
-                  ntmpimpls = (propdata->useimplics ? SCIPvarGetNImpls(currvar, currlower) : 0);
-
-                  if( stacknextedge[j] <= 0 )
-                  {
-                     SCIP_Bool nextlower = isIndexLowerbound(dfsstack[j+1]);
-                     /* @todo since the coefficient and constant only depend on the type of bounds of the two nodes (see
-                      * below), we could skip searching for the variable in the clique
-                      */
-                     SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
-                     int ntmpcliques = SCIPvarGetNCliques(currvar, currlower);
-                     SCIP_CLIQUE** tmpcliques = SCIPvarGetCliques(currvar, currlower);
-                     SCIP_VAR** cliquevars;
-                     SCIP_Bool* cliquevals;
-                     int ncliquevars;
-                     int v;
-
-                     if( stacknextedge[j] == 0 )
-                     {
-                        k = ntmpcliques - 1;
-                     }
-                     else
-                     {
-                        /* we processed at least one edge, so the next one should be -2 or smaller (we have a -1 offset) */
-                        assert(stacknextedge[j] <= -2);
-
-                        k = -stacknextedge[j] - 2;
-
-                        assert(k < ntmpcliques - 1);
-                     }
-
-                     cliquevars = SCIPcliqueGetVars(tmpcliques[k]);
-                     cliquevals = SCIPcliqueGetValues(tmpcliques[k]);
-                     ncliquevars = SCIPcliqueGetNVars(tmpcliques[k]);
-
-                     for( v = 0; v < ncliquevars; ++v )
-                     {
-                        if( cliquevars[v] != nextvar )
-                           continue;
-
-                        if( cliquevals[v] == !nextlower )
-                           break;
-                     }
-                     assert(v < ncliquevars);
-
-                     /* there are four cases:
-                      * a) lb(x) -> ub(y)   ==>   clique(x,y,...)    ==>   y <= 1 - x
-                      * b) lb(x) -> lb(y)   ==>   clique(x,~y,...)   ==>   y >= x
-                      * c) ub(x) -> ub(y)   ==>   clique(~x,y,...)   ==>   y <= x
-                      * d) ub(x) -> lb(y)   ==>   clique(~x,~y,...)  ==>   y >= 1 - x
-                      *
-                      * in cases b) and c), coef=1.0 and constant=0.0; these are the cases where both nodes represent
-                      * the same type of bound
-                      * in cases a) and d), coef=-1.0 and constant=1.0; both nodes represent different types of bounds
-                      *
-                      * we do not need to change the overall coef and constant in cases b) and c), but for the others
-                      */
-                     if( currlower != nextlower )
-                     {
-                        coef = -coef;
-                        constant = -constant + 1.0;
-                     }
-                  }
-                  else if( stacknextedge[j] <= ntmpimpls )
-                  {
-                     SCIP_VAR** implvars;
-                     SCIP_BOUNDTYPE* impltypes;
-                     SCIP_Real* implbounds;
-                     SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
-                     SCIP_Real newconstant;
-                     SCIP_Real newcoef;
-                     int* implids;
-
-                     implvars = SCIPvarGetImplVars(currvar, currlower);
-                     impltypes = SCIPvarGetImplTypes(currvar, currlower);
-                     implbounds = SCIPvarGetImplBounds(currvar, currlower);
-                     implids = SCIPvarGetImplIds(currvar, currlower);
-
-                     k = stacknextedge[j] - 1;
-
-                     assert(dfsstack[j+1] == (impltypes[k] == SCIP_BOUNDTYPE_LOWER ?
-                           varGetLbIndex(propdata, implvars[k]) : varGetUbIndex(propdata, implvars[k])));
-
-                     if( impltypes[k] == SCIP_BOUNDTYPE_LOWER )
-                     {
-                        newcoef = implbounds[k] - SCIPvarGetLbLocal(nextvar);
-
-                        if( currlower )
-                        {
-                           newconstant = SCIPvarGetLbLocal(nextvar);
-                        }
-                        else
-                        {
-                           newconstant = implbounds[k];
-                           newcoef *= -1.0;
-                        }
-                     }
-                     else
-                     {
-                        assert(impltypes[k] == SCIP_BOUNDTYPE_UPPER);
-
-                        newcoef = SCIPvarGetUbLocal(nextvar) - implbounds[k];
-
-                        if( currlower )
-                        {
-                           newconstant = SCIPvarGetUbLocal(nextvar);
-                           newcoef *= -1.0;
-                        }
-                        else
-                        {
-                           newconstant = implbounds[k];
-                        }
-                     }
-
-                     coef = coef * newcoef;
-                     constant = constant * newcoef + newconstant;
-
-
-                     SCIPdebugMessage("impl: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
-                        indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
-                  }
-                  /* the edge was given by a variable bound relation */
-                  else
-                  {
-                     assert(stacknextedge[j] > ntmpimpls);
-
-                     k = stacknextedge[j] - ntmpimpls - 1;
-                     assert(k < propdata->nvbounds[dfsstack[j]]);
-                     assert(propdata->vboundboundedidx[dfsstack[j]][k] == dfsstack[j+1]);
-
-                     printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
-                        indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
-                        propdata->vboundcoefs[dfsstack[j]][k], propdata->vboundconstants[dfsstack[j]][k],
-                        indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
-
-                     coef = coef * propdata->vboundcoefs[dfsstack[j]][k];
-                     constant = constant * propdata->vboundcoefs[dfsstack[j]][k] + propdata->vboundconstants[dfsstack[j]][k];
-                  }
-               }
-
-               printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
-                  indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
-                  propdata->vboundcoefs[curridx][i], propdata->vboundconstants[curridx][i],
-                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
-
-               coef = coef * propdata->vboundcoefs[curridx][i];
-               constant = constant * propdata->vboundcoefs[curridx][i] + propdata->vboundconstants[curridx][i];
-
-
-               printf("==> %s(%s) -- (*%g + %g) --> %s(%s)\n",
-                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]),
-                  coef, constant,
-                  indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
-
-               islower = isIndexLowerbound(idx);
-
-               if( SCIPisEQ(scip, coef, 1.0) )
-               {
-                  if( islower && SCIPisFeasPositive(scip, constant) )
-                  {
-                     printf("-> infeasible aggregated variable bound relation 0 >= %g\n", constant);
-                     *infeasible = TRUE;
-                  }
-                  else if( !islower && SCIPisFeasNegative(scip, constant) )
-                  {
-                     printf("-> infeasible aggregated variable bound relation 0 <= %g\n", constant);
-                     *infeasible = TRUE;
-                  }
-               }
-               else
-               {
-                  SCIP_Bool tightened;
-
-                  newbound = constant / (1.0 - coef);
-
-                  if( SCIPisGT(scip, coef, 1.0) )
-                     islower = !islower;
-
-                  if( islower )
-                  {
-                     printf("-> found new lower bound: <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[getVarIndex(idx)]),
-                        SCIPvarGetLbLocal(vars[getVarIndex(idx)]), SCIPvarGetUbLocal(vars[getVarIndex(idx)]), newbound);
-                     SCIP_CALL( SCIPtightenVarLb(scip, vars[getVarIndex(idx)], newbound, FALSE, infeasible, &tightened) );
-                  }
-                  else
-                  {
-                     printf("-> found new upper bound: <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[getVarIndex(idx)]),
-                        SCIPvarGetLbLocal(vars[getVarIndex(idx)]), SCIPvarGetUbLocal(vars[getVarIndex(idx)]), newbound);
-                     SCIP_CALL( SCIPtightenVarUb(scip, vars[getVarIndex(idx)], newbound, FALSE, infeasible, &tightened) );
-                  }
-               }
                if( *infeasible )
                   break;
             }
