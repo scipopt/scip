@@ -376,7 +376,7 @@ do
     export CLIENTTMPDIR
     export PASSSTARTSOL
     export EXAMINER
-    export SETNAME
+    export SETTINGS
 
     case $QUEUETYPE in
       srun )
