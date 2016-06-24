@@ -70,4 +70,6 @@ To debug one has to:
 All the information (test_suite::test_name) and the file and line number were to break is available from
 Criterion output.
 
+Note: when a test crashes, you might not need to `break` in `gdb`
+
 We are expecting that in the near future debugging is simpler.

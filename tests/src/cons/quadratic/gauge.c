@@ -20,21 +20,45 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/cons_nonlinear.h"
+#include "nlpi/nlpi_ipopt.h"
+
 #include "scip/cons_quadratic.c"
 
 #include "include/scip_test.h"
 
-/*
- *****************************************
- *     TESTS FOR SEPARATION METHODS      *
- *****************************************
-*/
-
 #define EPS 1e-6
-Test(separation, gauge, .description = "check computation of gauge function of a convex quadratic set")
+
+static SCIP* scip;
+
+/* creates scip, problem, includes nonlinear and quadratic cons handlers, and includes NLP */
+
+static
+void setup(void)
 {
-   /* in a unittest we somehow assume that all the "setup" works.. I guess */
-   SCIP* scip;
+   SCIP_NLPI* nlpi;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include quadratic conshdlr (need to include nonlinear) */
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
+
+   /* include NLPI's */
+   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
+   cr_assert_not_null(nlpi, "Couldn't create NLP solver!");
+
+   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+
+   /* create a problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
+}
+
+Test(separation, gauge, .init = setup,
+   .description = "check computation of gauge function of a convex quadratic set"
+   )
+{
    SCIP_VAR* xvar;
    SCIP_VAR* yvar;
    SCIP_CONS* cons;
@@ -44,19 +68,6 @@ Test(separation, gauge, .description = "check computation of gauge function of a
    SCIP_Bool success;
    SCIP_Real val;
 
-   SCIP_CALL( SCIPcreate(&scip) );
-
-   printf(" nnlpis %d\n", SCIPgetNNlpis(scip));
-   /* include quadratic conshdlr (need to include nonlinear) */
-   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
-   printf(" nnlpis %d\n", SCIPgetNNlpis(scip));
-   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
-   printf(" nnlpis %d\n", SCIPgetNNlpis(scip));
-
-
-   /* create a problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
-   printf(" nnlpis %d\n", SCIPgetNNlpis(scip));
 
    /* create convex quadratic constraint */
    {
@@ -92,7 +103,6 @@ Test(separation, gauge, .description = "check computation of gauge function of a
 
       /* compute gauge */
       conshdlr = SCIPconsGetHdlr(cons);
-      printf(" nnlpis %d\n", SCIPgetNNlpis(scip));
       SCIP_CALL( computeGauge(scip, conshdlr, cons) );
 
       /* this could be a single test probably */
@@ -115,8 +125,14 @@ Test(separation, gauge, .description = "check computation of gauge function of a
       cr_assert_float_eq(val, 1.41421356237309504880, EPS, "wrong gauge evaluation");
    }
 
+   SCIP_CALL( SCIPfreeSol(scip, &point) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
 
+   /* free SCIP */
+   SCIP_CALL( SCIPfree(&scip) );
+
+   /* check for memory leaks */
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
