@@ -10,6 +10,9 @@ fixed bugs:
 - fix wrong propagation of product expressions
 - fix memory leaks in TSP example
 
+performance improvements:
+- improve propagation of absolute expression by considering bounds on the child expression
+
 interface:
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
 
