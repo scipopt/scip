@@ -1,0 +1,73 @@
+Compiling the tests
+---------------
+Make sure to compile with the same flags that you used to compile SCIP
+
+`make OPT=<opt|dbg>, etc`
+
+The makefile will check for Criterion, if it is not found, it will download it and
+install it. You can also install it directly with `make Criterion`
+
+
+Writing tests
+----------------
+In `src/` add your test in the directory you think the test belongs
+In case no folder suits you, create a new directory
+If a test is meant to exemplify a bug, place is in the `src/bugs/`
+Use the include `#include "include/scip_test.h"` to have access to Criterion and the new `SCIP_CALL` macro.
+Make sure that this is the **last** header you include
+
+
+Modifying the Makefile
+----------------------
+Do *not* modify the makefile.
+
+
+Running the tests
+----------------
+`make tests` will compile the tests and run them.
+
+How it works: it creates the file CTestTestfile.cmake with a list of the test to run and
+then calls `ctest --output-on-failure`
+
+Note: By default, tests in `src/bugs/` are not run (they will not appear in `CTestTestfile.cmake`).
+To run them use `make tests BUGS=true`
+Note: If the test is in src/path/to/test.c, then the executable will be in bin/path/to/test.SUFFIX
+
+
+Examples
+---------
+To see a test that catches a signal, see src/bugs/depthlevel.c
+A parameterized test can be found in the unittest_framework_tmp branch, src/cons/expr/simplify.c
+A test that checks against the stdout can be found in the unittest_framework_tmp branch, src/cons/expr/walk.c
+
+
+Criterion
+---------
+Has fixtures
+There are plenty of asserts
+The executable generated comes with several options. One can
+  1. specify the type of output: xml, tap (test anything protocol)
+  2. list all tests in file with -l
+  3. run a particular test with --patern (e.g. test --patern *favorite*)
+  4. can run tests in parallel with -jN
+Documentation: http://criterion.readthedocs.io/en/v2.2.2/index.html
+
+
+Debugging
+---------
+If a test fails, one can use gdb to debug:
+Consider the following example
+>> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+        [----] src/cons/quadratic/gauge.c:112: Assertion failed: gauge unavailable, pointless to continue
+        [FAIL] separation::gauge: (0.00s)
+        [====] Synthesis: Tested: 1 | Passing: 0 | Failing: 1 | Crashing: 0
+The test suite is `separation` and the test name is `gauge`.
+To debug one has to:
+```
+>> gdb --args bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --single separation::gauge
+(gdb) br src/cons/quadratic/gauge.c:112
+```
+All the information (test_suite::test_name) and the file and line number were to break is available from
+Criterion output.
+
+We are expecting that in the near future debugging is simpler.
