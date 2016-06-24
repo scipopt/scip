@@ -11,7 +11,7 @@ fixed bugs:
 - fix memory leaks in TSP example
 
 performance improvements:
-- improve propagation of absolute expression by considering bounds on the child expression
+- improve propagation of absolute-value expression in the case that the sign of the argument is fixed
 
 interface:
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
