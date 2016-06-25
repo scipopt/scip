@@ -7,6 +7,9 @@ Make sure to compile with the same flags that you used to compile SCIP
 The makefile will check for Criterion, if it is not found, it will download it and
 install it. You can also install it directly with `make Criterion`
 
+Note: make sure to compile scip and the runs with IPOPT=true, otherwise some test will fail,
+since currently there is no way to, programatically, skip a test.
+
 
 Writing tests
 ----------------
