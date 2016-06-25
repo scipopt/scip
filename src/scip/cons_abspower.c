@@ -2006,16 +2006,12 @@ SCIP_RETCODE computeViolation(
 
    lb = SCIPvarGetLbLocal(consdata->x);
    ub = SCIPvarGetUbLocal(consdata->x);
-   if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
-   {
-      /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-      *solviolbounds = TRUE;
-      return SCIP_OKAY;
-   }
 
-   /* project x onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
-   if( sol == NULL )
-      xval = MAX(lb, MIN(ub, xval));
+   /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might be outside bounds */
+   if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
+      *solviolbounds = TRUE;
+   else
+      xval = MAX(lb, MIN(ub, xval));  /* project x onto local box if just slightly outside (or even not outside) */
 
    xval += consdata->xoffset;
 
@@ -2096,6 +2092,7 @@ SCIP_RETCODE computeViolations(
    SCIP_CONSDATA* consdata;
    SCIP_Real      viol;
    SCIP_Real      maxviol;
+   SCIP_Bool      solviolbounds1;
    int            c;
 
    assert(scip != NULL);
@@ -2103,6 +2100,7 @@ SCIP_RETCODE computeViolations(
    assert(solviolbounds != NULL);
    assert(maxviolcon != NULL);
 
+   *solviolbounds = FALSE;
    *maxviolcon = NULL;
 
    maxviol = 0.0;
@@ -2112,9 +2110,8 @@ SCIP_RETCODE computeViolations(
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &viol, solviolbounds) );
-      if( *solviolbounds )
-         break;
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &viol, &solviolbounds1) );
+      *solviolbounds |= solviolbounds1;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
