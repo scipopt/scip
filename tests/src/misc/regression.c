@@ -109,7 +109,7 @@ Test(reg, line_properties, .description = "determine regression of a cloud of po
    testRegressionSlopeAndIntercept(regression, slope, yintercept);
 }
 
-Test(reg, all_point_equal, .description = "test that there is no best-fit line when all points are equal")
+Test(reg, all_point_equal, .description = "tests that there is no best-fit line when all points are equal")
 {
    int i;
    SCIP_Real x = 0;
@@ -125,7 +125,7 @@ Test(reg, all_point_equal, .description = "test that there is no best-fit line w
 /* test for same Y's over many observations. In this case, the best fit line is horizontal, i.e. it has zero slope
  * and a y-intercept equal to the average y-value
  */
-Test(reg, same_y)
+Test(reg, horizontal_line, .description = "tests properties of regression on a horizontal line")
 {
    int i;
    SCIP_Real x = 0;
@@ -146,7 +146,7 @@ Test(reg, same_y)
 /* test for same X values over many points. In this case, a best fit line is the vertical line going through
  * the mean value of the X observations, with infinite slope and no y-intercept
  */
-Test(reg, same_x)
+Test(reg, vertical_line, .description = "tests properties of regression on a horizontal line")
 {
    int i;
    SCIP_Real x = 42;
@@ -164,7 +164,7 @@ Test(reg, same_x)
    testRegressionSlopeAndIntercept(regression, SCIP_INVALID, SCIP_INVALID);
 }
 
-Test(reg, zero_one_obs, .description = "Test that slope and intercept are not SCIP_INVALID for zero or one observation")
+Test(reg, zero_one_obs, .description = "tests that slope and intercept are SCIP_INVALID for zero or one observation")
 {
    do
    {
@@ -177,7 +177,7 @@ Test(reg, zero_one_obs, .description = "Test that slope and intercept are not SC
 /* test that observations on a straight line from which you remove some observations still fits
  * the remaining points
  */
-Test(reg, removing_points)
+Test(reg, removing_points, .description = "tests removal of regression observations")
 {
    int i;
    SCIP_Real slope = 0.4;
