@@ -36,10 +36,10 @@ Smart test discovery is already built into the `Makefile`, so anything in `src` 
 The easiest way to compile and run the tests is:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true all
+make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true
 ```
 
-This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`. PROTIP: pass the same flags that were used to compile SCIP to `make all`. Also, `IPOPT=true` is required for all tests to pass.
+This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`. PROTIP: pass the same flags that were used to compile SCIP to `make`. Also, `IPOPT=true` is required for all tests to pass.
 
 ## Run
 
