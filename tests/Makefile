@@ -122,6 +122,8 @@ endif
 
 .PHONY: all
 all:            Criterion $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
+		make ctestrunner
+		ctest --output-on-failure
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -143,8 +145,8 @@ $(BINDIRS):
 		@echo "-> Creating $@ directory"
 		@-mkdir -p $@
 
-.PHONY: test
-test:           $(UNITTESTSBIN)
+.PHONY: tests
+tests:           $(UNITTESTSBIN)
 		make ctestrunner
 		ctest --output-on-failure
 

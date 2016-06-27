@@ -31,7 +31,7 @@ Here are some test examples that can help you get started writing unit tests.
 
 ## Compile
 
-Smart test discovery is already built into the `Makefile`, so anything in `src` (at any level of nesting) will be detected and compiled into the equivalent path in the `bin` directory. Also, Criterion automagically generates the test makefile for `ctest`. There should never be a reason to directly modify any Makefile unless you are hacking on the SCIP Unit Test Suite.
+Smart test discovery is already built into the `Makefile`, so anything in `src` (at any level of nesting) will be detected and compiled into the equivalent path in the `bin` directory. Also, the `Makefile` generates the test "makefile" for `ctest`. There should never be a reason to directly modify any Makefile unless you are hacking on the SCIP Unit Test Suite.
 
 The easiest way to compile and run the tests is:
 
