@@ -204,6 +204,10 @@ LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
 
+ifeq ($(SHARED),true)
+LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR) $(LPSLDFLAGS) $(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
+
 
 #-----------------------------------------------------------------------------
 # NLP Solver Interfaces and expression interpreter
@@ -246,6 +250,11 @@ NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEI
 NLPILIBLINK	=	$(LIBDIR)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
 NLPILIBSHORTLINK	=	$(LIBDIR)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(NLPILIBSRC)
+
+ifeq ($(SHARED),true)
+NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR) $(IPOPTLIBS) $(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
+
 
 #-----------------------------------------------------------------------------
 # External Libraries
@@ -305,6 +314,12 @@ FLAGS		+=	-I$(SCIPDIR)/interfaces/gams/src -I$(GAMSDIR)/apifiles/C/api
 SOFTLINKS	+=	$(GAMSDIR)
 LPIINSTMSG	+=	"\n  -> \"$(GAMSDIR)\" is the path to the GAMS system directory"
 endif
+
+ifeq ($(SHARED),true)
+SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR) $(ZLIB_LDFLAGS) $(GMP_LDFLAGS) $(READLINE_LDFLAGS) $(ZIMPLLIB) \
+			$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+endif
+
 
 #-----------------------------------------------------------------------------
 # SCIP Library
@@ -937,20 +952,38 @@ depend:		scipdepend lpidepend nlpidepend maindepend
 -include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
-$(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+ifeq ($(SHARED),true)
+$(MAINFILE):	$(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		-$(LINKCC) $(MAINOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
+		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
+		$(LINKCC_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
+		$(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
-		-$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
+		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
+		$(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
+else
+$(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+		@echo "-> linking $@"
+ifeq ($(LINKER),C)
+		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
+		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
+		$(LINKCC_L)$(LIBDIR) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
+		|| ($(MAKE) errorhints && false)
+endif
+ifeq ($(LINKER),CPP)
+		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
+		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
+		$(LINKCXX_L)$(LIBDIR) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
+		|| ($(MAKE) errorhints && false)
+endif
+endif
+
 
 .PHONY: makesciplibfile
 makesciplibfile: preprocess
@@ -959,10 +992,12 @@ makesciplibfile: preprocess
 $(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(SCIPLIBEXTLIBS)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
+
+
 
 $(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
@@ -975,7 +1010,7 @@ endif
 $(LPILIBFILE):	$(LPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES) $(LPILIBEXTLIBS)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -983,7 +1018,7 @@ endif
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) $(NLPILIBEXTLIBS)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
