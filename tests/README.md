@@ -46,13 +46,13 @@ This command will check for [Criterion](http://criterion.readthedocs.io/en/maste
 See above for the easiest way to compile and run tests. For simply running tests:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true tests
+make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true test
 ```
 
 This creates `CTestTestfile.cmake` with a list of the test to run and then calls `ctest --output-on-failure`. By default, tests in `src/bugs/` are not compiled or run since they take a long time. To compile and run them:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true tests BUGS=true
+make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true test BUGS=true
 ```
 
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
@@ -62,7 +62,7 @@ TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are 
 If a test fails, use `gdb` to debug. For example:
 
 ```
- >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
          [----] src/cons/quadratic/gauge.c:112: Assertion failed: gauge unavailable, pointless to continue
          [FAIL] separation::gauge: (0.00s)
          [====] Synthesis: Tested: 1 | Passing: 0 | Failing: 1 | Crashing: 0
@@ -71,7 +71,7 @@ If a test fails, use `gdb` to debug. For example:
 The test suite is `separation` and the test name is `gauge`. To debug:
 
 ```
->> gdb --args bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --single separation::gauge  
+>> gdb --args bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --single separation::gauge
 (gdb) br src/cons/quadratic/gauge.c:112
 ```
 
