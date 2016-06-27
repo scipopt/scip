@@ -7684,8 +7684,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
 
    SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcons) );
 
-   assert(!solviolbounds);  /* see also issue #627 */
-
    if( maxviolcons == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -7693,6 +7691,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    }
 
    *result = SCIP_INFEASIBLE;
+
+   if( solviolbounds )
+   {
+      /* if LP solution violates variable bounds, then this should be because a row was added that
+       * introduced this variable newly to the LP, in which case it gets value 0.0; the row should
+       * have been added to resolve an infeasibility, so solinfeasible should be TRUE
+       * see also issue #627
+       */
+      assert(solinfeasible);
+      return SCIP_OKAY;
+   }
 
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);

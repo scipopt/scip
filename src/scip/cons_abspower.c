@@ -5878,8 +5878,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
 
    SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcons) );
 
-   assert(!solviolbounds); /* see also issue #627 */
-
    if( maxviolcons == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -5887,6 +5885,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    }
 
    *result = SCIP_INFEASIBLE;
+
+   if( solviolbounds )
+   {
+      /* if LP solution violates variable bounds, then this should be because a row was added that
+       * introduced this variable newly to the LP, in which case it gets value 0.0; the row should
+       * have been added to resolve an infeasibility, so solinfeasible should be TRUE
+       * see also issue #627
+       */
+      assert(solinfeasible);
+      return SCIP_OKAY;
+   }
 
    /* if we are above the 100'th enforcement round for this node, something is strange
     * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
