@@ -2345,6 +2345,8 @@ SCIP_RETCODE priceAndCutLoop(
          /* if we need to propagate again, we postpone separation */
          if( *propagateagain )
          {
+            assert(!mustprice);
+
             SCIPdebugMessage("postpone separation, since we want to propagate again, first\n");
 
             mustsepa = FALSE;
