@@ -1,6 +1,6 @@
- # SCIP Unit Tests
+# SCIP Unit Tests
 
- Write and run unit tests for SCIP.
+Write and run unit tests for SCIP.
 
 - [Overview](#overview)
 - [Write](#write)
@@ -10,22 +10,27 @@
 - [Debug](#debug)
 
 ## Overview
+
 A unit test is an automated piece of code that invokes a unit of work in the system and then checks a single assumption about the behavior of that unit of work. The SCIP Unit Test Suite leverages [Criterion](http://criterion.readthedocs.io/en/master/) as the testing framework and [ctest](https://cmake.org/cmake/help/v2.8.8/ctest.html) as the runner. The SCIP Unit Test Suite is very much in a state of development. Check out the [unit test suite milestone](https://git.zib.de/integer/scip/milestones/2) for more information.
 
 ## Write
+
 Tests are organized into topic-specific directories in `src`. When writing new tests, find the directory that best suites your test, or create one if it doesn't already exist. For example, if a test is meant to illustrate a bug, place is in `src/bugs/`. Use `#include "include/scip_test.h"` to access Criterion and the `SCIP_CALL` macro. Ensure that this is the **last** included header.
 
 Criterion comes with [fixtures](http://criterion.readthedocs.io/en/master/starter.html?highlight=fixture#fixtures) and [asserts](http://criterion.readthedocs.io/en/master/assert.html) built-in, and also supports [parameterized tests](http://criterion.readthedocs.io/en/master/parameterized.html).
 
 ### Examples
+
 Here are some test examples that can help you get started writing unit tests.
+
 | Example Type| Location |
-| --- | --- |
-| catch a signal | `src/bugs/depthlevel.c`|
-| parameterized test | unittest_framework_tmp branch, `src/cons/expr/simplify.c`|  
-| check stdout | unittest_framework_tmp branch, `src/cons/expr/walk.c`|
+| ------ | ------ |
+| catch a signal | `src/bugs/depthlevel.c` |
+| parameterized test | unittest_framework_tmp branch, `src/cons/expr/simplify.c` |
+| check stdout | unittest_framework_tmp branch, `src/cons/expr/walk.c` |
 
 ## Compile
+
 Smart test discovery is already built into the `Makefile`, so anything in `src` (at any level of nesting) will be detected and compiled into the equivalent path in the `bin` directory. Also, Criterion automagically generates the test makefile for `ctest`. There should never be a reason to directly modify any Makefile unless you are hacking on the SCIP Unit Test Suite.
 
 The easiest way to compile and run the tests is:
@@ -37,6 +42,7 @@ make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true all
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`. PROTIP: pass the same flags that were used to compile SCIP to `make all`. Also, `IPOPT=true` is required for all tests to pass.
 
 ## Run
+
 See above for the easiest way to compile and run tests. For simply running tests:
 
 ```
@@ -52,6 +58,7 @@ make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true tests BUGS=true
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
 
 ## Debug
+
 If a test fails, use `gdb` to debug. For example:
 
 ```

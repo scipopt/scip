@@ -1,4 +1,5 @@
-# SCIP Unit Tests
+SCIP Unit Tests
+===============
 
 Write and run unit tests for SCIP.
 
@@ -42,12 +43,18 @@ tests <http://criterion.readthedocs.io/en/master/parameterized.html>`__.
 Examples
 ~~~~~~~~
 
-| Here are some test examples that can help you get started writing unit
-tests. \| Example Type\| Location \| \| --- \| --- \| \| catch a signal
-\| ``src/bugs/depthlevel.c``\ \| \| parameterized test \|
-unittest\_framework\_tmp branch, ``src/cons/expr/simplify.c``\ \|
-| \| check stdout \| unittest\_framework\_tmp branch,
-``src/cons/expr/walk.c``\ \|
+Here are some test examples that can help you get started writing unit
+tests.
+
++----------------------+-----------------------------------------------------------------+
+| Example Type         | Location                                                        |
++======================+=================================================================+
+| catch a signal       | ``src/bugs/depthlevel.c``                                       |
++----------------------+-----------------------------------------------------------------+
+| parameterized test   | unittest\_framework\_tmp branch, ``src/cons/expr/simplify.c``   |
++----------------------+-----------------------------------------------------------------+
+| check stdout         | unittest\_framework\_tmp branch, ``src/cons/expr/walk.c``       |
++----------------------+-----------------------------------------------------------------+
 
 Compile
 -------
