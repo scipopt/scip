@@ -15,12 +15,11 @@
 
 #@file    Makefile
 #@brief   Makefile for unit tests
-#@author  Ambros Gleixner
-#@author  Marc Pfetsch
+#@author  Felipe Serrano
 
 #-----------------------------------------------------------------------------
 # Probably nothing below here should be changed
-# TODO: I think SCIP has a flag for -Wl,-rpath
+# TODO: use the $ORIGIN variable
 #-----------------------------------------------------------------------------
 
 UNITTESTSSRC	= $(shell find src/ -name *.c)
@@ -145,8 +144,8 @@ $(BINDIRS):
 		@echo "-> Creating $@ directory"
 		@-mkdir -p $@
 
-.PHONY: tests
-tests:           $(UNITTESTSBIN)
+.PHONY: test
+test:           $(UNITTESTSBIN)
 		make ctestrunner
 		ctest --output-on-failure
 
