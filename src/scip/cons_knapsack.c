@@ -12953,6 +12953,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
        * or that we can propagate based on negated clique information
        */
       consdata->propagated = FALSE;
+      consdata->presolvedtiming = 0;
       SCIP_CALL( SCIPmarkConsPropagate(scip, eventdata->cons) );
       break;
    case SCIP_EVENTTYPE_VARFIXED:  /* the variable should be removed from the constraint in presolving */

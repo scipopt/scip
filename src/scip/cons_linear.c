@@ -5469,6 +5469,9 @@ SCIP_RETCODE rangedRowPropagation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( consdata->rangedrowpropagated )
+      return SCIP_OKAY;
+
    /* at least three variables are needed */
    if( consdata->nvars < 3 )
       return SCIP_OKAY;
@@ -9586,6 +9589,7 @@ SCIP_RETCODE convertLongEquality(
           * again
           */
          consdata->boundstightened = FALSE;
+         consdata->rangedrowpropagated = FALSE;
          consdata->presolved = FALSE;
       }
    }
@@ -14344,15 +14348,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
-   if( SCIPisTransformed(scip) && needEvents(scip) )
-   {
-      assert(FALSE);
-
-      /* catch bound change events of variables */
-      SCIP_CALL( consCatchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
-      assert(targetdata->eventdata != NULL);
-   }
-
    return SCIP_OKAY;
 }
 
@@ -14962,18 +14957,22 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
       }
 
-      if( conshdlrdata->rangedrowpropagation && !cutoff && !SCIPisStopped(scip) )
+      if( !cutoff && !SCIPisStopped(scip) )
       {
-         int lastnfixedvars;
-
-         lastnfixedvars = *nfixedvars;
-
-         SCIP_CALL( rangedRowPropagation(scip, cons, &cutoff, nfixedvars, nchgbds, naddconss) );
-         if( !cutoff )
+         /* perform ranged row propagation */
+         if( conshdlrdata->rangedrowpropagation && !consdata->rangedrowpropagated )
          {
-            if( lastnfixedvars < *nfixedvars )
+            int lastnfixedvars;
+
+            lastnfixedvars = *nfixedvars;
+
+            SCIP_CALL( rangedRowPropagation(scip, cons, &cutoff, nfixedvars, nchgbds, naddconss) );
+            if( !cutoff )
             {
-               SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+               if( lastnfixedvars < *nfixedvars )
+               {
+                  SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+               }
             }
          }
 
@@ -15575,14 +15574,35 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
             consdata->maxactdelta = SCIP_INVALID;
             consdata->maxactdeltavar = NULL;
          }
+
+         /* check whether bound tightening might now be successful */
+         if( consdata->boundstightened )
+         {
+            switch( eventtype )
+            {
+            case SCIP_EVENTTYPE_LBTIGHTENED:
+               consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, consdata->rhs))
+                  || (val < 0.0 && SCIPisInfinity(scip, -consdata->lhs));
+               break;
+            case SCIP_EVENTTYPE_UBTIGHTENED:
+               consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, -consdata->lhs))
+                  || (val < 0.0 && SCIPisInfinity(scip, consdata->rhs));
+               break;
+            default:
+               SCIPerrorMessage("invalid event type %d\n", eventtype);
+               return SCIP_INVALIDDATA;
+            }
+         }
       }
       /* update maximal activity delta if a bound was relaxed */
-      else if( (eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 && !SCIPisInfinity(scip, consdata->maxactdelta) )
+      else if( !SCIPisInfinity(scip, consdata->maxactdelta) )
       {
          SCIP_Real lb;
          SCIP_Real ub;
          SCIP_Real domain;
          SCIP_Real delta;
+
+         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
 
          lb = SCIPvarGetLbLocal(var);
          ub = SCIPvarGetUbLocal(var);
@@ -15594,29 +15614,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          {
             consdata->maxactdelta = delta;
             consdata->maxactdeltavar = var;
-         }
-      }
-
-      /* check whether bound tightening might now be successful (if the current bound was relaxed, it might be
-       * that it can be tightened again)
-       */
-      if( consdata->boundstightened )
-      {
-         switch( eventtype )
-         {
-         case SCIP_EVENTTYPE_LBTIGHTENED:
-         case SCIP_EVENTTYPE_UBRELAXED:
-            consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, consdata->rhs))
-               || (val < 0.0 && SCIPisInfinity(scip, -consdata->lhs));
-            break;
-         case SCIP_EVENTTYPE_LBRELAXED:
-         case SCIP_EVENTTYPE_UBTIGHTENED:
-            consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, -consdata->lhs))
-               || (val < 0.0 && SCIPisInfinity(scip, consdata->rhs));
-            break;
-         default:
-            SCIPerrorMessage("invalid event type %d\n", eventtype);
-            return SCIP_INVALIDDATA;
          }
       }
    }
