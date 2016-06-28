@@ -9543,6 +9543,7 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          }
       }
    }
+   conshdlrdata->nfixnonzerovars = 0;
 
    /* if SOS1 constraint propagation shall be used */
    if ( conshdlrdata->sosconsprop || conflictgraph == NULL )
