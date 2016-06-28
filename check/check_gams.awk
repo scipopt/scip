@@ -48,7 +48,7 @@ BEGIN  {
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    useshortnames = 1;        # should problem name be truncated to fit into column?
-   namelength = 18;          # maximal length of instance names (can be increased)
+   namelength = 30;          # maximal length of instance names (can be increased)
    writesolufile = 0;        # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
    infty = 1e+20;
@@ -482,7 +482,7 @@ END {
    shiftednodegeom -= nodegeomshift;
    shiftedtimegeom -= timegeomshift;
    
-   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("------------------------------+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n");
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
