@@ -3046,9 +3046,8 @@ SCIP_RETCODE treeSwitchPath(
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
 
    /* activate the new focus node; there is no need to delay these events */
-   if( !(*cutoff) )
+   if( !(*cutoff) && (i == focusnodedepth) )
    {
-      assert(i == focusnodedepth);
       assert(!tree->path[focusnodedepth]->cutoff);
       assert(tree->pathlen == focusnodedepth);
 
