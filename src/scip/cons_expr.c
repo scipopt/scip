@@ -2942,8 +2942,28 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         break;
+      }
+   }
+
+   if( *result == SCIP_FEASIBLE )
+      return SCIP_OKAY;
+
+   /* TODO do domain propagation */
+   /* TODO try to separate */
+   /* TODO register branching candidates */
 
    return SCIP_OKAY;
 }
@@ -2953,8 +2973,27 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         break;
+      }
+   }
+
+   if( *result == SCIP_FEASIBLE )
+      return SCIP_OKAY;
+
+   /* TODO do domain propagation */
+   /* TODO ask for solving LP */
 
    return SCIP_OKAY;
 }
