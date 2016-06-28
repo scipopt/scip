@@ -2282,7 +2282,7 @@ SCIP_RETCODE priceAndCutLoop(
                   {
                      *propagateagain = TRUE;
 
-                     if ( lp->solved && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+                     if( lp->solved && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
                      {
                         assert(lp->flushed);
                         assert(lp->solved);
