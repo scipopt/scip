@@ -69,7 +69,7 @@ if test $EXAMINER = 1
 then
   mkdir -p $OPTDIR
   echo "subsolver ${SOLVER,,}" > $OPTDIR/examiner2.opt
-  if test "$SETNAME" != "default"
+  if test -n "$SETTINGS"
   then
     echo "subsolveropt 1" >> $OPTDIR/examiner2.opt
   else
