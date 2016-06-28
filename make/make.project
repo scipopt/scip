@@ -259,7 +259,7 @@ endif
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 ifneq ($(LINKRPATH),)
-LDFLAGS                +=      $(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/xprsinc/../lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
 endif
 endif
 
@@ -375,7 +375,7 @@ FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $
 IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
 LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -416,7 +416,7 @@ RANLIB		=
 endif
 
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)
 endif
 
 
