@@ -4988,6 +4988,11 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
+   /* include handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
+         "signals a bound change to an expression constraint", processVarEvent, NULL) );
+   assert(conshdlrdata->eventhdlr != NULL);
+
    return SCIP_OKAY;
 }
 
@@ -5039,12 +5044,6 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for absolute expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "abs") == 0);
-
-   /* include handler for bound change events */
-   conshdlrdata->eventhdlr = NULL;
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange",
-         "signals a bound change to an expression constraint", processVarEvent, NULL) );
-   assert(conshdlrdata->eventhdlr != NULL);
 
    return SCIP_OKAY;
 }
