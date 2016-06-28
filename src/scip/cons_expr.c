@@ -183,6 +183,13 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
+/** data passed on during conversion to classic expression */
+typedef struct
+{
+   SCIP_CONSEXPR_EXPR**    varexprs;         /**< variable expressions */
+   int                     nvarexprs;        /**< number of variable expressions */
+} MAKECLASSICEXPR_DATA;
+
 struct SCIP_ConsExpr_PrintDotData
 {
    FILE*                   file;             /**< file to print to */
@@ -2261,6 +2268,177 @@ SCIP_RETCODE parseExpr(
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(makeClassicExpr)
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   MAKECLASSICEXPR_DATA* walkdata;
+   SCIP_EXPR** children = NULL;
+   int nchildren;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(data != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   walkdata = (MAKECLASSICEXPR_DATA*) data;
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   /* collect children expressions from children, if any */
+   if( nchildren > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, nchildren) );
+      for( c = 0; c < nchildren; ++c )
+      {
+         children[c] = (SCIP_EXPR*)SCIPgetConsExprExprChildren(expr)[c]->walkio.ptrval;
+         assert(children[c] != NULL);
+      }
+   }
+
+   /* create expression and store in walkio */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "var") == 0 )
+   {
+      int varidx;
+
+      /* find variable expression in varexprs array
+       * the position in the array determines the index of the variable in the classic expression
+       * TODO if varexprs are sorted, then can do this more efficient
+       */
+      for( varidx = 0; varidx < walkdata->nvarexprs; ++varidx )
+         if( walkdata->varexprs[varidx] == expr )
+            break;
+      assert(varidx < walkdata->nvarexprs);
+
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, SCIP_EXPR_VARIDX, varidx) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "val") == 0 )
+   {
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, SCIP_EXPR_CONST, SCIPgetConsExprExprValueValue(expr)) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "sum") == 0 )
+   {
+      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, nchildren, children, SCIPgetConsExprExprSumCoefs(expr), SCIPgetConsExprExprSumConstant(expr)) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
+   {
+      SCIP_EXPRDATA_MONOMIAL* monomial;
+      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, SCIPgetConsExprExprProductCoef(expr), nchildren, NULL, SCIPgetConsExprExprProductExponents(expr)) );
+      SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, nchildren, children, 1, &monomial, 0.0, FALSE) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "abs") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, SCIP_EXPR_ABS, children[0]) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "exp") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, SCIP_EXPR_EXP, children[0]) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "log") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), (SCIP_EXPR**)&expr->walkio.ptrval, SCIP_EXPR_LOG, children[0]) );
+   }
+   else
+   {
+      SCIPerrorMessage("unsupported expression handler <%s>, cannot convert to classical expression\n", SCIPgetConsExprExprHdlrName(exprhdlr));
+      return SCIP_ERROR;
+   }
+
+   SCIPfreeBufferArrayNull(scip, &children);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+/** given an expression and an array of occurring variable expressions, construct a classic expression tree */
+static
+SCIP_RETCODE makeClassicExprTree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to convert */
+   SCIP_CONSEXPR_EXPR**  varexprs,           /**< variable expressions that occur in expr */
+   int                   nvarexprs,          /**< number of variable expressions */
+   SCIP_EXPRTREE**       exprtree            /**< buffer to store classic expression tree, or NULL if failed */
+)
+{
+   MAKECLASSICEXPR_DATA walkdata = { .varexprs = varexprs, .nvarexprs = nvarexprs };
+   SCIP_VAR** vars;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(varexprs != NULL);  /* we could also create this here, if NULL; but for now, assume it is given by called */
+   assert(exprtree != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarexprs) );
+   for( i = 0; i < nvarexprs; ++i )
+      vars[i] = SCIPgetConsExprExprVarVar(varexprs[i]);
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, makeClassicExpr, &walkdata) );
+   assert(expr->walkio.ptrval != NULL);
+
+   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), exprtree, (SCIP_EXPR*)expr->walkio.ptrval, nvarexprs, 0, NULL) );
+   SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvarexprs, vars) );
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+/** create a nonlinear row representation of an expr constraint and stores them in consdata */
+static
+SCIP_RETCODE createNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< expression constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
+   if( consdata->expr == NULL )
+   {
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs) );
+   }
+   else
+   {
+      /* get an exprtree representation of the cons-expr-expression */
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_EXPRTREE* exprtree;
+
+      conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( makeClassicExprTree(scip, consdata->expr, consdata->varexprs, consdata->nvarexprs, &exprtree) );
+      if( exprtree == NULL )
+      {
+         SCIPerrorMessage("could not create classic expression tree from cons_expr expression\n");
+         return SCIP_ERROR;
+      }
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            0, NULL, NULL, 0, NULL, 0, NULL, exprtree, consdata->lhs, consdata->rhs) );
+      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -2616,14 +2794,12 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       /* add nlrow respresentation to NLP, if NLP had been constructed */
       if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
       {
-         /*
          if( consdata->nlrow == NULL )
          {
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
-         */
       }
    }
 
