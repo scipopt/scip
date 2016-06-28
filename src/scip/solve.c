@@ -2758,6 +2758,8 @@ SCIP_RETCODE solveNodeLP(
 
    if( !initiallpsolved )
    {
+      assert(!(*finishedfirstsepa));
+
       /* load and solve the initial LP of the node */
       SCIP_CALL( solveNodeInitialLP(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
             pricestore, sepastore, branchcand, eventfilter, eventqueue, cliquetable, newinitconss, cutoff, lperror) );
@@ -3834,7 +3836,7 @@ SCIP_RETCODE solveNode(
       if( *stopped )
          return SCIP_OKAY;
 
-      if( !(*cutoff) && !propagateagain )
+      if( !(*cutoff) /* && !propagateagain ????? */)
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
