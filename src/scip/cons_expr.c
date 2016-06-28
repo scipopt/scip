@@ -2912,18 +2912,15 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   /* TODO separate */
+   *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpExpr NULL
-#endif
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
