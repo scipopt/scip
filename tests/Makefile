@@ -22,7 +22,7 @@
 # TODO: use the $ORIGIN variable
 #-----------------------------------------------------------------------------
 
-UNITTESTSSRC	= $(shell find src/ -name *.c)
+UNITTESTSSRC	=	$(shell find src/ -name *.c)
 
 # remove unittests in src/bugs if BUGS is not true
 ifneq ($(BUGS),true)
@@ -34,17 +34,18 @@ TESTDIRS 	= $(sort $(dir $(patsubst src/%,%,$(UNITTESTSSRC))))
 #$(warning testdirs: $(TESTDIRS))
 
 #-----------------------------------------------------------------------------
-# OPTIONS TODO: override
+# OPTIONS
 #-----------------------------------------------------------------------------
 
-IPOPT = true
-OPT = dbg
+override IPOPT	=	true
+override OPT	=	dbg
+override SHARED	=	true
 
 #-----------------------------------------------------------------------------
 # paths
 #-----------------------------------------------------------------------------
 
-SCIPDIR         =       ..
+SCIPDIR		=	..
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
@@ -59,7 +60,7 @@ BASESUFFIX	=	.$(BASE).$(LPS)$(EXEEXTENSION)
 # Functions
 #-----------------------------------------------------------------------------
 
-src2obj = $(patsubst $(SRCDIR)%,$(OBJDIR)%,$(1:.c=.o))
+src2obj		=	$(patsubst $(SRCDIR)%,$(OBJDIR)%,$(1:.c=.o))
 #$(warning obj2src: src/cons/quadratic/quadratic.c -> \
 	$(call src2obj, src/cons/quadratic/quadratic.c))
 
@@ -94,15 +95,15 @@ UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 # To make criterion compile without warnings
 #-----------------------------------------------------------------------------
 
-CFLAGS 	:= $(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
-CFLAGS 	+= -std=c99
+CFLAGS 		:=	$(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
+CFLAGS 		+=	-std=c99
 
 #-----------------------------------------------------------------------------
 # Criterion Framework
 #-----------------------------------------------------------------------------
-CR_INC 		= 	Criterion/include
-CR_LIBDIR 	= 	Criterion/build/
-CR_LIB		= 	criterion
+CR_INC		=	Criterion/include
+CR_LIBDIR	=	Criterion/build/
+CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -183,13 +184,13 @@ depend:		$(SCIPDIR)
 $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-					 $(LINKCXX_L)$(CR_LIBDIR) \
-					 $(LINKRPATH)$(CR_LIBDIR) \
-					 $(LINKCXX_l)$(CR_LIB) \
-					 $(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX_L)$(SCIPDIR)/lib \
+		$(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
+		$(LINKCXX_L)$(CR_LIBDIR) \
+		$(LINKCXX_l)$(CR_LIB) \
+		$(LINKRPATH)$(CR_LIBDIR) \
+		$(LINKRPATH)$(SCIPDIR)/lib \
+		$(LINKCXX_o)$@
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
