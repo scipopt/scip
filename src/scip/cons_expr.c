@@ -111,6 +111,8 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
+
+   SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 };
 
 /** constraint handler data */
@@ -2585,48 +2587,70 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
 static
 SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   if( nconss > 0 )
+   {
+      /* tell SCIP that we have something nonlinear */
+      SCIPenableNLP(scip);
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreExpr NULL
-#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 0
 static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
+      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+      {
+         /*
+         if( consdata->nlrow == NULL )
+         {
+            SCIP_CALL( createNlRow(scip, conss[c]) );
+            assert(consdata->nlrow != NULL);
+         }
+         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+         */
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolExpr NULL
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
 static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
+      /* free nonlinear row representation */
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolExpr NULL
-#endif
 
 
 /** frees specific constraint data */
@@ -2640,6 +2664,12 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert((*consdata)->varexprs == NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
+
+   /* free nonlinear row representation */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
+   }
 
    SCIPfreeBlockMemory(scip, consdata);
 
