@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_exp.c
- * @brief  exponential expression handler
+/**@file   cons_expr_abs.c
+ * @brief  absolute expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  *
@@ -24,11 +24,10 @@
 
 #include <string.h>
 
-#include "scip/cons_expr_exp.h"
+#include "scip/cons_expr_abs.h"
 
-#define EXP_PRECEDENCE  85000
-#define EXP_HASHKEY     SCIPcalcFibHash(10181)
-
+#define ABS_PRECEDENCE  70000
+#define ABS_HASHKEY     SCIPcalcFibHash(7187)
 /*
  * Data structures
  */
@@ -38,22 +37,23 @@
  * Local methods
  */
 
+
 /*
  * Callback methods of expression handler
  */
 
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrExp)
+SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
 {
-   SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, consexprhdlr) );
    *valid = TRUE;
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataExp)
+SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
 {
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
@@ -65,7 +65,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataExp)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataExp)
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataAbs)
 {
    assert(expr != NULL);
 
@@ -75,7 +75,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataExp)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
+SCIP_DECL_CONSEXPR_EXPRPRINT(printAbs)
 {
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
@@ -85,7 +85,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "exp(");
+         SCIPinfoMessage(scip, file, "abs(");
          break;
       }
 
@@ -109,7 +109,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseAbs)
 {
    SCIP_CONSEXPR_EXPR* childexpr;
 
@@ -119,11 +119,11 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
    SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
    assert(childexpr != NULL);
 
-   /* create exponential expression */
-   SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, childexpr) );
+   /* create absolute expression */
+   SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, expr, childexpr) );
    assert(*expr != NULL);
 
-   /* release child expression since it has been captured by the exponential expression */
+   /* release child expression since it has been captured by the absolute expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
 
    *success = TRUE;
@@ -132,21 +132,21 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
+SCIP_DECL_CONSEXPR_EXPREVAL(evalAbs)
 {
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID);
 
-   *val = exp(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+   *val = REALABS(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
 {
    SCIP_INTERVAL childinterval;
 
@@ -157,14 +157,14 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
-   SCIPintervalExp(SCIPinfinity(scip), interval, childinterval);
+   SCIPintervalAbs(SCIPinfinity(scip), interval, childinterval);
 
    return SCIP_OKAY;
 }
 
-/** expression reverse propagaton callback */
+/** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
+SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 {
    SCIP_INTERVAL childbound;
 
@@ -176,14 +176,25 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
 
    *nreductions = 0;
 
-   if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 0.0 )
+   /* handle absolute expression as identity if child expression is already non-negative */
+   if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf >= 0.0 )
    {
-      *infeasible = TRUE;
-      return SCIP_OKAY;
+      SCIPintervalSetBounds(&childbound, SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
    }
-
-   /* f = exp(c0) -> c0 = log(f) */
-   SCIPintervalLog(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
+   /* handle absolute expression as -identity if child expression is already non-positive */
+   else if( SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup <= 0.0 )
+   {
+      assert(-SCIPgetConsExprExprInterval(expr).sup <= -SCIPgetConsExprExprInterval(expr).inf);
+      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
+         -SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)));
+   }
+   /* f = abs(c0) => c0 = -f union f */
+   else
+   {
+      SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+   }
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, infeasible, nreductions) );
@@ -193,7 +204,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
 
 /** expression hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
+SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
 {
    unsigned int childhash;
 
@@ -203,41 +214,41 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = EXP_HASHKEY;
+   *hashkey = ABS_HASHKEY;
 
-   assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
-   childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
+   assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
+   childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
 
    *hashkey ^= childhash;
 
    return SCIP_OKAY;
 }
 
-/** creates the handler for exponential expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
+/** creates the handler for absolute expression and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "exp", "exponential function",
-         EXP_PRECEDENCE, evalExp, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "abs", "absolute expression",
+         ABS_PRECEDENCE, evalAbs, NULL) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrExp, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataExp, freedataExp) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printExp) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropExp) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrAbs, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataAbs, freedataAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
 
    return SCIP_OKAY;
 }
 
-/** creates an exponential expression */
-SCIP_RETCODE SCIPcreateConsExprExprExp(
+/** creates an absolute expression */
+SCIP_RETCODE SCIPcreateConsExprExprAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
@@ -246,9 +257,9 @@ SCIP_RETCODE SCIPcreateConsExprExprExp(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "exp") != NULL);
+   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "abs") != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "exp"), NULL, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "abs"), NULL, 1, &child) );
 
    return SCIP_OKAY;
 }

@@ -216,6 +216,23 @@ extern "C" {
    SCIP_Real* val, \
    SCIP_SOL* sol)
 
+/** expression callback for reverse propagation
+ *
+ * The method propagates each child of an expression by taking the intervals of all other children into account. The
+ * tighter interval is stored inside the interval variable of the corresponding child expression.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be evaluated
+ *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
+ *  - nreductions : buffer to store the number of interval reductions of all children
+ */
+#define SCIP_DECL_CONSEXPR_REVERSEPROP(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* infeasible, \
+   int* nreductions)
+
 /** expression (interval-) evaluation callback
  *
  * The method evaluates an expression by taking the intervals of its children into account.
@@ -229,6 +246,22 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval)
+
+/** expression hash callback
+ *
+ * The method hashes an expression by taking the hash keys of its children into account.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be hashed
+ *  - expr2key : hash map containing keys for sub-expressions
+ *  - hashkey: pointer to store the hash key
+ */
+#define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_HASHMAP* expr2key, \
+   unsigned int* hashkey)
 
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
@@ -275,12 +308,32 @@ typedef union
    void* data, \
    SCIP_CONSEXPREXPRWALK_RESULT* result)
 
+/** @name bitflags that customize what is printed by dot-format printer
+ * @{
+ */
+#define SCIP_CONSEXPR_PRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
+#define SCIP_CONSEXPR_PRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
+#define SCIP_CONSEXPR_PRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
+#define SCIP_CONSEXPR_PRINTDOT_EVALVALUE    0x8u /**< print evaluation value */
+#define SCIP_CONSEXPR_PRINTDOT_EVALTAG     0x18u /**< print evaluation value and tag */
+#define SCIP_CONSEXPR_PRINTDOT_INTERVAL    0x20u /**< print interval value */
+#define SCIP_CONSEXPR_PRINTDOT_INTERVALTAG 0x60u /**< print interval value and tag */
+
+/** print everything */
+#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_INTERVALTAG
+
+/** type for printdot bitflags
+ * @todo find a better name
+ */
+typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
+/** @} */
 
 typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
 typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
 typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expression */
 
+typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< printing a dot file data */
 
 #ifdef __cplusplus
 }

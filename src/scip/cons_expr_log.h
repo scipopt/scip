@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_exp.h
- * @brief  exponential expression handler
+/**@file   cons_expr_log.h
+ * @brief  logarithm expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_EXP_H__
-#define __SCIP_CONS_EXPR_EXP_H__
+#ifndef __SCIP_CONS_EXPR_LOG_H__
+#define __SCIP_CONS_EXPR_LOG_H__
 
 
 #include "scip/scip.h"
@@ -32,18 +32,18 @@
 extern "C" {
 #endif
 
-/** creates an exponential expression */
+/** creates a logarithmic expression */
 EXTERN
-SCIP_RETCODE SCIPcreateConsExprExprExp(
+SCIP_RETCODE SCIPcreateConsExprExprLog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    );
 
-/** creates the handler for exponential expressions and includes it into the expression constraint handler */
+/** creates the handler for logarithmic expression and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
@@ -52,4 +52,4 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_EXP_H__ */
+#endif /* __SCIP_CONS_EXPR_LOG_H__ */

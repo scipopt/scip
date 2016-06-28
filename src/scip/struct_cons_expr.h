@@ -51,6 +51,8 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -72,6 +74,10 @@ struct SCIP_ConsExpr_Expr
    /* interval-evaluation */
    unsigned int            intevaltag;    /**< tag of domains for which tag for which the expression has been evaluated last, or 0 */
    SCIP_INTERVAL           interval;      /**< interval from the last interval evaluation */
+
+   /* propagation */
+   SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
+   SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */

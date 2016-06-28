@@ -26,6 +26,7 @@
 #include "scip/cons_expr_value.h"
 
 #define VALUE_PRECEDENCE     10000
+#define VALUE_HASHKEY        SCIPcalcFibHash(36787)
 
 /** the order of two values is the real order */
 static
@@ -113,6 +114,32 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
    return SCIP_OKAY;
 }
 
+/** expression reverse propagaton callback */
+static
+SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropValue)
+{
+   SCIPerrorMessage("Unexpected call of reverse propagation callback of value expression handler.");
+   SCIPABORT();
+
+   return SCIP_OKAY;
+}
+
+/** expression hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
+
+   *hashkey = VALUE_HASHKEY;
+   *hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -129,6 +156,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropValue) );
 
    return SCIP_OKAY;
 }

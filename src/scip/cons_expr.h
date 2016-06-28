@@ -115,6 +115,24 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
+/** set the reverse propagation callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop))/**< reverse propagation callback (can be NULL) */
+);
+
+/** set the hash callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRHASH((*hash))      /**< hash callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -286,6 +304,53 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    FILE*                   file              /**< file to print to, or NULL for stdout */
    );
 
+/** initializes printing of expressions in dot format to a give FILE* pointer */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotInit(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   );
+
+/** initializes printing of expressions in dot format to a file with given filename */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotInit2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   const char*             filename,         /**< name of file to print to */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   );
+
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDot(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata,      /**< data as initialized by \ref SCIPprintConsExprExprDotInit() */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   );
+
+/** finishes printing of expressions in dot format */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotFinal(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
+   );
+
+/** shows a single expression by use of dot and gv
+ *
+ * This function is meant for debugging purposes.
+ * It's signature is kept as simple as possible to make it
+ * easily callable from gdb, for example.
+ *
+ * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
+ * SCIP will hold until ghostscript is closed.
+ */
+EXTERN
+SCIP_RETCODE SCIPshowConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   );
+
 /** evaluate an expression in a point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
@@ -326,7 +391,20 @@ EXTERN
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    unsigned int            boxtag            /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   );
+
+/** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
+ *  expression will be tightened immediately if SCIP is in a stage above SCIP_STAGE_TRANSFORMED
+ */
+EXTERN
+SCIP_RETCODE SCIPtightenConsExprExprInterval(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
+   SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings (NULL if not needed) */
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
@@ -359,6 +437,13 @@ void SCIPsetConsExprExprEvalValue(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_Real               value,            /**< value to set */
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
+   );
+
+/** returns the hash key of an expression */
+EXTERN
+unsigned int SCIPgetConsExprExprHashkey(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /** sets the evaluation interval */
@@ -524,6 +609,15 @@ int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
+
+/** compare expressions
+ * The given expressions are assumed to be simplified */
+EXTERN
+int SCIPcompareExprs(
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
+   );
+
 /** @} */
 
 
