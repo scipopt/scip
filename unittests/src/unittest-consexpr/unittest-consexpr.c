@@ -2682,7 +2682,7 @@ SCIP_RETCODE testPropConss(void)
    SCIP_VAR* z;
    SCIP_VAR* var;
    SCIP_RESULT result;
-   int nchgbds;
+   int nchgbds = 0;
    int i;
 
    const char* cons1str[4] = {"<x>^2 + <x>", "<x>^(0.5) - <y>", "exp(<x>) - <y>", "log(abs(<x> + 1)) - <y>"};

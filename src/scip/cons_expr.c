@@ -1336,6 +1336,9 @@ SCIP_RETCODE propConss(
       /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
 
+      if( nchgbds != NULL )
+         *nchgbds += ntightenings;
+
       if( cutoff )
       {
          SCIPdebugMessage(" -> cutoff\n");
