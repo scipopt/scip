@@ -68,6 +68,12 @@ namespace polyscip {
 
         SCIP_RETCODE computeUnitWeightOutcomes();
 
+        void deleteWeaklyNondomResults();
+
+        /* Return true if other element exists which dominates 'it' or has objective values coinciding with 'it
+         */
+        bool isDominatedOrEqual(ResultContainer::const_iterator it) const;
+
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
         SCIP_RETCODE solve();

@@ -219,7 +219,7 @@ namespace polyscip {
                     skeleton_.addEdge(getNode(*it), getNode(*succ_it));
             }
         }
-    };
+    }
 
     template <typename Container>
     void WeightSpacePolyhedron::printVertices(const Container& container,
@@ -232,7 +232,7 @@ namespace polyscip {
             os << "\n";
         }
         os << "\n";
-    };
+    }
 
 }
 

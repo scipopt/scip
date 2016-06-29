@@ -325,6 +325,7 @@ namespace polyscip {
             }
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
+        deleteWeaklyNondomResults();
         return SCIP_OKAY;
     }
 
@@ -430,12 +431,14 @@ namespace polyscip {
                                   size_t checked_obj) const {
         bool is_redundant = false;
         auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+
         assert (obj_probdata != nullptr);
         assert (checked_obj >= 1 && checked_obj < obj_probdata->getNoAllObjs());
 
         SCIP_LPI* lpi;
         auto retcode = SCIPlpiCreate(addressof(lpi), nullptr, "check objective redundancy", SCIP_OBJSEN_MINIMIZE);
-        assert (retcode == SCIP_OKAY);
+        if (retcode != SCIP_OKAY)
+            throw std::runtime_error("no SCIP_OKAY for SCIPlpiCreate\n.");
 
         auto no_cols = global::narrow_cast<int>(checked_obj);
         auto obj = vector<SCIP_Real>(checked_obj, 1.);
@@ -476,16 +479,26 @@ namespace polyscip {
                                     ind.data(),
                                     val.data());
 
-        assert (retcode == SCIP_OKAY);
+
+
+        if (retcode != SCIP_OKAY)
+            throw std::runtime_error("no SCIP_OKAY for SCIPlpiLoadColLP\n");
+
         retcode = SCIPlpiSolvePrimal(lpi);
-        assert (retcode == SCIP_OKAY);
-        if (SCIPlpiIsPrimalFeasible(lpi))
+        if (retcode != SCIP_OKAY)
+            throw std::runtime_error("no SCIP_OKAY for SCIPlpiSolvePrimal\n");
+
+        if (SCIPlpiIsPrimalFeasible(lpi)) {
             is_redundant = true;
-        else
+        }
+        else {
             assert (SCIPlpiIsPrimalInfeasible(lpi));
+        }
 
         retcode = SCIPlpiFree(addressof(lpi));
-        assert (retcode == SCIP_OKAY);
+        if (retcode != SCIP_OKAY)
+            throw std::runtime_error("no SCIP_OKAY for SCIPlpiFree\n");
+
         return is_redundant;
     }
 
@@ -537,5 +550,31 @@ namespace polyscip {
             std::cerr << "ERROR writing solution file\n.";
     }
 
+    bool Polyscip::isDominatedOrEqual(ResultContainer::const_iterator it) const {
+        for (auto curr = supported_.cbegin(); curr != supported_.cend(); ++curr) {
+            if (it == curr)
+                continue;
+            else if (std::equal(begin(curr->second),
+                                end(curr->second),
+                                begin(it->second),
+                                std::less_equal<ValueType>()))
+                return true;
+        }
+        return false;
+    }
+
+
+    void Polyscip::deleteWeaklyNondomResults() {
+        auto it = begin(supported_);
+        while (it != end(supported_)) {
+            if (isDominatedOrEqual(it)) {
+                std::cout << "weakly non-dominated point found\n";
+                it = supported_.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+    }
 
 }

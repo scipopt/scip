@@ -73,7 +73,7 @@ namespace polyscip {
             for (const auto &elem : container)
                 os << elem << " ";
             os << "]";
-        };
+        }
 
         /** todo Doc - Stroustroup page 299
          * /todo test narrow_cast
@@ -84,7 +84,7 @@ namespace polyscip {
             if (static_cast<Source>(r)!=v)
                 throw std::runtime_error("narrow_cast<>() failed\n");
             return r;
-        };
+        }
 
 
     }

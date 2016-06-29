@@ -107,22 +107,21 @@ namespace polyscip {
             auto indices = std::set<size_t> {};
             for (const auto& index : zero_slacks_) {
                 auto ret = indices.insert(index);
-                assert (ret.second);
+                if (!ret.second)
+                    return false;
             }
             for (const auto& elem : minus_slacks_) {
                 auto ret = indices.insert(elem.first);
-                assert (ret.second);
+                if (!ret.second)
+                    return false;
             }
             for (const auto& elem : plus_slacks_) {
                 auto ret = indices.insert(elem.first);
-                assert (ret.second);
+                if (!ret.second)
+                    return false;
             }
             if (indices.size() != no_of_constraints)
                 return false;
-            for (size_t i=0; i<no_of_constraints; ++i) {
-                if (indices.count(i) != 1)
-                    return false;
-            }
             return true;
         }
 
@@ -135,13 +134,11 @@ namespace polyscip {
         }
 
         void V_RepT::addMinusSlack(size_t index, double value) {
-            auto ret = minus_slacks_.insert({index, value});
-            assert (ret.second);
+            minus_slacks_.insert({index, value});
         }
 
         void V_RepT::addPlusSlack(size_t index, double value) {
-            auto ret = plus_slacks_.insert({index, value});
-            assert (ret.second);
+            plus_slacks_.insert({index, value});
         }
 
         void V_RepT::addZeroSlackIndex(size_t index) {
