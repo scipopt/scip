@@ -285,7 +285,7 @@ SCIP_RETCODE findEqualExpr(
       }
       else if( expr != *newexpr )
       {
-         assert(SCIPcompareExprs(expr, *newexpr) == 0);
+         assert(SCIPcompareConsExprExprs(expr, *newexpr) == 0);
          break;
       }
       else
@@ -1082,7 +1082,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
    if( newchild != NULL )
    {
       assert(child != newchild);
-      assert(SCIPcompareExprs(child, newchild) == 0);
+      assert(SCIPcompareConsExprExprs(child, newchild) == 0);
 
       /** @todo use SCIPsetConsExprExprChild() (simplify-branch) to replace child */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
@@ -1285,6 +1285,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
 
+            /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified */
             simplifiedexpr = expr;
             SCIPcaptureConsExprExpr(simplifiedexpr);
          }
@@ -1354,7 +1355,6 @@ int SCIPcompareConsExprExprs(
    /* expressions are of the same kind/type; use compare callback or default method */
    if( exprhdlr1 == exprhdlr2 )
    {
-      assert(exprhdlr1->compare != NULL);
       if( exprhdlr1->compare != NULL )
          /* enforces OR1-OR3 */
          return exprhdlr1->compare(expr1, expr2);
@@ -2017,7 +2017,7 @@ SCIP_DECL_HASHKEYEQ(hashCommonSubexprEq)
    assert(expr1 != NULL);
    assert(expr2 != NULL);
 
-   return expr1 == expr2 || SCIPcompareExprs(expr1, expr2) == 0;
+   return expr1 == expr2 || SCIPcompareConsExprExprs(expr1, expr2) == 0;
 }  /*lint !e715*/
 
 /** get value of hash element when comparing with another expression */
@@ -2049,7 +2049,7 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
  *     hash table, otherwise we add it to the hash table
  *
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
- *  (with the same hash) are structurally the same we use the function SCIPcompareExprs()
+ *  (with the same hash) are structurally the same we use the function SCIPcompareConsExprExprs()
  */
 SCIP_RETCODE replaceCommonSubexpressions(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2108,7 +2108,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
       if( newroot != NULL )
       {
          assert(newroot != consdata->expr);
-         assert(SCIPcompareExprs(consdata->expr, newroot) == 0);
+         assert(SCIPcompareConsExprExprs(consdata->expr, newroot) == 0);
 
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
@@ -5422,277 +5422,6 @@ SCIP_RETCODE SCIPparseConsExprExpr(
 
    return retcode;
 }
-
-/*
- * ORDER
- * ^^^^^
- * This is a partial order for *simplified* expressions. Just a copy of the order from
- * the book so feel very free to modify.
- * Comparing equal type expressions:
- * - u,v value expressions: u < v <=> val(u) < val(v) [DONE]
- * - u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v)) <=> SCIPvarCompare(var(u),var(v)) [DONE]
- * - u,v are both sum or product expression: < is a lexicographical order on the terms, [DONE]
- *    starting from the _last_ finds the first index i where they differ and u < v <=> u_i < v_i
- *    If they are the same in all indices, then u < v <=> nchildren(u) < nchildren(v)
- *       Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
- *       Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
- *       Question: Quadratics are one of the most important cases, does this make sense for quadratics?
- * - u, v expressions p,q numbers: u^q < v^p <=> u < v, and in case they are equal, q < p [DONE:considered in the above case]
- * - u, v are functional expressions (exp, log, etc): u < v <=> Kind(u) < Kind(v), or if they are equal, args(u) < args(v)
- *    (the first argument and so on), if all common arguments are equal, then the one with less arguments < other one
- *       Example: f(x) < f(y), g(x) < g(x,y)
- *       Note: Kind is the type of operator
- *
- * Different type expressions:
- * - u value expr, v other: u < v always [DONE]
- * - u product (this is a proper product in the book, not a power), v sum, var or func: u < v <=> u < 1*v <=> u_n < v
- *       Note: This means we compare u with the 1*v product. Though 1*v is unsimplified, the rule applies.
- *       Example: 2*x^0.5 < x [Note that x is a var expression]
- * - u^p, v sum, var or func: u^p < v <=> u^p < v^1 (I think this is the same as the previous one)
- *       This means that u^p < v <=> u < v and if they are equal, if p < 1
- * - u sum, v var or func: u < v <=> u < 0+v
- * - u sum, v var or func: u < v <=> u < 0+v
- * - u, v and none of the rules apply: u < v <=> ! v < u
- *    Example: is x < x^2 ? x is var and x^2 product, so none applies, then
- *    we try to answer if x^2 < x <=> x^2 < x^1 <=> 2 < 1 <=> False, so x < x^2 is True
- */
-
-/** compare expressions
- * The given expressions are assumed to be simplified */
-int SCIPcompareExprs(
-   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
-   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
-   )
-{
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr1;
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr2;
-
-   exprhdlr1 = SCIPgetConsExprExprHdlr(expr1);
-   exprhdlr2 = SCIPgetConsExprExprHdlr(expr2);
-
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2)) == 0 )
-   { /* expressions are of the same kind/type */
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
-      {
-         SCIP_Real val1;
-         SCIP_Real val2;
-
-         val1 = SCIPgetConsExprExprValueValue(expr1);
-         val2 = SCIPgetConsExprExprValueValue(expr2);
-
-         return val1 < val2 ? -1 : val1 == val2 ? 0 : 1;
-      }
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
-      {
-         int index1;
-         int index2;
-
-         index1 = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr1));
-         index2 = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr2));
-
-         return index1 < index2 ? -1 : index1 == index2 ? 0 : 1;
-      }
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
-      {
-         int nchildren1;
-         int nchildren2;
-         int compareresult;
-         int i;
-         int j;
-         SCIP_Real* coefs1;
-         SCIP_Real* coefs2;
-         SCIP_Real  const1;
-         SCIP_Real  const2;
-
-         nchildren1 = SCIPgetConsExprExprNChildren(expr1);
-         nchildren2 = SCIPgetConsExprExprNChildren(expr2);
-         coefs1 = SCIPgetConsExprExprSumCoefs(expr1);
-         coefs2 = SCIPgetConsExprExprSumCoefs(expr2);
-
-         for( i = nchildren1 - 1, j = nchildren2 -1; i >= 0 && j >= 0; --i, --j )
-         {
-            compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[i], SCIPgetConsExprExprChildren(expr2)[j]);
-            if( compareresult != 0 )
-               return compareresult;
-            else
-            {
-               /* expressions are equal, compare coefficient */
-               if( coefs1[i] < coefs2[j] )
-                  return -1;
-               if( coefs1[i] > coefs2[j] )
-                  return 1;
-
-               /* coefficients are equal, continue */
-            }
-         }
-
-         /* all children of one expression are children of the other expression, use amount of children as a tie-breaker */
-         if( i < j )
-         {
-            assert(i == -1);
-            /* expr1 has less elements, hence expr1 < expr2 */
-            return -1;
-         }
-         if( i > j )
-         {
-            assert(j == -1);
-            /* expr1 has more elements, hence expr1 > expr2 */
-            return 1;
-         }
-
-         /* everything is equal, use constant as tie-breaker */
-         assert(i == -1 && j == -1);
-         const1 = SCIPgetConsExprExprSumConstant(expr1);
-         const2 = SCIPgetConsExprExprSumConstant(expr2);
-         if( const1 < const2 )
-            return -1;
-         if( const1 > const2 )
-            return 1;
-
-         /* they are equal */
-         return 0;
-      }
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
-      {
-         int nchildren1;
-         int nchildren2;
-         int compareresult;
-         int i;
-         int j;
-         SCIP_Real* exponents1;
-         SCIP_Real* exponents2;
-         SCIP_Real  coef1;
-         SCIP_Real  coef2;
-
-         nchildren1 = SCIPgetConsExprExprNChildren(expr1);
-         nchildren2 = SCIPgetConsExprExprNChildren(expr2);
-         exponents1 = SCIPgetConsExprExprProductExponents(expr1);
-         exponents2 = SCIPgetConsExprExprProductExponents(expr2);
-
-         for( i = nchildren1 - 1, j = nchildren2 -1; i >= 0 && j >= 0; --i, --j )
-         {
-            compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[i], SCIPgetConsExprExprChildren(expr2)[j]);
-            if( compareresult != 0 )
-               return compareresult;
-            else
-            {
-               /* expressions are equal, compare exponents */
-               if( exponents1[i] < exponents2[j] )
-                  return -1;
-               if( exponents1[i] > exponents2[j] )
-                  return 1;
-
-               /* exponents are equal, continue */
-            }
-         }
-
-         /* all children of one expression are children of the other expression, use amount of children as a tie-breaker */
-         if( i < j )
-         {
-            assert(i == -1);
-            return -1;
-         }
-         if( i > j )
-         {
-            assert(j == -1);
-            return 1;
-         }
-
-         /* everything is equal, use coefficient as tie-breaker */
-         assert(i == -1 && j == -1);
-         coef1 = SCIPgetConsExprExprProductCoef(expr1);
-         coef2 = SCIPgetConsExprExprProductCoef(expr2);
-         if( coef1 < coef2 )
-            return -1;
-         if( coef1 > coef2 )
-            return 1;
-
-         /* they are equal */
-         return 0;
-      }
-      /* TODO: the same function! */
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "abs") == 0 )
-      {
-         return SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[0], SCIPgetConsExprExprChildren(expr2)[0]);
-      }
-
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "exp") == 0 )
-      {
-         return SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[0], SCIPgetConsExprExprChildren(expr2)[0]);
-      }
-
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "log") == 0 )
-      {
-         return SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[0], SCIPgetConsExprExprChildren(expr2)[0]);
-      }
-   }
-   else
-   { /* expressions are of different kind/type */
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
-      {
-         return -1;
-      }
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "val") == 0 )
-         return -1 * SCIPcompareExprs(expr2, expr1);
-
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
-      {
-         int compareresult;
-         int nchildren;
-
-         nchildren = SCIPgetConsExprExprNChildren(expr1);
-         compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
-
-         if( compareresult != 0 )
-            return compareresult;
-
-         /* base of the largest expression of the product is equal to expr2, exponent might tell us that expr2 is larger */
-         if( SCIPgetConsExprExprProductExponents(expr1)[nchildren-1] < 1.0 )
-            return -1;
-
-         /* largest expression of product is larger or equal than expr2 => expr1 >= expr2 */
-         return 1;
-      }
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
-         return -1 * SCIPcompareExprs(expr2, expr1);
-
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
-      {
-         int compareresult;
-         int nchildren;
-
-         nchildren = SCIPgetConsExprExprNChildren(expr1);
-         compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
-
-         if( compareresult != 0 )
-            return compareresult;
-
-         /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
-         if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
-            return -1;
-
-         /* largest expression of sum is larger or equal than expr2 => expr1 >= expr2 */
-         return 1;
-      }
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "sum") == 0 )
-         return -1 * SCIPcompareExprs(expr2, expr1);
-
-      /* at this point we know type(expr1) != type(expr2) and neither is value, product nor sum;
-       * if type(expr2) is var, then exp1 is some function */
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "var") == 0 )
-         return 1;
-      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
-         return -1;
-
-      /* both are a different function */
-      return strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
-   }
-
-   /* should not get here */
-   SCIPerrorMessage("Unexpected behavior in comparison\n");
-   return SCIP_ERROR;
-}
-
 
 /** appends child to the children list of expr */
 SCIP_RETCODE SCIPappendConsExprExpr(
