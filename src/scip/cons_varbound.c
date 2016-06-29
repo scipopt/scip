@@ -1038,6 +1038,8 @@ SCIP_RETCODE chgLhs(
    {
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    consdata->presolved = FALSE;
@@ -1119,6 +1121,8 @@ SCIP_RETCODE chgRhs(
    {
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    consdata->presolved = FALSE;

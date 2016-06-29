@@ -491,6 +491,9 @@ SCIP_RETCODE catchEvents(
             eventhdlr, consdata->eventdata[i], &consdata->eventdata[i]->filterpos) );
    }
 
+   /* mark constraint to be propagated */
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+
    return SCIP_OKAY;
 }
 

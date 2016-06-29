@@ -1745,10 +1745,7 @@ SCIP_RETCODE applyFixings(
                                  SCIPfreeBufferArray(scip, &consvals);
                                  SCIPfreeBufferArray(scip, &consvars);
 
-                                 /* all multi-aggregations should be resolved */
-                                 consdata->existmultaggr = FALSE;
-
-                                 return SCIP_OKAY;
+                                 goto TERMINATE;
                               }
 
                               if( fixed )
@@ -1767,10 +1764,7 @@ SCIP_RETCODE applyFixings(
                   SCIPfreeBufferArray(scip, &consvals);
                   SCIPfreeBufferArray(scip, &consvars);
 
-                  /* all multi-aggregations should be resolved */
-                  consdata->existmultaggr = FALSE;
-
-                  return SCIP_OKAY;
+                  goto TERMINATE;
                }
             }
 
@@ -1875,10 +1869,7 @@ SCIP_RETCODE applyFixings(
                   ++(*naddconss);
                }
 
-               /* all multi-aggregations should be resolved */
-               consdata->existmultaggr = FALSE;
-
-               return SCIP_OKAY;
+               goto TERMINATE;
             }
             /* we need to degrade this setppc constraint to a linear constraint*/
             else
@@ -1917,8 +1908,11 @@ SCIP_RETCODE applyFixings(
       }
    }
 
+ TERMINATE:
    /* all multi-aggregations should be resolved */
    consdata->existmultaggr = FALSE;
+
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }

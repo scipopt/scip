@@ -780,6 +780,9 @@ SCIP_RETCODE consCatchAllEvents(
       SCIP_CALL( consCatchEvent(scip, cons, eventhdlr, i) );
    }
 
+   /* mark the constraint for propagation */
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+
    return SCIP_OKAY;
 }
 
@@ -3454,6 +3457,7 @@ SCIP_RETCODE addCoef(
    consdata->vars[consdata->nvars] = var;
    consdata->vals[consdata->nvars] = val;
    consdata->nvars++;
+
    /* capture variable */
    SCIP_CALL( SCIPcaptureVar(scip, var) );
 
@@ -14316,7 +14320,6 @@ SCIP_DECL_CONSDELETE(consDeleteLinear)
 static
 SCIP_DECL_CONSTRANS(consTransLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
@@ -14332,11 +14335,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
-
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
