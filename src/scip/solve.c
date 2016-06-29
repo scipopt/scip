@@ -2333,7 +2333,7 @@ SCIP_RETCODE priceAndCutLoop(
           * we don't need to separate cuts
           * (the global limits are only checked at the root node in order to not query system time too often)
           */
-         if( !separate
+         if( !separate || (*cutoff)
              || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
              || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
              || (root && SCIPsolveIsStopped(set, stat, FALSE)) )
@@ -2341,9 +2341,11 @@ SCIP_RETCODE priceAndCutLoop(
             mustsepa = FALSE;
             delayedsepa = FALSE;
          }
+         else
+            assert(!(*lperror));
 
          /* if we need to propagate again, we postpone separation */
-         if( *propagateagain )
+         if( mustsepa && *propagateagain )
          {
             assert(!mustprice);
 
@@ -2358,7 +2360,7 @@ SCIP_RETCODE priceAndCutLoop(
       }
 
       /* separation (needs not to be done completely, because we just want to increase the lower bound) */
-      if( !(*cutoff) && !(*lperror) && mustsepa )
+      if( mustsepa )
       {
          SCIP_Longint olddomchgcount;
          SCIP_Longint oldninitconssadded;
