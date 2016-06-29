@@ -172,6 +172,7 @@ typedef struct
    SCIP*                   targetscip;                 /**< target SCIP pointer */
    SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR((*mapvar));  /**< variable mapping function, or NULL for identity mapping (used in handler for var-expressions) */
    void*                   mapvardata;                 /**< data of variable mapping function */
+   SCIP_CONSEXPR_EXPR*     targetexpr;                 /**< pointer that will hold the copied expression after the walk */
 } COPY_DATA;
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -462,6 +463,17 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
       }
 
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      {
+         COPY_DATA* copydata;
+
+         /* store the copied expression in the copydata, in case this expression was the root, for which the walkio will be cleared */
+         copydata = (COPY_DATA*)data;
+         copydata->targetexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
+
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       default:
       {
@@ -2867,8 +2879,8 @@ SCIP_DECL_CONSTRANS(consTransExpr)
    copydata.mapvardata = NULL;
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
-   targetexpr = (SCIP_CONSEXPR_EXPR*)sourceexpr->walkio.ptrval;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
+   targetexpr = copydata.targetexpr;
 
    if( targetexpr == NULL )
    {
@@ -3274,8 +3286,8 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    copydata.mapvardata = &mapvardata;
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
-   targetexpr = (SCIP_CONSEXPR_EXPR*)sourceexpr->walkio.ptrval;
+   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
+   targetexpr = copydata.targetexpr;
 
    if( targetexpr == NULL )
    {
@@ -4742,13 +4754,16 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    SCIP_CONSEXPREXPRWALK_STAGE  stage;
    SCIP_CONSEXPREXPRWALK_RESULT result;
    SCIP_CONSEXPR_EXPR*          child;
+   SCIP_CONSEXPR_EXPR*          oldroot;
    SCIP_CONSEXPR_EXPR*          oldparent;
    SCIP_CONSEXPREXPRWALK_IO     oldwalkio;
    int                          oldcurrentchild;
+   SCIP_Bool                    abort;
 
    assert(root != NULL);
 
-   /* remember the current data, child and parent of incoming root, in case we are called from within another walk */
+   /* remember the current root, data, child and parent of incoming root, in case we are called from within another walk */
+   oldroot         = root;
    oldcurrentchild = root->walkcurrentchild;
    oldparent       = root->walkparent;
    oldwalkio       = root->walkio;
@@ -4759,7 +4774,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    /* traverse the tree */
    result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
-   while( TRUE )
+   abort = FALSE;
+   while( !abort )
    {
       switch( stage )
       {
@@ -4776,7 +4792,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      root->walkcurrentchild = root->nchildren;
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     return SCIP_OKAY;
+                     abort = TRUE;
+                     break;
                }
             }
             /* goto start visiting children */
@@ -4803,7 +4820,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                }
                else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
                {
-                  return SCIP_OKAY;
+                  abort = TRUE;
+                  break;
                }
             }
             /* remember the parent and set the first child that should be visited of the new root */
@@ -4830,7 +4848,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      root->walkcurrentchild = root->nchildren;
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     return SCIP_OKAY;
+                     abort = TRUE;
+                     break;
                }
             }
             else
@@ -4838,7 +4857,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                /* visit next child (if any) */
                ++root->walkcurrentchild;
             }
-            /* goto visitng (next) */
+            /* goto visiting (next) */
             stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
             break;
 
@@ -4860,7 +4879,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      SCIPABORT();
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     return SCIP_OKAY;
+                     abort = TRUE;
+                     break;
                }
 
                /* go up */
@@ -4873,7 +4893,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
             }
             /* if we finished with the real root (walkparent == NULL), we are done */
             if( root == NULL )
-               return SCIP_OKAY;
+               abort = TRUE;
 
             /* goto visited */
             stage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
@@ -4885,6 +4905,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    }
 
    /* recover previous information */
+   root = oldroot;
    root->walkcurrentchild = oldcurrentchild;
    root->walkparent       = oldparent;
    root->walkio           = oldwalkio;
@@ -5546,8 +5567,8 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    copydata.mapvar = NULL;
    copydata.mapvardata = NULL;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
-   *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
+   *copyexpr = copydata.targetexpr;
 
    return SCIP_OKAY;
 }
