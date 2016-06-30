@@ -2343,7 +2343,7 @@ SCIP_RETCODE priceAndCutLoop(
          }
          else
             assert(!(*lperror));
-
+#if 0
          /* if we need to propagate again, we postpone separation */
          if( mustsepa && *propagateagain )
          {
@@ -2357,6 +2357,7 @@ SCIP_RETCODE priceAndCutLoop(
             if( !wassepafinished )
                *finishedfirstsepa = FALSE;
          }
+#endif
       }
 
       /* separation (needs not to be done completely, because we just want to increase the lower bound) */
