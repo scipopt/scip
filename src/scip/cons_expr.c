@@ -456,6 +456,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          /* free children array, if any */
          SCIPfreeBlockMemoryArrayNull(scip, &expr->children, expr->childrensize);
 
+         /* expression should not be locked anymore */
+         assert(expr->nlockspos == 0);
+         assert(expr->nlocksneg == 0);
+
          SCIPfreeBlockMemory(scip, &expr);
          assert(expr == NULL);
 
@@ -1616,6 +1620,36 @@ SCIP_RETCODE parseExpr(
    }
 
    *newpos = expr;
+
+   return SCIP_OKAY;
+}
+
+/** propagates variable locks through expression and adds lock to variables */
+static
+SCIP_RETCODE propagateLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   nlockspos,          /**< number of positive locks */
+   int                   nlocksneg           /**< number of negative locks */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   EXPRLOCK_DATA lockdata;
+
+   assert(expr != NULL);
+
+   /* if no locks, then nothing to do, then do nothing */
+   if( nlockspos == 0 && nlocksneg == 0 )
+      return SCIP_OKAY;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   lockdata.exprvarhdlr = SCIPgetConsExprExprHdlrVar(conshdlr);
+   lockdata.nlockspos = nlockspos;
+   lockdata.nlocksneg = nlocksneg;
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, NULL, NULL, NULL, &lockdata) );
 
    return SCIP_OKAY;
 }
@@ -4066,6 +4100,9 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    /* capture child */
    SCIPcaptureConsExprExpr(child);
 
+   /* update locks in child */
+   SCIP_CALL( propagateLocks(scip, child, expr->nlockspos, expr->nlocksneg) );
+
    return SCIP_OKAY;
 }
 
@@ -4139,8 +4176,14 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    assert(newchild != NULL);
    assert(childidx < SCIPgetConsExprExprNChildren(expr));
 
+   /* update locks in old child */
+   SCIP_CALL( propagateLocks(scip, expr->children[childidx], -expr->nlockspos, -expr->nlocksneg) );
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(expr->children[childidx])) );
    expr->children[childidx] = newchild;
+
+   /* update locks in new child */
+   SCIP_CALL( propagateLocks(scip, expr->children[childidx], expr->nlockspos, expr->nlocksneg) );
 
    return SCIP_OKAY;
 }
