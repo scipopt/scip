@@ -2181,7 +2181,7 @@ SCIP_RETCODE priceAndCutLoop(
    stalllpobjval = SCIP_REAL_MIN;
    stallnfracs = INT_MAX;
    lp->installing = FALSE;
-   while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
+   while( !(*cutoff) && !(*lperror) && !(*propagateagain) && (mustprice || mustsepa || delayedsepa) )
    {
       SCIPdebugMessage("-------- node solving loop --------\n");
       assert(lp->flushed);
