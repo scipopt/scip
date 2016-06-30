@@ -3838,7 +3838,7 @@ SCIP_RETCODE solveNode(
       if( *stopped )
          return SCIP_OKAY;
 
-      if( !(*cutoff) /* && !propagateagain ????? */)
+      if( !(*cutoff) && !propagateagain )
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
