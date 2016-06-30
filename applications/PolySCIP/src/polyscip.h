@@ -90,11 +90,12 @@ namespace polyscip {
 
         void addResult(bool check_if_new_result, bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
 
-        void computeNonRedundantObjectives(bool printObjectives);
+        void computeNonRedundantObjectives(bool printObjectives) = delete;
 
         void printObjective(std::size_t obj_no,
                             const std::vector<int>& nonzero_indices,
-                            const std::vector<SCIP_Real>& nonzero_vals) const;
+                            const std::vector<SCIP_Real>& nonzero_vals,
+                            std::ostream& os = std::cout) const;
 
         bool objIsRedundant(const std::vector<int>& begin_nonzeros,
                             const std::vector< std::vector<int> >& obj_to_nonzero_indices,
@@ -122,7 +123,7 @@ namespace polyscip {
         SCIP_Objsense obj_sense_;
         /**< number of objectives */
         //std::size_t no_objs_;
-        std::vector<std::size_t> non_redundant_objs_;
+        std::vector<std::size_t> considered_objs_;
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;
 

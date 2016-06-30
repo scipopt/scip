@@ -33,6 +33,8 @@ namespace polyscip {
         version_no_ = std::to_string(POLYSCIP_VERSION_MAJOR) + string(".") + std::to_string(POLYSCIP_VERSION_MINOR);
         CmdLine cmd(executable_name_,' ', version_no_);
         cmd.setExceptionHandling(false); // set internal exception handling
+        SwitchArg check_redundant_objs_arg("r", "redundant", "switch on check for redundant objectives", false);
+        cmd.add(check_redundant_objs_arg);
         SwitchArg with_unsupported_arg("u", "unsupported", "switch off computation of unsupported non-dominated points", true);
         cmd.add(with_unsupported_arg);
         SwitchArg be_verbose_arg("v", "verbose", "verbose PolySCIP cmd line output ", false);
@@ -58,11 +60,12 @@ namespace polyscip {
         cmd.add(prob_file_arg);
         cmd.parse(argc, argv);
 
-        with_unsupported_ = with_unsupported_arg.getValue();
-        epsilon_ = epsilon_arg.getValue();
+        check_for_redundant_objs_ = check_redundant_objs_arg.getValue();
         be_verbose_ = be_verbose_arg.getValue();
+        with_unsupported_ = with_unsupported_arg.getValue();
         write_sols_ = write_sols_arg.getValue();
         time_limit_ = time_limit_arg.getValue();
+        epsilon_ = epsilon_arg.getValue();
         write_sols_path_ = write_sols_path_arg.getValue();
         param_file_ = param_file_arg.getValue();
         prob_file_ = prob_file_arg.getValue();

@@ -32,6 +32,7 @@ namespace polyscip {
 
         CmdLineArgs(int argc, const char *const *argv);
 
+        bool checkForRedundantObjs() const { return check_for_redundant_objs_;};
         bool beVerbose() const {return be_verbose_;};
         bool withUnsupported() const {return with_unsupported_;};
         bool writeSolutions() const {return write_sols_;};
@@ -48,6 +49,7 @@ namespace polyscip {
         std::string version_no_;
 
         // arguments read from command line
+        bool check_for_redundant_objs_;
         bool be_verbose_;
         bool with_unsupported_;
         bool write_sols_;

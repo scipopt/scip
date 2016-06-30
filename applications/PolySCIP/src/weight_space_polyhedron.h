@@ -101,6 +101,8 @@ namespace polyscip {
 
         //void addEdgesToSkeleton() = delete {addEdgesToSkeleton(unmarked_vertices_);};
 
+        void printFacets() const;
+
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
          */
@@ -139,6 +141,7 @@ namespace polyscip {
 
         using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
         using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
+        using FacetMap = std::unordered_map<const WeightSpaceFacet*, std::vector<const WeightSpaceVertex*>>;
 
         bool vertexIsObsolete(double epsilon,
                               const WeightSpaceVertex* vertex,
@@ -147,12 +150,14 @@ namespace polyscip {
 
 
 
-        void createInitialFacets(H_RepC h_rep);
+        void createInitialFacets(H_RepC h_rep) = delete;
 
         void createInitialVerticesAndSkeleton(SCIP* scip,
+                                              H_RepC h_rep,
                                               V_RepC v_rep);
 
         FacetContainer computeIncidentFacets(SCIP* scip,
+                                             const FacetContainer& initial_facets,
                                              const polytoperepresentation::V_RepT& v) const;
 
         void updateWeightSpacePolyhedron(double epsilon,
@@ -206,7 +211,8 @@ namespace polyscip {
         NodeMap nodes_to_vertices_;
         /**< maps vertices to nodes */
         VertexMap vertices_to_nodes_;
-        FacetContainer facets_;
+        FacetMap facets_to_vertices_;
+        //FacetContainer facets_;
 
 
     };

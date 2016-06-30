@@ -102,8 +102,6 @@ namespace polyscip {
 
             void computeVRep();
 
-            void computeVRep_new();
-
             void printVRep(std::ostream &os = std::cout, bool withIncidentFacets = false) const;
 
             std::size_t size() const { return v_rep_.size(); };
@@ -127,20 +125,14 @@ namespace polyscip {
              * ...
              * k+1) w_k >= 0
              */
-            void computeInitialRep(const OutcomeType &bounded);
 
-            void computeInitialRep_new(const OutcomeType &bounded);
+            void computeInitialRep(const OutcomeType &bounded);
 
             std::vector<std::size_t> computeZeroSlackSet(const V_RepT &ray) const;
 
             std::vector<std::size_t> getCommonZeroSlacks(const V_RepT& v, const V_RepT& w) const;
 
             bool rayPairIsAdjacent(std::size_t plus_index,
-                                   std::size_t minus_index,
-                                   const SlackContainer &zero_slacks,
-                                   const std::vector<V_RepT> &current_v_rep) const;
-
-            bool rayPairIsAdjacent_new(std::size_t plus_index,
                                        std::size_t minus_index,
                                        const std::vector<V_RepT> &current_v_rep) const;
 
@@ -149,17 +141,11 @@ namespace polyscip {
             bool isMultiple(const V_RepT& v, const V_RepT& w) const;
             bool weightIsMultiple(SCIP* scip, double v_multiple, const V_RepT& v, const V_RepT& w) const;
 
-            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs(const std::vector<std::size_t> &plus_indices,
-                                                                                  const std::vector<std::size_t> &minus_indices,
-                                                                                  const SlackContainer &zero_slacks,
-                                                                                  const std::vector<V_RepT> &current_v_rep) const;
-
-            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs_new(const std::vector<std::size_t>& plus_inds,
+            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs(const std::vector<std::size_t>& plus_inds,
                                                                                       const std::vector<std::size_t>& minus_inds,
                                                                                       const std::vector<V_RepT>& current_rep) const;
 
-            std::vector<V_RepT> extendVRep(std::vector<V_RepT> current_v_rep, const H_RepT &new_constraint);
-            std::vector<V_RepT> extendVRep_new(std::vector<V_RepT> current_rep,
+            std::vector<V_RepT> extendVRep(std::vector<V_RepT> current_rep,
                                                const H_RepT &constraint,
                                                std::size_t index_of_constraint_in_hrep);
             V_RepT computeNewRay(const V_RepT &plus_ray, const V_RepT &minus_ray, const H_RepT &new_constraint) const;
@@ -172,7 +158,6 @@ namespace polyscip {
             H_RepContainer h_rep_;
             V_RepContainer initial_v_rep_;
             V_RepContainer v_rep_;
-
         };
     }
 }

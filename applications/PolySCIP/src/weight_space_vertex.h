@@ -57,6 +57,13 @@ namespace polyscip {
                                    const WeightSpaceVertex* non_obs,
                                    const OutcomeType& outcome,
                                    bool outcome_is_ray,
+                                   std::size_t wsp_dimension) = delete;
+
+        explicit WeightSpaceVertex(double obs_coeff,
+                                   double non_obs_coeff,
+                                   const WeightSpaceVertex* obs,
+                                   const WeightSpaceVertex* non_obs,
+                                   const std::shared_ptr<const WeightSpaceFacet>& incident_facet,
                                    std::size_t wsp_dimension);
 
         /** Return associated weight of weight space vertex
@@ -69,7 +76,9 @@ namespace polyscip {
          */
         ValueType getCurrentWOV() const;
 
-        ValueType getWeightedOutcome(const OutcomeType& outcome) const;
+        double getWeightedOutcome(const OutcomeType& outcome) const;
+
+        double computeSlack(const OutcomeType& outcome, bool outcome_is_ray) const;
 
         /** Checks whether weight of vertex corresponds to unit weight
          * @param index index of 1 in unit weight

@@ -49,7 +49,7 @@ namespace polyscip {
         return weighted_obj_val_;
     }
 
-    WeightSpaceVertex::WeightSpaceVertex(double convCombVal,
+    /*WeightSpaceVertex::WeightSpaceVertex(double convCombVal,
                                          const WeightSpaceVertex *obs,
                                          const WeightSpaceVertex *non_obs,
                                          const OutcomeType &outcome,
@@ -74,19 +74,60 @@ namespace polyscip {
         incident_facets_.insert(upper_it, std::move(new_facet));
         weight_ = calculateWeightCombination(convCombVal, non_obs->weight_, obs->weight_);
         weighted_obj_val_ = convCombVal*non_obs->getCurrentWOV() + (1.0-convCombVal)*obs->getCurrentWOV();
-    }
+    }*/
 
+    WeightSpaceVertex::WeightSpaceVertex(double obs_coeff,
+                                         double non_obs_coeff,
+                                         const WeightSpaceVertex* obs,
+                                         const WeightSpaceVertex* non_obs,
+                                         const shared_ptr<const WeightSpaceFacet>& incident_facet,
+                                         std::size_t wsp_dimension) {
+        assert (obs != non_obs);
+        // get intersection of facets of obs and non_obs
+        std::set_intersection(obs->incident_facets_.cbegin(),
+                              obs->incident_facets_.cend(),
+                              non_obs->incident_facets_.cbegin(),
+                              non_obs->incident_facets_.cend(),
+                              std::back_inserter(incident_facets_),
+                              WeightSpaceFacet::compare_facet_ptr);
+        auto upper_it = std::upper_bound(begin(incident_facets_),
+                                         end(incident_facets_),
+                                         incident_facet, WeightSpaceFacet::compare_facet_ptr);
+        incident_facets_.insert(upper_it, incident_facet);
+        assert(incident_facets_.size() >= wsp_dimension);
+
+        std::transform(begin(obs->weight_), end(obs->weight_),
+                       begin(non_obs->weight_), std::back_inserter(weight_),
+                       [obs_coeff, non_obs_coeff](ValueType obs_val, ValueType non_obs_val) {
+                           return obs_coeff * obs_val - non_obs_coeff * non_obs_val;
+                       });
+        auto normalize_val = *(std::max_element(begin(weight_), end(weight_)));
+        assert (normalize_val > 0);
+        std::transform(begin(weight_), end(weight_), begin(weight_),
+                       [normalize_val](const ValueType &val) { return val / normalize_val; });
+        weighted_obj_val_ = obs_coeff*obs->weighted_obj_val_ - non_obs_coeff*non_obs->weighted_obj_val_; // return m_coeff * ray_minus - p_coeff * ray_plus
+        weighted_obj_val_ /= normalize_val;
+
+
+    }
 
     WeightType WeightSpaceVertex::getWeight() const {
         return weight_;
     }
 
-    ValueType WeightSpaceVertex::getWeightedOutcome(const OutcomeType& outcome) const {
+    double WeightSpaceVertex::getWeightedOutcome(const OutcomeType& outcome) const {
         assert (outcome.size() == weight_.size());
         return std::inner_product(begin(outcome),
                                   end(outcome),
                                   begin(weight_),
                                   0.);
+    }
+
+    double WeightSpaceVertex::computeSlack(const OutcomeType& outcome, bool outcome_is_ray) const {
+        double slack = getWeightedOutcome(outcome);
+        if (!outcome_is_ray)
+            slack -= getCurrentWOV();
+        return slack;
     }
 
     const WeightType WeightSpaceVertex::calculateWeightCombination(double h,

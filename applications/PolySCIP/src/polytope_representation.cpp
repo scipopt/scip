@@ -32,20 +32,6 @@ namespace polyscip {
 
     namespace polytoperepresentation {
 
-        /*V_RepT::V_RepT(WeightType weight,
-                       ValueType wov,
-                       SlackContainer minus_inds,
-                       SlackContainer plus_inds,
-                       vector<size_t> zero_inds)
-                : weight_(weight),
-                  wov_(wov),
-                  minus_slacks_(minus_inds),
-                  plus_slacks_(plus_inds),
-                  zero_slacks_(zero_inds)
-        {
-            assert (std::is_sorted(begin(zero_inds), end(zero_inds)));
-        }*/
-
         V_RepT::V_RepT(WeightType weight, ValueType wov)
                 : weight_(weight),
                   wov_(wov)
@@ -169,34 +155,6 @@ namespace polyscip {
                 unbounded_.push_back(unbd.second);
         }
 
-        void DoubleDescriptionMethod::computeVRep() {
-            assert (!bounded_.empty());
-            computeInitialRep(bounded_.front());
-            auto current_v_rep = initial_v_rep_;
-            for (auto bd = std::next(begin(bounded_)); bd != end(bounded_); ++bd) {
-                auto new_constraint = H_RepT(*bd, 1.);
-                current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
-                h_rep_.push_back(new_constraint);
-            }
-            for (auto unbd = begin(unbounded_); unbd != end(unbounded_); ++unbd) {
-                auto new_constraint = H_RepT(*unbd, 0.);
-                current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
-                h_rep_.push_back(new_constraint);
-            }
-            normalizeVRep(current_v_rep);
-            auto scip_ptr = scip_;
-            std::remove_copy_if(
-                    begin(current_v_rep),   // copy all elements from current_v_rep with non-zero weights to v_rep_
-                    end(current_v_rep),
-                    std::back_inserter(v_rep_),
-                    [scip_ptr](const V_RepT &v) {
-                        return SCIPisZero(scip_ptr, std::accumulate(begin(v.weight_),
-                                                                    end(v.weight_),
-                                                                    0.0));
-                    });
-            assert (v_rep_.size() + 1 == current_v_rep.size());
-        }
-
         //todo make simpler
         bool DoubleDescriptionMethod::shouldNormalize(const H_RepT &constraint, const V_RepContainer &current_v_rep) const {
             if (constraint.second > kLimitForNormalization) {
@@ -227,13 +185,13 @@ namespace polyscip {
                 v.print(os, withIncidentFacets);
         }
 
-        void DoubleDescriptionMethod::computeVRep_new() {
+        void DoubleDescriptionMethod::computeVRep() {
             assert (!bounded_.empty());
-            computeInitialRep_new(bounded_.front());
+            computeInitialRep(bounded_.front());
             auto current_v_rep = initial_v_rep_;
             for (auto bd = std::next(begin(bounded_)); bd != end(bounded_); ++bd) {
                 h_rep_.emplace_back(*bd, 1.0); // add new inequality
-                current_v_rep = extendVRep_new(std::move(current_v_rep),
+                current_v_rep = extendVRep(std::move(current_v_rep),
                                                h_rep_.back(),
                                                h_rep_.size()-1); // extend v-representation w.r.t. new inequality
                 auto h_rep_size = h_rep_.size();
@@ -244,7 +202,7 @@ namespace polyscip {
 
             for (auto unbd = begin(unbounded_); unbd != end(unbounded_); ++unbd) {
                 h_rep_.emplace_back(*unbd, 0.0); // add new inequality
-                current_v_rep = extendVRep_new(std::move(current_v_rep),
+                current_v_rep = extendVRep(std::move(current_v_rep),
                                                h_rep_.back(),
                                                h_rep_.size()-1); // extend v-representation w.r.t. new inequality
                 auto h_rep_size = h_rep_.size();
@@ -267,41 +225,6 @@ namespace polyscip {
         }
 
         vector<V_RepT> DoubleDescriptionMethod::extendVRep(vector<V_RepT> current_rep,
-                                                           const H_RepT &constraint) {
-
-            auto extended_v_rep = vector<V_RepT> {};
-            auto plus_inds = vector<std::size_t> {};
-            auto minus_inds = vector<std::size_t> {};
-            auto zero_slacks = SlackContainer {};
-
-            // partition current v-representation
-            for (size_t i = 0; i < current_rep.size(); ++i) {
-                zero_slacks.emplace_back(computeZeroSlackSet(current_rep[i]));
-                auto result = std::inner_product(begin(current_rep[i].weight_), end(current_rep[i].weight_),
-                                                 begin(constraint.first), -(current_rep[i].wov_ * constraint.second));
-                if (SCIPisNegative(scip_, result)) {
-                    minus_inds.push_back(i);
-                }
-                else if (SCIPisZero(scip_, result)) {
-                    extended_v_rep.push_back(current_rep[i]);
-                }
-                else {
-                    assert(SCIPisPositive(scip_, result));
-                    plus_inds.push_back(i);
-                    extended_v_rep.push_back(current_rep[i]);
-                }
-            }
-
-            auto adj_pairs = computeAdjacentPairs(plus_inds, minus_inds, zero_slacks, current_rep);
-            for (const auto &p : adj_pairs) {
-                extended_v_rep.push_back(computeNewRay(current_rep[p.first],
-                                                       current_rep[p.second],
-                                                       constraint));
-            }
-            return extended_v_rep;
-        }
-
-        vector<V_RepT> DoubleDescriptionMethod::extendVRep_new(vector<V_RepT> current_rep,
                                                                const H_RepT& constraint,
                                                                size_t index_of_constraint_in_hrep) {
             auto extended_v_rep = vector<V_RepT> {};
@@ -326,68 +249,25 @@ namespace polyscip {
                     extended_v_rep.push_back(current_rep[i]); // element will also be in extended v-representation
                 }
             }
-            auto adj_pairs = computeAdjacentPairs_new(plus_inds, minus_inds, current_rep);
+            auto adj_pairs = computeAdjacentPairs(plus_inds, minus_inds, current_rep);
             for (const auto &p : adj_pairs)
                 extended_v_rep.emplace_back(scip_, current_rep[p.first], current_rep[p.second], constraint, index_of_constraint_in_hrep, h_rep_);
 
             return extended_v_rep;
         }
 
-        vector<pair<size_t, size_t>> DoubleDescriptionMethod::computeAdjacentPairs_new(const vector<size_t> &plus_inds,
+        vector<pair<size_t, size_t>> DoubleDescriptionMethod::computeAdjacentPairs(const vector<size_t> &plus_inds,
                                                                                        const vector<size_t> &minus_inds,
                                                                                        const vector<V_RepT> &current_rep) const {
             auto adj_pairs = vector<pair<size_t, size_t>> {};
             for (auto plus : plus_inds) {
                 for (auto minus : minus_inds) {
                     assert (plus != minus);
-                    if (rayPairIsAdjacent_new(plus, minus, current_rep))
+                    if (rayPairIsAdjacent(plus, minus, current_rep))
                         adj_pairs.push_back({plus, minus});
                 }
             }
             return adj_pairs;
-        }
-
-
-
-        vector<pair<size_t, size_t>> DoubleDescriptionMethod::computeAdjacentPairs(const vector<size_t> &plus_inds,
-                                                                             const vector<size_t> &minus_inds,
-                                                                             const SlackContainer &zero_slacks,
-                                                                             const vector<V_RepT> &current_rep) const {
-            auto adj_pairs = vector<pair<size_t, size_t>> {};
-            for (const auto &plus : plus_inds) {
-                for (const auto &minus : minus_inds) {
-                    if (rayPairIsAdjacent(plus, minus, zero_slacks, current_rep))
-                        adj_pairs.push_back({plus, minus});
-                }
-            }
-            return adj_pairs;
-        }
-
-        bool DoubleDescriptionMethod::rayPairIsAdjacent(size_t index1,
-                                                        size_t index2,
-                                                        const SlackContainer &zero_slacks,
-                                                        const vector<V_RepT> &current_rep) const {
-            assert (std::max(index1, index2) < zero_slacks.size());
-            auto intersec = vector<size_t> {};
-            std::set_intersection(begin(zero_slacks[index1]),
-                                  end(zero_slacks[index1]),
-                                  begin(zero_slacks[index2]),
-                                  end(zero_slacks[index2]),
-                                  std::back_inserter(intersec));
-
-            for (size_t i = 0; i < zero_slacks.size(); ++i) {
-                if (i == index1 || i == index2 || zero_slacks[i].size() <= intersec.size())
-                    continue;
-                auto includes = std::includes(begin(zero_slacks[i]),
-                                              end(zero_slacks[i]),
-                                              begin(intersec),
-                                              end(intersec));
-
-                if (includes && !isMultiple(current_rep[i], current_rep[index1]) &&
-                    !isMultiple(current_rep[i], current_rep[index2]))
-                    return false;
-            }
-            return true;
         }
 
         vector<size_t> DoubleDescriptionMethod::getCommonZeroSlacks(const V_RepT& v, const V_RepT& w) const {
@@ -402,7 +282,7 @@ namespace polyscip {
         }
 
 
-        bool DoubleDescriptionMethod::rayPairIsAdjacent_new(size_t index1,
+        bool DoubleDescriptionMethod::rayPairIsAdjacent(size_t index1,
                                                             size_t index2,
                                                             const vector<V_RepT>& current_rep) const {
 
@@ -526,18 +406,6 @@ namespace polyscip {
 
 
         void DoubleDescriptionMethod::computeInitialRep(const OutcomeType &bd_outcome) {
-            auto size = bd_outcome.size();
-            initial_v_rep_.emplace_back(WeightType(size, 0), -1.);
-            h_rep_.emplace_back(bd_outcome, 1.);
-            for (size_t i = 0; i < size; ++i) {
-                auto ray = WeightType(size, 0.);
-                ray[i] = 1.;
-                h_rep_.push_back({ray, 0.});
-                initial_v_rep_.emplace_back(ray, bd_outcome[i]);
-            }
-        }
-
-        void DoubleDescriptionMethod::computeInitialRep_new(const OutcomeType &bd_outcome) {
             auto size = bd_outcome.size();
             // create initial h_rep
             for (size_t i=0; i<size; ++i) {

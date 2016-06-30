@@ -56,24 +56,34 @@ namespace polyscip {
               nodes_to_vertices_(skeleton_) {
         assert (!v_rep.empty());
         assert (!h_rep.empty());
-        createInitialFacets(h_rep);
-        createInitialVerticesAndSkeleton(scip, v_rep);
+        //createInitialFacets(h_rep);
+        createInitialVerticesAndSkeleton(scip, h_rep, v_rep);
     }
 
-    void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepContainer h_rep) {
+    /*void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepContainer h_rep) {
         for (auto& h : h_rep) {
             facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
         }
-    }
+    }*/
 
     void WeightSpacePolyhedron::createInitialVerticesAndSkeleton(SCIP* scip,
+                                                                 H_RepC h_rep,
                                                                  V_RepC v_rep) {
+        auto initial_facets = FacetContainer {};
+        for (auto& h : h_rep) {
+            initial_facets.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
+        }
+        for (const auto& f : initial_facets) {
+            facets_to_vertices_.emplace(f.get(), vector<const WeightSpaceVertex*>{});
+        }
         for (auto& v : v_rep) {
-            auto inc_facets = computeIncidentFacets(scip, v);
-            auto vertex = new WeightSpaceVertex(std::move(inc_facets),
+            auto inc_facets = computeIncidentFacets(scip, initial_facets, v);
+            auto vertex = new WeightSpaceVertex(inc_facets,
                                                 v.moveWeight(),
                                                 v.getWov());
-
+            for (const auto& f : inc_facets) {
+                facets_to_vertices_[f.get()].push_back(vertex);
+            }
             auto node = skeleton_.addNode();
             nodes_to_vertices_[node] = vertex;
             vertices_to_nodes_.insert({vertex, node});
@@ -92,9 +102,10 @@ namespace polyscip {
     }
 
     WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
+                                                                                       const FacetContainer& initial_facets,
                                                                                        const polytoperepresentation::V_RepT& v) const {
         auto facets = FacetContainer {};
-        for (const auto& f : facets_) {
+        for (const auto& f : initial_facets) {
             if (SCIPisEQ(scip, f->getWeightedWeight(v.getWeight()), f->getWOVCoeff()*v.getWov()))
                 facets.push_back(f);
         }
@@ -179,6 +190,10 @@ namespace polyscip {
 
         auto unscanned = std::list<WeightSpaceVertex*> {curr_investigated_vertex_};
         auto obsolete = std::vector<WeightSpaceVertex*> {curr_investigated_vertex_};
+        auto new_facet = outcome_is_ray ? make_shared<const WeightSpaceFacet>(outcome, 0) :
+                         make_shared<const WeightSpaceFacet>(outcome, 1);
+        facets_to_vertices_.emplace(new_facet.get(), vector<const WeightSpaceVertex*>{});
+
         while (!unscanned.empty()) {
             auto obs_vertex = unscanned.front();
             unscanned.pop_front();
@@ -200,16 +215,18 @@ namespace polyscip {
                             begin(obsolete),
                             end(obsolete)) == end(marked_vertices_)); // assert no marked vertex is made obsolete by outcome
 
-
         auto new_vertices = vector<WeightSpaceVertex*> {};
         auto new_edges = vector< pair<WeightSpaceVertex*, WeightSpaceVertex*> > {}; // pair: new vertex, adjacent vertex
         for (const auto& pair : obs_nonobs_pairs) { // create new vertices between obsolete and non-obsolete vertices
             auto obs_vertex= pair.first;
             auto non_obs_vertex = pair.second;
-            auto convCombVal = calculateConvexCombValue(obs_vertex, non_obs_vertex, outcome, outcome_is_ray);
-            if (convCombVal >= 0 && convCombVal <= 1) {
-                auto new_vertex = new WeightSpaceVertex(convCombVal, obs_vertex, non_obs_vertex, outcome,
-                                                        outcome_is_ray, wsp_dimension_);
+            double obs_coeff = non_obs_vertex->computeSlack(outcome, outcome_is_ray);
+            double non_obs_coeff = obs_vertex->computeSlack(outcome, outcome_is_ray);
+            if (obs_coeff > -1e-6 && non_obs_coeff < 1e-6) {
+                auto new_vertex = new WeightSpaceVertex(obs_coeff, non_obs_coeff,
+                                                        obs_vertex, non_obs_vertex,
+                                                        new_facet, wsp_dimension_);
+                facets_to_vertices_[new_facet.get()].push_back(new_vertex);
                 assert (std::find(begin(unmarked_vertices_), end(unmarked_vertices_), new_vertex) ==
                         end(unmarked_vertices_));
                 unmarked_vertices_.push_back(new_vertex);
@@ -217,7 +234,7 @@ namespace polyscip {
                 new_edges.push_back({new_vertex, non_obs_vertex});
             }
             else {
-                std::cout << std::setprecision(9) << "Encountered combination value = " << convCombVal << "\n";
+                throw std::runtime_error("Unexpected convex combination of obsolete and non-obsolete weight space vertices\n");
             }
         }
 
@@ -290,6 +307,12 @@ namespace polyscip {
         printVertices(obsolete_vertices_, {"OBSOLETE VERTICES:"}, os, printFacets);
     }
 
+    void WeightSpacePolyhedron::printFacets() const {
+        for (const auto& i : facets_to_vertices_) {
+            i.first->print(std::cout);
+            std::cout << "size of incident verts: " << i.second.size() << "\n";
+        }
+    }
 
 
 
