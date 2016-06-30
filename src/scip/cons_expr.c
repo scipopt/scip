@@ -671,9 +671,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 
    lockdata = (EXPRLOCK_DATA*)data;
 
+   expr->nlockspos += lockdata->nlockspos;
+   expr->nlocksneg += lockdata->nlocksneg;
+
    if( SCIPgetConsExprExprHdlr(expr) == lockdata->exprvarhdlr )
    {
-      /* if a variable, lock in both directions */
+      /* if a variable, then also add nlockspos/nlocksneg from lockdata via SCIPaddVarLocks() */
       SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), lockdata->nlockspos, lockdata->nlocksneg) );
    }
 
