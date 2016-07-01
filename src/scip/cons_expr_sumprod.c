@@ -170,7 +170,7 @@ SCIP_RETCODE createExprlistFromExprs(
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions stored in list */
    SCIP_Real*            coefs,              /**< coefficients/exponents of expression */
    SCIP_Real             coef,               /**< coefficient/exponent to multiply coefs (distributing) */
-   int                   nexprs,             /**< number of expressiosn */
+   int                   nexprs,             /**< number of expressions */
    EXPRNODE**            list                /**< pointer to store list */
    )
 {
@@ -443,7 +443,7 @@ SCIP_RETCODE createExprProductFromExprlist(
    return SCIP_OKAY;
 }
 
-/** simplifies a term of a sum expression: constant * expr, so that is a valid children of a simplified sum expr.
+/** simplifies a term of a sum expression: constant * expr, so that it is a valid child of a simplified sum expr.
  * @note: in contrast to other simplify methods, this does *not* return a simplified expression.
  * Instead, the method is intended to be called only when simplifying a sum expression,
  * Since in general, constant*expr is not a simplified child of a sum expression, this method returns
@@ -613,7 +613,7 @@ SCIP_RETCODE simplifyFactor(
           * and so has a nuses = 1. Otherwise, if it was called from simplifyProduct, then it as *at least* nuses = 2,
           * one from whoever its father is and another from the nodeexpr that contains `base`. That's the reason why
           * we know it has another parent only when nuses >= 3
-          * FIXME: THIS IS INCREDIBLE HORRIBLE. a possible fix is to release the nodeexpr before calling simplifyFactor
+          * FIXME: THIS IS INCREDIBLY HORRIBLE. a possible fix is to release the nodeexpr before calling simplifyFactor
           * from simplifyProduct. Sadly, that solution is also horrible...
           */
          if( SCIPgetConsExprExprNUses(base) > 2 )
