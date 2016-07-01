@@ -885,13 +885,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval) );
 
    /* stop if callback returned an empty interval */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
-   {
-      SCIPintervalSetEmpty(&expr->interval);
-      propdata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-   }
-   else
+   if( !SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
    {
       /* intersect new interval with the previous one */
       if( propdata->intersect )
@@ -900,6 +894,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
          SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
 
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   }
+
+   /* stop if resulting interval is empty */
+   if( SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
+   {
+      SCIPintervalSetEmpty(&expr->interval);
+      propdata->aborted = TRUE;
+      *result = SCIP_CONSEXPREXPRWALK_ABORT;
    }
 
    return SCIP_OKAY;
@@ -1098,9 +1100,17 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
 
-   /* compare root expression interval with constraint sides; store the result in the root expression */
-   SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
-   SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL);
+   /* it may happen that we detect infeasibility during forward propagation if we use previously computes intervals */
+   if( SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(consdata->expr)) )
+   {
+      *infeasible = TRUE;
+   }
+   else
+   {
+      /* compare root expression interval with constraint sides; store the result in the root expression */
+      SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
+      SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL);
+   }
 
 #ifdef SCIP_DEBUG
    if( *infeasible )
