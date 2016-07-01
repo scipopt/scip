@@ -890,15 +890,11 @@ END {
       ismaxi = 0;
       mark = " ";
       marker = " ";
-      countprob = 1;
       notimeout = 1;
 
       # check for exclusion
       if( excluded[p] )
-      {
          unprocessed = 1;
-         countprob = 0;
-      }
 
       # find best and worst run and check whether this instance should be counted in overall statistics
       for( s = 0; s < nsolver; ++s )
@@ -947,8 +943,6 @@ END {
             worsttimetofirst = max(worsttimetofirst, timetofirst[s, pidx]);
             worsttimetobest = max(worsttimetobest, timetobest[s, pidx]);
          }
-         else
-            countprob = 0;
       }
       worsttime = max(worsttime, mintime);
       worsttimetofirst = max(worsttimetofirst, mintime);
@@ -1044,12 +1038,9 @@ END {
                notimeout = 0;
                if( !unprocessed )
                {
-                  if( countprob )
-                  {
-                     ntimeouts[s,0]++;
-                     ntimeouts[s,category[s]]++;
-                     nthistimeouts++;
-                  }
+                  ntimeouts[s,0]++;
+                  ntimeouts[s,category[s]]++;
+                  nthistimeouts++;
                }
             }
             else
