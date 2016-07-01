@@ -1206,6 +1206,12 @@ SCIP_RETCODE reversePropConss(
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
 
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("call reverse propagation for ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
       /* call reverse propagation callback */
       SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds) );
       assert(nreds >= 0);
@@ -1326,6 +1332,9 @@ SCIP_RETCODE propConss(
 
          if( SCIPconsIsActive(conss[i]) && !consdata->ispropagated )
          {
+            SCIPdebugMessage("call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
+            SCIPdebugPrintCons(scip, conss[i], NULL);
+
             SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff) );
 
             if( cutoff )
