@@ -37,7 +37,7 @@ namespace polyscip {
 
     class Polyscip {
     public:
-        Polyscip(int argc, const char *const *argv);
+        explicit Polyscip(int argc, const char *const *argv);
 
         ~Polyscip();
 

@@ -20,9 +20,11 @@
 #ifndef POLYSCIP_SRC_POLYTOPE_REPRESENTATION_H_INCLUDED
 #define POLYSCIP_SRC_POLYTOPE_REPRESENTATION_H_INCLUDED
 
+#include <algorithm>
 #include <cstddef>
+#include <functional> // std::function
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -42,32 +44,23 @@ namespace polyscip {
         class V_RepT {
         public:
             friend class DoubleDescriptionMethod;
-            using SlackContainer = std::map<std::size_t, double>;  // maps keep keys sorted in contrast to unordered_maps!
+            using SlackMap = std::unordered_map<std::size_t, ValueType>;
 
             explicit V_RepT(WeightType weight, ValueType wov);
 
             explicit V_RepT(SCIP* scip, WeightType weight, ValueType wov, const H_RepContainer& current_h_rep);
 
-            explicit V_RepT(WeightType weight,
-                            ValueType wov,
-                            SlackContainer minus_inds,
-                            SlackContainer plus_inds,
-                            std::vector<std::size_t> zero_inds) = delete;
-
             explicit V_RepT(SCIP* scip,
                             const V_RepT& v,
                             const V_RepT& w,
-                            const H_RepT& constraint,
                             std::size_t index_of_constraint_in_hrep,
                             const H_RepContainer& current_h_rep);
 
+
+            ValueType getSlack(std::size_t index) const {return inds_to_slacks_.at(index);}
             void addZeroSlackIndex(std::size_t index);
-            void addMinusSlack(std::size_t index, double value);
-            void addPlusSlack(std::size_t index, double value);
-            void print(std::ostream& os, bool withIncidentFacets) const;
-            double getPlusSlack(std::size_t index) const;
-            double getMinusSlack(std::size_t index) const;
-            bool hasValidSlackSets(std::size_t no_of_constraints) const;
+            void addSlack(std::size_t index, double val);
+            void print(std::ostream& os, bool withIncidentFacets, const H_RepContainer& h_rep) const;
 
             //todo incorporate way for facets when WSP is not full-dimensional
 
@@ -81,13 +74,13 @@ namespace polyscip {
             ValueType getWov() const {return wov_;};
 
         private:
+            static constexpr double kNormalizingThreshold = 1e+6;
+            void normalize();
+
             WeightType weight_;
             ValueType wov_;
-            SlackContainer minus_slacks_;
-            SlackContainer plus_slacks_;
+            SlackMap inds_to_slacks_;
             std::vector<std::size_t> zero_slacks_; // indices in h_rep_ which this object fulfills with equality
-
-            //std::vector<std::size_t> zero_slack_indices_; // indices in h_rep_ which this object fulfills with equality
         };
 
         using V_RepContainer = std::vector<V_RepT>;
@@ -95,8 +88,6 @@ namespace polyscip {
 
         class DoubleDescriptionMethod {
         public:
-
-            const double kLimitForNormalization = 1e+6;
 
             DoubleDescriptionMethod(SCIP *scip, const ResultContainer &bounded, const ResultContainer &unbounded);
 
@@ -117,8 +108,6 @@ namespace polyscip {
         private:
             using SlackContainer = std::vector<std::vector<std::size_t>>;
 
-            bool shouldNormalize(const H_RepT &constraint, const V_RepContainer &current_v_rep) const;
-
             /** Computes initial v-representation for the following h-representation:
              * 1) bounded \cdot (w_1,...,w_k) - a >= 0
              * 2) w_1 >= 0
@@ -127,8 +116,6 @@ namespace polyscip {
              */
 
             void computeInitialRep(const OutcomeType &bounded);
-
-            std::vector<std::size_t> computeZeroSlackSet(const V_RepT &ray) const;
 
             std::vector<std::size_t> getCommonZeroSlacks(const V_RepT& v, const V_RepT& w) const;
 
@@ -148,9 +135,6 @@ namespace polyscip {
             std::vector<V_RepT> extendVRep(std::vector<V_RepT> current_rep,
                                                const H_RepT &constraint,
                                                std::size_t index_of_constraint_in_hrep);
-            V_RepT computeNewRay(const V_RepT &plus_ray, const V_RepT &minus_ray, const H_RepT &new_constraint) const;
-
-            void normalizeVRep(V_RepContainer &v_rep);
 
             SCIP *scip_;
             std::vector<OutcomeType> bounded_;

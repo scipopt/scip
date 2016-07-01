@@ -33,7 +33,7 @@ namespace polyscip {
         version_no_ = std::to_string(POLYSCIP_VERSION_MAJOR) + string(".") + std::to_string(POLYSCIP_VERSION_MINOR);
         CmdLine cmd(executable_name_,' ', version_no_);
         cmd.setExceptionHandling(false); // set internal exception handling
-        SwitchArg check_redundant_objs_arg("r", "redundant", "switch on check for redundant objectives", false);
+        SwitchArg check_redundant_objs_arg("r", "redundancyCheck", "switch on check for redundancy of objectives", false);
         cmd.add(check_redundant_objs_arg);
         SwitchArg with_unsupported_arg("u", "unsupported", "switch off computation of unsupported non-dominated points", true);
         cmd.add(with_unsupported_arg);

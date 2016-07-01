@@ -15,6 +15,7 @@
 #include "polytope_representation.h"
 
 #include <algorithm>
+#include <cmath> //std::fabs
 #include <iterator>
 #include <set>
 #include <utility>
@@ -41,28 +42,25 @@ namespace polyscip {
                 : weight_(weight),
                   wov_(wov)
         {
-            //todo do more efficiently
             for (size_t i=0; i<current_h_rep.size(); ++i) {
                 auto result = std::inner_product(begin(weight_), end(weight_),
                                                  begin(current_h_rep[i].first), -(current_h_rep[i].second * wov_));
-                if (SCIPisNegative(scip, result)) {
-                    addMinusSlack(i, result);
-                }
-                else if (SCIPisZero(scip, result)) {
+                inds_to_slacks_.emplace(i, result);
+                if (SCIPisZero(scip, result)) {
+                    inds_to_slacks_[i] = 0.;
                     addZeroSlackIndex(i);
-                }
-                else {
-                    assert(SCIPisPositive(scip, result));
-                    addPlusSlack(i, result);
                 }
             }
         }
 
-        V_RepT::V_RepT(SCIP* scip, const V_RepT& plus, const V_RepT& minus, const H_RepT& ineq, size_t index_of_ineq, const H_RepContainer& current_h_rep) {
-
-            auto m_coeff = plus.getPlusSlack(index_of_ineq);
+        V_RepT::V_RepT(SCIP* scip,
+                       const V_RepT& plus,
+                       const V_RepT& minus,
+                       size_t index_of_ineq,
+                       const H_RepContainer& current_h_rep) {
+            auto m_coeff = plus.getSlack(index_of_ineq);
             assert (SCIPisPositive(scip, m_coeff));
-            auto p_coeff = minus.getMinusSlack(index_of_ineq);
+            auto p_coeff = minus.getSlack(index_of_ineq);
             assert (SCIPisNegative(scip, p_coeff));
 
             std::transform(begin(minus.weight_), end(minus.weight_),
@@ -72,59 +70,30 @@ namespace polyscip {
                            });
             wov_ = m_coeff*minus.wov_ - p_coeff*plus.wov_; // return m_coeff * ray_minus - p_coeff * ray_plus
 
-            // TODO temporary change to more efficient version
+            auto normalizing_threshold = kNormalizingThreshold;
+            if (std::any_of(weight_.cbegin(), weight_.cend(), [normalizing_threshold](ValueType w){return w > normalizing_threshold;}))
+                normalize();
+
             for (size_t i=0; i<current_h_rep.size(); ++i) {
-                auto result = std::inner_product(begin(weight_), end(weight_),
-                                                 begin(current_h_rep[i].first), -(current_h_rep[i].second * wov_));
-                if (SCIPisNegative(scip, result)) {
-                    addMinusSlack(i, result);
-                }
-                else if (SCIPisZero(scip, result)) {
+                auto res = m_coeff * minus.getSlack(i) - p_coeff * plus.getSlack(i);
+                inds_to_slacks_.emplace(i, res);
+                if (SCIPisZero(scip, res)) {
+                    inds_to_slacks_[i] = 0.;
                     addZeroSlackIndex(i);
                 }
-                else {
-                    assert(SCIPisPositive(scip, result));
-                    addPlusSlack(i, result);
-                }
             }
         }
 
-        bool V_RepT::hasValidSlackSets(size_t no_of_constraints) const {
-            auto indices = std::set<size_t> {};
-            for (const auto& index : zero_slacks_) {
-                auto ret = indices.insert(index);
-                if (!ret.second)
-                    return false;
-            }
-            for (const auto& elem : minus_slacks_) {
-                auto ret = indices.insert(elem.first);
-                if (!ret.second)
-                    return false;
-            }
-            for (const auto& elem : plus_slacks_) {
-                auto ret = indices.insert(elem.first);
-                if (!ret.second)
-                    return false;
-            }
-            if (indices.size() != no_of_constraints)
-                return false;
-            return true;
+        void V_RepT::normalize() {
+            auto normalizing_val = kNormalizingThreshold;
+            std::transform(begin(weight_), end(weight_), begin(weight_),
+                           [normalizing_val](const ValueType &val) { return val / normalizing_val; });
+            wov_ /= normalizing_val;
         }
 
-        double V_RepT::getPlusSlack(size_t index) const {
-            return plus_slacks_.at(index);
-        }
-
-        double V_RepT::getMinusSlack(size_t index) const {
-            return minus_slacks_.at(index);
-        }
-
-        void V_RepT::addMinusSlack(size_t index, double value) {
-            minus_slacks_.insert({index, value});
-        }
-
-        void V_RepT::addPlusSlack(size_t index, double value) {
-            plus_slacks_.insert({index, value});
+        void V_RepT::addSlack(std::size_t index, double val) {
+            auto res = inds_to_slacks_.emplace(index, val);
+            assert (res.second);
         }
 
         void V_RepT::addZeroSlackIndex(size_t index) {
@@ -132,11 +101,17 @@ namespace polyscip {
             assert (std::is_sorted(begin(zero_slacks_), end(zero_slacks_)));
         }
 
-        void V_RepT::print(std::ostream& os, bool withIncidentFacets) const {
+        void V_RepT::print(std::ostream& os, bool withIncidentFacets, const H_RepContainer& h_rep) const {
             global::print(weight_, "Weight = ", os);
             os << " Coeff = " << wov_ << "\n";
-            if (withIncidentFacets)
-                os << "No of facets: " << zero_slacks_.size() << "\n";
+            if (withIncidentFacets) {
+                os << "Facets: \n";
+                for (const auto& ind : zero_slacks_) {
+                    global::print(h_rep[ind].first, "", os);
+                    os << " " << h_rep[ind].second << "\n";
+                }
+                os << "\n";
+            }
         }
 
         bool V_RepT::hasZeroSlackSuperSet(const std::vector<size_t>& indices) const {
@@ -155,34 +130,9 @@ namespace polyscip {
                 unbounded_.push_back(unbd.second);
         }
 
-        //todo make simpler
-        bool DoubleDescriptionMethod::shouldNormalize(const H_RepT &constraint, const V_RepContainer &current_v_rep) const {
-            if (constraint.second > kLimitForNormalization) {
-                return true;
-            }
-            else if (std::upper_bound(
-                    begin(constraint.first), // check whether value in constraint.first > kLimitForNormalization
-                    end(constraint.first),
-                    kLimitForNormalization) != end(constraint.first)) {
-                return true;
-            }
-            else {
-                for (const auto &v : current_v_rep) {
-                    if (v.wov_ > kLimitForNormalization)
-                        return true;
-                    else if (std::upper_bound(begin(v.weight_), // check whether value in v > kLimitForNormalization
-                                              end(v.weight_),
-                                              kLimitForNormalization) != end(v.weight_))
-                        return true;
-                }
-                return false;
-            }
-        }
-
-
         void DoubleDescriptionMethod::printVRep(std::ostream &os, bool withIncidentFacets) const {
             for (const auto& v : v_rep_)
-                v.print(os, withIncidentFacets);
+                v.print(os, withIncidentFacets, h_rep_);
         }
 
         void DoubleDescriptionMethod::computeVRep() {
@@ -194,10 +144,6 @@ namespace polyscip {
                 current_v_rep = extendVRep(std::move(current_v_rep),
                                                h_rep_.back(),
                                                h_rep_.size()-1); // extend v-representation w.r.t. new inequality
-                auto h_rep_size = h_rep_.size();
-                assert (std::all_of(begin(current_v_rep),
-                                    end(current_v_rep),
-                                    [h_rep_size](const V_RepT& v){return v.hasValidSlackSets(h_rep_size);}));
             }
 
             for (auto unbd = begin(unbounded_); unbd != end(unbounded_); ++unbd) {
@@ -205,12 +151,8 @@ namespace polyscip {
                 current_v_rep = extendVRep(std::move(current_v_rep),
                                                h_rep_.back(),
                                                h_rep_.size()-1); // extend v-representation w.r.t. new inequality
-                auto h_rep_size = h_rep_.size();
-                assert (std::all_of(begin(current_v_rep),
-                                    end(current_v_rep),
-                                    [h_rep_size](const V_RepT& v){return v.hasValidSlackSets(h_rep_size);}));
             }
-            normalizeVRep(current_v_rep);
+            //normalizeVRep(current_v_rep);
             auto scip_ptr = scip_;
             std::remove_copy_if(
                     begin(current_v_rep),   // copy all elements from current_v_rep with non-zero weights to v_rep_
@@ -234,24 +176,24 @@ namespace polyscip {
             for (size_t i = 0; i < current_rep.size(); ++i) { // partition current v-representation
                 auto result = std::inner_product(begin(current_rep[i].weight_), end(current_rep[i].weight_),
                                                  begin(constraint.first), -(current_rep[i].wov_ * constraint.second));
+                current_rep[i].addSlack(index_of_constraint_in_hrep, result);
                 if (SCIPisNegative(scip_, result)) {
-                    current_rep[i].addMinusSlack(index_of_constraint_in_hrep, result);
                     minus_inds.push_back(i);
                 }
                 else if (SCIPisZero(scip_, result)) {
+                    current_rep[i].inds_to_slacks_[index_of_constraint_in_hrep] = 0.; // set to zero instead of some small epsilon
                     current_rep[i].addZeroSlackIndex(index_of_constraint_in_hrep);
                     extended_v_rep.push_back(current_rep[i]); // element will also be in extended v-representation
                 }
                 else {
                     assert(SCIPisPositive(scip_, result));
-                    current_rep[i].addPlusSlack(index_of_constraint_in_hrep, result);
                     plus_inds.push_back(i);
                     extended_v_rep.push_back(current_rep[i]); // element will also be in extended v-representation
                 }
             }
             auto adj_pairs = computeAdjacentPairs(plus_inds, minus_inds, current_rep);
             for (const auto &p : adj_pairs)
-                extended_v_rep.emplace_back(scip_, current_rep[p.first], current_rep[p.second], constraint, index_of_constraint_in_hrep, h_rep_);
+                extended_v_rep.emplace_back(scip_, current_rep[p.first], current_rep[p.second], index_of_constraint_in_hrep, h_rep_);
 
             return extended_v_rep;
         }
@@ -357,63 +299,15 @@ namespace polyscip {
         }
 
 
-        vector<size_t> DoubleDescriptionMethod::computeZeroSlackSet(const V_RepT& v) const {
-            auto zeroSet = vector<size_t> {};
-            for (size_t i = 0; i < h_rep_.size(); ++i) {
-                auto weight_coeff = h_rep_[i].first;
-                auto a_coeff = h_rep_[i].second;
-                auto result = std::inner_product(begin(weight_coeff), end(weight_coeff),
-                                                 begin(v.weight_), -a_coeff * v.wov_);
-                if (SCIPisZero(scip_, result))
-                    zeroSet.push_back(i);
-            }
-            return zeroSet;
-        }
-
-        void DoubleDescriptionMethod::normalizeVRep(V_RepContainer &v_rep) {
-            for (auto &v : v_rep) {
-                auto weight_length = std::accumulate(begin(v.weight_), end(v.weight_), 0.);
-                if (SCIPisPositive(scip_, weight_length)) {
-                    std::transform(begin(v.weight_), end(v.weight_), begin(v.weight_),
-                                   [weight_length](const ValueType &val) { return val / weight_length; });
-                    v.wov_ /= weight_length;
-                }
-            }
-        }
-
-        V_RepT DoubleDescriptionMethod::computeNewRay(const V_RepT &plus_ray, const V_RepT &minus_ray,
-                                                                   const H_RepT &ineq) const {
-            auto size = plus_ray.weight_.size();
-            assert (size == minus_ray.weight_.size());
-            assert (size == ineq.first.size());
-            auto m_coeff = std::inner_product(begin(ineq.first),  // m_coeff = ineq \cdot ray_plus
-                                              end(ineq.first),
-                                              begin(plus_ray.weight_),
-                                              -(ineq.second * plus_ray.wov_));
-            auto p_coeff = std::inner_product(begin(ineq.first),  // p_coeff = ineq \cdot ray_minus
-                                              end(ineq.first),
-                                              begin(minus_ray.weight_),
-                                              -(ineq.second * minus_ray.wov_));
-            auto new_weight = WeightType(size, 0.);
-            std::transform(begin(minus_ray.weight_), end(minus_ray.weight_),
-                           begin(plus_ray.weight_), begin(new_weight),
-                           [m_coeff, p_coeff](ValueType m_val, ValueType p_val) {
-                               return m_coeff * m_val - p_coeff * p_val;
-                           });
-            // return m_coeff * ray_minus - p_coeff * ray_plus
-            return V_RepT(new_weight, m_coeff * minus_ray.wov_ - p_coeff * plus_ray.wov_);
-        }
-
-
         void DoubleDescriptionMethod::computeInitialRep(const OutcomeType &bd_outcome) {
             auto size = bd_outcome.size();
             // create initial h_rep
             for (size_t i=0; i<size; ++i) {
                 auto constraint = WeightType(size, 0.);
                 constraint[i] = 1.;
-                h_rep_.push_back({constraint, 0.}); // add constraint: e_i >= 0 with e_i being i-th unit vector
+                h_rep_.push_back({constraint, 0.}); // add constraint: e_i 0 >= 0 with e_i being i-th unit vector
             }
-            h_rep_.emplace_back(bd_outcome, 1.); // add constraint; bd_outcome >= 1
+            h_rep_.emplace_back(bd_outcome, 1.); // add constraint; bd_outcome -1 >= 0
             // create initial v_rep
             for (size_t i=0; i<size; ++i) {
                 initial_v_rep_.emplace_back(scip_, h_rep_[i].first, bd_outcome[i], h_rep_); // add v_rep: e_i, bd_outcome[i] with e_i being i-th unit vector

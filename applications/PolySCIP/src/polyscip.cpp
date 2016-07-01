@@ -87,9 +87,10 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::computeNondomPoints() {
         SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
         SCIP_CALL( computeSupported() );
-        std::cout << "supported computation done\n";
-        if (!cmd_line_args_.withUnsupported())
-            std::cerr << "NOT IMPLEMENTED.\n";
+        cout << "supported computation done\n";
+        if (cmd_line_args_.withUnsupported()) {
+            ; // check whether problem is not pure lp
+        }
         SCIP_CALL( SCIPstopClock(scip_, clock_total_) );
         return SCIP_OKAY;
     }
@@ -134,12 +135,15 @@ namespace polyscip {
                 auto v_rep = DDMethod(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
-                v_rep.printVRep(std::cout, true);
+                //v_rep.printVRep(std::cout, true);
+                std::cout << "Starting initializing WSP...";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
                                                                                 considered_objs_.size(),
                                                                                 v_rep.getVRep(),
                                                                                 v_rep.getHRep());
+                std::cout << "...finished.\n";
                 polyscip_status_ = PolyscipStatus::WeightSpacePhase;
+                //polyscip_status_ = PolyscipStatus::Finished;
             }
         }
         return SCIP_OKAY;
@@ -256,7 +260,7 @@ namespace polyscip {
         }
         else {
             global::print(outcome, "Outcome: ");
-            std::cout << "not added to results.\n";
+            cout << "not added to results.\n";
         }
     }
 
@@ -294,8 +298,12 @@ namespace polyscip {
         SCIP_CALL( initWeightSpace() );
         if (polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
             std::cout << "Starting weight space phase...\n";
+            auto iteration = 0;
             while (weight_space_poly_->hasUntestedWeight()) {
+                std::cout << "iteration = " << ++iteration << "\n";
                 auto untested_weight = weight_space_poly_->getUntestedWeight();
+                if (iteration == 14)
+                    global::print(untested_weight, "untested weight");
                 SCIP_CALL( setWeightedObjective(untested_weight) );
                 SCIP_CALL( solve() );
                 auto scip_status = SCIPgetStatus(scip_);
@@ -321,7 +329,7 @@ namespace polyscip {
                     return SCIP_OKAY;
                 }
             }
-            weight_space_poly_->printFacets();
+            //weight_space_poly_->printFacets();
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
         deleteWeaklyNondomResults();
@@ -421,7 +429,7 @@ namespace polyscip {
         auto obj = vector<SCIP_Real>(global::narrow_cast<size_t>(SCIPgetNOrigVars(scip_)), 0);
         for (size_t i=0; i<size; ++i)
             obj[nonzero_indices[i]] = nonzero_vals[i];
-        global::print(obj, std::to_string(obj_no)+". obj: ", os);
+        global::print(obj, std::to_string(obj_no) + ". obj: ", os);
         os << "\n";
     }
 
@@ -518,7 +526,8 @@ namespace polyscip {
             for (size_t obj_ind=0; obj_ind<no_objs; ++obj_ind) {
                 auto nonzero_vars = obj_probdata->getNonZeroCoeffVars(obj_ind);
                 auto size = nonzero_vars.size();
-                assert (size > 0);
+                if (size == 0)
+                    throw std::runtime_error(std::to_string(obj_ind) + ". objective is zero objective!");
                 auto nonzero_inds = vector<int>(size, 0);
                 std::transform(begin(nonzero_vars),
                                end(nonzero_vars),
@@ -553,7 +562,7 @@ namespace polyscip {
                                         obj_no))
                         considered_objs_.push_back(obj_no);
                     else
-                        std::cout << "objective no: " << obj_no << " is redundant.\n";
+                        cout << "Objective no: " << obj_no << " is redundant.\n";
                 }
             }
         }
@@ -598,7 +607,7 @@ namespace polyscip {
             << " written to: " << writePath << "\n";
         }
         else
-            std::cerr << "ERROR writing solution file\n.";
+            cout << "ERROR writing solution file\n.";
     }
 
     bool Polyscip::isDominatedOrEqual(ResultContainer::const_iterator it) const {
@@ -619,7 +628,7 @@ namespace polyscip {
         auto it = begin(supported_);
         while (it != end(supported_)) {
             if (isDominatedOrEqual(it)) {
-                std::cout << "weakly non-dominated point found\n";
+                cout << "Deleting weakly non-dominated point.\n";
                 it = supported_.erase(it);
             }
             else {

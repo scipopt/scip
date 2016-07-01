@@ -38,11 +38,12 @@ namespace polyscip {
     public:
         static bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
                                       const std::shared_ptr<const WeightSpaceFacet>& f2) {
-            return *f1 < *f2;
+            return std::tie(f1->wov_coeff_, f1->w_coeffs_) <
+                   std::tie(f2->wov_coeff_, f2->w_coeffs_);
         }
 
-        bool friend operator<(const WeightSpaceFacet& facet1,
-                              const WeightSpaceFacet& facet2);
+        /*bool friend operator<(const WeightSpaceFacet& facet1,
+                              const WeightSpaceFacet& facet2);*/
 
         /** Creates the facet: outcome \cdot w >= wov_coeff*weighted_obj_val
          *  @param outcome outcome in objective space
