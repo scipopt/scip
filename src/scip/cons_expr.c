@@ -3087,7 +3087,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds) );
    assert(*nchgbds >= 0);
 
-   if( *nchgbds > 0 )
+   if( *nchgbds > 0 && *result != SCIP_CUTOFF )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
