@@ -70,6 +70,24 @@ TIMEFORMAT="sec"
 MEMFORMAT="kB"
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
 
+if test -e $SCIPPATH/../$BINNAME
+then
+   export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+else
+   export EXECNAME=$BINNAME
+fi
+
+# check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
+if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
+   # skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
+   HARDMEMLIMIT="none"
+elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
+   # skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
+   HARDMEMLIMIT="none"
+else
+   ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
+fi
+
 INIT="true"
 COUNT=0
 for INSTANCE in $INSTANCELIST DONE
@@ -128,26 +146,13 @@ do
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH
-        EXECNAME=$BINNAME
-
-	if test -e $SCIPPATH/../$BINNAME
-	then
-            export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
-        else
-            export EXECNAME=$BINNAME
-        fi
         export BASENAME=$FILENAME
         export FILENAME=$INSTANCE
         export SOLNAME=$SOLCHECKFILE
         export CLIENTTMPDIR
         export CHECKERPATH=$SCIPPATH/solchecker
-        if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[at]san) ; then
-           # skip hard mem limit if using AddressSanitizer (libasan) or LeakSanitizer (libtsan) 
-           echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT
-        else
-           ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
-           echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
-        fi
+
+        echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
         if [ $MAXJOBS -eq 1 ]
         then
             bash -c "ulimit -t $HARDTIMELIMIT s; $ULIMITMEM ulimit -f 200000; ./run.sh"

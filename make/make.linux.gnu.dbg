@@ -17,7 +17,7 @@ ifeq ($(SANITIZE),full)
 
 ifeq ($(PARASCIP),true)
 # enable ThreadSanitizer (https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
-SANITZERFLAGS += -fsanitize=thread
+SANITZERFLAGS = -fsanitize=thread
 
 # enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
 SANITZERFLAGS += -fsanitize=leak
@@ -36,7 +36,10 @@ endif
 ifeq ($(SANITIZE),true)
 
 # enable UndefinedBehaviorSanitizer
-SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
+SANITZERFLAGS = -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
+
+# enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
+SANITZERFLAGS += -fsanitize=leak
 
 endif
 
