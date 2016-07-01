@@ -74,7 +74,7 @@ namespace polyscip {
             ValueType getWov() const {return wov_;};
 
         private:
-            static constexpr double kNormalizingThreshold = 1e+6;
+            static constexpr double kNormalizingThreshold = 1e+4;
             void normalize();
 
             WeightType weight_;

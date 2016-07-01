@@ -141,7 +141,7 @@ namespace polyscip {
 
         using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
         using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
-        using FacetMap = std::unordered_map<const WeightSpaceFacet*, std::vector<const WeightSpaceVertex*>>;
+        using FacetMap = std::map<std::shared_ptr<const WeightSpaceFacet>, std::vector<const WeightSpaceVertex*>, WeightSpaceFacet::Compare>;
 
         bool vertexIsObsolete(double epsilon,
                               const WeightSpaceVertex* vertex,

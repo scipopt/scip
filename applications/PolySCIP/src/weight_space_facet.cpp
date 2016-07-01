@@ -23,17 +23,6 @@ using std::ostream;
 
 namespace polyscip {
 
-    /*bool operator<(const WeightSpaceFacet &facet1, const WeightSpaceFacet &facet2) {
-        return std::tie(facet1.wov_coeff_, facet1.w_coeffs_) <
-               std::tie(facet2.wov_coeff_, facet2.w_coeffs_);
-    }*/
-
-    /*WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
-                                       unsigned index)
-            : w_coeffs_(num_objs, 0.),
-              wov_coeff_(0.) {
-        w_coeffs_.at(index) = 1.;
-    }*/
 
     WeightSpaceFacet::WeightSpaceFacet(OutcomeType outcome,
                                        ValueType wov_coeff)

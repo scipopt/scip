@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
             polyscip.writeSupportedResults();
         else
             polyscip.printSupportedResults(std::cout, false);
+        polyscip.writeExtFile();
     }
     catch (TCLAP::ArgException& e) {
         std::cerr << "ERROR: " << e.error() << " " << e.argId() << "\n";

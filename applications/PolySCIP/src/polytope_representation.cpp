@@ -102,12 +102,12 @@ namespace polyscip {
         }
 
         void V_RepT::print(std::ostream& os, bool withIncidentFacets, const H_RepContainer& h_rep) const {
-            global::print(weight_, "Weight = ", os);
+            global::print(weight_, "Weight = [", "]", os);
             os << " Coeff = " << wov_ << "\n";
             if (withIncidentFacets) {
                 os << "Facets: \n";
                 for (const auto& ind : zero_slacks_) {
-                    global::print(h_rep[ind].first, "", os);
+                    global::print(h_rep[ind].first, "", "", os);
                     os << " " << h_rep[ind].second << "\n";
                 }
                 os << "\n";

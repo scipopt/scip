@@ -42,7 +42,7 @@ namespace polyscip {
               weight_(std::move(weight)),
               weighted_obj_val_{weighted_obj_val} {
         if (sort_facets) // sort facets in order to be able to use std::set_intersection in other constructor
-            sort(begin(incident_facets_), end(incident_facets_), WeightSpaceFacet::compare_facet_ptr);
+            sort(begin(incident_facets_), end(incident_facets_), WeightSpaceFacet::Compare());
     }
 
     ValueType WeightSpaceVertex::getCurrentWOV() const {
@@ -89,10 +89,10 @@ namespace polyscip {
                               non_obs->incident_facets_.cbegin(),
                               non_obs->incident_facets_.cend(),
                               std::back_inserter(incident_facets_),
-                              WeightSpaceFacet::compare_facet_ptr);
+                              WeightSpaceFacet::Compare());
         auto upper_it = std::upper_bound(begin(incident_facets_),
                                          end(incident_facets_),
-                                         incident_facet, WeightSpaceFacet::compare_facet_ptr);
+                                         incident_facet, WeightSpaceFacet::Compare());
         incident_facets_.insert(upper_it, incident_facet);
         assert(incident_facets_.size() >= wsp_dimension);
 
@@ -156,7 +156,7 @@ namespace polyscip {
     }
 
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {
-        global::print(weight_, "WeightSpaceVertex: weight = ", os);
+        global::print(weight_, "WeightSpaceVertex: weight = [", "]", os);
         os << "\n wov = " << weighted_obj_val_ << "\n";
         if (printFacets) {
             os << " defining facets: \n";

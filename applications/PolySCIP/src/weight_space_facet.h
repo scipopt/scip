@@ -36,11 +36,19 @@ namespace polyscip {
     /** Facet of the (partial) weight space polyhedron. */
     class WeightSpaceFacet {
     public:
-        static bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
+        struct Compare {
+            bool operator()(const std::shared_ptr<const WeightSpaceFacet> &f1,
+                            const std::shared_ptr<const WeightSpaceFacet> &f2) {
+                return std::tie(f1->wov_coeff_, f1->w_coeffs_) <
+                       std::tie(f2->wov_coeff_, f2->w_coeffs_);
+            }
+        };
+
+        /*static bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
                                       const std::shared_ptr<const WeightSpaceFacet>& f2) {
             return std::tie(f1->wov_coeff_, f1->w_coeffs_) <
                    std::tie(f2->wov_coeff_, f2->w_coeffs_);
-        }
+        }*/
 
         /*bool friend operator<(const WeightSpaceFacet& facet1,
                               const WeightSpaceFacet& facet2);*/

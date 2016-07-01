@@ -135,7 +135,7 @@ namespace polyscip {
                 auto v_rep = DDMethod(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
-                //v_rep.printVRep(std::cout, true);
+                v_rep.printVRep(std::cout, true);
                 std::cout << "Starting initializing WSP...";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
                                                                                 considered_objs_.size(),
@@ -143,7 +143,6 @@ namespace polyscip {
                                                                                 v_rep.getHRep());
                 std::cout << "...finished.\n";
                 polyscip_status_ = PolyscipStatus::WeightSpacePhase;
-                //polyscip_status_ = PolyscipStatus::Finished;
             }
         }
         return SCIP_OKAY;
@@ -259,7 +258,7 @@ namespace polyscip {
                 unbounded_.push_back({sol, outcome});
         }
         else {
-            global::print(outcome, "Outcome: ");
+            global::print(outcome, "Outcome: [", "]");
             cout << "not added to results.\n";
         }
     }
@@ -298,12 +297,8 @@ namespace polyscip {
         SCIP_CALL( initWeightSpace() );
         if (polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
             std::cout << "Starting weight space phase...\n";
-            auto iteration = 0;
             while (weight_space_poly_->hasUntestedWeight()) {
-                std::cout << "iteration = " << ++iteration << "\n";
                 auto untested_weight = weight_space_poly_->getUntestedWeight();
-                if (iteration == 14)
-                    global::print(untested_weight, "untested weight");
                 SCIP_CALL( setWeightedObjective(untested_weight) );
                 SCIP_CALL( solve() );
                 auto scip_status = SCIPgetStatus(scip_);
@@ -329,7 +324,7 @@ namespace polyscip {
                     return SCIP_OKAY;
                 }
             }
-            //weight_space_poly_->printFacets();
+            weight_space_poly_->printFacets();
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
         deleteWeaklyNondomResults();
@@ -360,11 +355,11 @@ namespace polyscip {
     }
 
     void Polyscip::printPoint(const OutcomeType& point, ostream& os) const {
-        global::print(point, {"Point = "}, os);
+        global::print(point, "Point = [", "]", os);
     }
 
     void Polyscip::printRay(const OutcomeType& ray, ostream& os) const {
-        global::print(ray, {"Ray = "}, os);
+        global::print(ray, "Ray = [", "]", os);
     }
 
     bool Polyscip::filenameIsOkay(const string& filename) {
@@ -429,7 +424,7 @@ namespace polyscip {
         auto obj = vector<SCIP_Real>(global::narrow_cast<size_t>(SCIPgetNOrigVars(scip_)), 0);
         for (size_t i=0; i<size; ++i)
             obj[nonzero_indices[i]] = nonzero_vals[i];
-        global::print(obj, std::to_string(obj_no) + ". obj: ", os);
+        global::print(obj, std::to_string(obj_no) + ". obj: [", "]", os);
         os << "\n";
     }
 
@@ -588,23 +583,45 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    void Polyscip::writeExtFile() const {
+        auto prob_file = cmd_line_args_.getProblemFile();
+        size_t prefix = prob_file.find_last_of("/"), //separate path/ and filename.mop
+                suffix = prob_file.find_last_of("."),      //separate filename and .mop
+                start_ind = (prefix == string::npos) ? 0 : prefix + 1,
+                end_ind = (suffix != string::npos) ? suffix : string::npos;
+        string file_name = prob_file.substr(start_ind, end_ind - start_ind) + ".ext";
+        std::ofstream solfs(file_name);
+        if (solfs.is_open()) {
+            solfs << "nondom points\n";
+            solfs << "V-representation\n";
+            solfs << "begin\n";
+            solfs << supported_.size() + unbounded_.size() << " " << considered_objs_.size() + 1 << " rational\n";
+            for (const auto& elem : supported_)
+                global::print(elem.second, "1 ", "\n", solfs);
+            solfs << "end\n";
+            solfs.close();
+        }
+        else
+            cout << "ERROR writing vertex enumeration file\n.";
+    }
+
     void Polyscip::writeSupportedResults() const {
-        auto probFile = cmd_line_args_.getProblemFile();
-        size_t prefix = probFile.find_last_of("/"), //separate path/ and filename.mop
-                suffix = probFile.find_last_of("."),      //separate filename and .mop
-                startInd = (prefix == string::npos) ? 0 : prefix + 1,
-                endInd = (suffix != string::npos) ? suffix : string::npos;
-        string solFileName = "solutions_" +
-                             probFile.substr(startInd, endInd - startInd) + ".txt";
-        auto writePath = cmd_line_args_.getWritePath();
-        if (writePath.back() != '/')
-            writePath.push_back('/');
-        std::ofstream solfs(writePath + solFileName);
+        auto prob_file = cmd_line_args_.getProblemFile();
+        size_t prefix = prob_file.find_last_of("/"), //separate path/ and filename.mop
+                suffix = prob_file.find_last_of("."),      //separate filename and .mop
+                start_ind = (prefix == string::npos) ? 0 : prefix + 1,
+                end_ind = (suffix != string::npos) ? suffix : string::npos;
+        string file_name = "solutions_" +
+                           prob_file.substr(start_ind, end_ind - start_ind) + ".txt";
+        auto write_path = cmd_line_args_.getWritePath();
+        if (write_path.back() != '/')
+            write_path.push_back('/');
+        std::ofstream solfs(write_path + file_name);
         if (solfs.is_open()) {
             printSupportedResults(solfs);
             solfs.close();
-            cout << "#Solution file " << solFileName
-            << " written to: " << writePath << "\n";
+            cout << "#Solution file " << file_name
+            << " written to: " << write_path << "\n";
         }
         else
             cout << "ERROR writing solution file\n.";

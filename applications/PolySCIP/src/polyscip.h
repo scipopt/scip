@@ -49,6 +49,8 @@ namespace polyscip {
 
         void writeSupportedResults() const;
 
+        void writeExtFile() const;
+
         void printSupportedResults(std::ostream& os = std::cout, bool withSolution = true) const;
 
     private:

@@ -67,12 +67,14 @@ namespace polyscip {
          */
         template<typename Container>
         void print(const Container &container,
-                   std::string description,
-                   std::ostream &os = std::cout, int prec = 5) {
-            os << std::setprecision(prec) << description << "[ ";
+                   std::string prefix = "",
+                   std::string suffix = "",
+                   std::ostream &os = std::cout,
+                   int prec = 5) {
+            os << std::setprecision(prec) << prefix;
             for (const auto &elem : container)
                 os << elem << " ";
-            os << "]";
+            os << suffix;
         }
 
         /** todo Doc - Stroustroup page 299

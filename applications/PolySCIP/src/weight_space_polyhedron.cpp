@@ -74,7 +74,7 @@ namespace polyscip {
             initial_facets.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
         }
         for (const auto& f : initial_facets) {
-            facets_to_vertices_.emplace(f.get(), vector<const WeightSpaceVertex*>{});
+            facets_to_vertices_.insert({f, vector<const WeightSpaceVertex*>{}});
         }
         for (auto& v : v_rep) {
             auto inc_facets = computeIncidentFacets(scip, initial_facets, v);
@@ -82,7 +82,7 @@ namespace polyscip {
                                                 v.moveWeight(),
                                                 v.getWov());
             for (const auto& f : inc_facets) {
-                facets_to_vertices_[f.get()].push_back(vertex);
+                facets_to_vertices_[f].push_back(vertex);
             }
             auto node = skeleton_.addNode();
             nodes_to_vertices_[node] = vertex;
@@ -178,7 +178,7 @@ namespace polyscip {
                               w->incident_facets_.cbegin(),
                               w->incident_facets_.cend(),
                               std::back_inserter(inc_facets),
-                              WeightSpaceFacet::compare_facet_ptr);
+                              WeightSpaceFacet::Compare());
         return inc_facets.size() >= wsp_dimension_-1;
     }
 
@@ -192,7 +192,7 @@ namespace polyscip {
         auto obsolete = std::vector<WeightSpaceVertex*> {curr_investigated_vertex_};
         auto new_facet = outcome_is_ray ? make_shared<const WeightSpaceFacet>(outcome, 0) :
                          make_shared<const WeightSpaceFacet>(outcome, 1);
-        facets_to_vertices_.emplace(new_facet.get(), vector<const WeightSpaceVertex*>{});
+        facets_to_vertices_.insert({new_facet, vector<const WeightSpaceVertex*>{}});
 
         while (!unscanned.empty()) {
             auto obs_vertex = unscanned.front();
@@ -226,7 +226,7 @@ namespace polyscip {
                 auto new_vertex = new WeightSpaceVertex(obs_coeff, non_obs_coeff,
                                                         obs_vertex, non_obs_vertex,
                                                         new_facet, wsp_dimension_);
-                facets_to_vertices_[new_facet.get()].push_back(new_vertex);
+                facets_to_vertices_[new_facet].push_back(new_vertex);
                 assert (std::find(begin(unmarked_vertices_), end(unmarked_vertices_), new_vertex) ==
                         end(unmarked_vertices_));
                 unmarked_vertices_.push_back(new_vertex);
@@ -296,15 +296,15 @@ namespace polyscip {
     }
 
     void WeightSpacePolyhedron::printUnmarkedVertices(ostream &os, bool printFacets) const {
-        printVertices(unmarked_vertices_, {"UNMARKED VERTICES:"}, os, printFacets);
+        printVertices(unmarked_vertices_, "UNMARKED VERTICES:", os, printFacets);
     }
 
     void WeightSpacePolyhedron::printMarkedVertices(ostream &os, bool printFacets) const {
-        printVertices(marked_vertices_, {"MARKED VERTICES:"}, os, printFacets);
+        printVertices(marked_vertices_, "MARKED VERTICES:", os, printFacets);
     }
 
     void WeightSpacePolyhedron::printObsoleteVertices(ostream &os, bool printFacets) const {
-        printVertices(obsolete_vertices_, {"OBSOLETE VERTICES:"}, os, printFacets);
+        printVertices(obsolete_vertices_, "OBSOLETE VERTICES:", os, printFacets);
     }
 
     void WeightSpacePolyhedron::printFacets() const {
