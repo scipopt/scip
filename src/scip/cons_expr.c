@@ -112,6 +112,8 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
+
+   SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 };
 
 /** constraint handler data */
@@ -171,6 +173,7 @@ typedef struct
    SCIP*                   targetscip;                 /**< target SCIP pointer */
    SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR((*mapvar));  /**< variable mapping function, or NULL for identity mapping (used in handler for var-expressions) */
    void*                   mapvardata;                 /**< data of variable mapping function */
+   SCIP_CONSEXPR_EXPR*     targetexpr;                 /**< pointer that will hold the copied expression after the walk */
 } COPY_DATA;
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -461,6 +464,17 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
       }
 
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      {
+         COPY_DATA* copydata;
+
+         /* store the copied expression in the copydata, in case this expression was the root, for which the walkio will be cleared */
+         copydata = (COPY_DATA*)data;
+         copydata->targetexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
+
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       default:
       {
@@ -1706,6 +1720,9 @@ SCIP_RETCODE propConss(
       /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
 
+      if( nchgbds != NULL )
+         *nchgbds += ntightenings;
+
       if( cutoff )
       {
          SCIPdebugMessage(" -> cutoff\n");
@@ -2643,6 +2660,179 @@ SCIP_RETCODE parseExpr(
    return SCIP_OKAY;
 }
 
+/** given a cons_expr expression, creates an equivalent classic (nlpi-) expression */
+static
+SCIP_RETCODE makeClassicExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   sourceexpr,         /**< expression to convert */
+   SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to created expression */
+   SCIP_CONSEXPR_EXPR**  varexprs,           /**< variable expressions that might occur in expr, their position in this array determines the varidx */
+   int                   nvarexprs           /**< number of variable expressions */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_EXPR** children = NULL;
+   int nchildren;
+   int c;
+
+   assert(scip != NULL);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(sourceexpr);
+   nchildren = SCIPgetConsExprExprNChildren(sourceexpr);
+
+   /* collect children expressions from children, if any */
+   if( nchildren > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, nchildren) );
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( makeClassicExpr(scip, SCIPgetConsExprExprChildren(sourceexpr)[c], &children[c], varexprs, nvarexprs) );
+         assert(children[c] != NULL);
+      }
+   }
+
+   /* create target expression */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "var") == 0 )
+   {
+      int varidx;
+
+      /* find variable expression in varexprs array
+       * the position in the array determines the index of the variable in the classic expression
+       * TODO if varexprs are sorted, then can do this more efficient
+       */
+      for( varidx = 0; varidx < nvarexprs; ++varidx )
+         if( varexprs[varidx] == sourceexpr )
+            break;
+      assert(varidx < nvarexprs);
+
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_VARIDX, varidx) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "val") == 0 )
+   {
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_CONST, SCIPgetConsExprExprValueValue(sourceexpr)) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "sum") == 0 )
+   {
+      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), targetexpr, nchildren, children, SCIPgetConsExprExprSumCoefs(sourceexpr), SCIPgetConsExprExprSumConstant(sourceexpr)) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
+   {
+      SCIP_EXPRDATA_MONOMIAL* monomial;
+      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, SCIPgetConsExprExprProductCoef(sourceexpr), nchildren, NULL, SCIPgetConsExprExprProductExponents(sourceexpr)) );
+      SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), targetexpr, nchildren, children, 1, &monomial, 0.0, FALSE) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "abs") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_ABS, children[0]) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "exp") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_EXP, children[0]) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "log") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_LOG, children[0]) );
+   }
+   else
+   {
+      SCIPerrorMessage("unsupported expression handler <%s>, cannot convert to classical expression\n", SCIPgetConsExprExprHdlrName(exprhdlr));
+      return SCIP_ERROR;
+   }
+
+   SCIPfreeBufferArrayNull(scip, &children);
+
+   return SCIP_OKAY;
+}
+
+/** given an expression and an array of occurring variable expressions, construct a classic expression tree */
+static
+SCIP_RETCODE makeClassicExprTree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to convert */
+   SCIP_CONSEXPR_EXPR**  varexprs,           /**< variable expressions that occur in expr */
+   int                   nvarexprs,          /**< number of variable expressions */
+   SCIP_EXPRTREE**       exprtree            /**< buffer to store classic expression tree, or NULL if failed */
+)
+{
+   SCIP_EXPR* classicexpr;
+   SCIP_VAR** vars;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(varexprs != NULL);  /* we could also create this here, if NULL; but for now, assume it is given by called */
+   assert(exprtree != NULL);
+
+   /* make classic expression */
+   SCIP_CALL( makeClassicExpr(scip, expr, &classicexpr, varexprs, nvarexprs) );
+
+   /* make classic expression tree */
+   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), exprtree, classicexpr, nvarexprs, 0, NULL) );
+
+   /* set variables in expression tree */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarexprs) );
+   for( i = 0; i < nvarexprs; ++i )
+      vars[i] = SCIPgetConsExprExprVarVar(varexprs[i]);
+   SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvarexprs, vars) );
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+/** create a nonlinear row representation of an expr constraint and stores them in consdata */
+static
+SCIP_RETCODE createNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< expression constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
+   if( consdata->expr == NULL )
+   {
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs) );
+   }
+   else
+   {
+      /* get an exprtree representation of the cons-expr-expression */
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_EXPRTREE* exprtree;
+
+      conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( makeClassicExprTree(scip, consdata->expr, consdata->varexprs, consdata->nvarexprs, &exprtree) );
+      if( exprtree == NULL )
+      {
+         SCIPerrorMessage("could not create classic expression tree from cons_expr expression\n");
+         return SCIP_ERROR;
+      }
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            0, NULL, NULL, 0, NULL, 0, NULL, exprtree, consdata->lhs, consdata->rhs) );
+      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -2969,48 +3159,68 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
 static
 SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   if( nconss > 0 )
+   {
+      /* tell SCIP that we have something nonlinear */
+      SCIPenableNLP(scip);
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreExpr NULL
-#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 0
 static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
+      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+      {
+         if( consdata->nlrow == NULL )
+         {
+            SCIP_CALL( createNlRow(scip, conss[c]) );
+            assert(consdata->nlrow != NULL);
+         }
+         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolExpr NULL
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
 static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
+      /* free nonlinear row representation */
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolExpr NULL
-#endif
 
 
 /** frees specific constraint data */
@@ -3024,6 +3234,12 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert((*consdata)->varexprs == NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
+
+   /* free nonlinear row representation */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
+   }
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -3050,8 +3266,8 @@ SCIP_DECL_CONSTRANS(consTransExpr)
    copydata.mapvardata = NULL;
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
-   targetexpr = (SCIP_CONSEXPR_EXPR*)sourceexpr->walkio.ptrval;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
+   targetexpr = copydata.targetexpr;
 
    if( targetexpr == NULL )
    {
@@ -3090,18 +3306,15 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   /* TODO separate */
+   *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpExpr NULL
-#endif
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
@@ -3123,8 +3336,28 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         break;
+      }
+   }
+
+   if( *result == SCIP_FEASIBLE )
+      return SCIP_OKAY;
+
+   /* TODO do domain propagation */
+   /* TODO try to separate */
+   /* TODO register branching candidates */
 
    return SCIP_OKAY;
 }
@@ -3134,8 +3367,27 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         break;
+      }
+   }
+
+   if( *result == SCIP_FEASIBLE )
+      return SCIP_OKAY;
+
+   /* TODO do domain propagation */
+   /* TODO ask for solving LP */
 
    return SCIP_OKAY;
 }
@@ -3218,6 +3470,11 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
 
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds) );
    assert(*nchgbds >= 0);
+
+   if( *nchgbds > 0 )
+      *result = SCIP_SUCCESS;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -3416,8 +3673,8 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    copydata.mapvardata = &mapvardata;
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
-   targetexpr = (SCIP_CONSEXPR_EXPR*)sourceexpr->walkio.ptrval;
+   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
+   targetexpr = copydata.targetexpr;
 
    if( targetexpr == NULL )
    {
@@ -4924,13 +5181,16 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    SCIP_CONSEXPREXPRWALK_STAGE  stage;
    SCIP_CONSEXPREXPRWALK_RESULT result;
    SCIP_CONSEXPR_EXPR*          child;
+   SCIP_CONSEXPR_EXPR*          oldroot;
    SCIP_CONSEXPR_EXPR*          oldparent;
    SCIP_CONSEXPREXPRWALK_IO     oldwalkio;
    int                          oldcurrentchild;
+   SCIP_Bool                    abort;
 
    assert(root != NULL);
 
-   /* remember the current data, child and parent of incoming root, in case we are called from within another walk */
+   /* remember the current root, data, child and parent of incoming root, in case we are called from within another walk */
+   oldroot         = root;
    oldcurrentchild = root->walkcurrentchild;
    oldparent       = root->walkparent;
    oldwalkio       = root->walkio;
@@ -4941,7 +5201,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    /* traverse the tree */
    result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
-   while( TRUE )
+   abort = FALSE;
+   while( !abort )
    {
       switch( stage )
       {
@@ -4958,7 +5219,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      root->walkcurrentchild = root->nchildren;
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     return SCIP_OKAY;
+                     abort = TRUE;
+                     break;
                }
             }
             /* goto start visiting children */
@@ -4985,7 +5247,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                }
                else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
                {
-                  return SCIP_OKAY;
+                  abort = TRUE;
+                  break;
                }
             }
             /* remember the parent and set the first child that should be visited of the new root */
@@ -5012,7 +5275,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      root->walkcurrentchild = root->nchildren;
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     return SCIP_OKAY;
+                     abort = TRUE;
+                     break;
                }
             }
             else
@@ -5020,7 +5284,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                /* visit next child (if any) */
                ++root->walkcurrentchild;
             }
-            /* goto visitng (next) */
+            /* goto visiting (next) */
             stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
             break;
 
@@ -5042,7 +5306,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      SCIPABORT();
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     return SCIP_OKAY;
+                     abort = TRUE;
+                     break;
                }
 
                /* go up */
@@ -5055,7 +5320,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
             }
             /* if we finished with the real root (walkparent == NULL), we are done */
             if( root == NULL )
-               return SCIP_OKAY;
+               abort = TRUE;
 
             /* goto visited */
             stage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
@@ -5067,6 +5332,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    }
 
    /* recover previous information */
+   root = oldroot;
    root->walkcurrentchild = oldcurrentchild;
    root->walkparent       = oldparent;
    root->walkio           = oldwalkio;
@@ -5209,6 +5475,11 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
+   /* include handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
+         "signals a bound change to an expression constraint", processVarEvent, NULL) );
+   assert(conshdlrdata->eventhdlr != NULL);
+
    return SCIP_OKAY;
 }
 
@@ -5260,12 +5531,6 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for absolute expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "abs") == 0);
-
-   /* include handler for bound change events */
-   conshdlrdata->eventhdlr = NULL;
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange",
-         "signals a bound change to an expression constraint", processVarEvent, NULL) );
-   assert(conshdlrdata->eventhdlr != NULL);
 
    return SCIP_OKAY;
 }
@@ -5457,8 +5722,8 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    copydata.mapvar = NULL;
    copydata.mapvardata = NULL;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
-   *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
+   *copyexpr = copydata.targetexpr;
 
    return SCIP_OKAY;
 }
