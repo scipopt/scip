@@ -84,8 +84,7 @@ BEGIN  {
 /^\*/  { next; } # skip other comments and invalid problems
 /^ *$/ { next; } # skip empty lines
 
-#These need to coincide with those in in check_gams.sh
-#TODO make this more flexible (see readtrace.awk from ptools)
+#These need to coincide with those in rungamscluster.sh ("initialize trace file")
 #01 InputFileName
 #02 ModelType
 #03 SolverName
@@ -113,6 +112,9 @@ BEGIN  {
     maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );
     cons[nprobs] = $6;
     vars[nprobs] = $7;
+    discrvars[nprobs] = $8;
+    nnz[nprobs] = $9;
+    nnlnz[nprobs] = $10;
     modstat[nprobs] = $11;
     solstat[nprobs] = $12;
     dualbnd[nprobs] = $14;
@@ -136,8 +138,8 @@ END {
   tablehead3 = hyphenstr;
 
   # append rest of header
-  tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+-------\n";
-  tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |       \n";
+  tablehead1 = tablehead1"+------+---------- Original -----------+----------------+----------------+------+---------+--------+-------+-------\n";
+  tablehead2 = tablehead2"| Type | Conss |  Vars | Discr%%|Nonlin%%|   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |       \n";
   tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n";
 
   # print header
@@ -188,6 +190,9 @@ END {
      db = dualbnd[m];
      pb = primalbnd[m];
      
+     discr = vars[m] > 0 ? 100.0 * discrvars[m] / vars[m] : 0;
+     nonlin = nnz[m] > 0 ? 100.0 * nnlnz[m] / nnz[m] : 0;
+
      # we consider every solver status between 4 and 7 and above 8 as unusal interrupt, i.e., abort
      # (8 is user interrupt, which is likely to be due to schulz stopping a solver on the hard timelimit)
      aborted = 0;
@@ -444,8 +449,8 @@ END {
        printf("\\\\\n") > TEXFILE;
 
        # note: probtype has length 5, but field width is 6
-       printf("%-*s  %-5s %7d %7d     n/a     n/a %16.9g %16.9g %6s %9d %8d %7.1f %s (%d/%d)\n",
-              namelength, shortprob, probtype, cons[m], vars[m], db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
+       printf("%-*s  %-5s %7d %7d %7.1f %7.1f %16.9g %16.9g %6s %9d %8d %7.1f %s (%d/%d)\n",
+              namelength, shortprob, probtype, cons[m], vars[m], discr, nonlin, db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
 
        #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
        if( status == "abort" ) {
