@@ -1236,7 +1236,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/maxstoresize",
-         "maximal size of conflict storage (-1: no limit, 0: auto)",
+         "maximal size of conflict storage (-1: auto, 0: disable storage)",
          &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

@@ -355,7 +355,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    return SCIP_OKAY;
 }
 
-
+static
 void printConflictDialRayStats(
    SCIP_CONFLICTSTORE*    conflictstore
    )
@@ -564,13 +564,16 @@ SCIP_RETCODE SCIPconflictstoreFree(
    assert(conflictstore != NULL);
    assert(*conflictstore != NULL);
 
-   printConflictDialRayStats(*conflictstore);
+//   printConflictDialRayStats(*conflictstore);
 
    /* free statistics */
-   BMSfreeMemoryArray(&(*conflictstore)->dualrayinitsize);
-   BMSfreeMemoryArray(&(*conflictstore)->dualraysize);
-   BMSfreeMemoryArray(&(*conflictstore)->nclauses);
-   BMSfreeMemoryArray(&(*conflictstore)->nconflictsets);
+   if( (*conflictstore)->dualrayinitsize != NULL )
+   {
+      BMSfreeMemoryArray(&(*conflictstore)->dualrayinitsize);
+      BMSfreeMemoryArray(&(*conflictstore)->dualraysize);
+      BMSfreeMemoryArray(&(*conflictstore)->nclauses);
+      BMSfreeMemoryArray(&(*conflictstore)->nconflictsets);
+   }
 
    if( (*conflictstore)->nconflictsfound > 0 && set->conf_cleanboundexeedings )
    {
@@ -653,9 +656,10 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    /* calculate the maximal size of the conflict storage */
    if( conflictstore->maxstoresize == -1 )
    {
-      /* the size should be dynamic wrt number of variables after presolving */
       SCIP_CALL( SCIPsetGetIntParam(set, "conflict/maxstoresize", &conflictstore->maxstoresize) );
-      if( conflictstore->maxstoresize == 0 )
+
+      /* the size should be dynamic wrt number of variables after presolving */
+      if( conflictstore->maxstoresize == -1 )
       {
          int nconss;
          int nvars;
@@ -675,10 +679,13 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
 
          conflictstore->maxstoresize = MIN(conflictstore->maxstoresize, DEFAULT_CONFLICTSTORE_MAXSIZE);
       }
-      else if( set->conf_maxstoresize == -1 )
-         conflictstore->maxstoresize = INT_MAX;
-      SCIPdebugMessage("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
 
+#ifndef NDEBUG
+      if( conflictstore->maxstoresize == 0 )
+         SCIPdebugMessage("usage of conflict pool is disabled.\n");
+      else
+         SCIPdebugMessage("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
+#endif
       /* get the clean-up frequency */
       SCIP_CALL( SCIPsetGetIntParam(set, "conflict/cleanupfreq", &(conflictstore->cleanupfreq)) );
 
@@ -698,8 +705,12 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
          conflictstore->avgswitchlength = set->conf_maxswitchinglength;
       SCIPdebugMessage("max. switching length = %g%s\n", conflictstore->avgswitchlength, set->conf_maxswitchinglength == 0 ? " (dynamic)" : "");
    }
-   assert(conflictstore->maxstoresize >= 1);
+   assert(conflictstore->maxstoresize >= 0);
    assert(conflictstore->cleanupfreq >= 0);
+
+   /* return if conflict pool is disabled */
+   if( conflictstore->maxstoresize == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( conflictstoreEnsureMem(conflictstore, set, nconflicts+1) );
 
@@ -775,7 +786,7 @@ SCIP_RETCODE SCIPconflictstoreCleanSwitching(
    ndelconfs_del = 0;
 
    /* return if we do not want to use the storage */
-   if( set->conf_maxstoresize == -1 )
+   if( set->conf_maxstoresize == 0 )
       return SCIP_OKAY;
 
    /* clean up is disabled */
@@ -891,7 +902,7 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    ndelconfs_del = 0;
 
    /* return if we do not want to use the storage */
-   if( set->conf_maxstoresize == -1 )
+   if( set->conf_maxstoresize == 0 )
       return SCIP_OKAY;
 
    /* return if we do not want to remove conflicts related to an older cutoff bound */
