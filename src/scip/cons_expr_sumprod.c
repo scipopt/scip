@@ -496,7 +496,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
             assert(maxlinactivityinf == 1);
             childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity;
          }
-         else
+         else if( maxlinactivityinf == 0 )
          {
             childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity + bounds[c].sup;
          }
