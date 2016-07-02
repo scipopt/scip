@@ -242,7 +242,7 @@ END {
        probtype = type[m];
 
        tottime = time[m];
-       if( time[m] >= timelimit && timelimit > 0.0 )
+       if( time[m] >= 0.999*timelimit && timelimit > 0.0 )
          timeout = 1;
        else if( gapreached || nodelimreached )
          timeout = 0;
@@ -273,7 +273,7 @@ END {
          abstol = 1e-4;
 
          if( ( !maxobj[m] && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( maxobj[m] && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
-            status = "fail";
+            status = sprintf("fail (opt=%g)", sol[prob]);
             failtime += tottime;
             fail++;
          }
@@ -298,7 +298,7 @@ END {
                pass++;
              }
              else {
-               status = "fail";
+               status = "fail (gap)";
                failtime += tottime;
                fail++;
              }
@@ -310,7 +310,7 @@ END {
          abstol = 1e-4;
 
          if( ( !maxobj[m] && db-sol[prob] > reltol) || ( maxobj[m] && sol[prob]-db > reltol) ) {
-           status = "fail";
+           status = sprintf("fail (best=%g)", sol[prob]);
            failtime += tottime;
            fail++;
          }
@@ -342,7 +342,7 @@ END {
                pass++;
              }
              else {
-               status = "fail";
+               status = "fail (gap)";
                failtime += tottime;
                fail++;
              }
@@ -395,7 +395,7 @@ END {
 	     }
 	  }
 	  else {
-	     status = "fail";
+	     status = "fail (infeas.)";
 	     failtime += tottime;
 	     fail++;
 	  }
@@ -444,14 +444,14 @@ END {
        printf("\\\\\n") > TEXFILE;
 
        # note: probtype has length 5, but field width is 6
-       printf("%-*s  %-5s %7d %7d      ??      ?? %16.9g %16.9g %6s %9d %8d %7.1f %s (%2d - %2d)\n",
+       printf("%-*s  %-5s %7d %7d     n/a     n/a %16.9g %16.9g %6s %9d %8d %7.1f %s (%d/%d)\n",
               namelength, shortprob, probtype, cons[m], vars[m], db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
 
        #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
        if( status == "abort" ) {
          modelstat = 13;
          solverstat = 13;
-       } else if( status == "fail" || status == "unknown" ) {
+       } else if( status ~ "^fail" || status == "unknown" ) {
          modelstat = 7;
          solverstat = 1;
        } else if( status == "timeout" ) {

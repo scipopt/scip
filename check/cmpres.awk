@@ -1154,7 +1154,7 @@ END {
             (ismaxi && maxpb - mindb > 1e-5 * max(max(abs(maxpb), abs(mindb)), 1.0)) ||
             (!ismini && !ismaxi && abs(maxpb - minpb) > 1e-5 * max(abs(maxpb), 1.0))) )
       {
-         line = sprintf("%s  inconsistent", line);
+         line = sprintf("%s  inconsistent (maxdb=%g, minpb=%g)", line, maxdb, minpb);
          fail = 1;
          mark = " ";
       }
