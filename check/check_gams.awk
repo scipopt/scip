@@ -214,12 +214,10 @@ END {
       nodelimreached = (solstat[m] == 2);
 
       timeout = 0;
-      optimal = 0;
       markersym = "\\g";
       if( abs(pb - db) < 1e-06 && pb < infty )
       {
          gap = 0.0;
-         optimal = 1;
          markersym = "  ";
       }
       else if( abs(db) < 1e-06 )
@@ -411,8 +409,9 @@ END {
       }
       else if( solstatus[prob] == "inf" )
       {
-         if( !feasible )  #FIXME we never set feasible
+         if( (!maxobj[m] && db >= infty) || (maxobj[m] && db <= -infty) )
          {
+            # proven infeasible
             if( timeout )
             {
                # time or node limit reached
