@@ -788,7 +788,7 @@ END {
            else
            {
                if( length(sname) <= 33 )
-                   printf("%31s |", sname);
+                   printf("%33s |", sname);
                else
                    printf("*%30s |", substr(sname, length(sname)-31));
            }
