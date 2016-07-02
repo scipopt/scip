@@ -355,81 +355,81 @@ END {
          }
        }
        else if( solstatus[prob] == "unkn" ) {
-	  reltol = 1e-4 * max(abs(pb),1.0);
-	  abstol = 1e-4;
+          reltol = 1e-4 * max(abs(pb),1.0);
+          abstol = 1e-4;
 
-	  if( timeout || gapreached || nodelimreached ) {
-	     if( abs(pb) < infty ) {
-		status = "better";
-		timeouttime += tottime;
-		timeouts++;
-	     }
-	     else {
-		if( timeout )
-		   status = "timeout";
-		else if( gapreached )
-		   status = "gaplimit";
-		else if( nodelimreached )
-			status = "nodelimit";
-		timeouttime += tottime;
-		timeouts++;
-	     }
-	  }
-	  else if( abs(pb - db) <= max(abstol, reltol) ) {
-	     status = "solved not verified";
-	     pass++;
-	  }
-	  else if( (gap <= 105*gaplimit) ) {
-	     status = "solved not verified";
-	     pass++;
-	  }
-	  else {
-	     status = "unknown";
-	  }
+          if( timeout || gapreached || nodelimreached ) {
+             if( abs(pb) < infty ) {
+                status = "better";
+                timeouttime += tottime;
+                timeouts++;
+             }
+             else {
+                if( timeout )
+                   status = "timeout";
+                else if( gapreached )
+                   status = "gaplimit";
+                else if( nodelimreached )
+                        status = "nodelimit";
+                timeouttime += tottime;
+                timeouts++;
+             }
+          }
+          else if( abs(pb - db) <= max(abstol, reltol) ) {
+             status = "solved not verified";
+             pass++;
+          }
+          else if( (gap <= 105*gaplimit) ) {
+             status = "solved not verified";
+             pass++;
+          }
+          else {
+             status = "unknown";
+          }
        }
        else if( solstatus[prob] == "inf" ) {
-	  if( !feasible ) {
-	     if( timeout ) {
-		status = "timeout";
-		timeouttime += tottime;
-		timeouts++;
-	     }
-	     else {
-		status = "ok";
-		pass++;
-	     }
-	  }
-	  else {
-	     status = "fail (infeas.)";
-	     failtime += tottime;
-	     fail++;
-	  }
+          if( !feasible ) {
+             if( timeout ) {
+                status = "timeout";
+                timeouttime += tottime;
+                timeouts++;
+             }
+             else {
+                status = "ok";
+                pass++;
+             }
+          }
+          else {
+             status = "fail (infeas.)";
+             failtime += tottime;
+             fail++;
+          }
        }
        else {
-	  reltol = 1e-4 * max(abs(pb),1.0);
-	  abstol = 1e-4;
+          reltol = 1e-4 * max(abs(pb),1.0);
+          abstol = 1e-4;
 
-	  if( timeout || gapreached || nodelimreached ) {
-	     if( timeout )
-		status = "timeout";
-	     else if( gapreached )
-		status = "gaplimit";
-		  else if( nodelimreached )
-		status = "nodelimit";
-	     timeouttime += tottime;
-	     timeouts++;
-	  }
-	  else if( abs(pb - db) < max(abstol,reltol) ) {
-	     status = "solved not verified";
-	     pass++;
-	  }
-	  else if( (gap <= 105*gaplimit) ) {
-	     status = "solved not verified";
-	     pass++;
-	  }
-	  else {
-	     status = "unknown";
-	  }
+          if( timeout || gapreached || nodelimreached ) {
+             if( timeout )
+                status = "timeout";
+             else if( gapreached )
+                status = "gaplimit";
+                  else if( nodelimreached )
+                status = "nodelimit";
+             timeouttime += tottime;
+             timeouts++;
+          }
+          else if( abs(pb - db) < max(abstol,reltol) ) {
+             status = "solved not verified";
+             pass++;
+          }
+          else if( (gap <= 105*gaplimit) ) {
+             status = "solved not verified";
+             pass++;
+          }
+          else {
+             status = "unknown";
+          }
        }
 
        if( writesolufile ) {
