@@ -537,6 +537,8 @@ void SCIPsetConsExprExprEvalInterval(
  * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitingchild callback, visiting the current child will be skipped.
  * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitedchild callback, visiting the remaining children will be skipped.
  * If returning SCIP_CONSEXPREXPRWALK_ABORT in any of the callbacks, the walk will be aborted immediately.
+ *
+ * @note The walkio member of the root expression is reset to its previous value when the walk finishes.
  */
 EXTERN
 SCIP_RETCODE SCIPwalkConsExprExprDF(
