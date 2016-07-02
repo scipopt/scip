@@ -47,14 +47,10 @@ BEGIN {
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
-   useshortnames = 1;        # should problem name be truncated to fit into column?
-   namelength = 30;          # maximal length of instance names (can be increased)
    writesolufile = 0;        # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
    infty = 1e+20;
-
-   if( solver == "" )
-      solver = "SCIP";
+   solver = "SCIP";
 
    nprobs = 0;
    sbab = 0;
@@ -71,6 +67,7 @@ BEGIN {
    pass = 0;
    timelimit = 0;
    settings = "default";
+   namelength = 4;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
@@ -120,6 +117,9 @@ $3 == solver || $3 == "EXAMINER2" {
    time[nprobs] = $15; # use max($15,$16) for max of solver reported time and wallclock time
    iters[nprobs] = $17;
    nodes[nprobs] = $18;
+
+   if( length($1) > namelength )
+      namelength = length($1);
    nprobs++;
 }
 
@@ -157,7 +157,7 @@ END {
       if( onlyinsolufile && solstatus[prob] == "" )
          continue;
 
-      if( useshortnames && length(prob) > namelength )
+      if( length(prob) > namelength ) # can only happen if namelength is overwritten in END
          shortprob = substr(prob, length(prob)-namelength-1, namelength);
       else
          shortprob = prob;
