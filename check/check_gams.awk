@@ -155,6 +155,11 @@ END {
    for (m = 0; m < nprobs; m++)
    {
       prob = model[m];
+
+      # skip problem if onlyinsolufile is set and prob was not in solufile
+      if( onlyinsolufile && solstatus[prob] == "" )
+         continue;
+
       if( useshortnames && length(prob) > namelength )
          shortprob = substr(prob, length(prob)-namelength-1, namelength);
       else
@@ -212,170 +217,123 @@ END {
       nodelimreached = (solstat[m] == 2);
 
       timeout = 0;
-
-      if( !onlyinsolufile || solstatus[prob] != "" )
+      optimal = 0;
+      markersym = "\\g";
+      if( abs(pb - db) < 1e-06 && pb < infty )
       {
-         optimal = 0;
-         markersym = "\\g";
-         if( abs(pb - db) < 1e-06 && pb < infty )
+         gap = 0.0;
+         optimal = 1;
+         markersym = "  ";
+      }
+      else if( abs(db) < 1e-06 )
+         gap = -1.0;
+      else if( abs(pb) < 1e-06 )
+         gap = -1.0;
+      else if( pb*db < 0.0 )
+         gap = -1.0;
+      else if( abs(db) >= +infty )
+         gap = -1.0;
+      else if( abs(pb) >= +infty )
+         gap = -1.0;
+      else
+         gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
+      if( gap < 0.0 )
+      {
+         gap = 1.0;
+         gapstr = "  --  ";
+      }
+      else if( gap < 1e+04 )
+         gapstr = sprintf("%6.1f", gap);
+      else
+         gapstr = " Large";
+
+      tottime = time[m];
+      if( time[m] >= 0.999*timelimit && timelimit > 0.0 )
+         timeout = 1;
+      else if( nodelimreached )
+         timeout = 0;
+      if( tottime == 0.0 )
+         tottime = timelimit;
+      if( timelimit > 0.0 )
+         tottime = min(tottime, timelimit);
+
+      simplex = iters[m];
+      stottime += tottime;
+      sbab += nodes[m];
+      ssim += simplex;
+
+      nodegeom = nodegeom * max(nodes[m], 1.0)^(1.0/nprobs);
+      timegeom = timegeom * max(tottime, 1.0)^(1.0/nprobs);
+
+      shiftednodegeom = shiftednodegeom * max(nodes[m]+nodegeomshift, 1.0)^(1.0/nprobs);
+      shiftedtimegeom = shiftedtimegeom * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+
+      status = "";
+      if( aborted )
+      {
+         status = "abort";
+         failtime += tottime;
+         fail++;
+      }
+      else if( solstatus[prob] == "opt" )
+      {
+         reltol = 1e-4 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( ( !maxobj[m] && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( maxobj[m] && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) )
          {
-            gap = 0.0;
-            optimal = 1;
-            markersym = "  ";
-         }
-         else if( abs(db) < 1e-06 )
-            gap = -1.0;
-         else if( abs(pb) < 1e-06 )
-            gap = -1.0;
-         else if( pb*db < 0.0 )
-            gap = -1.0;
-         else if( abs(db) >= +infty )
-            gap = -1.0;
-         else if( abs(pb) >= +infty )
-            gap = -1.0;
-         else
-            gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
-         if( gap < 0.0 )
-         {
-            gap = 1.0;
-            gapstr = "  --  ";
-         }
-         else if( gap < 1e+04 )
-            gapstr = sprintf("%6.1f", gap);
-         else
-            gapstr = " Large";
-
-         tottime = time[m];
-         if( time[m] >= 0.999*timelimit && timelimit > 0.0 )
-            timeout = 1;
-         else if( nodelimreached )
-            timeout = 0;
-         if( tottime == 0.0 )
-            tottime = timelimit;
-         if( timelimit > 0.0 )
-            tottime = min(tottime, timelimit);
-
-         simplex = iters[m];
-         stottime += tottime;
-         sbab += nodes[m];
-         ssim += simplex;
-
-         nodegeom = nodegeom * max(nodes[m], 1.0)^(1.0/nprobs);
-         timegeom = timegeom * max(tottime, 1.0)^(1.0/nprobs);
-
-         shiftednodegeom = shiftednodegeom * max(nodes[m]+nodegeomshift, 1.0)^(1.0/nprobs);
-         shiftedtimegeom = shiftedtimegeom * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-
-         status = "";
-         if( aborted )
-         {
-            status = "abort";
+            status = sprintf("fail (opt=%g)", sol[prob]);
             failtime += tottime;
             fail++;
          }
-         else if( solstatus[prob] == "opt" )
+         else
          {
-            reltol = 1e-4 * max(abs(pb),1.0);
-            abstol = 1e-4;
-
-            if( ( !maxobj[m] && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( maxobj[m] && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) )
-            {
-               status = sprintf("fail (opt=%g)", sol[prob]);
-               failtime += tottime;
-               fail++;
-            }
-            else
-            {
-               if( timeout || nodelimreached )
-               {
-                 if( timeout )
-                    status = "timeout";
-                 else if( nodelimreached )
-                    status = "nodelimit";
-                 timeouttime += tottime;
-                 timeouts++;
-               }
-               else
-               {
-                  if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
-                  {
-                     status = "ok";
-                     pass++;
-                  }
-                  else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-                  {
-                     status = "ok";
-                     pass++;
-                  }
-                  else
-                  {
-                     status = "fail (gap)";
-                     failtime += tottime;
-                     fail++;
-                  }
-               }
-            }
-         }
-         else if( solstatus[prob] == "best" )
-         {
-            reltol = 1e-4 * max(abs(pb),1.0);
-            abstol = 1e-4;
-
-            if( ( !maxobj[m] && db-sol[prob] > reltol) || ( maxobj[m] && sol[prob]-db > reltol) )
-            {
-               status = sprintf("fail (best=%g)", sol[prob]);
-               failtime += tottime;
-               fail++;
-            }
-            else
-            {
-               if( timeout || nodelimreached )
-               {
-                  if( (!maxobj[m] && sol[prob]-pb > reltol) || (maxobj[m] && pb-sol[prob] > reltol) )
-                  {
-                     status = "better";
-                     timeouttime += tottime;
-                     timeouts++;
-                  }
-                  else
-                  {
-                     if( timeout )
-                        status = "timeout";
-                     else if( nodelimreached )
-                        status = "nodelimit";
-                     timeouttime += tottime;
-                     timeouts++;
-                  }
-               }
-               else
-               {
-                  if( abs(pb - db) <= max(abstol, reltol) )
-                  {
-                     status = "solved not verified";
-                     pass++;
-                  }
-                  else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-                  {
-                     status = "solved not verified";
-                     pass++;
-                  }
-                  else
-                  {
-                     status = "fail (gap)";
-                     failtime += tottime;
-                     fail++;
-                  }
-               }
-            }
-         }
-         else if( solstatus[prob] == "unkn" )
-         {
-            reltol = 1e-4 * max(abs(pb),1.0);
-            abstol = 1e-4;
-
             if( timeout || nodelimreached )
             {
-               if( abs(pb) < infty )
+              if( timeout )
+                 status = "timeout";
+              else if( nodelimreached )
+                 status = "nodelimit";
+              timeouttime += tottime;
+              timeouts++;
+            }
+            else
+            {
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+               {
+                  status = "ok";
+                  pass++;
+               }
+               else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
+               {
+                  status = "ok";
+                  pass++;
+               }
+               else
+               {
+                  status = "fail (gap)";
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
+      }
+      else if( solstatus[prob] == "best" )
+      {
+         reltol = 1e-4 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( ( !maxobj[m] && db-sol[prob] > reltol) || ( maxobj[m] && sol[prob]-db > reltol) )
+         {
+            status = sprintf("fail (best=%g)", sol[prob]);
+            failtime += tottime;
+            fail++;
+         }
+         else
+         {
+            if( timeout || nodelimreached )
+            {
+               if( (!maxobj[m] && sol[prob]-pb > reltol) || (maxobj[m] && pb-sol[prob] > reltol) )
                {
                   status = "better";
                   timeouttime += tottime;
@@ -391,50 +349,41 @@ END {
                   timeouts++;
                }
             }
-            else if( abs(pb - db) <= max(abstol, reltol) )
-            {
-               status = "solved not verified";
-               pass++;
-            }
-            else if( (gap <= 105*gaplimit) )
-            {
-               status = "solved not verified";
-               pass++;
-            }
             else
             {
-               status = "unknown";
-            }
-         }
-         else if( solstatus[prob] == "inf" )
-         {
-            if( !feasible )
-            {
-               if( timeout )
+               if( abs(pb - db) <= max(abstol, reltol) )
                {
-                  status = "timeout";
-                  timeouttime += tottime;
-                  timeouts++;
+                  status = "solved not verified";
+                  pass++;
+               }
+               else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
+               {
+                  status = "solved not verified";
+                  pass++;
                }
                else
                {
-                  status = "ok";
-                  pass++;
+                  status = "fail (gap)";
+                  failtime += tottime;
+                  fail++;
                }
             }
-            else
-            {
-               status = "fail (infeas.)";
-               failtime += tottime;
-               fail++;
-            }
          }
-         else
-         {
-            reltol = 1e-4 * max(abs(pb),1.0);
-            abstol = 1e-4;
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = 1e-4 * max(abs(pb),1.0);
+         abstol = 1e-4;
 
-            if( timeout || nodelimreached )
+         if( timeout || nodelimreached )
+         {
+            if( abs(pb) < infty )
+            {
+               status = "better";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
             {
                if( timeout )
                   status = "timeout";
@@ -443,87 +392,139 @@ END {
                timeouttime += tottime;
                timeouts++;
             }
-            else if( abs(pb - db) < max(abstol,reltol) )
-            {
-               status = "solved not verified";
-               pass++;
-            }
-            else if( (gap <= 105*gaplimit) )
-            {
-               status = "solved not verified";
-               pass++;
-            }
-            else
-            {
-               status = "unknown";
-            }
          }
-
-         if( writesolufile )
+         else if( abs(pb - db) <= max(abstol, reltol) )
          {
-            if( pb == +infty && db == +infty )
-               printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
-            else if( pb == db )
-               printf("=opt= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
-            else if( pb < +infty )
-               printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
-            else
-               printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
+            status = "solved not verified";
+            pass++;
          }
-
-         #write output to both the tex file and the console depending on whether printsoltimes is activated or not
-         printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-                namelength, pprob, cons[m], vars[m], db, pb, gapstr, markersym, nodes[m], markersym, time[m]) > TEXFILE;
-         printf("\\\\\n") > TEXFILE;
-
-         # note: probtype has length 5, but field width is 6
-         printf("%-*s  %-5s %7d %7d %7.1f %7.1f %16.9g %16.9g %6s %9d %8d %7.1f %s (%d/%d)\n",
-                namelength, shortprob, probtype, cons[m], vars[m], discr, nonlin, db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
-
-         #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
-         if( status == "abort" )
+         else if( (gap <= 105*gaplimit) )
          {
-            modelstat = 13;
-            solverstat = 13;
-         }
-         else if( status ~ "^fail" || status == "unknown" )
-         {
-            modelstat = 7;
-            solverstat = 1;
-         }
-         else if( status == "timeout" )
-         {
-            modelstat = abs(pb) < infty ? 8 : 14;
-            solverstat = 3;
-         }
-         else if( status == "nodelimit" )
-         {
-            modelstat = abs(pb) < infty ? 8 : 14;
-            solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
-         }
-         else if( status == "gaplimit" || status == "better" )
-         {
-            modelstat = 8;
-            solverstat = 1;
-         }
-         else if( status == "ok" || status == "solved not verified" )
-         {
-            modelstat = 1;
-            solverstat = 1;
+            status = "solved not verified";
+            pass++;
          }
          else
          {
-            modelstat = 13;
-            solverstat = 13;
+            status = "unknown";
          }
-         pavprob = prob;
-         if( length(pavprob) > 25 )
-            pavprob = substr(pavprob, length(pavprob)-24,25);
-         #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
-         #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,MINLP,%s_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
-         printf("%d,%d,%d,%d\n", nodes[m], iters[m], cons[m], vars[m]) > PAVFILE;
       }
+      else if( solstatus[prob] == "inf" )
+      {
+         if( !feasible )
+         {
+            if( timeout )
+            {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               status = "ok";
+               pass++;
+            }
+         }
+         else
+         {
+            status = "fail (infeas.)";
+            failtime += tottime;
+            fail++;
+         }
+      }
+      else
+      {
+         reltol = 1e-4 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( timeout || nodelimreached )
+         {
+            if( timeout )
+               status = "timeout";
+            else if( nodelimreached )
+               status = "nodelimit";
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else if( abs(pb - db) < max(abstol,reltol) )
+         {
+            status = "solved not verified";
+            pass++;
+         }
+         else if( (gap <= 105*gaplimit) )
+         {
+            status = "solved not verified";
+            pass++;
+         }
+         else
+         {
+            status = "unknown";
+         }
+      }
+
+      if( writesolufile )
+      {
+         if( pb == +infty && db == +infty )
+            printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else if( pb < +infty )
+            printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
+      }
+
+      #write output to both the tex file and the console depending on whether printsoltimes is activated or not
+      printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
+             namelength, pprob, cons[m], vars[m], db, pb, gapstr, markersym, nodes[m], markersym, time[m]) > TEXFILE;
+      printf("\\\\\n") > TEXFILE;
+
+      # note: probtype has length 5, but field width is 6
+      printf("%-*s  %-5s %7d %7d %7.1f %7.1f %16.9g %16.9g %6s %9d %8d %7.1f %s (%d/%d)\n",
+             namelength, shortprob, probtype, cons[m], vars[m], discr, nonlin, db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
+
+      #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
+      if( status == "abort" )
+      {
+         modelstat = 13;
+         solverstat = 13;
+      }
+      else if( status ~ "^fail" || status == "unknown" )
+      {
+         modelstat = 7;
+         solverstat = 1;
+      }
+      else if( status == "timeout" )
+      {
+         modelstat = abs(pb) < infty ? 8 : 14;
+         solverstat = 3;
+      }
+      else if( status == "nodelimit" )
+      {
+         modelstat = abs(pb) < infty ? 8 : 14;
+         solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
+      }
+      else if( status == "gaplimit" || status == "better" )
+      {
+         modelstat = 8;
+         solverstat = 1;
+      }
+      else if( status == "ok" || status == "solved not verified" )
+      {
+         modelstat = 1;
+         solverstat = 1;
+      }
+      else
+      {
+         modelstat = 13;
+         solverstat = 13;
+      }
+      pavprob = prob;
+      if( length(pavprob) > 25 )
+         pavprob = substr(pavprob, length(pavprob)-24,25);
+      #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
+      #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
+      printf("%s,MINLP,%s_%s,%d,%d,%d,%.8g,%.8g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
+      printf("%d,%d,%d,%d\n", nodes[m], iters[m], cons[m], vars[m]) > PAVFILE;
    }
    shiftednodegeom -= nodegeomshift;
    shiftedtimegeom -= timegeomshift;
