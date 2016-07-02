@@ -54,9 +54,7 @@ BEGIN {
    infty = 1e+20;
 
    if( solver == "" )
-      solver="SCIP";
-   if( penaltytime == "" )
-      penaltytime=3600.0;
+      solver = "SCIP";
 
    nprobs = 0;
    sbab = 0;
@@ -172,10 +170,10 @@ END {
       # if dual bound is not given, try to guess from model status
       if( dualbnd[m] == "NA" )
       {
-        if( modstat[m] == 1 )  # if model status says "optimal", set dual bound to primal bound
-           dualbnd[m] = primalbnd[m];
-        else  # otherwise, set to worst possible dual bound
-           dualbnd[m] = maxobj[m] ? +infty : -infty;
+         if( modstat[m] == 1 )  # if model status says "optimal", set dual bound to primal bound
+            dualbnd[m] = primalbnd[m];
+         else  # otherwise, set to worst possible dual bound
+            dualbnd[m] = maxobj[m] ? +infty : -infty;
       }
       # if model status says "infeasible", set dual bound to correct infinity
       if( modstat[m] == 4 || modstat[m] == 10 || modstat[m] == 19 )
@@ -183,21 +181,23 @@ END {
       # if model status says "unbounded", set primal and dual bound to correct infinity
       if( modstat[m] == 3 )
          primalbnd[m] = dualbnd[m] = maxobj[m] ? +infty : -infty;
-
-      # if CNS model status says solved, then overwrite primal and dual bound
+      # if CNS model status says solved, set primal and dual bound to 0.0
       if( modstat[m] == 15 || modstat[m] == 16 || modstat[m] == 17 )
       {
          primalbnd[m] = 0.0;
          dualbnd[m] = 0.0;
       }
 
-      db = dualbnd[m];
-      pb = primalbnd[m];
+      # multiply by 1.0 to avoid problems when comparing floats and integer (make everything float)
+      db = 1.0*dualbnd[m];
+      pb = 1.0*primalbnd[m];
 
       # percentage of discrete variables
       discr = vars[m] > 0 ? 100.0 * discrvars[m] / vars[m] : 0;
       # percentage of nonlinear nonzeros
       nonlin = nnz[m] > 0 ? 100.0 * nnlnz[m] / nnz[m] : 0;
+
+      probtype = type[m];
 
       # we consider every solver status between 4 and 7 and above 8 as unusal interrupt, i.e., abort
       # (8 is user interrupt, which is likely to be due to schulz stopping a solver on the hard timelimit)
@@ -211,17 +211,10 @@ END {
       # we consider iteration limit reached as node limit reached, because there is no extra status for node limits
       nodelimreached = (solstat[m] == 2);
 
-      gapreached = 0;  # we consider gaplimit reaching as solved and not hitting a limit, so gapreached will remain 0
       timeout = 0;
 
       if( !onlyinsolufile || solstatus[prob] != "" )
       {
-         #avoid problems when comparing floats and integer (make everything float)
-         temp = pb;
-         pb = 1.0*temp;
-         temp = db;
-         db = 1.0*temp;
-
          optimal = 0;
          markersym = "\\g";
          if( abs(pb - db) < 1e-06 && pb < infty )
@@ -252,12 +245,10 @@ END {
          else
             gapstr = " Large";
 
-         probtype = type[m];
-
          tottime = time[m];
          if( time[m] >= 0.999*timelimit && timelimit > 0.0 )
             timeout = 1;
-         else if( gapreached || nodelimreached )
+         else if( nodelimreached )
             timeout = 0;
          if( tottime == 0.0 )
             tottime = timelimit;
@@ -295,12 +286,10 @@ END {
             }
             else
             {
-               if( timeout || gapreached || nodelimreached )
+               if( timeout || nodelimreached )
                {
                  if( timeout )
                     status = "timeout";
-                 else if( gapreached )
-                    status = "gaplimit";
                  else if( nodelimreached )
                     status = "nodelimit";
                  timeouttime += tottime;
@@ -340,7 +329,7 @@ END {
             }
             else
             {
-               if( timeout || gapreached || nodelimreached )
+               if( timeout || nodelimreached )
                {
                   if( (!maxobj[m] && sol[prob]-pb > reltol) || (maxobj[m] && pb-sol[prob] > reltol) )
                   {
@@ -352,8 +341,6 @@ END {
                   {
                      if( timeout )
                         status = "timeout";
-                     else if( gapreached )
-                        status = "gaplimit";
                      else if( nodelimreached )
                         status = "nodelimit";
                      timeouttime += tottime;
@@ -386,7 +373,7 @@ END {
             reltol = 1e-4 * max(abs(pb),1.0);
             abstol = 1e-4;
 
-            if( timeout || gapreached || nodelimreached )
+            if( timeout || nodelimreached )
             {
                if( abs(pb) < infty )
                {
@@ -398,8 +385,6 @@ END {
                {
                   if( timeout )
                      status = "timeout";
-                  else if( gapreached )
-                     status = "gaplimit";
                   else if( nodelimreached )
                      status = "nodelimit";
                   timeouttime += tottime;
@@ -449,12 +434,10 @@ END {
             reltol = 1e-4 * max(abs(pb),1.0);
             abstol = 1e-4;
 
-            if( timeout || gapreached || nodelimreached )
+            if( timeout || nodelimreached )
             {
                if( timeout )
                   status = "timeout";
-               else if( gapreached )
-                  status = "gaplimit";
                else if( nodelimreached )
                   status = "nodelimit";
                timeouttime += tottime;
