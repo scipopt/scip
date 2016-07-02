@@ -76,7 +76,7 @@ BEGIN {
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
 /=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
-/^\*/    { FS="," }  # a start at the beginnnig of a line we take as start of tracefile, so change FS to ','
+/^\*/    { FS="," }  # a star at the beginnnig of a line we take as start of tracefile, so change FS to ','
 /^\* SOLVER/     { solver=$2; }
 /^\* TIMELIMIT/  { timelimit=$2; }
 /^\* SETTINGS/   { settings=$2; }
@@ -104,26 +104,23 @@ BEGIN {
 #17 NumberOfIterations
 #18 NumberOfNodes
 
-/.*/ {
-   if( $3 == solver || $3 == "EXAMINER2" )
-   {
-      model[nprobs] = $1;
-      type[nprobs] = $2;
-      maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );
-      cons[nprobs] = $6;
-      vars[nprobs] = $7;
-      discrvars[nprobs] = $8;
-      nnz[nprobs] = $9;
-      nnlnz[nprobs] = $10;
-      modstat[nprobs] = $11;
-      solstat[nprobs] = $12;
-      dualbnd[nprobs] = $14;
-      primalbnd[nprobs] = $13;
-      time[nprobs] = $15; # use max($15,$16) for max of solver reported time and wallclock time
-      iters[nprobs] = $17;
-      nodes[nprobs] = $18;
-      nprobs++;
-   }
+$3 == solver || $3 == "EXAMINER2" {
+   model[nprobs] = $1;
+   type[nprobs] = $2;
+   maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );
+   cons[nprobs] = $6;
+   vars[nprobs] = $7;
+   discrvars[nprobs] = $8;
+   nnz[nprobs] = $9;
+   nnlnz[nprobs] = $10;
+   modstat[nprobs] = $11;
+   solstat[nprobs] = $12;
+   dualbnd[nprobs] = $14;
+   primalbnd[nprobs] = $13;
+   time[nprobs] = $15; # use max($15,$16) for max of solver reported time and wallclock time
+   iters[nprobs] = $17;
+   nodes[nprobs] = $18;
+   nprobs++;
 }
 
 END {
