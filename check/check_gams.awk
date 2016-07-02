@@ -279,40 +279,39 @@ END {
 
          if( ( !maxobj[m] && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( maxobj[m] && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) )
          {
+            # primal or dual bound contradicts known optimal value
             status = sprintf("fail (opt=%g)", sol[prob]);
             failtime += tottime;
             fail++;
          }
+         else if( timeout || nodelimreached )
+         {
+            # time or node limit
+            if( timeout )
+               status = "timeout";
+            else if( nodelimreached )
+               status = "nodelimit";
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+         {
+            # found and proven optimal value
+            status = "ok";
+            pass++;
+         }
+         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
+         {
+            # found and proven optimal value w.r.t. gaplimit
+            status = "ok";
+            pass++;
+         }
          else
          {
-            if( timeout || nodelimreached )
-            {
-              if( timeout )
-                 status = "timeout";
-              else if( nodelimreached )
-                 status = "nodelimit";
-              timeouttime += tottime;
-              timeouts++;
-            }
-            else
-            {
-               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
-               {
-                  status = "ok";
-                  pass++;
-               }
-               else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-               {
-                  status = "ok";
-                  pass++;
-               }
-               else
-               {
-                  status = "fail (gap)";
-                  failtime += tottime;
-                  fail++;
-               }
-            }
+            # gap not closed, but no timeout
+            status = "fail (gap)";
+            failtime += tottime;
+            fail++;
          }
       }
       else if( solstatus[prob] == "best" )
@@ -322,60 +321,17 @@ END {
 
          if( ( !maxobj[m] && db-sol[prob] > reltol) || ( maxobj[m] && sol[prob]-db > reltol) )
          {
+            # dual bound contradicts best known optimal value
             status = sprintf("fail (best=%g)", sol[prob]);
             failtime += tottime;
             fail++;
          }
-         else
+         else if( timeout || nodelimreached )
          {
-            if( timeout || nodelimreached )
+            # time or node limit reached
+            if( (!maxobj[m] && sol[prob]-pb > reltol) || (maxobj[m] && pb-sol[prob] > reltol) )
             {
-               if( (!maxobj[m] && sol[prob]-pb > reltol) || (maxobj[m] && pb-sol[prob] > reltol) )
-               {
-                  status = "better";
-                  timeouttime += tottime;
-                  timeouts++;
-               }
-               else
-               {
-                  if( timeout )
-                     status = "timeout";
-                  else if( nodelimreached )
-                     status = "nodelimit";
-                  timeouttime += tottime;
-                  timeouts++;
-               }
-            }
-            else
-            {
-               if( abs(pb - db) <= max(abstol, reltol) )
-               {
-                  status = "solved not verified";
-                  pass++;
-               }
-               else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-               {
-                  status = "solved not verified";
-                  pass++;
-               }
-               else
-               {
-                  status = "fail (gap)";
-                  failtime += tottime;
-                  fail++;
-               }
-            }
-         }
-      }
-      else if( solstatus[prob] == "unkn" )
-      {
-         reltol = 1e-4 * max(abs(pb),1.0);
-         abstol = 1e-4;
-
-         if( timeout || nodelimreached )
-         {
-            if( abs(pb) < infty )
-            {
+               # improved on best known optimal value
                status = "better";
                timeouttime += tottime;
                timeouts++;
@@ -392,11 +348,59 @@ END {
          }
          else if( abs(pb - db) <= max(abstol, reltol) )
          {
+            # proven optimal
+            status = "solved not verified";
+            pass++;
+         }
+         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
+         {
+            # proven optimal w.r.t. gap
+            status = "solved not verified";
+            pass++;
+         }
+         else
+         {
+            # gap not closed, but also no timeout
+            status = "fail (gap)";
+            failtime += tottime;
+            fail++;
+         }
+      }
+      # TODO solstatus[prob] == "bestdual"
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = 1e-4 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( timeout || nodelimreached )
+         {
+            # time or node limit reached
+            if( abs(pb) < infty )
+            {
+               # proven not infeasible
+               status = "better";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if( timeout )
+                  status = "timeout";
+               else if( nodelimreached )
+                  status = "nodelimit";
+               timeouttime += tottime;
+               timeouts++;
+            }
+         }
+         else if( abs(pb - db) <= max(abstol, reltol) )
+         {
+            # proven optimal
             status = "solved not verified";
             pass++;
          }
          else if( (gap <= 105*gaplimit) )
          {
+            # proven optimal w.r.t. gaplimit
             status = "solved not verified";
             pass++;
          }
@@ -407,10 +411,11 @@ END {
       }
       else if( solstatus[prob] == "inf" )
       {
-         if( !feasible )
+         if( !feasible )  #FIXME we never set feasible
          {
             if( timeout )
             {
+               # time or node limit reached
                status = "timeout";
                timeouttime += tottime;
                timeouts++;
@@ -423,6 +428,7 @@ END {
          }
          else
          {
+            # feasible for an infeasible problem
             status = "fail (infeas.)";
             failtime += tottime;
             fail++;
@@ -435,6 +441,7 @@ END {
 
          if( timeout || nodelimreached )
          {
+            # time or node limit reached
             if( timeout )
                status = "timeout";
             else if( nodelimreached )
@@ -444,11 +451,13 @@ END {
          }
          else if( abs(pb - db) < max(abstol,reltol) )
          {
+            # proven optimal
             status = "solved not verified";
             pass++;
          }
          else if( (gap <= 105*gaplimit) )
          {
+            # proven optimal w.r.t. gap
             status = "solved not verified";
             pass++;
          }
