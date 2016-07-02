@@ -1271,8 +1271,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  */
 
 /** expression walk callback to simplify an expression
- * simplifies bottom up; when leaving an expression it simplifies it and stores the simplified expr in its walkio ptr;
- * after the child was visited, it is replaced with the simpified expr
+ * simplifies bottom up; when leaving an expression it simplifies it and stores the simplified expr in its walkio ptr
+ * and the walk data;
+ * after the child was visited, it is replaced with the simplified expr
  */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
@@ -1311,6 +1312,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
             SCIPcaptureConsExprExpr(simplifiedexpr);
          }
          expr->walkio.ptrval = (void *)simplifiedexpr;
+
+         *(SCIP_CONSEXPR_EXPR**)data = simplifiedexpr;
 
          /* continue */
          *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -5774,17 +5777,16 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
    )
 {
-   SCIP_CONSEXPR_EXPR* aux;
+   SCIP_CONSEXPR_EXPR* simplified = NULL;
 
    assert(scip != NULL);
    assert(*expr != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, NULL, simplifyExpr, simplifyExpr, NULL) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, NULL, simplifyExpr, simplifyExpr, &simplified) );
+   assert(simplified != NULL);
 
-   aux = *expr;
-   *expr = (SCIP_CONSEXPR_EXPR*)(*expr)->walkio.ptrval;
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, expr) );
+   *expr = simplified;
 
    return SCIP_OKAY;
 }
