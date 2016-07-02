@@ -136,7 +136,7 @@ END {
 
    # append rest of header
    tablehead1 = tablehead1"+------+---------- Original -----------+----------------+----------------+------+---------+--------+-------+-------\n";
-   tablehead2 = tablehead2"| Type | Conss |  Vars | Discr%%|Nonlin%%|   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |       \n";
+   tablehead2 = tablehead2"| Type | Conss |  Vars | Discr%%|Nonlin%%|   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time | Status\n";
    tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n";
 
    # print header
@@ -534,7 +534,7 @@ END {
    shiftednodegeom -= nodegeomshift;
    shiftedtimegeom -= timegeomshift;
 
-   printf("------------------------------+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("%s+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n", hyphenstr);
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
