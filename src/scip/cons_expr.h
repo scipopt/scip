@@ -70,6 +70,24 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
    SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata))  /**< expression data free callback (can be NULL if data does not need to be freed) */
 );
 
+/** set the simplify callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrSimplify(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRSIMPLIFY((*simplify))  /**< simplify callback (can be NULL) */
+);
+
+/** set the compare callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCMP((*compare))    /**< compare callback (can be NULL) */
+);
+
 /** set the print callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
@@ -218,6 +236,12 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    SCIP_EXPRGRAPH*         exprgraph,        /**< expression graph */
    SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
+   );
+
+/** gets the number of times the expression is currently captured */
+EXTERN
+int SCIPgetConsExprExprNUses(
+   SCIP_CONSEXPR_EXPR*   expr               /**< expression */
    );
 
 /** captures an expression (increments usage count) */
@@ -513,6 +537,8 @@ void SCIPsetConsExprExprEvalInterval(
  * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitingchild callback, visiting the current child will be skipped.
  * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitedchild callback, visiting the remaining children will be skipped.
  * If returning SCIP_CONSEXPREXPRWALK_ABORT in any of the callbacks, the walk will be aborted immediately.
+ *
+ * @note The walkio member of the root expression is reset to its previous value when the walk finishes.
  */
 EXTERN
 SCIP_RETCODE SCIPwalkConsExprExprDF(
@@ -574,6 +600,16 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    const char*           exprstr,            /**< string with the expr to parse */
    const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
+   );
+
+/** compare expressions
+ * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
+ * @note: The given expressions are assumed to be simplified.
+ */
+EXTERN
+int SCIPcompareConsExprExprs(
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
 
 /** compare expressions
@@ -678,6 +714,26 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   );
+
+/** simplifies an expression */
+SCIP_RETCODE SCIPsimplifyConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
+   );
+
+/** prints structure of an expression a la Maple's dismantle */
+SCIP_RETCODE SCIPdismantleConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
+   );
+
+/** overwrites/replaces a child of an expressions */
+SCIP_RETCODE SCIPreplaceConsExprExprChild(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
+   int                     childidx,         /**< index of child being replaced */
+   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
    );
 /** @} */
 

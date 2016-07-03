@@ -63,6 +63,11 @@ SCIP_Real SCIPgetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
+EXTERN
+void SCIPsetConsExprExprSumConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant */
+   );
 
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 EXTERN
@@ -111,6 +116,18 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
    SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
    SCIP_Real             childcoef           /**< child's coefficient */
+   );
+
+/** multiplies given sum expr by a constant */
+void SCIPmultiplyConsExprExprSumByConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant that multiplies sum expression */
+   );
+
+/** exponentiate given product expr by a constant */
+void SCIPexponentiateConsExprExprProductByConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant that exponentiates the product expression */
    );
 #ifdef __cplusplus
 }
