@@ -324,7 +324,6 @@ namespace polyscip {
                     return SCIP_OKAY;
                 }
             }
-            weight_space_poly_->printFacets();
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
         deleteWeaklyNondomResults();

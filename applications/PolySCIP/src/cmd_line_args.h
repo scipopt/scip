@@ -28,7 +28,7 @@ namespace polyscip {
     class CmdLineArgs {
     public:
         using TimeLimitType = long;
-        constexpr static auto TIME_LIMIT_INF = std::numeric_limits<TimeLimitType>::max();
+        constexpr static auto kTimeLimitInf = std::numeric_limits<TimeLimitType>::max();
 
         CmdLineArgs(int argc, const char *const *argv);
 
@@ -36,7 +36,7 @@ namespace polyscip {
         bool beVerbose() const {return be_verbose_;};
         bool withUnsupported() const {return with_unsupported_;};
         bool writeSolutions() const {return write_sols_;};
-        bool hasTimeLimit() const {return time_limit_ != TIME_LIMIT_INF;}
+        bool hasTimeLimit() const {return time_limit_ != kTimeLimitInf;}
         bool hasParameterFile() const {return !param_file_.empty();};
         TimeLimitType getTimeLimit() const {return time_limit_;};
         double getEpsilon() const {return epsilon_;};

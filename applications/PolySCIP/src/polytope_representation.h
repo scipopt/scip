@@ -21,6 +21,7 @@
 #define POLYSCIP_SRC_POLYTOPE_REPRESENTATION_H_INCLUDED
 
 #include <algorithm>
+#include <bitset>
 #include <cstddef>
 #include <functional> // std::function
 #include <iostream>
@@ -31,6 +32,7 @@
 
 #include "global_functions.h"
 #include "objscip/objscip.h"
+#include "PolySCIPConfig.h" // defines MAX_NO_OBJS
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
 
@@ -43,12 +45,14 @@ namespace polyscip {
 
         class V_RepT {
         public:
-            friend class DoubleDescriptionMethod;
             using SlackMap = std::unordered_map<std::size_t, ValueType>;
+            constexpr static std::size_t kMaxInitialHrepSize = 2*POLYSCIP_MAX_NO_OBJS;
 
-            explicit V_RepT(WeightType weight, ValueType wov);
+            friend class DoubleDescriptionMethod;
 
-            explicit V_RepT(SCIP* scip, WeightType weight, ValueType wov, const H_RepContainer& current_h_rep);
+            V_RepT(WeightType weight, ValueType wov) = delete;
+
+            explicit V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepContainer& current_h_rep);
 
             explicit V_RepT(SCIP* scip,
                             const V_RepT& v,
@@ -58,8 +62,8 @@ namespace polyscip {
 
 
             ValueType getSlack(std::size_t index) const {return inds_to_slacks_.at(index);}
-            void addZeroSlackIndex(std::size_t index);
-            void addSlack(std::size_t index, double val);
+            //void setZeroSlackIndex(std::size_t index);
+            //void addSlack(std::size_t index, ValueType val);
             void print(std::ostream& os, bool withIncidentFacets, const H_RepContainer& h_rep) const;
 
             //todo incorporate way for facets when WSP is not full-dimensional
@@ -67,20 +71,26 @@ namespace polyscip {
             /** Checks whether given parameter is a subset of member zero_slack_indices_
              * @Return true if member zero_slack_indices_ is superset of given parameter; false otherwise
              */
-            bool hasZeroSlackSuperSet(const std::vector<std::size_t>& indices) const;
+            bool hasZeroSlackSuperSet(const std::vector<std::size_t>& indices) const = delete;
+            bool hasZeroIndsSuperSet(const std::bitset<kMaxInitialHrepSize>& common_zero_inds) const;
 
             WeightType&& moveWeight() {return std::move(weight_);};
             WeightType getWeight() const {return weight_;};
             ValueType getWov() const {return wov_;};
 
         private:
-            static constexpr double kNormalizingThreshold = 1e+4;
-            void normalize();
+            //todo weight space phase ändert sich abhängig von Größe!! Testen warum!
+            constexpr static double kNormalizingThreshold = 1e+5;
+            bool shouldNormalize(double threshold) const;
+            void normalize(double normalizing_val);
+
+            void setSlacksAndMinInfeasInd(SCIP* scip, const H_RepContainer& h_rep);
 
             WeightType weight_;
             ValueType wov_;
+            std::pair<bool, std::size_t> min_infeas_ind_;
             SlackMap inds_to_slacks_;
-            std::vector<std::size_t> zero_slacks_; // indices in h_rep_ which this object fulfills with equality
+            std::bitset<kMaxInitialHrepSize> zero_slacks_;
         };
 
         using V_RepContainer = std::vector<V_RepT>;
@@ -101,10 +111,6 @@ namespace polyscip {
 
             H_RepContainer getHRep() const { return h_rep_; };
 
-            //V_RepContainer &&moveVRep() { return std::move(v_rep_); };
-
-            //H_RepContainer &&moveHRep() { return std::move(h_rep_); };
-
         private:
             using SlackContainer = std::vector<std::vector<std::size_t>>;
 
@@ -114,10 +120,12 @@ namespace polyscip {
              * ...
              * k+1) w_k >= 0
              */
+            void computeInitialRep(const OutcomeType &bounded) = delete;
+            V_RepContainer computeInitialVRep() const;
 
-            void computeInitialRep(const OutcomeType &bounded);
+            //std::vector<std::size_t> getCommonZeroSlackIndices(const V_RepT& v, const V_RepT& w) const;
 
-            std::vector<std::size_t> getCommonZeroSlacks(const V_RepT& v, const V_RepT& w) const;
+            std::bitset<V_RepT::kMaxInitialHrepSize> getCommonZeroSlackIndices(const V_RepT &v, const V_RepT &w) const;
 
             bool rayPairIsAdjacent(std::size_t plus_index,
                                        std::size_t minus_index,
@@ -132,15 +140,16 @@ namespace polyscip {
                                                                                       const std::vector<std::size_t>& minus_inds,
                                                                                       const std::vector<V_RepT>& current_rep) const;
 
+            V_RepContainer extendVRep(V_RepContainer&& current_v_rep);
+
             std::vector<V_RepT> extendVRep(std::vector<V_RepT> current_rep,
                                                const H_RepT &constraint,
-                                               std::size_t index_of_constraint_in_hrep);
+                                               std::size_t index_of_constraint_in_hrep) = delete;
 
             SCIP *scip_;
-            std::vector<OutcomeType> bounded_;
-            std::vector<OutcomeType> unbounded_;
+            std::size_t outcome_dimension_;
+            std::size_t current_hrep_index_;
             H_RepContainer h_rep_;
-            V_RepContainer initial_v_rep_;
             V_RepContainer v_rep_;
         };
     }

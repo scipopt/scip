@@ -30,7 +30,7 @@
 namespace polyscip {
 
     /**< type for computed values */
-    using ValueType = long double;
+    using ValueType = SCIP_Real;
     /**< type for points, rays in outcome space */
     using OutcomeType = std::vector<ValueType>;
     /**< type for solutions in feasible space */

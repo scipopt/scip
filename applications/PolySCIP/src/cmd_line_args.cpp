@@ -43,7 +43,7 @@ namespace polyscip {
         cmd.add(write_sols_arg);
         ValueArg<TimeLimitType> time_limit_arg("t", "timeLimit",
                                                "time limit in seconds for total computation time",
-                                               false, TIME_LIMIT_INF, "seconds");
+                                               false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
         ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of obsolete and non-obsolete vertices",
                                      false, 1e-6, "double");
