@@ -7414,8 +7414,11 @@ SCIP_RETCODE propagateCons(
                /* loop over items with non-maximal weight (omitting the first position) */
                for( i = endvarposclique; i > startvarposclique; --i )
                {
+                  /* there should be no variables fixed to 0 here */
+                  assert(SCIPvarGetUbLocal(myvars[i]) > 0.5);
+
                   /* only check variables of negated cliques for which no variable is locally fixed */
-                  if( SCIPvarGetLbLocal(myvars[i]) < 0.5 && SCIPvarGetUbLocal(myvars[i]) > 0.5  )
+                  if( SCIPvarGetLbLocal(myvars[i]) < 0.5 )
                   {
                      assert(maxcliqueweight >= myweights[i]);
                      assert(i == endvarposclique || myweights[i] >= myweights[i+1]);
@@ -7483,7 +7486,7 @@ SCIP_RETCODE propagateCons(
       /* analyze the cutoff in SOLVING stage and if conflict analysis is turned on */
       if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
-         /* start conflict analysis with the fixed-to-one variables, add only as many as need to exceed the capacity */
+         /* start conflict analysis with the fixed-to-one variables, add only as many as needed to exceed the capacity */
          SCIP_Longint weight;
 
          weight = 0;
