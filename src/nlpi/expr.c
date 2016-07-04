@@ -10464,7 +10464,7 @@ void exprgraphNodePropagateBounds(
                assert(maxlinactivityinf == 1);
                childbounds.inf = node->bounds.inf - maxlinactivity;
             }
-            else
+            else if( maxlinactivityinf == 0 )
             {
                childbounds.inf = node->bounds.inf - maxlinactivity + node->children[i]->bounds.sup;
             }
