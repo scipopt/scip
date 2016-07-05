@@ -97,6 +97,7 @@
 #define DEFAULT_DETECTLOWERBOUND TRUE   /**< should presolving try to detect constraints parallel to the objective
                                          *   function defining a lower bound and prevent these constraints from
                                          *   entering the LP */
+#define DEFAULT_CLIQUEEXTRACTFACTOR 0.8 /**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
@@ -162,6 +163,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             detectlowerbound;   /**< should presolving try to detect constraints parallel to the objective
                                               *   function defining a lower bound and prevent these constraints from
                                               *   entering the LP */
+   SCIP_Real             cliqueextractfactor;/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
 };
 
 
@@ -11082,6 +11084,7 @@ SCIP_RETCODE greedyCliqueAlgorithm(
    int                   nitems,             /**< the number of items */
    SCIP_Longint          capacity,           /**< maximum free capacity of the knapsack */
    SCIP_Bool             sorteditems,        /**< are the items sorted by their weights nonincreasing? */
+   SCIP_Real             cliqueextractfactor,/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
    SCIP_Bool*const       cutoff,             /**< pointer to store whether the node can be cut off */
    int*const             nbdchgs             /**< pointer to count the number of performed bound changes */
    )
@@ -11113,6 +11116,7 @@ SCIP_RETCODE greedyCliqueAlgorithm(
       SCIP_Longint compareweight;
       SCIP_VAR** cliquevars;
       int compareweightidx;
+      int minclqsize;
 
       /* add the clique to the clique table */
       SCIPdebug( printClique(items, ncliquevars) );
@@ -11123,6 +11127,10 @@ SCIP_RETCODE greedyCliqueAlgorithm(
 
       *nbdchgs += thisnbdchgs;
 
+      /* no more cliques to be found (don't know if this can actually happen, since the knapsack could be replaced by a set-packing constraint)*/
+      if( ncliquevars == nitems )
+         return SCIP_OKAY;
+
       /* copy items in order into buffer array and deduce more cliques */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &cliquevars, items, ncliquevars) );
 
@@ -11130,7 +11138,13 @@ SCIP_RETCODE greedyCliqueAlgorithm(
       /* loop over remaining, smaller items and compare each item backwards against larger weights, starting with the second smallest weight */
       compareweightidx = ncliquevars - 2;
       assert(i == nitems || weights[i] + weights[ncliquevars - 1] <= capacity);
-      while( compareweightidx >= 0 && i < nitems && ! (*cutoff) )
+
+      /* determine minimum clique size for the following loop */
+      minclqsize = (int)(cliqueextractfactor * ncliquevars);
+      minclqsize = MAX(minclqsize, 2);
+
+      /* loop over the remaining variables and the larger items of the first clique until we find another clique or reach the size limit */
+      while( compareweightidx >= 0 && i < nitems && ncliquevars >= minclqsize && ! (*cutoff) )
       {
          compareweight = weights[compareweightidx];
          assert(compareweight > 0);
@@ -11170,6 +11184,7 @@ static
 SCIP_RETCODE addCliques(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< knapsack constraint */
+   SCIP_Real             cliqueextractfactor,/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
    SCIP_Bool*const       cutoff,             /**< pointer to store whether the node can be cut off */
    int*const             nbdchgs             /**< pointer to count the number of performed bound changes */
    )
@@ -11285,7 +11300,7 @@ SCIP_RETCODE addCliques(
       /* use the gain weights and free capacity to derive greedily cliques */
       if( nposcliquevars > 1 )
       {
-         SCIP_CALL( greedyCliqueAlgorithm(scip, poscliquevars, gainweights, nposcliquevars, freecapacity, FALSE, cutoff, nbdchgs) );
+         SCIP_CALL( greedyCliqueAlgorithm(scip, poscliquevars, gainweights, nposcliquevars, freecapacity, FALSE, cliqueextractfactor, cutoff, nbdchgs) );
 
          if( *cutoff )
             goto TERMINATE;
@@ -11293,7 +11308,7 @@ SCIP_RETCODE addCliques(
    }
 
    /* build cliques by using the items with the maximal weights */
-   SCIP_CALL( greedyCliqueAlgorithm(scip, consdata->vars, consdata->weights, nvars, consdata->capacity, TRUE, cutoff, nbdchgs) );
+   SCIP_CALL( greedyCliqueAlgorithm(scip, consdata->vars, consdata->weights, nvars, consdata->capacity, TRUE, cliqueextractfactor, cutoff, nbdchgs) );
 
    TERMINATE:
    /* free temporary memory and mark the constraint */
@@ -12470,7 +12485,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       /* add cliques in the knapsack to the clique table */
       if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
       {
-         SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
+         SCIP_CALL( addCliques(scip, cons, conshdlrdata->cliqueextractfactor, &cutoff, nchgbds) );
          if( cutoff )
             break;
       }
@@ -13067,6 +13082,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "constraints/" CONSHDLR_NAME "/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cuts",
          &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/cliqueextractfactor",
+         "lower clique size limit for greedy clique extraction algorithm (relative to largest clique)",
+         &conshdlrdata->cliqueextractfactor, TRUE, DEFAULT_CLIQUEEXTRACTFACTOR, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
