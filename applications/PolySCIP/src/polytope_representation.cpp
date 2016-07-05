@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cmath> //std::fabs
+#include <functional>
 #include <iterator>
 #include <set>
 #include <utility>
@@ -69,6 +70,23 @@ namespace polyscip {
                 normalize(kNormalizingThreshold);
 
             setSlacksAndMinInfeasInd(scip, h_rep);
+        }
+
+        bool V_RepT::operator==(const V_RepT& rhs) const {
+            return std::tie(weight_, wov_) == std::tie(rhs.weight_, rhs.wov_);
+        }
+
+        bool V_RepT::operator!=(const V_RepT& rhs) const {
+            return !(operator==(rhs));
+        }
+
+        size_t V_RepT::getMinInfeasIndex() const {
+            assert (!min_infeas_ind_.first);
+            return min_infeas_ind_.second;
+        }
+
+        bool V_RepT::isZeroSlackIndex(size_t index) const {
+            return zero_slacks_.test(index);
         }
 
         void V_RepT::setSlacksAndMinInfeasInd(SCIP* scip, const H_RepContainer& h_rep) {
@@ -126,7 +144,8 @@ namespace polyscip {
 
         DoubleDescriptionMethod::DoubleDescriptionMethod(SCIP *scip, const ResultContainer& bounded_results,
                                                          const ResultContainer& unbounded_results)
-                : scip_(scip)
+                : scip_(scip),
+                  adj_pairs_(bounded_results.size()+unbounded_results.size()-1, AdjPairContainer{})
         {
             /* build up h-representation for which v-representation is to be found */
             assert (!bounded_results.empty());
@@ -143,7 +162,34 @@ namespace polyscip {
             for (const auto &unbd : unbounded_results) {
                 h_rep_.emplace_back(unbd.second, 0.);    // add constraint; unbd_outcome 0 >= 0
             }
+        }
 
+        std::pair<bool, size_t> DoubleDescriptionMethod::minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const {
+            auto minInfeasInd1 = r1.getMinInfeasIndex();
+            auto minInfeasInd2 = r2.getMinInfeasIndex();
+            if (minInfeasInd1 < minInfeasInd2 && !r2.isZeroSlackIndex(minInfeasInd1)) {
+                return {true, minInfeasInd1};
+            }
+            else if (minInfeasInd2 < minInfeasInd1 && !r1.isZeroSlackIndex(minInfeasInd1)) {
+                return {true, minInfeasInd2};
+            }
+            else {
+                return {false, 0};
+            }
+        }
+
+        void DoubleDescriptionMethod::conditionalStoreEdge(const V_RepT& r1,
+                                                           const V_RepT& r2,
+                                                           size_t k,
+                                                           size_t i,
+                                                           const V_RepContainer& v_rep) {
+            for (auto index=i+1; index<k; ++index) {
+                if (r1.isZeroSlackIndex(index) && r2.isZeroSlackIndex(index))
+                    return;
+            }
+            if (rayPairIsAdjacent(r1, r2, v_rep)) {
+                adj_pairs_[k].emplace_back(r1,r2);
+            }
         }
 
         void DoubleDescriptionMethod::printVRep(std::ostream &os, bool withIncidentFacets) const {
@@ -152,7 +198,16 @@ namespace polyscip {
         }
 
         void DoubleDescriptionMethod::computeVRep() {
-            auto current_v_rep (computeInitialVRep());
+            auto current_v_rep = computeInitialVRep();
+            for (size_t i=0; i<current_v_rep.size()-1; ++i) {
+                for (auto j=i+1; j<current_v_rep.size(); ++j) {
+                    if (rayPairIsAdjacent(i,j,current_v_rep)) {
+
+                    }
+
+                }
+
+            }
             ++current_hrep_index_;
             while (current_hrep_index_ < h_rep_.size()) {
                 current_v_rep = extendVRep(std::move(current_v_rep));
@@ -224,7 +279,7 @@ namespace polyscip {
 
         bool DoubleDescriptionMethod::rayPairIsAdjacent(size_t index1,
                                                         size_t index2,
-                                                        const vector<V_RepT>& cur_v_rep) const {
+                                                        const V_RepContainer & cur_v_rep) const {
 
             auto common_zero_inds = getCommonZeroSlackIndices(cur_v_rep[index1], cur_v_rep[index2]);
 
@@ -240,6 +295,26 @@ namespace polyscip {
             }
             return true;
         }
+
+
+        bool DoubleDescriptionMethod::rayPairIsAdjacent(const V_RepT& ray1,
+                                                        const V_RepT& ray2,
+                                                        const V_RepContainer& v_rep) const {
+            auto common_zero_inds = getCommonZeroSlackIndices(ray1, ray2);
+
+            for (const auto& ray : v_rep) {
+                if (ray == ray1 || ray == ray2) {
+                    continue;
+                }
+                else if (ray.hasZeroIndsSuperSet(common_zero_inds)) {
+                    /* check whether current_rep[i] is multiple of current_rep[index1] or current_rep[index2] */
+                    if (!isMultiple(ray, ray1) && !isMultiple(ray, ray2))
+                        return false;
+                }
+            }
+            return true;
+        }
+
 
         //todo Check function thoroughly
         bool DoubleDescriptionMethod::isMultiple(const V_RepT& v, const V_RepT& w) const {
