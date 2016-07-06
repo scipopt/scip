@@ -97,7 +97,6 @@ struct SCIP_ConsData
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-   unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
    unsigned int          varboundsadded:1;   /**< are the globally valid variable bounds added? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
@@ -227,6 +226,9 @@ SCIP_RETCODE catchEvents(
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
+
+   /* mark the constraint to be propagated */
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }

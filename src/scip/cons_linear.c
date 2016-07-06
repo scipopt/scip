@@ -220,7 +220,6 @@ struct SCIP_ConsData
    unsigned int          validmaxact:1;      /**< is the local maxactivity valid? */
    unsigned int          validglbminact:1;   /**< is the global minactivity valid? */
    unsigned int          validglbmaxact:1;   /**< is the global maxactivity valid? */
-   unsigned int          propagated:1;       /**< is constraint already propagated? */
    unsigned int          boundstightened:1;  /**< is constraint already propagated with bound tightening? */
    unsigned int          presolved:1;        /**< is constraint already presolved? */
    unsigned int          removedfixings:1;   /**< are all fixed variables removed from the constraint? */
@@ -948,7 +947,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->validmaxact = FALSE;
    (*consdata)->validglbminact = FALSE;
    (*consdata)->validglbmaxact = FALSE;
-   (*consdata)->propagated = FALSE;
    (*consdata)->boundstightened = FALSE;
    (*consdata)->presolved = FALSE;
    (*consdata)->removedfixings = FALSE;
@@ -3279,11 +3277,16 @@ SCIP_RETCODE chgLhs(
    /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
    if( !SCIPisInfinity(scip, -lhs) && SCIPisGT(scip, lhs, consdata->lhs) )
    {
-      consdata->propagated = FALSE;
       consdata->boundstightened = FALSE;
       consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
       consdata->implsadded = FALSE;
+
+      /* mark the constraint for propagation */
+      if( SCIPconsIsTransformed(cons) )
+      {
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      }
    }
 
    /* set new left hand side and update constraint data */
@@ -3292,6 +3295,7 @@ SCIP_RETCODE chgLhs(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
    consdata->rangedrowpropagated = FALSE;
+
 
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
@@ -3396,11 +3400,16 @@ SCIP_RETCODE chgRhs(
    /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
    if( !SCIPisInfinity(scip, rhs) && SCIPisLT(scip, rhs, consdata->rhs) )
    {
-      consdata->propagated = FALSE;
       consdata->boundstightened = FALSE;
       consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
       consdata->implsadded = FALSE;
+
+      /* mark the constraint for propagation */
+      if( SCIPconsIsTransformed(cons) )
+      {
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      }
    }
 
    /* set new right hand side and update constraint data */
@@ -3516,7 +3525,12 @@ SCIP_RETCODE addCoef(
    /* install rounding locks for new variable */
    SCIP_CALL( lockRounding(scip, cons, var, val) );
 
-   consdata->propagated = FALSE;
+   /* mark the constraint for propagation */
+   if( transformed )
+   {
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+   }
+
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(var);
@@ -3655,7 +3669,12 @@ SCIP_RETCODE delCoefPos(
       }
    }
 
-   consdata->propagated = FALSE;
+   /* mark the constraint for propagation */
+   if( SCIPconsIsTransformed(cons) )
+   {
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+   }
+
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->validsignature = FALSE;
@@ -3732,7 +3751,12 @@ SCIP_RETCODE chgCoefPos(
    if( SCIPconsIsTransformed(cons) )
       consdataUpdateChgCoef(scip, consdata, var, val, newval, TRUE);
 
-   consdata->propagated = FALSE;
+   /* mark the constraint for propagation */
+   if( SCIPconsIsTransformed(cons) )
+   {
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+   }
+
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->validsignature = consdata->validsignature && (newval * val > 0.0);
@@ -7206,13 +7230,6 @@ SCIP_RETCODE propagateCons(
    assert(consdata != NULL);
 
    *cutoff = FALSE;
-#if 0
-   /* check, if constraint is already propagated */
-   if( consdata->propagated && (!tightenbounds || consdata->boundstightened) && SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-#endif
-   /* mark constraint as propagated */
-   consdata->propagated = TRUE;
 
    /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
    if( !SCIPconsIsModifiable(cons) )
@@ -14801,10 +14818,10 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(consdata != NULL);
 
       /* constraint should not be already presolved in the initial round */
-      assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || !consdata->propagated);
+      assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || SCIPconsIsMarkedPropagate(cons));
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || !consdata->boundstightened);
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || !consdata->presolved);
-      assert(consdata->propagated || !consdata->presolved);
+      assert(!SCIPconsIsMarkedPropagate(cons) || !consdata->presolved);
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, cons, &infeasible) );
@@ -14850,7 +14867,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
          /* mark constraint being presolved and propagated */
          consdata->presolved = TRUE;
-         consdata->propagated = TRUE;
+         SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
@@ -15563,7 +15580,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
       if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
       {
-         consdata->propagated = FALSE;
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
          /* reset maximal activity delta, so that it will be recalculated on the next real propagation */

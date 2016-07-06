@@ -177,7 +177,6 @@ struct SCIP_ConsData
    SCIP_Longint          capacity;           /**< capacity of knapsack */
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
-   unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
    unsigned int          presolvedtiming:5;  /**< max level in which the knapsack constraint is already presolved */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
@@ -641,7 +640,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->onesweightsum = 0;
    (*consdata)->ncliques = 0;
    (*consdata)->nnegcliques = 0;
-   (*consdata)->propagated = FALSE;
    (*consdata)->presolvedtiming = 0;
    (*consdata)->sorted = FALSE;
    (*consdata)->cliquepartitioned = FALSE;
@@ -735,7 +733,9 @@ SCIP_RETCODE consdataFree(
 
 /** changes a single weight in knapsack constraint data */
 static
-void consdataChgWeight(
+SCIP_RETCODE consdataChgWeight(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
    SCIP_CONSDATA*        consdata,           /**< knapsack constraint data */
    int                   item,               /**< item number */
    SCIP_Longint          newweight           /**< new weight of item */
@@ -743,8 +743,10 @@ void consdataChgWeight(
 {
    SCIP_Longint oldweight;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(0 <= item && item < consdata->nvars);
+   assert(SCIPconsGetData(cons) == consdata);
 
    oldweight = consdata->weights[item];
    consdata->weights[item] = newweight;
@@ -760,15 +762,21 @@ void consdataChgWeight(
       consdata->eventdata[item]->weight = newweight;
    }
 
-   consdata->propagated = FALSE;
-   consdata->presolvedtiming = 0;
-   consdata->sorted = FALSE;
-
-   /* recalculate cliques extraction after a weight was increased */
-   if( oldweight < newweight )
+   /* mark constraint to be propagated and presolved */
+   if( SCIPconsIsTransformed(cons) )
    {
-      consdata->cliquesadded = FALSE;
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      consdata->presolvedtiming = 0;
+      consdata->sorted = FALSE;
+
+      /* recalculate cliques extraction after a weight was increased */
+      if( oldweight < newweight )
+      {
+         consdata->cliquesadded = FALSE;
+      }
    }
+
+   return SCIP_OKAY;
 }
 
 /** creates LP row corresponding to knapsack constraint */
@@ -6259,6 +6267,11 @@ SCIP_RETCODE addCoef(
 
          if( !consdata->existmultaggr && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
             consdata->existmultaggr = TRUE;
+
+         /* mark constraint to be propagated and presolved */
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+         consdata->presolvedtiming = 0;
+         consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
       }
 
       /* update weight sums */
@@ -6271,9 +6284,6 @@ SCIP_RETCODE addCoef(
       consdata->negcliquepartitioned = FALSE;
       consdata->merged = FALSE;
    }
-   consdata->propagated = FALSE;
-   consdata->presolvedtiming = 0;
-   consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
 
    return SCIP_OKAY;
 }
@@ -6306,7 +6316,7 @@ SCIP_RETCODE delCoefPos(
    /* remove the rounding locks of variable */
    SCIP_CALL( unlockRounding(scip, cons, var) );
 
-   /* drop events */
+   /* drop events and mark constraint to be propagated and presolved */
    if( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -6318,6 +6328,10 @@ SCIP_RETCODE delCoefPos(
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             conshdlrdata->eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdata[pos]) );
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      consdata->presolvedtiming = 0;
+      consdata->sorted = (consdata->sorted && pos == consdata->nvars - 1);
    }
 
    /* update weight sums */
@@ -6335,10 +6349,6 @@ SCIP_RETCODE delCoefPos(
 
    /* release variable */
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-   consdata->propagated = FALSE;
-   consdata->presolvedtiming = 0;
-   consdata->sorted = (consdata->sorted && pos == consdata->nvars - 1);
 
    /* try to use old clique partitions */
    if( consdata->cliquepartitioned )
@@ -6618,7 +6628,7 @@ SCIP_RETCODE mergeMultiples(
          if( negated1 == negated2 )
          {
             /* variables var1 and var2 are equal: add weight of var1 to var2, and delete var1 */
-            consdataChgWeight(consdata, prev, consdata->weights[v] + consdata->weights[prev]);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, prev, consdata->weights[v] + consdata->weights[prev]) );
             SCIP_CALL( delCoefPos(scip, cons, v) );
          }
          /* variables var1 and var2 are opposite: subtract smaller weight from larger weight, reduce capacity,
@@ -6636,14 +6646,14 @@ SCIP_RETCODE mergeMultiples(
          else if( consdata->weights[v] < consdata->weights[prev] )
          {
             consdata->capacity -= consdata->weights[v];
-            consdataChgWeight(consdata, prev, consdata->weights[prev] - consdata->weights[v]);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, prev, consdata->weights[prev] - consdata->weights[v]) );
             assert(consdata->weights[prev] > 0);
             SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect var2, because var2 stands before var1 */
          }
          else
          {
             consdata->capacity -= consdata->weights[prev];
-            consdataChgWeight(consdata, v, consdata->weights[v] - consdata->weights[prev]);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, consdata->weights[v] - consdata->weights[prev]) );
             assert(consdata->weights[v] > 0);
             SCIP_CALL( delCoefPos(scip, cons, prev) ); /* attention: normally we lose our order */
             /* restore order iff necessary */
@@ -7532,7 +7542,8 @@ SCIP_RETCODE propagateCons(
       *redundant = TRUE;
    }
 
-   /* @todo unmark the constraint to be propagated only here? */
+   /* unmark the constraint to be propagated */
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -7697,7 +7708,7 @@ SCIP_RETCODE deleteRedundantVars(
       {
          for( w = splitpos; w >= 0; --w )
          {
-            consdataChgWeight(consdata, w, weights[w]/gcd);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, weights[w]/gcd) );
          }
          (*nchgcoefs) += nvars;
 
@@ -7825,7 +7836,7 @@ SCIP_RETCODE deleteRedundantVars(
             {
                for( w = splitpos; w >= 0; --w )
                {
-                  consdataChgWeight(consdata, w, weights[w]/gcd);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, weights[w]/gcd) );
                }
                (*nchgcoefs) += nvars;
 
@@ -8053,7 +8064,8 @@ SCIP_RETCODE detectRedundantVars(
 
 /** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
 static
-void normalizeWeights(
+SCIP_RETCODE normalizeWeights(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides           /**< pointer to count number of side changes */
@@ -8091,7 +8103,9 @@ void normalizeWeights(
       SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %" SCIP_LONGINT_FORMAT "\n", SCIPconsGetName(cons), gcd);
 
       for( i = 0; i < consdata->nvars; ++i )
-         consdataChgWeight(consdata, i, consdata->weights[i]/gcd);
+      {
+         SCIP_CALL( consdataChgWeight(scip, cons, consdata, i, consdata->weights[i]/gcd) );
+      }
       consdata->capacity /= gcd;
       (*nchgcoefs) += consdata->nvars;
       (*nchgsides)++;
@@ -8103,6 +8117,8 @@ void normalizeWeights(
 #endif
       consdata->sorted = TRUE;
    }
+
+   return SCIP_OKAY;
 }
 
 /** dual weights tightening for knapsack constraints
@@ -8260,7 +8276,7 @@ SCIP_RETCODE dualWeightsTightening(
          {
             if( weights[v] > newweight )
             {
-               consdataChgWeight(consdata, v, newweight);
+               SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                ++(*nchgcoefs);
             }
          }
@@ -8270,7 +8286,7 @@ SCIP_RETCODE dualWeightsTightening(
          {
             if( weights[v] > 1 )
             {
-               consdataChgWeight(consdata, v, 1LL);
+               SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, 1LL) );
                ++(*nchgcoefs);
             }
          }
@@ -8318,7 +8334,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                if( weights[v] > newweight )
                {
-                  consdataChgWeight(consdata, v, newweight);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                   ++(*nchgcoefs);
                }
             }
@@ -8328,7 +8344,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                if( weights[v] > 1 )
                {
-                  consdataChgWeight(consdata, v, 1LL);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, 1LL) );
                   ++(*nchgcoefs);
                }
             }
@@ -8381,7 +8397,7 @@ SCIP_RETCODE dualWeightsTightening(
          {
             if( weights[v] > newweight )
             {
-               consdataChgWeight(consdata, v, newweight);
+               SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                ++(*nchgcoefs);
             }
          }
@@ -8391,7 +8407,7 @@ SCIP_RETCODE dualWeightsTightening(
          {
             if( weights[v] > 1 )
             {
-               consdataChgWeight(consdata, v, 1LL);
+               SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, 1LL) );
                ++(*nchgcoefs);
             }
          }
@@ -8424,7 +8440,7 @@ SCIP_RETCODE dualWeightsTightening(
    while( weights[v] > dualcapacity )
    {
       reductionsum += (weights[v] - dualcapacity);
-      consdataChgWeight(consdata, v, dualcapacity);
+      SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, dualcapacity) );
       ++v;
       assert(v < nvars);
    }
@@ -8472,7 +8488,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                if( weights[w] > 2 )
                {
-                  consdataChgWeight(consdata, w, 2LL);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, 2LL) );
                   ++ncoefchg;
                }
                else
@@ -8488,7 +8504,7 @@ SCIP_RETCODE dualWeightsTightening(
             {
                if( weights[w] > 1 )
                {
-                  consdataChgWeight(consdata, w, 1LL);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, 1LL) );
                   ++ncoefchg;
                }
             }
@@ -8531,7 +8547,7 @@ SCIP_RETCODE dualWeightsTightening(
          while( weights[v] > newweight )
          {
             reductionsum += (weights[v] - newweight);
-            consdataChgWeight(consdata, v, newweight);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
             ++v;
             assert(v < nvars);
          }
@@ -8595,7 +8611,7 @@ SCIP_RETCODE dualWeightsTightening(
                {
                   if( weights[w] > 1 )
                   {
-                     consdataChgWeight(consdata, w, 1LL);
+                     SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, 1LL) );
                      ++(*nchgcoefs);
                   }
                }
@@ -8609,7 +8625,7 @@ SCIP_RETCODE dualWeightsTightening(
                {
                   if( weights[w] > newweight )
                   {
-                     consdataChgWeight(consdata, w, newweight);
+                     SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, newweight) );
                      ++(*nchgcoefs);
                   }
                   else
@@ -8623,7 +8639,7 @@ SCIP_RETCODE dualWeightsTightening(
                {
                   if( weights[w] > newweight )
                   {
-                     consdataChgWeight(consdata, w, newweight);
+                     SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, newweight) );
                      ++(*nchgcoefs);
                   }
                   else
@@ -8698,7 +8714,7 @@ SCIP_RETCODE dualWeightsTightening(
                      if( weights[v] > newweight )
                      {
                         reductionsum += (weights[v] - newweight);
-                        consdataChgWeight(consdata, v, newweight);
+                        SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                         ++(*nchgcoefs);
                      }
                   }
@@ -8714,7 +8730,7 @@ SCIP_RETCODE dualWeightsTightening(
                   /* multiply big coefficients by 2 */
                   for( w = 0; w < v; ++w )
                   {
-                     consdataChgWeight(consdata, w, weights[w] * 2);
+                     SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, weights[w] * 2) );
                   }
 
                   newweight = dualcapacity;
@@ -8722,13 +8738,13 @@ SCIP_RETCODE dualWeightsTightening(
                   for( ; v <= end; ++v )
                   {
                      reductionsum += (2 * weights[v] - newweight);
-                     consdataChgWeight(consdata, v, newweight);
+                     SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                   }
 
                   /* multiply small coefficients by 2 */
                   for( w = end + 1; w < nvars; ++w )
                   {
-                     consdataChgWeight(consdata, w, weights[w] * 2);
+                     SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, weights[w] * 2) );
                   }
                   (*nchgcoefs) += nvars;
 
@@ -8801,7 +8817,7 @@ SCIP_RETCODE dualWeightsTightening(
                while( weights[v] + minweight > dualcapacity && 2 * minweight <= dualcapacity )
                {
                   reductionsum += (weights[v] - newweight);
-                  consdataChgWeight(consdata, v, newweight);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                   ++v;
                   assert(v < nvars);
                }
@@ -8840,7 +8856,7 @@ SCIP_RETCODE dualWeightsTightening(
                while( weights[v] + minweight > dualcapacity && 2 * minweight <= dualcapacity )
                {
                   reductionsum += (weights[v] - newweight);
-                  consdataChgWeight(consdata, v, newweight);
+                  SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                   ++v;
                   assert(v < nvars);
                }
@@ -8887,7 +8903,7 @@ SCIP_RETCODE dualWeightsTightening(
                         if( weights[v] > newweight )
                         {
                            reductionsum += (weights[v] - newweight);
-                           consdataChgWeight(consdata, v, newweight);
+                           SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                            ++(*nchgcoefs);
                         }
                      }
@@ -8903,7 +8919,7 @@ SCIP_RETCODE dualWeightsTightening(
                      /* multiply big coefficients by 2 */
                      for( w = 0; w < v; ++w )
                      {
-                        consdataChgWeight(consdata, w, weights[w] * 2);
+                        SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, weights[w] * 2) );
                      }
 
                      newweight = dualcapacity;
@@ -8911,13 +8927,13 @@ SCIP_RETCODE dualWeightsTightening(
                      for( ; v <= end; ++v )
                      {
                         reductionsum += (2 * weights[v] - newweight);
-                        consdataChgWeight(consdata, v, newweight);
+                        SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, newweight) );
                      }
 
                      /* multiply small coefficients by 2 */
                      for( w = end + 1; w < nvars; ++w )
                      {
-                        consdataChgWeight(consdata, w, weights[w] * 2);
+                        SCIP_CALL( consdataChgWeight(scip, cons, consdata, w, weights[w] * 2) );
                      }
                      (*nchgcoefs) += nvars;
 
@@ -8964,7 +8980,7 @@ SCIP_RETCODE dualWeightsTightening(
       assert(!SCIPconsIsDeleted(cons));
 
       /* it might be that we can divide the weights by their greatest common divisor */
-      normalizeWeights(cons, nchgcoefs, nchgsides);
+      SCIP_CALL( normalizeWeights(scip, cons, nchgcoefs, nchgsides) );
    }
    else
    {
@@ -9188,7 +9204,7 @@ SCIP_RETCODE simplifyInequalities(
    {
       for( v = nvars - 1; v >= 0; --v )
       {
-         consdataChgWeight(consdata, v, weights[v]/gcd);
+         SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, weights[v]/gcd) );
       }
       (*nchgcoefs) += nvars;
 
@@ -9323,7 +9339,9 @@ SCIP_RETCODE simplifyInequalities(
 
          /* replace old big coefficients with new capacity */
          for( v = 0; v < offsetv; ++v )
-            consdataChgWeight(consdata, v, consdata->capacity);
+         {
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, consdata->capacity) );
+         }
 
          *nchgcoefs += offsetv;
          goto CONTINUE;
@@ -9358,7 +9376,9 @@ SCIP_RETCODE simplifyInequalities(
 
          /* replace old big coefficients with new capacity */
          for( v = 0; v < offsetv; ++v )
-            consdataChgWeight(consdata, v, consdata->capacity);
+         {
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, consdata->capacity) );
+         }
 
          *nchgcoefs += offsetv;
       }
@@ -9373,7 +9393,7 @@ SCIP_RETCODE simplifyInequalities(
       else
       {
          /* replace old with new coefficient */
-         consdataChgWeight(consdata, candpos, newweight);
+         SCIP_CALL( consdataChgWeight(scip, cons, consdata, candpos, newweight) );
       }
       ++(*nchgcoefs);
 
@@ -9385,7 +9405,7 @@ SCIP_RETCODE simplifyInequalities(
       /* now constraint can be normalized, dividing it by the gcd */
       for( v = nvars - 1; v >= 0; --v )
       {
-         consdataChgWeight(consdata, v, weights[v]/gcd);
+         SCIP_CALL( consdataChgWeight(scip, cons, consdata, v, weights[v]/gcd) );
       }
       (*nchgcoefs) += nvars;
 
@@ -10342,7 +10362,7 @@ SCIP_RETCODE tightenWeights(
             if( consdata->weightsum - weight < consdata->capacity )
             {
                newweight = consdata->weightsum - consdata->capacity;
-               consdataChgWeight(consdata, i, newweight);
+               SCIP_CALL( consdataChgWeight(scip, cons, consdata, i, newweight) );
                consdata->capacity -= (weight - newweight);
                (*nchgcoefs)++;
                (*nchgsides)++;
@@ -10445,7 +10465,7 @@ SCIP_RETCODE tightenWeights(
             SCIPdebugMessage("in constraint <%s> changing weight %" SCIP_LONGINT_FORMAT " to %" SCIP_LONGINT_FORMAT "\n",
                SCIPconsGetName(cons), maxweight, newweight);
 
-            consdataChgWeight(consdata, pos, newweight);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, pos, newweight) );
 
             ++pos;
             assert(pos < nvars);
@@ -10478,7 +10498,7 @@ SCIP_RETCODE tightenWeights(
             SCIPdebugMessage("in constraint <%s> changing weight %" SCIP_LONGINT_FORMAT " to %" SCIP_LONGINT_FORMAT "\n",
                SCIPconsGetName(cons), maxweight, newweight);
 
-            consdataChgWeight(consdata, pos, newweight);
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, pos, newweight) );
 
             break;
          }
@@ -10734,7 +10754,7 @@ SCIP_RETCODE tightenWeights(
                         /* apply the weight change */
                         SCIPdebugMessage(" -> change weight of <%s> from %" SCIP_LONGINT_FORMAT " to %" SCIP_LONGINT_FORMAT "\n",
                            SCIPvarGetName(consdata->vars[j]), consdata->weights[j], newweightvals[k]);
-                        consdataChgWeight(consdata, j, newweightvals[k]);
+                        SCIP_CALL( consdataChgWeight(scip, cons, consdata, j, newweightvals[k]) );
                         (*nchgcoefs)++;
                         assert(!consdata->sorted);
                         zeroweights = zeroweights || (newweightvals[k] == 0);
@@ -10817,7 +10837,7 @@ SCIP_RETCODE tightenWeights(
                SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %" SCIP_LONGINT_FORMAT " to %" SCIP_LONGINT_FORMAT "\n",
                   SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
                assert(consdata->sorted);
-               consdataChgWeight(consdata, i, consdata->capacity); /* this does not destroy the weight order! */
+               SCIP_CALL( consdataChgWeight(scip, cons, consdata, i, consdata->capacity) ); /* this does not destroy the weight order! */
                assert(i == 0 || consdata->weights[i-1] >= consdata->weights[i]);
                consdata->sorted = TRUE;
                (*nchgcoefs)++;
@@ -10840,7 +10860,7 @@ SCIP_RETCODE tightenWeights(
             SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %" SCIP_LONGINT_FORMAT " to %" SCIP_LONGINT_FORMAT "\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]), weight, consdata->capacity);
             assert(consdata->sorted);
-            consdataChgWeight(consdata, consdata->nvars-1, consdata->capacity); /* this does not destroy the weight order! */
+            SCIP_CALL( consdataChgWeight(scip, cons, consdata, consdata->nvars-1, consdata->capacity) ); /* this does not destroy the weight order! */
             assert(minweight >= consdata->weights[consdata->nvars-1]);
             consdata->sorted = TRUE;
             (*nchgcoefs)++;
@@ -12372,7 +12392,6 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
          assert(!(SCIPconsGetData(conss[i])->existmultaggr));
 #endif
 
-      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
       SCIP_CALL( propagateCons(scip, conss[i], &cutoff, &redundant, &nfixedvars, conshdlrdata->negatedclique) );
    }
 
@@ -12467,10 +12486,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       }
 
       /* propagate constraint */
-      if( !consdata->propagated )
+      if( SCIPconsIsMarkedPropagate(cons) )
       {
-         consdata->propagated = TRUE;
-
          SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars, (presoltiming & SCIP_PRESOLTIMING_MEDIUM)) );
 
          if( cutoff )
@@ -12504,7 +12521,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          }
 
          /* divide weights by their greatest common divisor */
-         normalizeWeights(cons, nchgcoefs, nchgsides);
+         SCIP_CALL( normalizeWeights(scip, cons, nchgcoefs, nchgsides) );
 
          /* try to simplify inequalities */
          if( conshdlrdata->simplifyinequalities && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
@@ -12944,7 +12961,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
       consdata->onesweightsum += eventdata->weight;
-      consdata->propagated = FALSE;
       consdata->presolvedtiming = 0;
       SCIP_CALL( SCIPmarkConsPropagate(scip, eventdata->cons) );
       break;
@@ -12955,7 +12971,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       /* if a variable is fixed to 0, it is possible that the constraint gets redundant
        * or that we can propagate based on negated clique information
        */
-      consdata->propagated = FALSE;
       consdata->presolvedtiming = 0;
       SCIP_CALL( SCIPmarkConsPropagate(scip, eventdata->cons) );
       break;

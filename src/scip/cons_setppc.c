@@ -141,7 +141,6 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
-   unsigned int          propagated:1;       /**< does this constraint need to be propagated? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
 };
 
@@ -594,7 +593,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->changed = TRUE;
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->merged = FALSE;
-   (*consdata)->propagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -868,9 +866,9 @@ SCIP_RETCODE catchEvent(
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
    {
       consdata->nfixedzeros++;
-      consdata->propagated = FALSE;
 
-      if( SCIPconsIsActive(cons) && consdata->nfixedzeros >= consdata->nvars - 1 )
+      if( SCIPconsIsActive(cons) && (consdata->nfixedzeros >= consdata->nvars - 1
+            || ((SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) && (consdata->nfixedzeros >= consdata->nvars - 2))) )
       {
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
       }
@@ -878,7 +876,6 @@ SCIP_RETCODE catchEvent(
    else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
    {
       consdata->nfixedones++;
-      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) )
       {
@@ -1091,6 +1088,12 @@ SCIP_RETCODE delCoefPos(
 
       /* drop bound change events of variable */
       SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+
+      /* the last variable of the constraint was deleted; mark it for propagation (so that it can be deleted) */
+      if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE && consdata->nvars == 1 )
+      {
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      }
    }
 
    /* delete coefficient from the LP row */
@@ -1911,8 +1914,6 @@ SCIP_RETCODE applyFixings(
  TERMINATE:
    /* all multi-aggregations should be resolved */
    consdata->existmultaggr = FALSE;
-
-   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -3048,13 +3049,13 @@ SCIP_RETCODE presolvePropagateCons(
    if( !SCIPconsIsActive(cons) )
       return SCIP_OKAY;
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( consdata->propagated )
+   if( !SCIPconsIsMarkedPropagate(cons) )
       return SCIP_OKAY;
 
-   consdata->propagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    vars = consdata->vars;
    nvars = consdata->nvars;
@@ -7842,7 +7843,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    cutoff = FALSE;
    inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
-   /* propagate all useful set partitioning / packing / covering constraints */
+   /* propagate all marked set partitioning / packing / covering constraints */
    for( c = nmarkedconss - 1; c >= 0 && !cutoff; --c )
    {
       assert(SCIPconsGetData(conss[c]) != NULL);
@@ -7869,6 +7870,8 @@ SCIP_DECL_CONSPROP(consPropSetppc)
       assert(inpresolve || ! SCIPconsGetData(conss[c])->existmultaggr);
 
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
+
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
    }
 
    /* return the correct result */
@@ -8579,14 +8582,12 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
       consdata->nfixedones++;
-      consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       consdata->nfixedones--;
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       consdata->nfixedzeros++;
-      consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       consdata->nfixedzeros--;
@@ -8624,7 +8625,9 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) && (consdata->nfixedones >= 1 || consdata->nfixedzeros >= consdata->nvars - 1) )
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) &&
+      (consdata->nfixedones >= 1 || consdata->nfixedzeros >= consdata->nvars - 1
+         || ((SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) && consdata->nfixedzeros >= consdata->nvars - 2)) )
    {
       SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }

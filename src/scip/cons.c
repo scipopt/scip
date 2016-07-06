@@ -7757,7 +7757,7 @@ SCIP_Bool SCIPconsIsMarkedPropagate(
 {
    assert(cons != NULL);
 
-   return cons->markpropagate;
+   return (cons->updatemarkpropagate || (cons->markpropagate && !cons->updateunmarkpropagate));
 }
 
 /** returns TRUE iff constraint should be propagated during node processing */
