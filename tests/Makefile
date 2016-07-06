@@ -69,10 +69,10 @@ src2obj		=	$(patsubst $(SRCDIR)%,$(OBJDIR)%,$(1:.c=.o))
 #-----------------------------------------------------------------------------
 
 
-BINDIRS 	= $(addprefix $(BINDIR)/, $(TESTDIRS))
+BINDIRS 	= 	$(addprefix $(BINDIR)/, $(TESTDIRS))
 #$(warning bindirs: $(BINDIRS))
 
-OBJDIRS 	= $(addprefix $(OBJDIR)/, $(TESTDIRS))
+OBJDIRS 	= 	$(addprefix $(OBJDIR)/, $(TESTDIRS))
 #$(warning objdirs: $(OBJDIRS))
 
 # remove the .c from UNITTESTSSRC: src/lpi/bases, src/cons/quadratic/gauge, etc
@@ -202,11 +202,10 @@ $(OBJDIR)/%.o:	%.cpp
 
 Criterion:
 	@echo "Criterion not found, building it"
-	git clone https://github.com/Snaipe/Criterion
-	cd Criterion; 			\
-	git checkout v2.2.2;	\
-	mkdir build;			\
-	cd build;				\
-	cmake ..;				\
+	git clone -b v2.2.2 https://github.com/Snaipe/Criterion
+	cd Criterion; \
+	mkdir build; \
+	cd build; \
+	cmake ..; \
 	make
 #---- EOF --------------------------------------------------------------------
