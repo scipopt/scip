@@ -77,10 +77,10 @@ namespace polyscip {
             facets_to_vertices_.insert({f, vector<const WeightSpaceVertex*>{}});
         }
         for (auto& v : v_rep) {
-            auto inc_facets = computeIncidentFacets(scip, initial_facets, v);
+            auto inc_facets = computeIncidentFacets(scip, initial_facets, *v);
             auto vertex = new WeightSpaceVertex(inc_facets,
-                                                v.moveWeight(),
-                                                v.getWov());
+                                                v->moveWeight(),
+                                                v->getWov());
             for (const auto& f : inc_facets) {
                 facets_to_vertices_[f].push_back(vertex);
             }

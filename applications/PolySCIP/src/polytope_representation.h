@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <functional> // std::reference_wrapper
 #include <iostream>
+#include <memory>
 #include <unordered_map>
 #include <ostream>
 #include <tuple> // std::tie
@@ -89,7 +90,7 @@ namespace polyscip {
             constexpr static double kNormalizingThreshold = 1e+5;
             bool shouldNormalize(double threshold) const;
             void normalize(double normalizing_val);
-            ValueType getSlack(std::size_t index) const {return inds_to_slacks_.at(index);}
+            ValueType getSlack(std::size_t index) const;
 
             void setSlacksAndMinInfeasInd(SCIP* scip, const H_RepContainer& h_rep);
 
@@ -100,17 +101,19 @@ namespace polyscip {
             std::bitset<kMaxInitialHrepSize> zero_slacks_;
         };
 
-        using V_RepContainer = std::vector<V_RepT>;
+        using V_RepContainer = std::vector<std::shared_ptr<V_RepT>>;
 
 
         class DoubleDescriptionMethod {
         public:
-            using AdjPair = std::pair<std::reference_wrapper<const V_RepT>, std::reference_wrapper<const V_RepT>>;
+            using AdjPair = std::pair<const V_RepT*, const V_RepT*>;
             using AdjPairContainer = std::vector<AdjPair>;
 
-            DoubleDescriptionMethod(SCIP *scip, const ResultContainer &bounded, const ResultContainer &unbounded);
+            explicit DoubleDescriptionMethod(SCIP *scip, const ResultContainer &bounded, const ResultContainer &unbounded);
 
             void computeVRep();
+
+            void computeVRep_Variation1() = delete;
 
             void printVRep(std::ostream &os = std::cout, bool withIncidentFacets = false) const;
 
@@ -144,7 +147,7 @@ namespace polyscip {
                                       const V_RepT& r2,
                                       std::size_t k,
                                       std::size_t i,
-                                      const V_RepContainer& v_rep);
+                                      const V_RepContainer& v_rep) = delete;
 
             bool rayPairIsAdjacent(std::size_t plus_index,
                                        std::size_t minus_index,
@@ -152,7 +155,7 @@ namespace polyscip {
 
             bool rayPairIsAdjacent(const V_RepT& r1,
                                    const V_RepT& r2,
-                                   const V_RepContainer& v_rep) const;
+                                   const V_RepContainer& v_rep) const = delete;
 
             /** Check whether first parameter is multiple of second or third parameter
              */
@@ -165,6 +168,8 @@ namespace polyscip {
 
             V_RepContainer extendVRep(V_RepContainer&& current_v_rep);
 
+            V_RepContainer extendVRep_Variation1(V_RepContainer&& current_v_rep) = delete;
+
             V_RepContainer extendVRep(std::vector<V_RepT> current_rep,
                                       const H_RepT &constraint,
                                       std::size_t index_of_constraint_in_hrep) = delete;
@@ -175,6 +180,7 @@ namespace polyscip {
             H_RepContainer h_rep_;
             V_RepContainer v_rep_;
             std::vector< AdjPairContainer > adj_pairs_;
+            std::size_t adj_pairs_ind_offset_;
         };
     }
 }
