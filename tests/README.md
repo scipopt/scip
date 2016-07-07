@@ -17,6 +17,8 @@ A unit test is an automated piece of code that invokes a unit of work in the sys
 
 Tests are organized into topic-specific directories in `src`. When writing new tests, find the directory that best suites your test, or create one if it doesn't already exist. For example, if a test is meant to illustrate a bug, place is in `src/bugs/`. Use `#include "include/scip_test.h"` to access Criterion and the `SCIP_CALL` macro. Ensure that this is the **last** included header.
 
+**NOTE** If your test needs `SCIP` code (eg, you are implementing a constraint handler in your test, see `src/cons/cons.c`), place `#include "include/scip_test.h"` after the SCIP code.
+
 Criterion comes with [fixtures](http://criterion.readthedocs.io/en/master/starter.html?highlight=fixture#fixtures) and [asserts](http://criterion.readthedocs.io/en/master/assert.html) built-in, and also supports [parameterized tests](http://criterion.readthedocs.io/en/master/parameterized.html).
 
 ### Examples
@@ -39,9 +41,9 @@ The easiest way to compile and run the tests is:
 make
 ```
 
-**NOTE** `SCIP` must be compiled with `IPOPT=true SHARED=true`. If `SoPlex` is used as LP solver, it must be compiled with `SHARED=true`
+**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg IPOPT=true SHARED=true`. You can specifiy a the LP solver used. If `SoPlex` is used as LP solver, it must be compiled with `SHARED=true`.
 
-This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`. PROTIP: pass the same flags that were used to compile SCIP to `make`. Also, `IPOPT=true` is required for all tests to pass.
+This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`.
 
 ## Run
 
