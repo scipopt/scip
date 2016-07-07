@@ -8356,7 +8356,7 @@ SCIP_RETCODE dualWeightsTightening(
    }
    else
    {
-      /* if the follwoing assert fails we have either a redundant constraint or a set-packing constraint, this should
+      /* if the following assert fails we have either a redundant constraint or a set-packing constraint, this should
        * not happen here
        */
       assert(vbig > 0 && vbig < nvars);
@@ -8442,24 +8442,30 @@ SCIP_RETCODE dualWeightsTightening(
    while( v < nvars && weights[v] == dualcapacity )
       ++v;
 
-   /* one negated variable is enough to fulfill the constraint, so we can update it to a logicor
+   /* any negated variable out of the first n - 1 items is enough to fulfill the constraint, so we can update it to a logicor
+    * after a possible removal of the last, redundant item
     *
     * e.g. 10x1 + 10x2 + 10x3 <= 20   <=>    10~x1 + 10~x2 + 10~x3 >= 10  <=>   ~x1 + ~x2 + ~x3 >= 1
     */
-   if( v == nvars )
+   if( v >= nvars - 1 )
    {
+      /* the last weight is not enough to satisfy the dual capacity -> remove this redundant item */
+      if( v == nvars - 1 )
+      {
+         SCIP_CALL( delCoefPos(scip, cons, nvars - 1) );
+      }
       SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
       assert(SCIPconsIsDeleted(cons));
 
       return SCIP_OKAY;
    }
-   else if( v < nvars - 1 )
+   else /* v < nvars - 1 <=> at least two items with weight smaller than the dual capacity */
    {
       /* @todo generalize the following algorithm for more than two variables */
 
       if( weights[nvars - 1] + weights[nvars - 2] >= dualcapacity )
       {
-         /* we have a dual-knapsack constraint were we either need to choose one variable out of a subset (big
+         /* we have a dual-knapsack constraint where we either need to choose one variable out of a subset (big
           * coefficients) of all or two variables of the rest
           *
           * e.g. 9x1 + 9x2 + 6x3 + 4x4 <= 19   <=>    9~x1 + 9~x2 + 6~x3 + 4~x4 >= 9
@@ -9091,7 +9097,7 @@ SCIP_RETCODE prepareCons(
  *
  *     -8~x1 - 8~x2 - 7~x3 - 5~x4 - 5~x5 <= -12   <=>   8x1 + 8x2 + 7x3 + 5x4 + 5x5 <= 20
  *
- *  2. if variables in a constraint do not affect the (in-)feasibility of the constraint, we can delte them, e.g.
+ *  2. if variables in a constraint do not affect the (in-)feasibility of the constraint, we can delete them, e.g.
  *
  *     7x1 + 6x2 + 5x3 + 5x4 + x5 + x6 <= 20 => x5 and x6 are redundant and can be removed
  *
