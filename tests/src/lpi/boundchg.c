@@ -88,7 +88,7 @@ Test(boundchg, change_bound_by_small_value)
    cr_assert_float_eq(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
 }
 
-Test(boundchg, fix_to_infinity)
+Test(boundchg, fix_to_infinity, .disabled = true)
 {
    SCIP_Real lb;
    SCIP_Real ub;

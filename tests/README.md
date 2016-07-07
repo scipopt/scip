@@ -39,9 +39,9 @@ The easiest way to compile and run the tests is:
 make
 ```
 
-**NOTE** `SCIP` must be compiled with `IPOPT=true SHARED=true`. If `SoPlex` is used as LP solver, it must be compiled with `SHARED=true`
+**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg IPOPT=true SHARED=true`. You can specifiy a the LP solver used. If `SoPlex` is used as LP solver, it must be compiled with `SHARED=true`.
 
-This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`. PROTIP: pass the same flags that were used to compile SCIP to `make`. Also, `IPOPT=true` is required for all tests to pass.
+This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`.
 
 ## Run
 
