@@ -58,7 +58,7 @@ namespace polyscip {
          *  @param wov_coeff coefficient for weighted objective value
          */
         explicit WeightSpaceFacet(OutcomeType outcome,
-                                  ValueType wov_coeff);
+                         ValueType wov_coeff);
 
         /** Creates the weight space facet w_i >= 0
          *  @param num_objs number of objectives of given problem

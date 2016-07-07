@@ -26,8 +26,9 @@ namespace polyscip {
 
     WeightSpaceFacet::WeightSpaceFacet(OutcomeType outcome,
                                        ValueType wov_coeff)
-            : w_coeffs_(outcome),
-              wov_coeff_{wov_coeff} { }
+            : w_coeffs_(std::move(outcome)),
+              wov_coeff_(std::move(wov_coeff)) { }
+
 
     ValueType WeightSpaceFacet::getWeightedWeight(const WeightType& weight) const {
         assert (weight.size() == w_coeffs_.size());

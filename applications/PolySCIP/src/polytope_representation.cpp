@@ -21,6 +21,7 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -30,7 +31,6 @@
 #include "PolySCIPConfig.h"
 
 using std::make_shared;
-using std::pair;
 using std::size_t;
 using std::vector;
 
@@ -38,9 +38,9 @@ namespace polyscip {
 
     namespace polytoperepresentation {
 
-        V_RepT::V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepContainer& h_rep)
-                : weight_(std::move(weight)),
-                  wov_(std::move(wov)),
+        V_RepT::V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepC& h_rep)
+                : weight_(weight),
+                  wov_(wov),
                   min_infeas_ind_(false, 0)
         {
             if (shouldNormalize(kNormalizingThreshold))
@@ -53,7 +53,7 @@ namespace polyscip {
                        const V_RepT& plus,
                        const V_RepT& minus,
                        size_t index_of_ineq,
-                       const H_RepContainer& h_rep)
+                       const H_RepC& h_rep)
                 : min_infeas_ind_(false, 0)
         {
             auto m_coeff = plus.getSlack(index_of_ineq);
@@ -96,7 +96,11 @@ namespace polyscip {
             return zero_slacks_.test(index);
         }
 
-        void V_RepT::setSlacksAndMinInfeasInd(SCIP* scip, const H_RepContainer& h_rep) {
+        bool V_RepT::hasNonZeroWeight() const {
+            return std::any_of(weight_.cbegin(), weight_.cend(), [](const ValueType& val){return val != 0.;});
+        }
+
+        void V_RepT::setSlacksAndMinInfeasInd(SCIP* scip, const H_RepC& h_rep) {
             for (size_t i=0; i<h_rep.size(); ++i) {
                 auto result = std::inner_product(weight_.cbegin(), weight_.cend(),
                                                  h_rep[i].first.cbegin(), -(h_rep[i].second * wov_));
@@ -132,7 +136,7 @@ namespace polyscip {
             wov_ /= normalizing_val;
         }
 
-        void V_RepT::print(std::ostream& os, bool withIncidentFacets, const H_RepContainer& h_rep) const {
+        void V_RepT::print(std::ostream& os, bool withIncidentFacets, const H_RepC& h_rep) const {
             global::print(weight_, "Weight = [", "]", os);
             os << " Coeff = " << wov_ << "\n";
             if (withIncidentFacets) {
@@ -164,7 +168,7 @@ namespace polyscip {
             for (size_t i=0; i<outcome_dimension_; ++i) {
                 auto unit_vec = OutcomeType(outcome_dimension_, 0.);
                 unit_vec[i] = 1.;
-                h_rep_.push_back({std::move(unit_vec), 0.});  // add constraint: e_i 0 >= 0 with e_i being i-th unit vector
+                h_rep_.emplace_back(std::move(unit_vec), 0.);  // add constraint: e_i 0 >= 0 with e_i being i-th unit vector
             }
             for (const auto &bd : bounded_results) {
                 h_rep_.emplace_back(bd.second, 1.); // add constraint; bd_outcome -1 >= 0
@@ -175,30 +179,34 @@ namespace polyscip {
             }
         }
 
-        std::pair<bool, size_t> DoubleDescriptionMethod::minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const {
+        /*std::tuple<bool, DoubleDescriptionMethod::VarOrder, size_t> DoubleDescriptionMethod::minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const {
             auto minInfeasInd1 = r1.getMinInfeasIndex();
             auto minInfeasInd2 = r2.getMinInfeasIndex();
             if (minInfeasInd1 < minInfeasInd2 && !r2.isZeroSlackIndex(minInfeasInd1)) {
                 assert (current_hrep_index_ < minInfeasInd1 && minInfeasInd1 < h_rep_.size());
-                return {true, minInfeasInd1};
+                return {true, VarOrder::keep_var_order, minInfeasInd1};
+            }
+            else if (minInfeasInd2 < minInfeasInd1 && !r1.isZeroSlackIndex(minInfeasInd2)) {
+                assert (current_hrep_index_ < minInfeasInd2 && minInfeasInd2 < h_rep_.size());
+                return {true, VarOrder::change_var_order, minInfeasInd2};
             }
             else {
-                return {false, 0};
+                return {false, VarOrder::keep_var_order, 0};
             }
-        }
+        }*/
 
-        /*void DoubleDescriptionMethod::conditionalStoreEdge(const V_RepT& r1,
-                                                           const V_RepT& r2,
+        /*void DoubleDescriptionMethod::conditionalStoreEdge(const V_RepT& plus,
+                                                           const V_RepT& minus,
                                                            size_t k,
                                                            size_t i,
-                                                           const V_RepContainer& v_rep) {
+                                                           const V_RepC& v_rep) {
             assert (i <= k);
             for (auto index=i+1; index<k; ++index) {
-                if (r1.isZeroSlackIndex(index) && r2.isZeroSlackIndex(index))
+                if (plus.isZeroSlackIndex(index) && minus.isZeroSlackIndex(index))
                     return;
             }
-            if (rayPairIsAdjacent(r1, r2, v_rep)) {
-                adj_pairs_.at(k-adj_pairs_ind_offset_).push_back({&r2, &r1});
+            if (rayPairIsAdjacent(plus, minus, v_rep)) {
+                adj_pairs_.at(k-adj_pairs_ind_offset_).push_back({std::cref(plus), std::cref(minus)});
             }
         }*/
 
@@ -209,98 +217,75 @@ namespace polyscip {
 
         void DoubleDescriptionMethod::computeVRep() {
             auto current_v_rep = computeInitialVRep();
-
             ++current_hrep_index_;
             while (current_hrep_index_ < h_rep_.size()) {
                 current_v_rep = extendVRep(std::move(current_v_rep));
                 ++current_hrep_index_;
             }
-
-            assert (v_rep_.empty());
-            auto scip_ptr = scip_;
-            std::remove_copy_if(
-                    begin(current_v_rep),   // copy all elements from current_v_rep with non-zero weights to v_rep_
-                    end(current_v_rep),
-                    std::back_inserter(v_rep_),
-                    [scip_ptr](const std::shared_ptr<V_RepT>& v) {
-                        return SCIPisZero(scip_ptr, std::accumulate(begin(v->weight_),
-                                                                    end(v->weight_),
-                                                                    0.0));
-                    });
-            assert (v_rep_.size() + 1 == current_v_rep.size()); // assert that only (0,0,...,0,-1) was removed
+            v_rep_ = current_v_rep;
         }
 
-        /*void DoubleDescriptionMethod::computeVRep_Variation1() {
+        /*void DoubleDescriptionMethod::applyInfeasCondition(const V_RepT& r1,
+                                                           const V_RepT& r2,
+                                                           const V_RepC& v_rep) {
+            auto infeasTuple = minInfeasCondition(r1, r2);
+            if (std::get<0>(infeasTuple)) {
+                if (std::get<1>(infeasTuple) == VarOrder::keep_var_order){
+                    conditionalStoreEdge(r1, r2, std::get<2>(infeasTuple), current_hrep_index_, v_rep);
+                }
+                else {
+                    conditionalStoreEdge(r2, r1, std::get<2>(infeasTuple), current_hrep_index_, v_rep);
+                }
+            }
+        }*/
+
+        /*void DoubleDescriptionMethod::computeVRep_Var1() {
             auto current_v_rep = computeInitialVRep();
 
             for (auto r1_it=begin(current_v_rep); r1_it!=std::prev(end(current_v_rep)); ++r1_it) {
                 for (auto r2_it=std::next(r1_it); r2_it!=end(current_v_rep); ++r2_it) {
-                    auto minInfeasPair = minInfeasCondition(*r1_it, *r2_it);
-                    if (minInfeasPair.first) {
-                        conditionalStoreEdge(*r1_it, *r2_it, minInfeasPair.second, current_hrep_index_, current_v_rep);
-                    }
-                    else {
-                        minInfeasPair = minInfeasCondition(*r2_it, *r1_it);
-                        if (minInfeasPair.first)
-                            conditionalStoreEdge(*r2_it, *r1_it, minInfeasPair.second, current_hrep_index_, current_v_rep);
-                    }
+                    const V_RepT& r1 = r1_it->operator*();
+                    const V_RepT& r2 = r2_it->operator*();
+                    applyInfeasCondition(r1, r2, current_v_rep);
                 }
             }
 
             ++current_hrep_index_;
             while (current_hrep_index_ < h_rep_.size()) {
                 std::cout << "current h_rep index = " << current_hrep_index_ << "\n";
-                current_v_rep = extendVRep_Variation1(std::move(current_v_rep));
+                current_v_rep = extendVRep_Var1(std::move(current_v_rep));
                 ++current_hrep_index_;
             }
-
-            assert (v_rep_.empty());
-            auto scip_ptr = scip_;
-            std::remove_copy_if(
-                    begin(current_v_rep),   // copy all elements from current_v_rep with non-zero weights to v_rep_
-                    end(current_v_rep),
-                    std::back_inserter(v_rep_),
-                    [scip_ptr](const V_RepT &v) {
-                        return SCIPisZero(scip_ptr, std::accumulate(begin(v.weight_),
-                                                                    end(v.weight_),
-                                                                    0.0));
-                    });
-            assert (v_rep_.size() + 1 == current_v_rep.size()); // assert that only (0,0,...,0,-1) was removed
-        }
+            v_rep_ = current_v_rep;
+        }*/
 
 
-        V_RepContainer DoubleDescriptionMethod::extendVRep_Variation1(V_RepContainer&& cur_v_rep) {
-            auto extended_v_rep = V_RepContainer {};
+        /*V_RepC DoubleDescriptionMethod::extendVRep_Var1(V_RepC&& current_v_rep) {
 
-            const H_RepT& constraint = h_rep_[current_hrep_index_];
+            auto extended_v_rep = V_RepC{};
+            const H_RepT& h = h_rep_[current_hrep_index_];
 
-            for (const auto& v_rep : cur_v_rep) { // partition current v-representation
-                auto result = std::inner_product(v_rep.weight_.cbegin(), v_rep.weight_.cend(),
-                                                 constraint.first.cbegin(), -(v_rep.wov_ * constraint.second));
-
+            for (const auto& v : current_v_rep) { // partition current v-representation
+                auto result = std::inner_product(v->weight_.cbegin(), v->weight_.cend(),
+                                                 h.first.cbegin(), -(v->wov_ * h.second));
                 if (SCIPisZero(scip_, result)) {
-                    extended_v_rep.push_back(v_rep); // element will also be in extended v-representation
+                    extended_v_rep.push_back(v); // element will also be in extended v-representation
                 }
                 else if (SCIPisPositive(scip_, result)) {
-                    extended_v_rep.push_back(v_rep);
+                    extended_v_rep.push_back(v);
                 }
             }
 
             for (auto p : adj_pairs_[current_hrep_index_-adj_pairs_ind_offset_]) {
-                extended_v_rep.emplace_back(scip_, *(p.first), *(p.second), current_hrep_index_, h_rep_);
+                extended_v_rep.emplace_back(scip_, p.first.get(), p.second.get(), current_hrep_index_, h_rep_);
             }
-            for (auto r1=extended_v_rep.cbegin(); r1!=std::prev(extended_v_rep.cend()); ++r1) {
-                for (auto r2=std::next(r1); r2!=extended_v_rep.cend(); ++r2) {
-                    if (r1->isZeroSlackIndex(current_hrep_index_) && r2->isZeroSlackIndex(current_hrep_index_)) {
-                        auto minInfeasPair = minInfeasCondition(*r1, *r2);
-                        if (minInfeasPair.first) {
-                            conditionalStoreEdge(*r1, *r2, minInfeasPair.second, current_hrep_index_, extended_v_rep);
-                        }
-                        else {
-                            auto minInfeasPair = minInfeasCondition(*r2, *r1);
-                            if (minInfeasPair.first)
-                                conditionalStoreEdge(*r2, *r1, minInfeasPair.second, current_hrep_index_, extended_v_rep);
-                        }
+
+            for (auto r1_it=extended_v_rep.cbegin(); r1_it!=std::prev(extended_v_rep.cend()); ++r1_it) {
+                for (auto r2_it=std::next(r1_it); r2_it!=extended_v_rep.cend(); ++r2_it) {
+                    const V_RepT& r1 = r1_it->operator*();
+                    const V_RepT& r2 = r2_it->operator*();
+                    if (r1.isZeroSlackIndex(current_hrep_index_) && r2.isZeroSlackIndex(current_hrep_index_)) {
+                        applyInfeasCondition(r1, r2, extended_v_rep);
                     }
                 }
             }
@@ -308,10 +293,10 @@ namespace polyscip {
             return extended_v_rep;
         }*/
 
-        V_RepContainer DoubleDescriptionMethod::extendVRep(V_RepContainer&& cur_v_rep) {
-            auto extended_v_rep = V_RepContainer {};
-            auto plus_inds = vector<std::size_t> {};
-            auto minus_inds = vector<std::size_t> {};
+        /*V_RepC DoubleDescriptionMethod::extendVRep(V_RepC&& cur_v_rep) {
+            auto extended_v_rep = V_RepC{};
+            auto plus_inds = vector<std::size_t>{};
+            auto minus_inds = vector<std::size_t>{};
             const H_RepT& constraint = h_rep_[current_hrep_index_];
 
             for (size_t i = 0; i < cur_v_rep.size(); ++i) { // partition current v-representation
@@ -336,11 +321,57 @@ namespace polyscip {
                 extended_v_rep.push_back(cur_v_rep[i]);
 
             return extended_v_rep;
+        }*/
+
+
+        V_RepC DoubleDescriptionMethod::extendVRep(V_RepC&& cur_v_rep) {
+            auto extended_v_rep = V_RepC{};
+            auto plus = V_RepC{};
+            auto minus = V_RepC{};
+            const H_RepT& hrep = h_rep_[current_hrep_index_];
+
+            for (const auto& v : cur_v_rep) {
+                auto result = std::inner_product(v->weight_.cbegin(), v->weight_.cend(),
+                                                 hrep.first.cbegin(), -(v->wov_ * hrep.second));
+                if (SCIPisNegative(scip_, result)) {
+                    minus.push_back(v);
+                }
+                else if (SCIPisZero(scip_, result)) {
+                    extended_v_rep.push_back(std::move(v)); // element will also be in extended v-representation
+                }
+                else {
+                    assert(SCIPisPositive(scip_, result));
+                    plus.push_back(v);
+                }
+            }
+
+            auto adj_pairs = computeAdjacentPairs(plus, minus, cur_v_rep);
+            for (const auto& p : adj_pairs)
+                extended_v_rep.push_back(make_shared<V_RepT>(scip_, p.first.get(), p.second.get(), current_hrep_index_, h_rep_));
+
+            for (const auto& p : plus)
+                extended_v_rep.push_back(std::move(p));
+
+            return extended_v_rep;
         }
 
-        vector<pair<size_t, size_t>> DoubleDescriptionMethod::computeAdjacentPairs(const vector<size_t> &plus_inds,
+        DoubleDescriptionMethod::AdjPairContainer DoubleDescriptionMethod::computeAdjacentPairs(const V_RepC& plus,
+                                                                                                const V_RepC& minus,
+                                                                                                const V_RepC& current_v_rep) const {
+            auto adj_pairs = AdjPairContainer{};
+            for (const auto& p_ptr : plus) {
+                for (const auto& m_ptr : minus) {
+                    assert (*p_ptr != *m_ptr);
+                    if (rayPairIsAdjacent(*p_ptr, *m_ptr, current_v_rep))
+                        adj_pairs.push_back({std::cref(*p_ptr), std::cref(*m_ptr)});
+                }
+            }
+            return adj_pairs;
+        }
+
+        /*vector<pair<size_t, size_t>> DoubleDescriptionMethod::computeAdjacentPairs(const vector<size_t> &plus_inds,
                                                                                    const vector<size_t> &minus_inds,
-                                                                                   const V_RepContainer& cur_v_rep) const {
+                                                                                   const V_RepC& cur_v_rep) const {
             auto adj_pairs = vector<pair<size_t, size_t>> {};
             for (const auto& plus : plus_inds) {
                 for (const auto& minus : minus_inds) {
@@ -350,16 +381,16 @@ namespace polyscip {
                 }
             }
             return adj_pairs;
-        }
+        }*/
 
         std::bitset<V_RepT::kMaxInitialHrepSize> DoubleDescriptionMethod::getCommonZeroSlackIndices(const V_RepT &v,
                                                                                                     const V_RepT &w) const {
             return v.zero_slacks_ & w.zero_slacks_;
         }
 
-        bool DoubleDescriptionMethod::rayPairIsAdjacent(size_t index1,
+        /*bool DoubleDescriptionMethod::rayPairIsAdjacent(size_t index1,
                                                         size_t index2,
-                                                        const V_RepContainer& cur_v_rep) const {
+                                                        const V_RepC& cur_v_rep) const {
 
             auto common_zero_inds = getCommonZeroSlackIndices(*cur_v_rep[index1], *cur_v_rep[index2]);
 
@@ -367,33 +398,33 @@ namespace polyscip {
                 if (i == index1 || i == index2)
                     continue;
                 else if (cur_v_rep[i]->hasZeroIndsSuperSet(common_zero_inds)) {
-                    /* check whether current_rep[i] is multiple of current_rep[index1] or current_rep[index2] */
+                    *//* check whether current_rep[i] is multiple of current_rep[index1] or current_rep[index2] *//*
                     if (!isMultiple(*cur_v_rep[i], *cur_v_rep[index1]) &&
                         !isMultiple(*cur_v_rep[i], *cur_v_rep[index2]))
                         return false;
                 }
             }
             return true;
-        }
+        }*/
 
 
-        /*bool DoubleDescriptionMethod::rayPairIsAdjacent(const V_RepT& ray1,
+        bool DoubleDescriptionMethod::rayPairIsAdjacent(const V_RepT& ray1,
                                                         const V_RepT& ray2,
-                                                        const V_RepContainer& v_rep) const {
+                                                        const V_RepC& v_rep) const {
             auto common_zero_inds = getCommonZeroSlackIndices(ray1, ray2);
 
-            for (const auto& ray : v_rep) {
-                if (ray == ray1 || ray == ray2) {
+            for (const auto& ray_sptr : v_rep) {
+                if (ray1 == *ray_sptr || ray2 == *ray_sptr) {
                     continue;
                 }
-                else if (ray.hasZeroIndsSuperSet(common_zero_inds)) {
-                    *//* check whether current_rep[i] is multiple of current_rep[index1] or current_rep[index2] *//*
-                    if (!isMultiple(ray, ray1) && !isMultiple(ray, ray2))
+                else if (ray_sptr->hasZeroIndsSuperSet(common_zero_inds)) {
+                    /* check whether current_rep[i] is multiple of current_rep[index1] or current_rep[index2] */
+                    if (!isMultiple(*ray_sptr, ray1) && !isMultiple(*ray_sptr, ray2))
                         return false;
                 }
             }
             return true;
-        }*/
+        }
 
 
         //todo Check function thoroughly
@@ -452,9 +483,9 @@ namespace polyscip {
         }
 
 
-        V_RepContainer DoubleDescriptionMethod::computeInitialVRep() const {
+        V_RepC DoubleDescriptionMethod::computeInitialVRep() const {
             // create initial v_rep
-            auto init_v_rep = V_RepContainer {};
+            auto init_v_rep = V_RepC{};
             init_v_rep.push_back(make_shared<V_RepT>(scip_, WeightType(outcome_dimension_, 0.), -1., h_rep_)); // add v_rep: 0 0 ... 0 -1
             for (size_t i=0; i<outcome_dimension_; ++i) {
                 auto unit_vec = WeightType(outcome_dimension_, 0.);

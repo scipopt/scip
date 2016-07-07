@@ -43,7 +43,7 @@ namespace polyscip {
     namespace polytoperepresentation {
 
         using H_RepT = std::pair<OutcomeType, ValueType>;
-        using H_RepContainer = std::vector<H_RepT>;
+        using H_RepC = std::vector<H_RepT>;
 
         class V_RepT {
         public:
@@ -54,21 +54,21 @@ namespace polyscip {
 
             V_RepT(WeightType weight, ValueType wov) = delete;
 
-            explicit V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepContainer& current_h_rep);
+            explicit V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepC& current_h_rep);
 
             explicit V_RepT(SCIP* scip,
                             const V_RepT& v,
                             const V_RepT& w,
                             std::size_t index_of_constraint_in_hrep,
-                            const H_RepContainer& current_h_rep);
-
+                            const H_RepC& current_h_rep);
 
             inline bool operator==(const V_RepT& rhs) const;
 
             inline bool operator!=(const V_RepT& rhs) const;
 
-            void print(std::ostream& os, bool withIncidentFacets, const H_RepContainer& h_rep) const;
+            void print(std::ostream& os, bool withIncidentFacets, const H_RepC& h_rep) const;
 
+            bool hasNonZeroWeight() const;
 
             //todo incorporate way for facets when WSP is not full-dimensional
 
@@ -82,7 +82,7 @@ namespace polyscip {
             bool isZeroSlackIndex(std::size_t index) const;
 
             WeightType&& moveWeight() {return std::move(weight_);};
-            WeightType getWeight() const {return weight_;};
+            //WeightType getWeight() const {return weight_;};
             ValueType getWov() const {return wov_;};
 
         private:
@@ -92,7 +92,7 @@ namespace polyscip {
             void normalize(double normalizing_val);
             ValueType getSlack(std::size_t index) const;
 
-            void setSlacksAndMinInfeasInd(SCIP* scip, const H_RepContainer& h_rep);
+            void setSlacksAndMinInfeasInd(SCIP* scip, const H_RepC& h_rep);
 
             WeightType weight_;
             ValueType wov_;
@@ -101,30 +101,31 @@ namespace polyscip {
             std::bitset<kMaxInitialHrepSize> zero_slacks_;
         };
 
-        using V_RepContainer = std::vector<std::shared_ptr<V_RepT>>;
+        using V_RepC = std::vector<std::shared_ptr<V_RepT>>;
 
 
         class DoubleDescriptionMethod {
         public:
-            using AdjPair = std::pair<const V_RepT*, const V_RepT*>;
+            using AdjPair = std::pair<std::reference_wrapper<const V_RepT>, std::reference_wrapper<const V_RepT>>;
             using AdjPairContainer = std::vector<AdjPair>;
 
             explicit DoubleDescriptionMethod(SCIP *scip, const ResultContainer &bounded, const ResultContainer &unbounded);
 
             void computeVRep();
 
-            void computeVRep_Variation1() = delete;
+            //void computeVRep_Var1();
 
             void printVRep(std::ostream &os = std::cout, bool withIncidentFacets = false) const;
 
             std::size_t size() const { return v_rep_.size(); };
 
-            V_RepContainer getVRep() const { return v_rep_; };
-
-            H_RepContainer getHRep() const { return h_rep_; };
+            H_RepC&& moveHRep() {return std::move(h_rep_);};
+            V_RepC&& moveVRep() {return std::move(v_rep_);};
 
         private:
             using SlackContainer = std::vector<std::vector<std::size_t>>;
+
+            enum class VarOrder {keep_var_order, change_var_order};
 
             /** Computes initial v-representation for the following h-representation:
              * 1) bounded \cdot (w_1,...,w_k) - a >= 0
@@ -132,53 +133,61 @@ namespace polyscip {
              * ...
              * k+1) w_k >= 0
              */
-            void computeInitialRep(const OutcomeType &bounded) = delete;
-            V_RepContainer computeInitialVRep() const;
+            //void computeInitialRep(const OutcomeType &bounded) = delete;
+            V_RepC computeInitialVRep() const;
 
             //std::vector<std::size_t> getCommonZeroSlackIndices(const V_RepT& v, const V_RepT& w) const;
 
             std::bitset<V_RepT::kMaxInitialHrepSize> getCommonZeroSlackIndices(const V_RepT &v, const V_RepT &w) const;
 
-            std::pair<bool, std::size_t> minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const;
+            //std::tuple<bool, VarOrder, std::size_t> minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const;
+
+            //void applyInfeasCondition(const V_RepT& r1, const V_RepT& r2, const V_RepC& current_v_rep);
 
             /* see function description in DoubleDescriptionRevisited
              */
-            void conditionalStoreEdge(const V_RepT& r1,
+            /*void conditionalStoreEdge(const V_RepT& r1,
                                       const V_RepT& r2,
                                       std::size_t k,
                                       std::size_t i,
-                                      const V_RepContainer& v_rep) = delete;
+                                      const V_RepC& v_rep);*/
 
-            bool rayPairIsAdjacent(std::size_t plus_index,
+            /*bool rayPairIsAdjacent(std::size_t plus_index,
                                        std::size_t minus_index,
-                                       const V_RepContainer& current_v_rep) const;
+                                       const V_RepC& current_v_rep) const;*/
 
             bool rayPairIsAdjacent(const V_RepT& r1,
                                    const V_RepT& r2,
-                                   const V_RepContainer& v_rep) const = delete;
+                                   const V_RepC& v_rep) const;
 
             /** Check whether first parameter is multiple of second or third parameter
              */
             bool isMultiple(const V_RepT& v, const V_RepT& w) const;
             bool weightIsMultiple(SCIP* scip, double v_multiple, const V_RepT& v, const V_RepT& w) const;
 
-            std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs(const std::vector<std::size_t>& plus_inds,
+            /*std::vector<std::pair<std::size_t, std::size_t>> computeAdjacentPairs(const std::vector<std::size_t>& plus_inds,
                                                                                       const std::vector<std::size_t>& minus_inds,
-                                                                                      const V_RepContainer& current_rep) const;
+                                                                                      const V_RepC& current_rep) const;*/
 
-            V_RepContainer extendVRep(V_RepContainer&& current_v_rep);
 
-            V_RepContainer extendVRep_Variation1(V_RepContainer&& current_v_rep) = delete;
+            AdjPairContainer computeAdjacentPairs(const V_RepC& plus,
+                                                  const V_RepC& minus,
+                                                  const V_RepC& current_v_rep) const;
 
-            V_RepContainer extendVRep(std::vector<V_RepT> current_rep,
+            //V_RepC extendVRep(V_RepC&& current_v_rep);
+            V_RepC extendVRep(V_RepC&& current_v_rep);
+
+            V_RepC extendVRep_Var1(V_RepC&& current_v_rep) = delete;
+
+            /*V_RepC extendVRep(std::vector<V_RepT> current_rep,
                                       const H_RepT &constraint,
-                                      std::size_t index_of_constraint_in_hrep) = delete;
+                                      std::size_t index_of_constraint_in_hrep) = delete;*/
 
             SCIP *scip_;
             std::size_t outcome_dimension_;
             std::size_t current_hrep_index_;
-            H_RepContainer h_rep_;
-            V_RepContainer v_rep_;
+            H_RepC h_rep_;
+            V_RepC v_rep_;
             std::vector< AdjPairContainer > adj_pairs_;
             std::size_t adj_pairs_ind_offset_;
         };

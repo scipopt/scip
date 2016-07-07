@@ -57,10 +57,10 @@ namespace polyscip {
         assert (!v_rep.empty());
         assert (!h_rep.empty());
         //createInitialFacets(h_rep);
-        createInitialVerticesAndSkeleton(scip, h_rep, v_rep);
+        createInitialVerticesAndSkeleton(scip, std::move(h_rep), std::move(v_rep));
     }
 
-    /*void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepContainer h_rep) {
+    /*void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepC h_rep) {
         for (auto& h : h_rep) {
             facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
         }
@@ -71,28 +71,30 @@ namespace polyscip {
                                                                  V_RepC v_rep) {
         auto initial_facets = FacetContainer {};
         for (auto& h : h_rep) {
-            initial_facets.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
+            initial_facets.emplace_back(make_shared<WeightSpaceFacet>(std::move(h.first), std::move(h.second)));  //todo check for std::move in computeSupported...
         }
         for (const auto& f : initial_facets) {
             facets_to_vertices_.insert({f, vector<const WeightSpaceVertex*>{}});
         }
         for (auto& v : v_rep) {
-            auto inc_facets = computeIncidentFacets(scip, initial_facets, *v);
-            auto vertex = new WeightSpaceVertex(inc_facets,
-                                                v->moveWeight(),
-                                                v->getWov());
-            for (const auto& f : inc_facets) {
-                facets_to_vertices_[f].push_back(vertex);
+            if (v->hasNonZeroWeight()) { // do not consider (0,0,...,0 | -1)
+                //auto inc_facets = computeIncidentFacets(scip, initial_facets, *v);
+                auto inc_facets = getIncidentFacets(*v, initial_facets);
+                auto vertex = new WeightSpaceVertex(inc_facets,
+                                                    v->moveWeight(),
+                                                    v->getWov());
+                for (const auto &f : inc_facets) {
+                    facets_to_vertices_[f].push_back(vertex);
+                }
+                auto node = skeleton_.addNode();
+                nodes_to_vertices_[node] = vertex;
+                vertices_to_nodes_.insert({vertex, node});
+                if (vertex->hasUnitWeight())
+                    marked_vertices_.push_back(vertex);
+                else
+                    unmarked_vertices_.push_back(vertex);
             }
-            auto node = skeleton_.addNode();
-            nodes_to_vertices_[node] = vertex;
-            vertices_to_nodes_.insert({vertex, node});
-            if (vertex->hasUnitWeight())
-                marked_vertices_.push_back(vertex);
-            else
-                unmarked_vertices_.push_back(vertex);
         }
-
         for (Graph::NodeIt node(skeleton_); node != lemon::INVALID; ++node) {
             for (Graph::NodeIt succ_node(node); succ_node != lemon::INVALID; ++succ_node) {
                 if (succ_node != node && areAdjacent(getVertex(node), getVertex(succ_node)))
@@ -101,7 +103,17 @@ namespace polyscip {
         }
     }
 
-    WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
+    WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::getIncidentFacets(const V_RepT& v,
+                                                                                   const FacetContainer& initial_facets) const {
+        auto facets = FacetContainer{};
+        for (size_t i=0; i<initial_facets.size(); i++) {
+            if (v.isZeroSlackIndex(i))
+                facets.push_back(initial_facets[i]);
+        }
+        return facets;
+    }
+
+    /*WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
                                                                                        const FacetContainer& initial_facets,
                                                                                        const polytoperepresentation::V_RepT& v) const {
         auto facets = FacetContainer {};
@@ -110,7 +122,7 @@ namespace polyscip {
                 facets.push_back(f);
         }
         return facets;
-    }
+    }*/
 
     WeightSpacePolyhedron::~WeightSpacePolyhedron() {
         for (auto v_ptr : marked_vertices_)
@@ -217,9 +229,9 @@ namespace polyscip {
 
         auto new_vertices = vector<WeightSpaceVertex*> {};
         auto new_edges = vector< pair<WeightSpaceVertex*, WeightSpaceVertex*> > {}; // pair: new vertex, adjacent vertex
-        for (const auto& pair : obs_nonobs_pairs) { // create new vertices between obsolete and non-obsolete vertices
-            auto obs_vertex= pair.first;
-            auto non_obs_vertex = pair.second;
+        for (const auto& v_pair : obs_nonobs_pairs) { // create new vertices between obsolete and non-obsolete vertices
+            auto obs_vertex = v_pair.first;
+            auto non_obs_vertex = v_pair.second;
             double obs_coeff = non_obs_vertex->computeSlack(outcome, outcome_is_ray);
             double non_obs_coeff = obs_vertex->computeSlack(outcome, outcome_is_ray);
             if (obs_coeff > -1e-6 && non_obs_coeff < 1e-6) {

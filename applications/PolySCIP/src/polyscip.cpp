@@ -139,8 +139,8 @@ namespace polyscip {
                 std::cout << "Starting initializing WSP...";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
                                                                                 considered_objs_.size(),
-                                                                                v_rep.getVRep(),
-                                                                                v_rep.getHRep());
+                                                                                v_rep.moveVRep(),
+                                                                                v_rep.moveHRep());
                 std::cout << "...finished.\n";
                 polyscip_status_ = PolyscipStatus::WeightSpacePhase;
             }
@@ -307,8 +307,7 @@ namespace polyscip {
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
                     if (SCIPgetPrimalbound(scip_)+cmd_line_args_.getEpsilon() < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
                         SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
-                        auto last_added_outcome = supported_.back().second; //was added by handleStatus
-                        weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(), untested_weight, last_added_outcome);
+                        weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(), untested_weight, supported_.back().second);
                     }
                     else {
                         weight_space_poly_->incorporateKnownOutcome(untested_weight);

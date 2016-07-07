@@ -47,8 +47,9 @@
 
 namespace polyscip {
 
-    using V_RepC = polytoperepresentation::V_RepContainer;
-    using H_RepC = polytoperepresentation::H_RepContainer;
+    using V_RepT = polytoperepresentation::V_RepT;
+    using V_RepC = polytoperepresentation::V_RepC;
+    using H_RepC = polytoperepresentation::H_RepC;
     class WeightSpaceVertex;
 
     /** 1-skeleton of the (partial) weight space polyhedron. */
@@ -158,7 +159,10 @@ namespace polyscip {
 
         FacetContainer computeIncidentFacets(SCIP* scip,
                                              const FacetContainer& initial_facets,
-                                             const polytoperepresentation::V_RepT& v) const;
+                                             const V_RepT& v) const = delete;
+
+        FacetContainer getIncidentFacets(const V_RepT& v,
+                                         const FacetContainer& initial_facets) const;
 
         void updateWeightSpacePolyhedron(double epsilon,
                                          const OutcomeType& outcome,
