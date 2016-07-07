@@ -48,7 +48,7 @@ BEGIN  {
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    useshortnames = 1;        # should problem name be truncated to fit into column?
-   namelength = 18;          # maximal length of instance names (can be increased)
+   namelength = 30;          # maximal length of instance names (can be increased)
    writesolufile = 0;        # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
    infty = 1e+20;
@@ -80,6 +80,7 @@ BEGIN  {
 /^\* SOLVER/     { solver=$2; }
 /^\* TIMELIMIT/  { timelimit=$2; }
 /^\* SETTINGS/   { settings=$2; }
+/^\* GAPLIMIT/   { gaplimit=$2; }
 /^\*/  { next; } # skip other comments and invalid problems
 /^ *$/ { next; } # skip empty lines
 
@@ -174,6 +175,15 @@ END {
      # if model status says "infeasible", set dual bound to correct infinity
      if( modstat[m] == 4 || modstat[m] == 10 || modstat[m] == 19 )
        dualbnd[m] = maxobj[m] ? -infty : +infty;
+     # if model status says "unbounded", set primal and dual bound to correct infinity
+     if( modstat[m] == 3 )
+       primalbnd[m] = dualbnd[m] = maxobj[m] ? +infty : -infty;
+
+     # if CNS model status says solved, then overwrite primal and dual bound
+     if( modstat[m] == 15 || modstat[m] == 16 || modstat[m] == 17 ) {
+       primalbnd[m] = 0.0;
+       dualbnd[m] = 0.0;
+     }
 
      db = dualbnd[m];
      pb = primalbnd[m];
@@ -190,9 +200,7 @@ END {
      # we consider iteration limit reached as node limit reached, because there is no extra status for node limits
      nodelimreached = (solstat[m] == 2);
 
-     # TODO consider gaplimit
-     gapreached = 0;
-     
+     gapreached = 0;  # we consider gaplimit reaching as solved and not hitting a limit, so gapreached will remain 0
      timeout = 0;
 
      if( !onlyinsolufile || solstatus[prob] != "" )  {
@@ -222,8 +230,10 @@ END {
          gap = -1.0;
       else
          gap = 100.0*abs((pb-db)/min(abs(db),abs(pb)));
-       if( gap < 0.0 )
+       if( gap < 0.0 ) {
+         gap = 1.0;
          gapstr = "  --  ";
+       }
        else if( gap < 1e+04 )
          gapstr = sprintf("%6.1f", gap);
        else
@@ -283,6 +293,10 @@ END {
                status = "ok";
                pass++;
              }
+             else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit ) {
+               status = "ok";
+               pass++;
+             }
              else {
                status = "fail";
                failtime += tottime;
@@ -323,6 +337,10 @@ END {
                status = "solved not verified";
                pass++;
              }
+             else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit ) {
+               status = "solved not verified";
+               pass++;
+             }
              else {
                status = "fail";
                failtime += tottime;
@@ -353,6 +371,10 @@ END {
 	     }
 	  }
 	  else if( abs(pb - db) <= max(abstol, reltol) ) {
+	     status = "solved not verified";
+	     pass++;
+	  }
+	  else if( (gap <= 105*gaplimit) ) {
 	     status = "solved not verified";
 	     pass++;
 	  }
@@ -393,6 +415,10 @@ END {
 	     timeouts++;
 	  }
 	  else if( abs(pb - db) < max(abstol,reltol) ) {
+	     status = "solved not verified";
+	     pass++;
+	  }
+	  else if( (gap <= 105*gaplimit) ) {
 	     status = "solved not verified";
 	     pass++;
 	  }
@@ -456,7 +482,7 @@ END {
    shiftednodegeom -= nodegeomshift;
    shiftedtimegeom -= timegeomshift;
    
-   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("------------------------------+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n");
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
