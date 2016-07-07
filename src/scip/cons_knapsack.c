@@ -97,7 +97,7 @@
 #define DEFAULT_DETECTLOWERBOUND TRUE   /**< should presolving try to detect constraints parallel to the objective
                                          *   function defining a lower bound and prevent these constraints from
                                          *   entering the LP */
-#define DEFAULT_CLIQUEEXTRACTFACTOR 0.8 /**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
+#define DEFAULT_CLIQUEEXTRACTFACTOR 0.5 /**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
