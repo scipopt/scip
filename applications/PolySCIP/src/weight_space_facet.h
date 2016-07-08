@@ -44,6 +44,7 @@ namespace polyscip {
             }
         };
 
+
         /*static bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
                                       const std::shared_ptr<const WeightSpaceFacet>& f2) {
             return std::tie(f1->wov_coeff_, f1->w_coeffs_) <
@@ -71,6 +72,9 @@ namespace polyscip {
         void print(std::ostream& os) const;
 
         bool hasNonZeroWOVCoeff() const {return wov_coeff_ != 0;};
+
+        OutcomeType::const_iterator coeffsBegin() const {return w_coeffs_.cbegin();};
+        OutcomeType::const_iterator coeffsEnd() const {return w_coeffs_.cend();};
 
         ValueType getWeightedWeight(const WeightType& weight) const;
 

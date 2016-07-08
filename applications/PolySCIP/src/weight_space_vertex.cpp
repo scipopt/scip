@@ -17,6 +17,7 @@
 #include <algorithm> // std::copy, std::set_intersection, std::sort
 #include <cstddef>
 #include <iterator>  // std::back_inserter
+#include <limits>
 #include <memory> //std::shared
 #include <numeric>   // std::inner_product;
 #include <ostream>
@@ -114,6 +115,31 @@ namespace polyscip {
 
     WeightType WeightSpaceVertex::getWeight() const {
         return weight_;
+    }
+
+    OutcomeType WeightSpaceVertex::getIncFacetsBounds(std::function<ValueType()> limit,
+                                                      std::function<ValueType(const ValueType&, const ValueType&)> cmp) const {
+        auto bounds = OutcomeType(weight_.size(), limit());
+        for (const auto& f : incident_facets_) {
+            if (f->hasNonZeroWOVCoeff()) {
+                std::transform(f->coeffsBegin(),
+                               f->coeffsEnd(),
+                               bounds.begin(),
+                               bounds.begin(),
+                               cmp);
+            }
+        }
+        return bounds;
+    }
+
+    OutcomeType WeightSpaceVertex::getIncFacetsLowerBounds() const {
+        return getIncFacetsBounds([](){return std::numeric_limits<ValueType>::max();},
+                                  [](const ValueType& val1, const ValueType& val2){return std::min(val1, val2);});
+    }
+
+    OutcomeType WeightSpaceVertex::getIncFacetsUpperBounds() const {
+        return getIncFacetsBounds([](){return std::numeric_limits<ValueType>::min();},
+                                  [](const ValueType& val1, const ValueType& val2){return std::max(val1, val2);});
     }
 
     double WeightSpaceVertex::getWeightedOutcome(const OutcomeType& outcome) const {

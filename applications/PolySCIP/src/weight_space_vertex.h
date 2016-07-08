@@ -27,6 +27,7 @@
 #define POLYSCIP_SRC_WEIGHT_SPACE_VERTEX_H_INCLUDED
 
 #include <cstddef>
+#include <functional>
 #include <iosfwd>
 #include <memory> // std::shared_ptr
 #include <vector>
@@ -80,6 +81,8 @@ namespace polyscip {
 
         double computeSlack(const OutcomeType& outcome, bool outcome_is_ray) const;
 
+        OutcomeType getIncFacetsBounds(std::function<ValueType()> limit,
+                                       std::function<ValueType(const ValueType&, const ValueType&)> cmp) const;
         OutcomeType getIncFacetsLowerBounds() const;
         OutcomeType getIncFacetsUpperBounds() const;
 

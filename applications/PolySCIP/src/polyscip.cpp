@@ -214,9 +214,10 @@ namespace polyscip {
     }
 
     SCIP_RETCODE Polyscip::handleOptimalStatus(bool check_if_new_result) {
+        std::cout << "handleOptimalStatus\n";
         auto best_sol = SCIPgetBestSol(scip_);
-        SCIP_SOL *finite_sol = nullptr;
-        SCIP_Bool same_obj_val = FALSE;
+        SCIP_SOL *finite_sol{nullptr};
+        SCIP_Bool same_obj_val{FALSE};
         SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
         if (!same_obj_val) {
             auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -

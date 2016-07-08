@@ -119,7 +119,7 @@ namespace polyscip {
             if (v->hasUnitWeight())
                 continue;
             //todo
-            
+
         }
         return constraint_container;
     }
