@@ -124,11 +124,19 @@ namespace polyscip {
     }
 
     SCIP_RETCODE Polyscip::computeUnsupported() {
-
+        auto constraint_pairs = weight_space_poly_->getConstraintsForUnsupported();
+        for (const auto& item : constraint_pairs) {
+            if (item.first != item.second)
+                SCIP_CALL( computeUnsupported(scip_, item.first, item.second) );
+        }
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::computeUnsupported(SCIP* scip, const vector<OutcomeType>& constraints) {
+    SCIP_RETCODE Polyscip::computeUnsupported(SCIP* scip, const OutcomeType& upper_bound, const OutcomeType& ref_point) {
+        std::cout << "upper_bound: ";
+        global::print(upper_bound);
+        std::cout << " ref_point: ";
+        global::print(ref_point, "", "\n");
         return SCIP_OKAY;
     }
 

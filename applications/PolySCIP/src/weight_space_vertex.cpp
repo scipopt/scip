@@ -138,7 +138,7 @@ namespace polyscip {
     }
 
     OutcomeType WeightSpaceVertex::getIncFacetsUpperBounds() const {
-        return getIncFacetsBounds([](){return std::numeric_limits<ValueType>::min();},
+        return getIncFacetsBounds([](){return std::numeric_limits<ValueType>::lowest();},
                                   [](const ValueType& val1, const ValueType& val2){return std::max(val1, val2);});
     }
 
