@@ -102,7 +102,7 @@ namespace polyscip {
 
         //void addEdgesToSkeleton() = delete {addEdgesToSkeleton(unmarked_vertices_);};
 
-        void printFacets() const;
+        std::vector<std::vector<OutcomeType>> getConstraintsForUnsupported() const;
 
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
@@ -142,14 +142,13 @@ namespace polyscip {
 
         using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
         using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
-        using FacetMap = std::map<std::shared_ptr<const WeightSpaceFacet>, std::vector<const WeightSpaceVertex*>, WeightSpaceFacet::Compare>;
+        /*using FacetMapValueT = std::vector<const WeightSpaceVertex*>;
+        using FacetMap = std::map<std::shared_ptr<const WeightSpaceFacet>, FacetMapValueT , WeightSpaceFacet::Compare>;*/
 
         bool vertexIsObsolete(double epsilon,
                               const WeightSpaceVertex* vertex,
                               const OutcomeType& outcome,
                               bool outcome_is_ray) const;
-
-
 
         void createInitialFacets(H_RepC h_rep) = delete;
 
@@ -181,7 +180,7 @@ namespace polyscip {
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
-        void setStatusToObsolete(WeightSpaceVertex* v);
+        void removeFromUnmarkedVertices(WeightSpaceVertex *v);
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
 
@@ -215,7 +214,7 @@ namespace polyscip {
         NodeMap nodes_to_vertices_;
         /**< maps vertices to nodes */
         VertexMap vertices_to_nodes_;
-        FacetMap facets_to_vertices_;
+        //FacetMap facets_to_vertices_;
         //FacetContainer facets_;
 
 

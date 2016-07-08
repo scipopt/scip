@@ -108,7 +108,9 @@ namespace polyscip {
         SCIP_RETCODE computeSupported();
 
         /** Computes the unsupported solutions and corresponding non-dominated points */
-        void computeUnsupported() = delete;
+        SCIP_RETCODE computeUnsupported();
+
+        SCIP_RETCODE computeUnsupported(SCIP* scip, const std::vector<OutcomeType>& constraints);
 
         void printSol(const SolType& sol, std::ostream& os) const;
 

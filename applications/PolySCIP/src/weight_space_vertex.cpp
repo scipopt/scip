@@ -38,7 +38,8 @@ namespace polyscip {
                                          WeightType weight,
                                          ValueType weighted_obj_val,
                                          bool sort_facets)
-            : incident_facets_(std::move(incident_facets)),
+            : is_obsolete_(false),
+              incident_facets_(std::move(incident_facets)),
               weight_(std::move(weight)),
               weighted_obj_val_{weighted_obj_val} {
         if (sort_facets) // sort facets in order to be able to use std::set_intersection in other constructor
@@ -81,7 +82,9 @@ namespace polyscip {
                                          const WeightSpaceVertex* obs,
                                          const WeightSpaceVertex* non_obs,
                                          const shared_ptr<const WeightSpaceFacet>& incident_facet,
-                                         std::size_t wsp_dimension) {
+                                         std::size_t wsp_dimension)
+            : is_obsolete_(false)
+    {
         assert (obs != non_obs);
         // get intersection of facets of obs and non_obs
         std::set_intersection(obs->incident_facets_.cbegin(),
@@ -107,8 +110,6 @@ namespace polyscip {
                        [normalize_val](const ValueType &val) { return val / normalize_val; });
         weighted_obj_val_ = obs_coeff*obs->weighted_obj_val_ - non_obs_coeff*non_obs->weighted_obj_val_; // return m_coeff * ray_minus - p_coeff * ray_plus
         weighted_obj_val_ /= normalize_val;
-
-
     }
 
     WeightType WeightSpaceVertex::getWeight() const {

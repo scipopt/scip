@@ -70,6 +70,8 @@ namespace polyscip {
          */
         void print(std::ostream& os) const;
 
+        bool hasNonZeroWOVCoeff() const {return wov_coeff_ != 0;};
+
         ValueType getWeightedWeight(const WeightType& weight) const;
 
         ValueType getWOVCoeff() const {return wov_coeff_;};

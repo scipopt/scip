@@ -87,10 +87,10 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::computeNondomPoints() {
         SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
         SCIP_CALL( computeSupported() );
-        cout << "supported computation done\n";
-        if (cmd_line_args_.withUnsupported()) {
-            ; // check whether problem is not pure lp
+        if (cmd_line_args_.withUnsupported() && polyscip_status_ == PolyscipStatus::CompUnsupportedPhase) {
+            SCIP_CALL( computeUnsupported() );
         }
+        deleteWeaklyNondomResults();
         SCIP_CALL( SCIPstopClock(scip_, clock_total_) );
         return SCIP_OKAY;
     }
@@ -123,7 +123,14 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    SCIP_RETCODE Polyscip::computeUnsupported() {
 
+        return SCIP_OKAY;
+    }
+
+    SCIP_RETCODE Polyscip::computeUnsupported(SCIP* scip, const vector<OutcomeType>& constraints) {
+        return SCIP_OKAY;
+    }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
         SCIP_CALL( computeUnitWeightOutcomes() ); // computes optimal outcomes for all unit weights
@@ -299,33 +306,54 @@ namespace polyscip {
             std::cout << "Starting weight space phase...\n";
             while (weight_space_poly_->hasUntestedWeight()) {
                 auto untested_weight = weight_space_poly_->getUntestedWeight();
+                std::cout << "new weight: ";
+                global::print(untested_weight);
                 SCIP_CALL( setWeightedObjective(untested_weight) );
+                std::cout << "solving...";
                 SCIP_CALL( solve() );
+                std::cout << "...finished\n";
                 auto scip_status = SCIPgetStatus(scip_);
+                std::cout << "STATUS = " << scip_status << "\n";
                 if (scip_status == SCIP_STATUS_INFORUNBD)
                     scip_status = separateINFORUNBD(untested_weight);
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
                     if (SCIPgetPrimalbound(scip_)+cmd_line_args_.getEpsilon() < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
                         SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
-                        weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(), untested_weight, supported_.back().second);
+                        std::cout << "incorporating new outcome...";
+                        weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(),
+                                                                  untested_weight,
+                                                                  supported_.back().second); // was added by handleOptimalStatus()
+                        std::cout << "...finished.\n";
                     }
                     else {
+                        std::cout << "incorporating old outcome...";
                         weight_space_poly_->incorporateKnownOutcome(untested_weight);
+                        std::cout << "...finished.\n";
                     }
                 }
                 else if (scip_status == SCIP_STATUS_UNBOUNDED) {
                     SCIP_CALL( handleUnboundedStatus() ); //adds unbounded result to unbounded_
-                    auto last_added_outcome = unbounded_.back().second; //was added by handleStatus
-                    weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(), untested_weight, last_added_outcome, true);
+                    std::cout << "incorporating unbounded outcome...";
+                    weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(),
+                                                              untested_weight,
+                                                              unbounded_.back().second, // was added by handleUnboundedStatus()
+                                                              true);
+                    std::cout << "...finished.\n";
                 }
                 else {
                     SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) ); //polyscip_status_ is set to finished or time limit reached
                     return SCIP_OKAY;
                 }
             }
-            polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
+            std::cout << "...finished.\n";
+            //weight_space_poly_->printMarkedVertices(std::cout, true);
+            if (SCIPgetNOrigContVars(scip_) == SCIPgetNOrigVars(scip_)) {   //check whether there exists integer variables
+                polyscip_status_ = PolyscipStatus::Finished;
+            }
+            else {
+                polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
+            }
         }
-        deleteWeaklyNondomResults();
         return SCIP_OKAY;
     }
 

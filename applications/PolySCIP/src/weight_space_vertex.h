@@ -80,12 +80,17 @@ namespace polyscip {
 
         double computeSlack(const OutcomeType& outcome, bool outcome_is_ray) const;
 
+        OutcomeType getIncFacetsLowerBounds() const;
+        OutcomeType getIncFacetsUpperBounds() const;
+
         /** Checks whether weight of vertex corresponds to unit weight
          * @param index index of 1 in unit weight
          * @return true if weight of vertex is unit weight with 1 at index; false otherwise
          */
         bool hasUnitWeight() const;
 
+        bool isObsolete() const {return is_obsolete_;};
+        void setObsolete() {is_obsolete_ = true;};
 
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
@@ -115,6 +120,7 @@ namespace polyscip {
                                                            const WeightType& weight1,
                                                            const WeightType& weight2);
 
+        bool is_obsolete_;
         /**< incident facets */
         WeightSpacePolyhedron::FacetContainer incident_facets_;
         /**< used weight */
