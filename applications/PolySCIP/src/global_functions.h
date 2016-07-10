@@ -21,6 +21,7 @@
 #ifndef POLYSCIP_SRC_GLOBAL_FUNCTIONS_H_INCLUDED
 #define POLYSCIP_SRC_GLOBAL_FUNCTIONS_H_INCLUDED
 
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
@@ -67,13 +68,14 @@ namespace polyscip {
          */
         template<typename Container>
         void print(const Container &container,
-                   std::string prefix = "",
-                   std::string suffix = "",
+                   const std::string& prefix = "",
+                   const std::string& suffix = "",
                    std::ostream &os = std::cout,
-                   int prec = 5) {
+                   const std::function<typename Container::value_type(typename Container::value_type)>& func = [](typename Container::value_type val){return val;},
+                   int prec = 9) {
             os << std::setprecision(prec) << prefix;
             for (const auto &elem : container)
-                os << elem << " ";
+                os << func(elem) << " ";
             os << suffix;
         }
 

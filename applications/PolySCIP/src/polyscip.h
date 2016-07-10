@@ -49,7 +49,7 @@ namespace polyscip {
 
         void writeSupportedResults() const;
 
-        void writeExtFile() const;
+        void writeFileForVertexEnumeration() const;
 
         void printSupportedResults(std::ostream& os = std::cout, bool withSolution = true) const;
 

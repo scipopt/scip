@@ -618,7 +618,7 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    void Polyscip::writeExtFile() const {
+    void Polyscip::writeFileForVertexEnumeration() const {
         auto prob_file = cmd_line_args_.getProblemFile();
         size_t prefix = prob_file.find_last_of("/"), //separate path/ and filename.mop
                 suffix = prob_file.find_last_of("."),      //separate filename and .mop
@@ -631,8 +631,10 @@ namespace polyscip {
             solfs << "V-representation\n";
             solfs << "begin\n";
             solfs << supported_.size() + unbounded_.size() << " " << considered_objs_.size() + 1 << " rational\n";
-            for (const auto& elem : supported_)
-                global::print(elem.second, "1 ", "\n", solfs);
+            auto integral = true;
+            for (const auto& elem : supported_) {
+                global::print(elem.second, "1 ", "\n", solfs, [](ValueType val) { return round(val); });
+            }
             solfs << "end\n";
             solfs.close();
         }
