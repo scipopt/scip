@@ -28,6 +28,19 @@
 #define VALUE_PRECEDENCE     10000
 #define VALUE_HASHKEY        SCIPcalcFibHash(36787)
 
+/** the order of two values is the real order */
+static
+SCIP_DECL_CONSEXPR_EXPRCMP(compareValue)
+{
+   SCIP_Real val1;
+   SCIP_Real val2;
+
+   val1 = SCIPgetConsExprExprValueValue(expr1);
+   val2 = SCIPgetConsExprExprValueValue(expr2);
+
+   return val1 < val2 ? -1 : val1 == val2 ? 0 : 1;
+}
+
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
 {
@@ -140,6 +153,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashValue) );

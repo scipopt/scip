@@ -101,16 +101,52 @@ SCIP_RETCODE getVarExprs(
    }                                             \
    while( FALSE )
 
+/** macro to print the argument of the assertion */
+#define ASSERT(x)                                \
+   do                                            \
+   {                                             \
+      printf("Checking: " #x "\n");              \
+      assert((x));                               \
+   }                                             \
+   while( FALSE )
+
 /** macro to check interval of an expression */
 #define CHECK_EXPRINTERVAL(scip,expr,a,b) (SCIPisEQ((scip), SCIPgetConsExprExprInterval((expr)).inf, (a)) && SCIPisEQ((scip), SCIPgetConsExprExprInterval((expr)).sup, (b)))
 
 /* BIG = 75000 produces a seg fault because of stack overflow */
-#define BIG 100
+#define BIG 20
 
 /*
  * Local methods for tests
  */
 
+static
+SCIP_RETCODE parsePrintSimplifyPrint(SCIP* scip, SCIP_CONSHDLR* conshdlr, const char* input, const char* endtype)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+
+   printf("Simplifying: %s\n", input);
+   /* parse */
+   assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) == SCIP_OKAY);
+
+   /* print structure */
+   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+
+   /* simplify */
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &expr) );
+
+   /* print structure */
+   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+
+   /* should assert value and that it is of value type */
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), endtype) == 0);
+
+
+   /* release both expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * TESTS
@@ -557,6 +593,10 @@ SCIP_RETCODE testParse(void)
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"donothave(<x> ", NULL, &e) == SCIP_READERROR);
 
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"val(1) ", NULL, &e) == SCIP_READERROR);
+
+      #ifdef FAILING_TESTS
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>+2<y> ", NULL, &e) == SCIP_READERROR);
+      #endif
 
       SCIPmessageSetErrorPrintingDefault();
    }
@@ -2867,6 +2907,490 @@ SCIP_RETCODE testGetVarExprs(void)
    return SCIP_OKAY;
 }
 
+/** test comparison method
+ * @note: expressions should be simplified! */
+static
+SCIP_RETCODE testCompare(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   conshdlr = NULL;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 2.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -1.0, 2.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* x+y < x*y*(x+y) */
+   {
+      SCIP_CONSEXPR_EXPR* expr_x; /* x */
+      SCIP_CONSEXPR_EXPR* expr_y; /* y */
+      SCIP_CONSEXPR_EXPR* expr_z; /* z */
+      SCIP_CONSEXPR_EXPR* expr_posvalue; /* 1.3 */
+      SCIP_CONSEXPR_EXPR* expr_negvalue; /* -12.58 */
+      SCIP_CONSEXPR_EXPR* expr_sum; /* x + y */
+      SCIP_CONSEXPR_EXPR* expr_prod; /* x */
+      SCIP_CONSEXPR_EXPR* expr_halfx; /* 0.5 * x */
+      SCIP_CONSEXPR_EXPR* expr_sqrtx; /* \sqrt x */
+      SCIP_CONSEXPR_EXPR* expr_half_sqrx; /* 0.5 * x^2 */
+      SCIP_CONSEXPR_EXPR* expr_sqrx; /* x^2 */
+      SCIP_CONSEXPR_EXPR* expr_sum_fracpow; /* (x+y)^3.2 */
+      SCIP_CONSEXPR_EXPR* expr_subprod_fracpow; /* x*(y*(x+y))^2.8 */
+      SCIP_CONSEXPR_EXPR* lin_expr1;
+      SCIP_CONSEXPR_EXPR* lin_expr2;
+      SCIP_CONSEXPR_EXPR* tmp;
+      SCIP_Real aux;
+
+      /* create expressions for negative and positive values */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_posvalue, 1.3) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_negvalue, -12.58) );
+
+      /* create expressions for variables x and y */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_z, z) );
+
+      /* create expression x+y */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 1, &expr_x, NULL, 0.0) );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr_sum, expr_y, 1.0) );
+
+      /* create expression (x+y)^3.2 */
+      aux = 3.2;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_sum_fracpow, 1, &expr_sum, &aux, 1.0) );
+
+      /* create expression 0.5*x */
+      /* SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_halfx, 1, &expr_x, NULL, 0.5) ); */ /*this is not simplified*/
+      aux = 0.5;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_halfx, 1, &expr_x, &aux, 0.0) );
+
+      /* create expression sqrt(x) */
+      aux = 0.5;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_sqrtx, 1, &expr_x, &aux, 1.0) );
+
+      /* create expression x^2 */
+      aux = 2.0;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_sqrx, 1, &expr_x, &aux, 1.0) );
+
+      /* create expression 0.5*x^2 */
+      aux = 0.5;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_half_sqrx, 1, &expr_sqrx, &aux, 0.0) );
+
+      /* create expression x*y*(x+y) */
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_x, NULL, 1.0) );
+      SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_y, 1.0) );
+      SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sum, 1.0) );
+
+      /* create expression x*(y*(x+y))^2.8 */
+      aux = 2.8;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_subprod_fracpow, 1, &expr_x, NULL, 1.0) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &tmp, 1, &expr_y, NULL, 1.0) );
+      SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, tmp, expr_sum, 1.0) );
+      SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_subprod_fracpow, tmp, aux) );
+
+      /* test linear expressions */
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_x) == 0 );
+      ASSERT( SCIPcompareConsExprExprs(expr_y, expr_y) == 0 );
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_y) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_y, expr_x) == 1 );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &lin_expr1, 1, &expr_x, NULL, 2.0) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &lin_expr2, 1, &expr_x, NULL, 3.0) );
+      ASSERT( SCIPcompareConsExprExprs(lin_expr1, lin_expr2) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(lin_expr2, lin_expr1) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(lin_expr1, lin_expr1) == 0 );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, lin_expr1, expr_y, 3.0) );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, lin_expr2, expr_y, 3.0) );
+      ASSERT( SCIPcompareConsExprExprs(lin_expr1, lin_expr2) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(lin_expr2, lin_expr1) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(lin_expr1, lin_expr1) == 0 );
+
+      /* test values */
+      ASSERT( SCIPcompareConsExprExprs(expr_negvalue, expr_negvalue) == 0 );
+      ASSERT( SCIPcompareConsExprExprs(expr_posvalue, expr_negvalue) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_negvalue, expr_posvalue) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_posvalue, expr_x) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_posvalue, expr_y) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_posvalue, expr_sum) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_posvalue, expr_prod) == -1 );
+
+      /* test exponents */
+      ASSERT( SCIPcompareConsExprExprs(expr_halfx, expr_x) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_halfx) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sqrtx, expr_x) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_sqrtx) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sqrtx, expr_sqrx) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sqrx, expr_sqrtx) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_sqrx) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sqrx, expr_x) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_prod, expr_sum_fracpow) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sum_fracpow, expr_prod) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sum_fracpow, expr_sum_fracpow) == 0 );
+
+      /* test general? */
+      ASSERT( SCIPcompareConsExprExprs(expr_sum, expr_prod) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_prod, expr_sum) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_prod, expr_prod) == 0 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sum, expr_sum) == 0 );
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_sum) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_y, expr_sum) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_x, expr_prod) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_y, expr_prod) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sum, expr_x) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sum, expr_y) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_prod, expr_x) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_prod, expr_y) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_prod, expr_subprod_fracpow) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_subprod_fracpow, expr_prod) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_subprod_fracpow, expr_subprod_fracpow) == 0 );
+      ASSERT( SCIPcompareConsExprExprs(expr_subprod_fracpow, expr_z) == -1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_z, expr_subprod_fracpow) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_sqrx, expr_half_sqrx) == 1 );
+      ASSERT( SCIPcompareConsExprExprs(expr_half_sqrx, expr_sqrx) == -1 );
+
+      /* release */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_z) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_negvalue) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_posvalue) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_subprod_fracpow) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum_fracpow) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_halfx) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sqrx) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_half_sqrx) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sqrtx) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &tmp) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &lin_expr1) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &lin_expr2) );
+   }
+
+
+   /* release scip */
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   /* test something? */
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+/** test simplify methods */
+static
+SCIP_RETCODE testSimplify(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   conshdlr = NULL;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 2.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -1.0, 2.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+   {
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "1+2*2+3", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "1*2*2*3", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "2*(3*4)*(1*(2*3*(4*5*6)))", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "2*<x>", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<y> + <x> + 1", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<y> + <x> + 1 +2*(<y> + <x> + 1)", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<y> + 1 +0.5*(0+2*<x>*<y>)", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<y> + 0.5*(0+2*<x>*<y>)", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<y> + 0.5*(0+2*<x>*<y>) -<x>*0.5*<y>*2", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "0+0", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "-<x>+2*<y>-<y>-<y>", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "-<x>+2*<y>+2*(0+0.5*<x>-<y>)", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<x>", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)*(2*<x>)", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<x>^2", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>^0.5)^2", "var") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<y>^2)^2", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "1*2*(<x>+<y>)*<x>*4*0*5", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>^0.5)^2", "var") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>^0.25)^2*(<x>^0.25)^2", "var") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "((<x>^0.125*<x>^0.125*<x>^0.125*<x>^0.125)^0.5/<x>^0.25)^4", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>)^0.25*(<x>)^0.25*(<x>)^0.25*(<x>)^0.25", "var") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>^0.2)^1.25*(<x>^0.2)^1.25*(<x>^0.2)^1.25*(<x>^0.2)^1.25", "var") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>^0.5 * (<x>^0.8)^(-0.625)", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>^0.5*<y>^0.5)^0.5*(<x>^0.5*<y>^0.5)^0.5 * <y>", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "2+3*<x>^2-<y>*<x>*4*(<x>+<y>)", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "2*<x>*<y>", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>^10 + <x>^9.5 + <x>^9 + <x>^8.5 + <x>^8 + <x>^7.5", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>/<x>", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)^2", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)*(2*<x>) - 4 * <x>^2", "val") );
+
+      /* failing tests */
+      #ifdef FAILING_TESTS
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "((<x>^2)^0.25)^2", "abs") );
+      #endif
+   }
+
+   /*
+    * towards efficiency tests
+    */
+   #ifdef EFFICIENCY_TEST
+   /* long sum of similar terms */
+   {
+      int i;
+      SCIP_CONSEXPR_EXPR* exprs[BIG];
+      SCIP_Real           coefs[BIG];
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+
+      /* create expressions for variables x */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+
+      /* decreasing value of coefficients */
+      for( i = 0; i < BIG; i++ )
+      {
+         exprs[i] = expr_x;
+         coefs[i] = BIG-i;
+      }
+
+      /* create expression for sum */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, BIG, exprs, coefs, -1.0) );
+
+      /* simplify */
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &sumexpr) );
+
+      /* print */
+      SCIP_CALL( SCIPprintConsExprExpr(scip, sumexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+
+      /* release sum expression (this should free the sum and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   }
+
+   /* long unsorted polynomial */
+   {
+      int i;
+      SCIP_CONSEXPR_EXPR* exprs[BIG];
+      SCIP_CONSEXPR_EXPR* powers[BIG];
+      SCIP_Real           exponent;
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* polyexpr;
+
+      /* create expressions for variables x */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+
+      /* power with decreasing exponent */
+      for( i = 0; i < BIG; i++ )
+      {
+         exponent = BIG-i;
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &powers[i], 1, &expr_x, &exponent, i) );
+      }
+
+      /* create expression for sum */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &polyexpr, BIG, powers, NULL, -1.0) );
+
+      #if BIG < 15
+      printf("SIMPLIFYING UNSORTED POLYNOMIAL!\n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, polyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      #endif
+
+      /* simplify */
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &polyexpr) );
+
+      #if BIG < 15
+      /* print */
+      SCIP_CALL( SCIPprintConsExprExpr(scip, polyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, polyexpr) );
+      #endif
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      for( i = 0; i < BIG; i++ )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powers[i]) );
+      }
+
+      /* release sum expression (this should free the sum and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &polyexpr) );
+   }
+
+   /* deep expression */
+   {
+      int i;
+      SCIP_CONSEXPR_EXPR* sumexprs[BIG];
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+
+      /* create expressions for variables x */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexprs[0], 1, &expr_x, NULL, 0.0) );
+      for( i = 1; i < BIG; i++ )
+      {
+         /* create expressions for sum */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexprs[i], 1, &sumexprs[i-1], NULL, 1.0 * i) );
+      }
+
+      /* create expressions for sum */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 1, &sumexprs[BIG-1], NULL, 1.0 * BIG) );
+
+      printf("SIMPLIFYING DEEP EXPRESSION!\n");
+      #if BIG < 25
+      SCIP_CALL( SCIPprintConsExprExpr(scip, sumexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      #endif
+
+      /* simplify */
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &sumexpr) );
+
+      /* print */
+      SCIP_CALL( SCIPprintConsExprExpr(scip, sumexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, sumexpr) );
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      for( i = 0; i < BIG; i++ )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexprs[i]) );
+      }
+
+      /* release sum expression (this should free the sum and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   }
+
+   /* simplifying deep and long expression
+    * @note: this is slow, 6 seconds for BIG = 5000!
+    * that seems to be in part for a O(BIG) calls to SCIPreleaseConsExprExpr in the simplify procedure
+    */
+   {
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* expr_y;
+      SCIP_CONSEXPR_EXPR* prodexprs[BIG];
+      SCIP_CONSEXPR_EXPR* xysum[3];
+      SCIP_CONSEXPR_EXPR* exprs[BIG];
+      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_CONSEXPR_EXPR* crazyexpr;
+      SCIP_Real           coefs[BIG];
+      int i;
+
+      /* create expressions for variables x and y */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+      /* create long sum */
+      for( i = 0; i < BIG; i++ )
+      {
+         exprs[i] = expr_x;
+         coefs[i] = (SCIP_Real)((i+1)>>2*i);
+      }
+      printf("finish big loop\n");
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, BIG, exprs, coefs, -1.0) );
+
+      /* create deep product of y * x * long sum */
+      xysum[0] = expr_x; xysum[1] = expr_y; xysum[2] = sumexpr;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[0], 3, (SCIP_CONSEXPR_EXPR**)&xysum, NULL, 1.0) );
+
+      for( i = 1; i < BIG; i++ )
+      {
+         /* create expressions for product */
+         if( BIG % 2 == 1 )
+         {
+            xysum[0] = sumexpr; xysum[1] = prodexprs[i-1]; xysum[2] = expr_y;
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[i], 3, (SCIP_CONSEXPR_EXPR**)&xysum, NULL, 1.0 + i) );
+         }
+         else
+         {
+            exprs[0] = prodexprs[i-1]; exprs[1] = prodexprs[i-1]; exprs[2] = expr_y;
+            SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &prodexprs[i], BIG, exprs, coefs, -1.0) );
+         }
+
+      }
+
+      /* create expressions for crazy expr */
+      xysum[0] = sumexpr; xysum[1] = prodexprs[BIG-1]; xysum[2] = sumexpr;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &crazyexpr, 3, (SCIP_CONSEXPR_EXPR**)&xysum, NULL, 1.0 * BIG) );
+
+      printf("SIMPLIFYING CRAZY EXPRESSION!\n");
+      #if BIG < 5
+      SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      #endif
+
+      /* simplify */
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &crazyexpr) );
+
+      /* print */
+      SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, crazyexpr) );
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+      for( i = 0; i < BIG; i++ )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexprs[i]) );
+      }
+
+      /* release product expression (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   }
+   #endif
+
+   /* release scip */
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   /* test something? */
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** main function */
 int
 main(
@@ -2913,6 +3437,10 @@ main(
    CHECK_TEST( testGetVarExprs() );
 
    CHECK_TEST( testPropConss() );
+
+   CHECK_TEST( testCompare() );
+
+   CHECK_TEST( testSimplify() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
