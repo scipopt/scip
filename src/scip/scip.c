@@ -35403,6 +35403,7 @@ SCIP_RETCODE SCIPprintSol(
 {
    SCIP_Real objvalue;
    SCIP_Bool currentsol;
+   SCIP_Bool oldquiet = FALSE;
 
    assert(SCIPisTransformed(scip) || sol != NULL);
 
@@ -35419,6 +35420,12 @@ SCIP_RETCODE SCIPprintSol(
             scip->tree, scip->lp, NULL) );
    }
 
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      oldquiet = SCIPmessagehdlrIsQuiet(scip->messagehdlr);
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, FALSE);
+   }
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
    if( SCIPsolIsOriginal(sol) )
       objvalue = SCIPsolGetOrigObj(sol);
@@ -35429,6 +35436,11 @@ SCIP_RETCODE SCIPprintSol(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
+
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, oldquiet);
+   }
 
    if( currentsol )
    {
