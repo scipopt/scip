@@ -1100,7 +1100,7 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
 
-   /* it may happen that we detect infeasibility during forward propagation if we use previously computes intervals */
+   /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(consdata->expr)) )
    {
       *infeasible = TRUE;
