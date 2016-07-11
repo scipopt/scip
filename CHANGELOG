@@ -14,6 +14,7 @@ fixed bugs:
   whole set of processed instances (as with fail and solv), while before it was with respect to the
   set of instances where no solver failed (eval set); thus, now proc = fail + time + solv.
 - fixed memory leak in OSiL reader
+- writing of solutions or parameters to a file now works also with the message handler set to quiet
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
