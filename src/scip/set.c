@@ -130,6 +130,7 @@
 #define SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT TRUE /**< try to shorten the whole conflict set or terminate early (depending on the 'maxvarsdetectimpliedbounds' parameter) */
 #define SCIP_DEFAULT_CONF_CONFLITWEIGHT     0.0 /**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict */
 #define SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT 1.0/**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph */
+#define SCIP_DEFAULT_CONF_ANALYZEDUALRAY  FALSE /**< enable dual ray analyzes */
 
 
 /* Constraints */
@@ -1328,6 +1329,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/conflictgraphweight",
          "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
          &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/analyzedualray",
+         "enable dual ray analysis",
+         &(*set)->conf_analyzedualray, TRUE, SCIP_DEFAULT_CONF_ANALYZEDUALRAY,
          NULL, NULL) );
 
    /* constraint parameters */

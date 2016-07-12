@@ -35,6 +35,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_conflict.h"
 #include "scip/pub_conflict.h"
+#include "scip/conflictstore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -425,6 +426,7 @@ SCIP_Longint SCIPconflictGetNPropReconvergenceLiterals(
 extern
 SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -546,6 +548,7 @@ SCIP_Longint SCIPconflictGetNBoundexceedingLPIterations(
 extern
 SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -567,6 +570,18 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 /** gets time in seconds used for analyzing infeasible strong branching conflicts */
 extern
 SCIP_Real SCIPconflictGetStrongbranchTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls to infeasible dualray analysis */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of successful calls to infeasible dualray analysis that */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

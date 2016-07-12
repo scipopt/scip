@@ -18214,7 +18214,7 @@ SCIP_RETCODE analyzeStrongbranch(
       {
          assert(downconflict != NULL);
          assert(upconflict   != NULL);
-         SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+         SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, col, downconflict, upconflict) );
       }
    }
@@ -31688,7 +31688,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
       if( !scip->set->misc_exactsolve && !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
          && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
-         SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
       }
 
@@ -32419,7 +32419,7 @@ SCIP_RETCODE solveProbingLP(
       /* analyze the infeasible LP (only if all columns are in the LP and no external pricers exist) */
       if( !scip->set->misc_exactsolve && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->tree->probingobjchanged )
       {
-         SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
       }
 
@@ -39300,6 +39300,19 @@ void printConflictStatistics(
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0);
 }
 
+/** print dualray  statistic to given output stream */
+static
+void printDualrayStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Dualray Analysis   :       Time      Calls    Success \n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeasible LP    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPconflictGetDualrayInfTime(scip->conflict), SCIPconflictGetNDualrayInfCalls(scip->conflict),
+      SCIPconflictGetNDualrayInfSuccess(scip->conflict));
+}
+
 static
 void printSeparatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -39983,6 +39996,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printConstraintTimingStatistics(scip, file);
       printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
+      printDualrayStatistics(scip, file);
       return SCIP_OKAY;
    }
    case SCIP_STAGE_PRESOLVING:
@@ -39999,6 +40013,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printConstraintTimingStatistics(scip, file);
       printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
+      printDualrayStatistics(scip, file);
       printHeuristicStatistics(scip, file);
       printCompressionStatistics(scip, file);
       printSolutionStatistics(scip, file);
@@ -40017,6 +40032,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printConstraintTimingStatistics(scip, file);
       printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
+      printDualrayStatistics(scip, file);
       printSeparatorStatistics(scip, file);
       printPricerStatistics(scip, file);
       printBranchruleStatistics(scip, file);

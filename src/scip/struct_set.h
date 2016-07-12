@@ -213,6 +213,7 @@ struct SCIP_Set
    SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
                                                     *   variable if it is part of a conflict graph
                                                     */
+   SCIP_Bool             conf_analyzedualray;/**< enable dual ray analyzes */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

@@ -2529,6 +2529,7 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conflict)->dualrayinftime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* enable or disable timing depending on the parameter statistic timing */
    SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
@@ -2585,6 +2586,8 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->npseudoconfliterals = 0;
    (*conflict)->npseudoreconvconss = 0;
    (*conflict)->npseudoreconvliterals = 0;
+   (*conflict)->ndualrayinfcalls = 0;
+   (*conflict)->ndualrayinfsuccess = 0;
 
    return SCIP_OKAY;
 }
@@ -2610,6 +2613,7 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPclockFree(&(*conflict)->boundlpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
    SCIPclockFree(&(*conflict)->pseudoanalyzetime);
+   SCIPclockFree(&(*conflict)->dualrayinftime);
    SCIPpqueueFree(&(*conflict)->bdchgqueue);
    SCIPpqueueFree(&(*conflict)->forcedbdchgqueue);
    conflictsetFree(&(*conflict)->conflictset, blkmem);
@@ -5425,6 +5429,7 @@ SCIP_RETCODE getFarkasProof(
 {
    SCIP_ROW** rows;
    SCIP_VAR** vars;
+   SCIP_VAR* var;
    SCIP_Real* dualfarkas;
    SCIP_ROW* row;
    int nrows;
@@ -5560,6 +5565,9 @@ SCIP_RETCODE getFarkasProof(
    }
    SCIPdebugMessage(" -> farkaslhs=%g, farkasact=%g\n", *farkaslhs, (*farkasact));
 
+  TERMINATE:
+   SCIPsetFreeBufferArray(set, &dualfarkas);
+
    return SCIP_OKAY;
 }
 
@@ -5598,14 +5606,11 @@ SCIP_RETCODE runBoundHeuristic(
    SCIP_Bool*            valid
    )
 {
-   SCIP_VAR** vars;
    SCIP_LPBDCHGS* oldlpbdchgs;
    SCIP_LPBDCHGS* relaxedlpbdchgs;
    SCIP_Bool solvelp;
    SCIP_Bool resolve;
    int ncols;
-   int nvars;
-   int v;
 
 //   /* get active problem variables */
 //   vars = transprob->vars;
@@ -5628,13 +5633,13 @@ SCIP_RETCODE runBoundHeuristic(
       if( SCIPlpiIsPrimalInfeasible(lpi) )
       {
          SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs,
-               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, reducebounds, valid, &resolve, farkascoefs, farkaslhs) );
+               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, farkascoefs, farkaslhs, farkasactivity) );
       }
       else
       {
          assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
          SCIP_CALL( undoBdchgsDualsol(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-               oldlpbdchgs, relaxedlpbdchgs, reducebounds, valid, &resolve) );
+               oldlpbdchgs, relaxedlpbdchgs, valid, &resolve) );
       }
    }
 
@@ -5779,14 +5784,14 @@ SCIP_RETCODE runBoundHeuristic(
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
-                     lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, reducebounds, valid, &resolve,
+                     lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, valid, &resolve,
                      farkascoefs, farkaslhs, farkasactivity) );
             }
             else
             {
                assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
                SCIP_CALL( undoBdchgsDualsol(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
-                     lbchginfoposs, ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, reducebounds, valid, &resolve) );
+                     lbchginfoposs, ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve) );
             }
          }
          assert(!resolve || (*valid));
@@ -5847,13 +5852,17 @@ SCIP_RETCODE runBoundHeuristic(
    return SCIP_OKAY;
 }
 
-/** perfom conflict analysis */
+/** perform conflict analysis */
 static
 SCIP_RETCODE performDualRayAnalysis(
+   SCIP_CONFLICT*        conflict,
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,
+   BMS_BLKMEM*           blkmem,
    SCIP_PROB*            prob,
+   SCIP_CONFLICTSTORE*   conflictstore,
    SCIP_Real*            farkascoefs,
-   SCIP_Real             farkaslhs,
+   SCIP_Real             farkaslhs
    )
 {
    SCIP_CONS* dualraycons;
@@ -5866,12 +5875,16 @@ SCIP_RETCODE performDualRayAnalysis(
    assert(farkascoefs != NULL);
    assert(!SCIPsetIsInfinity(set, !farkaslhs));
 
+   /* start time for dualŕay analysis of infeasible LPs */
+   SCIPclockStart(conflict->dualrayinftime, set);
+   ++conflict->ndualrayinfcalls;
+
    vars = prob->vars;
    nvars = prob->nvars;
    assert(vars != NULL);
 
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &dualraycons, "dualraycons", 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set),
-         FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+         FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
 
    for( v = 0; v < nvars; ++v )
    {
@@ -5888,7 +5901,15 @@ SCIP_RETCODE performDualRayAnalysis(
 //   SCIPinfoMessage(set->scip, NULL, "\n");
 
    SCIP_CALL( SCIPaddCons(set->scip, dualraycons) );
+
+   SCIP_CALL( SCIPconflictstoreAddDualray(conflictstore, dualraycons, blkmem, set, stat, prob) );
+
    SCIP_CALL( SCIPreleaseCons(set->scip, &dualraycons) );
+
+   ++conflict->ndualrayinfsuccess;
+
+   /* stop time for dualŕay analysis of infeasible LPs */
+   SCIPclockStop(conflict->dualrayinftime, set);
 
    return SCIP_OKAY;
 }
@@ -5897,6 +5918,7 @@ SCIP_RETCODE performDualRayAnalysis(
 static
 SCIP_RETCODE conflictAnalyzeLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -5917,10 +5939,12 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_Bool             marklpunsolved      /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
    )
 {
+   SCIP_VAR** vars;
    SCIP_LPI* lpi;
    SCIP_Bool resolve;
    SCIP_Bool solvelp;
    SCIP_Bool valid;
+   int nvars;
 
    // only for tmp stats
    int nbndchgs = 0;
@@ -5946,6 +5970,9 @@ SCIP_RETCODE conflictAnalyzeLP(
    *nliterals = 0;
    *nreconvconss = 0;
    *nreconvliterals = 0;
+
+   vars = transprob->vars;
+   nvars = transprob->nvars;
 
    /* get LP solver interface */
    lpi = SCIPlpGetLPI(lp);
@@ -6100,10 +6127,10 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs, curvarubs) );
 
       /* start dual ray analysis */
-      if( TRUE )
+      if( set->conf_analyzedualray )
       {
          /* start dual ray analysis */
-         SCIP_CALL( performDualRayAnalysis(set, transprob, farkascoefs, farkaslhs) );
+         SCIP_CALL( performDualRayAnalysis(conflict, set, stat, blkmem, transprob, conflictstore, farkascoefs, farkaslhs) );
       }
 
       /* start conflict analysis */
@@ -6112,7 +6139,7 @@ SCIP_RETCODE conflictAnalyzeLP(
          int j;
 
          SCIP_CALL( runBoundHeuristic(set, stat, transprob, tree, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity,
-               lbchginfoposs, ubchginfoposs, iterations, diving, marklpunsolved, reducebounds, &valid) );
+               curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, diving, marklpunsolved, TRUE, &valid) );
 
          /* analyze the conflict starting with remaining bound changes */
          SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving,
@@ -6152,6 +6179,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 static
 SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -6197,7 +6225,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_INFEASLP;
 
    /* perform conflict analysis */
-   SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+   SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          cliquetable, SCIPlpDiving(lp), &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->ninflpsuccess += (nconss > 0 ? 1 : 0);
    conflict->ninflpiterations += iterations;
@@ -6223,6 +6251,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
 static
 SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -6271,7 +6300,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    conflict->conflictset->usescutoffbound = TRUE;
 
    /* perform conflict analysis */
-   SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+   SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          cliquetable, SCIPlpDiving(lp), &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->nboundlpsuccess += (nconss > 0 ? 1 : 0);
    conflict->nboundlpiterations += iterations;
@@ -6297,6 +6326,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
  */
 SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -6382,12 +6412,12 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    /* check, if the LP was infeasible or bound exceeding */
    if( SCIPlpiIsPrimalInfeasible(SCIPlpGetLPI(lp)) )
    {
-      SCIP_CALL( conflictAnalyzeInfeasibleLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+      SCIP_CALL( conflictAnalyzeInfeasibleLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
             branchcand, eventqueue, cliquetable, success) );
    }
    else
    {
-      SCIP_CALL( conflictAnalyzeBoundexceedingLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+      SCIP_CALL( conflictAnalyzeBoundexceedingLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
             branchcand, eventqueue, cliquetable, success) );
    }
 
@@ -6606,6 +6636,7 @@ SCIP_Longint SCIPconflictGetNBoundexceedingLPIterations(
 /** analyses infeasible strong branching sub problems for conflicts */
 SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -6721,7 +6752,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPdebugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
-            SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                   eventqueue, cliquetable, TRUE, &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += (nconss > 0 ? 1 : 0);
             conflict->nsbiterations += iter;
@@ -6784,7 +6815,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPdebugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
-            SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                   eventqueue, cliquetable, TRUE, &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += (nconss > 0 ? 1 : 0);
             conflict->nsbiterations += iter;
@@ -6844,6 +6875,26 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
    assert(conflict != NULL);
 
    return SCIPclockGetTime(conflict->sbanalyzetime);
+}
+
+/** gets number of calls to infeasible dualray analysis */
+SCIP_Longint SCIPconflictGetNDualrayInfCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->ndualrayinfcalls;
+}
+
+/** gets number of successful calls to infeasible dualray analysis that */
+SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->ndualrayinfsuccess;
 }
 
 /** gets number of calls to infeasible strong branching conflict analysis */
@@ -7045,7 +7096,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
       /* undo bound changes without destroying the infeasibility proof */
       SCIP_CALL( undoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, pseudoact,
-            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, TRUE, NULL, lp->lpi) );
+            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, lp->lpi) );
 
       /* analyze conflict on remaining bound changes */
       SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, FALSE,
@@ -7073,6 +7124,16 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPclockStop(conflict->pseudoanalyzetime, set);
 
    return SCIP_OKAY;
+}
+
+/** gets time in seconds used for analyzing dualray of infeasible LPs */
+SCIP_Real SCIPconflictGetDualrayInfTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return SCIPclockGetTime(conflict->dualrayinftime);
 }
 
 /** gets time in seconds used for analyzing pseudo solution conflicts */
@@ -7145,6 +7206,7 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
    return conflict->npseudoreconvliterals;
 }
 
+
 /** enables or disables all clocks of \p conflict, depending on the value of the flag */
 void SCIPconflictEnableOrDisableClocks(
    SCIP_CONFLICT*        conflict,           /**< the conflict analysis data for which all clocks should be enabled or disabled */
@@ -7158,6 +7220,7 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->dualrayinftime, enable);
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
 

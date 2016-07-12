@@ -35,6 +35,7 @@
 #include "scip/struct_conflictstore.h"
 
 
+#define DEFAULT_CONFLICTSTORE_DUALSIZE     100 /* default size of conflict storage */
 #define DEFAULT_CONFLICTSTORE_SIZE       10000 /* default size of conflict storage */
 #define DEFAULT_CONFLICTSTORE_MAXSIZE    50000 /* maximal size of conflict storage */
 
@@ -106,6 +107,11 @@ SCIP_RETCODE conflictstoreEnsureMem(
          SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (i+1)) );
       }
       conflictstore->conflictsize = newsize;
+
+      if( conflictstore->dualrays == NULL )
+      {
+         SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
+      }
    }
    assert(num <= conflictstore->conflictsize);
 
@@ -513,6 +519,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    SCIP_ALLOC( BMSallocMemory(conflictstore) );
 
    (*conflictstore)->conflicts = NULL;
+   (*conflictstore)->dualrays = NULL;
    (*conflictstore)->primalbounds = NULL;
    (*conflictstore)->slotqueue = NULL;
    (*conflictstore)->orderqueue = NULL;
@@ -609,9 +616,55 @@ SCIP_RETCODE SCIPconflictstoreFree(
    }
    assert((*conflictstore)->nconflicts == 0);
 
+   if( (*conflictstore)->dualrays != NULL )
+   {
+      while( !SCIPqueueIsEmpty((*conflictstore)->dualrays) )
+      {
+         SCIP_CONS* dualray = SCIPqueueRemove((*conflictstore)->dualrays);
+         SCIP_CALL( SCIPconsRelease(&dualray, blkmem, set) );
+      }
+      SCIPqueueFree(&(*conflictstore)->dualrays);
+   }
+
    BMSfreeMemoryArrayNull(&(*conflictstore)->conflicts);
    BMSfreeMemoryArrayNull(&(*conflictstore)->primalbounds);
    BMSfreeMemory(conflictstore);
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPconflictstoreAddDualray(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONS*            dualray,            /**< dual ray to add */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob           /**< transformed problem */
+   )
+{
+   SCIP_CONS* olddualray;
+
+   assert(conflictstore != NULL);
+
+   /* check whether the constraint violates the root solution */
+   // TODO
+
+   if( conflictstore->dualrays == NULL )
+   {
+      SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
+   }
+
+   if( SCIPqueueNElems(conflictstore->dualrays) == DEFAULT_CONFLICTSTORE_DUALSIZE )
+   {
+      while( !SCIPqueueIsEmpty(conflictstore->dualrays) )
+      {
+         olddualray = (SCIP_CONS*)SCIPqueueRemove(conflictstore->dualrays);
+         SCIP_CALL( SCIPconsDelete(olddualray, blkmem, set, stat, transprob) );
+      }
+   }
+
+   SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
+   SCIPconsCapture(dualray);
 
    return SCIP_OKAY;
 }
