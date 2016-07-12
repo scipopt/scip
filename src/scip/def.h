@@ -88,7 +88,7 @@ extern "C" {
 
 #define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*

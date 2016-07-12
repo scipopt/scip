@@ -67,6 +67,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderMps(scip) );
+   SCIP_CALL( SCIPincludeReaderMst(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
    SCIP_CALL( SCIPincludeReaderOsil(scip) );
    SCIP_CALL( SCIPincludeReaderPip(scip) );
@@ -117,6 +118,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurBound(scip) );
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurCompletesol(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
    SCIP_CALL( SCIPincludeHeurDistributiondiving(scip) );

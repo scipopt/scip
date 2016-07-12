@@ -1216,7 +1216,7 @@ SCIP_RETCODE exprEvalUser(
    Type* hessian
    )
 {
-   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian);
+   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian); /*lint !e429*/
 }
 
 template<>
@@ -1510,7 +1510,7 @@ private:
       {
          s[j] = false;
          for( size_t i = 0; i < n; i++ )
-            s[j] |= r[i * q + j]; /*lint !e1786*/
+            s[j] |= (bool)r[i * q + j]; /*lint !e1786*/
       }
 
       return true;
@@ -1588,7 +1588,7 @@ private:
          for( j = 0; j < q; j++ )
             for( i = 0; i < n; i++ )
                for( k = 0; k < n; ++k )
-                  v[ i * q + j] |= r[ k * q + j];
+                  v[ i * q + j] |= (bool) r[ k * q + j];
 
       return true;
    }

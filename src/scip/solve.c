@@ -3861,6 +3861,29 @@ SCIP_RETCODE solveNode(
             stat->nnodes, stat->nlps, nlperrors);
       }
 
+      if( pricingaborted && !(*cutoff) && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         assert(SCIPsolveIsStopped(set, stat, FALSE));
+
+         SCIPtreeSetFocusNodeLP(tree, FALSE);
+
+/* if the above assert holds, this is not really a numerical trouble but we just ran into the time limit;
+ * however, if the assert proves to be wrong, we should activate the code below
+ */
+#ifdef SCIP_DISABLED_CODE
+         if( forcedlpsolve )
+         {
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
+               stat->nnodes, stat->nlps);
+            return SCIP_LPERROR;
+         }
+         nlperrors++;
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
+            stat->nnodes, stat->nlps, nlperrors);
+#endif
+      }
+
       /* if an improved solution was found, propagate and solve the relaxations again */
       if( foundsol )
       {
@@ -4198,14 +4221,14 @@ SCIP_RETCODE solveNode(
       SCIP_Real lpobjval;
 
       /* get number of LP candidate variables */
-      SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL);
+      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL) );
 
       /* get LP objective value */
       lpobjval = SCIPlpGetObjval(lp, set, transprob);
-      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval)));
+      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval))); /*lint !e777*/
 
-      /*add the observation to the regression */
-      SCIPregressionAddObservation(stat->regressioncandsobjval, nlpbranchcands, lpobjval);
+      /* add the observation to the regression */
+      SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
    }
 
    return SCIP_OKAY;
@@ -4394,7 +4417,7 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_Longint nsuccessconflicts;
       SCIP_Bool afternodeheur;
       SCIP_Bool stopped;
-      SCIP_Bool branched = FALSE;
+      SCIP_Bool branched;
 
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 

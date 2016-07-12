@@ -3467,8 +3467,8 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
@@ -3499,8 +3499,8 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
@@ -15976,6 +15976,21 @@ SCIP_RETCODE SCIPcreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates a partial primal solution, initialized to unknown values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPcreatePartialSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a primal solution, initialized to unknown values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -16680,6 +16695,21 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+/** check whether the dual solution is available
+ *
+ * @note This is used when calling \ref SCIPprintDualSol()
+ *
+ * @return is dual solution available?
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Bool SCIPisDualSolAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
+   );
+
 /** outputs dual solution from LP solver to file stream
  *
  *  @note This only works if no presolving has been performed, which can be checked by calling method \ref
@@ -16908,6 +16938,31 @@ SCIP_RETCODE SCIPreadSol(
    const char*           filename            /**< name of the input file */
    );
 
+/** reads a given solution file and store the solution values in the given solution pointer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPreadSolFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   SCIP_SOL*             sol,                /**< solution pointer */
+   SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            error               /**< pointer store if an error occured */
+   );
+
 /** adds feasible primal solution to solution storage by copying it
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -17041,6 +17096,37 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   );
+
+/** returns all partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_SOL** SCIPgetPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number of partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+int SCIPgetNPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** checks solution for feasibility without adding it to the solution store
@@ -17319,6 +17405,23 @@ SCIP_RETCODE SCIPdropRowEvent(
 
 /**@name Tree Methods */
 /**@{ */
+
+/** gets focus node in the tree
+ *
+ *  if we are in probing/diving mode this method returns the node in the tree where the probing/diving mode was started.
+ *
+ *  @return the current node of the search tree
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_NODE* SCIPgetFocusNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** gets current node in the tree
  *

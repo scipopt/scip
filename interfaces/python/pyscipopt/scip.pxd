@@ -70,11 +70,39 @@ cdef extern from "scip/scip.h":
         SCIP_STATUS_UNBOUNDED      = 13
         SCIP_STATUS_INFORUNBD      = 14
 
+    ctypedef enum SCIP_STAGE:
+        SCIP_STAGE_INIT         =  0
+        SCIP_STAGE_PROBLEM      =  1
+        SCIP_STAGE_TRANSFORMING =  2
+        SCIP_STAGE_TRANSFORMED  =  3
+        SCIP_STAGE_INITPRESOLVE =  4
+        SCIP_STAGE_PRESOLVING   =  5
+        SCIP_STAGE_EXITPRESOLVE =  6
+        SCIP_STAGE_PRESOLVED    =  7
+        SCIP_STAGE_INITSOLVE    =  8
+        SCIP_STAGE_SOLVING      =  9
+        SCIP_STAGE_SOLVED       = 10
+        SCIP_STAGE_EXITSOLVE    = 11
+        SCIP_STAGE_FREETRANS    = 12
+        SCIP_STAGE_FREE         = 13
+
     ctypedef enum SCIP_PARAMSETTING:
         SCIP_PARAMSETTING_DEFAULT    = 0
         SCIP_PARAMSETTING_AGGRESSIVE = 1
         SCIP_PARAMSETTING_FAST       = 2
         SCIP_PARAMSETTING_OFF        = 3
+
+    ctypedef enum SCIP_PARAMEMPHASIS:
+        SCIP_PARAMEMPHASIS_DEFAULT      = 0
+        SCIP_PARAMEMPHASIS_CPSOLVER     = 1
+        SCIP_PARAMEMPHASIS_EASYCIP      = 2
+        SCIP_PARAMEMPHASIS_FEASIBILITY  = 3
+        SCIP_PARAMEMPHASIS_HARDLP       = 4
+        SCIP_PARAMEMPHASIS_OPTIMALITY   = 5
+        SCIP_PARAMEMPHASIS_COUNTER      = 6
+        SCIP_PARAMEMPHASIS_PHASEFEAS    = 7
+        SCIP_PARAMEMPHASIS_PHASEIMPROVE = 8
+        SCIP_PARAMEMPHASIS_PHASEPROOF   = 9
 
     ctypedef enum SCIP_PROPTIMING:
         SCIP_PROPTIMING_BEFORELP     = 0x001u
@@ -83,10 +111,10 @@ cdef extern from "scip/scip.h":
         SCIP_PROPTIMING_AFTERLPNODE  = 0x008u
 
     ctypedef enum SCIP_PRESOLTIMING:
-        SCIP_PRESOLTIMING_NONE       = 0x000u
-        SCIP_PRESOLTIMING_FAST       = 0x002u
-        SCIP_PRESOLTIMING_MEDIUM     = 0x004u
-        SCIP_PRESOLTIMING_EXHAUSTIVE = 0x008u
+        SCIP_PRESOLTIMING_NONE       = 0x002u
+        SCIP_PRESOLTIMING_FAST       = 0x004u
+        SCIP_PRESOLTIMING_MEDIUM     = 0x008u
+        SCIP_PRESOLTIMING_EXHAUSTIVE = 0x010u
 
     ctypedef enum SCIP_HEURTIMING:
         SCIP_HEURTIMING_BEFORENODE        = 0x001u
@@ -100,6 +128,36 @@ cdef extern from "scip/scip.h":
         SCIP_HEURTIMING_BEFOREPRESOL      = 0x100u
         SCIP_HEURTIMING_DURINGPRESOLLOOP  = 0x200u
         SCIP_HEURTIMING_AFTERPROPLOOP     = 0x400u
+
+    ctypedef enum SCIP_EXPROP:
+        SCIP_EXPR_VARIDX    =  1
+        SCIP_EXPR_CONST     =  2
+        SCIP_EXPR_PARAM     =  3
+        SCIP_EXPR_PLUS      =  8
+        SCIP_EXPR_MINUS     =  9
+        SCIP_EXPR_MUL       = 10
+        SCIP_EXPR_DIV       = 11
+        SCIP_EXPR_SQUARE    = 12
+        SCIP_EXPR_SQRT      = 13
+        SCIP_EXPR_REALPOWER = 14
+        SCIP_EXPR_INTPOWER  = 15
+        SCIP_EXPR_SIGNPOWER = 16
+        SCIP_EXPR_EXP       = 17
+        SCIP_EXPR_LOG       = 18
+        SCIP_EXPR_SIN       = 19
+        SCIP_EXPR_COS       = 20
+        SCIP_EXPR_TAN       = 21
+        SCIP_EXPR_MIN       = 24
+        SCIP_EXPR_MAX       = 25
+        SCIP_EXPR_ABS       = 26
+        SCIP_EXPR_SIGN      = 27
+        SCIP_EXPR_SUM       = 64
+        SCIP_EXPR_PRODUCT   = 65
+        SCIP_EXPR_LINEAR    = 66
+        SCIP_EXPR_QUADRATIC = 67
+        SCIP_EXPR_POLYNOMIAL= 68
+        SCIP_EXPR_USER      = 69
+        SCIP_EXPR_LAST      = 70
 
     ctypedef bint SCIP_Bool
 
@@ -221,6 +279,18 @@ cdef extern from "scip/scip.h":
     ctypedef struct SCIP_LPI:
         pass
 
+    ctypedef struct BMS_BLKMEM:
+        pass
+
+    ctypedef struct SCIP_EXPR:
+        pass
+
+    ctypedef struct SCIP_EXPRTREE:
+        pass
+
+    ctypedef struct SCIP_EXPRDATA_MONOMIAL:
+        pass
+
     # General SCIP Methods
     SCIP_RETCODE SCIPcreate(SCIP** scip)
     SCIP_RETCODE SCIPfree(SCIP** scip)
@@ -230,6 +300,7 @@ cdef extern from "scip/scip.h":
     SCIP_Real SCIPgetSolvingTime(SCIP* scip)
     SCIP_Real SCIPgetReadingTime(SCIP* scip)
     SCIP_Real SCIPgetPresolvingTime(SCIP* scip)
+    SCIP_STAGE SCIPgetStage(SCIP* scip)
 
     # Global Problem Methods
     SCIP_RETCODE SCIPcreateProbBasic(SCIP* scip, char* name)
@@ -267,6 +338,7 @@ cdef extern from "scip/scip.h":
     SCIP_RETCODE SCIPaddPricedVar(SCIP* scip, SCIP_VAR* var, SCIP_Real score)
     SCIP_RETCODE SCIPreleaseVar(SCIP* scip, SCIP_VAR** var)
     SCIP_RETCODE SCIPtransformVar(SCIP* scip, SCIP_VAR* var, SCIP_VAR** transvar)
+    SCIP_RETCODE SCIPaddVarLocks(SCIP* scip, SCIP_VAR* var, int nlocksdown, int nlocksup)
     SCIP_VAR** SCIPgetVars(SCIP* scip)
     SCIP_VAR** SCIPgetOrigVars(SCIP* scip)
     const char* SCIPvarGetName(SCIP_VAR* var)
@@ -277,16 +349,30 @@ cdef extern from "scip/scip.h":
     SCIP_Bool SCIPvarIsTransformed(SCIP_VAR* var)
     SCIP_COL* SCIPvarGetCol(SCIP_VAR* var)
     SCIP_Bool SCIPvarIsInLP(SCIP_VAR* var)
+    SCIP_Real SCIPvarGetLbLocal(SCIP_VAR* var)
+    SCIP_Real SCIPvarGetUbLocal(SCIP_VAR* var)
 
     # Constraint Methods
     SCIP_RETCODE SCIPcaptureCons(SCIP* scip, SCIP_CONS* cons)
     SCIP_RETCODE SCIPreleaseCons(SCIP* scip, SCIP_CONS** cons)
     SCIP_RETCODE SCIPtransformCons(SCIP* scip, SCIP_CONS* cons, SCIP_CONS** transcons)
+    SCIP_RETCODE SCIPgetTransformedCons(SCIP* scip, SCIP_CONS* cons, SCIP_CONS** transcons)
     SCIP_CONS** SCIPgetConss(SCIP* scip)
     const char* SCIPconsGetName(SCIP_CONS* cons)
     int SCIPgetNConss(SCIP* scip)
     SCIP_Bool SCIPconsIsOriginal(SCIP_CONS* cons)
     SCIP_Bool SCIPconsIsTransformed(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsInitial(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsSeparated(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsEnforced(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsChecked(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsPropagated(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsLocal(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsModifiable(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsDynamic(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsRemovable(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsStickingAtNode(SCIP_CONS* cons)
+    SCIP_CONSDATA* SCIPconsGetData(SCIP_CONS* cons)
 
     # Primal Solution Methods
     SCIP_SOL** SCIPgetSols(SCIP* scip)
@@ -375,7 +461,7 @@ cdef extern from "scip/scip.h":
                                      SCIP_RETCODE (*consexitsol) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool restart),
                                      SCIP_RETCODE (*consdelete) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_CONSDATA** consdata),
                                      SCIP_RETCODE (*constrans) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* sourcecons, SCIP_CONS** targetcons),
-                                     SCIP_RETCODE (*consinitlp) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss),
+                                     SCIP_RETCODE (*consinitlp) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool* infeasible),
                                      SCIP_RETCODE (*conssepalp) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, SCIP_RESULT* result),
                                      SCIP_RETCODE (*conssepasol) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, SCIP_SOL* sol, SCIP_RESULT* result),
                                      SCIP_RETCODE (*consenfolp) (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, SCIP_Bool solinfeasible, SCIP_RESULT* result),
@@ -545,6 +631,7 @@ cdef extern from "scip/scip.h":
     SCIP_RETCODE SCIPsetStringParam(SCIP* scip, char* name, char* value)
     SCIP_RETCODE SCIPreadParams(SCIP* scip, char* file)
     SCIP_RETCODE SCIPreadProb(SCIP* scip, char* file, char* extension)
+    SCIP_RETCODE SCIPsetEmphasis(SCIP* scip, SCIP_PARAMEMPHASIS paramemphasis, SCIP_Bool quiet);
 
     # LPI Functions
     SCIP_RETCODE SCIPlpiCreate(SCIP_LPI** lpi, SCIP_MESSAGEHDLR* messagehdlr, const char* name, SCIP_OBJSENSE objsen)
@@ -575,6 +662,8 @@ cdef extern from "scip/scip.h":
     SCIP_Bool    SCIPlpiHasDualRay(SCIP_LPI* lpi)
     SCIP_Real    SCIPlpiInfinity(SCIP_LPI* lpi)
     SCIP_Bool    SCIPlpiIsInfinity(SCIP_LPI* lpi, SCIP_Real val)
+
+    BMS_BLKMEM* SCIPblkmem(SCIP* scip)
 
 cdef extern from "scip/scipdefplugins.h":
     SCIP_RETCODE SCIPincludeDefaultPlugins(SCIP* scip)
@@ -690,3 +779,62 @@ cdef extern from "scip/cons_sos2.h":
     SCIP_RETCODE SCIPappendVarSOS2(SCIP* scip,
                                    SCIP_CONS* cons,
                                    SCIP_VAR* var)
+
+cdef extern from "blockmemshell/memory.h":
+    void BMScheckEmptyMemory()
+    long long BMSgetMemoryUsed()
+
+cdef extern from "nlpi/pub_expr.h":
+    SCIP_RETCODE SCIPexprCreate(BMS_BLKMEM* blkmem,
+                                SCIP_EXPR** expr,
+                                SCIP_EXPROP op,
+                                ...)
+    SCIP_RETCODE SCIPexprCreateMonomial(BMS_BLKMEM* blkmem,
+                                        SCIP_EXPRDATA_MONOMIAL** monomial,
+                                        SCIP_Real coef,
+                                        int nfactors,
+                                        int* childidxs,
+                                        SCIP_Real* exponents)
+    SCIP_RETCODE SCIPexprCreatePolynomial(BMS_BLKMEM* blkmem,
+                                          SCIP_EXPR** expr,
+                                          int nchildren,
+                                          SCIP_EXPR** children,
+                                          int nmonomials,
+                                          SCIP_EXPRDATA_MONOMIAL** monomials,
+                                          SCIP_Real constant,
+                                          SCIP_Bool copymonomials)
+    SCIP_RETCODE SCIPexprtreeCreate(BMS_BLKMEM* blkmem,
+                                    SCIP_EXPRTREE** tree,
+                                    SCIP_EXPR* root,
+                                    int nvars,
+                                    int nparams,
+                                    SCIP_Real* params)
+    SCIP_RETCODE SCIPexprtreeFree(SCIP_EXPRTREE** tree)
+
+cdef extern from "scip/pub_nlp.h":
+    SCIP_RETCODE SCIPexprtreeSetVars(SCIP_EXPRTREE* tree,
+                                     int nvars,
+                                     SCIP_VAR** vars)
+
+cdef extern from "scip/cons_nonlinear.h":
+    SCIP_RETCODE SCIPcreateConsNonlinear(SCIP* scip,
+                                         SCIP_CONS** cons,
+                                         const char* name,
+                                         int nlinvars,
+                                         SCIP_VAR** linvars,
+                                         SCIP_Real* lincoefs,
+                                         int nexprtrees,
+                                         SCIP_EXPRTREE** exprtrees,
+                                         SCIP_Real* nonlincoefs,
+                                         SCIP_Real lhs,
+                                         SCIP_Real rhs,
+                                         SCIP_Bool initial,
+                                         SCIP_Bool separate,
+                                         SCIP_Bool enforce,
+                                         SCIP_Bool check,
+                                         SCIP_Bool propagate,
+                                         SCIP_Bool local,
+                                         SCIP_Bool modifiable,
+                                         SCIP_Bool dynamic,
+                                         SCIP_Bool removable,
+                                         SCIP_Bool stickingatnode)

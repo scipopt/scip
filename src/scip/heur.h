@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */

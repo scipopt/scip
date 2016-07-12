@@ -659,7 +659,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE );
 
    /* entire root LP best-estimate must be computed from scratch first */
-   if( stat->rootlpbestestimate == SCIP_INVALID )
+   if( stat->rootlpbestestimate == SCIP_INVALID ) /*lint !e777*/
       return SCIP_OKAY;
 
    rootlpsol = SCIPvarGetRootSol(var);

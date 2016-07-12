@@ -65,7 +65,7 @@
 #define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
 #define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
-#define DEFAULT_DYNAMICWEIGHTS FALSE    /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
+#define DEFAULT_DYNAMICWEIGHTS TRUE     /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -1697,7 +1697,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/dynamicweights",
          "should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters?",
-         &branchruledata->randinitorder, TRUE, DEFAULT_DYNAMICWEIGHTS,
+         &branchruledata->dynamicweights, TRUE, DEFAULT_DYNAMICWEIGHTS,
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );

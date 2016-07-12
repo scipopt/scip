@@ -36,6 +36,99 @@ function max(x,y)
 {
    return (x) > (y) ? (x) : (y);
 }
+
+# check if a limit was reached that counts as timeout
+function isLimitReached()
+{
+   if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached )
+      return 1;
+   else
+      return 0;
+}
+# set a limit status and increase the timers and counters accordingly
+function setStatusToLimit()
+{
+   if( timeout )
+      status = "timeout";
+   else if( gapreached )
+      status = "gaplimit";
+   else if( sollimitreached )
+      status = "sollimit";
+   else if( memlimitreached )
+      status = "memlimit";
+   else if( nodelimitreached )
+      status = "nodelimit";
+   else
+      printf("Warning: Trying to set limit status for problem %s, but no limit was reached.\n", prob);
+
+   timeouttime += tottime;
+   timeouts++;
+}
+
+# set a file status and increase timers and counters accordingly
+function setStatusToFail(statusstr)
+{
+   status = statusstr;
+   failtime += tottime;
+   fail++;
+}
+
+# is the dual bound better than the optimal or best known solution according to the given solu file?
+# 'Better' means larger for minimization problems, else 'smaller'.
+function isDualBoundBetter()
+{
+   # objective sense of 1 means minimization
+   if( (objsense == 1 && db-sol[prob] > reltol) || ( objsense == -1 && sol[prob]-db > reltol) )
+      return 1;
+   else
+      return 0;
+}
+
+# is the primal bound better than the optimal or best known solution according to the given solu file?
+# 'Better' means smaller for minimization problems, else 'larger'.
+function isPrimalBoundBetter()
+{
+   # objective sense of 1 means minimization
+   if( (objsense == 1 && sol[prob] - pb > reltol) || (objsense == -1 && pb - sol[prob] > reltol) )
+      return 1;
+   else
+      return 0;
+}
+
+# are primal and dual bound equal with respect to tolerances?
+function isPrimalDualBoundEqual()
+{
+   if( abs(pb - db) <= max(abstol, reltol) )
+      return 1;
+   else
+      return 0;
+}
+
+# write status and primal bound to solu file in case that the status requires a primal bound
+function writeToSoluFile(status, thepb)
+{
+   # write status and problem name
+   printf("=%s= %-18s",status, prob) > NEWSOLUFILE;
+
+   #write primal bound for appropriate statusses
+   if( status == "opt" || status == "best" )
+   {
+      printf(" %16.9g", thepb) > NEWSOLUFILE;
+   }
+
+   printf("\n") > NEWSOLUFILE;
+}
+
+# does this status string represent a failed status?
+function isStatusFail(thisstatus)
+{
+   # check if the first four characters are 'fail'
+   if( substr(thisstatus, 1, 4) == "fail" )
+      return 1;
+   else
+      return 0;
+}
+
 BEGIN {
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
@@ -45,7 +138,8 @@ BEGIN {
    onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;           # should problem name be truncated to fit into column?
-   writesolufile = 0;           # should a solution file be created from the results
+   writesolufile = 0;           # should a solution file be created from the results? Use '1' for writing a new solution file, or '2' for writing an update
+                                # respecting the previous solu file information and updating it by better solution values for previously unsolved instances
    printsoltimes = 0;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
    NEWSOLUFILE = "new_solufile.solu";
@@ -92,7 +186,8 @@ BEGIN {
    overheadtottime = 0.0;
 
    #initialize paver input file
-   if( PAVFILE != "" ) {
+   if( PAVFILE != "" )
+   {
       printf("* Trace Record Definition\n") > PAVFILE;
       printf("* InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime\n") > PAVFILE;
       printf("* NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables\n") > PAVFILE;
@@ -109,9 +204,9 @@ BEGIN {
    intestfile[prob] = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
-/=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
+/=inf=/  { solstatus[$2] = "inf"; sol[$2] = +infty} # problem infeasible (no feasible solution exists)
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
-/=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
+/=unkn=/ { solstatus[$2] = "unkn"; sol[$2] = $3; }  # no feasible solution known
 #
 # problem name
 #
@@ -152,6 +247,7 @@ BEGIN {
    timeout = 0;
    feasible = 0;
    pb = +infty;
+   objectivelimit = +infty;
    firstpb = +infty;
    db = -infty;
    dbset = 0;
@@ -179,6 +275,7 @@ BEGIN {
    sollimitreached = 0;
    memlimitreached = 0;
    nodelimitreached = 0;
+   objlimitreached = 0;
    starttime = 0.0;
    endtime = 0.0;
    timelimit = 0.0;
@@ -241,6 +338,7 @@ BEGIN {
 /^reading user parameter file/ { settings = $5; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
+/set limits objective/ { objectivelimit = $4; }
 
 /^read problem/ { niter += 1; }
 
@@ -250,7 +348,7 @@ BEGIN {
       reoptimization = 1;
 }
 
-# check for primalbound before statitic printing
+# check for primalbound before statistic printing
 /^Primal Bound       :/{
    pb = $4
 }
@@ -421,6 +519,11 @@ BEGIN {
    close(command)
 }
 
+# grep for an objective limit induced infeasibility
+/^SCIP Status        : problem is solved \[infeasible\] \(objective limit reached\)/ {
+    objlimitreached = 1;
+}
+
 /solving was interrupted/ { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
@@ -522,10 +625,12 @@ BEGIN {
 /^=ready=/ {
 
    #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
-   if( !headerprinted ) {
+   if( !headerprinted )
+   {
       ntexcolumns = 8 + (2 * printsoltimes);
 
-      if (TEXFILE != "") {
+      if (TEXFILE != "")
+      {
          #print header of tex file table
          printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
          printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -632,6 +737,13 @@ BEGIN {
 	    objsense = -1;  # maximize
       }
 
+      # treat primal and dual bound differently if objective limit was reached
+      if( objlimitreached && objectivelimit < +infty )
+      {
+          pb = objectivelimit;
+          db = objectivelimit;
+      }
+
       # modify primal bound for maximization problems without primal solution
       if ( (objsense == -1 && pb >= +infty) )
 	 pb = -1.0 * pb;
@@ -643,7 +755,8 @@ BEGIN {
       nprobs++;
 
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 && pb < infty ) {
+      if( abs(pb - db) < 1e-06 && pb < infty )
+      {
          gap = 0.0;
          markersym = "  ";
       }
@@ -702,7 +815,8 @@ BEGIN {
             probtype = "  MIP";
       }
 
-      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
+      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 )
+      {
          timeout = 1;
          tottime = endtime - starttime;
       }
@@ -721,10 +835,12 @@ BEGIN {
       if( usetimestamps != 0 )
          tottime = endtime - starttime;
 
-      if( aborted || timetobest < 0.0 ) {
+      if( aborted || timetobest < 0.0 )
+      {
          timetofirst = tottime;
          timetobest = tottime;
       }
+
 
       lps = primlps + duallps;
       simplex = primiter + dualiter;
@@ -759,213 +875,182 @@ BEGIN {
       shiftedtimetobestgeom = shiftedtimetobestgeom^((nprobs-1)/nprobs) * max(timetobest + timegeomshift, 1.0)^(1.0/nprobs);
 
       status = "";
-      if( readerror ) {
-         status = "readerror";
-         failtime += tottime;
-         fail++;
-      }
-      else if( aborted ) {
-         status = "abort";
-         failtime += tottime;
-         fail++;
-      }
-      else if( checksol && !bestsolfeas ) {
-         status = "fail";
-         failtime += tottime;
-         fail++;
-      }
-      else if( solstatus[prob] == "opt" ) {
-         reltol = 1e-5 * max(abs(pb),1.0);
-         abstol = 1e-4;
+      reltol = 1e-5 * max(abs(pb),1.0);
+      abstol = 1e-4;
 
-	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( feasible && (( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) )) ) {
-            status = "fail";
-            failtime += tottime;
-            fail++;
+      if( readerror )
+      {
+         setStatusToFail("fail (readerror)");
+      }
+      else if( aborted )
+      {
+         setStatusToFail("fail (abort)");
+      }
+      else if( checksol && !bestsolfeas )
+      {
+         setStatusToFail("fail (solution infeasible)");
+      }
+      else if( solstatus[prob] == "opt" )
+      {
+
+         # in case a solution was found we compare primal and dual bound
+         if( feasible && ( isPrimalBoundBetter() || isDualBoundBetter() ) )
+         {
+            setStatusToFail("fail (objective value)");
          }
-         else {
-            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached )
-	    {
-               if( timeout )
-                  status = "timeout";
-               else if( gapreached )
-                  status = "gaplimit";
-               else if( sollimitreached )
-                  status = "sollimit";
-               else if( memlimitreached )
-                  status = "memlimit";
-               else if( nodelimitreached )
-                  status = "nodelimit";
-
-               timeouttime += tottime;
-               timeouts++;
+         else if( !feasible && objlimitreached ) {
+            # if the objective limit was at least as tight as the optimal solution value, we accept the infeasibility
+            if( (objsense == 1 && sol[prob]-objectivelimit >= -reltol) || (objsense == -1 && (objectivelimit - sol[prob] >= -reltol)) )
+            {
+               status = "ok";
+               pass++;
             }
-            else {
-               if( (db == -infty || (abs(pb - db) <= max(abstol, reltol))) && abs(pb - sol[prob]) <= reltol ) {
-                  status = "ok";
-                  pass++;
-               }
-               else {
-                  status = "fail";
-                  failtime += tottime;
-                  fail++;
-               }
+            else
+            {
+               setStatusToFail("fail (objective value)")
             }
          }
-      }
-      else if( solstatus[prob] == "best" ) {
-         reltol = 1e-5 * max(abs(pb),1.0);
-         abstol = 1e-4;
-
-	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && db-sol[prob] > reltol) || ( objsense == -1 && sol[prob]-db > reltol) ) {
-            status = "fail";
-            failtime += tottime;
-            fail++;
+         else if( isLimitReached() )
+         {
+            setStatusToLimit();
          }
-         else {
-            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
-               if( (objsense == 1 && sol[prob]-pb > reltol) || (objsense == -1 && pb-sol[prob] > reltol) ) {
-                  status = "better";
-                  timeouttime += tottime;
-                  timeouts++;
-               }
-               else {
-                  if( timeout )
-                     status = "timeout";
-                  else if( gapreached )
-                     status = "gaplimit";
-                  else if( sollimitreached )
-                     status = "sollimit";
-                  else if( memlimitreached )
-                     status = "memlimit";
-                  else if( nodelimitreached )
-                     status = "nodelimit";
-                  timeouttime += tottime;
-                  timeouts++;
-               }
-            }
-            else {
-               if( abs(pb - db) <= max(abstol, reltol) ) {
-		  status = "solved not verified";
-                  pass++;
-               }
-               else {
-                  status = "fail";
-                  failtime += tottime;
-                  fail++;
-               }
-            }
+         else if( (db == -infty || isPrimalDualBoundEqual()) && !isPrimalBoundBetter() )
+         {
+            status = "ok";
+            pass++;
+         }
+         else
+         {
+            setStatusToFail("fail");
          }
       }
-      else if( solstatus[prob] == "unkn" ) {
-         reltol = 1e-5 * max(abs(pb),1.0);
-         abstol = 1e-4;
+      else if( solstatus[prob] == "best" )
+      {
+         # we failed if the dual bound was higher/lower than the best known primal bound
+         if( isDualBoundBetter() )
+         {
+            setStatusToFail("fail (dual bound)");
+         }
+         else if( isLimitReached() )
+         {
+            setStatusToLimit();
 
-	 if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
-            if( abs(pb) < infty ) {
+            if( isPrimalBoundBetter() )
+            {
                status = "better";
-               timeouttime += tottime;
-               timeouts++;
             }
-	    else {
-	       if( timeout )
-		  status = "timeout";
-	       else if( gapreached )
-		  status = "gaplimit";
-	       else if( sollimitreached )
-		  status = "sollimit";
-	       else if( memlimitreached )
-		  status = "memlimit";
-	       else if( nodelimitreached )
-		  status = "nodelimit";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	 }
-         else if( abs(pb - db) <= max(abstol, reltol) ) {
+         }
+         else if( isPrimalDualBoundEqual() )
+         {
+               status = "solved not verified";
+               pass++;
+         }
+         else
+         {
+             setStatusToFail("fail");
+         }
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+
+         if( isLimitReached() )
+         {
+            setStatusToLimit();
+
+            if( abs(pb) < infty )
+            {
+               status = "better";
+            }
+         }
+         else if( isPrimalDualBoundEqual() )
+         {
             status = "solved not verified";
             pass++;
          }
-         else {
-	    status = "unknown";
+         else
+         {
+            status = "unknown";
          }
       }
-      else if( solstatus[prob] == "inf" ) {
-         if( !feasible ) {
-	    if( timeout || memlimitreached || nodelimitreached ) {
-	       if( timeout )
-		  status = "timeout";
-	       else if( memlimitreached )
-		  status = "memlimit";
-	       else if( nodelimitreached )
-		  status = "nodelimit";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-            else {
+      else if( solstatus[prob] == "inf" )
+      {
+         if( !feasible )
+         {
+            if( timeout || memlimitreached || nodelimitreached )
+            {
+               setStatusToLimit();
+            }
+            else
+            {
                status = "ok";
                pass++;
             }
          }
-         else {
-            status = "fail";
-            failtime += tottime;
-            fail++;
+         else
+         {
+            setStatusToFail("fail (solution on infeasible instance)");
          }
       }
-      else {
-         reltol = 1e-5 * max(abs(pb),1.0);
-         abstol = 1e-4;
-
-         if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) {
-	    if( timeout )
-	       status = "timeout";
-	    else if( gapreached )
-	       status = "gaplimit";
-	    else if( sollimitreached )
-	       status = "sollimit";
-	    else if( memlimitreached )
-	       status = "memlimit";
-	    else if( nodelimitreached )
-	       status = "nodelimit";
-	    timeouttime += tottime;
-	    timeouts++;
-	 }
-         else if( abs(pb - db) < max(abstol,reltol) ) {
+      else
+      {
+         if( isLimitReached() )
+         {
+            setStatusToLimit();
+         }
+         else if( isPrimalDualBoundEqual() )
+         {
             status = "solved not verified";
             pass++;
          }
-         else {
-	    status = "unknown";
+         else
+         {
+            status = "unknown";
          }
       }
 
-      if( valgrinderror > 0 ) {
-         status = "fail"
-         failtime += tottime;
-         fail++;
-      } else if( valgrindleaks > 0 ) {
-         status = "fail"
-         failtime += tottime;
-         fail++;
+      if( valgrinderror > 0 || valgrindleaks > 0 )
+      {
+         setStatusToFail("fail (valgrind)")
       }
 
-      if( writesolufile ) {
+
+      # write some solu file information
+      if( writesolufile )
+      {
+         newsolpb = pb;
+
          if( pb == +infty && db == +infty )
-            printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
-         else if( pb == db )
-            printf("=opt= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
-         else if( pb < +infty )
-            printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
+             newsolstatus = "inf";
+         else if( isPrimalDualBoundEqual() )
+            newsolstatus = "opt";
+         else if( abs(pb) < +infty )
+            newsolstatus = "best";
          else
-            printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
+            newsolstatus = "unkn";
+
+         # in update mode, use values from this run only if the primal bound is strictly better than the current best known
+         # in case of a tie, we trust the solu-file more than the current results
+         if( writesolufile == 2 )
+         {
+            # an opt or inf status from the solu-file always wins. In case of a best status in the solu-file, we use the value of this run
+            # if the primal bound is strictly better or the instance was solved to proven optimality respecting the value from the solu file
+            if( solstatus[prob] == "opt" ||
+                solstatus[prob] == "inf" ||
+                (solstatus[prob] == "best" && !isPrimalBoundBetter() && (!isPrimalDualBoundEqual() || isDualBoundBetter())) )
+            {
+               newsolstatus = solstatus[prob];
+               newsolpb = sol[prob];
+            }
+         }
+
+         writeToSoluFile(newsolstatus, newsolpb);
       }
 
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
-      if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
-         if (TEXFILE != "") {
+      if( !onlypresolvereductions || origcons > cons || origvars > vars )
+      {
+         if (TEXFILE != "")
+         {
 	    if( reoptimization == 0 )
 	    {
                printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
@@ -999,27 +1084,41 @@ BEGIN {
          printf("%s\n", status);
       }
 
-      if( PAVFILE != "" ) {
+      if( PAVFILE != "" )
+      {
          #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
-         if( status == "abort" ) {
+         if( status == "fail (abort)" )
+         {
             modelstat = 13;
             solverstat = 13;
-         } else if( status == "fail" || status == "unknown" ) {
+         }
+         else if( isStatusFail(status) || status == "unknown" )
+         {
             modelstat = 7;
             solverstat = 1;
-         } else if( status == "timeout" ) {
+         }
+         else if( status == "timeout" )
+         {
             modelstat = abs(pb) < infty ? 8 : 14;
             solverstat = 3;
-         } else if( status == "nodelimit" || status == "memlimit" || status == "sollimit" ) {
+         }
+         else if( status == "nodelimit" || status == "memlimit" || status == "sollimit" )
+         {
             modelstat = abs(pb) < infty ? 8 : 14;
             solverstat = 2;  # GAMS does not have a status for these limits, so let's report iteration limit
-         } else if( status == "gaplimit" || status == "better" ) {
+         }
+         else if( status == "gaplimit" || status == "better" )
+         {
             modelstat = 8;
             solverstat = 1;
-         } else if( status == "ok" || status == "solved not verified" ) {
+         }
+         else if( status == "ok" || status == "solved not verified" )
+         {
             modelstat = 1;
             solverstat = 1;
-         } else {
+         }
+         else
+         {
             modelstat = 13;
             solverstat = 13;
          }
@@ -1053,7 +1152,8 @@ END {
    shiftedtimetofirstgeom -= timegeomshift;
    shiftedtimetobestgeom -= timegeomshift;
 
-   if (TEXFILE != "" ) {
+   if (TEXFILE != "" )
+   {
       printf("\\midrule\n")                                                 >TEXFILE;
       printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
              "Total", nprobs, sbab, stottime) >TEXFILE;
@@ -1074,23 +1174,24 @@ END {
    printf(tablehead3);
    printf("\n");
 
-   tablebottom1 = "------------------------------[Nodes]---------------[Time]------";
-   tablebottom2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
-   tablebottom3 = "----------------------------------------------------------------";
+   tablefooter1 = "------------------------------[Nodes]---------------[Time]------";
+   tablefooter2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
+   tablefooter3 = "----------------------------------------------------------------";
 
-   if( printsoltimes ) {
-      tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
-      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
-      tablebottom3 = tablebottom3"-----------------------------------------";
+   if( printsoltimes )
+   {
+      tablefooter1 = tablefooter1"--------[ToFirst]-----------[ToLast]-----";
+      tablefooter2 = tablefooter2"     total     geom.     total     geom.";
+      tablefooter3 = tablefooter3"-----------------------------------------";
    }
 
-   tablebottom1 = tablebottom1"\n";
-   tablebottom2 = tablebottom2"\n";
-   tablebottom3 = tablebottom3"\n";
+   tablefooter1 = tablefooter1"\n";
+   tablefooter2 = tablefooter2"\n";
+   tablefooter3 = tablefooter3"\n";
 
-   printf(tablebottom1);
-   printf(tablebottom2);
-   printf(tablebottom3);
+   printf(tablefooter1);
+   printf(tablefooter2);
+   printf(tablefooter3);
 
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
           nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
@@ -1103,9 +1204,10 @@ END {
    if( printsoltimes )
       printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
    printf("\n");
-   printf(tablebottom3);
+   printf(tablefooter3);
 
-   if (TEXFILE != "" ) {
+   if (TEXFILE != "" )
+   {
       printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
       printf("\\end{supertabular*}\n")                                      >TEXFILE;
       printf("\\end{center}\n")                                             >TEXFILE;

@@ -27,7 +27,7 @@
 
 
 #define PRESOL_NAME            "trivial"
-#define PRESOL_DESC            "trivial presolver: round fractional bounds on integers, fix variables with equal bounds"
+#define PRESOL_DESC            "round fractional bounds on integers, fix variables with equal bounds"
 #define PRESOL_PRIORITY        +9000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */

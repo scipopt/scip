@@ -1442,13 +1442,15 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    if( debugCheckBdchginfos(set, forcedbdchgqueued, NULL, nforcedbdchgqueued) )
       return SCIP_OKAY;
 
-   SCIPerrorMessage("invalid conflict frontier:");
+   SCIPerrorMessage("invalid conflict frontier");
 
    if( bdchginfo != NULL )
    {
+      printf(" (after resolving bound change ");
       printBdchginfo(set, bdchginfo, SCIPbdchginfoGetNewbound(bdchginfo));
-      printf(" ");
+      printf(")");
    }
+   printf(":");
 
    /* print bound changes which are already part of the conflict set */
    SCIP_CALL( printBdchginfos(set, bdchginfos, relaxedbds, nbdchginfos) );

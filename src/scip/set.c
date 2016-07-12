@@ -390,7 +390,7 @@
 /* Writing */
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
-
+#define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should varibales set to zero be printed? */
 
 
 
@@ -2226,6 +2226,11 @@ SCIP_RETCODE SCIPsetCreate(
          "write/allconss",
          "should all constraints be written (including the redundant constraints)?",
          &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "write/printzeros",
+         "should varibales set to zero be printed?",
+         &(*set)->write_printzeros, FALSE, SCIP_DEFAULT_PRINTZEROS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "write/genericnamesoffset",
@@ -5708,9 +5713,7 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    )
 {
    assert(set != NULL);
-   /* TODO: maybe we should compare with REALABS(val) to handle
-      numerical issues, e.g., if val < 0 */
-   assert(SCIPsetIsGE(set, val, -set->num_feastol));
+   assert(SCIPsetIsGE(set, val, -2*set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 
    return (val <= set->num_feastol);
@@ -5972,7 +5975,8 @@ SCIP_Real SCIPsetDualfeasFrac(
 }
 
 /** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
- *  strengthening epsilon better than the old one
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
  */
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5986,13 +5990,18 @@ SCIP_Bool SCIPsetIsLbBetter(
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
+   /* if lower bound is moved to 0 or higher, always accept bound change */
+   if( oldlb < 0.0 && newlb >= 0.0 )
+      return TRUE;
+
    eps = REALABS(oldlb);
    eps = MIN(oldub - oldlb, eps);
    return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
 /** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
- *  strengthening epsilon better than the old one
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
  */
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6005,6 +6014,10 @@ SCIP_Bool SCIPsetIsUbBetter(
 
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+
+   /* if upper bound is moved to 0 or lower, always accept bound change */
+   if( oldub > 0.0 && newub <= 0.0 )
+      return TRUE;
 
    eps = REALABS(oldub);
    eps = MIN(oldub - oldlb, eps);

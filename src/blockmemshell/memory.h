@@ -459,7 +459,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSgetBlockMemoryUsed(mem)                           0LL
 #define BMSgetBlockPointerSize(mem,ptr)                      0
 #define BMSdisplayBlockMemory(mem)                           /**/
-#define BMSblockMemoryCheckEmpty(mem)                        /**/
+#define BMSblockMemoryCheckEmpty(mem)                        0LL
 
 #endif
 
@@ -619,9 +619,9 @@ void BMSdisplayBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** outputs warning messages, if there are allocated elements in the block memory */
+/** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
 EXTERN
-void BMScheckEmptyBlockMemory_call(
+long long BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
