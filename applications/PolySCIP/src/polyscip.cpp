@@ -150,7 +150,6 @@ namespace polyscip {
                 auto v_rep = DDMethod(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
-                v_rep.printVRep(std::cout, true);
                 std::cout << "Starting initializing WSP...";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
                                                                                 considered_objs_.size(),
@@ -224,9 +223,12 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::handleOptimalStatus(bool check_if_new_result) {
         std::cout << "handleOptimalStatus\n";
         auto best_sol = SCIPgetBestSol(scip_);
+        std::cout << "got best sol\n";
         SCIP_SOL *finite_sol{nullptr};
         SCIP_Bool same_obj_val{FALSE};
+        std::cout << "scipcreateFiniteSolCopy\n";
         SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
+
         if (!same_obj_val) {
             auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
                                  SCIPgetSolOrigObj(scip_, finite_sol));
@@ -237,6 +239,7 @@ namespace polyscip {
             }
         }
         assert (finite_sol != nullptr);
+        std::cout << "entering addResult\n";
         addResult(check_if_new_result, true, finite_sol);
         SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
         return SCIP_OKAY;
@@ -543,17 +546,17 @@ namespace polyscip {
         SCIP_CALL( SCIPreadProb(scip_, filename.c_str(), "mop") );
         auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
         assert (obj_probdata != nullptr);
-        auto no_objs = obj_probdata->getNoAllObjs();
+        no_all_objs_ = obj_probdata->getNoAllObjs();
 
         if (cmd_line_args_.beVerbose() || cmd_line_args_.checkForRedundantObjs()) {
             auto vars = SCIPgetOrigVars(scip_);
-            auto begin_nonzeros = vector<int>(no_objs,0);
-            for (size_t i = 0; i<no_objs-1; ++i)
+            auto begin_nonzeros = vector<int>(no_all_objs_, 0);
+            for (size_t i = 0; i<no_all_objs_-1; ++i)
                 begin_nonzeros[i+1] = global::narrow_cast<int>(begin_nonzeros[i] + obj_probdata->getNumberNonzeroCoeffs(i));
 
             auto obj_to_nonzero_inds = vector< vector<int> >{};
             auto obj_to_nonzero_vals = vector< vector<SCIP_Real> >{};
-            for (size_t obj_ind=0; obj_ind<no_objs; ++obj_ind) {
+            for (size_t obj_ind=0; obj_ind<no_all_objs_; ++obj_ind) {
                 auto nonzero_vars = obj_probdata->getNonZeroCoeffVars(obj_ind);
                 auto size = nonzero_vars.size();
                 if (size == 0)
@@ -585,7 +588,7 @@ namespace polyscip {
 
             if (cmd_line_args_.checkForRedundantObjs()) {
                 considered_objs_.push_back(0);
-                for (size_t obj_no=1; obj_no<no_objs; ++obj_no) {
+                for (size_t obj_no=1; obj_no<no_all_objs_; ++obj_no) {
                     if (!objIsRedundant(begin_nonzeros,
                                         obj_to_nonzero_inds,
                                         obj_to_nonzero_vals,
@@ -597,7 +600,7 @@ namespace polyscip {
             }
         }
         else {
-            for (size_t obj_ind=0; obj_ind<no_objs; ++obj_ind)
+            for (size_t obj_ind=0; obj_ind<no_all_objs_; ++obj_ind)
                 considered_objs_.push_back(obj_ind);
         }
 
@@ -624,16 +627,23 @@ namespace polyscip {
                 suffix = prob_file.find_last_of("."),      //separate filename and .mop
                 start_ind = (prefix == string::npos) ? 0 : prefix + 1,
                 end_ind = (suffix != string::npos) ? suffix : string::npos;
-        string file_name = prob_file.substr(start_ind, end_ind - start_ind) + ".ext";
+        string file_name = prob_file.substr(start_ind, end_ind - start_ind) + ".ine";
         std::ofstream solfs(file_name);
         if (solfs.is_open()) {
-            solfs << "nondom points\n";
-            solfs << "V-representation\n";
+            solfs << "WeightSpacePolyhedron\n";
+            solfs << "H-representation\n";
             solfs << "begin\n";
-            solfs << supported_.size() + unbounded_.size() << " " << considered_objs_.size() + 1 << " rational\n";
-            auto integral = true;
+            solfs << supported_.size() + unbounded_.size() + no_all_objs_ << " " << considered_objs_.size() + 1 << " rational\n";
             for (const auto& elem : supported_) {
-                global::print(elem.second, "1 ", "\n", solfs, [](ValueType val) { return round(val); });
+                global::print(elem.second, "0 ", " -1\n", solfs);
+            }
+            for (const auto& elem : unbounded_) {
+                global::print(elem.second, "0 ", " 0", solfs);
+            }
+            for (size_t i=0; i<no_all_objs_; ++i) {
+                auto ineq = vector<unsigned>(no_all_objs_, 0);
+                ineq[i] = 1;
+                global::print(ineq, "0 ", " 0\n", solfs);
             }
             solfs << "end\n";
             solfs.close();

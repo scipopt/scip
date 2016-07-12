@@ -126,7 +126,7 @@ namespace polyscip {
         /**< objective sense of given problem */
         SCIP_Objsense obj_sense_;
         /**< number of objectives */
-        //std::size_t no_objs_;
+        std::size_t no_all_objs_;
         std::vector<std::size_t> considered_objs_;
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;

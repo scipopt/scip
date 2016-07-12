@@ -127,6 +127,8 @@ namespace polyscip {
         bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
 
     private:
+        enum class FacetPartition {minus, plus, zero};
+
         using Graph = lemon::ListGraph;
         using Node = Graph::Node;
         /** Container used to store the marked weight space vertices
@@ -145,10 +147,10 @@ namespace polyscip {
         /*using FacetMapValueT = std::vector<const WeightSpaceVertex*>;
         using FacetMap = std::map<std::shared_ptr<const WeightSpaceFacet>, FacetMapValueT , WeightSpaceFacet::Compare>;*/
 
-        bool vertexIsObsolete(double epsilon,
-                              const WeightSpaceVertex* vertex,
-                              const OutcomeType& outcome,
-                              bool outcome_is_ray) const;
+        FacetPartition getFacetPartition(const WeightSpaceVertex *vertex,
+                                         const OutcomeType &outcome,
+                                         bool outcome_is_ray,
+                                         double eps = 1e-9) const;
 
         void createInitialFacets(H_RepC h_rep) = delete;
 
@@ -175,8 +177,8 @@ namespace polyscip {
         void addToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
                            const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >& new_edges);
 
-        template <typename Container>
-        void addEdgesOfAdjacentVerticesToSkeleton(const Container& vertices);
+        void addEdgesOfAdjacentVerticesToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
+                                                  const std::vector<WeightSpaceVertex*>& zero_vertices);
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
@@ -220,15 +222,7 @@ namespace polyscip {
 
     };
 
-    template <typename Container>
-    void WeightSpacePolyhedron::addEdgesOfAdjacentVerticesToSkeleton(const Container& vertices) {
-        for (auto it = std::begin(vertices); it!=std::end(vertices); ++it ) {
-            for (auto succ_it = std::begin(vertices); succ_it<it; ++succ_it) {
-                if (areAdjacent(*it, *succ_it))
-                    skeleton_.addEdge(getNode(*it), getNode(*succ_it));
-            }
-        }
-    }
+
 
     template <typename Container>
     void WeightSpacePolyhedron::printVertices(const Container& container,
