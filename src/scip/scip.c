@@ -25836,6 +25836,8 @@ SCIP_RETCODE SCIPmarkConsPropagate(
 
    SCIP_CALL( SCIPconsMarkPropagate(cons, scip->set) );
 
+   assert(!SCIPconsIsEnabled(cons) || SCIPconsIsMarkedPropagate(cons));
+
    return SCIP_OKAY;
 }
 
@@ -25861,6 +25863,8 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
    SCIP_CALL( checkStage(scip, "SCIPunmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsUnmarkPropagate(cons, scip->set) );
+
+   assert(!SCIPconsIsEnabled(cons) || !SCIPconsIsMarkedPropagate(cons));
 
    return SCIP_OKAY;
 }

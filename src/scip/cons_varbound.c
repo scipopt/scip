@@ -227,9 +227,6 @@ SCIP_RETCODE catchEvents(
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) );
 
-   /* mark the constraint to be propagated */
-   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-
    return SCIP_OKAY;
 }
 

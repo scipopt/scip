@@ -7866,12 +7866,12 @@ SCIP_DECL_CONSPROP(consPropSetppc)
             break;
       }
 
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
+
       /* all multiaggregations should be resolved at here */
       assert(inpresolve || ! SCIPconsGetData(conss[c])->existmultaggr);
 
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
-
-      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
    }
 
    /* return the correct result */
