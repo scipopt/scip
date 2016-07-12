@@ -5550,7 +5550,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
-   (*cons)->markpropagate = FALSE;
+   (*cons)->markpropagate = TRUE;
    (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
    (*cons)->updateinsert = FALSE;
@@ -7444,7 +7444,7 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
             SCIPconsCapture(conshdlr->storedpropconss[v]);
             SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->storedpropconss[v], set) );
          }
-         assert(conshdlr->nmarkedpropconss == 0);
+         /* assert(conshdlr->nmarkedpropconss == 0); this assert does not hold if updates are delayed */
       }
    }
 

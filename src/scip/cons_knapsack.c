@@ -9051,6 +9051,7 @@ SCIP_RETCODE prepareCons(
          ++(*nfixedvars);
 
       ++v;
+      assert(v < nvars);
    }
 
    /* if we fixed at least one variable we need to delete them from the constraint */
