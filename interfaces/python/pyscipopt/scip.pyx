@@ -5,7 +5,7 @@ import sys
 from cpython cimport Py_INCREF, Py_DECREF
 from libc.stdlib cimport malloc, free
 
-include "linexpr.pxi"
+include "expr.pxi"
 include "lp.pxi"
 
 include "branchrule.pxi"
@@ -200,20 +200,23 @@ cdef class Solution:
         sol.sol = scip_sol
         return sol
 
-cdef class Variable(LinExpr):
+cdef class Variable(Expr):
     """Is a linear expression and has SCIP_VAR*"""
     cdef SCIP_VAR* var
-    cdef readonly str name
 
     @staticmethod
-    cdef create(SCIP_VAR* scipvar, str name):
+    cdef create(SCIP_VAR* scipvar):
         var = Variable()
         var.var = scipvar
-        var.name = name
         return var
 
+    property name:
+        def __get__(self):
+            cname = bytes( SCIPvarGetName(self.var) )
+            return cname.decode('utf-8')
+
     def __init__(self):
-        LinExpr.__init__(self, {(self,) : 1.0})
+        Expr.__init__(self, {(self,) : 1.0})
 
     def __hash__(self):
         return hash(id(self))
@@ -259,18 +262,18 @@ cdef class Variable(LinExpr):
 
 cdef class Constraint:
     cdef SCIP_CONS* cons
-    cdef readonly str name
     cdef public object data #storage for python user
 
     @staticmethod
-    cdef create(SCIP_CONS* scipcons, str name):
+    cdef create(SCIP_CONS* scipcons):
         cons = Constraint()
         cons.cons = scipcons
-        cons.name = name
         return cons
 
-    def __init__(self, name=None):
-        self.name = name
+    property name:
+        def __get__(self):
+            cname = bytes( SCIPconsGetName(self.cons) )
+            return cname.decode('utf-8')
 
     def __repr__(self):
         return self.name
@@ -413,7 +416,7 @@ cdef class Model:
         sense -- the objective sense (default 'minimize')
         """
         cdef SCIP_Real coeff
-        if isinstance(coeffs, LinExpr):
+        if isinstance(coeffs, Expr):
             # transform linear expression into variable dictionary
             terms = coeffs.terms
             coeffs = {t[0]:c for t, c in terms.items() if c != 0.0}
@@ -487,7 +490,7 @@ cdef class Model:
         else:
             PY_SCIP_CALL(SCIPaddVar(self._scip, scip_var))
 
-        pyVar = Variable.create(scip_var, name)
+        pyVar = Variable.create(scip_var)
         PY_SCIP_CALL(SCIPreleaseVar(self._scip, &scip_var))
         return pyVar
 
@@ -507,7 +510,7 @@ cdef class Model:
         """
         cdef SCIP_VAR* _tvar
         PY_SCIP_CALL(SCIPtransformVar(self._scip, var.var, &_tvar))
-        return Variable.create(_tvar, SCIPvarGetName(_tvar).decode("utf-8"))
+        return Variable.create(_tvar)
 
     def addVarLocks(self, Variable var, nlocksdown, nlocksup):
         """adds given values to lock numbers of variable for rounding
@@ -552,7 +555,7 @@ cdef class Model:
         else:
             raise Warning("unrecognized variable type")
         if infeasible:
-            print('could not change variable type of variable ', var.name)
+            print('could not change variable type of variable %s' % var)
 
     def getVars(self, transformed=False):
         """Retrieve all variables.
@@ -572,28 +575,17 @@ cdef class Model:
             _vars = SCIPgetOrigVars(self._scip)
             _nvars = SCIPgetNOrigVars(self._scip)
 
-        for i in range(_nvars):
-            _var = _vars[i]
-            name = SCIPvarGetName(_var).decode("utf-8")
-            vars.append(Variable.create(_var, name))
-
-        return vars
-
+        return [Variable.create(_vars[i]) for i in range(_nvars)]
 
     # Constraint functions
-    # . By default the lhs is set to 0.0.
-    # If the lhs is to be unbounded, then you set lhs to None.
-    # By default the rhs is unbounded.
-    def addCons(self, coeffs, lhs=0.0, rhs=None, name="cons",
-                initial=True, separate=True, enforce=True, check=True,
-                propagate=True, local=False, modifiable=False, dynamic=False,
-                removable=False, stickingatnode=False):
+    def addCons(self, cons, name="cons", initial=True, separate=True,
+                enforce=True, check=True, propagate=True, local=False,
+                modifiable=False, dynamic=False, removable=False,
+                stickingatnode=False):
         """Add a linear or quadratic constraint.
 
         Keyword arguments:
-        coeffs -- list of coefficients
-        lhs -- the left hand side (default 0.0)
-        rhs -- the right hand side (default None)
+        cons -- list of coefficients
         name -- the name of the constraint (default 'cons')
         initial -- should the LP relaxation of constraint be in the initial LP? (default True)
         separate -- should the constraint be separated during LP processing? (default True)
@@ -606,56 +598,52 @@ cdef class Model:
         removable -- hould the relaxation be removed from the LP due to aging or cleanup? (default False)
         stickingatnode -- should the constraint always be kept at the node where it was added, even if it may be moved to a more global node? (default False)
         """
-        if isinstance(coeffs, LinCons):
-            kwargs = dict(lhs=lhs, rhs=rhs, name=name,
-                          initial=initial, separate=separate, enforce=enforce,
-                          check=check, propagate=propagate, local=local,
-                          modifiable=modifiable, dynamic=dynamic,
-                          removable=removable, stickingatnode=stickingatnode)
-            deg = coeffs.expr.degree()
-            if deg <= 1:
-                return self._addLinCons(coeffs, **kwargs)
-            elif deg <= 2:
-                return self._addQuadCons(coeffs, **kwargs)
-            else:
-                return self._addNonlinearCons(coeffs, **kwargs)
+        assert isinstance(cons, ExprCons)
+        kwargs = dict(name=name, initial=initial, separate=separate,
+                      enforce=enforce, check=check,
+                      propagate=propagate, local=local,
+                      modifiable=modifiable, dynamic=dynamic,
+                      removable=removable,
+                      stickingatnode=stickingatnode)
+        kwargs['lhs'] = -SCIPinfinity(self._scip) if cons.lhs is None else cons.lhs
+        kwargs['rhs'] =  SCIPinfinity(self._scip) if cons.rhs is None else cons.rhs
 
-        if lhs is None:
-            lhs = -SCIPinfinity(self._scip)
-        if rhs is None:
-            rhs = SCIPinfinity(self._scip)
+        deg = cons.expr.degree()
+        if deg <= 1:
+            return self._addLinCons(cons, **kwargs)
+        elif deg <= 2:
+            return self._addQuadCons(cons, **kwargs)
+        else:
+            return self._addNonlinearCons(cons, **kwargs)
+
+    def _addLinCons(self, ExprCons lincons, **kwargs):
+        """Add object of class ExprCons."""
+        assert isinstance(lincons, ExprCons)
+
+        assert lincons.expr.degree() <= 1
+        terms = lincons.expr.terms
+
         cdef SCIP_CONS* scip_cons
-        PY_SCIP_CALL(SCIPcreateConsLinear(self._scip, &scip_cons, str_conversion(name), 0, NULL, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode))
+        PY_SCIP_CALL(SCIPcreateConsLinear(
+            self._scip, &scip_cons, str_conversion(kwargs['name']), 0, NULL, NULL,
+            kwargs['lhs'], kwargs['rhs'], kwargs['initial'],
+            kwargs['separate'], kwargs['enforce'], kwargs['check'],
+            kwargs['propagate'], kwargs['local'], kwargs['modifiable'],
+            kwargs['dynamic'], kwargs['removable'], kwargs['stickingatnode']))
 
-        for k in coeffs:
-            var = <Variable>k
-            PY_SCIP_CALL(SCIPaddCoefLinear(self._scip, scip_cons, var.var, <SCIP_Real>coeffs[k]))
+        for key, coeff in terms.items():
+            var = <Variable>key[0]
+            PY_SCIP_CALL(SCIPaddCoefLinear(self._scip, scip_cons, var.var, <SCIP_Real>coeff))
 
         PY_SCIP_CALL(SCIPaddCons(self._scip, scip_cons))
-        PyCons = Constraint.create(scip_cons, name)
-
+        PyCons = Constraint.create(scip_cons)
         PY_SCIP_CALL(SCIPreleaseCons(self._scip, &scip_cons))
 
         return PyCons
 
-    def _addLinCons(self, LinCons lincons, **kwargs):
-        """Add object of class LinCons."""
-        assert isinstance(lincons, LinCons)
-        kwargs['lhs'], kwargs['rhs'] = lincons.lb, lincons.ub
-        terms = lincons.expr.terms
-        assert lincons.expr.degree() <= 1
-        assert terms[()] == 0.0
-        coeffs = {t[0]:c for t, c in terms.items() if c != 0.0}
-
-        return self.addCons(coeffs, **kwargs)
-
-    def _addQuadCons(self, LinCons quadcons, **kwargs):
-        kwargs['lhs'] = -SCIPinfinity(self._scip) if quadcons.lb is None else quadcons.lb
-        kwargs['rhs'] =  SCIPinfinity(self._scip) if quadcons.ub is None else quadcons.ub
+    def _addQuadCons(self, ExprCons quadcons, **kwargs):
         terms = quadcons.expr.terms
         assert quadcons.expr.degree() <= 2
-        assert terms[()] == 0.0
 
         cdef SCIP_CONS* scip_cons
         PY_SCIP_CALL(SCIPcreateConsQuadratic(
@@ -668,9 +656,7 @@ cdef class Model:
             kwargs['modifiable'], kwargs['dynamic'], kwargs['removable']))
 
         for v, c in terms.items():
-            if len(v) == 0: # constant
-                assert c == 0.0
-            elif len(v) == 1: # linear
+            if len(v) == 1: # linear
                 var = <Variable>v[0]
                 PY_SCIP_CALL(SCIPaddLinearVarQuadratic(self._scip, scip_cons, var.var, c))
             else: # quadratic
@@ -679,11 +665,10 @@ cdef class Model:
                 PY_SCIP_CALL(SCIPaddBilinTermQuadratic(self._scip, scip_cons, var1.var, var2.var, c))
 
         PY_SCIP_CALL(SCIPaddCons(self._scip, scip_cons))
+        return Constraint.create(scip_cons)
 
-        return Constraint.create(scip_cons, SCIPconsGetName(scip_cons).decode("utf-8"))
-
-    def _addNonlinearCons(self, LinCons cons, **kwargs):
-        """Add object of class LinCons."""
+    def _addNonlinearCons(self, ExprCons cons, **kwargs):
+        """Add object of class ExprCons."""
         cdef SCIP_EXPR* expr
         cdef SCIP_EXPR** varexprs
         cdef SCIP_EXPRDATA_MONOMIAL** monomials
@@ -692,10 +677,7 @@ cdef class Model:
         cdef SCIP_VAR** vars
         cdef SCIP_CONS* scip_cons
 
-        assert isinstance(cons, LinCons)
-        kwargs['lhs'], kwargs['rhs'] = cons.lb, cons.ub
         terms = cons.expr.terms
-        assert terms[()] == 0.0
 
         # collect variables
         variables = list(set(var for term in terms for var in term))
@@ -739,7 +721,7 @@ cdef class Model:
             kwargs['modifiable'], kwargs['dynamic'], kwargs['removable'],
             kwargs['stickingatnode']) )
         PY_SCIP_CALL(SCIPaddCons(self._scip, scip_cons))
-        result = Constraint.create(scip_cons, SCIPconsGetName(scip_cons).decode("utf-8"))
+        result = Constraint.create(scip_cons)
 
         PY_SCIP_CALL( SCIPexprtreeFree(&exprtree) )
         free(vars)
@@ -793,7 +775,7 @@ cdef class Model:
                 PY_SCIP_CALL(SCIPaddVarSOS1(self._scip, scip_cons, var.var, weights[i]))
 
         PY_SCIP_CALL(SCIPaddCons(self._scip, scip_cons))
-        return Constraint.create(scip_cons, name)
+        return Constraint.create(scip_cons)
 
     def addConsSOS2(self, vars, weights=None, name="SOS2cons",
                 initial=True, separate=True, enforce=True, check=True,
@@ -832,7 +814,7 @@ cdef class Model:
                 PY_SCIP_CALL(SCIPaddVarSOS2(self._scip, scip_cons, var.var, weights[i]))
 
         PY_SCIP_CALL(SCIPaddCons(self._scip, scip_cons))
-        return Constraint.create(scip_cons, name)
+        return Constraint.create(scip_cons)
 
 
     def addPyCons(self, Constraint cons):
@@ -891,7 +873,7 @@ cdef class Model:
         cdef SCIP_CONS* transcons
         PY_SCIP_CALL(SCIPgetTransformedCons(self._scip, cons.cons, &transcons))
 
-        return Constraint.create(transcons, SCIPconsGetName(transcons).decode("utf-8"))
+        return Constraint.create(transcons)
 
     def getConss(self):
         """Retrieve all constraints."""
@@ -902,12 +884,7 @@ cdef class Model:
 
         _conss = SCIPgetConss(self._scip)
         _nconss = SCIPgetNConss(self._scip)
-
-        for i in range(_nconss):
-            _cons = _conss[i]
-            conss.append(Constraint.create(_cons, SCIPconsGetName(_cons).decode("utf-8")))
-
-        return conss
+        return [Constraint.create(_conss[i]) for i in range(_nconss)]
 
     def getDualsolLinear(self, Constraint cons):
         """Retrieve the dual solution to a linear constraint.
@@ -998,7 +975,7 @@ cdef class Model:
         n = str_conversion(name)
         cdef SCIP_CONSHDLR* scip_conshdlr
         scip_conshdlr = SCIPfindConshdlr(self._scip, str_conversion(conshdlr.name))
-        constraint = Constraint(name)
+        constraint = Constraint()
         PY_SCIP_CALL(SCIPcreateCons(self._scip, &(constraint.cons), n, scip_conshdlr, <SCIP_CONSDATA*>constraint,
                                 initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode))
         return constraint

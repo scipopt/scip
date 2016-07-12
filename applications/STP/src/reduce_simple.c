@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dirreduce.c
+/**@file   reduce_simple.c
  * @brief  several basic reductions for Steiner tree problems
  * @author Daniel Rehfeldt
  *

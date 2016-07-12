@@ -5335,6 +5335,7 @@ SCIP_RETCODE undoBdchgsDualsol(
       }
       else
       {
+         SCIP_Real capped_primsol;          /* we're not primal feasible, primsol may exceed SCIP_INFINITY */
          SCIP_COL* col;
          int c;
 
@@ -5347,9 +5348,16 @@ SCIP_RETCODE undoBdchgsDualsol(
          /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
          varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
+         /* cap primal solution */
+         capped_primsol = primsols[c];
+         if( SCIPsetIsInfinity(set, primsols[c]) )
+            capped_primsol = SCIPsetInfinity(set);
+         else if( SCIPsetIsInfinity(set, -primsols[c]) )
+            capped_primsol = -SCIPsetInfinity(set);
+
          /* check dual feasibility */
-         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
-            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
+         if( (SCIPsetIsGT(set, capped_primsol, curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
+            || (SCIPsetIsLT(set, capped_primsol, curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
          {
             SCIPdebugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
                varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);

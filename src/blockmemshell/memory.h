@@ -28,7 +28,6 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include <stdio.h>
 
 /* special thanks to Daniel Junglas for following template and macros */
 #ifdef __cplusplus
@@ -428,7 +427,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
-#define BMSblockMemoryCheckEmpty(mem,file)    BMScheckEmptyBlockMemory_call(mem,file)
+#define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
 
 #else
 
@@ -457,7 +456,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSgetBlockMemoryUsed(mem)                           0LL
 #define BMSgetBlockPointerSize(mem,ptr)                      0
 #define BMSdisplayBlockMemory(mem)                           /**/
-#define BMSblockMemoryCheckEmpty(mem,file)                   0LL
+#define BMSblockMemoryCheckEmpty(mem)                        0LL
 
 #endif
 
@@ -608,11 +607,10 @@ void BMSdisplayBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** prints allocated elements in the block memory and returns number of unfreed bytes */
+/** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
 EXTERN
 long long BMScheckEmptyBlockMemory_call(
-   const BMS_BLKMEM*     blkmem,             /**< block memory */
-   FILE*                 file                /**< file to print to, or NULL for using SCIPerrorMessage (if in SCIP, otherwise stdout) */
+   const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 

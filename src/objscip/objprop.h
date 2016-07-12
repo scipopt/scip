@@ -64,7 +64,7 @@ public:
    const SCIP_Bool scip_delay_;
 
    /** positions in the node solving loop where propagator should be executed */
-   const unsigned int scip_timingmask_;
+   const SCIP_PROPTIMING scip_timingmask_;
 
    /** default presolving priority of the propagator */
    const int scip_presol_priority_;
@@ -73,7 +73,7 @@ public:
    const int scip_presol_maxrounds_;
 
    /**< timing mask of the propagator's presolving method */
-   const SCIP_Bool scip_presol_timing_;
+   const SCIP_PRESOLTIMING scip_presol_timing_;
 
 
    /** default constructor */
@@ -84,10 +84,10 @@ public:
       int                priority,           /**< priority of the propagator */
       int                freq,               /**< frequency for calling propagator */
       SCIP_Bool          delay,              /**< should propagator be delayed, if other propagators found reductions? */
-      unsigned int       timingmask,         /**< positions in the node solving loop where propagator should be executed */
+      SCIP_PROPTIMING    timingmask,         /**< positions in the node solving loop where propagator should be executed */
       int                presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
       int                presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-      SCIP_Bool          presoltiming        /**< timing mask of the propagator's presolving method */
+      SCIP_PRESOLTIMING  presoltiming        /**< timing mask of the propagator's presolving method */
       )
       : scip_(scip),
         scip_name_(0),

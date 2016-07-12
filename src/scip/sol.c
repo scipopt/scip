@@ -232,6 +232,7 @@ SCIP_RETCODE solUnlinkVar(
       SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
+   case SCIP_SOLORIGIN_PARTIAL:
    case SCIP_SOLORIGIN_UNKNOWN:
       SCIP_CALL( solSetArrayVal(sol, set, var, SCIP_UNKNOWN) );
       return SCIP_OKAY;
@@ -1547,7 +1548,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
    {
       int idx = SCIPvarGetIndex(vars[v]);
 
-      if( vals[v] != SCIP_UNKNOWN )
+      if( vals[v] != SCIP_UNKNOWN ) /*lint !e777*/
       {
          /* from now on, variable must not be deleted */
          SCIPvarMarkNotDeletable(vars[v]);
@@ -2048,7 +2049,7 @@ SCIP_RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
       if( printzeros
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
-         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) )
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -2069,7 +2070,7 @@ SCIP_RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
       if( printzeros
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
-         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) )
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
