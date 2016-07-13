@@ -214,13 +214,15 @@ struct SCIP_ConsData
    int                   nbinvars;           /**< the number of binary variables in the constraint, only valid after
                                               *   sorting in stage >= SCIP_STAGE_INITSOLVE
                                               */
+   unsigned int          boundstightened:2;  /**< is constraint already propagated with bound tightening? */
+   unsigned int          rangedrowpropagated:2; /**< did we perform ranged row propagation on this constraint?
+                                                 *   (0: no, 1: yes, 2: with potentially adding artificial constraint */
    unsigned int          validmaxabsval:1;   /**< is the maximum absolute value valid? */
    unsigned int          validactivities:1;  /**< are the activity bounds (local and global) valid? */
    unsigned int          validminact:1;      /**< is the local minactivity valid? */
    unsigned int          validmaxact:1;      /**< is the local maxactivity valid? */
    unsigned int          validglbminact:1;   /**< is the global minactivity valid? */
    unsigned int          validglbmaxact:1;   /**< is the global maxactivity valid? */
-   unsigned int          boundstightened:1;  /**< is constraint already propagated with bound tightening? */
    unsigned int          presolved:1;        /**< is constraint already presolved? */
    unsigned int          removedfixings:1;   /**< are all fixed variables removed from the constraint? */
    unsigned int          validsignature:1;   /**< is the bit signature valid? */
@@ -237,7 +239,6 @@ struct SCIP_ConsData
    unsigned int          hascontvar:1;       /**< does the constraint contain at least one continuous variable? */
    unsigned int          hasnonbinvar:1;     /**< does the constraint contain at least one non-binary variable? */
    unsigned int          hasnonbinvalid:1;   /**< is the information stored in hasnonbinvar and hascontvar valid? */
-   unsigned int          rangedrowpropagated:1; /**< did we perform ranged row propagation on this constraint? */
 };
 
 /** event data for bound change event */
@@ -779,9 +780,6 @@ SCIP_RETCODE consCatchAllEvents(
       SCIP_CALL( consCatchEvent(scip, cons, eventhdlr, i) );
    }
 
-   /* mark the constraint for propagation */
-   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-
    return SCIP_OKAY;
 }
 
@@ -947,7 +945,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->validmaxact = FALSE;
    (*consdata)->validglbminact = FALSE;
    (*consdata)->validglbmaxact = FALSE;
-   (*consdata)->boundstightened = FALSE;
+   (*consdata)->boundstightened = 0;
    (*consdata)->presolved = FALSE;
    (*consdata)->removedfixings = FALSE;
    (*consdata)->validsignature = FALSE;
@@ -962,7 +960,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->binvarssorted = FALSE;
    (*consdata)->nbinvars = -1;
    (*consdata)->varsdeleted = FALSE;
-   (*consdata)->rangedrowpropagated = FALSE;
+   (*consdata)->rangedrowpropagated = 0;
 
    if( SCIPisTransformed(scip) )
    {
@@ -3277,7 +3275,7 @@ SCIP_RETCODE chgLhs(
    /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
    if( !SCIPisInfinity(scip, -lhs) && SCIPisGT(scip, lhs, consdata->lhs) )
    {
-      consdata->boundstightened = FALSE;
+      consdata->boundstightened = 0;
       consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
       consdata->implsadded = FALSE;
@@ -3294,7 +3292,7 @@ SCIP_RETCODE chgLhs(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->rangedrowpropagated = FALSE;
+   consdata->rangedrowpropagated = 0;
 
 
    /* update the lhs of the LP row */
@@ -3400,7 +3398,7 @@ SCIP_RETCODE chgRhs(
    /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
    if( !SCIPisInfinity(scip, rhs) && SCIPisLT(scip, rhs, consdata->rhs) )
    {
-      consdata->boundstightened = FALSE;
+      consdata->boundstightened = 0;
       consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
       consdata->implsadded = FALSE;
@@ -3417,7 +3415,7 @@ SCIP_RETCODE chgRhs(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->rangedrowpropagated = FALSE;
+   consdata->rangedrowpropagated = 0;
 
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
@@ -3531,7 +3529,7 @@ SCIP_RETCODE addCoef(
       SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
-   consdata->boundstightened = FALSE;
+   consdata->boundstightened = 0;
    consdata->presolved = FALSE;
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(var);
 
@@ -3543,7 +3541,7 @@ SCIP_RETCODE addCoef(
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
-   consdata->rangedrowpropagated = FALSE;
+   consdata->rangedrowpropagated = 0;
 
    if( consdata->nvars == 1 )
    {
@@ -3675,7 +3673,7 @@ SCIP_RETCODE delCoefPos(
       SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
-   consdata->boundstightened = FALSE;
+   consdata->boundstightened = 0;
    consdata->presolved = FALSE;
    consdata->validsignature = FALSE;
    consdata->changed = TRUE;
@@ -3683,7 +3681,7 @@ SCIP_RETCODE delCoefPos(
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
-   consdata->rangedrowpropagated = FALSE;
+   consdata->rangedrowpropagated = 0;
 
    /* check if hasnonbinvar flag might be incorrect now */
    if( consdata->hasnonbinvar && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
@@ -3757,7 +3755,7 @@ SCIP_RETCODE chgCoefPos(
       SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
-   consdata->boundstightened = FALSE;
+   consdata->boundstightened = 0;
    consdata->presolved = FALSE;
    consdata->validsignature = consdata->validsignature && (newval * val > 0.0);
    consdata->changed = TRUE;
@@ -3765,7 +3763,7 @@ SCIP_RETCODE chgCoefPos(
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
-   consdata->rangedrowpropagated = FALSE;
+   consdata->rangedrowpropagated = 0;
 
    return SCIP_OKAY;
 }
@@ -5497,7 +5495,8 @@ SCIP_RETCODE rangedRowPropagation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->rangedrowpropagated )
+   /* we already did full ranged row propagation */
+   if( consdata->rangedrowpropagated == 2 )
       return SCIP_OKAY;
 
    /* at least three variables are needed */
@@ -5514,8 +5513,22 @@ SCIP_RETCODE rangedRowPropagation(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   addartconss = conshdlrdata->rangedrowartcons;
+   addartconss = conshdlrdata->rangedrowartcons && SCIPgetDepth(scip) < 1 && !SCIPinProbing(scip) && !SCIPinRepropagation(scip);
 
+   /* we may add artificial constraints */
+   if( addartconss )
+      consdata->rangedrowpropagated = 2;
+   /* we are not allowed to add artificial constraints during propagation; if nothing changed on this constraint since
+    * the last rangedrowpropagation, we can stop; otherwise, we mark this constraint to be rangedrowpropagated without
+    * artificial constraints
+    */
+   else
+   {
+      if( consdata->rangedrowpropagated )
+         return SCIP_OKAY;
+
+      consdata->rangedrowpropagated = 1;
+   }
    fixedact = 0;
    nfixedconsvars = 0;
    /* calculate fixed activity and number of fixed variables */
@@ -5999,8 +6012,7 @@ SCIP_RETCODE rangedRowPropagation(
                         ++(*nfixedvars);
                   }
                }
-               else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && addartconss &&
-                  (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
+               else if( addartconss && (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
                {
                   /* aggregation possible if we have two variables, but this will be done later on */
                   SCIP_CONS* newcons;
@@ -6258,8 +6270,7 @@ SCIP_RETCODE rangedRowPropagation(
             /* at least two solutions and more than one variable, so we add a new constraint which bounds the feasible
              * region for our infcheckvars, if possible
              */
-            else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && addartconss &&
-               (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
+            else if( addartconss && (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
             {
                SCIP_CONS* newcons;
                char name[SCIP_MAXSTRLEN];
@@ -6301,7 +6312,7 @@ SCIP_RETCODE rangedRowPropagation(
          }
       }
    }
-   else if( ncontvars < ninfcheckvars && !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 )
+   else if( addartconss && ncontvars < ninfcheckvars )
    {
       SCIP_Real maxact = 0.0;
       SCIP_Real minact = 0.0;
@@ -6366,8 +6377,7 @@ SCIP_RETCODE rangedRowPropagation(
             }
          }
       }
-      if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && v == consdata->nvars
-         && addartconss && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
+      if( v == consdata->nvars && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
       {
          SCIP_CONS* newcons;
          char name[SCIP_MAXSTRLEN];
@@ -6401,8 +6411,6 @@ SCIP_RETCODE rangedRowPropagation(
  TERMINATE:
    SCIPfreeBufferArray(scip, &infcheckvals);
    SCIPfreeBufferArray(scip, &infcheckvars);
-
-   consdata->rangedrowpropagated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -6691,6 +6699,7 @@ SCIP_RETCODE tightenBounds(
    )
 {
    SCIP_CONSDATA* consdata;
+   int tightenmode;
    int nvars;
    int nrounds;
    int lastchange;
@@ -6727,6 +6736,16 @@ SCIP_RETCODE tightenBounds(
 
    nvars = consdata->nvars;
    force = (nvars == 1) && !SCIPconsIsModifiable(cons);
+
+   /* we are at the root node or during presolving */
+   if( SCIPgetDepth(scip) < 1 )
+      tightenmode = 2;
+   else
+      tightenmode = 1;
+
+   /* stop if we already tightened the constraint and the tightening is not forced */
+   if( !force && consdata->boundstightened >= tightenmode )
+      return SCIP_OKAY;
 
    /* ensure that the variables are properly sorted */
    if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
@@ -6774,10 +6793,10 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   for( nrounds = 0; (force || !consdata->boundstightened) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
+   for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
    {
       /* mark the constraint to have the variables' bounds tightened */
-      consdata->boundstightened = TRUE;
+      consdata->boundstightened = tightenmode;
 
       /* try to tighten the bounds of each variable in the constraint. During solving process, the binary variable
        * sorting enables skipping variables
@@ -9609,8 +9628,8 @@ SCIP_RETCODE convertLongEquality(
          /* we do not have any event on vartype changes, so we need to manually force this constraint to be presolved
           * again
           */
-         consdata->boundstightened = FALSE;
-         consdata->rangedrowpropagated = FALSE;
+         consdata->boundstightened = 0;
+         consdata->rangedrowpropagated = 0;
          consdata->presolved = FALSE;
       }
    }
@@ -14975,7 +14994,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       if( !cutoff && !SCIPisStopped(scip) )
       {
          /* perform ranged row propagation */
-         if( conshdlrdata->rangedrowpropagation && !consdata->rangedrowpropagated )
+         if( conshdlrdata->rangedrowpropagation )
          {
             int lastnfixedvars;
 
@@ -15575,7 +15594,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       }
 
       consdata->presolved = FALSE;
-      consdata->rangedrowpropagated = FALSE;
+      consdata->rangedrowpropagated = 0;
 
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
       if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
@@ -15595,12 +15614,12 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
             switch( eventtype )
             {
             case SCIP_EVENTTYPE_LBTIGHTENED:
-               consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, consdata->rhs))
-                  || (val < 0.0 && SCIPisInfinity(scip, -consdata->lhs));
+               if( (val > 0.0 ? !SCIPisInfinity(scip, consdata->rhs) : !SCIPisInfinity(scip, -consdata->lhs)) )
+                  consdata->boundstightened = 0;
                break;
             case SCIP_EVENTTYPE_UBTIGHTENED:
-               consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, -consdata->lhs))
-                  || (val < 0.0 && SCIPisInfinity(scip, consdata->rhs));
+               if( (val > 0.0 ? !SCIPisInfinity(scip, -consdata->lhs) : !SCIPisInfinity(scip, consdata->rhs)) )
+                  consdata->boundstightened = 0;
                break;
             default:
                SCIPerrorMessage("invalid event type %d\n", eventtype);
@@ -15636,7 +15655,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       /* we want to remove the fixed variable */
       consdata->presolved = FALSE;
       consdata->removedfixings = FALSE;
-      consdata->rangedrowpropagated = FALSE;
+      consdata->rangedrowpropagated = 0;
 
       /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
       if( consdata->maxactdeltavar == var )
@@ -15668,7 +15687,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
-      consdata->rangedrowpropagated = FALSE;
+      consdata->rangedrowpropagated = 0;
 
       /* update the activity values */
       if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
