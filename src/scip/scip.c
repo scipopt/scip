@@ -13505,6 +13505,7 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+   int ncliquecomponents;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -13700,6 +13701,9 @@ SCIP_RETCODE presolve(
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
    SCIPclockStop(scip->stat->presolvingtimeoverall, scip->set);
 
+   ncliquecomponents = -1;
+   SCIP_CALL( SCIPcomputeCliqueComponents(scip, &ncliquecomponents) );
+
    /* print presolving statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "presolving (%d rounds: %d fast, %d medium, %d exhaustive):\n", scip->stat->npresolrounds,
@@ -13710,6 +13714,9 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
+
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+         "Clique table has %d connected components (bin+impl bin vars)\n", ncliquecomponents);
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -21886,11 +21893,14 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
    SCIP_VAR** vars;
    SCIP_DIGRAPH* digraph;
    int nbinvars;
+   int nimplbinvars;
    int* components;
    int* sizes;
    int v;
    int c;
-   int ndoublebinvars;
+   int nintvars;
+   int nimplvars;
+   int nbinvarstotal;
    SCIP_Bool infeasible;
    SCIP_CLIQUE** cliques;
 
@@ -21899,33 +21909,66 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
 
    SCIP_CALL( checkStage(scip, "SCIPcomputeCliqueComponents", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   vars = SCIPgetVars(scip);
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
 
-   nbinvars = SCIPgetNBinVars(scip);
-   ndoublebinvars = 2 * nbinvars;
+   nimplbinvars = 0;
+
+   /* detect implicit integer variables with bounds {0,1} because they might appear in cliques, as well */
+   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
+   {
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+
+      if( SCIPvarIsBinary(vars[v]) )
+         ++nimplbinvars;
+   }
+
+
+   /* count binary and implicit binary variables */
+   nbinvarstotal = nbinvars + nimplbinvars;
+
+   /* if there are no binary variables, continue */
+   if( nbinvarstotal == 0 )
+   {
+      *ncomponents = 0;
+      return SCIP_OKAY;
+   }
+
+   /* no cliques are present */
+   if( SCIPgetNCliques(scip) == 0 )
+   {
+      *ncomponents = nbinvarstotal;
+      return SCIP_OKAY;
+   }
 
    /* clean up cliques first to have only active variables */
    infeasible = FALSE;
    SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
-   assert(!infeasible);
+   if( infeasible )
+   {
+      *ncomponents = -1;
+      return SCIP_OKAY;
+   }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &components, ndoublebinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &sizes, ndoublebinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &components, nbinvars + nimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sizes, nbinvars + nimplvars) );
 
    /* collect clique list sizes as an upper bound for the edges for each variable node in the digraph */
    for( v = 0; v < nbinvars; ++v )
    {
-      SCIP_VAR* negationvar;
       assert(SCIPvarIsActive(vars[v]));
       assert(SCIPvarGetProbindex(vars[v]) == v);
-      sizes[v] = SCIPvarGetNCliques(vars[v], TRUE);
-
-      SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &negationvar) );
-
-      sizes[v + nbinvars] = SCIPvarGetNCliques(vars[v], FALSE);
+      sizes[v] = SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE);
+   }
+   /* collect sizes also for the implicit binary variables */
+   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
+   {
+      if( SCIPvarIsBinary(vars[v]) )
+         sizes[v - nintvars] = SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE);
+      else
+         sizes[v - nintvars] = 0;
    }
 
-   SCIP_CALL( SCIPdigraphCreate(&digraph, ndoublebinvars) );
+   SCIP_CALL( SCIPdigraphCreate(&digraph, nbinvars + nimplvars) );
    SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
 
    cliques = SCIPgetCliques(scip);
@@ -21935,14 +21978,13 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
    {
       SCIP_CLIQUE* clique;
       SCIP_VAR** cliquevars;
-      SCIP_Bool* cliquevals;
       int nclqvars;
       int cv;
 
       clique = cliques[c];
       cliquevars = SCIPcliqueGetVars(clique);
       nclqvars = SCIPcliqueGetNVars(clique);
-      cliquevals = SCIPcliqueGetValues(clique);
+      assert(nclqvars > 0);
 
       /* add a variable and its predecessor in this clique as an arc to the digraph */
       for( cv = 1; cv < nclqvars; ++cv )
@@ -21950,27 +21992,38 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
          int startnode;
          int endnode;
          assert(SCIPvarIsActive(cliquevars[cv]));
-         assert(SCIPvarIsActive(cliquevars[cv - 1]));
+         assert(SCIPvarIsBinary(cliquevars[cv]));
+         assert(SCIPvarGetType(cliquevars[cv]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(cliquevars[cv]) == SCIP_VARTYPE_IMPLINT);
 
-         startnode = cliquevals[cv - 1] ? SCIPvarGetProbindex(cliquevars[cv - 1]) : SCIPvarGetProbindex(cliquevars[cv - 1]) + nbinvars;
-         endnode = cliquevals[cv] ? SCIPvarGetProbindex(cliquevars[cv]) : SCIPvarGetProbindex(cliquevars[cv]) + nbinvars;
+         startnode = SCIPvarGetType(cliquevars[cv]) == SCIP_VARTYPE_BINARY ? SCIPvarGetProbindex(cliquevars[cv]) : SCIPvarGetProbindex(cliquevars[cv]) - nintvars;
+         assert(startnode >= 0);
+         assert(startnode < nbinvars + nimplvars);
 
-         assert(startnode < ndoublebinvars);
-         assert(endnode < ndoublebinvars);
+         endnode = SCIPvarGetType(cliquevars[cv - 1]) == SCIP_VARTYPE_BINARY ? SCIPvarGetProbindex(cliquevars[cv - 1]) : SCIPvarGetProbindex(cliquevars[cv - 1]) - nintvars;
+         assert(endnode >= 0);
+         assert(endnode < nbinvars + nimplvars);
+
          SCIP_CALL( SCIPdigraphAddArc(digraph, startnode, endnode, NULL) );
       }
    }
 
+   *ncomponents = -1;
    SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, ncomponents) );
+
+   /* subtract superfluous implicit integer variables added to the auxiliary graph */
+   *ncomponents -= (nimplvars - nimplbinvars);
+   assert(*ncomponents >= 0);
+   assert(*ncomponents <= nbinvarstotal);
 
    /* save variable component in variable data structure */
    for( v = 0; v < nbinvars; ++v )
-   {
-      SCIP_VAR* negatedvar;
       SCIPvarSetCliqueComponentIdx(vars[v], components[v]);
 
-      SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &negatedvar) );
-      SCIPvarSetCliqueComponentIdx(negatedvar, components[v + nbinvars]);
+   /* save variable components for implicit binary variables */
+   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
+   {
+      /* component of this variable is saved with an offset of -nintvars */
+      SCIPvarSetCliqueComponentIdx(vars[v], components[v - nintvars]);
    }
 
    SCIPdigraphFree(&digraph);

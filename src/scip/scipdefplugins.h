@@ -75,7 +75,6 @@
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_bound.h"
 #include "scip/heur_clique.h"
-#include "scip/heur_cliquecomponents.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_completesol.h"
 #include "scip/heur_crossover.h"

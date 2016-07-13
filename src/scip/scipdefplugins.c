@@ -119,7 +119,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCompletesol(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
-   SCIP_CALL( SCIPincludeHeurCliquecomponents(scip));
    SCIP_CALL( SCIPincludeHeurDins(scip) );
    SCIP_CALL( SCIPincludeHeurDistributiondiving(scip) );
    SCIP_CALL( SCIPincludeHeurDualval(scip) );
