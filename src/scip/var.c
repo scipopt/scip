@@ -1976,6 +1976,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+   (*var)->clqcomponentidx = -1;
 
    stat->nvaridx++;
 
@@ -16357,6 +16358,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
+#undef SCIPvarGetCliqueComponentIdx
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -16376,6 +16378,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPbdchginfoIsRedundant
 #undef SCIPbdchginfoHasInferenceReason
 #undef SCIPbdchginfoIsTighter
+
 
 /** returns the new value of the bound in the bound change data */
 SCIP_Real SCIPboundchgGetNewbound(
@@ -17573,6 +17576,26 @@ SCIP_Real SCIPvarGetVSIDS(
    else
       return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
+
+/** returns the variable clique component index, or -1 if no index was computed */
+int SCIPvarGetCliqueComponentIdx(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   return var->clqcomponentidx;
+}
+
+/** sets the variable clique component index, or -1 if index should be reset */
+void SCIPvarSetCliqueComponentIdx(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   idx                 /**< clique component index of this variable */
+   )
+{
+   assert(var != NULL);
+   var->clqcomponentidx = idx;
+}
+
 
 /** includes event handler with given data in variable's event filter */
 SCIP_RETCODE SCIPvarCatchEvent(

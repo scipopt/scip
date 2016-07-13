@@ -21877,6 +21877,110 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
+/** computes clique components for all binary variables */
+SCIP_RETCODE SCIPcomputeCliqueComponents(
+   SCIP*                scip,               /**< SCIP data structure */
+   int*                 ncomponents         /**< pointer to store the number of found components */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_DIGRAPH* digraph;
+   int nbinvars;
+   int* components;
+   int* sizes;
+   int v;
+   int c;
+   int ndoublebinvars;
+   SCIP_Bool infeasible;
+   SCIP_CLIQUE** cliques;
+
+   assert(scip != NULL);
+   assert(ncomponents != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPcomputeCliqueComponents", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   vars = SCIPgetVars(scip);
+
+   nbinvars = SCIPgetNBinVars(scip);
+   ndoublebinvars = 2 * nbinvars;
+
+   /* clean up cliques first to have only active variables */
+   infeasible = FALSE;
+   SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
+   assert(!infeasible);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &components, ndoublebinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sizes, ndoublebinvars) );
+
+   /* collect clique list sizes as an upper bound for the edges for each variable node in the digraph */
+   for( v = 0; v < nbinvars; ++v )
+   {
+      SCIP_VAR* negationvar;
+      assert(SCIPvarIsActive(vars[v]));
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      sizes[v] = SCIPvarGetNCliques(vars[v], TRUE);
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &negationvar) );
+
+      sizes[v + nbinvars] = SCIPvarGetNCliques(vars[v], FALSE);
+   }
+
+   SCIP_CALL( SCIPdigraphCreate(&digraph, ndoublebinvars) );
+   SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
+
+   cliques = SCIPgetCliques(scip);
+
+   /* loop over cliques and add them as paths to the digraph */
+   for( c = 0; c < SCIPgetNCliques(scip); ++c )
+   {
+      SCIP_CLIQUE* clique;
+      SCIP_VAR** cliquevars;
+      SCIP_Bool* cliquevals;
+      int nclqvars;
+      int cv;
+
+      clique = cliques[c];
+      cliquevars = SCIPcliqueGetVars(clique);
+      nclqvars = SCIPcliqueGetNVars(clique);
+      cliquevals = SCIPcliqueGetValues(clique);
+
+      /* add a variable and its predecessor in this clique as an arc to the digraph */
+      for( cv = 1; cv < nclqvars; ++cv )
+      {
+         int startnode;
+         int endnode;
+         assert(SCIPvarIsActive(cliquevars[cv]));
+         assert(SCIPvarIsActive(cliquevars[cv - 1]));
+
+         startnode = cliquevals[cv - 1] ? SCIPvarGetProbindex(cliquevars[cv - 1]) : SCIPvarGetProbindex(cliquevars[cv - 1]) + nbinvars;
+         endnode = cliquevals[cv] ? SCIPvarGetProbindex(cliquevars[cv]) : SCIPvarGetProbindex(cliquevars[cv]) + nbinvars;
+
+         assert(startnode < ndoublebinvars);
+         assert(endnode < ndoublebinvars);
+         SCIP_CALL( SCIPdigraphAddArc(digraph, startnode, endnode, NULL) );
+      }
+   }
+
+   SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, ncomponents) );
+
+   /* save variable component in variable data structure */
+   for( v = 0; v < nbinvars; ++v )
+   {
+      SCIP_VAR* negatedvar;
+      SCIPvarSetCliqueComponentIdx(vars[v], components[v]);
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &negatedvar) );
+      SCIPvarSetCliqueComponentIdx(negatedvar, components[v + nbinvars]);
+   }
+
+   SCIPdigraphFree(&digraph);
+   SCIPfreeBufferArray(scip, &sizes);
+   SCIPfreeBufferArray(scip, &components);
+
+   return SCIP_OKAY;
+}
+
+
 /* calculate clique partition for a maximal amount of comparisons on variables due to expensive algorithm
  * @todo: check for a good value, maybe it's better to check parts of variables
  */

@@ -1632,32 +1632,32 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
       /* check whether both clique lists have a same clique */
       while( TRUE )  /*lint !e716*/
       {
-	 cliqueid = SCIPcliqueGetId(cliques2[i2]);
+         cliqueid = SCIPcliqueGetId(cliques2[i2]);
 
-	 /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
-	  * there will be no same item and we can stop */
-	 if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
-	    break;
+         /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
+            break;
 
-	 while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-	 {
-	    ++i1;
-	    assert(i1 < ncliques1);
-	 }
-	 cliqueid = SCIPcliqueGetId(cliques1[i1]);
+         while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+         {
+            ++i1;
+            assert(i1 < ncliques1);
+         }
+         cliqueid = SCIPcliqueGetId(cliques1[i1]);
 
-	 /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
-	  * there will be no same item and we can stop */
-	 if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
-	    break;
+         /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
+            break;
 
-	 while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-	 {
-	    ++i2;
-	    assert(i2 < ncliques2);
-	 }
-	 if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-	    return TRUE;
+         while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+         {
+            ++i2;
+            assert(i2 < ncliques2);
+         }
+         if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+            return TRUE;
       }
    }
    return FALSE;
@@ -2983,7 +2983,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
    return SCIP_OKAY;
 }
-
 
 /*
  * simple functions implemented as defines
