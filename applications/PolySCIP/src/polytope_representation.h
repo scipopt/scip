@@ -140,17 +140,17 @@ namespace polyscip {
 
             std::bitset<V_RepT::kMaxInitialHrepSize> getCommonZeroSlackIndices(const V_RepT &v, const V_RepT &w) const;
 
-            //std::tuple<bool, VarOrder, std::size_t> minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const;
+            std::tuple<bool, VarOrder, std::size_t> minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const;
 
-            //void applyInfeasCondition(const V_RepT& r1, const V_RepT& r2, const V_RepC& current_v_rep);
+            void applyInfeasCondition(const V_RepT& r1, const V_RepT& r2, const V_RepC& current_v_rep);
 
             /* see function description in DoubleDescriptionRevisited
              */
-            /*void conditionalStoreEdge(const V_RepT& r1,
+            void conditionalStoreEdge(const V_RepT& r1,
                                       const V_RepT& r2,
                                       std::size_t k,
                                       std::size_t i,
-                                      const V_RepC& v_rep);*/
+                                      const V_RepC& v_rep);
 
             /*bool rayPairIsAdjacent(std::size_t plus_index,
                                        std::size_t minus_index,
@@ -177,7 +177,7 @@ namespace polyscip {
             //V_RepC extendVRep(V_RepC&& current_v_rep);
             V_RepC extendVRep(V_RepC&& current_v_rep);
 
-            V_RepC extendVRep_Var1(V_RepC&& current_v_rep) = delete;
+            //V_RepC extendVRep_Var1(V_RepC&& current_v_rep);
 
             /*V_RepC extendVRep(std::vector<V_RepT> current_rep,
                                       const H_RepT &constraint,

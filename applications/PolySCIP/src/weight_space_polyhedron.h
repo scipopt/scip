@@ -93,7 +93,7 @@ namespace polyscip {
          * into the (partial) weight space polyhedron
          //todo
          */
-        void incorporateNewOutcome(double epsilon,
+        void incorporateNewOutcome(SCIP* scip,
                                    const WeightType& used_weight,
                                    const OutcomeType& outcome,
                                    bool outcome_is_ray = false);
@@ -147,10 +147,10 @@ namespace polyscip {
         /*using FacetMapValueT = std::vector<const WeightSpaceVertex*>;
         using FacetMap = std::map<std::shared_ptr<const WeightSpaceFacet>, FacetMapValueT , WeightSpaceFacet::Compare>;*/
 
-        FacetPartition getFacetPartition(const WeightSpaceVertex *vertex,
+        FacetPartition getFacetPartition(SCIP* scip,
+                                         const WeightSpaceVertex *vertex,
                                          const OutcomeType &outcome,
-                                         bool outcome_is_ray,
-                                         double eps = 1e-9) const;
+                                         bool outcome_is_ray) const;
 
         void createInitialFacets(H_RepC h_rep) = delete;
 
@@ -165,7 +165,7 @@ namespace polyscip {
         FacetContainer getIncidentFacets(const V_RepT& v,
                                          const FacetContainer& initial_facets) const;
 
-        void updateWeightSpacePolyhedron(double epsilon,
+        void updateWeightSpacePolyhedron(SCIP* scip,
                                          const OutcomeType& outcome,
                                          bool outcome_is_ray);
 
@@ -178,11 +178,11 @@ namespace polyscip {
                            const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >& new_edges);
 
         void addEdgesOfAdjacentVerticesToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
-                                                  const std::vector<WeightSpaceVertex*>& zero_vertices);
+                                                  const std::unordered_map<WeightSpaceVertex*, bool>& zero_vertices);
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
-        void removeFromUnmarkedVertices(WeightSpaceVertex *v);
+        void removeFrom(WeightSpaceVertex *v);
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
 

@@ -179,23 +179,23 @@ namespace polyscip {
             }
         }
 
-        /*std::tuple<bool, DoubleDescriptionMethod::VarOrder, size_t> DoubleDescriptionMethod::minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const {
+        std::tuple<bool, DoubleDescriptionMethod::VarOrder, size_t> DoubleDescriptionMethod::minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const {
             auto minInfeasInd1 = r1.getMinInfeasIndex();
             auto minInfeasInd2 = r2.getMinInfeasIndex();
             if (minInfeasInd1 < minInfeasInd2 && !r2.isZeroSlackIndex(minInfeasInd1)) {
                 assert (current_hrep_index_ < minInfeasInd1 && minInfeasInd1 < h_rep_.size());
-                return {true, VarOrder::keep_var_order, minInfeasInd1};
+                return std::make_tuple(true, VarOrder::keep_var_order, minInfeasInd1);
             }
             else if (minInfeasInd2 < minInfeasInd1 && !r1.isZeroSlackIndex(minInfeasInd2)) {
                 assert (current_hrep_index_ < minInfeasInd2 && minInfeasInd2 < h_rep_.size());
-                return {true, VarOrder::change_var_order, minInfeasInd2};
+                return std::make_tuple(true, VarOrder::change_var_order, minInfeasInd2);
             }
             else {
-                return {false, VarOrder::keep_var_order, 0};
+                return std::make_tuple(false, VarOrder::keep_var_order, 0);
             }
-        }*/
+        }
 
-        /*void DoubleDescriptionMethod::conditionalStoreEdge(const V_RepT& plus,
+        void DoubleDescriptionMethod::conditionalStoreEdge(const V_RepT& plus,
                                                            const V_RepT& minus,
                                                            size_t k,
                                                            size_t i,
@@ -208,7 +208,7 @@ namespace polyscip {
             if (rayPairIsAdjacent(plus, minus, v_rep)) {
                 adj_pairs_.at(k-adj_pairs_ind_offset_).push_back({std::cref(plus), std::cref(minus)});
             }
-        }*/
+        }
 
         void DoubleDescriptionMethod::printVRep(std::ostream &os, bool withIncidentFacets) const {
             for (const auto& v : v_rep_)
@@ -225,7 +225,7 @@ namespace polyscip {
             v_rep_ = current_v_rep;
         }
 
-        /*void DoubleDescriptionMethod::applyInfeasCondition(const V_RepT& r1,
+        void DoubleDescriptionMethod::applyInfeasCondition(const V_RepT& r1,
                                                            const V_RepT& r2,
                                                            const V_RepC& v_rep) {
             auto infeasTuple = minInfeasCondition(r1, r2);
@@ -237,7 +237,7 @@ namespace polyscip {
                     conditionalStoreEdge(r2, r1, std::get<2>(infeasTuple), current_hrep_index_, v_rep);
                 }
             }
-        }*/
+        }
 
         /*void DoubleDescriptionMethod::computeVRep_Var1() {
             auto current_v_rep = computeInitialVRep();

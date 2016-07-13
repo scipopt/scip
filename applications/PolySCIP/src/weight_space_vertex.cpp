@@ -39,7 +39,7 @@ namespace polyscip {
                                          WeightType weight,
                                          ValueType weighted_obj_val,
                                          bool sort_facets)
-            : is_obsolete_(false),
+            : vertex_status_(VertexStatus::unmarked),
               incident_facets_(std::move(incident_facets)),
               weight_(std::move(weight)),
               weighted_obj_val_{weighted_obj_val} {
@@ -84,7 +84,7 @@ namespace polyscip {
                                          const WeightSpaceVertex* non_obs,
                                          const shared_ptr<const WeightSpaceFacet>& incident_facet,
                                          std::size_t wsp_dimension)
-            : is_obsolete_(false)
+            : vertex_status_(VertexStatus::unmarked)
     {
         assert (obs != non_obs);
         // get intersection of facets of obs and non_obs
@@ -189,6 +189,18 @@ namespace polyscip {
             os << " defining facets: \n";
             for (const auto &facet : incident_facets_)
                 facet->print(os);
+        }
+        os << "Vertex-Status: ";
+        switch (vertex_status_) {
+            case VertexStatus::marked:
+                os << "marked\n";
+                break;
+            case VertexStatus::obsolete:
+                os << "obsolete\n";
+                break;
+            case VertexStatus::unmarked:
+                os << "unmarked\n";
+                break;
         }
     }
 

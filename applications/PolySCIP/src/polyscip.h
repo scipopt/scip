@@ -70,7 +70,7 @@ namespace polyscip {
 
         SCIP_RETCODE computeUnitWeightOutcomes();
 
-        void deleteWeaklyNondomResults();
+        //void deleteWeaklyNondomResults();
 
         /* Return true if other element exists which dominates 'it' or has objective values coinciding with 'it
          */
@@ -84,13 +84,17 @@ namespace polyscip {
 
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
-        SCIP_RETCODE handleOptimalStatus(bool check_if_new_result=false);
+        SCIP_RETCODE handleOptimalStatus();
+        SCIP_RETCODE handleOptimalStatus(const WeightType& weight,
+                                         ValueType current_opt_val);
+
 
         SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=false);
 
+
         bool outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const;
 
-        void addResult(bool check_if_new_result, bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
+        Result getResult(bool outcome_is_bounded = false, SCIP_SOL *primal_sol = nullptr);
 
         void computeNonRedundantObjectives(bool printObjectives) = delete;
 

@@ -42,6 +42,8 @@ namespace polyscip {
     class WeightSpaceVertex {
 
     public:
+        enum class VertexStatus {marked, obsolete, unmarked};
+
         /** Creates a vertex of the (partial) weight space polyhedron.
          * @param incident_facets Facets defining of the weight space polyhedron defining the vertex
          * @param weight Corresponding weight
@@ -92,8 +94,8 @@ namespace polyscip {
          */
         bool hasUnitWeight() const;
 
-        bool isObsolete() const {return is_obsolete_;};
-        void setObsolete() {is_obsolete_ = true;};
+        VertexStatus getStatus() const {return vertex_status_;};
+        void setStatus(VertexStatus status) {vertex_status_ = status;};
 
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
@@ -106,6 +108,7 @@ namespace polyscip {
         void print(std::ostream& os, bool printFacets = false) const;
 
     private:
+
         friend bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
         friend double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,
                                                                       const WeightSpaceVertex* non_obs,
@@ -123,7 +126,8 @@ namespace polyscip {
                                                            const WeightType& weight1,
                                                            const WeightType& weight2);
 
-        bool is_obsolete_;
+
+        VertexStatus vertex_status_;
         /**< incident facets */
         WeightSpacePolyhedron::FacetContainer incident_facets_;
         /**< used weight */

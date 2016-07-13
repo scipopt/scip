@@ -90,17 +90,19 @@ namespace polyscip {
         if (cmd_line_args_.withUnsupported() && polyscip_status_ == PolyscipStatus::CompUnsupportedPhase) {
             SCIP_CALL( computeUnsupported() );
         }
-        deleteWeaklyNondomResults();
+        //deleteWeaklyNondomResults();
         SCIP_CALL( SCIPstopClock(scip_, clock_total_) );
         return SCIP_OKAY;
     }
 
     SCIP_RETCODE Polyscip::computeUnitWeightOutcomes() {
         polyscip_status_ = PolyscipStatus::InitPhase;
+        auto cur_opt_vals = OutcomeType(considered_objs_.size(), std::numeric_limits<ValueType>::max());
         auto weight = WeightType(considered_objs_.size(),0.);
-        for (auto unit_weight_index : considered_objs_) {
+        for (size_t unit_weight_index=0; unit_weight_index!=considered_objs_.size(); ++unit_weight_index) {
             if (polyscip_status_ != PolyscipStatus::InitPhase)
                 break;
+            auto supported_size_before = supported_.size();
             weight[unit_weight_index] = 1.;
             SCIP_CALL(setWeightedObjective(weight));
             SCIP_CALL(solve());
@@ -109,7 +111,7 @@ namespace polyscip {
                 scip_status = separateINFORUNBD(weight);
 
             if (scip_status == SCIP_STATUS_OPTIMAL) {
-                SCIP_CALL( handleOptimalStatus(true) );
+                SCIP_CALL( handleOptimalStatus(weight, cur_opt_vals[unit_weight_index]) );
             }
             else if (scip_status == SCIP_STATUS_UNBOUNDED) {
                 SCIP_CALL( handleUnboundedStatus(true) );
@@ -118,6 +120,13 @@ namespace polyscip {
                 SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) );
             }
 
+            if (supported_size_before < supported_.size()) {
+                std::transform(begin(cur_opt_vals),
+                               end(cur_opt_vals),
+                               begin(supported_.back().second),
+                               begin(cur_opt_vals),
+                               [](ValueType val1, ValueType val2){return std::min<ValueType>(val1, val2);});
+            }
             weight[unit_weight_index] = 0.;
         }
         return SCIP_OKAY;
@@ -149,6 +158,7 @@ namespace polyscip {
             else {
                 auto v_rep = DDMethod(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
+                v_rep.printVRep(std::cout);
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
                 std::cout << "Starting initializing WSP...";
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
@@ -216,17 +226,22 @@ namespace polyscip {
             if (!SCIPhasPrimalRay(scip_))
                 throw std::runtime_error("Existence of primal ray expected.\n");
         }
-        addResult(check_if_new_result);
+        auto result = getResult(false);
+        if (!check_if_new_result || outcomeIsNew(result.second, false)) {
+            unbounded_.push_back(std::move(result));
+        }
+        else {
+            global::print(result.second, "Outcome: [", "]");
+            cout << "not added to results.\n";
+        }
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::handleOptimalStatus(bool check_if_new_result) {
-        std::cout << "handleOptimalStatus\n";
+    SCIP_RETCODE Polyscip::handleOptimalStatus(const WeightType& weight,
+                                               ValueType current_opt_val) {
         auto best_sol = SCIPgetBestSol(scip_);
-        std::cout << "got best sol\n";
         SCIP_SOL *finite_sol{nullptr};
         SCIP_Bool same_obj_val{FALSE};
-        std::cout << "scipcreateFiniteSolCopy\n";
         SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
 
         if (!same_obj_val) {
@@ -239,13 +254,25 @@ namespace polyscip {
             }
         }
         assert (finite_sol != nullptr);
-        std::cout << "entering addResult\n";
-        addResult(check_if_new_result, true, finite_sol);
+        auto result = getResult(true, finite_sol);
+
+        assert (weight.size() == result.second.size());
+        auto weighted_outcome = std::inner_product(weight.cbegin(),
+                                                   weight.cend(),
+                                                   result.second.cbegin(),
+                                                   0.);
+        if (weighted_outcome + 0.0000000001 < current_opt_val/*SCIPisLT(scip_, weighted_outcome, current_opt_val)*/) {
+            supported_.push_back(std::move(result));
+        }
+        else {
+            global::print(result.second, "Outcome: [", "]");
+            cout << "not added to results.\n";
+        }
         SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
         return SCIP_OKAY;
     }
 
-    void Polyscip::addResult(bool check_if_new_result, bool outcome_is_bounded, SCIP_SOL* primal_sol) {
+    Result Polyscip::getResult(bool outcome_is_bounded, SCIP_SOL *primal_sol) {
         SolType sol;
         auto outcome = OutcomeType(considered_objs_.size(),0.);
         auto no_vars = SCIPgetNOrigVars(scip_);
@@ -267,19 +294,8 @@ namespace polyscip {
                                std::plus<ValueType>());
 
             }
-
         }
-
-        if (!check_if_new_result || outcomeIsNew(outcome, outcome_is_bounded)) {
-            if (outcome_is_bounded)
-                supported_.push_back({sol, outcome});
-            else
-                unbounded_.push_back({sol, outcome});
-        }
-        else {
-            global::print(outcome, "Outcome: [", "]");
-            cout << "not added to results.\n";
-        }
+        return {sol, outcome};
     }
 
     bool Polyscip::outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const {
@@ -329,10 +345,14 @@ namespace polyscip {
                 if (scip_status == SCIP_STATUS_INFORUNBD)
                     scip_status = separateINFORUNBD(untested_weight);
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
-                    if (SCIPgetPrimalbound(scip_)+cmd_line_args_.getEpsilon() < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
-                        SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
+                    auto supported_size_before = supported_.size();
+                    SCIP_CALL( handleOptimalStatus(untested_weight,
+                                                   weight_space_poly_->getUntestedVertexWOV(untested_weight)) ); //might add bounded result to supported_
+                    if (supported_size_before < supported_.size()) {
+                    //if (SCIPisLT(scip_, SCIPgetPrimalbound(scip_), weight_space_poly_->getUntestedVertexWOV(untested_weight))) {
+
                         std::cout << "incorporating new outcome...";
-                        weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(),
+                        weight_space_poly_->incorporateNewOutcome(scip_,
                                                                   untested_weight,
                                                                   supported_.back().second); // was added by handleOptimalStatus()
                         std::cout << "...finished.\n";
@@ -346,7 +366,7 @@ namespace polyscip {
                 else if (scip_status == SCIP_STATUS_UNBOUNDED) {
                     SCIP_CALL( handleUnboundedStatus() ); //adds unbounded result to unbounded_
                     std::cout << "incorporating unbounded outcome...";
-                    weight_space_poly_->incorporateNewOutcome(cmd_line_args_.getEpsilon(),
+                    weight_space_poly_->incorporateNewOutcome(scip_,
                                                               untested_weight,
                                                               unbounded_.back().second, // was added by handleUnboundedStatus()
                                                               true);
@@ -688,7 +708,7 @@ namespace polyscip {
     }
 
 
-    void Polyscip::deleteWeaklyNondomResults() {
+    /*void Polyscip::deleteWeaklyNondomResults() {
         auto it = begin(supported_);
         while (it != end(supported_)) {
             if (isDominatedOrEqual(it)) {
@@ -699,6 +719,6 @@ namespace polyscip {
                 ++it;
             }
         }
-    }
+    }*/
 
 }
