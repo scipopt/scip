@@ -2892,6 +2892,57 @@ SCIP_RETCODE propagateLocks(
    return SCIP_OKAY;
 }
 
+/** registers branching candidates */
+static
+SCIP_RETCODE registerBranchingCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
+   int c;
+   int i;
+
+   *nnotify = 0;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* violations have been computed during CONSENFOLP */
+      if( SCIPisFeasGT(scip, consdata->lhsviol, 0.0) || SCIPisFeasGT(scip, consdata->rhsviol, 0.0) )
+      {
+         assert(consdata->varexprs != NULL);
+
+         /* introduce all variables which do not have been fixed */
+         for( i = 0; i < consdata->nvarexprs; ++i )
+         {
+            var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+            assert(var != NULL);
+
+            if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+               ++(*nnotify);
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -3396,6 +3447,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   int nnotify;
    int c;
 
    *result = SCIP_FEASIBLE;
@@ -3414,9 +3466,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
 
+   /* find branching candidates */
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIPdebugMessage("registered %d external branching candidates\n", nnotify);
+
    /* TODO do domain propagation */
    /* TODO try to separate */
-   /* TODO register branching candidates */
+
 
    return SCIP_OKAY;
 }
