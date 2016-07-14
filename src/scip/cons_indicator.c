@@ -3586,6 +3586,10 @@ SCIP_RETCODE propIndicator(
 
       /* perform conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      /* change the conflict type */
+      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
       SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
