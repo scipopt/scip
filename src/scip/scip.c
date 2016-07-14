@@ -21922,7 +21922,6 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
          ++nimplbinvars;
    }
 
-
    /* count binary and implicit binary variables */
    nbinvarstotal = nbinvars + nimplbinvars;
 
@@ -22033,6 +22032,76 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
    return SCIP_OKAY;
 }
 
+/** creates a variable order-consistent labeling of the clique component indices of the variables
+ *
+ *  order-consistent means that
+ *  a) the component of the first variable is labeled 0, and
+ *  b) that for two variables i <= j
+ *     (regarding the given variable order), it holds that
+ *     label_i > label_j if and only if there is a k < i such that label_k == label_j
+ */
+static
+SCIP_RETCODE relabelComponents(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int*                  componentlabels,    /**< array to store new label for each variable */
+   int*                  ncomponents,        /**< pointer to store the total number of components */
+   int const             nvars               /**< number of variables in the clique */
+   )
+{
+   SCIP_HASHMAP* compidx2varcomp;
+
+   int componentidx;
+   int i;
+
+   SCIP_CALL( SCIPhashmapCreate(&compidx2varcomp, SCIPblkmem(scip), 2 * nvars) );
+
+   componentidx = 0;
+
+   /* loop over variables to create local component indices that obey the variable order */
+   for( i = 0; i < nvars; ++i )
+   {
+      int varcliquecompidx = SCIPvarGetCliqueComponentIdx(vars[i]);
+      int localclqcompidx;
+
+      assert(SCIPvarIsActive(vars[i]));
+      /* variables with component index -1 are stored as singleton components */
+      if( varcliquecompidx == - 1 )
+      {
+         ++componentidx;
+         localclqcompidx = componentidx;
+      }
+      else
+      {
+         /* look up the component index image in the hash map; if it is not stored yet, new component index is created and stored */
+         int compidximage = (int)SCIPhashmapGetImage(compidx2varcomp, (void*)varcliquecompidx);
+         if( compidximage == 0 )
+         {
+            ++componentidx;
+            localclqcompidx = componentidx;
+            SCIPhashmapInsert(compidx2varcomp, (void*)varcliquecompidx, (void *)componentidx);
+         }
+         else
+         {
+            localclqcompidx = compidximage;
+         }
+      }
+      assert(localclqcompidx - 1 >= 0);
+      assert(localclqcompidx - 1 <= i);
+
+      /* indices start with zero, but we have an offset of 1 because we cannot store 0 in a hashmap */
+      componentlabels[i] = localclqcompidx - 1;
+   }
+
+   assert(componentidx > 0);
+   assert(componentidx <= nvars);
+   *ncomponents = componentidx;
+
+   SCIPhashmapFree(&compidx2varcomp);
+
+   return SCIP_OKAY;
+}
+
 
 /* calculate clique partition for a maximal amount of comparisons on variables due to expensive algorithm
  * @todo: check for a good value, maybe it's better to check parts of variables
@@ -22068,9 +22137,11 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_VAR** cliquevars;
    SCIP_Bool* cliquevalues;
    SCIP_Bool* tmpvalues;
+   int* componentlabels;
    int ncliquevars;
    int i;
    int maxncliquevarscomp;
+   int ncomponents;
 
    assert(scip != NULL);
    assert(nvars == 0 || vars != NULL);
@@ -22101,6 +22172,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &tmpvalues, nvars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &componentlabels, nvars) );
    ncliquevars = 0;
 
    /* initialize the cliquepartition array with -1 */
@@ -22113,6 +22185,13 @@ SCIP_RETCODE SCIPcalcCliquePartition(
 
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
+
+   ncomponents = -1;
+
+   /* assign component indices that match the variable order */
+   SCIP_CALL( relabelComponents(scip, tmpvars, componentlabels, &ncomponents, nvars) );
+   assert(ncomponents >= 1);
+   assert(ncomponents <= nvars);
 
    maxncliquevarscomp = MIN(nvars*nvars, MAXNCLIQUEVARSCOMP);
 
@@ -22169,7 +22248,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       if( i * nvars > maxncliquevarscomp )
          break;
    }
-   /* if we had to much variables fill up the cliquepartition and put each variable in a separate clique */
+   /* if we had to many variables fill up the cliquepartition and put each variable in a separate clique */
    for( ; i < nvars; ++i )
    {
       if( cliquepartition[i] == -1 )
@@ -22179,7 +22258,9 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       }
    }
 
+
    /* free temporary memory */
+   SCIPsetFreeBufferArray(scip->set, &componentlabels);
    SCIPsetFreeBufferArray(scip->set, &tmpvars);
    SCIPsetFreeBufferArray(scip->set, &tmpvalues);
    SCIPsetFreeBufferArray(scip->set, &cliquevalues);
