@@ -233,6 +233,9 @@ SCIP_RETCODE generateAverageRay(
    SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
    BMSclearMemoryArray(rownorm, nrows);
 
+   /* clear ray */
+   BMSclearMemoryArray(raydirection, nsubspacevars);
+
    /* get the relevant columns of the simplex tableau */
    for( j = nsubspacevars - 1; j >= 0; --j )
    {

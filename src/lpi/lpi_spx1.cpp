@@ -141,6 +141,12 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
+      catch( const SPxMemoryException& E )                              \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw a memory exception: %s\n", s.c_str()); \
+         return SCIP_ERROR;                                             \
+      }                                                                 \
       catch( const SPxException& E )                                    \
       {                                                                 \
          std::string s = E.what();                                      \
@@ -156,6 +162,12 @@ using namespace soplex;
       try                                                               \
       {                                                                 \
          (x);                                                           \
+      }                                                                 \
+      catch( const SPxMemoryException& E )                              \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw a memory exception: %s\n", s.c_str()); \
+         return SCIP_ERROR;                                             \
       }                                                                 \
       catch( const SPxException& )                                      \
       {                                                                 \
