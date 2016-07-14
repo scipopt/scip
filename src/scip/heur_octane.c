@@ -299,7 +299,7 @@ SCIP_RETCODE generateAverageRay(
          for( j = nsubspacevars - 1; j >= 0; --j )
          {
             raydirection[j] += tableaurows[j][i] / (rownorm[i] * rowweight);
-            assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+            assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
          }
       }
    }
@@ -359,7 +359,7 @@ SCIP_RETCODE generateAverageRay(
                if( usedrowids[tableaurowind] )
                {
                   raydirection[j] += tableaurows[j][tableaurowind] / (rownorm[tableaurowind] * rowweights[tableaurowind]);
-                  assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+                  assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
                }
             }
          }
@@ -477,7 +477,7 @@ SCIP_RETCODE generateAverageNBRay(
          if( f >= 0 )
          {
             raydirection[f] += factor * coeffs[j] / rownorm;
-            assert(SCIP_REAL_MIN <= raydirection[f] && raydirection[f]  <= SCIP_REAL_MAX);
+            assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
          }
       }
    }
