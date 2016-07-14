@@ -15,6 +15,7 @@ fixed bugs:
   set of instances where no solver failed (eval set); thus, now proc = fail + time + solv.
 - fixed memory leak in OSiL reader
 - writing of solutions or parameters to a file now works also with the message handler set to quiet
+- fixed bug in heur_octane with uninitialized ray direction
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
