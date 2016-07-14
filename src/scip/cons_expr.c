@@ -902,7 +902,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    }
 
    /* stop if resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
+   if( SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval) )
    {
       SCIPintervalSetEmpty(&expr->interval);
       propdata->aborted = TRUE;
