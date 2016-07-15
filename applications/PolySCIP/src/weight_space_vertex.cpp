@@ -182,6 +182,14 @@ namespace polyscip {
         return false;
     }
 
+    bool WeightSpaceVertex::hasZeroWeight() const {
+        for (std::size_t i=0; i<weight_.size(); ++i) {
+            if (weight_[i] != 0)
+                return false;
+        }
+        return true;
+    }
+
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {
         global::print(weight_, "WeightSpaceVertex: weight = [", "]", os);
         os << "\n wov = " << weighted_obj_val_ << "\n";
@@ -200,6 +208,9 @@ namespace polyscip {
                 break;
             case VertexStatus::unmarked:
                 os << "unmarked\n";
+                break;
+            case VertexStatus::special:
+                os << "special\n";
                 break;
         }
     }

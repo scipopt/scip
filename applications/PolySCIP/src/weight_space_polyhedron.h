@@ -126,6 +126,8 @@ namespace polyscip {
 
         bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
 
+        bool hasValidSkeleton(std::size_t dim) const;
+
     private:
         enum class FacetPartition {minus, plus, zero};
 

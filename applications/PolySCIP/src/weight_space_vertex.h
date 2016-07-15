@@ -42,7 +42,7 @@ namespace polyscip {
     class WeightSpaceVertex {
 
     public:
-        enum class VertexStatus {marked, obsolete, unmarked};
+        enum class VertexStatus {marked, obsolete, unmarked, special};
 
         /** Creates a vertex of the (partial) weight space polyhedron.
          * @param incident_facets Facets defining of the weight space polyhedron defining the vertex
@@ -93,6 +93,7 @@ namespace polyscip {
          * @return true if weight of vertex is unit weight with 1 at index; false otherwise
          */
         bool hasUnitWeight() const;
+        bool hasZeroWeight() const;
 
         VertexStatus getStatus() const {return vertex_status_;};
         void setStatus(VertexStatus status) {vertex_status_ = status;};

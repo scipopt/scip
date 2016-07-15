@@ -70,7 +70,7 @@ namespace polyscip {
 
         SCIP_RETCODE computeUnitWeightOutcomes();
 
-        //void deleteWeaklyNondomResults();
+        void deleteWeaklyNondomResults();
 
         /* Return true if other element exists which dominates 'it' or has objective values coinciding with 'it
          */
