@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+/*#define SCIP_DEBUG
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -68,6 +68,13 @@ typedef struct
    SCIP_Bool             nobranch;
 } BranchingResultData;
 
+/*typedef struct
+{
+   SCIP_Real* boundvalues;
+   int* cutoffindices;
+   int ncutoffindices;
+} CutoffData;*/
+
 /*
  * Local methods
  */
@@ -107,6 +114,19 @@ SCIP_RETCODE initBranchingResultData(
    resultdata->nobranch = FALSE;
    return SCIP_OKAY;
 }
+
+/*static
+SCIP_RETCODE initCutoffData(
+   SCIP*                 scip,
+   CutoffData*           cutoffdata,
+   int                   nvariables
+)
+{
+   SCIPallocClearBufferArray(scip, &cutoffdata->boundvalues, nvariables);
+   SCIPallocClearBufferArray(scip, &cutoffdata->cutoffindices, nvariables);
+   cutoffdata->ncutoffindices = 0;
+   return SCIP_OKAY;
+}*/
 
 /**
  * Executes the branching on the current probing node by adding a probing node with a new upper bound.
@@ -323,7 +343,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
       weightdata->highestweight = MAX(weightdata->highestweight, currentweight);
       weightdata->sumofweights = weightdata->sumofweights + currentweight;
-      weightdata->numberofweights = weightdata->numberofweights + 1;
+      weightdata->numberofweights++;
 
       SCIPdebugMessage("The sum of weights is <%g>.\n", weightdata->sumofweights);
       SCIPdebugMessage("The number of weights is <%i>.\n", weightdata->numberofweights);
@@ -337,7 +357,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    else
    {
       *fullcutoff = FALSE;
-      *ncutoffs = *ncutoffs + 1;
+      *ncutoffs = *ncutoffs++;
    }
 
    SCIPfreeMemory(scip, &upresultdata);
@@ -482,19 +502,27 @@ SCIP_RETCODE selectVarLookaheadBranching(
    {
       BranchingResultData* downbranchingresult;
       BranchingResultData* upbranchingresult;
+      ScoreData* scoredata;
+      int* downcutoffindices;
+      int ndowncutoffindices = 0;
+      int* upcutoffindices;
+      int nupcutoffindices = 0;
       SCIP_Real lpobjval;
       SCIP_Real highestscore = 0;
       int highestscoreindex = -1;
       int i;
-      ScoreData* scoredata;
+      SCIP_NODE* basenode;
 
       SCIP_CALL( SCIPallocMemory(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &scoredata) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &downcutoffindices, nlpcands) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &upcutoffindices, nlpcands) );
       SCIP_CALL( initBranchingResultData(scip, downbranchingresult) );
       SCIP_CALL( initBranchingResultData(scip, upbranchingresult) );
 
       lpobjval = SCIPgetLPObjval(scip);
+      basenode = SCIPgetCurrentNode(scip);
 
       SCIPdebugMessage("The objective value of the base lp is <%g>.\n", lpobjval);
 
@@ -505,6 +533,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       for( i = 0; i < nlpcands; i++ )
       {
          assert(lpcands[i] != NULL);
+
+         SCIPdebugMessage("Start branching on variable <%s>\n", SCIPvarGetName(lpcands[i]));
 
          SCIP_CALL( initScoreData(scoredata, i) );
          scoredata->varindex = i;
@@ -534,10 +564,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("Going back to layer 0.\n");
          SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
 
-         /* TODO CS: if (downcutoff && upcutoff), then this IP has no valid solution */
-         /* TODO CS: if (upcutoff), add the bound x >= ceil(x*) to the branched childs */
-         /* TODO CS: if (downcutoff), add the bound x <= floor(x*) to the branched childs */
-         /* why are these break conditions resulting in more evaluated nodes? */
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
             *result = SCIP_CUTOFF;
@@ -546,49 +572,91 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
          else if( upbranchingresult->cutoff )
          {
-
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            SCIPdebugMessage("New upper bound: <%g>, old lower bound: <%g>, old upper bound: <%g>\n",
-               SCIPfeasFloor(scip, lpcandssol[i]), SCIPvarGetLbLocal(lpcands[i]), SCIPvarGetUbLocal(lpcands[i]));
-
-            SCIP_CALL( /* TODO: change to SCIPchgVarLb/UbNode and use the lp starting node */
-               SCIPtightenVarUb(scip, lpcands[i], SCIPfeasFloor(scip, lpcandssol[i]), TRUE, &infeasible, &tightened));
-
-            assert(!infeasible);
-
-            *result = SCIP_REDUCEDDOM;
-            break;
-         }/*
+            upcutoffindices[nupcutoffindices] = i;
+            nupcutoffindices++;
+         }
          else if( downbranchingresult->cutoff )
          {
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            SCIP_CALL( SCIPtightenVarLb(scip, lpcands[i], SCIPfeasCeil(scip, lpcandssol[i]), TRUE,
-               &infeasible, &tightened) );
-
-            assert(!infeasible);
-
-            *result = SCIP_REDUCEDDOM;
-            break;
-         }*/
-
-
-         if( !upbranchingresult->nobranch && !downbranchingresult->nobranch)
+            downcutoffindices[ndowncutoffindices] = i;
+            ndowncutoffindices++;
+         }
+         else
          {
             SCIP_CALL( calculateCurrentWeight(scip, *scoredata,
                &highestscore, &highestscoreindex) );
          }
       }
 
+      SCIPdebugMessage("End Probing Mode\n");
+      SCIP_CALL( SCIPendProbing(scip) );
+
+      if( nupcutoffindices > 0 )
+      {
+         SCIPdebugMessage("There are <%i> upper child cutoffs (with invalid new lower bound) out of <%i> variables \n",
+            nupcutoffindices, nlpcands);
+
+         for( i = 0; i < nupcutoffindices; i++ )
+         {
+            int cutoffindex;
+            SCIP_VAR* cutoffvar;
+            SCIP_Real cutoffbound;
+            SCIP_Real oldlowerbound;
+            SCIP_Real oldupperbound;
+
+            cutoffindex = upcutoffindices[i];
+            cutoffvar = lpcands[cutoffindex];
+            cutoffbound = SCIPfeasFloor(scip, lpcandssol[cutoffindex]);
+
+            oldupperbound = SCIPvarGetUbLocal(cutoffvar);
+            oldlowerbound = SCIPvarGetLbLocal(cutoffvar);
+
+            /*add bound checks. See branching methods at top*/
+            if( SCIPisFeasLE(scip, oldlowerbound, cutoffbound) && SCIPisFeasLT(scip, cutoffbound, oldupperbound) )
+            {
+               SCIP_CALL( SCIPchgVarUbNode(scip, basenode, cutoffvar, cutoffbound) );
+            }
+         }
+
+         *result = SCIP_REDUCEDDOM;
+         SCIPdebugMessage("Finished upper child cutoffs.\n");
+      }
+
+      if( ndowncutoffindices > 0 )
+      {
+         SCIPdebugMessage("There are <%i> down child cutoffs (with invalid new upper bound) out of <%i> variables \n",
+            nupcutoffindices, nlpcands);
+
+         for( i = 0; i < ndowncutoffindices; i++ )
+         {
+            int cutoffindex;
+            SCIP_VAR* cutoffvar;
+            SCIP_Real cutoffbound;
+            SCIP_Real oldlowerbound;
+            SCIP_Real oldupperbound;
+
+            cutoffindex = downcutoffindices[i];
+            cutoffvar = lpcands[cutoffindex];
+            cutoffbound = SCIPfeasCeil(scip, lpcandssol[cutoffindex]);
+
+            oldupperbound = SCIPvarGetUbLocal(cutoffvar);
+            oldlowerbound = SCIPvarGetLbLocal(cutoffvar);
+
+            /*add bound checks. See branching methods at top*/
+            if( SCIPisFeasLT(scip, oldlowerbound, cutoffbound) && SCIPisFeasLE(scip, cutoffbound, oldupperbound) )
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, basenode, cutoffvar, cutoffbound) );
+            }
+         }
+
+         *result = SCIP_REDUCEDDOM;
+         SCIPdebugMessage("Finished down child cutoffs.\n");
+      }
+
+      SCIPfreeBufferArray(scip, &upcutoffindices);
+      SCIPfreeBufferArray(scip, &downcutoffindices);
       SCIPfreeMemory(scip, &scoredata);
       SCIPfreeMemory(scip, &upbranchingresult);
       SCIPfreeMemory(scip, &downbranchingresult);
-
-      SCIPdebugMessage("End Probing Mode\n");
-      SCIP_CALL( SCIPendProbing(scip) );
 
       if( highestscoreindex != -1 )
       {
