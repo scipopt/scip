@@ -889,7 +889,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    /* evaluate current expression and move on */
    SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval) );
 
-   /* stop if callback returned an empty interval */
+   /* update expression interval */
    if( !SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
    {
       /* intersect new interval with the previous one */
@@ -901,8 +901,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    }
 
-   /* stop if resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval) )
+   /* stop if the computed or resulting interval is empty */
+   if( SCIPintervalIsEmpty(SCIPinfinity(scip), interval) || SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval) )
    {
       SCIPintervalSetEmpty(&expr->interval);
       propdata->aborted = TRUE;
