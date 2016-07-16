@@ -28,6 +28,7 @@ static SCIP* scip;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
+static SCIP_SOL* sol;
 
 /* creates scip, problem, includes expression constraint handler, creates  and adds variables */
 static
@@ -53,25 +54,30 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* create solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 }
 
 /* releases variables, frees scip */
 static
 void teardown(void)
 {
+   /* release solution */
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   BMScheckEmptyMemory();
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 Test(conshdlr, conscheck, .init = setup, .fini = teardown,
    .description = "test feasibility check of the cons_expr constraint handler."
    )
 {
-   SCIP_SOL* sol;
    SCIP_CONS* consexpr;
    SCIP_Bool success;
    const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
@@ -80,44 +86,30 @@ Test(conshdlr, conscheck, .init = setup, .fini = teardown,
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   assert(success);
+   cr_assert(success);
    SCIP_CALL( SCIPaddCons(scip, consexpr) );
 
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
    /* create an infeasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 2) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 3) );
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
-   if( success )
-   {
-      cr_assert(FALSE, "an ifeasible solution has been accepted");
-   }
+   cr_expect_not(success, "an ifeasible solution has been accepted");
 
    /* create a feasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 1) );
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
-   if( !success )
-   {
-      cr_assert(FALSE, "a feasible solution has been declined");
-   }
+   cr_expect(success, "a feasible solution has been declined");
 
    /* create an undefined solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 0) );
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
-   if( success )
-   {
-      cr_assert(FALSE, "undefined solution has been accepted");
-   }
-
-   /* release solution */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   cr_expect_not(success, "undefined solution has been accepted");
 
    /* release constraints */
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
