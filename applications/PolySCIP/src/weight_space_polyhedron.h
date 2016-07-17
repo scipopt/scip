@@ -180,7 +180,7 @@ namespace polyscip {
                            const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >& new_edges);
 
         void addEdgesOfAdjacentVerticesToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
-                                                  const std::unordered_map<WeightSpaceVertex*, bool>& zero_vertices);
+                                                  const std::vector<WeightSpaceVertex*>& zero_vertices);
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 

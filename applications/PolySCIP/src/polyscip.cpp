@@ -156,8 +156,8 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Finished; // all outcomes for unit weights are unbounded
             }
             else {
-                auto v_rep = DDMethod(scip_, supported_, unbounded_);
-                v_rep.computeVRep();
+                auto v_rep = DDMethod(scip_, no_all_objs_, supported_, unbounded_);
+                v_rep.computeVRep_Var1();
                 v_rep.printVRep(std::cout);
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
                 std::cout << "Starting initializing WSP...";

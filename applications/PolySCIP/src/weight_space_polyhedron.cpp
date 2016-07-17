@@ -167,7 +167,7 @@ namespace polyscip {
 
 
     void WeightSpacePolyhedron::addEdgesOfAdjacentVerticesToSkeleton(const vector<WeightSpaceVertex*>& new_vertices,
-                                                                     const std::unordered_map<WeightSpaceVertex*, bool>& zero_vertices) {
+                                                                     const vector<WeightSpaceVertex*>& zero_vertices) {
 
         if (!new_vertices.empty()) {
             for (auto it = new_vertices.cbegin(); it != std::prev(new_vertices.cend()); ++it) {
@@ -175,9 +175,9 @@ namespace polyscip {
                     if (areAdjacent(*it, *succ_it))
                         skeleton_.addEdge(getNode(*it), getNode(*succ_it));
                 }
-                for (auto zero_item = zero_vertices.cbegin(); zero_item!=zero_vertices.cend(); ++zero_item) {
-                    if (areAdjacent(*it, zero_item->first))
-                        skeleton_.addEdge(getNode(*it), getNode(zero_item->first));
+                for (auto zero = zero_vertices.cbegin(); zero!=zero_vertices.cend(); ++zero) {
+                    if (areAdjacent(*it, *zero))
+                        skeleton_.addEdge(getNode(*it), getNode(*zero));
                 }
             }
         }
@@ -270,21 +270,51 @@ namespace polyscip {
 
         auto obs_nonobs_pairs = vector<pair<WeightSpaceVertex*, WeightSpaceVertex*>> {}; // pair: obsolete vertex , adjacent non-obsolete vertex
         assert (SCIPisNegative(scip, curr_investigated_vertex_->computeSlack(outcome, outcome_is_ray)));
-        curr_investigated_vertex_->setStatus(WeightSpaceVertex::VertexStatus::obsolete);
 
-        auto unscanned = std::list<WeightSpaceVertex*> {curr_investigated_vertex_};
+
+        auto tmp_plus = vector<WeightSpaceVertex*> {};
+        auto tmp_minus = vector<WeightSpaceVertex*> {};
+        auto tmp_zero = vector<WeightSpaceVertex*> {};
+
+        for (const auto& elem : vertices_to_nodes_) {
+            if (elem.first->getStatus() == WeightSpaceVertex::VertexStatus::obsolete)
+                continue;
+            auto facet_partition = getFacetPartition(scip, elem.first, outcome, outcome_is_ray);
+            if (facet_partition == FacetPartition::plus) {
+                tmp_plus.push_back(elem.first);
+            }
+            else if (facet_partition == FacetPartition::minus) {
+                tmp_minus.push_back(elem.first);
+            }
+            else if (facet_partition == FacetPartition::zero) {
+                tmp_zero.push_back(elem.first);
+            }
+            else {
+                throw std::runtime_error("Unexpected Facet Partition Status\n");
+            }
+        }
+        for (const auto& non_obs : tmp_plus) {
+            for (const auto& obs : tmp_minus) {
+                if (areAdjacent(non_obs, obs)) {
+                    obs_nonobs_pairs.push_back({obs, non_obs});
+                }
+            }
+        }
+
+        curr_investigated_vertex_->setStatus(WeightSpaceVertex::VertexStatus::obsolete);
+        /*auto unscanned = std::list<WeightSpaceVertex*> {curr_investigated_vertex_};
         auto obsolete = std::unordered_map<WeightSpaceVertex*, bool>({{curr_investigated_vertex_, true}});
-        auto zeros = std::unordered_map<WeightSpaceVertex*, bool>{};
+        auto zeros = std::unordered_map<WeightSpaceVertex*, bool>{};*/
         auto new_facet = outcome_is_ray ? make_shared<const WeightSpaceFacet>(outcome, 0) :
                          make_shared<const WeightSpaceFacet>(outcome, 1);
-        while (!unscanned.empty()) {
+        /*while (!unscanned.empty()) {
             auto obs_vertex = unscanned.front();
             unscanned.pop_front();
             for (Graph::IncEdgeIt edge(skeleton_, getNode(obs_vertex)); edge != lemon::INVALID; ++edge) {
                 auto adj_node = skeleton_.oppositeNode(getNode(obs_vertex), edge);
                 auto adj_vertex = getVertex(adj_node);
                 auto facet_partition = getFacetPartition(scip, adj_vertex, outcome, outcome_is_ray);
-                if (facet_partition == FacetPartition::plus) {
+                if (facet_partition == FacetPartition::plus && obsolete.count(obs_vertex) == 1) {
                     obs_nonobs_pairs.push_back({obs_vertex, adj_vertex});
                 }
                 else if (facet_partition == FacetPartition::minus) {
@@ -293,19 +323,33 @@ namespace polyscip {
                         unscanned.push_back(adj_vertex);
                     }
                 }
-                else { //facet_partition == FacetPartition::zero
+                else if (facet_partition == FacetPartition::zero) {
                     if (zeros.count(adj_vertex) == 0) {
                         zeros[adj_vertex] = true;
+                        unscanned.push_back(adj_vertex);
                     }
                 }
+                else {
+                    std::runtime_error("Unexpected Facet Partiton Status\n");
+                }
             }
-        }
-        
-        std::cout << "size of obsolete: " << obsolete.size() << "\n";
-        std::cout << "size of obs_nonobs_pairs: " << obs_nonobs_pairs.size() << "\n";
-        std::cout << "size of zeros: " << zeros.size() << "\n";
+        }*/
 
-        assert (obs_nonobs_pairs.size() + zeros.size() > 0);
+       /* std::cout << "size of obs_nonobs_pairs: " << obs_nonobs_pairs.size() << "\n";
+        std::cout << "size of tmp_obs_non_pairs: " << tmp_nonobs_obs.size() << "\n";
+        std::cout << "size of zeros: " << zeros.size() << "\n";
+        for (const auto& zero : zeros)
+            zero.first->print(std::cout, true);
+        std::cout << "size of tmp_zeros: " << tmp_zero.size() << "\n";
+        for (const auto& zero : tmp_zero)
+            zero->print(std::cout, true);
+        std::cout << "okay\n";
+
+        assert (zeros.size() == tmp_zero.size());
+        assert (obs_nonobs_pairs.size() == tmp_nonobs_obs.size());
+
+        assert (obs_nonobs_pairs.size() + zeros.size() > 0);*/
+
         auto new_vertices = vector<WeightSpaceVertex*> {};
         auto new_edges = vector< pair<WeightSpaceVertex*, WeightSpaceVertex*> > {}; // pair: new vertex, adjacent vertex
         for (const auto& v_pair : obs_nonobs_pairs) { // create new vertices between obsolete and non-obsolete vertices
@@ -315,24 +359,23 @@ namespace polyscip {
             double non_obs_coeff = obs_vertex->computeSlack(outcome, outcome_is_ray);
             assert (SCIPisPositive(scip,obs_coeff));
             assert (SCIPisNegative(scip, non_obs_coeff));
-            if (true/*obs_coeff > 0 && non_obs_coeff > 0*/) {
-                auto new_vertex = new WeightSpaceVertex(obs_coeff, non_obs_coeff,
-                                                        obs_vertex, non_obs_vertex,
-                                                        new_facet, wsp_dimension_);
-                unmarked_vertices_.push_back(new_vertex);
-                new_vertices.push_back(new_vertex);
-                new_edges.push_back({new_vertex, non_obs_vertex});
-            }
+            auto new_vertex = new WeightSpaceVertex(obs_coeff, non_obs_coeff,
+                                                    obs_vertex, non_obs_vertex,
+                                                    new_facet, wsp_dimension_);
+            unmarked_vertices_.push_back(new_vertex);
+            new_vertices.push_back(new_vertex);
+            new_edges.push_back({new_vertex, non_obs_vertex});
+            /*}
             else {
                 throw std::runtime_error("Unexpected convex combination of obsolete and non-obsolete weight space vertices\n");
-            }
+            }*/
         }
 
         addToSkeleton(new_vertices, new_edges);
-        addEdgesOfAdjacentVerticesToSkeleton(new_vertices, zeros);
-        for (auto obs_item : obsolete) {
-            removeFrom(obs_item.first);
-            deleteFromSkeleton(obs_item.first);
+        addEdgesOfAdjacentVerticesToSkeleton(new_vertices, tmp_zero);
+        for (auto obs : tmp_minus) {
+            removeFrom(obs);
+            deleteFromSkeleton(obs);
         }
         std::cout << "NO UNMARKED VERTICES: " << unmarked_vertices_.size() << "\n";
         std::cout << "NO MARKED VERTICES: " << marked_vertices_.size() << "\n";

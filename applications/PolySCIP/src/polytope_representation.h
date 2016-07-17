@@ -109,11 +109,11 @@ namespace polyscip {
             using AdjPair = std::pair<std::reference_wrapper<const V_RepT>, std::reference_wrapper<const V_RepT>>;
             using AdjPairContainer = std::vector<AdjPair>;
 
-            explicit DoubleDescriptionMethod(SCIP *scip, const ResultContainer &bounded, const ResultContainer &unbounded);
+            explicit DoubleDescriptionMethod(SCIP *scip, std::size_t no_all_obj, const ResultContainer &bounded, const ResultContainer &unbounded);
 
             void computeVRep();
 
-            //void computeVRep_Var1();
+            void computeVRep_Var1();
 
             void printVRep(std::ostream &os = std::cout, bool withIncidentFacets = false) const;
 
@@ -142,7 +142,7 @@ namespace polyscip {
 
             std::tuple<bool, VarOrder, std::size_t> minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const;
 
-            void applyInfeasCondition(const V_RepT& r1, const V_RepT& r2, const V_RepC& current_v_rep);
+            void applyInfeasCondition(const V_RepT& r1, const V_RepT& r2, const V_RepC& current_v_rep, std::size_t index);
 
             /* see function description in DoubleDescriptionRevisited
              */
@@ -177,7 +177,7 @@ namespace polyscip {
             //V_RepC extendVRep(V_RepC&& current_v_rep);
             V_RepC extendVRep(V_RepC&& current_v_rep);
 
-            //V_RepC extendVRep_Var1(V_RepC&& current_v_rep);
+            V_RepC extendVRep_Var1(V_RepC&& current_v_rep);
 
             /*V_RepC extendVRep(std::vector<V_RepT> current_rep,
                                       const H_RepT &constraint,
@@ -189,7 +189,6 @@ namespace polyscip {
             H_RepC h_rep_;
             V_RepC v_rep_;
             std::vector< AdjPairContainer > adj_pairs_;
-            std::size_t adj_pairs_ind_offset_;
         };
     }
 }
