@@ -114,6 +114,9 @@ struct SCIP_ConsData
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
 
    SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
+
+   int                   nlockspos;          /**< number of positive locks */
+   int                   nlocksneg;          /**< number of negative locks */
 };
 
 /** constraint handler data */
@@ -2044,6 +2047,36 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
+/** propagates variable locks through expression and adds lock to variables */
+static
+SCIP_RETCODE propagateLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   nlockspos,          /**< number of positive locks */
+   int                   nlocksneg           /**< number of negative locks */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   EXPRLOCK_DATA lockdata;
+
+   assert(expr != NULL);
+
+   /* if no locks, then nothing to do, then do nothing */
+   if( nlockspos == 0 && nlocksneg == 0 )
+      return SCIP_OKAY;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   lockdata.exprvarhdlr = SCIPgetConsExprExprHdlrVar(conshdlr);
+   lockdata.nlockspos = nlockspos;
+   lockdata.nlocksneg = nlocksneg;
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, NULL, NULL, NULL, &lockdata) );
+
+   return SCIP_OKAY;
+}
+
 /** get key of hash element */
 static
 SCIP_DECL_HASHGETKEY(hashCommonSubexprGetKey)
@@ -2156,10 +2189,16 @@ SCIP_RETCODE replaceCommonSubexpressions(
          assert(newroot != consdata->expr);
          assert(SCIPcompareConsExprExprs(consdata->expr, newroot) == 0);
 
+         /* remove locks on old expression */
+         SCIP_CALL( propagateLocks(scip, consdata->expr, -consdata->nlockspos, -consdata->nlocksneg) );
+
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
          consdata->expr = newroot;
          SCIPcaptureConsExprExpr(newroot);
+
+         /* add locks on new expression */
+         SCIP_CALL( propagateLocks(scip, consdata->expr, consdata->nlockspos, consdata->nlocksneg) );
 
          SCIPdebugMessage("replace common root expression\n");
       }
@@ -2862,36 +2901,6 @@ SCIP_RETCODE createNlRow(
    return SCIP_OKAY;
 }
 
-/** propagates variable locks through expression and adds lock to variables */
-static
-SCIP_RETCODE propagateLocks(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   nlockspos,          /**< number of positive locks */
-   int                   nlocksneg           /**< number of negative locks */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   EXPRLOCK_DATA lockdata;
-
-   assert(expr != NULL);
-
-   /* if no locks, then nothing to do, then do nothing */
-   if( nlockspos == 0 && nlocksneg == 0 )
-      return SCIP_OKAY;
-
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-
-   lockdata.exprvarhdlr = SCIPgetConsExprExprHdlrVar(conshdlr);
-   lockdata.nlockspos = nlockspos;
-   lockdata.nlocksneg = nlocksneg;
-
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, NULL, NULL, NULL, &lockdata) );
-
-   return SCIP_OKAY;
-}
-
 /** registers branching candidates */
 static
 SCIP_RETCODE registerBranchingCandidates(
@@ -3343,6 +3352,10 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert((*consdata)->nvarexprs == 0);
    assert((*consdata)->varexprs == NULL);
 
+   /* constraint locks should have been removed */
+   assert((*consdata)->nlockspos == 0);
+   assert((*consdata)->nlocksneg == 0);
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
 
    /* free nonlinear row representation */
@@ -3635,6 +3648,10 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    lockdata.nlocksneg = nlocksneg;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, lockVar, NULL, NULL, NULL, &lockdata) );
+
+   /* remember how the constraint was locked */
+   consdata->nlockspos += nlockspos;
+   consdata->nlocksneg += nlocksneg;
 
    return SCIP_OKAY;
 }
