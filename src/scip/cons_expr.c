@@ -5903,7 +5903,11 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    return SCIP_OKAY;
 }
 
-/** overwrites/replaces a child of an expressions */
+/** overwrites/replaces a child of an expressions
+ *
+ * @attention the old child is released, but newchild is not captured
+ * @todo should we modify this so SCIPreplaceConsExprExprChild() also captures newchild ?
+ */
 SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
