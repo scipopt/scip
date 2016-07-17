@@ -727,6 +727,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
       SCIPinfoMessage(scip, dotdata->file, "%d uses\\n", expr->nuses);
    }
 
+   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
+   {
+      /* print number of locks */
+      SCIPinfoMessage(scip, dotdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
+   }
+
    if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALVALUE )
    {
       /* print eval value */

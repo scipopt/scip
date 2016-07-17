@@ -314,13 +314,14 @@ typedef union
 #define SCIP_CONSEXPR_PRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
 #define SCIP_CONSEXPR_PRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
 #define SCIP_CONSEXPR_PRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
-#define SCIP_CONSEXPR_PRINTDOT_EVALVALUE    0x8u /**< print evaluation value */
-#define SCIP_CONSEXPR_PRINTDOT_EVALTAG     0x18u /**< print evaluation value and tag */
-#define SCIP_CONSEXPR_PRINTDOT_INTERVAL    0x20u /**< print interval value */
-#define SCIP_CONSEXPR_PRINTDOT_INTERVALTAG 0x60u /**< print interval value and tag */
+#define SCIP_CONSEXPR_PRINTDOT_NLOCKS       0x8u /**< print number of locks */
+#define SCIP_CONSEXPR_PRINTDOT_EVALVALUE   0x10u /**< print evaluation value */
+#define SCIP_CONSEXPR_PRINTDOT_EVALTAG     0x30u /**< print evaluation value and tag */
+#define SCIP_CONSEXPR_PRINTDOT_INTERVAL    0x40u /**< print interval value */
+#define SCIP_CONSEXPR_PRINTDOT_INTERVALTAG 0xC0u /**< print interval value and tag */
 
 /** print everything */
-#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_INTERVALTAG
+#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_NLOCKS | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_INTERVALTAG
 
 /** type for printdot bitflags
  * @todo find a better name
