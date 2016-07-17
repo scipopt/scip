@@ -1116,13 +1116,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
       assert(child != newchild);
       assert(SCIPcompareConsExprExprs(child, newchild) == 0);
 
-      /** @todo use SCIPsetConsExprExprChild() (simplify-branch) to replace child */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
+      SCIPdebugMessage("replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
 
-      expr->children[expr->walkcurrentchild] = newchild;
+      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, expr->walkcurrentchild, newchild) );
       SCIPcaptureConsExprExpr(newchild);
-
-      SCIPdebugMessage("replace common inner node expression\n");
 
       *result = SCIP_CONSEXPREXPRWALK_SKIP;
    }
@@ -2195,6 +2192,8 @@ SCIP_RETCODE replaceCommonSubexpressions(
          assert(newroot != consdata->expr);
          assert(SCIPcompareConsExprExprs(consdata->expr, newroot) == 0);
 
+         SCIPdebugMessage("replacing common root expression of constraint <%s>: %p -> %p\n", SCIPconsGetName(conss[i]), (void*)consdata->expr, (void*)newroot);
+
          /* remove locks on old expression */
          SCIP_CALL( propagateLocks(scip, consdata->expr, -consdata->nlockspos, -consdata->nlocksneg) );
 
@@ -2205,8 +2204,6 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
          /* add locks on new expression */
          SCIP_CALL( propagateLocks(scip, consdata->expr, consdata->nlockspos, consdata->nlocksneg) );
-
-         SCIPdebugMessage("replace common root expression\n");
       }
       else
       {
