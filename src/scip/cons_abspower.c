@@ -184,16 +184,21 @@ DECL_MYPOW(square)
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
-   SCIP_Bool* ispropagated;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS* cons;
 
    assert(scip  != NULL);
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED);
 
-   ispropagated = (SCIP_Bool*)eventdata;
-   assert(ispropagated != NULL);
+   cons = (SCIP_CONS*) eventdata;
+   assert(cons != NULL);
 
-   *ispropagated = FALSE;
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->isxpropagated = FALSE;
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -225,7 +230,7 @@ SCIP_RETCODE catchVarEvents(
       if( !SCIPisInfinity(scip,  consdata->rhs) )
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->isxpropagated, &consdata->xeventfilterpos) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, &consdata->xeventfilterpos) );
 
       consdata->isxpropagated = FALSE;
    }
@@ -2517,7 +2522,7 @@ SCIP_RETCODE propagateCons(
    zub = SCIPvarGetUbLocal(consdata->z);
 
    /* if some bound is not tightened, tighten bounds of variables as long as possible */
-   tightenedround = !consdata->isxpropagated || !consdata->iszpropagated;
+   tightenedround = !consdata->isxpropagated || !consdata->iszpropagated || SCIPconsIsMarkedPropagate(cons);
    while( tightenedround )
    {
       tightenedround = FALSE;
@@ -3003,6 +3008,7 @@ SCIP_RETCODE propagateCons(
    /* mark the constraint propagated */
    consdata->isxpropagated = TRUE;
    consdata->iszpropagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    if( *cutoff )
       return SCIP_OKAY;
@@ -6120,7 +6126,7 @@ SCIP_DECL_CONSPROP(consPropAbspower)
 
    *result = SCIP_DIDNOTFIND;
 
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nmarkedconss; ++c )
    {
       assert(conss != NULL);
 
