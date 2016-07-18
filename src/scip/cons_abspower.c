@@ -256,7 +256,7 @@ SCIP_RETCODE catchVarEvents(
             eventtype |= SCIP_EVENTTYPE_UBTIGHTENED;
       }
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->iszpropagated, &consdata->zeventfilterpos) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, &consdata->zeventfilterpos) );
       consdata->iszpropagated = FALSE;
    }
    else
@@ -291,7 +291,7 @@ SCIP_RETCODE dropVarEvents(
       if( !SCIPisInfinity(scip,  consdata->rhs) )
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->isxpropagated, consdata->xeventfilterpos) );
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, consdata->xeventfilterpos) );
       consdata->xeventfilterpos = -1;
    }
 
@@ -313,7 +313,7 @@ SCIP_RETCODE dropVarEvents(
             eventtype |= SCIP_EVENTTYPE_UBTIGHTENED;
       }
 
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->iszpropagated, consdata->zeventfilterpos) );
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, consdata->zeventfilterpos) );
       consdata->zeventfilterpos = -1;
    }
 
