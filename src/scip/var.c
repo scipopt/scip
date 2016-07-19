@@ -13622,6 +13622,7 @@ SCIP_RETCODE SCIPvarAddToRow(
 #ifdef SCIP_HISTORYTOFILE
 SCIP_Longint counter = 0l;
 const char* historypath="."; /* allows for user-defined path; use '.' for calling directory of SCIP */
+#include "scip/scip.h"
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
@@ -13676,13 +13677,24 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    {
       FILE* f;
       char filename[256];
+      SCIP_NODE* currentnode;
+      SCIP_NODE* parentnode;
+      currentnode = SCIPgetFocusNode(set->scip);
+      parentnode = SCIPnodeGetParent(currentnode);
 
       sprintf(filename, "%s/%s.pse", historypath, SCIPgetProbName(set->scip));
       f = fopen(filename, "a");
       if( NULL != f )
       {
-         fprintf(f, "%lld %s \t %lld \t %d %15.9f %.3f\n", ++counter,
-            SCIPvarGetName(var), stat->nnodes, SCIPgetDepth(set->scip), objdelta, solvaldelta);
+         fprintf(f, "%lld %s \t %lld \t %lld \t %lld \t %d \t %15.9f \t %.3f\n",
+            ++counter,
+            SCIPvarGetName(var),
+            SCIPnodeGetNumber(currentnode),
+            parentnode != NULL ? SCIPnodeGetNumber(parentnode) : -1,
+            SCIPgetNLPIterations(set->scip),
+            SCIPgetDepth(set->scip),
+            objdelta,
+            solvaldelta);
          fclose(f);
       }
    }

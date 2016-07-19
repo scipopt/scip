@@ -44,6 +44,9 @@ SCIP_RETCODE run(
    /* setup SCIP and print version information */
    SCIP_CALL( SCIPcreate(&scip) );
 
+   /* we explicitly have to enable the use of a debug solution for this main SCIP instance */
+   SCIPenableDebugSol(scip);
+
    SCIPprintVersion(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 

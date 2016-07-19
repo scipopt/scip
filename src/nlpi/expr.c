@@ -1631,6 +1631,9 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
 
 /** point evaluation for EXPR_DIV */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalDiv )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -10283,9 +10286,24 @@ void exprgraphNodePropagateBounds(
    case SCIP_EXPR_ABS:
    {
       assert(node->nchildren == 1);
-      /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
 
-      SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
+      /* use identity if child bounds are non-negative */
+      if( node->children[0]->bounds.inf >= 0 )
+      {
+         SCIPintervalSetBounds(&childbounds, node->bounds.inf, node->bounds.sup);
+      }
+      /* use -identity if child bounds are non-positive */
+      else if( node->children[0]->bounds.sup <= 0 )
+      {
+         assert(node->bounds.inf <= node->bounds.sup);
+         SCIPintervalSetBounds(&childbounds, -node->bounds.sup, -node->bounds.inf);
+      }
+      /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
+      else
+      {
+         SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
+      }
+
       SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
@@ -10449,7 +10467,7 @@ void exprgraphNodePropagateBounds(
                assert(maxlinactivityinf == 1);
                childbounds.inf = node->bounds.inf - maxlinactivity;
             }
-            else
+            else if( maxlinactivityinf == 0 )
             {
                childbounds.inf = node->bounds.inf - maxlinactivity + node->children[i]->bounds.sup;
             }
@@ -10484,7 +10502,7 @@ void exprgraphNodePropagateBounds(
          {
             if( i == j )
                continue;
-            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[i]->bounds);
+            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[j]->bounds);
 
             /* if there is 0.0 in the product, then later division will hardly give useful bounds, so giveup for this i */
             if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )

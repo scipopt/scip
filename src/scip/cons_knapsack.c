@@ -93,6 +93,7 @@
 #define DEFAULT_DETECTLOWERBOUND TRUE   /**< should presolving try to detect constraints parallel to the objective
                                          *   function defining a lower bound and prevent these constraints from
                                          *   entering the LP */
+#define DEFAULT_CLIQUEEXTRACTFACTOR 0.5 /**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
 
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
@@ -158,6 +159,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             detectlowerbound;   /**< should presolving try to detect constraints parallel to the objective
                                               *   function defining a lower bound and prevent these constraints from
                                               *   entering the LP */
+   SCIP_Real             cliqueextractfactor;/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
 };
 
 
@@ -674,7 +676,6 @@ SCIP_RETCODE consdataCreate(
       /* capture variables */
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
-
    return SCIP_OKAY;
 }
 
@@ -8344,7 +8345,7 @@ SCIP_RETCODE dualWeightsTightening(
    }
    else
    {
-      /* if the follwoing assert fails we have either a redundant constraint or a set-packing constraint, this should
+      /* if the following assert fails we have either a redundant constraint or a set-packing constraint, this should
        * not happen here
        */
       assert(vbig > 0 && vbig < nvars);
@@ -8430,24 +8431,30 @@ SCIP_RETCODE dualWeightsTightening(
    while( v < nvars && weights[v] == dualcapacity )
       ++v;
 
-   /* one negated variable is enough to fulfill the constraint, so we can update it to a logicor
+   /* any negated variable out of the first n - 1 items is enough to fulfill the constraint, so we can update it to a logicor
+    * after a possible removal of the last, redundant item
     *
     * e.g. 10x1 + 10x2 + 10x3 <= 20   <=>    10~x1 + 10~x2 + 10~x3 >= 10  <=>   ~x1 + ~x2 + ~x3 >= 1
     */
-   if( v == nvars )
+   if( v >= nvars - 1 )
    {
+      /* the last weight is not enough to satisfy the dual capacity -> remove this redundant item */
+      if( v == nvars - 1 )
+      {
+         SCIP_CALL( delCoefPos(scip, cons, nvars - 1) );
+      }
       SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
       assert(SCIPconsIsDeleted(cons));
 
       return SCIP_OKAY;
    }
-   else if( v < nvars - 1 )
+   else /* v < nvars - 1 <=> at least two items with weight smaller than the dual capacity */
    {
       /* @todo generalize the following algorithm for more than two variables */
 
       if( weights[nvars - 1] + weights[nvars - 2] >= dualcapacity )
       {
-         /* we have a dual-knapsack constraint were we either need to choose one variable out of a subset (big
+         /* we have a dual-knapsack constraint where we either need to choose one variable out of a subset (big
           * coefficients) of all or two variables of the rest
           *
           * e.g. 9x1 + 9x2 + 6x3 + 4x4 <= 19   <=>    9~x1 + 9~x2 + 6~x3 + 4~x4 >= 9
@@ -9079,7 +9086,7 @@ SCIP_RETCODE prepareCons(
  *
  *     -8~x1 - 8~x2 - 7~x3 - 5~x4 - 5~x5 <= -12   <=>   8x1 + 8x2 + 7x3 + 5x4 + 5x5 <= 20
  *
- *  2. if variables in a constraint do not affect the (in-)feasibility of the constraint, we can delte them, e.g.
+ *  2. if variables in a constraint do not affect the (in-)feasibility of the constraint, we can delete them, e.g.
  *
  *     7x1 + 6x2 + 5x3 + 5x4 + x5 + x6 <= 20 => x5 and x6 are redundant and can be removed
  *
@@ -10851,6 +10858,22 @@ SCIP_RETCODE tightenWeights(
    return SCIP_OKAY;
 }
 
+
+#ifdef SCIP_DEBUG
+static
+void printClique(
+   SCIP_VAR**            cliquevars,
+   int                   ncliquevars
+   )
+{
+   int b;
+   SCIPdebugMessage("adding new Clique: ");
+   for( b = 0; b < ncliquevars; ++b )
+      SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
+   SCIPdebugPrintf("\n");
+}
+#endif
+
 /** adds negated cliques of the knapsack constraint to the global clique table */
 static
 SCIP_RETCODE addNegatedCliques(
@@ -10962,8 +10985,8 @@ SCIP_RETCODE addNegatedCliques(
             cliqueused[consdata->negcliquepartition[v]] = TRUE;
             for( w = v + 1; w < nvars; ++w )
             {
-               /* if we would take the biggest weight instead of another what would we gain, take weight[i] instead of
-                * weight[j] (which are both in a negated clique) */
+               /* if we would take the biggest weight instead of another what would we gain, take weight[v] instead of
+                * weight[w] (which are both in a negated clique) */
                if( consdata->negcliquepartition[v] == consdata->negcliquepartition[w] 
                   && consdata->weights[v] > consdata->weights[w] )
                {
@@ -11007,16 +11030,10 @@ SCIP_RETCODE addNegatedCliques(
 
             if( ncliquevars > 1 )
             {
-#ifdef SCIP_DEBUG
-               int b;
-               SCIPdebugMessage("adding new Clique: ");
-               for( b = 0; b < ncliquevars; ++b )
-                  SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
-               SCIPdebugPrintf("\n");
-#endif
-
+               SCIPdebug( printClique(cliquevars, ncliquevars) );
                assert(beforelastweight > 0);
                /* add the clique to the clique table */
+               /* this really happens, e.g., on enigma.mps from the short test set */
                SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                if( *cutoff )
                   goto TERMINATE;
@@ -11029,14 +11046,7 @@ SCIP_RETCODE addNegatedCliques(
                for( ++w; w < nposcliquevars && !cliqueused[gaincliquepartition[w]] && beforelastweight + gainweights[w] > freecapacity; ++w )
                {
                   SCIP_CALL( SCIPgetNegatedVar(scip, poscliquevars[w], &cliquevars[ncliquevars - 1]) );
-#ifdef SCIP_DEBUG
-                  {
-                     SCIPdebugMessage("adding new Clique: ");
-                     for( b = 0; b < ncliquevars; ++b )
-                        SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
-                     SCIPdebugPrintf("\n");
-                  }
-#endif
+                  SCIPdebug( printClique(cliquevars, ncliquevars) );
                   SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                   if( *cutoff )
                      goto TERMINATE;
@@ -11059,26 +11069,131 @@ SCIP_RETCODE addNegatedCliques(
    return SCIP_OKAY;
 }
 
+/** greedy clique detection by considering weights and capacity
+ *
+ *  greedily detects cliques by first sorting the items by decreasing weights (optional) and then collecting greedily
+ *  1) neighboring items which exceed the capacity together => one clique
+ *  2) looping through the remaining items and finding the largest set of preceding items to build a clique => possibly many more cliques
+ */
+static
+SCIP_RETCODE greedyCliqueAlgorithm(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**            items,              /**< array of variable items */
+   SCIP_Longint*         weights,            /**< weights of the items */
+   int                   nitems,             /**< the number of items */
+   SCIP_Longint          capacity,           /**< maximum free capacity of the knapsack */
+   SCIP_Bool             sorteditems,        /**< are the items sorted by their weights nonincreasing? */
+   SCIP_Real             cliqueextractfactor,/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
+   SCIP_Bool*const       cutoff,             /**< pointer to store whether the node can be cut off */
+   int*const             nbdchgs             /**< pointer to count the number of performed bound changes */
+   )
+{
+   SCIP_Longint lastweight;
+   int ncliquevars;
+   int i;
+   int thisnbdchgs;
+
+   if( nitems <= 1 )
+      return SCIP_OKAY;
+
+   /* sort possible gain per substitution of the clique members */
+   if( ! sorteditems )
+      SCIPsortDownLongPtr(weights,(void**) items, nitems);
+
+   ncliquevars = 1;
+   lastweight = weights[0];
+
+   /* taking these two weights together violates the knapsack => include into clique */
+   for( i = 1; i < nitems && weights[i] + lastweight > capacity; ++i )
+   {
+      lastweight = weights[i];
+      ++ncliquevars;
+   }
+
+   if( ncliquevars > 1 )
+   {
+      SCIP_Longint compareweight;
+      SCIP_VAR** cliquevars;
+      int compareweightidx;
+      int minclqsize;
+
+      /* add the clique to the clique table */
+      SCIPdebug( printClique(items, ncliquevars) );
+      SCIP_CALL( SCIPaddClique(scip, items, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
+
+      if( *cutoff )
+         return SCIP_OKAY;
+
+      *nbdchgs += thisnbdchgs;
+
+      /* no more cliques to be found (don't know if this can actually happen, since the knapsack could be replaced by a set-packing constraint)*/
+      if( ncliquevars == nitems )
+         return SCIP_OKAY;
+
+      /* copy items in order into buffer array and deduce more cliques */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &cliquevars, items, ncliquevars) );
+
+      /* try to replace the last item in the clique by a different item to obtain a slightly different clique */
+      /* loop over remaining, smaller items and compare each item backwards against larger weights, starting with the second smallest weight */
+      compareweightidx = ncliquevars - 2;
+      assert(i == nitems || weights[i] + weights[ncliquevars - 1] <= capacity);
+
+      /* determine minimum clique size for the following loop */
+      minclqsize = (int)(cliqueextractfactor * ncliquevars);
+      minclqsize = MAX(minclqsize, 2);
+
+      /* loop over the remaining variables and the larger items of the first clique until we find another clique or reach the size limit */
+      while( compareweightidx >= 0 && i < nitems && ncliquevars >= minclqsize && ! (*cutoff) )
+      {
+         compareweight = weights[compareweightidx];
+         assert(compareweight > 0);
+
+         /* include this item together with all items that have a weight at least as large as the compare weight in a clique */
+         if( compareweight + weights[i] > capacity )
+         {
+            assert(compareweightidx == ncliquevars -2);
+            cliquevars[ncliquevars - 1] = items[i];
+            SCIPdebug( printClique(cliquevars, ncliquevars) );
+            SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
+
+            /* stop when there is a cutoff */
+            if( ! (*cutoff) )
+               *nbdchgs += thisnbdchgs;
+
+            /* go to next smaller item */
+            ++i;
+         }
+         else
+         {
+            /* choose a preceding, larger weight to compare small items against. Clique size is reduced by 1 simultaneously */
+            compareweightidx--;
+            ncliquevars --;
+         }
+
+      }
+
+      SCIPfreeBufferArray(scip, &cliquevars);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds cliques of the knapsack constraint to the global clique table */
 static
 SCIP_RETCODE addCliques(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< knapsack constraint */
+   SCIP_Real             cliqueextractfactor,/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
    SCIP_Bool*const       cutoff,             /**< pointer to store whether the node can be cut off */
    int*const             nbdchgs             /**< pointer to count the number of performed bound changes */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** cliquevars;
-   int ncliquevars;
    int i;
    SCIP_Longint minactduetonegcliques;
    SCIP_Longint freecapacity;
-   SCIP_Longint lastweight;
-   SCIP_Longint beforelastweight;
    int nnegcliques;
    int cliquenum;
-   int thisnbdchgs;
    SCIP_VAR** poscliquevars;
    SCIP_Longint* gainweights;
    int nposcliquevars;
@@ -11118,7 +11233,6 @@ SCIP_RETCODE addCliques(
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &poscliquevars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &gainweights, nvars) );
    BMSclearMemoryArray(gainweights, nvars);
    SCIP_CALL( SCIPallocBufferArray(scip, &secondmaxweights, nnegcliques) );
@@ -11165,6 +11279,9 @@ SCIP_RETCODE addCliques(
       /* create negated cliques out of negated cliques, if we do not take the smallest weight of a cliques ... */
       SCIP_CALL( addNegatedCliques(scip, cons, cutoff, nbdchgs ) );
 
+      if( *cutoff )
+         goto TERMINATE;
+
       nposcliquevars = 0;
 
       for( i = nvars - 1; i >= 0; --i )
@@ -11179,112 +11296,23 @@ SCIP_RETCODE addCliques(
          }
       }
 
-      if( nposcliquevars > 0 )
+      /* use the gain weights and free capacity to derive greedily cliques */
+      if( nposcliquevars > 1 )
       {
-         /* sort possible gain per substitution of the clique members */
-         SCIPsortDownLongPtr(gainweights,(void**) poscliquevars, nposcliquevars);
+         SCIP_CALL( greedyCliqueAlgorithm(scip, poscliquevars, gainweights, nposcliquevars, freecapacity, FALSE, cliqueextractfactor, cutoff, nbdchgs) );
 
-         cliquevars[0] = poscliquevars[0];
-         ncliquevars = 1;
-         lastweight = gainweights[0];
-         beforelastweight = 0;
-
-         /* taking bigger weights make the knapsack redundant so we will create cliques */
-         for( i = 1; i < nposcliquevars && gainweights[i] + lastweight > freecapacity; ++i )
-         {
-            beforelastweight = lastweight;
-            lastweight = gainweights[i];
-            cliquevars[ncliquevars] = poscliquevars[i];
-            ++ncliquevars;
-         }
-
-         if( ncliquevars > 1 )
-         {
-#ifdef SCIP_DEBUG
-            int b;
-            SCIPdebugMessage("adding new Clique: ");
-            for( b = 0; b < ncliquevars; ++b )
-               SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
-            SCIPdebugPrintf("\n");
-#endif
-
-            assert(beforelastweight > 0);
-            /* add the clique to the clique table */
-            SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
-            if( *cutoff )
-               goto TERMINATE;
-            *nbdchgs += thisnbdchgs;
-
-            /* try to replace the last item in the clique by a different item to obtain a slightly different clique */
-            for( ++i; i < nposcliquevars && beforelastweight + gainweights[i] > freecapacity; ++i )
-            {
-               cliquevars[ncliquevars - 1] = poscliquevars[i];
-#ifdef SCIP_DEBUG
-               {
-                  SCIPdebugMessage("adding new Clique: ");
-                  for( b = 0; b < ncliquevars; ++b )
-                     SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
-                  SCIPdebugPrintf("\n");
-               }
-#endif
-               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
-               if( *cutoff )
-                  goto TERMINATE;
-               *nbdchgs += thisnbdchgs;
-            }
-         }
-      }
-   }
-
-   /* build a largest clique by using the items with the maximal weights */
-   cliquevars[0] = consdata->vars[0];
-   for( i = 1; i < nvars && consdata->weights[i-1] + consdata->weights[i] > consdata->capacity; ++i )
-      cliquevars[i] = consdata->vars[i];
-
-   ncliquevars = i;
-
-   if( ncliquevars >= 2 )
-   {
-      SCIP_Longint cliqueminweight;
-#ifdef SCIP_DEBUG
-      int b;
-      SCIPdebugMessage("adding new Clique: ");
-      for( b = 0; b < ncliquevars; ++b )
-         SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
-      SCIPdebugPrintf("\n");
-#endif
-
-      /* add the clique to the clique table */
-      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
-      if( *cutoff )
-         goto TERMINATE;
-      *nbdchgs += thisnbdchgs;
-
-      /* try to replace the last item in the clique by a different item to obtain a slightly different clique */
-      cliqueminweight = consdata->weights[ncliquevars-2];
-      for( i = ncliquevars; i < nvars && cliqueminweight + consdata->weights[i] > consdata->capacity; ++i )
-      {
-         cliquevars[ncliquevars - 1] = consdata->vars[i];
-#ifdef SCIP_DEBUG
-         {
-            SCIPdebugMessage("adding new Clique: ");
-            for( b = 0; b < ncliquevars; ++b )
-               SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
-            SCIPdebugPrintf("\n");
-         }
-#endif
-         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
          if( *cutoff )
             goto TERMINATE;
-         *nbdchgs += thisnbdchgs;
       }
    }
 
- TERMINATE:
+   /* build cliques by using the items with the maximal weights */
+   SCIP_CALL( greedyCliqueAlgorithm(scip, consdata->vars, consdata->weights, nvars, consdata->capacity, TRUE, cliqueextractfactor, cutoff, nbdchgs) );
+
+   TERMINATE:
    /* free temporary memory and mark the constraint */
    SCIPfreeBufferArray(scip, &secondmaxweights);
    SCIPfreeBufferArray(scip, &gainweights);
-   SCIPfreeBufferArray(scip, &cliquevars);
    SCIPfreeBufferArray(scip, &poscliquevars);
    consdata->cliquesadded = TRUE;
 
@@ -11382,7 +11410,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
       maxabsval = (int) consdata->weights[0];
 
    /* hash value depends on vectors of variable indices */
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + maxabsval; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx + maxabsval; /*lint !e701*/
 
    return hashval;
 }
@@ -12464,7 +12492,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       /* add cliques in the knapsack to the clique table */
       if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
       {
-         SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
+         SCIP_CALL( addCliques(scip, cons, conshdlrdata->cliqueextractfactor, &cutoff, nchgbds) );
          if( cutoff )
             break;
       }
@@ -13058,6 +13086,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "constraints/" CONSHDLR_NAME "/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cuts",
          &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/cliqueextractfactor",
+         "lower clique size limit for greedy clique extraction algorithm (relative to largest clique)",
+         &conshdlrdata->cliqueextractfactor, TRUE, DEFAULT_CLIQUEEXTRACTFACTOR, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
