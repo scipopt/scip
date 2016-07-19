@@ -101,7 +101,6 @@ struct SCIP_ConsData
 
    VAREVENTDATA*         lhsbndchgeventdata; /**< eventdata for bound change events on left  hand side variables */
    VAREVENTDATA          rhsbndchgeventdata; /**< eventdata for bound change event  on right hand side variable  */
-   SCIP_Bool             ispropagated;       /**< does the domains need to be propagated? */
    SCIP_Bool             isapproxadded;      /**< has a linear outer approximation be added? */
 };
 
@@ -164,8 +163,6 @@ SCIP_RETCODE catchLhsVarEvents(
    consdata->lhsbndchgeventdata[varidx].varidx   = varidx;
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], &consdata->lhsbndchgeventdata[varidx].filterpos) );
 
-   consdata->ispropagated = FALSE;
-
    /* since bound changes were not catched before, a possibly stored activity may have become outdated */
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
@@ -195,8 +192,6 @@ SCIP_RETCODE catchRhsVarEvents(
    consdata->rhsbndchgeventdata.cons = cons;
    consdata->rhsbndchgeventdata.varidx   = -1;
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
-
-   consdata->ispropagated = FALSE;
 
    /* since bound changes were not catched before, a possibly stored activity may have become outdated */
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
@@ -348,7 +343,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    consdata = SCIPconsGetData(cons);
    assert(consdata  != NULL);
 
-   consdata->ispropagated = FALSE;
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    /* @todo look at bounds on x_i to decide whether propagation makes sense */
 
@@ -2710,7 +2704,7 @@ SCIP_RETCODE propagateBounds(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->ispropagated )
+   if( !SCIPconsIsMarkedPropagate(cons) )
    {
       SCIPdebugMessage("skip propagation for constraint %s\n", SCIPconsGetName(cons));
       *result = SCIP_DIDNOTRUN;
@@ -2722,7 +2716,6 @@ SCIP_RETCODE propagateBounds(
    }
 
    *result = SCIP_DIDNOTFIND;
-   consdata->ispropagated = TRUE;
    SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    /* @todo do something clever to decide whether propagation should be tried */
@@ -4285,7 +4278,6 @@ SCIP_DECL_CONSTRANS(consTransSOC)
 
    consdata->nlrow = NULL;
    consdata->lhsbndchgeventdata = NULL;
-   consdata->ispropagated  = FALSE;
    consdata->isapproxadded = FALSE;
 
    /* create transformed constraint with the same flags */
@@ -5421,7 +5413,6 @@ SCIP_RETCODE SCIPcreateConsSOC(
    consdata->nlrow = NULL;
 
    consdata->lhsbndchgeventdata = NULL;
-   consdata->ispropagated        = FALSE;
    consdata->isapproxadded       = FALSE;
 
    /* create constraint */
