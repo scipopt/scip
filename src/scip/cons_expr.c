@@ -1140,6 +1140,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    getvarsdata = (GETVARS_DATA*) data;
    assert(getvarsdata != NULL);
 
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
    /* add variable expression if not seen so far; there is only one variable expression representing a variable */
    if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
