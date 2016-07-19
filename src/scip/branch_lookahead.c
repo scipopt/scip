@@ -20,12 +20,23 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/branch_lookahead.h"
+
 #include <assert.h>
 #include <string.h>
 
-#include "scip/branch_lookahead.h"
-#include "scip/branch_fullstrong.h"
-#include "scip/var.h"
+#include "def.h"
+#include "pub_branch.h"
+#include "pub_message.h"
+#include "pub_var.h"
+#include "scip.h"
+#include "type_branch.h"
+#include "type_lp.h"
+#include "type_result.h"
+#include "type_retcode.h"
+#include "type_scip.h"
+#include "type_tree.h"
+#include "type_var.h"
 
 #define BRANCHRULE_NAME            "lookahead"
 #define BRANCHRULE_DESC            "fullstrong branching with depth of 2" /* TODO CS: expand description */
@@ -470,6 +481,89 @@ SCIP_RETCODE calculateCurrentWeight(
 }
 
 static
+SCIP_RETCODE addVarCutoffBound(
+   SCIP_VAR*             cutoffvartoadd,
+   SCIP_Real             cutoffvaltoadd,
+   SCIP_VAR**            cutoffvars,
+   SCIP_Real*            cutoffvals,
+   int*                  cutoffindexmapping, /* global index to corresponding index in cutoffvals and cutoffvars */
+   int*                  ncutoffs,
+   SCIP_Bool             isdowncutoff
+)
+{
+   int globalvarindex;
+   int localvarindex;
+   SCIP_Real valtoinsert;
+
+   globalvarindex = SCIPvarGetProbindex(cutoffvartoadd);
+   localvarindex = cutoffindexmapping[globalvarindex];
+
+   if( localvarindex == -1 ) /* TODO CS: default value for int? maybe -1? how to set it efficiently? */
+   {
+      cutoffindexmapping[globalvarindex] = *ncutoffs;
+      localvarindex = *ncutoffs;
+      cutoffvars[localvarindex] = cutoffvartoadd;
+      valtoinsert = cutoffvaltoadd;
+      *ncutoffs = *ncutoffs + 1;
+   }
+   else if( isdowncutoff )
+   {
+      valtoinsert = MIN(cutoffvals[localvarindex], cutoffvaltoadd);
+   }
+   else
+   {
+      valtoinsert = MAX(cutoffvals[localvarindex], cutoffvaltoadd);
+   }
+   cutoffvals[localvarindex] = valtoinsert;
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE handleCutoffs(
+   SCIP*                 scip,
+   SCIP_NODE*            basenode,
+   SCIP_VAR**            cutoffvars,
+   SCIP_Real*            cutoffvals,
+   int                   ncutoffs,
+   SCIP_Bool             isdowncutoff
+)
+{
+   int i;
+
+   for( i = 0; i < ncutoffs; i++ )
+   {
+      SCIP_VAR* cutoffvar;
+      SCIP_Real cutoffbound;
+      SCIP_Real oldlowerbound;
+      SCIP_Real oldupperbound;
+
+      cutoffvar = cutoffvars[i];
+
+      oldupperbound = SCIPvarGetUbLocal(cutoffvar);
+      oldlowerbound = SCIPvarGetLbLocal(cutoffvar);
+
+      if( isdowncutoff )
+      {
+         cutoffbound = SCIPfeasCeil(scip, cutoffvals[i]);
+         if( SCIPisFeasLT(scip, oldlowerbound, cutoffbound) && SCIPisFeasLE(scip, cutoffbound, oldupperbound) )
+         {
+            SCIP_CALL( SCIPchgVarLbNode(scip, basenode, cutoffvar, cutoffbound) );
+         }
+      }
+      else
+      {
+         cutoffbound = SCIPfeasFloor(scip, cutoffvals[i]);
+         if( SCIPisFeasLE(scip, oldlowerbound, cutoffbound) && SCIPisFeasLT(scip, cutoffbound, oldupperbound) )
+         {
+            SCIP_CALL( SCIPchgVarUbNode(scip, basenode, cutoffvar, cutoffbound) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
@@ -503,23 +597,50 @@ SCIP_RETCODE selectVarLookaheadBranching(
       BranchingResultData* downbranchingresult;
       BranchingResultData* upbranchingresult;
       ScoreData* scoredata;
-      int* downcutoffindices;
-      int ndowncutoffindices = 0;
-      int* upcutoffindices;
-      int nupcutoffindices = 0;
+
+      int nglobalvars;
+
+      SCIP_VAR** downcutoffvars;
+      SCIP_Real* downcutoffvals;
+      int* downcutoffindexmapping; /* global index to corresponding index in downcutoffvals and downcutoffvars */
+      int ndowncutoffs;
+
+      SCIP_Real* upcutoffvals;
+      SCIP_VAR** upcutoffvars;
+      int* upcutoffindexmapping; /* global index to corresponding index in upcutoffvals and upcutoffvars */
+      int nupcutoffs;
+
       SCIP_Real lpobjval;
       SCIP_Real highestscore = 0;
       int highestscoreindex = -1;
       int i;
       SCIP_NODE* basenode;
 
+      nglobalvars = SCIPgetNVars(scip);
+
       SCIP_CALL( SCIPallocMemory(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &scoredata) );
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &downcutoffindices, nlpcands) );
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &upcutoffindices, nlpcands) );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffvals, nglobalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffvars, nglobalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffindexmapping, nglobalvars) );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &upcutoffvals, nglobalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &upcutoffvars, nglobalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &upcutoffindexmapping, nglobalvars) );
+
       SCIP_CALL( initBranchingResultData(scip, downbranchingresult) );
       SCIP_CALL( initBranchingResultData(scip, upbranchingresult) );
+
+      /* TODO CS: is there an alternative for this? */
+      for( i = 0; i < nglobalvars; i++ )
+      {
+         downcutoffindexmapping[i] = -1;
+         upcutoffindexmapping[i] = -1;
+      }
+      ndowncutoffs = 0;
+      nupcutoffs = 0;
 
       lpobjval = SCIPgetLPObjval(scip);
       basenode = SCIPgetCurrentNode(scip);
@@ -532,28 +653,34 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       for( i = 0; i < nlpcands; i++ )
       {
+         SCIP_VAR* branchvar;
+         SCIP_Real branchval;
+
          assert(lpcands[i] != NULL);
 
-         SCIPdebugMessage("Start branching on variable <%s>\n", SCIPvarGetName(lpcands[i]));
+         branchvar = lpcands[i];
+         branchval = lpcandssol[i];
+
+         SCIPdebugMessage("Start branching on variable <%s>\n", SCIPvarGetName(branchvar));
 
          SCIP_CALL( initScoreData(scoredata, i) );
          scoredata->varindex = i;
          scoredata->ncutoffs = 0;
 
-         SCIPdebugMessage("First level down branching on variable <%s>\n", SCIPvarGetName(lpcands[i]));
-         SCIP_CALL( executeBranchingOnUpperBound(scip, lpcands[i], lpcandssol[i], downbranchingresult) );
+         SCIPdebugMessage("First level down branching on variable <%s>\n", SCIPvarGetName(branchvar));
+         SCIP_CALL( executeBranchingOnUpperBound(scip, branchvar, branchval, downbranchingresult) );
 
          if( !downbranchingresult->cutoff )
          {
-            SCIP_CALL( executeDeepBranching(scip, lpobjval,
+            SCIP_CALL( executeDeepBranching(scip, lpobjval, /*downcutoffvars, downcutoffvals, &ndowncutoffs, &downcutoffindexmapping,*/
                &downbranchingresult->cutoff, &scoredata->upperbounddata, &scoredata->ncutoffs) );
          }
 
          SCIPdebugMessage("Going back to layer 0.\n");
          SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
 
-         SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(lpcands[i]));
-         SCIP_CALL( executeBranchingOnLowerBound(scip, lpcands[i], lpcandssol[i], upbranchingresult) );
+         SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
+         SCIP_CALL( executeBranchingOnLowerBound(scip, branchvar, branchval, upbranchingresult) );
 
          if( !upbranchingresult->cutoff )
          {
@@ -567,18 +694,18 @@ SCIP_RETCODE selectVarLookaheadBranching(
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
             *result = SCIP_CUTOFF;
-            SCIPdebugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[i]));
+            SCIPdebugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(branchvar));
             break;
          }
          else if( upbranchingresult->cutoff )
          {
-            upcutoffindices[nupcutoffindices] = i;
-            nupcutoffindices++;
+            SCIP_CALL(
+               addVarCutoffBound(branchvar, branchval, upcutoffvars, upcutoffvals, upcutoffindexmapping, &nupcutoffs, FALSE));
          }
          else if( downbranchingresult->cutoff )
          {
-            downcutoffindices[ndowncutoffindices] = i;
-            ndowncutoffindices++;
+            SCIP_CALL(
+               addVarCutoffBound(branchvar, branchval, downcutoffvars, downcutoffvals, downcutoffindexmapping, &ndowncutoffs, TRUE));
          }
          else
          {
@@ -590,71 +717,38 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPdebugMessage("End Probing Mode\n");
       SCIP_CALL( SCIPendProbing(scip) );
 
-      if( nupcutoffindices > 0 )
+      if( nupcutoffs > 0 )
       {
          SCIPdebugMessage("There are <%i> upper child cutoffs (with invalid new lower bound) out of <%i> variables \n",
-            nupcutoffindices, nlpcands);
+            nupcutoffs, nlpcands);
 
-         for( i = 0; i < nupcutoffindices; i++ )
-         {
-            int cutoffindex;
-            SCIP_VAR* cutoffvar;
-            SCIP_Real cutoffbound;
-            SCIP_Real oldlowerbound;
-            SCIP_Real oldupperbound;
-
-            cutoffindex = upcutoffindices[i];
-            cutoffvar = lpcands[cutoffindex];
-            cutoffbound = SCIPfeasFloor(scip, lpcandssol[cutoffindex]);
-
-            oldupperbound = SCIPvarGetUbLocal(cutoffvar);
-            oldlowerbound = SCIPvarGetLbLocal(cutoffvar);
-
-            /*add bound checks. See branching methods at top*/
-            if( SCIPisFeasLE(scip, oldlowerbound, cutoffbound) && SCIPisFeasLT(scip, cutoffbound, oldupperbound) )
-            {
-               SCIP_CALL( SCIPchgVarUbNode(scip, basenode, cutoffvar, cutoffbound) );
-            }
-         }
+         SCIP_CALL( handleCutoffs(scip, basenode, upcutoffvars, upcutoffvals, nupcutoffs, FALSE) );
 
          *result = SCIP_REDUCEDDOM;
          SCIPdebugMessage("Finished upper child cutoffs.\n");
       }
 
-      if( ndowncutoffindices > 0 )
+      if( ndowncutoffs > 0 )
       {
-         SCIPdebugMessage("There are <%i> down child cutoffs (with invalid new upper bound) out of <%i> variables \n",
-            nupcutoffindices, nlpcands);
+         SCIPdebugMessage("There are <%i> down child cutoffs (with invalid new upper bound) out of <%i> candidates \n",
+            ndowncutoffs, nlpcands);
 
-         for( i = 0; i < ndowncutoffindices; i++ )
-         {
-            int cutoffindex;
-            SCIP_VAR* cutoffvar;
-            SCIP_Real cutoffbound;
-            SCIP_Real oldlowerbound;
-            SCIP_Real oldupperbound;
-
-            cutoffindex = downcutoffindices[i];
-            cutoffvar = lpcands[cutoffindex];
-            cutoffbound = SCIPfeasCeil(scip, lpcandssol[cutoffindex]);
-
-            oldupperbound = SCIPvarGetUbLocal(cutoffvar);
-            oldlowerbound = SCIPvarGetLbLocal(cutoffvar);
-
-            /*add bound checks. See branching methods at top*/
-            if( SCIPisFeasLT(scip, oldlowerbound, cutoffbound) && SCIPisFeasLE(scip, cutoffbound, oldupperbound) )
-            {
-               SCIP_CALL( SCIPchgVarLbNode(scip, basenode, cutoffvar, cutoffbound) );
-            }
-         }
+         SCIP_CALL( handleCutoffs(scip, basenode, downcutoffvars, downcutoffvals, ndowncutoffs, TRUE) );
 
          *result = SCIP_REDUCEDDOM;
          SCIPdebugMessage("Finished down child cutoffs.\n");
       }
 
-      SCIPfreeBufferArray(scip, &upcutoffindices);
-      SCIPfreeBufferArray(scip, &downcutoffindices);
       SCIPfreeMemory(scip, &scoredata);
+
+      SCIPfreeBufferArray(scip, &upcutoffindexmapping);
+      SCIPfreeBufferArray(scip, &upcutoffvars);
+      SCIPfreeBufferArray(scip, &upcutoffvals);
+      /* TODO: ensure correct order*/
+      SCIPfreeBufferArray(scip, &downcutoffindexmapping);
+      SCIPfreeBufferArray(scip, &downcutoffvars);
+      SCIPfreeBufferArray(scip, &downcutoffvals);
+
       SCIPfreeMemory(scip, &upbranchingresult);
       SCIPfreeMemory(scip, &downbranchingresult);
 
