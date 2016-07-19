@@ -2957,6 +2957,156 @@ SCIP_RETCODE registerBranchingCandidates(
    return SCIP_OKAY;
 }
 
+/** expression walk callback to create and add auxiliary variables for the outer approximation */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   conshdlr = (SCIP_CONSHDLR*)data;
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* create and capture auxiliary variable; because of common sub-expressions it might happen that we already added an
+    * auxiliary variable to an expression
+    */
+   if( expr->auxvar == NULL && expr->exprhdlr != SCIPgetConsExprExprHdlrVar(conshdlr)
+      && expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      printf("add auxiliary variable for expression %p\n", (void*)expr);
+
+      /* @todo add an unique variable name */
+      SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS) );
+
+      /* add variable locks in both directions */
+      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
+   }
+   else
+   {
+      /* skip nodes which have been already explored */
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback to free auxiliary variables created for the outer approximation */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   conshdlr = (SCIP_CONSHDLR*)data;
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   if( expr->auxvar != NULL )
+   {
+      assert(expr->exprhdlr != SCIPgetConsExprExprHdlrVar(conshdlr));
+      assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
+
+      printf("remove auxiliary variable for expression %p\n", (void*)expr);
+
+      /* remove variable locks; @todo is this necessary? */
+      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
+
+      SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
+      expr->auxvar = NULL;
+   }
+   else
+   {
+      /* skip nodes which have been already explored */
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates and adds auxiliary variables for outer approximation; we do not add variables for value and variable
+ *  expressions; common sub-expression will share the same auxiliary variable
+ */
+static
+SCIP_RETCODE createAuxVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss              /**< total number of constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      if( consdata->expr != NULL )
+      {
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, createAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees auxiliary variables which have been added to compute an outer approximation */
+static
+SCIP_RETCODE freeAuxVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss              /**< total number of constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      if( consdata->expr != NULL )
+      {
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, freeAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -3293,6 +3443,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       SCIPenableNLP(scip);
    }
 
+   /* add auxiliary variables to expressions */
+   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+
    return SCIP_OKAY;
 }
 
@@ -3342,6 +3495,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
+
+   /* remove auxiliary variables from expressions */
+   SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }

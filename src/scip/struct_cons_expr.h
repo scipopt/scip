@@ -68,6 +68,8 @@ struct SCIP_ConsExpr_Expr
    int                     nlockspos;     /**< positive locks counter */
    int                     nlocksneg ;    /**< negative locks counter */
 
+   SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
+
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
    SCIP_Real               evalvalue;     /**< value of expression from last evaluation (corresponding to evaltag) */
