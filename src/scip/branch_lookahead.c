@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define SCIP_DEBUG
+/*#define SCIP_DEBUG*/
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -357,7 +357,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    else
    {
       *fullcutoff = FALSE;
-      *ncutoffs = *ncutoffs++;
+      *ncutoffs = *ncutoffs + 1;
    }
 
    SCIPfreeMemory(scip, &upresultdata);
