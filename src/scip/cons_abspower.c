@@ -197,7 +197,12 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   consdata->isxpropagated = FALSE;
+   assert(SCIPeventGetVar(event) == consdata->x || SCIPeventGetVar(event) == consdata->z);
+   if( SCIPeventGetVar(event) == consdata->x )
+      consdata->isxpropagated = FALSE;
+   else
+      consdata->iszpropagated = FALSE;
+
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
