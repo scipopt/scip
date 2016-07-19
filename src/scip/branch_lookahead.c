@@ -44,6 +44,11 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
+#define BOUNDSTATUS_NONE           0
+#define BOUNDSTATUS_UPPERBOUND     1
+#define BOUNDSTATUS_LOWERBOUND     2
+#define BOUNDSTATUS_BOTH           3
+
 /*
  * Data structures
  */
@@ -600,11 +605,20 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       int nglobalvars;
 
+      /* TODO: add usage of these arrays. */
+      SCIP_Real* newupperbounds;
+      SCIP_Real* newlowerbounds;
+      int* boundstatus;
+      int* boundedindices;
+      int nboundedindices;
+
+      /*TODO: remove usage of these arrays. */
       SCIP_VAR** downcutoffvars;
       SCIP_Real* downcutoffvals;
       int* downcutoffindexmapping; /* global index to corresponding index in downcutoffvals and downcutoffvars */
       int ndowncutoffs;
 
+      /*TODO: remove usage of these arrays. */
       SCIP_Real* upcutoffvals;
       SCIP_VAR** upcutoffvars;
       int* upcutoffindexmapping; /* global index to corresponding index in upcutoffvals and upcutoffvars */
@@ -621,6 +635,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_CALL( SCIPallocMemory(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &scoredata) );
+
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &boundstatus, nglobalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &boundedindices, nglobalvars) );
+      nboundedindices = 0;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffvals, nglobalvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffvars, nglobalvars) );
@@ -739,7 +757,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("Finished down child cutoffs.\n");
       }
 
-      SCIPfreeMemory(scip, &scoredata);
 
       SCIPfreeBufferArray(scip, &upcutoffindexmapping);
       SCIPfreeBufferArray(scip, &upcutoffvars);
@@ -749,6 +766,14 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPfreeBufferArray(scip, &downcutoffvars);
       SCIPfreeBufferArray(scip, &downcutoffvals);
 
+      for( i = 0; i < nboundedindices; i++ )
+      {
+         int boundedindex = boundedindices[i];
+         boundstatus[boundedindex] = 0;
+      }
+      SCIPfreeCleanBufferArray(scip, &boundstatus);
+
+      SCIPfreeMemory(scip, &scoredata);
       SCIPfreeMemory(scip, &upbranchingresult);
       SCIPfreeMemory(scip, &downbranchingresult);
 
