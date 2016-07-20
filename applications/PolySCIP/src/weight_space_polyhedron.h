@@ -102,7 +102,7 @@ namespace polyscip {
 
         //void addEdgesToSkeleton() = delete {addEdgesToSkeleton(unmarked_vertices_);};
 
-        std::vector<std::pair<OutcomeType, OutcomeType>> getConstraintsForUnsupported() const;
+        //std::vector<std::pair<OutcomeType, OutcomeType>> getConstraintsForUnsupported() const;
 
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed

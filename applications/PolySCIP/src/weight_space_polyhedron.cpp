@@ -113,7 +113,7 @@ namespace polyscip {
         return facets;
     }
 
-    vector<pair<OutcomeType, OutcomeType>> WeightSpacePolyhedron::getConstraintsForUnsupported() const {
+    /*vector<pair<OutcomeType, OutcomeType>> WeightSpacePolyhedron::getConstraintsForUnsupported() const {
         auto pairs = vector<pair<OutcomeType,OutcomeType >>{};
         for (auto v : marked_vertices_) {
             if (v->hasUnitWeight())
@@ -122,7 +122,7 @@ namespace polyscip {
             pairs.emplace_back(v->getIncFacetsUpperBounds(), v->getIncFacetsLowerBounds());
         }
         return pairs;
-    }
+    }*/
 
     /*WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
                                                                                        const FacetContainer& initial_facets,

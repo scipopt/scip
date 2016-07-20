@@ -114,7 +114,9 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
-        SCIP_RETCODE computeUnsupported(SCIP* scip, const OutcomeType& upper_bound, const OutcomeType& ref_point);
+        SCIP_RETCODE computeUnsupported(const OutcomeType& predecessor, const OutcomeType& successor);
+
+        void solveWeightedTchebycheff(const OutcomeType& predecessor, const OutcomeType& successor);
 
         void printSol(const SolType& sol, std::ostream& os) const;
 

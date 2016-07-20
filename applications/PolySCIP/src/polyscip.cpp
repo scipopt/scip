@@ -133,20 +133,74 @@ namespace polyscip {
     }
 
     SCIP_RETCODE Polyscip::computeUnsupported() {
-        auto constraint_pairs = weight_space_poly_->getConstraintsForUnsupported();
-        for (const auto& item : constraint_pairs) {
-            if (item.first != item.second)
-                SCIP_CALL( computeUnsupported(scip_, item.first, item.second) );
+        //auto constraint_pairs = weight_space_poly_->getConstraintsForUnsupported();
+        std::sort(begin(supported_), end(supported_), [](const Result& res1, const Result& res2){return res1.second < res2.second;});
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL( SCIPfreeTransform(scip_) );
+        for (auto res = supported_.cbegin(); res != std::prev(supported_.cend()); ++res) {
+            auto& pred = res->second;
+            auto& succ = std::next(res)->second;
+
+            SCIP_CALL( computeUnsupported(pred, succ) );
         }
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::computeUnsupported(SCIP* scip, const OutcomeType& upper_bound, const OutcomeType& ref_point) {
-        std::cout << "upper_bound: ";
-        global::print(upper_bound);
-        std::cout << " ref_point: ";
-        global::print(ref_point, "", "\n");
+    SCIP_RETCODE Polyscip::computeUnsupported(const OutcomeType& pred, const OutcomeType& succ) {
+        assert (pred.size() == succ.size());
+        auto ref_point = OutcomeType(pred.size(),0.);
+        auto upper_point = OutcomeType(pred.size(), 0.);
+        std::transform(pred.cbegin(), pred.cend(),
+                       succ.cbegin(), begin(ref_point),
+                       [](ValueType a, ValueType  b){return std::min(a,b);});
+        std::transform(pred.cbegin(), pred.cend(),
+                       succ.cbegin(), begin(upper_point),
+                       [](ValueType a, ValueType b){return std::max(a,b);});
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+
+        // create and add constraints for each objective
+        auto constraints = vector<SCIP_CONS*>{};
+        size_t obj_count = 0;
+        for (auto obj_ind : considered_objs_) {
+            SCIP_CONS* cons = nullptr;
+            int nvars = global::narrow_cast<int>(obj_probdata->getNumberNonzeroCoeffs(obj_ind));
+            assert (nvars != 0);
+            auto nonzero_vars = obj_probdata->getNonZeroCoeffVars(obj_ind);
+            auto nonzero_vals = vector<SCIP_Real>(nonzero_vars.size(),0.);
+            std::transform(nonzero_vars.cbegin(),
+                           nonzero_vars.cend(),
+                           begin(nonzero_vals),
+                           [obj_ind, obj_probdata](SCIP_VAR* var){return obj_probdata->getObjCoeff(var, obj_ind);});
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip_,
+                                                 addressof(cons),
+                                                 "compute unsupported",
+                                                 nvars,
+                                                 nonzero_vars.data(),
+                                                 nonzero_vals.data(),
+                                                 ref_point[obj_count],
+                                                 upper_point[obj_count]) );
+            assert (cons != nullptr);
+            SCIP_CALL( SCIPaddCons(scip_, cons) );
+            constraints.push_back(cons);
+            ++obj_count;
+        }
+
+        solveWeightedTchebycheff(pred, succ);
+
+        // release and delete constraints
+        for (auto cons : constraints) {
+            SCIP_CALL( SCIPdelCons(scip_, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
+        }
+
         return SCIP_OKAY;
+    }
+
+    void Polyscip::solveWeightedTchebycheff(const OutcomeType& predecessor, const OutcomeType& successor) {
+        assert (predecessor.size() == successor.size());
+        assert (predecessor.size() > 1);
+        auto weight_space_size = predecessor.size() - 1;
+        
     }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
@@ -157,7 +211,7 @@ namespace polyscip {
             }
             else {
                 auto v_rep = DDMethod(scip_, no_all_objs_, supported_, unbounded_);
-                v_rep.computeVRep_Var1();
+                v_rep.computeVRep();
                 v_rep.printVRep(std::cout);
                 std::cout << "SIZE OF VREP = " << v_rep.size() << "\n";
                 std::cout << "Starting initializing WSP...";
