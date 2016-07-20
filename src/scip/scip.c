@@ -13638,6 +13638,9 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
+   ncliquecomponents = -1;
+   SCIP_CALL( SCIPcomputeCliqueComponents(scip, &ncliquecomponents) );
+
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -13701,8 +13704,6 @@ SCIP_RETCODE presolve(
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
    SCIPclockStop(scip->stat->presolvingtimeoverall, scip->set);
 
-   ncliquecomponents = -1;
-   SCIP_CALL( SCIPcomputeCliqueComponents(scip, &ncliquecomponents) );
 
    /* print presolving statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
@@ -21876,12 +21877,25 @@ SCIP_RETCODE SCIPaddClique(
 
    if( nvars > 1 )
    {
+      int i;
       /* add the clique to the clique table */
       SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
             scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, vars, values, nvars, isequation,
             infeasible, nbdchgs) );
 
-      cliquecomponentsneedupdate = TRUE;
+
+      /* check if we can skip a clique components update because this clique does not connect two previously unconnected components */
+      for( i = 0; i < nvars - 1 && !cliquecomponentsneedupdate; ++i )
+      {
+         if( SCIPvarGetCliqueComponentIdx(vars[i]) == -1 || SCIPvarGetCliqueComponentIdx(vars[i]) != SCIPvarGetCliqueComponentIdx(vars[i + 1]) )
+         {
+            cliquecomponentsneedupdate = TRUE;
+            break;
+         }
+      }
+
+      /* check if last variable was a single component so far */
+      cliquecomponentsneedupdate = cliquecomponentsneedupdate || SCIPvarGetCliqueComponentIdx(vars[nvars - 1]) == -1;
    }
 
    return SCIP_OKAY;
@@ -21959,7 +21973,7 @@ SCIP_RETCODE SCIPcomputeCliqueComponents(
    {
       assert(SCIPvarIsActive(vars[v]));
       assert(SCIPvarGetProbindex(vars[v]) == v);
-      sizes[v] = SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE);
+      sizes[v] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
    }
    /* collect sizes also for the implicit binary variables */
    for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
@@ -22425,8 +22439,10 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* store the global clique component labels */
    for( i = 0; i < nvars; ++i )
    {
-      assert(SCIPvarIsActive(tmpvars[i]));
-      componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+      if( SCIPvarIsActive(tmpvars[i]) )
+          componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+      else
+         componentlabels[i] = -1;
    }
 
    /* relabel component labels order consistent for a stable sort */
