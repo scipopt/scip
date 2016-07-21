@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,7 @@
 static
 SCIP_Bool isVub(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row,                /**< row index */
    SCIP_Real*            lowthreshold,       /**< low switching threshold */
    SCIP_Real*            highthreshold,      /**< high switching threshold */
@@ -134,7 +134,7 @@ SCIP_Bool isVub(
 static
 SCIP_Bool isVlb(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row,                /**< row index */
    SCIP_Real*            lowthreshold,       /**< low switching threshold */
    SCIP_Real*            highthreshold,      /**< high switching threshold */
@@ -216,7 +216,7 @@ SCIP_Bool isVlb(
 static
 SCIP_RETCODE detectDominatingVubs(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   nvubs,              /**< number of vubs */
    int*                  vubs,               /**< row indices of the vubs */
    SCIP_Real*            lowthresholds,      /**< low switching thresholds */
@@ -315,7 +315,7 @@ SCIP_RETCODE detectDominatingVubs(
 static
 SCIP_RETCODE detectDominatingVlbs(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   nvlbs,              /**< number of vlbs */
    int*                  vlbs,               /**< row indices of the vlbs */
    SCIP_Real*            lowthresholds,      /**< low switching thresholds */
@@ -414,7 +414,7 @@ SCIP_RETCODE detectDominatingVlbs(
 static
 SCIP_RETCODE findVarAggrRedVbcons(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int*                  nvaragg,            /**< number of redundant variables */
    SCIP_Bool*            isvartoagg,         /**< flags indicating which variables could be substituted/aggregated */
    SCIP_VAR**            aggvars,            /**< pointers to the variables by which the aggregation should be done */
@@ -528,7 +528,7 @@ SCIP_RETCODE findVarAggrRedVbcons(
 static
 SCIP_DECL_PRESOLEXEC(presolExecRedvub)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 

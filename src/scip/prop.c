@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPpropCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> propagator instead.\n", name);

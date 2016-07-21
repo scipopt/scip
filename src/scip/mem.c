@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,6 +65,12 @@ SCIP_RETCODE SCIPmemFree(
    /* free memory buffers */
    BMSdestroyBufferMemory(&(*mem)->cleanbuffer);
    BMSdestroyBufferMemory(&(*mem)->buffer);
+
+   /* print unfreed memory */
+#ifndef NDEBUG
+   (void) BMSblockMemoryCheckEmpty((*mem)->setmem);
+   (void) BMSblockMemoryCheckEmpty((*mem)->probmem);
+#endif
 
    /* free block memory */
    BMSdestroyBlockMemory(&(*mem)->probmem);

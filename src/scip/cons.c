@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", name);
@@ -3466,9 +3466,9 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3506,17 +3506,13 @@ SCIP_RETCODE SCIPconshdlrCheck(
       /* update statistics */
       conshdlr->ncheckcalls++;
 
-
-
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
       /* evaluate result */
-      if( *result != SCIP_INFEASIBLE
-         && *result != SCIP_FEASIBLE )
+      if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )
       {
-         SCIPerrorMessage("feasibility check of constraint handler <%s> returned invalid result <%d>\n", 
-            conshdlr->name, *result);
+         SCIPerrorMessage("feasibility check of constraint handler <%s> returned invalid result <%d>\n", conshdlr->name, *result);
          return SCIP_INVALIDRESULT;
       }
    }
@@ -7008,9 +7004,9 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {

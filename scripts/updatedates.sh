@@ -15,7 +15,7 @@
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`
 
-DIRECTORIES=(check doc lint scripts src src/* examples examples/* examples/*/src examples/*/doc interfaces/jni/src interfaces/matlab)
+DIRECTORIES=(check doc lint scripts src src/* examples examples/* examples/*/src examples/*/doc interfaces/jni/src interfaces/matlab unittests/src/unittest-*)
 EXTENSIONS=(sh awk h c hpp cpp html dxy lnt m)
 EXTRAFILES=(Makefile INSTALL make/make.install make/make.project make/make.detecthost Makefile.nmake)
 

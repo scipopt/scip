@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -146,6 +146,7 @@ SCIP_RETCODE ProbDataTSP::scip_copy(
 
       assert( sourcegraph->edges[e].var != NULL );
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcegraph->edges[e].var, &(edgeforw->var), varmap, consmap, global, &success) );
+      SCIP_CALL( SCIPcaptureVar(scip, edgeforw->var) );
       assert(success);
       assert(edgeforw->var != NULL);
 
@@ -183,6 +184,7 @@ SCIP_RETCODE ProbDataTSP::scip_delorig(
 {
    for( int i = 0; i < graph_->nedges; i++ )
    {
+      SCIP_CALL( SCIPreleaseVar(scip, &graph_->edges[i].back->var) );
       SCIP_CALL( SCIPreleaseVar(scip, &graph_->edges[i].var) );
    }
    release_graph(&graph_);
@@ -204,6 +206,7 @@ SCIP_RETCODE ProbDataTSP::scip_deltrans(
 {
    for( int i = 0; i < graph_->nedges; i++ )
    {
+      SCIP_CALL( SCIPreleaseVar(scip, &graph_->edges[i].back->var) );
       SCIP_CALL( SCIPreleaseVar(scip, &graph_->edges[i].var) );
    }
    release_graph(&graph_);
@@ -248,6 +251,7 @@ SCIP_RETCODE ProbDataTSP::scip_trans(
 
       assert( graph_->edges[e].var != NULL );
       SCIP_CALL( SCIPgetTransformedVar(scip, graph_->edges[e].var, &(edgeforw->var)) );
+      SCIP_CALL( SCIPcaptureVar(scip, edgeforw->var) );
       edgebackw->var = edgeforw->var; // anti-parallel arcs share variable
       assert( edgebackw->var != NULL );
       SCIP_CALL( SCIPcaptureVar(scip, edgebackw->var) );

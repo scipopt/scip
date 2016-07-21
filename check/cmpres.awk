@@ -5,7 +5,7 @@
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -204,9 +204,9 @@ function mcnemar(ref_array, solver_array, problistlen)
    for( i = 0; i < problistlen; ++i )
    {
       if( ref_array[i] && !solver_array[i] )
-	 b++;
+         b++;
       else if( !ref_array[i] && solver_array[i] )
-	 c++;
+         c++;
    }
 
    # textbook McNemar formula, the square of the differences of both counters divided by their sum is supposed to be
@@ -254,7 +254,7 @@ function qsort(a, left, right)
    for( i = left+1; i <= right; i++ )
    {
       if( abs(a[i]) < abs(a[left]) )
-	 swap(a, ++last, i);
+         swap(a, ++last, i);
    }
 
    # swap back pivot, recursive calls
@@ -275,9 +275,9 @@ function parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen
       p = problist[i];
       if(probidx[p,p0] != "" && probidx[p,s] != "")
       {
-	 ref_array[n] = time[p0,probidx[p,p0]];
-	 solver_array[n] = time[s,probidx[p,s]];
-	 n++;
+         ref_array[n] = time[p0,probidx[p,p0]];
+         solver_array[n] = time[s,probidx[p,s]];
+         n++;
       }
    }
 }
@@ -294,17 +294,17 @@ function parse_nodes(ref_array,solver_array,nodes,o,probidx,problistlen,status,i
       p = problist[i];
       if(probidx[p,p0] != "" && probidx[p,s] != "")
       {
-	 if( status[p0,probidx[p,p0]] == "timeout" || status[p0,probidx[p,p0]] == "memlimit" )
-	    ref_array[n] = infinity;
-	 else
-	    ref_array[n] = nodes[p0,probidx[p,p0]];
+         if( status[p0,probidx[p,p0]] == "timeout" || status[p0,probidx[p,p0]] == "memlimit" )
+            ref_array[n] = infinity;
+         else
+            ref_array[n] = nodes[p0,probidx[p,p0]];
 
-	 if( status[s,probidx[p,s]] == "timeout" || status[s,probidx[p,s]] == "memlimit" )
-	    solver_array[n] = infinity;
-	 else
-	    solver_array[n] = nodes[s,probidx[p,s]];
+         if( status[s,probidx[p,s]] == "timeout" || status[s,probidx[p,s]] == "memlimit" )
+            solver_array[n] = infinity;
+         else
+            solver_array[n] = nodes[s,probidx[p,s]];
 
-	 n++;
+         n++;
       }
    }
 }
@@ -320,9 +320,9 @@ function filter(ref_array, solver_array, problistlen, rel_epsilon, abs_delta)
       diff = abs(solver_array[i] - ref_array[i]);
       if( diff > abs_delta && diff / max3(abs(solver_array[i]), abs(ref_array[i]), 1.0) > rel_epsilon )
       {
-	 ref_array[n] = ref_array[i];
-	 solver_array[n] = solver_array[i];
-	 n++;
+         ref_array[n] = ref_array[i];
+         solver_array[n] = solver_array[i];
+         n++;
       }
    }
 
@@ -336,19 +336,19 @@ function factorize(ref_array, solver_array, n, maxval)
    for( i = 0; i < n; ++i )
    {
       if( ref_array[i] >= maxval && solver_array[i] < maxval )
-	 ref_array[i] = -1.0 * maxval;
+         ref_array[i] = -1.0 * maxval;
       else if( ref_array[i] < maxval && solver_array[i] >= maxval )
-	 ref_array[i] = 1.0 * maxval;
+         ref_array[i] = 1.0 * maxval;
       else if( ref_array[i] == 0.0 && solver_array[i] == 0.0 )
          ref_array[i] = 0.0;
       else if( ref_array[i] == 0.0 )
-	 ref_array[i] = 1.0 * maxval;
+         ref_array[i] = 1.0 * maxval;
       else if( solver_array[i] == 0.0 )
-	 ref_array[i] = -1.0 * maxval;
+         ref_array[i] = -1.0 * maxval;
       else if( solver_array[i] / ref_array[i]  < 1.0 )
-	 ref_array[i] = -1.0 * ref_array[i] / solver_array[i];
+         ref_array[i] = -1.0 * ref_array[i] / solver_array[i];
        else
-	 ref_array[i] = solver_array[i] / ref_array[i];
+         ref_array[i] = solver_array[i] / ref_array[i];
 
       solver_array[i] = 0.0;
    }
@@ -378,7 +378,7 @@ function wilcoxon(ref_array, solver_array, problistlen, timelimit)
    {
       differences[i] = ref_array[i] - solver_array[i];
       if( (ref_array[i] >= timelimit) != (solver_array[i] >= timelimit) )
-	 differences[i] = sign(differences[i]) * timelimit;
+         differences[i] = sign(differences[i]) * timelimit;
    }
 
    # sort differences by their absolute values
@@ -396,8 +396,8 @@ function wilcoxon(ref_array, solver_array, problistlen, timelimit)
       # use average in case of tied samples (identical differences) - always executed once
       while ( i_end < problistlen && abs((abs(differences[i_start]) - abs(differences[i_end]))) < 1e-06 )
       {
-	 i_sum += i_end;
-	 i_end++;
+         i_sum += i_end;
+         i_end++;
       }
 
       i_sum = i_sum/(i_end - i_start);
@@ -408,11 +408,11 @@ function wilcoxon(ref_array, solver_array, problistlen, timelimit)
       # the value is simply added to one of the sums
       while ( i < i_end )
       {
-	 if( differences[i] < 0 )
-	    w_minus += (i_sum+1);
-	 else if( differences[i] > 0 )
-	    w_plus += (i_sum+1);
-	 i++;
+         if( differences[i] < 0 )
+            w_minus += (i_sum+1);
+         else if( differences[i] > 0 )
+            w_plus += (i_sum+1);
+         i++;
       }
    }
 
@@ -558,7 +558,7 @@ BEGIN {
    if( $11 in statuses ) # from NLP-trace-files
    {
       # collect data (line with problem type, problem size and simplex iterations)
-       type[nsolver,nprobs[nsolver]] = $2;
+      type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $3;
       vars[nsolver,nprobs[nsolver]] = $4;
       dualbound[nsolver,nprobs[nsolver]] = max(min($5, +infinity), -infinity);
@@ -574,7 +574,7 @@ BEGIN {
    if( $12 in statuses ) # GUROBI, CBC
    {
       # collect data (line with original and presolved problem size and simplex iterations)
-        type[nsolver,nprobs[nsolver]] = "?";
+      type[nsolver,nprobs[nsolver]] = "?";
       conss[nsolver,nprobs[nsolver]] = $4;
       vars[nsolver,nprobs[nsolver]] = $5;
       dualbound[nsolver,nprobs[nsolver]] = max(min($6, +infinity), -infinity);
@@ -643,21 +643,21 @@ BEGIN {
    {
       # postprocessing of information
       if( status[nsolver,nprobs[nsolver]] == "better" )
-	 status[nsolver,nprobs[nsolver]] = "timeout";
+         status[nsolver,nprobs[nsolver]] = "timeout";
       if( status[nsolver,nprobs[nsolver]] == "sollimit" || status[nsolver,nprobs[nsolver]] == "gaplimit" || status[nsolver,nprobs[nsolver]] == "solved" )
-	 status[nsolver,nprobs[nsolver]] = "ok";
+         status[nsolver,nprobs[nsolver]] = "ok";
 
       if( status[nsolver,nprobs[nsolver]] == "timeout" || status[nsolver,nprobs[nsolver]] == "nodelimit" ||  status[nsolver,nprobs[nsolver]] == "memlimit")
-	 hitlimit[nsolver,nprobs[nsolver]] = 1;
+         hitlimit[nsolver,nprobs[nsolver]] = 1;
       else
-	 hitlimit[nsolver,nprobs[nsolver]] = 0;
+         hitlimit[nsolver,nprobs[nsolver]] = 0;
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
       if( probcnt[$1] == 1 )
       {
-	 problist[problistlen] = $1;
-	 problistlen++;
+         problist[problistlen] = $1;
+         problistlen++;
       }
    }
 }
@@ -941,15 +941,11 @@ END {
       ismaxi = 0;
       mark = " ";
       marker = " ";
-      countprob = 1;
       notimeout = 1;
 
       # check for exclusion
       if( excluded[p] )
-      {
          unprocessed = 1;
-         countprob = 0;
-      }
 
       # find best and worst run and check whether this instance should be counted in overall statistics
       for( s = 0; s < nsolver; ++s )
@@ -1002,8 +998,6 @@ END {
             minconftime = min(minconftime, conftime[s, pidx]);
             maxconftime = max(maxconftime, conftime[s, pidx]);
          }
-         else
-            countprob = 0;
       }
       worsttime = max(worsttime, mintime);
       worsttimetofirst = max(worsttimetofirst, mintime);
@@ -1071,9 +1065,9 @@ END {
          pidx = probidx[p,s];
          processed = (pidx != "");
 
-	 # arrays for applying McNemar tests
-	 solfound[s,pidx] = 0;
-	 optproven[s,pidx] = 0;
+         # arrays for applying McNemar tests
+         solfound[s,pidx] = 0;
+         optproven[s,pidx] = 0;
 
          if( processed && name[s,pidx] != p )
             printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
@@ -1091,8 +1085,8 @@ END {
                   nsolved[s,0]++;
                   nsolved[s,category[s]]++;
                   nthissolved++;
-		  # fill array for  McNemar test "optimality proven?"
-		  optproven[s,pidx] = 1;
+                  # fill array for  McNemar test "optimality proven?"
+                  optproven[s,pidx] = 1;
                }
             }
             else if( hitlimit[s,pidx] )
@@ -1101,12 +1095,9 @@ END {
                notimeout = 0;
                if( !unprocessed )
                {
-                  if( countprob )
-                  {
-                     ntimeouts[s,0]++;
-                     ntimeouts[s,category[s]]++;
-                     nthistimeouts++;
-                  }
+                  ntimeouts[s,0]++;
+                  ntimeouts[s,category[s]]++;
+                  nthistimeouts++;
                }
             }
             else
@@ -1126,11 +1117,11 @@ END {
          }
 
          if( primalbound[s,pidx] < infinity )
-  	 {
+           {
             feasmark = " ";
-	    # fill the array for McNemar test "solution found?"
-	    solfound[s,pidx] = 1;
-	 }
+            # fill the array for McNemar test "solution found?"
+            solfound[s,pidx] = 1;
+         }
          else
             feasmark = "#";
 
@@ -1173,7 +1164,7 @@ END {
             else
                line = sprintf("%s %6.2f", line, time[s,pidx]/timecomp);
             if( processed &&
-		(timeoutcomp != hitlimit[s,pidx] ||
+                (timeoutcomp != hitlimit[s,pidx] ||
                  nodes[s,pidx] > markworsenodes * nodecomp ||
                  nodes[s,pidx] < 1.0/markbetternodes * nodecomp ||
                  isfaster(time[s,pidx], timecomp, markbettertime) ||
@@ -1246,7 +1237,7 @@ END {
             (ismaxi && maxpb - mindb > 1e-5 * max(max(abs(maxpb), abs(mindb)), 1.0)) ||
             (!ismini && !ismaxi && abs(maxpb - minpb) > 1e-5 * max(abs(maxpb), 1.0))) )
       {
-         line = sprintf("%s  inconsistent", line);
+         line = sprintf("%s  inconsistent (maxdb=%g, minpb=%g)", line, maxdb, minpb);
          fail = 1;
          mark = " ";
       }
@@ -1647,9 +1638,9 @@ END {
       # copy two-indexed arrays to one-indexed arrays
       for( i = 0; i < problistlen; ++i )
       {
-	 s = printorder[o];
-	 ref_array[i] = solfound[printorder[0],i];
-	 solver_array[i] = solfound[s,i];
+         s = printorder[o];
+         ref_array[i] = solfound[printorder[0],i];
+         solver_array[i] = solfound[s,i];
       }
 
       # compute chi-squared value and convert to p-value
@@ -1674,9 +1665,9 @@ END {
       # copy two-indexed arrays to one-indexed arrays
       for( i = 0; i < problistlen; ++i )
       {
-	 s = printorder[o];
-	 ref_array[i] = optproven[printorder[0],i];
-	 solver_array[i] = optproven[s,i];
+         s = printorder[o];
+         ref_array[i] = optproven[printorder[0],i];
+         solver_array[i] = optproven[s,i];
       }
 
       # compute chi-squared value and convert to p-value
@@ -1725,11 +1716,11 @@ END {
    
       for( o = 1; o < nsolver; ++o )
       {
-	 s = printorder[o];
+         s = printorder[o];
 
-	 parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
-	 n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
-	 factorize(ref_array, solver_array, n, timelimit[s])
+         parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
+         n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
+         factorize(ref_array, solver_array, n, timelimit[s])
 
 	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
 	 printf("   z %8.4f",z);
@@ -1890,7 +1881,7 @@ END {
          for( o = 0; o < nsolver; ++o )
          {
             s = printorder[o];
-	    sname = solvername[s];
+            sname = solvername[s];
             if( o == 0 )
             {
                nodegeomcomp = nodegeom[s,cat];
@@ -1900,12 +1891,12 @@ END {
             }
             if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
             {
-	       if ( length(sname) <= 50 )
-		  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
-	       else
-		  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-			 ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+               if ( length(sname) <= 50 )
+                  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                         ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+               else
+                  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                         ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
 
                printf(" %4d %4d", better[s,cat], worse[s,cat]);
                printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n",
@@ -1936,7 +1927,7 @@ END {
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
-	 sname = solvername[s];
+         sname = solvername[s];
          if( o == 0 )
          {
             nodegeomcomp = nodegeom[s,cat];
@@ -1946,12 +1937,12 @@ END {
          }
          if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
          {
-	    if ( length(sname) <= 50 )
-	       printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
-	    else
-	       printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-		      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+            if ( length(sname) <= 50 )
+               printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+            else
+               printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                      ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             printf(" %4d %4d", better[s,cat], worse[s,cat]);
             printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n",
                    betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],

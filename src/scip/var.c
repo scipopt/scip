@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11574,14 +11574,19 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_Bool*            negated             /**< pointer to update the negation status */
    )
 {
+   SCIP_Bool active = FALSE;
+#ifndef NDEBUG
+   SCIP_Real constant = 0.0;
+   SCIP_Bool orignegated = *negated;
+#endif
+
    assert(var != NULL);
    assert(*var != NULL);
    assert(negated != NULL);
+   assert(SCIPvarIsBinary(*var));
 
-   while( *var != NULL )
+   while( !active && *var != NULL )
    {
-      assert(SCIPvarIsBinary(*var));
-
       switch( SCIPvarGetStatus(*var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
@@ -11593,7 +11598,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_FIXED:
-         return SCIP_OKAY;
+         active = TRUE;
+         break;
 
       case SCIP_VARSTATUS_MULTAGGR:
          /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
@@ -11620,14 +11626,30 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             {
                /* @note due to fixations, a multi-aggregation can have a constant of zero and a negative scalar or even
                 *       a scalar in absolute value unequal to one, in this case this aggregation variable needs to be
-                *       fixed to zero, but should be done by another enforcement; so not depending on the scalar, we
-                *       will return the aggregation variable
+                *       fixed to zero, but this should be done by another enforcement; so not depending on the scalar,
+                *       we will return the aggregated variable;
                 */
                if( !EPSEQ(REALABS((*var)->data.multaggr.scalars[0]), 1.0, 1e-06) )
-                  return SCIP_OKAY;
+               {
+                  active = TRUE;
+                  break;
+               }
 
-               assert( EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) );
-               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               /* @note it may also happen that the constant is larger than 1 or smaller than 0, in that case the
+                *       aggregation variable needs to be fixed to one, but this should be done by another enforcement;
+                *       so if this is the case, we will return the aggregated variable
+                */
+               assert(EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06)
+                  || EPSZ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1e-06)
+                  || EPSEQ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+
+               if( !EPSZ((*var)->data.multaggr.constant, 1e-06) && !EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) )
+               {
+                  active = TRUE;
+                  break;
+               }
+
+               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
 
                if( EPSZ((*var)->data.multaggr.constant, 1e-06) )
                {
@@ -11642,6 +11664,9 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                else
                {
                   assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+#ifndef NDEBUG
+                  constant += (*negated) != orignegated ? -1.0 : 1.0;
+#endif
 
                   *negated = !(*negated);
                }
@@ -11649,21 +11674,26 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                break;
             }
          }
-         return SCIP_OKAY;
+         active = TRUE;
+         break;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
-         assert(SCIPvarIsBinary((*var)->data.aggregate.var));
-         assert(EPSZ((*var)->data.aggregate.constant, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
          assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
-         assert(EPSZ((*var)->data.aggregate.constant, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
+         assert(EPSLE((*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0, 1e-06));
+#ifndef NDEBUG
+         constant += (*negated) != orignegated ? -(*var)->data.aggregate.constant : (*var)->data.aggregate.constant;
+#endif
 
-         *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
+         *negated = ((*var)->data.aggregate.scalar > 0.0) ? *negated : !(*negated);
          *var = (*var)->data.aggregate.var;
          break;
 
       case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
          assert((*var)->negatedvar != NULL);
+#ifndef NDEBUG
+         constant += (*negated) != orignegated ? -1.0 : 1.0;
+#endif
 
          *negated = !(*negated);
          *var = (*var)->negatedvar;
@@ -11674,9 +11704,21 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
          return SCIP_INVALIDDATA;
       }
    }
+   assert(active == (*var != NULL));
 
-   SCIPerrorMessage("active variable path leads to NULL pointer\n");
-   return SCIP_INVALIDDATA;
+   if( active )
+   {
+      assert(SCIPvarIsBinary(*var));
+      assert(EPSZ(constant, 1e-06) || EPSEQ(constant, 1.0, 1e-06));
+      assert(EPSZ(constant, 1e-06) == ((*negated) == orignegated));
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      SCIPerrorMessage("active variable path leads to NULL pointer\n");
+      return SCIP_INVALIDDATA;
+   }
 }
 
 /** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
@@ -15761,6 +15803,36 @@ SCIP_Real SCIPvarGetLbAtIndex(
       }
 
    case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+      {
+         assert(var->data.multaggr.vars != NULL);
+         assert(var->data.multaggr.scalars != NULL);
+         assert(var->data.multaggr.vars[0] != NULL);
+
+         if( var->data.multaggr.scalars[0] > 0.0 )
+         {
+            /* a > 0 -> get lower bound of y */
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else if( var->data.multaggr.scalars[0] < 0.0 )
+         {
+            /* a < 0 -> get upper bound of y */
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else
+         {
+            SCIPerrorMessage("scalar is zero in multi-aggregation\n");
+            SCIPABORT();
+            return SCIP_INVALID; /*lint !e527*/
+         }
+      }
       SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/
@@ -15853,6 +15925,36 @@ SCIP_Real SCIPvarGetUbAtIndex(
       }
 
    case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+      {
+         assert(var->data.multaggr.vars != NULL);
+         assert(var->data.multaggr.scalars != NULL);
+         assert(var->data.multaggr.vars[0] != NULL);
+
+         if( var->data.multaggr.scalars[0] > 0.0 )
+         {
+            /* a > 0 -> get lower bound of y */
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else if( var->data.multaggr.scalars[0] < 0.0 )
+         {
+            /* a < 0 -> get upper bound of y */
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else
+         {
+            SCIPerrorMessage("scalar is zero in multi-aggregation\n");
+            SCIPABORT();
+            return SCIP_INVALID; /*lint !e527*/
+         }
+      }
       SCIPerrorMessage("cannot get the bounds of a multiple aggregated variable.\n");
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/

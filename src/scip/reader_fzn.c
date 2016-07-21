@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1720,6 +1720,8 @@ SCIP_RETCODE applyVariableAssignment(
    constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
 
    fixvalue = 0.0;
+   realvalue = SCIP_INVALID;
+   boolvalue = FALSE;
 
    if( linkVar == NULL )
    {
@@ -1770,6 +1772,8 @@ SCIP_RETCODE createConstantAssignment(
    SCIP_Real value;
 
    (*constant) = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
+   realvalue = SCIP_INVALID;
+   boolvalue = FALSE;
 
    if( *constant != NULL )
    {

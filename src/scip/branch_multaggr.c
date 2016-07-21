@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,13 +84,13 @@ struct SCIP_BranchruleData
    int                   nmultaggrbranch;    /**< number of branchings on multi-aggregated variables */
    int                   nfracbranch;        /**< number of branchings on fractional variables */
    int                   nEscore;            /**< number of times that the bestscore over all multi-aggregated variables is equal to the best
-                                              *   fractional variable´s score and thus we do not branch on the multi-aggregate variable */
+                                              *   fractional variables score and thus we do not branch on the multi-aggregate variable */
    int                   nmultaggrcutoff;    /**< number of cutoffs detected during the probing mode on multi-aggregated variables */
    int                   nmultaggrconsadd;   /**< number of times that a probing constraint of a multi-aggregated variable has been
                                               *   added to the original problem */
    int                   nfractcutoff;       /**< number of cutoffs detected during strong branching on fractional variables */
    int                   nfractconsadd;      /**< number of times that during strong branching on fractional variables a constraint has been
-                                              *   added to the original problem or a variable´s domain has been reduced */
+                                              *   added to the original problem or a variables domain has been reduced */
    int                   nmultaggrvars;      /**< number of multi-aggregated variables in the problem of the last run */
    int                   nrun;               /**< number of restarts */
    int                   size;               /**< size of the provided array to store the ratio gain */
@@ -146,8 +146,8 @@ SCIP_RETCODE selectVarMultAggrBranching(
    SCIP_Bool*            bestdownvalid,      /**< is bestdown a valid dual bound for the down branch? */
    SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch? */
    SCIP_Real*            provedbound,        /**< proved dual bound for the current subtree */
-   SCIP_Real*            estimatedown,       /**< pointer to store the down child node´s estimate */
-   SCIP_Real*            estimateup,         /**< pointer to store the up child node´s estimate */
+   SCIP_Real*            estimatedown,       /**< pointer to store the down child nodes estimate */
+   SCIP_Real*            estimateup,         /**< pointer to store the up child nodes estimate */
 #ifdef SCIP_STATISTIC
    SCIP_Real*            bestmultaggrscore,  /**< pointer to store the multi aggregated score */
 #endif
@@ -199,6 +199,14 @@ SCIP_RETCODE selectVarMultAggrBranching(
    fixvars = SCIPgetFixedVars(scip);
    nfixvars = SCIPgetNFixedVars(scip);
    SCIPdebugMessage(" fractional variable: <%s> with value: %f is selected by strong branching\n", SCIPvarGetName(*bestcand), *bestsol);
+
+   /* check if we would exceed the depth limit */
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      SCIPdebugMessage("cannot perform probing in selectVarMultAggrBranching, depth limit reached.\n");
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    if( nfixvars != 0 )
    {
@@ -979,7 +987,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             assert(*result == SCIP_DIDNOTRUN);
             assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
-            SCIP_CALL( SCIPbranchVar(scip, bestcand, &downchild, NULL, &upchild) );
+            SCIP_CALL( SCIPbranchVarVal(scip, bestcand, bestsol, &downchild, NULL, &upchild) );
 
             assert(downchild != NULL);
             assert(upchild != NULL);

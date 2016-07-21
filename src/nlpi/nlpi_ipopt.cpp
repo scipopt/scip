@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,6 +51,7 @@
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
+#include "IpLapack.hpp"
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
@@ -595,7 +596,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
+#else
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+#endif
       {
          SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -2778,14 +2783,6 @@ void ScipNLP::finalize_solution(
    }
 }
 
-/* Ipopt >= 3.10 do not reveal defines like F77_FUNC.
- * However, they install IpLapack.hpp, so Ipopt's Lapack interface is available.
- * Thus, we use IpLapack if F77_FUNC is not defined and access Lapack's Dsyev directly if F77_FUNC is defined.
- */
-#ifndef F77_FUNC
-
-#include "IpLapack.hpp"
-
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
  *  It's here, because we use Ipopt's interface to Lapack.
@@ -2819,9 +2816,9 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real A_[9];
-   SCIP_Real b_[3];
-   int pivot_[3];
+   SCIP_Real Acopy[9];
+   SCIP_Real bcopy[3];
+   int pivotcopy[3];
    const int N = 3;
    int info;
 
@@ -2831,7 +2828,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    assert(success != NULL);
 
    /* compute the LU factorization */
-   IpLapackDgetrf(N, A_, pivot_, N, info);
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
    if( info != 0 )
    {
@@ -2843,10 +2840,10 @@ SCIP_RETCODE SCIPsolveLinearProb3(
       *success = TRUE;
 
       /* solve linear problem */
-      IpLapackDgetrs(N, 1, A_, N, pivot_, b_, N);
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
 
       /* copy the solution */
-      BMScopyMemoryArray(x, b_, N);
+      BMScopyMemoryArray(x, bcopy, N);
    }
 
    return SCIP_OKAY;
@@ -2866,9 +2863,9 @@ SCIP_RETCODE SCIPsolveLinearProb(
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real* A_;
-   SCIP_Real* b_;
-   int* pivot_;
+   SCIP_Real* Acopy;
+   SCIP_Real* bcopy;
+   int* pivotcopy;
    int info;
 
    assert(N > 0);
@@ -2884,16 +2881,16 @@ SCIP_RETCODE SCIPsolveLinearProb(
       return SCIP_OKAY;
    }
 
-   A_ = NULL;
-   b_ = NULL;
-   pivot_ = NULL;
+   Acopy = NULL;
+   bcopy = NULL;
+   pivotcopy = NULL;
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&A_, A, N*N) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&b_, b, N*N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&pivot_, N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&Acopy, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&bcopy, b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
 
    /* compute the LU factorization */
-   IpLapackDgetrf(N, A_, pivot_, N, info);
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
    if( info != 0 )
    {
@@ -2905,84 +2902,15 @@ SCIP_RETCODE SCIPsolveLinearProb(
       *success = TRUE;
 
       /* solve linear problem */
-      IpLapackDgetrs(N, 1, A_, N, pivot_, b_, N);
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
 
       /* copy the solution */
-      BMScopyMemoryArray(x, b_, N);
+      BMScopyMemoryArray(x, bcopy, N);
    }
 
-   BMSfreeMemoryArray(&pivot_);
-   BMSfreeMemoryArray(&b_);
-   BMSfreeMemoryArray(&A_);
+   BMSfreeMemoryArray(&pivotcopy);
+   BMSfreeMemoryArray(&bcopy);
+   BMSfreeMemoryArray(&Acopy);
 
    return SCIP_OKAY;
 }
-
-#else
-
-extern "C" {
-   /** LAPACK Fortran subroutine DSYEV */
-   void F77_FUNC(dsyev,DSYEV)(
-      char*                 jobz,               /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
-      char*                 uplo,               /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
-      int*                  n,                  /**< dimension */
-      double*               A,                  /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
-      int*                  ldA,                /**< leading dimension, probably equal to n */
-      double*               W,                  /**< buffer for the eigenvalues in ascending order */
-      double*               WORK,               /**< workspace array */
-      int*                  LWORK,              /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
-      int*                  info                /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
-      );
-}
-
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- *
- *  It's here, because Ipopt is linked against Lapack.
- */
-SCIP_RETCODE LapackDsyev(
-   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
-   int                   N,                  /**< dimension */
-   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
-   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
-   )
-{
-   int     INFO;
-   char    JOBZ = computeeigenvectors ? 'V' : 'N';
-   char    UPLO = 'L';
-   int     LDA  = N;
-   double* WORK = NULL;
-   int     LWORK;
-   double  WORK_PROBE;
-   int     i;
-
-   /* First we find out how large LWORK should be */
-   LWORK = -1;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   LWORK = (int) WORK_PROBE;
-   assert(LWORK > 0);
-
-   SCIP_ALLOC( BMSallocMemoryArray(&WORK, LWORK) );
-
-   for( i = 0; i < LWORK; ++i )
-      WORK[i] = i;
-
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
-
-   BMSfreeMemoryArray(&WORK);
-
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
-#endif

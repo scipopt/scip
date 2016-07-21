@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -42,7 +42,7 @@ BEGIN {
    sblpgeomshift = 0.0;
    pavshift = 0.0;
    onlyinsolufile = 0;          # should only instances be reported that are included in the .solu file?
-   onlyintestfile = 1;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
+   onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;           # should problem name be truncated to fit into column?
    writesolufile = 0;           # should a solution file be created from the results
@@ -53,6 +53,7 @@ BEGIN {
    infty = +1e+20;
    headerprinted = 0;
    namelength = 18;             # maximal length of instance names (can be increased)
+   usetimestamps = 0;
 
    nprobs = 0;
    sbab = 0;
@@ -445,11 +446,11 @@ BEGIN {
 /problem is solved/ { timeout = 0; }
 /best solution is not feasible in original problem/  { bestsolfeas = 0; }
 
-/Check SOL:/ { 
+/Check SOL:/ {
    intcheck = $4;
    conscheck = $6;
    objcheck = $8;
-   if( !intcheck || !conscheck || !objcheck ) 
+   if( !intcheck || !conscheck || !objcheck )
       bestsolfeas = 0;
 }
 
@@ -625,7 +626,7 @@ BEGIN {
    {
       # if sol file could not be read, fix status to be "unkown"
       if ( ! (prob in solstatus) )
-         solstatus[prob] = "unkown";
+         solstatus[prob] = "unkn";
 
       #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
@@ -739,6 +740,9 @@ BEGIN {
          tottime = timelimit;
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
+
+      if( usetimestamps != 0 )
+         tottime = endtime - starttime;
 
       if( aborted || timetobest < 0.0 ) {
          timetofirst = tottime;
@@ -961,7 +965,7 @@ BEGIN {
             pass++;
          }
          else {
-               status = "unknown";
+	    status = "unknown";
          }
       }
 

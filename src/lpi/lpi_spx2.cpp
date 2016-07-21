@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -123,7 +123,13 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
-      catch(const SPxException& E)                                      \
+      catch( const SPxMemoryException& E )                              \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw a memory exception: %s\n", s.c_str()); \
+         return SCIP_ERROR;                                             \
+      }                                                                 \
+      catch( const SPxException& E )                                    \
       {                                                                 \
          std::string s = E.what();                                      \
          SCIPmessagePrintWarning((messagehdlr), "SoPlex threw an exception: %s\n", s.c_str()); \
@@ -139,7 +145,13 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
-      catch(const SPxException& E)                                      \
+      catch( const SPxMemoryException& E )                              \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw a memory exception: %s\n", s.c_str()); \
+         return SCIP_ERROR;                                             \
+      }                                                                 \
+      catch( const SPxException& )                                      \
       {                                                                 \
          return SCIP_LPERROR;                                           \
       }                                                                 \
@@ -156,7 +168,7 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
-      catch(const SPxException& E)                                      \
+      catch( const SPxException& E )                                    \
       {                                                                 \
          std::string s = E.what();                                      \
          SCIPerrorMessage("SoPlex threw an exception: %s\n", s.c_str()); \
@@ -387,7 +399,7 @@ public:
    {
       for( int i = 0; i < numColsReal(); ++i )
       {
-         if( lowerReal(i) > upperReal(i) )
+         if( lowerReal(i) > upperReal(i) + realParam(SoPlex::EPSILON_ZERO) )
          {
             SCIPerrorMessage("inconsistent bounds on column %d: lower=%.17g, upper=%.17g\n",
                i, lowerReal(i), upperReal(i));
@@ -402,7 +414,7 @@ public:
    {
       for( int i = 0; i < numRowsReal(); ++i )
       {
-         if( lhsReal(i) > rhsReal(i) )
+         if( lhsReal(i) > rhsReal(i) + realParam(SoPlex::EPSILON_ZERO) )
          {
             SCIPerrorMessage("inconsistent sides on row %d: lhs=%.17g, rhs=%.17g\n",
                i, lhsReal(i), rhsReal(i));
@@ -920,11 +932,12 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-   sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
+   sprintf(spxdesc, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
 #ifdef WITH_LPSCHECK
-   sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
+     " - including CPLEX double check"
 #endif
+   , getGitHash());
+
    return spxdesc;
 }
 
@@ -1076,11 +1089,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       /* create column vectors with coefficients and bounds */
       SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1140,11 +1156,14 @@ SCIP_RETCODE SCIPlpiAddCols(
       }
       spx->addColsReal(cols);
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1255,11 +1274,14 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
       spx->addRowsReal(rows);
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1370,11 +1392,14 @@ SCIP_RETCODE SCIPlpiChgBounds(
          assert(lpi->spx->lowerReal(ind[i]) <= lpi->spx->upperReal(ind[i]) + lpi->spx->realParam(SoPlex::EPSILON_ZERO));
       }
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1414,11 +1439,14 @@ SCIP_RETCODE SCIPlpiChgSides(
          assert(lpi->spx->lhsReal(ind[i]) <= lpi->spx->rhsReal(ind[i]) + lpi->spx->realParam(SoPlex::EPSILON_ZERO));
       }
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1499,11 +1527,14 @@ SCIP_RETCODE SCIPlpiChgObj(
          lpi->spx->changeObjReal(ind[i], obj[i]);
       }
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1564,11 +1595,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
       lpi->spx->changeRowReal(row, lprow);
       assert(lpi->spx->lhsReal(row) <= lpi->spx->rhsReal(row));
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -1636,11 +1670,14 @@ SCIP_RETCODE SCIPlpiScaleCol(
       lpi->spx->changeColReal(col, lpcol);
       assert(lpi->spx->lowerReal(col) <= lpi->spx->upperReal(col));
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -2922,11 +2959,14 @@ SCIP_RETCODE SCIPlpiGetSol(
          (void)lpi->spx->getRedCostReal(tmp);
       }
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -2950,11 +2990,14 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
       Vector tmp(lpi->spx->numColsReal(), ray);
       (void)lpi->spx->getPrimalRayReal(tmp);
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -2978,11 +3021,14 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
       (void)lpi->spx->getDualFarkasReal(tmp);
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_LPERROR;
    }
@@ -3554,11 +3600,14 @@ SCIP_RETCODE SCIPlpiClearState(
    {
       lpi->spx->clearBasis();
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       assert( lpi->spx->status() != SPxSolver::OPTIMAL );
       return SCIP_LPERROR;
@@ -4057,11 +4106,14 @@ SCIP_RETCODE SCIPlpiReadLP(
       if( !lpi->spx->readFile(fname) )
          return SCIP_READERROR;
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_READERROR;
    }
@@ -4084,11 +4136,14 @@ SCIP_RETCODE SCIPlpiWriteLP(
    {
       (void) lpi->spx->writeFileReal(fname);
    }
-   catch(const SPxException& x)
-   {
 #ifndef NDEBUG
+   catch( const SPxException& x )
+   {
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+   catch( const SPxException& )
+   {
 #endif
       return SCIP_WRITEERROR;
    }

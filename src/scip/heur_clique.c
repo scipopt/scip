@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -291,6 +291,10 @@ SCIP_RETCODE applyCliqueFixings(
 
       assert(bestpos < nbinvars);
       assert(c == cliquepartition[bestpos]);
+
+      /* stop if we reached the depth limit */
+      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+         break;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
 

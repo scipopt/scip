@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -654,7 +654,9 @@ SCIP_RETCODE SCIPlpiCreate(
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
 #endif
       MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
+#if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
+#endif
    }
 
    numlp++;

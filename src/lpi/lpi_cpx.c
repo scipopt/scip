@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,10 +26,6 @@
  * @author Michael Winkler
  * @author Kati Wolter
  * @author Felipe Serrano
- */
-
-/* CPLEX supports FASTMIP which fastens the lp solving process but therefor it might happen that there will be a loss in
- * precision (because e.g. the optimal basis will not be factorized again)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -68,7 +64,7 @@
 
 /* At several places we need to guarantee to have a factorization of an optimal basis and call the simplex to produce
  * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
- * refactorization, it might be necessary to do a few extra pivot steps, in particular if FASTMIP is used. */
+ * refactorization, it might be necessary to do a few extra pivot steps. */
 #define CPX_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
 
 /* CPLEX seems to ignore bounds with absolute value less than 1e-10. There is no interface define for this constant yet,
@@ -1556,7 +1552,11 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    invalidateSolution(lpi);
 
+#if (CPX_VERSION >= 12050000)
    CHECK_ZERO( lpi->messagehdlr, CPXchgobjsen(lpi->cpxenv, lpi->cpxlp, cpxObjsen(objsen)) );
+#else
+   CPXchgobjsen(lpi->cpxenv, lpi->cpxlp, cpxObjsen(objsen));
+#endif
 
    return SCIP_OKAY;
 }
@@ -3483,7 +3483,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
 
-      if( rowsense == 'G' )
+      /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+      if( rowsense == 'G' || rowsense == 'R' )
       {
          int i;
 
@@ -3559,7 +3560,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          assert(basicrow >= 0);
          assert(basicrow < nrows);
 
-         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+         /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+         if( basicrow >= 0 && basicrow < nrows && (lpi->senarray[basicrow] == 'G' || lpi->senarray[basicrow] == 'R') )
             coef[r] *= -1.0;
       }
    }
@@ -3626,7 +3628,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
 
-      if( rowsense == 'G' )
+      /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+      if( rowsense == 'G' || rowsense == 'R' )
       {
          int i;
 
@@ -3698,7 +3701,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
          assert(basicrow >= 0);
          assert(basicrow < nrows);
 
-         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+         /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+         if( basicrow >= 0 && basicrow < nrows && (lpi->senarray[basicrow] == 'G' || lpi->senarray[basicrow] == 'R') )
             coef[r] *= -1.0;
       }
    }
@@ -4041,7 +4045,11 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 /**@name Parameter Methods */
 /**@{ */
 
-/** gets integer parameter of LP */
+/** gets integer parameter of LP
+ *
+ * CPLEX supported FASTMIP in versions up to 12.6.1. FASTMIP fastens the lp solving process but therefor it might happen
+ * that there will be a loss in precision (because e.g. the optimal basis will not be factorized again).
+ */
 SCIP_RETCODE SCIPlpiGetIntpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -305,7 +305,11 @@ do
     fi
 
     GMSFILE=`basename $i`
-    INPUTDIR=`pwd`/`dirname $i`
+    if test "${i:0:1}" == "/" ; then
+       INPUTDIR=`dirname $i`
+    else
+       INPUTDIR=`pwd`/`dirname $i`
+    fi
     case $GMSFILE in
       *.gms )
         ;;
@@ -372,7 +376,7 @@ do
     export CLIENTTMPDIR
     export PASSSTARTSOL
     export EXAMINER
-    export SETNAME
+    export SETTINGS
 
     case $QUEUETYPE in
       srun )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1804,7 +1804,7 @@ SCIP_RETCODE detectImpliedBounds(
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int*                  nbdchgs,            /**< number of global deducted bound changes due to the conflict set */
    int*                  nredvars,           /**< number of redundant and removed variables from conflict set */
-   SCIP_Bool*            redundant           /**< did we found a gloabl reduction on a conflict set variable, which makes this conflict redundant */
+   SCIP_Bool*            redundant           /**< did we found a global reduction on a conflict set variable, which makes this conflict redundant */
    )
 {
    SCIP_BDCHGINFO** bdchginfos;
@@ -1888,7 +1888,7 @@ SCIP_RETCODE detectImpliedBounds(
    assert(conflictset->nbdchginfos > 0);
 
    /* do not check to big or trivial conflicts */
-   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos == 1 )
+   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos <= 1 )
    {
       *nredvars = ntrivialredvars;
       return SCIP_OKAY;
@@ -1960,6 +1960,7 @@ SCIP_RETCODE detectImpliedBounds(
    {
       SCIP_VAR** vars;
       SCIP_Bool* redundants;
+      SCIP_Bool glbinfeas;
 
       /* sort variables in increasing order of binary implications to gain speed later on */
       SCIPsortLongPtrRealRealBool(nbinimpls, (void**)bdchginfos, relaxedbds, bounds, boundtypes, v);
@@ -1981,7 +1982,14 @@ SCIP_RETCODE detectImpliedBounds(
       for( v = 0; v < nbdchginfos; ++v )
          vars[v] = SCIPbdchginfoGetVar(bdchginfos[v]);
 
-      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(set->scip, vars, bounds, boundtypes, redundants, nbdchginfos, nredvars, nbdchgs, redundant, set->conf_fullshortenconflict) );
+      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(set->scip, vars, bounds, boundtypes, redundants, nbdchginfos, nredvars,
+            nbdchgs, redundant, &glbinfeas, set->conf_fullshortenconflict) );
+
+      if( glbinfeas )
+      {
+         SCIPdebugMessage("conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+         goto TERMINATE;
+      }
 
 #ifdef SCIP_DEBUG
       if( *nbdchgs > 0 )
@@ -2026,6 +2034,7 @@ SCIP_RETCODE detectImpliedBounds(
          conflictset->nbdchginfos = nbdchginfos;
       }
 
+     TERMINATE:
       SCIPsetFreeCleanBufferArray(set, &redundants);
       SCIPsetFreeBufferArray(set, &vars);
    }
@@ -3628,7 +3637,8 @@ SCIP_RETCODE conflictResolveBound(
             SCIP_Real constant;
 
             assert(SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_AGGREGATED
-               || SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_NEGATED);
+               || SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_NEGATED
+               || (SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_MULTAGGR && SCIPvarGetMultaggrNVars(infervar) == 1));
 
             scalar = 1.0;
             constant = 0.0;
@@ -5055,6 +5065,7 @@ SCIP_RETCODE undoBdchgsDualsol(
    SCIP_VAR** vars;
    SCIP_ROW* row;
    SCIP_VAR* var;
+   SCIP_Real* primsols;
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
    SCIP_Real* dualcoefs;
@@ -5098,13 +5109,14 @@ SCIP_RETCODE undoBdchgsDualsol(
    assert(nrows == lp->nlpirows);
 
    /* get temporary memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &primsols, nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsols, nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &redcosts, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualcoefs, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varredcosts, nvars) );
 
    /* get solution from LPI */
-   retcode = SCIPlpiGetSol(lpi, NULL, NULL, dualsols, NULL, redcosts);
+   retcode = SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
       goto TERMINATE;
    SCIP_CALL( retcode );
@@ -5211,6 +5223,7 @@ SCIP_RETCODE undoBdchgsDualsol(
       }
       else
       {
+         SCIP_Real capped_primsol;          /* we're not primal feasible, primsol may exceed SCIP_INFINITY */
          SCIP_COL* col;
          int c;
 
@@ -5223,9 +5236,16 @@ SCIP_RETCODE undoBdchgsDualsol(
          /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
          varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
+         /* cap primal solution */
+         capped_primsol = primsols[c];
+         if( SCIPsetIsInfinity(set, primsols[c]) )
+            capped_primsol = SCIPsetInfinity(set);
+         else if( SCIPsetIsInfinity(set, -primsols[c]) )
+            capped_primsol = -SCIPsetInfinity(set);
+
          /* check dual feasibility */
-         if( (SCIPsetIsInfinity(set, curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v]))
-          || (SCIPsetIsInfinity(set, -curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v])) )
+         if( (SCIPsetIsGT(set, capped_primsol, curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
+            || (SCIPsetIsLT(set, capped_primsol, curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
          {
             SCIPdebugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
                varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
@@ -5269,6 +5289,7 @@ SCIP_RETCODE undoBdchgsDualsol(
    SCIPsetFreeBufferArray(set, &dualcoefs);
    SCIPsetFreeBufferArray(set, &redcosts);
    SCIPsetFreeBufferArray(set, &dualsols);
+   SCIPsetFreeBufferArray(set, &primsols);
 
    return SCIP_OKAY;
 }

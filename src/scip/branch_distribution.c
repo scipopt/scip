@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1238,7 +1238,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       SCIPdebugMessage("  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcand), downscore, upscore);
       SCIPdebugMessage("  Best candidate: %s, score %g, direction %d\n", SCIPvarGetName(bestcand), bestscore, bestbranchdir);
    }
-
+   assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(bestcand, TRUE)));
    assert(bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS || bestbranchdir == SCIP_BRANCHDIR_UPWARDS);
    assert(bestcand != NULL);
 

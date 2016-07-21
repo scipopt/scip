@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -115,7 +115,7 @@ for ((p = 0; $p <= $PERMUTE; p++))
 do
 
     # loop over testset
-    for INSTANCE in `cat testset/$TSTNAME.test` DONE
+    for INSTANCE in $INSTANCELIST DONE
     do
         if test "$INSTANCE" = "DONE"
         then
@@ -125,28 +125,6 @@ do
         # increase the index for the instance tried to solve, even if the filename does not exist
         COUNT=`expr $COUNT + 1`
 
-        # check if problem instance exists
-        SCIP_INSTANCEPATH=$SCIPPATH
-        SKIPINSTANCE="false"
-
-        for IPATH in ${POSSIBLEPATHS[@]}
-        do
-            if test "$IPATH" = "DONE"
-            then
-                echo "input file $INSTANCE not found!"
-                SKIPINSTANCE="true"
-            elif test -f $IPATH/$INSTANCE
-            then
-                SCIP_INSTANCEPATH=$IPATH
-                break
-            fi
-        done
-
-        # skip the instance if the file was not found
-        if test "$SKIPINSTANCE" = "true"
-        then
-            continue
-        fi
         # the cluster queue has an upper bound of 2000 jobs; if this limit is
         # reached the submitted jobs are dumped; to avoid that we check the total
         # load of the cluster and wait until it is save (total load not more than
@@ -176,7 +154,7 @@ do
             CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
             # call tmp file configuration for SCIP
-            . ./${CONFFILE} $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+            . ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
                 $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
 
 
@@ -194,7 +172,7 @@ do
             # additional environment variables needed by run.sh
                 export SOLVERPATH=$SCIPPATH
                 export BASENAME=$FILENAME
-                export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
+                export FILENAME=$INSTANCE
                 export CLIENTTMPDIR
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
@@ -203,7 +181,7 @@ do
             else
                 # -V to copy all environment variables
                 qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
-		    -v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR \
+		    -v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR \
 		    -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1281,7 +1281,7 @@ SCIP_RETCODE paramParseLongint(
    assert(set != NULL);
    assert(valuestr != NULL);
 
-   if( sscanf(valuestr, "%"SCIP_LONGINT_FORMAT, &value) == 1 )
+   if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetLongint(param, set, messagehdlr, value, TRUE) );
    }
@@ -2592,6 +2592,7 @@ SCIP_RETCODE SCIPparamsetWrite(
 {
    SCIP_RETCODE retcode;
    FILE* file;
+   SCIP_Bool oldquiet = FALSE;
    int i;
 
    assert(paramset != NULL);
@@ -2605,6 +2606,13 @@ SCIP_RETCODE SCIPparamsetWrite(
          SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
          SCIPprintSysError(filename);
          return SCIP_FILECREATEERROR;
+      }
+
+      /* temporarily set the quiet flag of the message handler to FALSE */
+      if( messagehdlr != NULL )
+      {
+         oldquiet = SCIPmessagehdlrIsQuiet(messagehdlr);
+         SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
       }
    }
    else
@@ -2643,6 +2651,13 @@ SCIP_RETCODE SCIPparamsetWrite(
    if( filename != NULL )
    {
       assert(file != NULL);  /*lint !e449*/
+
+      /* reset the quiet flag of the message handler */
+      if( messagehdlr != NULL )
+      {
+         SCIPmessagehdlrSetQuiet(messagehdlr, oldquiet);
+      }
+
       fclose(file);
    }
 

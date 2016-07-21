@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -317,7 +317,7 @@
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
 #define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
-#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
+#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT FALSE/**< is the given time limit for all reoptimization round? */
 #define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
 #define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
@@ -567,8 +567,8 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
-   SCIP_SET*             set,                     /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr              /**< message handler */
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    assert(set != NULL);
@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrsnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
-   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) );
+   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) ); /*lint !e506 !e774*/
 
    (*set)->presols = NULL;
    (*set)->npresols = 0;
@@ -5720,9 +5720,7 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    )
 {
    assert(set != NULL);
-   /* TODO: maybe we should compare with REALABS(val) to handle
-      numerical issues, e.g., if val < 0 */
-   assert(SCIPsetIsGE(set, val, -set->num_feastol));
+   assert(SCIPsetIsGE(set, val, -2*set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 
    return (val <= set->num_feastol);

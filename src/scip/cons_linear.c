@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3965,7 +3965,7 @@ SCIP_RETCODE normalizeCons(
       /* all coefficients are in absolute value equal, so change them to (-)1.0 */
       if( abscoefsequ )
       {
-	 SCIPdebugMessage("divide linear constraint with %g, because all coefficents are in absolute value the same\n", maxabsval);
+	 SCIPdebugMessage("divide linear constraint with %g, because all coefficients are in absolute value the same\n", maxabsval);
 	 SCIPdebugPrintCons(scip, cons, NULL);
 	 SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
 
@@ -5458,8 +5458,6 @@ SCIP_RETCODE rangedRowPropagation(
    int nunfixedvars;
    int nfixedconsvars;
    int ncontvars;
-   int nposbinvars;
-   int nnegbinvars;
    int pos;
    int v;
 
@@ -5531,8 +5529,6 @@ SCIP_RETCODE rangedRowPropagation(
    SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvals, nunfixedvars) );
 
    absminbincoef = SCIP_REAL_MAX;
-   nposbinvars = 0;
-   nnegbinvars = 0;
    ncontvars = 0;
    gcdisone = TRUE;
    possiblegcd = TRUE;
@@ -5569,12 +5565,9 @@ SCIP_RETCODE rangedRowPropagation(
             }
             else if( SCIPvarIsBinary(consdata->vars[v]) )
             {
-               SCIP_Real absval = REALABS(consdata->vals[v]);
+               SCIP_Real absval;
 
-               if( consdata->vals[v] > 0.0 )
-                  ++nposbinvars;
-               else
-                  ++nnegbinvars;
+               absval = REALABS(consdata->vals[v]);
 
                if( absminbincoef > absval )
                   absminbincoef = absval;
@@ -5619,12 +5612,9 @@ SCIP_RETCODE rangedRowPropagation(
 
       if( SCIPvarIsBinary(consdata->vars[v]) )
       {
-         SCIP_Real absval = REALABS(consdata->vals[v]);
+         SCIP_Real absval;
 
-         if( consdata->vals[v] > 0.0 )
-            ++nposbinvars;
-         else
-            ++nnegbinvars;
+         absval = REALABS(consdata->vals[v]);
 
          if( absminbincoef > absval )
             absminbincoef = absval;
@@ -5784,7 +5774,7 @@ SCIP_RETCODE rangedRowPropagation(
          SCIP_Real maxvalue = SCIP_INVALID;
          int nsols = 0;
 
-         value = minactinfvars;
+         value = SCIPceil(scip, minactinfvars - SCIPfeastol(scip));
 
          /* check how many possible solutions exist */
          while( SCIPisLE(scip, value, maxactinfvars) )
@@ -5808,24 +5798,28 @@ SCIP_RETCODE rangedRowPropagation(
          }
          assert(nsols < 2 || minvalue <= maxvalue);
 
-	 /* determine last possible solution for better bounding */
-	 if( nsols == 3 )
-	 {
-	    value = maxactinfvars;
+         /* determine last possible solution for better bounding */
+         if( nsols == 3 )
+         {
+#ifndef NDEBUG
+            SCIP_Real secondsolval = maxvalue;
+#endif
+            value = SCIPfloor(scip, maxactinfvars + SCIPfeastol(scip));
 
-	    /* check how many possible solutions exist */
-	    while( SCIPisGE(scip, value, minactinfvars) )
-	    {
-	       value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
+            /* check how many possible solutions exist */
+            while( SCIPisGE(scip, value, minactinfvars) )
+            {
+               value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
 
-	       if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
-	       {
-		  maxvalue = value;
-		  assert(maxvalue > minvalue);
-		  break;
-	       }
-	       value -= gcdinfvars;
-	    }
+               if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
+               {
+                  maxvalue = value;
+                  assert(maxvalue > minvalue);
+                  break;
+               }
+               value -= gcdinfvars;
+            }
+            assert(maxvalue > secondsolval);
          }
 
          SCIPdebugMessage("here nsols %s %d, minsolvalue = %g, maxsolvalue = %g, ninfcheckvars = %d, nunfixedvars = %d\n",
@@ -6811,8 +6805,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
-   SCIP_Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
-   SCIP_Bool             checkrelmaxabs,     /**< should the violation for a constraint with side 0.0 be checked relative
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkrelmaxabs,     /**< Should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
@@ -9644,11 +9638,9 @@ SCIP_Bool checkEqualObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_Real*            scale,              /**< pointer to store the scaling factor between the constraint and the
-					      *   objective function
-					      */
+					      *   objective function */
    SCIP_Real*            offset              /**< pointer to store the offset of the objective function resulting by
-					      *   this constraint
-					      */
+					      *   this constraint */
    )
 {
    SCIP_VAR** vars;
@@ -9784,7 +9776,7 @@ SCIP_RETCODE checkPartialObjective(
    return SCIP_OKAY;
 }
 
-/** updates the cutoff if the given primal bound  (which is implied by the given constraint) is better */
+/** updates the cutoff if the given primal bound (which is implied by the given constraint) is better */
 static
 SCIP_RETCODE updateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9852,7 +9844,7 @@ SCIP_RETCODE checkParallelObjective(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* ignore equalities since these are covert by the method checkPartialObjective() */
+   /* ignore equalities since these are covered by the method checkPartialObjective() */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       return SCIP_OKAY;
 
@@ -9867,6 +9859,12 @@ SCIP_RETCODE checkParallelObjective(
 
    offset = 0.0;
    scale = 1.0;
+
+   /* There are no variables in the ojective function and in the constraint. Thus, the constraint is redundant or proves
+    * infeasibility. Since we have a pure feasibility problem, we do not want to set a cutoff or lower bound.
+    */
+   if( nobjvars == 0 )
+      return SCIP_OKAY;
 
    /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
@@ -10143,7 +10141,7 @@ SCIP_RETCODE dualPresolve(
       maxotherlocks = 1;
 
    /* if this constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
-   if( lhsexists && rhsexists )
+   if( lhsexists && rhsexists && maxotherlocks < INT_MAX )
       maxotherlocks++;
 
    for( i = 0; i < consdata->nvars && bestisint; ++i )
@@ -11004,7 +11002,7 @@ SCIP_RETCODE simplifyInequalities(
 
    feastol = SCIPfeastol(scip);
 
-   SCIPdebugMessage("starting simplification of coeffcients\n");
+   SCIPdebugMessage("starting simplification of coefficients\n");
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* get global activities */
@@ -11025,7 +11023,7 @@ SCIP_RETCODE simplifyInequalities(
    offsetv = -1;
    side = haslhs ? lhs : rhs;
 
-   /* we now determine coefficients as large as the side of the constraint to might retrieve a better reduction were we
+   /* we now determine coefficients as large as the side of the constraint to retrieve a better reduction where we
     * do not need to look at the large coefficients
     *
     * e.g.  all x are binary, z are positive integer
@@ -11043,17 +11041,17 @@ SCIP_RETCODE simplifyInequalities(
    /* if the minimal activity is negative and we found more than one variable with a coefficient bigger than the left
     * hand side, we cannot apply the extra reduction step and need to reset v
     *
-    * e.g. 7x1 + 7x2 - 4x3 - 4x4 >= 7 => xi = 1 forall i is not a solution, but if we would do a change on the
-    *      coeffcients due to the gcd on the "small" coeffcients we would get 8x1 + 8x2 - 4x3 - 4x4 >= 8 were xi = 1
-    *      forall i is a solution
+    * e.g. 7x1 + 7x2 - 4x3 - 4x4 >= 7 => xi = 1 for all i is not a solution, but if we would do a change on the
+    *      coefficients due to the gcd on the "small" coefficients we would get 8x1 + 8x2 - 4x3 - 4x4 >= 8 were xi = 1
+    *      for all i is a solution
     *
-    * also redundancy of variables would not be correct determined in such a case
+    * also redundancy of variables would not be correctly determined in such a case
     */
    if( nvars > 2 && SCIPisEQ(scip, vals[0], side) && !SCIPisNegative(scip, minactsub) )
    {
-      ++v;
+      v = 1;
 
-      while( SCIPisEQ(scip, side, vals[v]) )
+      while( v < nvars && SCIPisEQ(scip, side, vals[v]) )
       {
          /* if we have integer variable with "side"-coefficients but also with a lower bound greater than 0 we stop this
           * extra step, which might have worked
@@ -11065,8 +11063,12 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          ++v;
-         assert(v < nvars);
       }
+
+      /* easy and quick fix: if all coefficients were equal to the side, we cannot apply further simplifications */
+      /* todo find numerically stable normalization conditions to scale this cons to have coefficients almost equal to 1 */
+      if( v == nvars )
+         return SCIP_OKAY;
 
       /* cannot work with continuous variables which have a big coefficient */
       if( v > 0 && SCIPvarGetType(vars[v - 1]) == SCIP_VARTYPE_CONTINUOUS )
@@ -11076,7 +11078,7 @@ SCIP_RETCODE simplifyInequalities(
       if( SCIPisEQ(scip, side, -vals[v]) )
          v = 0;
 
-      /* all but one variable are processed or the next variables is continuous we cannot perform the extra coefficient
+      /* all but one variable are processed or the next variable is continuous we cannot perform the extra coefficient
        * reduction
        */
       if( v == nvars - 1 || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
@@ -11103,9 +11105,9 @@ SCIP_RETCODE simplifyInequalities(
       }
    }
 
-   /* find and remove redundant variables which do not interact with the (in-)feasible of a constraints
+   /* find and remove redundant variables which do not interact with the (in-)feasibility of this constraint
     *
-    * e.g. assume all x are binary and y1 is continuous with bounds [-3,1] then we can reduce
+    * e.g. let all x are binary and y1 is continuous with bounds [-3,1] then we can reduce
     *
     *        15x1 + 15x2 + 7x3 + 3x4 + y1 <= 26
     * to
@@ -15744,7 +15746,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%" SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 

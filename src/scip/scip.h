@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3464,8 +3464,8 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
@@ -3496,8 +3496,8 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
@@ -4578,8 +4578,8 @@ SCIP_RETCODE SCIPsetProbCopy(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @post After the method was called, \SCIP is in one of the following stages:
- *       -\ref SCIP_STAGE_INIT if reading failed (usually, when a SCIP_READERROR occurs)
- *       - ref SCIP_STAGE_PROBLEM if the problem file was successfully read
+ *       - \ref SCIP_STAGE_INIT if reading failed (usually, when a SCIP_READERROR occurs)
+ *       - \ref SCIP_STAGE_PROBLEM if the problem file was successfully read
  */
 EXTERN
 SCIP_RETCODE SCIPreadProb(
@@ -6318,7 +6318,7 @@ SCIP_RETCODE SCIPrestartSolve(
 EXTERN
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             enable              /**< enable reoptimization */
+   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
    );
 
 /** returns whether reoptimization is enabled or not */
@@ -7023,7 +7023,8 @@ SCIP_RETCODE SCIPgetNegatedVar(
    SCIP_VAR**            negvar              /**< pointer to store the negated variable */
    );
 
-/** gets negated variables x' = lb + ub - x of variables x; negated variables are created, if not yet existing
+/** gets negated variables x' = lb + ub - x of variables x; negated variables are created, if not yet existing;
+ *  in difference to \ref SCIPcreateVar, the negated variable must not be released (unless captured explicitly)
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8479,16 +8480,64 @@ SCIP_Real SCIPcomputeVarUbLocal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
+ *  aggregation variables, this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+EXTERN
+SCIP_Real SCIPgetVarMultaggrLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   );
+
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+EXTERN
+SCIP_Real SCIPgetVarMultaggrUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   );
+
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all
+ *  aggregation variables, this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+EXTERN
+SCIP_Real SCIPgetVarMultaggrLbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   );
+
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+EXTERN
+SCIP_Real SCIPgetVarMultaggrUbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
-#define SCIPcomputeVarLbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(var, (scip)->set) : SCIPvarGetLbGlobal(var))
-#define SCIPcomputeVarUbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(var, (scip)->set) : SCIPvarGetUbGlobal(var))
-#define SCIPcomputeVarLbLocal(scip, var)   (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbLocal(var, (scip)->set)  : SCIPvarGetLbLocal(var))
-#define SCIPcomputeVarUbLocal(scip, var)   (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbLocal(var, (scip)->set)  : SCIPvarGetUbLocal(var))
+#define SCIPcomputeVarLbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPgetVarMultaggrLbGlobal(scip, var) : SCIPvarGetLbGlobal(var))
+#define SCIPcomputeVarUbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPgetVarMultaggrUbGlobal(scip, var) : SCIPvarGetUbGlobal(var))
+#define SCIPcomputeVarLbLocal(scip, var)   (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPgetVarMultaggrLbLocal(scip, var)  : SCIPvarGetLbLocal(var))
+#define SCIPcomputeVarUbLocal(scip, var)   (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPgetVarMultaggrUbLocal(scip, var)  : SCIPvarGetUbLocal(var))
 
 #endif
 
@@ -11076,9 +11125,9 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -14092,6 +14141,77 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
 /**@} */
 
 
+
+
+/*
+ * nonlinear methods
+ */
+
+/**@name Nonlinear Methods */
+/**@{ */
+
+
+/** computes coefficients of linearization of a square term in a reference point */
+EXTERN
+void SCIPaddSquareLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             refpoint,           /**< point where to linearize */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** computes coefficients of secant of a square term */
+EXTERN
+void SCIPaddSquareSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   );
+
+/** computes coefficients of linearization of a bilinear term in a reference point */
+EXTERN
+void SCIPaddBilinLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             refpointx,          /**< point where to linearize first  variable */
+   SCIP_Real             refpointy,          /**< point where to linearize second variable */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** computes coefficients of McCormick under- or overestimation of a bilinear term */
+EXTERN
+void SCIPaddBilinMcCormick(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/**@} */
+
+
+
+
 /*
  * cutting plane methods
  */
@@ -15308,7 +15428,7 @@ int SCIPgetNPrioLPBranchCands(
    );
 
 /** gets external branching candidates along with solution values, scores, and number of branching candidates;
- *  these branching candidates can be used by relaxations or nonlinear constraint handlers
+ *  these branching candidates can be used by relaxations or nonlinear constraint handlers;
  *  branching rules should always select the branching candidate among the first nprioexterncands of the candidate
  *  list
  *
@@ -16951,10 +17071,10 @@ EXTERN
 SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
@@ -16977,10 +17097,10 @@ EXTERN
 SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
 
@@ -16997,9 +17117,9 @@ EXTERN
 SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
@@ -17023,10 +17143,10 @@ EXTERN
 SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
    );
 
@@ -18571,6 +18691,26 @@ int SCIPgetFocusDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets maximal allowed tree depth
+ *
+ *  @return gets maximal allowed tree depth
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetDepthLimit(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
  *
  *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -18860,6 +19000,10 @@ SCIP_Real SCIPgetCutoffbound(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note using this method in the solving stage can lead to an erroneous SCIP solving status; in particular,
+ *        if a solution not respecting the cutoff bound was found before installing a cutoff bound which
+ *        renders the remaining problem infeasible, this solution may be reported as optimal
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED

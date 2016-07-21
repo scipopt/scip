@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -898,8 +898,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
 
-   /* clear raydirection array first for not accidentally using it uninitialized */
-   BMSclearMemoryArray(raydirection, nsubspacevars);
 
    for( i = f_max; i >= 0; --i )
    {
@@ -921,7 +919,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    firstrule = heurdata->lastrule;
    ++firstrule;
-   for( r = firstrule; r <= firstrule + 10 && !SCIPisStopped(scip); r++ )
+   for( r = firstrule; r <= firstrule + 5 && !SCIPisStopped(scip); r++ )
    {
       SCIP_ROW** rows;
       int nrows;
@@ -930,34 +928,34 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       switch(r % 5)
       {
       case 1:
-         if( heurdata->useavgnbray )
-         {
-            SCIP_CALL( generateAverageNBRay(scip, raydirection, fracspace, subspacevars, nsubspacevars) );
-         }
+         if( !heurdata->useavgnbray )
+            continue;
+
+         SCIP_CALL( generateAverageNBRay(scip, raydirection, fracspace, subspacevars, nsubspacevars) );
          break;
       case 2:
-         if( heurdata->useobjray )
-         {
-            SCIP_CALL( generateObjectiveRay(scip, raydirection, subspacevars, nsubspacevars) );
-         }
+         if( !heurdata->useobjray )
+            continue;
+
+         SCIP_CALL( generateObjectiveRay(scip, raydirection, subspacevars, nsubspacevars) );
          break;
       case 3:
-         if( heurdata->usediffray )
-         {
-            SCIP_CALL( generateDifferenceRay(scip, raydirection, subspacevars, nsubspacevars) );
-         }
+         if( !heurdata->usediffray )
+            continue;
+
+         SCIP_CALL( generateDifferenceRay(scip, raydirection, subspacevars, nsubspacevars) );
          break;
       case 4:
-         if( heurdata->useavgwgtray && SCIPisLPSolBasic(scip) )
-         {
-            SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, TRUE) );
-         }
+         if( !heurdata->useavgwgtray || !SCIPisLPSolBasic(scip) )
+            continue;
+
+         SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, TRUE) );
          break;
       case 0:
-         if( heurdata->useavgray && SCIPisLPSolBasic(scip) )
-         {
-            SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
-         }
+         if( !heurdata->useavgray || !SCIPisLPSolBasic(scip) )
+            continue;
+
+         SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
          break;
       default:
          SCIPerrorMessage("invalid ray rule identifier\n");
@@ -1001,11 +999,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       assert(SCIPisPositive(scip, q));
 
       /* resort the coordinates in nonincreasing order of negquotient */
-      SCIPsortDownRealRealRealBoolPtr( negquotient, raydirection, rayorigin, sign, (void**) subspacevars, nsubspacevars);
+      SCIPsortDownRealRealRealBoolPtr(negquotient, raydirection, rayorigin, sign, (void**) subspacevars, nsubspacevars);
 
 #ifndef NDEBUG
       for( i = 0; i < nsubspacevars; i++ )
+      {
          assert( raydirection[i] >= 0 );
+         assert(!SCIPisInfinity(scip, REALABS(raydirection[i])));
+      }
       for( i = 1; i < nsubspacevars; i++ )
          assert( negquotient[i - 1] >= negquotient[i] );
 #endif

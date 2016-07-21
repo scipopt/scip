@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -383,8 +383,15 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       SCIP_Longint nnewlpiterations;
       SCIP_Longint nnewdomreds;
 
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      divedepth++;
+      /* open a new probing node if this will not exceed the maximal tree depth, otherwise stop here */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      {
+         SCIP_CALL( SCIPnewProbingNode(scip) );
+         divedepth++;
+      }
+      else
+         break;
+
       nnewlpiterations = 0;
       nnewdomreds = 0;
 
@@ -561,6 +568,10 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          {
             SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+
+            /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
+            assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+
             SCIP_CALL( SCIPnewProbingNode(scip) );
 
             bestfixval = SCIPvarIsBinary(var)

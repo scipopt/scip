@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4428,6 +4428,7 @@ SCIP_RETCODE correctLocksAndCaptures(
 
    /* delete old and-coefficients and consanddata objects */
    SCIPfreeBlockMemoryArray(scip, &(consdata->andcoefs), consdata->sconsanddatas);
+   SCIPfreeBlockMemoryArray(scip, &(consdata->andnegs), consdata->sconsanddatas);
    SCIPfreeBlockMemoryArray(scip, &(consdata->consanddatas), consdata->sconsanddatas);
 
    if( !SCIPisEQ(scip, consdata->lhs, newlhs) || !SCIPisEQ(scip, consdata->rhs, newrhs) )

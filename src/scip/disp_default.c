@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,7 +27,7 @@
 
 
 #define DISP_NAME_SOLFOUND      "solfound"
-#define DISP_DESC_SOLFOUND      "letter that indicates the heuristic, that found the solution"
+#define DISP_DESC_SOLFOUND      "letter that indicates the heuristic which found the solution"
 #define DISP_HEAD_SOLFOUND      " "
 #define DISP_WIDT_SOLFOUND      1
 #define DISP_PRIO_SOLFOUND      80000
@@ -934,7 +934,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalgap)
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNSols)
 {  /*lint --e{715}*/
-   SCIPinfoMessage(scip, file, "%5"SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
+   SCIPinfoMessage(scip, file, "%5" SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
 
    return SCIP_OKAY;
 }

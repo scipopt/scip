@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1690,7 +1690,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    tryother = FALSE;
    if( x0y0[1] <= ylb + (yub - ylb)/(xub - xlb) * (x0y0[0] - xlb) )
    {
-      SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val, &alpha,
+      SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val, &alpha,
             &beta, &gamma_, &delta) );
 
       assert(SCIPisInfinity(scip, delta) || SCIPisFeasEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
@@ -1703,7 +1703,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    }
    else
    {
-      SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val, &alpha,
+      SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val, &alpha,
             &beta, &gamma_, &delta) );
 
       assert(SCIPisInfinity(scip, delta) || SCIPisFeasEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
@@ -1719,7 +1719,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    {
       if( x0y0[1] <= yub + (ylb - yub)/(xub - xlb) * (x0y0[0] - xlb) )
       {
-         SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p4[0], p4[1], p4val,
+         SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
 
          /* hyperplane should be above (p3,f(p3)) and other points should lie on hyperplane */
@@ -1730,7 +1730,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
       }
       else
       {
-         SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p2[0], p2[1], p2val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
+         SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p2[0], p2[1], p2val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
 
          /* hyperplane should be above (p1,f(p1)) and other points should lie on hyperplane */

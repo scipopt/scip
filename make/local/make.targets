@@ -63,7 +63,7 @@ testgamscluster:
 
 SCIPEXAMPLES	=	examples/Binpacking examples/CallableLibrary applications/Coloring \
                   examples/Eventhdlr examples/GMI examples/LOP examples/MIPSolver \
-                  applications/MultiObjective applications/Scheduler applications/STP examples/TSP examples/VRP
+                  applications/Scheduler applications/STP examples/TSP examples/VRP
 
 .PHONY: testexamples
 testexamples:

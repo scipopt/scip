@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2923,7 +2923,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    /* create a constraint out of the conflict set */
    if( i == nbdchginfos && ncontinuous < conflicthdlrdata->continuousfrac * nbdchginfos + 0.5 )
    {
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 

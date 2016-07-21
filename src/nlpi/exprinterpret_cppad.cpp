@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1510,7 +1510,7 @@ private:
       {
          s[j] = false;
          for( size_t i = 0; i < n; i++ )
-            s[j] |= r[i * q + j]; /*lint !e1786*/
+            s[j] |= (bool)r[i * q + j]; /*lint !e1786*/
       }
 
       return true;
@@ -1588,7 +1588,7 @@ private:
          for( j = 0; j < q; j++ )
             for( i = 0; i < n; i++ )
                for( k = 0; k < n; ++k )
-                  v[ i * q + j] |= r[ k * q + j];
+                  v[ i * q + j] |= (bool) r[ k * q + j];
 
       return true;
    }

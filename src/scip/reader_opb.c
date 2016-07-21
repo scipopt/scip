@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1492,7 +1492,7 @@ SCIP_RETCODE readConstraints(
    /* create and add the linear constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/dynamicconss", &dynamicconss) );
 
    initial = initialconss;
    separate = TRUE;
@@ -3006,7 +3006,7 @@ SCIP_RETCODE printPBRow(
    /* print non-linear part */
    for( t = 0; t < ntermvals; ++t )
    {
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT, (SCIP_Longint) SCIPround(scip, termvals[t] * (*mult))); /*lint !e613 */
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+" SCIP_LONGINT_FORMAT, (SCIP_Longint) SCIPround(scip, termvals[t] * (*mult))); /*lint !e613 */
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
       for( v = 0; v < ntermvars[t]; ++v ) /*lint !e613 */
@@ -3997,7 +3997,7 @@ SCIP_RETCODE writeOpb(
    assert( result != NULL );
 
    /* check if should use a multipliers symbol star '*' between coefficients and variables */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/multisymbol", &usesymbole) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbole) );
    (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbole ? " * " : " ");
 
    /* print statistics as comment to file */
@@ -4344,10 +4344,10 @@ SCIP_RETCODE SCIPincludeReaderOpb(
 
    /* add opb reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
+         "reading/" READER_NAME "/dynamicconss", "should model constraints be subject to aging?",
          NULL, FALSE, FALSE/*TRUE*/, NULL, NULL) ); /* have to be FALSE, otherwise an error might inccur in restart during branch and bound */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/multisymbol", "use '*' between coefficients and variables by writing to problem?",
+         "reading/" READER_NAME "/multisymbol", "use '*' between coefficients and variables by writing to problem?",
          NULL, TRUE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;

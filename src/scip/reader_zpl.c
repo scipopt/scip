@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1359,7 +1359,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       else
          *compextension = '\0';
       (void) SCIPsnprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
-      if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
+      if( (char*)getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_READERROR;
@@ -1379,7 +1379,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
    {
       char currentpath[SCIP_MAXSTRLEN];
-      if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
+      if( (char*)getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_READERROR;

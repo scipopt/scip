@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1447,10 +1447,12 @@ SCIP_RETCODE readExpression(
          if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg2, SCIPexprGetOpReal(arg1)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
          }
          else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else
          {
@@ -1463,6 +1465,7 @@ SCIP_RETCODE readExpression(
          {
             assert(SCIPexprGetOpReal(arg2) != 0.0);
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, 1.0/SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else
          {
@@ -1482,6 +1485,7 @@ SCIP_RETCODE readExpression(
             {
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
             }
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
@@ -1501,6 +1505,7 @@ SCIP_RETCODE readExpression(
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(SCIPexprGetOpReal(arg1))) );
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, arg2) );
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, tmp) );
+               SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
             }
          }
          else

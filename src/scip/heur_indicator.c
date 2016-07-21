@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -106,6 +106,10 @@ SCIP_RETCODE tryOneOpt(
       /* skip constraints with fixed variables */
       if ( SCIPvarGetUbLocal(binvar) < 0.5 || SCIPvarGetLbLocal(binvar) > 0.5 )
          continue;
+
+      /* return if the we would exceed the depth limit of the tree */
+      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+         break;
 
       /* get rid of all bound changes */
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -219,6 +223,14 @@ SCIP_RETCODE trySolCandidate(
    *nfoundsols = 0;
 
    SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* we can stop here if we have already reached the maximal depth */
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPnewProbingNode(scip) );
 
    /* fix variables */

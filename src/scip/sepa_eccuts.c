@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,6 @@
 
 #include "scip/scipdefplugins.h"
 #include "scip/sepa_eccuts.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_xor.h"
 #include "scip/nlp.h"
 #include "tclique/tclique.h"

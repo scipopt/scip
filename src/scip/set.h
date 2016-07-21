@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -465,8 +465,8 @@ SCIP_RETCODE SCIPsetSetEmphasis(
 /** set parameters for reoptimization */
 extern
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
-   SCIP_SET*             set,                     /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr              /**< message handler */
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */

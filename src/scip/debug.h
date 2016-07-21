@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,6 +50,17 @@ typedef struct SCIP_DebugSolData SCIP_DEBUGSOLDATA;
 /** creates debug solution data */
 SCIP_RETCODE SCIPdebugSolDataCreate(
    SCIP_DEBUGSOLDATA**   debugsoldata        /**< pointer to debug solution data */
+   );
+
+/** frees the debug solution */
+SCIP_RETCODE SCIPdebugFreeSol(
+   SCIP_SET*             set
+   );
+
+/** resets the data structure after restart */
+extern
+SCIP_RETCODE SCIPdebugReset(
+   SCIP_SET*             set
    );
 
 /** frees debugging data */
@@ -234,6 +245,8 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #else
 
 #define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
+#define SCIPdebugFreeSol(set) SCIP_OKAY
+#define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY

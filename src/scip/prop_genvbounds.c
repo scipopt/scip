@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1487,12 +1487,12 @@ SCIP_RETCODE sortGenVBounds(
    assert(SCIPdigraphGetNComponents(graph) == propdata->ncomponents);
 
    /* allocate memory for genvboundssorted and componentsstart array */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &genvboundssorted, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &genvboundssorted, propdata->ngenvbounds) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
 
    /* allocate memory for strong component arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph) + 1) ); /*lint !e666*/
 
    /* compute sorted genvbounds array, fill componentsstart array */
    sortedindex = 0;
@@ -1539,13 +1539,6 @@ SCIP_RETCODE sortGenVBounds(
    }
    assert(sortedindex == propdata->ngenvbounds);
 
-   /* free strong component arrays */
-   SCIPfreeMemoryArray(scip, &strongcompstartidx);
-   SCIPfreeMemoryArray(scip, &strongcomponents);
-
-   /* free digraph */
-   SCIPdigraphFree(&graph);
-
    /* copy sorted genvbounds into genvboundstore */
    for( i = 0; i < propdata->ngenvbounds; i++ )
    {
@@ -1554,7 +1547,14 @@ SCIP_RETCODE sortGenVBounds(
       propdata->genvboundstore[i] = genvboundssorted[i];
       propdata->genvboundstore[i]->index = i;
    }
-   SCIPfreeMemoryArray(scip, &(genvboundssorted));
+   SCIPfreeBufferArray(scip, &(genvboundssorted));
+
+   /* free strong component arrays */
+   SCIPfreeBufferArray(scip, &strongcompstartidx);
+   SCIPfreeBufferArray(scip, &strongcomponents);
+
+   /* free digraph */
+   SCIPdigraphFree(&graph);
 
    /* remember genvboundstore as sorted */
    propdata->issorted = TRUE;
@@ -2268,11 +2268,16 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
          /* free genvbound and fill gap */
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
          --(propdata->ngenvbounds);
-         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
-         propdata->genvboundstore[i]->index = i;
 
-         /* mark genvbounds array to be resorted */
-         propdata->issorted = FALSE;
+         /* move the last genvbound to the i-th position */
+         if( i < propdata->ngenvbounds )
+         {
+            propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
+            propdata->genvboundstore[i]->index = i;
+
+            /* mark genvbounds array to be resorted */
+            propdata->issorted = FALSE;
+         }
       }
       else
          ++i;

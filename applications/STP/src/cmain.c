@@ -33,12 +33,12 @@
 #include "heur_tm.h"
 #include "heur_local.h"
 #include "heur_rec.h"
-#include "heur_rs.h"
 #include "pricer_stp.h"
 #include "event_bestsol.h"
 #include "probdata_stp.h"
 #include "dialog_stp.h"
 #include "prop_stp.h"
+#include "branch_stp.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
@@ -76,18 +76,22 @@ SCIP_RETCODE runShell(
 
    /* include steiner tree constraint handler */
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
-
+#if 1
    /* include Takahashi Matsuyama heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
 
    /* include local heuristics */
    SCIP_CALL( SCIPincludeHeurLocal(scip) );
-
+#if 1
    /* include recombination heuristic */
    SCIP_CALL( SCIPincludeHeurRec(scip) );
-
+#endif
+#endif
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+
+   /* include branching rule */
+   SCIP_CALL( SCIPincludeBranchruleStp(scip) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropStp(scip) );

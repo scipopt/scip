@@ -66,13 +66,13 @@ do
 
     for OPT in ${OPTS[@]}
     do
-
         for TEST in ${TESTS[@]}
         do
             # pull and compile SoPlex
             cd ../soplex
             git pull
             make
+            make OPT=dbg
 
             # pull new version from git repository
             cd ../scip
@@ -85,8 +85,8 @@ do
             GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
             # compile SCIP in debug or opt mode
-            make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
-            make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
+            make OPT=$OPT LPSOPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
+            make OPT=$OPT LPSOPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
 
             # run test
             make OPT=$OPT VERSION=$GITHASH LPS=$LPS TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test
