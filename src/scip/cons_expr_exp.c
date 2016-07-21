@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/cons_expr_exp.h"
+#include "scip/cons_expr_var.h"
 
 #define EXP_PRECEDENCE  85000
 #define EXP_HASHKEY     SCIPcalcFibHash(10181)
@@ -162,6 +163,114 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    return SCIP_OKAY;
 }
 
+/** expression separation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* auxvar;
+   SCIP_VAR* childvar;
+   SCIP_Bool overestimate;
+   SCIP_Real refpoint;
+   SCIP_Real lincoef;
+   SCIP_Real linconstant;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   assert(auxvar != NULL);
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+   *ncuts = 0;
+
+   if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrVar(conshdlr) )
+   {
+      childvar = SCIPgetConsExprExprVarVar(child);
+   }
+   else
+   {
+      /* this should be handled by the simplyfier */
+      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
+      childvar = SCIPgetConsExprExprAuxVar(child);
+   }
+   assert(childvar != NULL);
+
+   /* check if there is a violation */
+   if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, auxvar) - SCIPgetSolVal(scip, sol, childvar), 0))
+      return SCIP_OKAY;
+
+   /* determine if we need to under- or overestimate */
+   overestimate = SCIPisLT(scip, SCIPgetSolVal(scip, sol, auxvar), SCIPgetSolVal(scip, sol, childvar));
+   refpoint = SCIPgetSolVal(scip, sol, childvar);
+   lincoef = 0.0;
+   linconstant = 0.0;
+   success = TRUE;
+
+   /* adjust the reference points */
+   refpoint = SCIPisLT(scip, refpoint, SCIPvarGetLbLocal(childvar)) ? SCIPvarGetLbLocal(childvar) : refpoint;
+   refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(childvar)) ? SCIPvarGetUbLocal(childvar) : refpoint;
+   assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(childvar)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(childvar)));
+
+   if( overestimate )
+   {
+      SCIPaddExpSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
+         &success);
+   }
+   else
+   {
+      SCIPaddExpLinearization(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
+         &success);
+   }
+
+   /* try to add cut if previous step was successful */
+   if( success )
+   {
+      SCIP_ROW* cut;
+      SCIP_Real efficacy;
+      SCIP_Real rhs;
+      SCIP_Real lhs;
+
+      if( overestimate )
+      {
+         lhs = -SCIPinfinity(scip);
+         rhs = -linconstant;
+      }
+      else
+      {
+         lhs = -linconstant;
+         rhs = SCIPinfinity(scip);
+      }
+
+      SCIP_CALL( SCIPcreateRowCons(scip, &cut, conshdlr, "exp_cut", 0, NULL, NULL, lhs, rhs, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, -1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, childvar, lincoef) );
+
+      efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+
+      /* add cut if it is violated */
+      if( SCIPisGE(scip, efficacy, minefficacy) )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+         *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+         *ncuts += 1;
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+         SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+#endif
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
@@ -230,6 +339,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
 

@@ -131,11 +131,19 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 
+   int                      auxvarid;        /**< unique id for the next auxiliary variable */
+
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
+   unsigned int             lastsepatag;     /**< last separation tag used to compute cuts */
 
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
+
+   /* separation parameters */
+   SCIP_Real                mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
+   SCIP_Real                mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
+
 };
 
 /** data passed on during expression evaluation in a point */
@@ -187,6 +195,17 @@ typedef struct
    SCIP_Bool               global;           /**< should a global or a local copy be created */
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
+
+/** data passed on during separation */
+typedef struct
+{
+   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
+   SCIP_SOL*               sol;              /**< solution to separate (NULL for separating the LP solution) */
+   SCIP_Real               minefficacy;      /**< minimal efficacy of a cut if it should be added to the LP */
+   SCIP_RESULT             result;           /**< buffer to store a result */
+   int                     ncuts;            /**< buffer to store the total number of added cuts */
+   unsigned int            sepatag;          /**< separation tag */
+} SEPA_DATA;
 
 struct SCIP_ConsExpr_PrintDotData
 {
@@ -1511,6 +1530,18 @@ SCIP_RETCODE forwardPropCons(
    {
       /* compare root expression interval with constraint sides; store the result in the root expression */
       SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
+
+      /* consider auxiliary variable stored in the root expression; it might happen that some other plug-ins tighten the
+       * bounds of these variables
+       */
+      if( consdata->expr->auxvar != NULL )
+      {
+         SCIP_INTERVAL auxvarinterval;
+
+         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar), SCIPvarGetUbLocal(consdata->expr->auxvar));
+         SCIPintervalIntersect(&interval, interval, auxvarinterval);
+      }
+
       SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL);
    }
 
@@ -2961,6 +2992,7 @@ SCIP_RETCODE registerBranchingCandidates(
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
    assert(expr != NULL);
@@ -2971,6 +3003,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlr != NULL);
+   assert(conshdlrdata->auxvarid >= 0);
+
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* create and capture auxiliary variable; because of common sub-expressions it might happen that we already added an
@@ -2979,11 +3015,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
    if( expr->auxvar == NULL && expr->exprhdlr != SCIPgetConsExprExprHdlrVar(conshdlr)
       && expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
-      printf("add auxiliary variable for expression %p\n", (void*)expr);
+      char name[SCIP_MAXSTRLEN];
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
 
       /* @todo add an unique variable name */
-      SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
+     ++(conshdlrdata->auxvarid);
+
+      SCIPdebugMessage("add auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
       /* add variable locks in both directions */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
@@ -3018,7 +3059,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
       assert(expr->exprhdlr != SCIPgetConsExprExprHdlrVar(conshdlr));
       assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
 
-      printf("remove auxiliary variable for expression %p\n", (void*)expr);
+      SCIPdebugMessage("remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
       /* remove variable locks; @todo is this necessary? */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
@@ -3102,6 +3143,131 @@ SCIP_RETCODE freeAuxVars(
       {
          SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, freeAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback for separating a given solution */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
+{
+   SEPA_DATA* sepadata;
+
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   sepadata = (SEPA_DATA*)data;
+   assert(sepadata != NULL);
+   assert(sepadata->result != SCIP_CUTOFF);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* skip expression if it has been considered already */
+   if( sepadata->sepatag != 0 && sepadata->sepatag == expr->sepatag )
+   {
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+      return SCIP_OKAY;
+   }
+
+   /* it only makes sense to call the separation callback if there is a variable attached to the expression */
+   if( expr->exprhdlr->sepa != NULL && expr->auxvar != NULL )
+   {
+      SCIP_RESULT separesult;
+      int ncuts;
+
+      separesult = SCIP_DIDNOTFIND;
+      ncuts = 0;
+
+      /* call the separation callback of the expression handler */
+      SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minefficacy, &separesult, &ncuts) );
+
+      assert(ncuts >= 0);
+      sepadata->ncuts += ncuts;
+
+      if( separesult == SCIP_CUTOFF )
+      {
+         SCIPdebugMessage("found a cutoff -> stop separation\n");
+         sepadata->result = SCIP_CUTOFF;
+         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      }
+      else if( separesult == SCIP_SEPARATED )
+      {
+         SCIPdebugMessage("found %d cuts separating the current solution\n", ncuts);
+         sepadata->result = SCIP_SEPARATED;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** tries to separate solution or LP solution by a linear cut
+ *
+ *  assumes that constraint violations have been computed
+ */
+static
+SCIP_RETCODE separatePoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of constraints that seem to be useful */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
+   SCIP_RESULT*          result              /**< result of separation */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SEPA_DATA sepadata;
+   int c;
+
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= nusefulconss);
+   assert(minefficacy >= 0.0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+
+      /* skip constraints that are not enabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* initialize separation data */
+      sepadata.conshdlr = conshdlr;
+      sepadata.sol = sol;
+      sepadata.minefficacy = minefficacy;
+      sepadata.result = SCIP_DIDNOTFIND;
+      sepadata.ncuts = 0;
+      sepadata.sepatag = ++(conshdlrdata->lastsepatag);
+
+      /* walk through the expression tree and call separation callback functions */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, separateSolEnterExpr, NULL, NULL, NULL, (void*)&sepadata) );
+
+      if( sepadata.result == SCIP_CUTOFF || sepadata.result == SCIP_SEPARATED )
+      {
+         assert(sepadata.ncuts > 0);
+         *result = sepadata.result;
+
+         if( *result == SCIP_CUTOFF )
+            return SCIP_OKAY;
+      }
+
+      /* enforce only useful constraints; others are only checked and enforced if we are still feasible or have not
+       * found a separating cut yet
+       */
+      if( c >= nusefulconss && *result == SCIP_SEPARATED )
+         break;
    }
 
    return SCIP_OKAY;
@@ -3443,9 +3609,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       SCIPenableNLP(scip);
    }
 
-   /* add auxiliary variables to expressions */
-   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
-
    return SCIP_OKAY;
 }
 
@@ -3575,18 +3738,15 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 0
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   /* add auxiliary variables to expressions */
+   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
-#else
-#define consInitlpExpr NULL
-#endif
 
 
 /** separation method of constraint handler for LP solutions */
@@ -3620,16 +3780,27 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Real minefficacy;
+   SCIP_Real maxviol;
    int nnotify;
    int c;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlr != NULL);
+
    *result = SCIP_FEASIBLE;
+   maxviol = 0.0;
+
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
-
       consdata = SCIPconsGetData(conss[c]);
+
+      /* compute max violation */
+      maxviol = MAX(maxviol, MAX(consdata->lhsviol, consdata->rhsviol));
+
       if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
       {
          *result = SCIP_INFEASIBLE;
@@ -3638,6 +3809,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    }
 
    if( *result == SCIP_FEASIBLE )
+      return SCIP_OKAY;
+
+   /* try to separate the LP solution */
+   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, result) );
+
+   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
 
    /* find branching candidates */
@@ -4325,6 +4504,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    return SCIP_OKAY;
 }
 
+/** set the separation callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa))      /**< separation callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->sepa = sepa;
+
+   return SCIP_OKAY;
+}
+
 /** set the reverse propagation callback of an expression handler */
 SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
    SCIP*                      scip,          /**< SCIP data structure */
@@ -4934,6 +5128,16 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    return expr->exprdata;
 }
 
+/** gets the auxiliary variable stored at an expression (might be NULL) */
+SCIP_VAR* SCIPgetConsExprExprAuxVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->auxvar;
+}
+
 /** sets the expression data of an expression
  *
  * The pointer to possible old data is overwritten and the
@@ -5280,6 +5484,33 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 #endif
+      }
+
+      /* tighten bounds of auxiliary variable; @todo merge this with the case above? */
+      if( expr->auxvar != NULL )
+      {
+         SCIP_Bool tightened;
+         SCIP_Bool auxvarcutoff;
+
+         SCIPdebugMessage("tighten bounds of %s: [%e, %e] -> ", SCIPvarGetName(expr->auxvar), SCIPvarGetLbLocal(expr->auxvar),
+            SCIPvarGetUbLocal(expr->auxvar));
+
+         SCIP_CALL( SCIPtightenVarLb(scip, expr->auxvar, SCIPintervalGetInf(expr->interval), FALSE, &auxvarcutoff,
+               &tightened) );
+         if( auxvarcutoff )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPtightenVarUb(scip, expr->auxvar, SCIPintervalGetSup(expr->interval), FALSE, &auxvarcutoff, &tightened) );
+         if( auxvarcutoff )
+         {
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+
+         SCIPdebugPrintf("[%e, %e]\n", SCIPvarGetLbLocal(expr->auxvar), SCIPvarGetUbLocal(expr->auxvar) );
       }
    }
 
@@ -5769,6 +6000,14 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
+         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
+         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
+         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
+         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",

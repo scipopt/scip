@@ -50,6 +50,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa));          /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
 };
@@ -68,7 +69,9 @@ struct SCIP_ConsExpr_Expr
    int                     nlockspos;     /**< positive locks counter */
    int                     nlocksneg ;    /**< negative locks counter */
 
+   /* separatio */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
+   unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
 
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
