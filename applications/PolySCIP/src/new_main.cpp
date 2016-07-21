@@ -36,8 +36,8 @@ int main(int argc, char** argv) {
         if (polyscip.writeResults())
             polyscip.writeSupportedResults();
         else
-            polyscip.printSupportedResults(std::cout, false);
-        polyscip.writeFileForVertexEnumeration();
+            polyscip.printResults(std::cout, false);
+        //polyscip.writeFileForVertexEnumeration();
     }
     catch (TCLAP::ArgException& e) {
         std::cerr << "ERROR: " << e.error() << " " << e.argId() << "\n";

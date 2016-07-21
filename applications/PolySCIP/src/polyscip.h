@@ -51,7 +51,7 @@ namespace polyscip {
 
         void writeFileForVertexEnumeration() const;
 
-        void printSupportedResults(std::ostream& os = std::cout, bool withSolution = true) const;
+        void printResults(std::ostream &os = std::cout, bool withSolution = true) const;
 
     private:
 
@@ -114,9 +114,18 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
-        SCIP_RETCODE computeUnsupported(const OutcomeType& predecessor, const OutcomeType& successor);
+        SCIP_RETCODE computeUnsupported(SCIP_VAR* new_var,
+                                        std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                        std::vector<std::vector<ValueType>>& orig_vals,
+                                        const OutcomeType& predecessor,
+                                        const OutcomeType& successor);
 
-        void solveWeightedTchebycheff(const OutcomeType& predecessor, const OutcomeType& successor);
+        SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
+                                              const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                              const std::vector<std::vector<ValueType>>& orig_vals,
+                                              const OutcomeType& predecessor,
+                                              const OutcomeType& successor,
+                                              const OutcomeType& reference_point);
 
         void printSol(const SolType& sol, std::ostream& os) const;
 

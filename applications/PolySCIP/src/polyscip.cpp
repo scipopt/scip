@@ -133,20 +133,62 @@ namespace polyscip {
     }
 
     SCIP_RETCODE Polyscip::computeUnsupported() {
-        //auto constraint_pairs = weight_space_poly_->getConstraintsForUnsupported();
-        std::sort(begin(supported_), end(supported_), [](const Result& res1, const Result& res2){return res1.second < res2.second;});
         if (SCIPisTransformed(scip_))
             SCIP_CALL( SCIPfreeTransform(scip_) );
+        // change objective values of existing variabless to zero
+        auto vars = SCIPgetOrigVars(scip_);
+        auto no_vars = SCIPgetNOrigVars(scip_);
+        for (auto i=0; i<no_vars; ++i) {
+            SCIP_CALL( SCIPchgVarObj(scip_, vars[i], 0.) );
+        }
+        // add new variable with objective value = 1 (for transformed Tchebycheff norm objective)
+        SCIP_VAR* z = nullptr;
+        SCIP_CALL( SCIPcreateVarBasic(scip_,
+                                      addressof(z),
+                                      "z",
+                                      -SCIPinfinity(scip_),
+                                      SCIPinfinity(scip_),
+                                      1,
+                                      SCIP_VARTYPE_CONTINUOUS) );
+        assert (z != nullptr);
+        SCIP_CALL( SCIPaddVar(scip_, z) );
+
+        // get variables (excluding new variable z) with nonzero objective coefficients
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        auto nonzero_obj_orig_vars = vector<vector<SCIP_VAR*>>{}; // excluding new variable z
+        auto nonzero_obj_orig_vals = vector<vector<ValueType>>{}; // excluding objective value of new variable z
+        for (auto obj_ind : considered_objs_) {
+            nonzero_obj_orig_vars.push_back(obj_probdata->getNonZeroCoeffVars(obj_ind));
+            assert (!nonzero_obj_orig_vars.empty());
+            auto nonzero_obj_vals = vector<ValueType>{};
+            std::transform(nonzero_obj_orig_vars.back().cbegin(),
+                           nonzero_obj_orig_vars.back().cend(),
+                           std::back_inserter(nonzero_obj_vals),
+                           [obj_ind, obj_probdata](SCIP_VAR *var) { return obj_probdata->getObjCoeff(var, obj_ind); });
+            nonzero_obj_orig_vals.push_back(std::move(nonzero_obj_vals));
+        }
+
+        std::sort(begin(supported_), end(supported_), [](const Result& res1, const Result& res2){return res1.second < res2.second;});
         for (auto res = supported_.cbegin(); res != std::prev(supported_.cend()); ++res) {
             auto& pred = res->second;
             auto& succ = std::next(res)->second;
-
-            SCIP_CALL( computeUnsupported(pred, succ) );
+            SCIP_CALL( computeUnsupported(z, nonzero_obj_orig_vars, nonzero_obj_orig_vals, pred, succ) );
         }
+
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL( SCIPfreeTransform(scip_) );
+        SCIP_Bool* var_deleted = nullptr;
+        SCIP_CALL( SCIPdelVar(scip_, z, var_deleted) );
+        assert (var_deleted!= nullptr && *var_deleted);
+        SCIP_CALL( SCIPreleaseVar(scip_, addressof(z)) );
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::computeUnsupported(const OutcomeType& pred, const OutcomeType& succ) {
+    SCIP_RETCODE Polyscip::computeUnsupported(SCIP_VAR* new_var,
+                                              vector<vector<SCIP_VAR*>>& orig_vars,
+                                              vector<vector<ValueType>>& orig_vals,
+                                              const OutcomeType& pred,
+                                              const OutcomeType& succ) {
         assert (pred.size() == succ.size());
         auto ref_point = OutcomeType(pred.size(),0.);
         auto upper_point = OutcomeType(pred.size(), 0.);
@@ -156,38 +198,31 @@ namespace polyscip {
         std::transform(pred.cbegin(), pred.cend(),
                        succ.cbegin(), begin(upper_point),
                        [](ValueType a, ValueType b){return std::max(a,b);});
-        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
 
         // create and add constraints for each objective
         auto constraints = vector<SCIP_CONS*>{};
-        size_t obj_count = 0;
-        for (auto obj_ind : considered_objs_) {
+        assert (orig_vars.size() == orig_vals.size());
+        for (size_t i=0; i<orig_vars.size(); ++i) {
             SCIP_CONS* cons = nullptr;
-            int nvars = global::narrow_cast<int>(obj_probdata->getNumberNonzeroCoeffs(obj_ind));
-            assert (nvars != 0);
-            auto nonzero_vars = obj_probdata->getNonZeroCoeffVars(obj_ind);
-            auto nonzero_vals = vector<SCIP_Real>(nonzero_vars.size(),0.);
-            std::transform(nonzero_vars.cbegin(),
-                           nonzero_vars.cend(),
-                           begin(nonzero_vals),
-                           [obj_ind, obj_probdata](SCIP_VAR* var){return obj_probdata->getObjCoeff(var, obj_ind);});
+            auto cons_name = std::to_string(i) + "obj constraint";
             SCIP_CALL( SCIPcreateConsBasicLinear(scip_,
                                                  addressof(cons),
-                                                 "compute unsupported",
-                                                 nvars,
-                                                 nonzero_vars.data(),
-                                                 nonzero_vals.data(),
-                                                 ref_point[obj_count],
-                                                 upper_point[obj_count]) );
+                                                 cons_name.data(),
+                                                 orig_vars[i].size(),
+                                                 orig_vars[i].data(),
+                                                 orig_vals[i].data(),
+                                                 ref_point[i],
+                                                 upper_point[i]) );
             assert (cons != nullptr);
             SCIP_CALL( SCIPaddCons(scip_, cons) );
             constraints.push_back(cons);
-            ++obj_count;
         }
 
-        solveWeightedTchebycheff(pred, succ);
+        solveWeightedTchebycheff(new_var, orig_vars, orig_vals, pred, succ, ref_point);
 
         // release and delete constraints
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL( SCIPfreeTransform(scip_) );
         for (auto cons : constraints) {
             SCIP_CALL( SCIPdelCons(scip_, cons) );
             SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
@@ -196,11 +231,82 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    void Polyscip::solveWeightedTchebycheff(const OutcomeType& predecessor, const OutcomeType& successor) {
-        assert (predecessor.size() == successor.size());
-        assert (predecessor.size() > 1);
-        auto weight_space_size = predecessor.size() - 1;
-        
+    SCIP_RETCODE Polyscip::solveWeightedTchebycheff(SCIP_VAR* new_var,
+                                            const vector<vector<SCIP_VAR*>>& orig_vars,
+                                            const vector<vector<ValueType>>& orig_vals,
+                                            const OutcomeType& pred,
+                                            const OutcomeType& succ,
+                                            const OutcomeType& ref_point) {
+        assert (pred.size() == succ.size());
+        assert (ref_point.size() == pred.size());
+        assert (ref_point.size() == orig_vars.size());
+        assert (orig_vars.size() == orig_vals.size());
+        assert (pred.size() > 1);
+
+        auto beta = vector<ValueType>(ref_point.size(), 1.);
+        auto constraints = vector<SCIP_CONS*>{};
+
+        for (size_t i=0; i<ref_point.size(); ++i) {
+            auto vars = vector<SCIP_VAR*>(begin(orig_vars[i]), end(orig_vars[i]));
+            auto vals = vector<ValueType>(orig_vals[i].size(),0.);
+            auto beta_i = beta[i];
+            std::transform(begin(orig_vals[i]),
+                           end(orig_vals[i]),
+                           begin(vals),
+                           [beta_i](ValueType val){return beta_i*val;});
+
+            // add contraint new_var >= beta_i * (vals*vars - ref_point[i])
+            SCIP_CONS* cons = nullptr;
+            auto cons_name = std::to_string(i) + "th beta weighted constraint";
+            vars.push_back(new_var);
+            vals.push_back(-1.);
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip_,
+                                                 addressof(cons),
+                                                 cons_name.data(),
+                                                 vars.size(),
+                                                 vars.data(),
+                                                 vals.data(),
+                                                 -SCIPinfinity(scip_),
+                                                 beta_i*ref_point[i]) );
+
+            assert (cons != nullptr);
+            SCIP_CALL( SCIPaddCons(scip_, cons) );
+            constraints.push_back(cons);
+        }
+
+        SCIP_CALL( solve() );
+        auto scip_status = SCIPgetStatus(scip_);
+        if (scip_status == SCIP_STATUS_OPTIMAL) {
+            auto best_sol = SCIPgetBestSol(scip_);
+            SCIP_SOL *finite_sol{nullptr};
+            SCIP_Bool same_obj_val{FALSE};
+            SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
+
+            if (!same_obj_val) {
+                auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
+                                     SCIPgetSolOrigObj(scip_, finite_sol));
+                if (diff > 1.0e-5) {
+                    std::cerr << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
+                    SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
+                    throw std::runtime_error("SCIPcreateFiniteSolCopy: unacceptable difference in objective values.");
+                }
+            }
+            assert (finite_sol != nullptr);
+            unbounded_.push_back(getResult(true, finite_sol));
+        }
+        else {
+            throw std::runtime_error("unexpected status in for weighted Tchebycheff problem\n");
+        }
+
+        // release and delete constraints
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL( SCIPfreeTransform(scip_) );
+        for (auto cons : constraints) {
+            SCIP_CALL( SCIPdelCons(scip_, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
+        }
+
+        return SCIP_OKAY;
     }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
@@ -445,9 +551,10 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    void Polyscip::printSupportedResults(ostream& os, bool withSolutions) const {
+    void Polyscip::printResults(ostream &os, bool withSolutions) const {
         os << "Number of supported bounded results: " << supported_.size() << "\n";
         os << "Number of supported unbounded results: " << unbounded_.size() << "\n";
+        os << "Number of unsupported bounded results: " << unsupported_.size() << "\n";
         for (const auto& result : supported_) {
             printPoint(result.second, os);
             if (withSolutions)
@@ -456,6 +563,12 @@ namespace polyscip {
         }
         for (const auto& result : unbounded_) {
             printRay(result.second, os);
+            if (withSolutions)
+                printSol(result.first, os);
+            os << "\n";
+        }
+        for (const auto& result : unsupported_) {
+            printPoint(result.second, os);
             if (withSolutions)
                 printSol(result.first, os);
             os << "\n";
@@ -741,7 +854,7 @@ namespace polyscip {
             write_path.push_back('/');
         std::ofstream solfs(write_path + file_name);
         if (solfs.is_open()) {
-            printSupportedResults(solfs);
+            printResults(solfs);
             solfs.close();
             cout << "#Solution file " << file_name
             << " written to: " << write_path << "\n";
