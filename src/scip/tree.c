@@ -4231,7 +4231,7 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( SCIPconflictstoreCleanSwitching(conflictstore, set, stat, blkmem, transprob, switchinglength) );
 
       /* clean the fork */
-      fork = NULL;
+//      fork = NULL;
    }
 
    /* remember the depth of the common fork node for LP updates */

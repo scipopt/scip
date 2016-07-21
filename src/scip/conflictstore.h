@@ -56,6 +56,18 @@ SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_EVENTFILTER*     eventfilter
    );
 
+extern
+SCIP_RETCODE SCIPconflictstoreAddDualray(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONS*            dualray,            /**< dual ray to add */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool             cutoffroot,         /**< the dual ray separates the root LP solution */
+   SCIP_Bool*            success
+   );
+
 /** adds a conflict to the conflict storage */
 extern
 SCIP_RETCODE SCIPconflictstoreAddConflict(
@@ -94,6 +106,15 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            transprob,          /**< transformed problem*/
    SCIP_Real             cutoffbound         /**< current cutoff bound */
+   );
+
+extern
+SCIP_RETCODE SCIPconflictstoreDualRayStats(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   int                   initsize,
+   int                   heursize,
+   int                   nconfsets,
+   int                   nclauses
    );
 
 #ifdef __cplusplus

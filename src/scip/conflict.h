@@ -579,9 +579,15 @@ SCIP_Longint SCIPconflictGetNDualrayInfCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of successful calls to infeasible dualray analysis that */
+/** gets number of successful calls to infeasible dualray analysis */
 extern
 SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of infeasible dualrays separating root LP solution */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfSepaRootsol(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -655,6 +661,12 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** gets time in seconds used for analyzing dualray of infeasible LPs */
+extern
+SCIP_Real SCIPconflictGetDualrayInfTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets time in seconds used for analyzing pseudo solution conflicts */

@@ -138,6 +138,7 @@ struct SCIP_Conflict
    SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence constraints */
    SCIP_Longint          ndualrayinfcalls;   /**< number of dualray analysis calls for infeasible LPs */
    SCIP_Longint          ndualrayinfsuccess; /**< number of successfully dualray analysis calls for infeasible LPs */
+   SCIP_Longint          ndualrayinfseparoot;/**< number of infeasible dualrays separating the root LP solution */
 
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 

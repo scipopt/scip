@@ -36,7 +36,12 @@ struct SCIP_ConflictStore
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to catch improving solutions */
    SCIP_CONS**           conflicts;          /**< array with conflicts */
+#if 0
+   SCIP_CONS**           dualrays;           /**< queue of dual rays */
+#else
    SCIP_QUEUE*           dualrays;           /**< queue of dual rays */
+#endif
+   SCIP_QUEUE*           rootdualrays;       /**< queue of dual rays */
    SCIP_Real*            primalbounds;       /**< array of primal bounds valid at the time the corresponding bound exceeding
                                                *   conflict was found (-infinity if the conflict as based on an infeasible LP) */
    SCIP_QUEUE*           slotqueue;          /**< queue of empty slots in the conflicts and primalbounds array */
@@ -46,6 +51,7 @@ struct SCIP_ConflictStore
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
    int                   conflictsize;       /**< size of conflict array (bounded by conflict->maxpoolsize) */
    int                   nconflicts;         /**< number of stored conflicts */
+   int                   ndualrays;          /**< number of stored dualrays */
    int                   ncbconflicts;       /**< number of conflicts depending on cutoff bound */
    int                   nconflictsfound;    /**< total number of conflicts found so far */
    int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */
