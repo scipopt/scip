@@ -8800,6 +8800,9 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* free stack of variables fixed to nonzero (usually already freed in consExitsolSOS1 unless instance was solved during presolving) */
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
+
    SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
