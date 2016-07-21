@@ -22072,7 +22072,7 @@ SCIP_RETCODE relabelOrderConsistent(
    int componentidx;
    int i;
 
-   SCIP_CALL( SCIPhashmapCreate(&compidx2varcomp, SCIPblkmem(scip), 2 * nlabels) );
+   SCIP_CALL( SCIPhashmapCreate(&compidx2varcomp, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nlabels)) );
 
    componentidx = 0;
 
@@ -22090,17 +22090,17 @@ SCIP_RETCODE relabelOrderConsistent(
       }
       else
       {
+         assert(currentlabel >= 0);
          /* look up the component index image in the hash map; if it is not stored yet, new component index is created and stored */
-         int compidximage = (int)SCIPhashmapGetImage(compidx2varcomp, (void*)currentlabel);
-         if( compidximage == 0 )
+         if( !SCIPhashmapExists(compidx2varcomp, (void*)(size_t)currentlabel) )
          {
             ++componentidx;
             localclqcompidx = componentidx;
-            SCIPhashmapInsert(compidx2varcomp, (void*)currentlabel, (void *)componentidx);
+            SCIPhashmapInsert(compidx2varcomp, (void*)(size_t)currentlabel, (void *)(size_t)componentidx);
          }
          else
          {
-            localclqcompidx = compidximage;
+            localclqcompidx = (int)(size_t)SCIPhashmapGetImage(compidx2varcomp, (void*)(size_t)currentlabel);
          }
       }
       assert(localclqcompidx - 1 >= 0);
