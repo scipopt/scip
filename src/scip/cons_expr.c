@@ -3800,7 +3800,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
       consdata = SCIPconsGetData(conss[c]);
 
       /* compute max violation */
-      maxviol = MAX(maxviol, MAX(consdata->lhsviol, consdata->rhsviol));
+      maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
 
       if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
       {
