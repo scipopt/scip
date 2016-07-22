@@ -1432,8 +1432,11 @@ SCIP_RETCODE separatePointSum(
    SCIP_VAR* auxvar;
    int c;
 
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0);
    assert(cut != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1751,27 +1754,38 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
+/** helper function to separate a given point; needed for proper unittest */
 static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
+SCIP_RETCODE separatePointProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* auxvar;
    SCIP_VAR* var;
-   SCIP_ROW* cut;
    SCIP_Real violation;
    SCIP_Bool overestimate;
    SCIP_Bool success;
    int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") == 0);
+   assert(cut != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
-   *result = SCIP_DIDNOTFIND;
-   *ncuts = 0;
+   *cut = NULL;
 
    /* compute violation of the expression by evaluating auxiliary variables */
    violation = exprdata->constant;
@@ -1796,9 +1810,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 
    overestimate = SCIPisLT(scip, violation, 0.0);
    success = FALSE;
-
-   SCIP_CALL( SCIPcreateRowCons(scip, &cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
-         SCIPinfinity(scip), FALSE, FALSE, FALSE) );
 
    /* square term */
    if( SCIPgetConsExprExprNChildren(expr) == 1 && exprdata->coefficients[0] == 2.0 )
@@ -1833,16 +1844,19 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 
       if( success )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, cut, x, lincoef) );
-         SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, -1.0) );
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
+               SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoef) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
 
          if( overestimate )
          {
-            SCIP_CALL( SCIPchgRowLhs(scip, cut, -linconstant) );
+            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
          }
          else
          {
-            SCIP_CALL( SCIPchgRowRhs(scip, cut, -linconstant) );
+            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
          }
       }
    }
@@ -1893,17 +1907,20 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 
       if( success )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, cut, x, lincoefx) );
-         SCIP_CALL( SCIPaddVarToRow(scip, cut, y, lincoefy) );
-         SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, -1.0) );
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
+               SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
 
          if( overestimate )
          {
-            SCIP_CALL( SCIPchgRowLhs(scip, cut, -linconstant) );
+            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
          }
          else
          {
-            SCIP_CALL( SCIPchgRowRhs(scip, cut, -linconstant) );
+            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
          }
       }
    }
@@ -1912,29 +1929,43 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
       /* @todo can not be handled so far */
    }
 
-   if( success )
+   return SCIP_OKAY;
+}
+
+
+/** expression separation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
+{
+   SCIP_ROW* cut;
+   SCIP_Real efficacy;
+   SCIP_Bool infeasible;
+
+   *result = SCIP_DIDNOTFIND;
+   *ncuts = 0;
+
+   /* try to find a cut */
+   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, &cut) );
+
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+
+   /* add cut if it is violated */
+   if( SCIPisGE(scip, efficacy, minefficacy) )
    {
-      SCIP_Real efficacy;
-
-      efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
-
-      /* add cut if it is violated */
-      if( SCIPisGE(scip, efficacy, minefficacy) )
-      {
-         SCIP_Bool infeasible;
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-         *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-         *ncuts += 1;
+      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
-         SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
-      }
    }
 
-   /* release memory */
+   /* release cut */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
    return SCIP_OKAY;
