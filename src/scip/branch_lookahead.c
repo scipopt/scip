@@ -44,11 +44,6 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define BOUNDSTATUS_NONE           0
-#define BOUNDSTATUS_UPPERBOUND     1
-#define BOUNDSTATUS_LOWERBOUND     2
-#define BOUNDSTATUS_BOTH           3
-
 /*
  * Data structures
  */
@@ -60,6 +55,15 @@ struct SCIP_BranchruleData
 {
    SCIP_Bool somerandomfield;
 };
+
+enum BoundStatus
+{
+   BOUNDSTATUS_NONE = 0,
+   BOUNDSTATUS_UPPERBOUND,
+   BOUNDSTATUS_LOWERBOUND,
+   BOUNDSTATUS_BOTH
+};
+typedef enum BoundStatus BOUNDSTATUS;
 
 typedef struct
 {
@@ -486,82 +490,149 @@ SCIP_RETCODE calculateCurrentWeight(
 }
 
 static
-SCIP_RETCODE addVarCutoffBound(
-   SCIP_VAR*             cutoffvartoadd,
-   SCIP_Real             cutoffvaltoadd,
-   SCIP_VAR**            cutoffvars,
-   SCIP_Real*            cutoffvals,
-   int*                  cutoffindexmapping, /* global index to corresponding index in cutoffvals and cutoffvars */
-   int*                  ncutoffs,
-   SCIP_Bool             isdowncutoff
+SCIP_RETCODE handleNewLowerBound(
+   SCIP*                 scip,
+   SCIP_VAR*             lowerboundvar,
+   SCIP_Real             lowerboundval
 )
 {
-   int globalvarindex;
-   int localvarindex;
-   SCIP_Real valtoinsert;
-
-   globalvarindex = SCIPvarGetProbindex(cutoffvartoadd);
-   localvarindex = cutoffindexmapping[globalvarindex];
-
-   if( localvarindex == -1 ) /* TODO CS: default value for int? maybe -1? how to set it efficiently? */
-   {
-      cutoffindexmapping[globalvarindex] = *ncutoffs;
-      localvarindex = *ncutoffs;
-      cutoffvars[localvarindex] = cutoffvartoadd;
-      valtoinsert = cutoffvaltoadd;
-      *ncutoffs = *ncutoffs + 1;
-   }
-   else if( isdowncutoff )
-   {
-      valtoinsert = MIN(cutoffvals[localvarindex], cutoffvaltoadd);
-   }
-   else
-   {
-      valtoinsert = MAX(cutoffvals[localvarindex], cutoffvaltoadd);
-   }
-   cutoffvals[localvarindex] = valtoinsert;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+   SCIP_CALL( SCIPtightenVarLb(scip, lowerboundvar, lowerboundval, FALSE, &infeasible, &tightened) );
+   /* TODO: check the given pointer? */
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE handleCutoffs(
+SCIP_RETCODE handleNewUpperBound(
    SCIP*                 scip,
-   SCIP_NODE*            basenode,
-   SCIP_VAR**            cutoffvars,
-   SCIP_Real*            cutoffvals,
-   int                   ncutoffs,
-   SCIP_Bool             isdowncutoff
+   SCIP_VAR*             upperboundvar,
+   SCIP_Real             upperboundval
+)
+{
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+   SCIP_CALL( SCIPtightenVarUb(scip, upperboundvar, upperboundval, FALSE, &infeasible, &tightened) );
+   /* TODO: check the given pointer? */
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE handleNewBounds(
+   SCIP*                 scip,
+   BOUNDSTATUS*          boundstatus,
+   SCIP_Real*            newlowerbounds,
+   SCIP_Real*            newupperbounds,
+   SCIP_RESULT*          result
 )
 {
    int i;
+   int nprobvars;
+   SCIP_VAR** probvars;
 
-   for( i = 0; i < ncutoffs; i++ )
+   nprobvars = SCIPgetNVars(scip);
+   probvars = SCIPgetVars(scip);
+
+   for( i = 0; i < nprobvars; i++ )
    {
-      SCIP_VAR* cutoffvar;
-      SCIP_Real cutoffbound;
-      SCIP_Real oldlowerbound;
-      SCIP_Real oldupperbound;
+      BOUNDSTATUS status;
+      SCIP_VAR* branchvar;
 
-      cutoffvar = cutoffvars[i];
-
-      oldupperbound = SCIPvarGetUbLocal(cutoffvar);
-      oldlowerbound = SCIPvarGetLbLocal(cutoffvar);
-
-      if( isdowncutoff )
+      status = boundstatus[i];
+      branchvar = probvars[i];
+      if( status == BOUNDSTATUS_LOWERBOUND || status == BOUNDSTATUS_BOTH )
       {
-         cutoffbound = SCIPfeasCeil(scip, cutoffvals[i]);
-         if( SCIPisFeasLT(scip, oldlowerbound, cutoffbound) && SCIPisFeasLE(scip, cutoffbound, oldupperbound) )
-         {
-            SCIP_CALL( SCIPchgVarLbNode(scip, basenode, cutoffvar, cutoffbound) );
-         }
+         SCIP_Real newlowerbound = newlowerbounds[i];
+         SCIP_CALL( handleNewLowerBound(scip, branchvar, newlowerbound) );
+      }
+      if( status == BOUNDSTATUS_UPPERBOUND || status == BOUNDSTATUS_BOTH )
+      {
+         SCIP_Real newupperbound = newupperbounds[i];
+         SCIP_CALL( handleNewUpperBound(scip, branchvar, newupperbound) );
+      }
+
+      if( status != BOUNDSTATUS_NONE )
+      {
+         /* Reset the array s.t. it only contains zero values. */
+         boundstatus[i] = BOUNDSTATUS_NONE;
+         *result = SCIP_REDUCEDDOM;
+      }
+   }
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE addNewUpperBound(
+   SCIP*                 scip,
+   SCIP_VAR*             branchvar,
+   SCIP_Real             newupperbound,
+   SCIP_Real*            newupperbounds,
+   BOUNDSTATUS*          boundstatus
+)
+{
+   int varindex;
+   BOUNDSTATUS status;
+
+   varindex = SCIPvarGetProbindex(branchvar);
+   status = boundstatus[varindex];
+
+   if( status == BOUNDSTATUS_UPPERBOUND || status == BOUNDSTATUS_BOTH )
+   {
+      /* we already have a valid new upper bound set, so we have to take the minimum of the previous and the new
+       * "newupperbound". */
+      SCIP_Real prevnewupperbound = newupperbounds[varindex];
+      newupperbounds[varindex] = MIN(newupperbound, prevnewupperbound);
+   }
+   else
+   {
+      /* We either have no new bounds or only a lower bound for our var, so we can set the new upper bound directly. */
+      newupperbounds[varindex] = newupperbound;
+      if( status == BOUNDSTATUS_NONE )
+      {
+         boundstatus[varindex] = BOUNDSTATUS_UPPERBOUND;
       }
       else
       {
-         cutoffbound = SCIPfeasFloor(scip, cutoffvals[i]);
-         if( SCIPisFeasLE(scip, oldlowerbound, cutoffbound) && SCIPisFeasLT(scip, cutoffbound, oldupperbound) )
-         {
-            SCIP_CALL( SCIPchgVarUbNode(scip, basenode, cutoffvar, cutoffbound) );
-         }
+         boundstatus[varindex] = BOUNDSTATUS_BOTH;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE addNewLowerBound(
+   SCIP*                 scip,
+   SCIP_VAR*             branchvar,
+   SCIP_Real             newlowerbound,
+   SCIP_Real*            newlowerbounds,
+   BOUNDSTATUS*          boundstatus
+)
+{
+   int varindex;
+   BOUNDSTATUS status;
+
+   varindex = SCIPvarGetProbindex(branchvar);
+   status = boundstatus[varindex];
+
+   if( status == BOUNDSTATUS_LOWERBOUND || status == BOUNDSTATUS_BOTH )
+   {
+      /* we already have a valid new lower bound set, so we have to take the minimum of the previous and the new
+       * "newlowerbound". */
+      SCIP_Real prevnewupperbound = newlowerbounds[varindex];
+      newlowerbounds[varindex] = MAX(newlowerbound, prevnewupperbound);
+   }
+   else
+   {
+      /* We either have no new bounds or only a upper bound for our var, so we can set the new lower bound directly. */
+      newlowerbounds[varindex] = newlowerbound;
+      if( status == BOUNDSTATUS_NONE )
+      {
+         boundstatus[varindex] = BOUNDSTATUS_LOWERBOUND;
+      }
+      else
+      {
+         boundstatus[varindex] = BOUNDSTATUS_BOTH;
       }
    }
 
@@ -605,30 +676,14 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       int nglobalvars;
 
-      /* TODO: add usage of these arrays. */
       SCIP_Real* newupperbounds;
       SCIP_Real* newlowerbounds;
-      int* boundstatus;
-      int* boundedindices;
-      int nboundedindices;
-
-      /*TODO: remove usage of these arrays. */
-      SCIP_VAR** downcutoffvars;
-      SCIP_Real* downcutoffvals;
-      int* downcutoffindexmapping; /* global index to corresponding index in downcutoffvals and downcutoffvars */
-      int ndowncutoffs;
-
-      /*TODO: remove usage of these arrays. */
-      SCIP_Real* upcutoffvals;
-      SCIP_VAR** upcutoffvars;
-      int* upcutoffindexmapping; /* global index to corresponding index in upcutoffvals and upcutoffvars */
-      int nupcutoffs;
+      BOUNDSTATUS* boundstatus;
 
       SCIP_Real lpobjval;
       SCIP_Real highestscore = 0;
       int highestscoreindex = -1;
       int i;
-      SCIP_NODE* basenode;
 
       nglobalvars = SCIPgetNVars(scip);
 
@@ -636,32 +691,14 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_CALL( SCIPallocMemory(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocMemory(scip, &scoredata) );
 
+      SCIP_CALL( SCIPallocBufferArray(scip, &newupperbounds, nglobalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlowerbounds, nglobalvars) );
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &boundstatus, nglobalvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &boundedindices, nglobalvars) );
-      nboundedindices = 0;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffvals, nglobalvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffvars, nglobalvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &downcutoffindexmapping, nglobalvars) );
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &upcutoffvals, nglobalvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &upcutoffvars, nglobalvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &upcutoffindexmapping, nglobalvars) );
 
       SCIP_CALL( initBranchingResultData(scip, downbranchingresult) );
       SCIP_CALL( initBranchingResultData(scip, upbranchingresult) );
 
-      /* TODO CS: is there an alternative for this? */
-      for( i = 0; i < nglobalvars; i++ )
-      {
-         downcutoffindexmapping[i] = -1;
-         upcutoffindexmapping[i] = -1;
-      }
-      ndowncutoffs = 0;
-      nupcutoffs = 0;
-
       lpobjval = SCIPgetLPObjval(scip);
-      basenode = SCIPgetCurrentNode(scip);
 
       SCIPdebugMessage("The objective value of the base lp is <%g>.\n", lpobjval);
 
@@ -717,13 +754,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
          else if( upbranchingresult->cutoff )
          {
-            SCIP_CALL(
-               addVarCutoffBound(branchvar, branchval, upcutoffvars, upcutoffvals, upcutoffindexmapping, &nupcutoffs, FALSE));
+            SCIP_CALL( addNewUpperBound(scip, branchvar, branchval, newupperbounds, boundstatus) );
          }
          else if( downbranchingresult->cutoff )
          {
-            SCIP_CALL(
-               addVarCutoffBound(branchvar, branchval, downcutoffvars, downcutoffvals, downcutoffindexmapping, &ndowncutoffs, TRUE));
+            SCIP_CALL( addNewLowerBound(scip, branchvar, branchval, newlowerbounds, boundstatus) );
          }
          else
          {
@@ -735,43 +770,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPdebugMessage("End Probing Mode\n");
       SCIP_CALL( SCIPendProbing(scip) );
 
-      if( nupcutoffs > 0 )
-      {
-         SCIPdebugMessage("There are <%i> upper child cutoffs (with invalid new lower bound) out of <%i> variables \n",
-            nupcutoffs, nlpcands);
+      SCIP_CALL( handleNewBounds(scip, boundstatus, newlowerbounds, newupperbounds, result) );
 
-         SCIP_CALL( handleCutoffs(scip, basenode, upcutoffvars, upcutoffvals, nupcutoffs, FALSE) );
-
-         *result = SCIP_REDUCEDDOM;
-         SCIPdebugMessage("Finished upper child cutoffs.\n");
-      }
-
-      if( ndowncutoffs > 0 )
-      {
-         SCIPdebugMessage("There are <%i> down child cutoffs (with invalid new upper bound) out of <%i> candidates \n",
-            ndowncutoffs, nlpcands);
-
-         SCIP_CALL( handleCutoffs(scip, basenode, downcutoffvars, downcutoffvals, ndowncutoffs, TRUE) );
-
-         *result = SCIP_REDUCEDDOM;
-         SCIPdebugMessage("Finished down child cutoffs.\n");
-      }
-
-
-      SCIPfreeBufferArray(scip, &upcutoffindexmapping);
-      SCIPfreeBufferArray(scip, &upcutoffvars);
-      SCIPfreeBufferArray(scip, &upcutoffvals);
-      /* TODO: ensure correct order*/
-      SCIPfreeBufferArray(scip, &downcutoffindexmapping);
-      SCIPfreeBufferArray(scip, &downcutoffvars);
-      SCIPfreeBufferArray(scip, &downcutoffvals);
-
-      for( i = 0; i < nboundedindices; i++ )
-      {
-         int boundedindex = boundedindices[i];
-         boundstatus[boundedindex] = 0;
-      }
       SCIPfreeCleanBufferArray(scip, &boundstatus);
+      SCIPfreeBufferArray(scip, &newlowerbounds);
+      SCIPfreeBufferArray(scip, &newupperbounds);
 
       SCIPfreeMemory(scip, &scoredata);
       SCIPfreeMemory(scip, &upbranchingresult);
