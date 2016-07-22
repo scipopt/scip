@@ -88,13 +88,6 @@ typedef struct
    SCIP_Bool             nobranch;
 } BranchingResultData;
 
-/*typedef struct
-{
-   SCIP_Real* boundvalues;
-   int* cutoffindices;
-   int ncutoffindices;
-} CutoffData;*/
-
 /*
  * Local methods
  */
@@ -134,19 +127,6 @@ SCIP_RETCODE initBranchingResultData(
    resultdata->nobranch = FALSE;
    return SCIP_OKAY;
 }
-
-/*static
-SCIP_RETCODE initCutoffData(
-   SCIP*                 scip,
-   CutoffData*           cutoffdata,
-   int                   nvariables
-)
-{
-   SCIPallocClearBufferArray(scip, &cutoffdata->boundvalues, nvariables);
-   SCIPallocClearBufferArray(scip, &cutoffdata->cutoffindices, nvariables);
-   cutoffdata->ncutoffindices = 0;
-   return SCIP_OKAY;
-}*/
 
 /**
  * Executes the branching on the current probing node by adding a probing node with a new upper bound.
@@ -199,6 +179,7 @@ SCIP_RETCODE executeBranchingOnUpperBound(
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &resultdata->lperror, &resultdata->cutoff) );
       solstat = SCIPgetLPSolstat(scip);
 
+      /* TODO: add a correct handling of time/iterlimit problems. */
       resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE) ||
             (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -265,6 +246,7 @@ SCIP_RETCODE executeBranchingOnLowerBound(
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &resultdata->lperror, &resultdata->cutoff) );
       solstat = SCIPgetLPSolstat(scip);
 
+      /* TODO: add a correct handling of time/iterlimit problems. */
       resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE) ||
             (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -687,9 +669,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       nglobalvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPallocMemory(scip, &downbranchingresult) );
-      SCIP_CALL( SCIPallocMemory(scip, &upbranchingresult) );
-      SCIP_CALL( SCIPallocMemory(scip, &scoredata) );
+      SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
+      SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
+      SCIP_CALL( SCIPallocBuffer(scip, &scoredata) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &newupperbounds, nglobalvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &newlowerbounds, nglobalvars) );
@@ -705,8 +687,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_CALL( SCIPstartProbing(scip) );
       SCIPdebugMessage("Start Probing Mode\n");
 
-
-      for( i = 0; i < nlpcands; i++ )
+      for( i = 0; i < nlpcands && !SCIPisStopped(scip); i++ )
       {
          SCIP_VAR* branchvar;
          SCIP_Real branchval;
@@ -727,7 +708,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
          if( !downbranchingresult->cutoff )
          {
-            SCIP_CALL( executeDeepBranching(scip, lpobjval, /*downcutoffvars, downcutoffvals, &ndowncutoffs, &downcutoffindexmapping,*/
+            SCIP_CALL( executeDeepBranching(scip, lpobjval,
                &downbranchingresult->cutoff, &scoredata->upperbounddata, &scoredata->ncutoffs) );
          }
 
@@ -776,9 +757,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPfreeBufferArray(scip, &newlowerbounds);
       SCIPfreeBufferArray(scip, &newupperbounds);
 
-      SCIPfreeMemory(scip, &scoredata);
-      SCIPfreeMemory(scip, &upbranchingresult);
-      SCIPfreeMemory(scip, &downbranchingresult);
+      SCIPfreeBuffer(scip, &scoredata);
+      SCIPfreeBuffer(scip, &upbranchingresult);
+      SCIPfreeBuffer(scip, &downbranchingresult);
 
       if( highestscoreindex != -1 )
       {
