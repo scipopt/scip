@@ -180,7 +180,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
    assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
@@ -188,16 +188,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    *result = SCIP_DIDNOTFIND;
    *ncuts = 0;
 
-   if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrVar(conshdlr) )
-   {
-      childvar = SCIPgetConsExprExprVarVar(child);
-   }
-   else
-   {
-      /* this should be handled by the simplyfier */
-      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
-      childvar = SCIPgetConsExprExprAuxVar(child);
-   }
+   childvar = SCIPgetConsExprExprLinearizationVar(child);
    assert(childvar != NULL);
 
    /* check if there is a violation */

@@ -5129,14 +5129,17 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    return expr->exprdata;
 }
 
-/** gets the auxiliary variable stored at an expression (might be NULL) */
-SCIP_VAR* SCIPgetConsExprExprAuxVar(
+/** returns the variable used for linearizing a given expression (return value might be NULL)
+ *
+ * @note for variable expression it returns the corresponding variable
+ */
+SCIP_VAR* SCIPgetConsExprExprLinearizationVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->auxvar;
+   return strcmp(expr->exprhdlr->name, "var") == 0 ? SCIPgetConsExprExprVarVar(expr) : expr->auxvar;
 }
 
 /** sets the expression data of an expression

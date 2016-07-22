@@ -1442,7 +1442,7 @@ SCIP_RETCODE separatePointSum(
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
    assert(auxvar != NULL);
 
    *cut = NULL;
@@ -1458,8 +1458,7 @@ SCIP_RETCODE separatePointSum(
       /* value expressions should have been removed during simplification */
       assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
 
-      vars[c] = SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) ?
-         SCIPgetConsExprExprVarVar(child) : SCIPgetConsExprExprAuxVar(child);
+      vars[c] = SCIPgetConsExprExprLinearizationVar(child);
       assert(vars[c] != NULL);
       coefs[c] = exprdata->coefficients[c];
    }
@@ -1782,7 +1781,7 @@ SCIP_RETCODE separatePointProduct(
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
    assert(auxvar != NULL);
 
    *cut = NULL;
@@ -1796,8 +1795,7 @@ SCIP_RETCODE separatePointProduct(
       /* value expressions should have been removed during simplification */
       assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
 
-      var = SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) ?
-         SCIPgetConsExprExprVarVar(child) : SCIPgetConsExprExprAuxVar(child);
+      var = SCIPgetConsExprExprLinearizationVar(child);
       assert(var != NULL);
 
       violation *= pow(SCIPgetSolVal(scip, sol, var), exprdata->coefficients[c]);
@@ -1821,10 +1819,8 @@ SCIP_RETCODE separatePointProduct(
 
       /* collect variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
-      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) )
-         x = SCIPgetConsExprExprVarVar(child);
-      else
-         x = SCIPgetConsExprExprAuxVar(child);
+      x = SCIPgetConsExprExprLinearizationVar(child);
+      assert(x != NULL);
 
       lincoef = 0.0;
       linconstant = 0.0;
@@ -1873,18 +1869,13 @@ SCIP_RETCODE separatePointProduct(
 
       /* collect first variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
-      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) )
-         x = SCIPgetConsExprExprVarVar(child);
-      else
-         x = SCIPgetConsExprExprAuxVar(child);
+      x = SCIPgetConsExprExprLinearizationVar(child);
+      assert(x != NULL);
 
       /* collect second variable */
       child = SCIPgetConsExprExprChildren(expr)[1];
-      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) )
-         y = SCIPgetConsExprExprVarVar(child);
-      else
-         y = SCIPgetConsExprExprAuxVar(child);
-      assert(x != NULL && y != NULL);
+      y = SCIPgetConsExprExprLinearizationVar(child);
+      assert(y != NULL);
 
       lincoefx = 0.0;
       lincoefy = 0.0;
