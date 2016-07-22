@@ -56,7 +56,6 @@ namespace polyscip {
                        const H_RepC& h_rep)
                 : min_infeas_ind_(false, 0)
         {
-            std::cout << "NEW V_REPT\n";
             auto m_coeff = plus.getSlack(index_of_ineq);
             auto p_coeff = minus.getSlack(index_of_ineq);
             assert (SCIPisPositive(scip, m_coeff));
@@ -204,13 +203,14 @@ namespace polyscip {
                                                            const V_RepT& minus,
                                                            size_t k,
                                                            size_t i,
-                                                           const V_RepC& v_rep) {
+                                                           const V_RepC& v_rep,
+                                                           bool with_adjacency_test) {
             assert (i <= k);
             for (auto index=i+1; index<k; ++index) {
                 if (plus.isZeroSlackIndex(index) && minus.isZeroSlackIndex(index))
                     return;
             }
-            if (rayPairIsAdjacent(plus, minus, v_rep)) {
+            if (!with_adjacency_test || rayPairIsAdjacent(plus, minus, v_rep)) {
                 adj_pairs_.at(k).push_back({std::cref(plus), std::cref(minus)});
             }
         }
@@ -233,35 +233,34 @@ namespace polyscip {
         void DoubleDescriptionMethod::applyInfeasCondition(const V_RepT& r1,
                                                            const V_RepT& r2,
                                                            const V_RepC& v_rep,
-                                                           size_t index
+                                                           size_t index,
+                                                           bool with_adjacency_test
         ) {
             auto infeasTuple = minInfeasCondition(r1, r2);
             if (std::get<0>(infeasTuple)) {
                 if (std::get<1>(infeasTuple) == VarOrder::keep_var_order){
-                    conditionalStoreEdge(r1, r2, std::get<2>(infeasTuple), index, v_rep);
+                    conditionalStoreEdge(r1, r2, std::get<2>(infeasTuple), index, v_rep, with_adjacency_test);
                 }
                 else {
-                    conditionalStoreEdge(r2, r1, std::get<2>(infeasTuple), index, v_rep);
+                    conditionalStoreEdge(r2, r1, std::get<2>(infeasTuple), index, v_rep, with_adjacency_test);
                 }
             }
         }
 
         void DoubleDescriptionMethod::computeVRep_Var1() {
             auto current_v_rep = computeInitialVRep();
-            std::cout << "SIZE OF INITIAL VREP: " << current_v_rep.size() << "\n";
 
             for (auto r1_it=begin(current_v_rep); r1_it!=std::prev(end(current_v_rep)); ++r1_it) {
                 for (auto r2_it=std::next(r1_it); r2_it!=end(current_v_rep); ++r2_it) {
                     const V_RepT& r1 = r1_it->operator*();
                     const V_RepT& r2 = r2_it->operator*();
-                    applyInfeasCondition(r1, r2, current_v_rep, current_hrep_index_);
+                    applyInfeasCondition(r1, r2, current_v_rep, current_hrep_index_, true);
                 }
             }
 
             ++current_hrep_index_;
             while (current_hrep_index_ < h_rep_.size()) {
                 current_v_rep = extendVRep_Var1(std::move(current_v_rep));
-                std::cout << "SIZE OF VREP: " << current_v_rep.size() << "\n";
                 ++current_hrep_index_;
             }
             v_rep_ = current_v_rep;
@@ -285,7 +284,9 @@ namespace polyscip {
             }
 
             for (auto p : adj_pairs_[current_hrep_index_]) {
-                extended_v_rep.push_back(make_shared<V_RepT>(scip_, p.first.get(), p.second.get(), current_hrep_index_, h_rep_));
+                auto new_ray = make_shared<V_RepT>(scip_, p.first.get(), p.second.get(), current_hrep_index_, h_rep_);
+                extended_v_rep.push_back(new_ray);
+                applyInfeasCondition(*new_ray, p.first.get(), extended_v_rep, current_hrep_index_, false);
             }
 
             for (auto r1_it=extended_v_rep.cbegin(); r1_it!=std::prev(extended_v_rep.cend()); ++r1_it) {
@@ -293,8 +294,7 @@ namespace polyscip {
                     const V_RepT& r1 = r1_it->operator*();
                     const V_RepT& r2 = r2_it->operator*();
                     if (r1.isZeroSlackIndex(current_hrep_index_) && r2.isZeroSlackIndex(current_hrep_index_)) {
-
-                        applyInfeasCondition(r1, r2, extended_v_rep, current_hrep_index_+1);
+                        applyInfeasCondition(r1, r2, extended_v_rep, current_hrep_index_, true);
                     }
                 }
             }

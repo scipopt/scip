@@ -57,8 +57,8 @@ namespace polyscip {
             explicit V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepC& current_h_rep);
 
             explicit V_RepT(SCIP* scip,
-                            const V_RepT& v,
-                            const V_RepT& w,
+                            const V_RepT& plus,
+                            const V_RepT& minus,
                             std::size_t index_of_constraint_in_hrep,
                             const H_RepC& current_h_rep);
 
@@ -142,7 +142,11 @@ namespace polyscip {
 
             std::tuple<bool, VarOrder, std::size_t> minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const;
 
-            void applyInfeasCondition(const V_RepT& r1, const V_RepT& r2, const V_RepC& current_v_rep, std::size_t index);
+            void applyInfeasCondition(const V_RepT& r1,
+                                      const V_RepT& r2,
+                                      const V_RepC& current_v_rep,
+                                      std::size_t index,
+                                      bool with_adjacency_test);
 
             /* see function description in DoubleDescriptionRevisited
              */
@@ -150,7 +154,8 @@ namespace polyscip {
                                       const V_RepT& r2,
                                       std::size_t k,
                                       std::size_t i,
-                                      const V_RepC& v_rep);
+                                      const V_RepC& v_rep,
+                                      bool with_adjacency_test);
 
             /*bool rayPairIsAdjacent(std::size_t plus_index,
                                        std::size_t minus_index,

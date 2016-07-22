@@ -32,11 +32,11 @@ int main(int argc, char** argv) {
         Polyscip polyscip(argc, (const char *const *) argv);
         SCIP_CALL( polyscip.readProblem() );
         SCIP_CALL( polyscip.computeNondomPoints() );
-        polyscip.writeFileForVertexEnumeration();
+
         if (polyscip.writeResults())
             polyscip.writeSupportedResults();
         else
-            polyscip.printResults(std::cout, false);
+            polyscip.printResults(std::cout, true);
         //polyscip.writeFileForVertexEnumeration();
     }
     catch (TCLAP::ArgException& e) {

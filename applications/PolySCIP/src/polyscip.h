@@ -150,6 +150,8 @@ namespace polyscip {
         ResultContainer supported_;
         ResultContainer unsupported_;
         ResultContainer unbounded_;
+
+        int tmp_counter;
     };
 
 }
