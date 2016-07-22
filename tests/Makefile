@@ -174,7 +174,7 @@ tags:
 depend:		$(SCIPDIR)
 		@- rm -f $(UNITTESTSDEP)
 		$(foreach src, $(UNITTESTSSRC), \
-			$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(src) \
+			$(SHELL) -ec '$(DCC) -I. $(FLAGS) $(DFLAGS) $(src) \
 			-MT $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
 
 
