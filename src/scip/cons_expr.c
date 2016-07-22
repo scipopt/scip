@@ -3061,11 +3061,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
 
       SCIPdebugMessage("remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-      /* remove variable locks; @todo is this necessary? */
+      /* remove variable locks */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
 
       SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
-      expr->auxvar = NULL;
+      assert(expr->auxvar == NULL);
    }
    else
    {
