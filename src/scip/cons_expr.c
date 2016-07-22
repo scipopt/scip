@@ -3235,13 +3235,14 @@ SCIP_RETCODE separatePoint(
    {
       assert(conss[c] != NULL);
 
-      /* skip constraints that are not enabled */
-      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
-         continue;
-      assert(SCIPconsIsActive(conss[c]));
-
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
+
+      /* skip constraints that are not enabled; skip non-violated constraints */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c])
+         || SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
 
       /* initialize separation data */
       sepadata.conshdlr = conshdlr;
