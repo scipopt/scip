@@ -1415,19 +1415,26 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
-/** @todo add these cuts during INITLP only */
+/** helper function to separate a given point; needed for proper unittest */
 static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
+SCIP_RETCODE separatePointSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    SCIP_VAR* auxvar;
-   SCIP_ROW* cut;
-   SCIP_Real efficacy;
    int c;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(scip != NULL);
+   assert(cut != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
@@ -1435,8 +1442,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
-   *result = SCIP_DIDNOTFIND;
-   *ncuts = 0;
+   *cut = NULL;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetConsExprExprNChildren(expr) + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, SCIPgetConsExprExprNChildren(expr) + 1) );
@@ -1458,9 +1464,36 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    vars[SCIPgetConsExprExprNChildren(expr)] = auxvar;
    coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
 
-   SCIP_CALL( SCIPcreateRowCons(scip, &cut, conshdlr, "cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
+   /* create cut */
+   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
          FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, *cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
+
+   /* release memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+/** expression separation callback */
+/** @todo add these cuts during INITLP only */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
+{
+   SCIP_ROW* cut;
+   SCIP_Real efficacy;
+
+   cut = NULL;
+   *ncuts = 0;
+   *result = SCIP_DIDNOTFIND;
+
+   /* try to compute a cut */
+   SCIP_CALL( separatePointSum(scip, conshdlr, expr, sol, &cut) );
+
+   /* failed to compute a cut */
+   if( cut == NULL )
+      return SCIP_OKAY;
 
    efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
 
@@ -1471,7 +1504,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
       SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
@@ -1479,10 +1511,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 #endif
    }
 
-   /* release memory */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
