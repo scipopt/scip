@@ -423,10 +423,13 @@ size_t ADFun<Base>::SparseJacobianFor(
 			);
 # endif
 		}
-		else CPPAD_ASSERT_KNOWN(
-			false,
-			"SparseJacobianForward: work.color_method is not valid."
-		);
+		else
+		{
+		   CPPAD_ASSERT_KNOWN(
+		      false,
+		      "SparseJacobianForward: work.color_method is not valid."
+		   );
+      }
 
 		// put sorting indices in color order
 		VectorSize key(K);
@@ -620,10 +623,13 @@ size_t ADFun<Base>::SparseJacobianRev(
 			);
 # endif
 		}
-		else CPPAD_ASSERT_KNOWN(
-			false,
-			"SparseJacobianReverse: work.color_method is not valid."
-		);
+		else
+		{
+         CPPAD_ASSERT_KNOWN(
+            false,
+            "SparseJacobianReverse: work.color_method is not valid."
+         );
+		}
 
 		// put sorting indices in color order
 		VectorSize key(K);
