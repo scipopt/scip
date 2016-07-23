@@ -153,6 +153,7 @@ namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 template <class Base>
 void put_check_for_nan(const CppAD::vector<Base>& vec, std::string& file_name)
 {
+#if 0
 	size_t char_size       = sizeof(Base) * vec.size();
 	const char* char_ptr   = reinterpret_cast<const char*>( vec.data() );
 # if CPPAD_HAS_MKSTEMP
@@ -178,12 +179,14 @@ void put_check_for_nan(const CppAD::vector<Base>& vec, std::string& file_name)
 	file_out.write(char_ptr, char_size);
 	file_out.close();
 # endif
+#endif
 	return;
 }
 
 template <class Base>
 void get_check_for_nan(CppAD::vector<Base>& vec, const std::string& file_name)
 {	//
+#if 0
 	size_t n = vec.size();
 	size_t char_size = sizeof(Base) * n;
 	char* char_ptr   = reinterpret_cast<char*>( vec.data() );
@@ -191,6 +194,7 @@ void get_check_for_nan(CppAD::vector<Base>& vec, const std::string& file_name)
 	std::fstream file_in(file_name.c_str(), std::ios::in|std::ios::binary );
 	file_in.read(char_ptr, char_size);
 	//
+#endif
 	return;
 }
 
