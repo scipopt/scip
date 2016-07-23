@@ -1,12 +1,12 @@
-/* $Id: erf.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_ERF_INCLUDED
-# define CPPAD_ERF_INCLUDED
+// $Id$
+# ifndef CPPAD_ERF_HPP
+# define CPPAD_ERF_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -16,24 +16,19 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 /*
 -------------------------------------------------------------------------------
 $begin erf$$
-
-$section The AD Error Function$$
 $spell
-	Vedder
-	Cpp
-	namespace
-	Vec
 	erf
 	const
+	Vec
+	std
+	cmath
+	CppAD
+	Vedder
 $$
-
-$index erf, AD function$$
-$index error, AD function$$
-$index function, error AD$$
+$section The Error Function$$
 
 $head Syntax$$
 $icode%y% = erf(%x%)%$$
-
 
 $head Description$$
 Returns the value of the error function which is defined by
@@ -41,32 +36,27 @@ $latex \[
 {\rm erf} (x) = \frac{2}{ \sqrt{\pi} } \int_0^x \exp( - t * t ) \; {\bf d} t
 \] $$
 
-$head x$$
-The argument $icode x$$, and the result $icode y$$
-have one of the following paris of prototypes:
-$codei%
-	const float%%                  &%x%,     float%%    %y%
-	const double%%                 &%x%,     double%%   %y%
-	const AD<%Base%>               &%x%,     AD<%Base%> %y%
-	const VecAD<%Base%>::reference &%x%,     AD<%Base%> %y%
-%$$
+$head x, y$$
+See the $cref/possible types/unary_standard_math/Possible Types/$$
+for a unary standard math function.
 
+$head CPPAD_USE_CPLUSPLUS_2011$$
 
-$head Operation Sequence$$
-The AD of $icode Base$$
-operation sequence used to calculate $icode y$$ is
-$cref/independent/glossary/Operation/Independent/$$
-of $icode x$$.
+$subhead true$$
+If this preprocessor symbol is true ($code 1$$),
+and $icode x$$ is an AD type,
+this is an $cref/atomic operation/glossary/Operation/Atomic/$$.
 
-$head Method$$
-This is a fast approximation (few numerical operations) 
+$subhead false$$
+If this preprocessor symbol is false ($code 0$$),
+CppAD uses a fast approximation (few numerical operations)
 with relative error bound $latex 4 \times 10^{-4}$$; see
 Vedder, J.D.,
 $icode Simple approximations for the error function and its inverse$$,
-American Journal of Physics, 
-v 55, 
-n 8, 
-1987, 
+American Journal of Physics,
+v 55,
+n 8,
+1987,
 p 762-3.
 
 $head Example$$
@@ -75,25 +65,23 @@ $children%
 %$$
 The file
 $cref erf.cpp$$
-contains an example and test of this function.   
+contains an example and test of this function.
 It returns true if it succeeds and false otherwise.
 
 $end
 -------------------------------------------------------------------------------
 */
-# include <cppad/local/cppad_assert.hpp>
-
-// needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
-# include <cppad/thread_alloc.hpp>
+# include <cppad/configure.hpp>
+# if ! CPPAD_USE_CPLUSPLUS_2011
 
 // BEGIN CppAD namespace
-namespace CppAD {   
+namespace CppAD {
 
 template <class Type>
 Type erf_template(const Type &x)
 {	using CppAD::exp;
 	const Type a = static_cast<Type>(993./880.);
-	const Type b = static_cast<Type>(89./880.); 
+	const Type b = static_cast<Type>(89./880.);
 
 	return tanh( (a + b * x * x) * x );
 }
@@ -115,4 +103,5 @@ inline AD<Base> erf(const VecAD_reference<Base> &x)
 
 } // END CppAD namespace
 
-# endif
+# endif // CPPAD_USE_CPLUSPLUS_2011
+# endif // CPPAD_ERF_INCLUDED

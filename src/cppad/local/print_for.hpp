@@ -1,12 +1,12 @@
-/* $Id: print_for.hpp 2859 2013-05-28 06:03:21Z bradbell $ */
-# ifndef CPPAD_PRINT_FOR_INCLUDED
-# define CPPAD_PRINT_FOR_INCLUDED
+// $Id$
+# ifndef CPPAD_PRINT_FOR_HPP
+# define CPPAD_PRINT_FOR_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -24,14 +24,9 @@ $spell
 	const
 $$
 
-$index print, forward mode$$
-$index forward, mode print$$
-$index text, output$$
-$index output, text$$
-$index debug, forward mode$$
-$index forward, debug$$
 
-$section Printing AD Values During Forward Mode$$ 
+$section Printing AD Values During Forward Mode$$
+$mindex print text output debug$$
 
 $head Syntax$$
 $icode%f%.Forward(0, %x%)
@@ -42,14 +37,14 @@ $codei%PrintFor(%pos%, %before%, %var%, %after%)
 %$$
 
 $head Purpose$$
-The $cref/zero order forward/ForwardZero/$$ mode command
+The $cref/zero order forward/forward_zero/$$ mode command
 $codei%
 	%f%.Forward(0, %x%)
 %$$
-assigns the 
+assigns the
 $cref/independent variable/glossary/Tape/Independent Variable/$$ vector
 equal to $icode x$$.
-It then computes a value for all of the dependent variables in the 
+It then computes a value for all of the dependent variables in the
 $cref/operation sequence/glossary/Operation/Sequence/$$ corresponding
 to $icode f$$.
 Putting a $code PrintFor$$ in the operation sequence will
@@ -75,7 +70,7 @@ The argument $icode before$$ has prototype
 $codei%
 	const char* %before%
 %$$
-This text is written to $code std::cout$$ before $icode var$$. 
+This text is written to $code std::cout$$ before $icode var$$.
 
 $head var$$
 The argument $icode var$$ has one of the following prototypes
@@ -84,14 +79,14 @@ $codei%
 	const VecAD<%Base%>::reference& %var%
 %$$
 The value of $icode var$$, that corresponds to $icode x$$,
-is written to $code std::cout$$ during the execution of 
+is written to $code std::cout$$ during the execution of
 $codei%
 	%f%.Forward(0, %x%)
 %$$
 Note that $icode var$$ may be a
-$cref/variable/glossary/Variable/$$ or 
+$cref/variable/glossary/Variable/$$ or
 $cref/parameter/glossary/Parameter/$$.
-(A parameters value does not depend on the value of 
+(A parameters value does not depend on the value of
 the independent variable vector $icode x$$.)
 
 $head after$$
@@ -99,8 +94,8 @@ The argument $icode after$$ has prototype
 $codei%
 	const char* %after%
 %$$
-This text is written to $code std::cout$$ after $icode var$$. 
-	
+This text is written to $code std::cout$$ after $icode var$$.
+
 $head Discussion$$
 This is helpful for understanding why tape evaluations
 have trouble.
@@ -109,7 +104,7 @@ $codei%log(%var%)%$$ and $icode%var% <= 0%$$,
 the corresponding result will be $cref nan$$.
 
 $head Alternative$$
-The $cref ad_output$$ section describes the normal 
+The $cref ad_output$$ section describes the normal
 printing of values; i.e., printing when the corresponding
 code is executed.
 
@@ -134,9 +129,9 @@ $end
 
 # include <cstring>
 
-namespace CppAD { 
+namespace CppAD {
 	template <class Base>
-	void PrintFor(const AD<Base>& pos, 
+	void PrintFor(const AD<Base>& pos,
 		const char *before, const AD<Base>& var, const char* after)
 	{	CPPAD_ASSERT_NARG_NRES(PriOp, 5, 0);
 
@@ -154,7 +149,7 @@ namespace CppAD {
 			"PrintFor: length of after is greater than 1000 characters"
 		);
 		size_t ind0, ind1, ind2, ind3, ind4;
-	
+
 		// ind[0] = base 2 representation of the value [Var(pos), Var(var)]
 		ind0 = 0;
 
@@ -196,7 +191,7 @@ namespace CppAD {
 	template <class Base>
 	void PrintFor(
 		const VecAD_reference<Base>& pos    ,
-		const char                  *before , 
+		const char                  *before ,
 		const VecAD_reference<Base>& var    ,
 		const char                  *after  )
 	{	PrintFor(pos.ADBase(), before, var.ADBase(), after); }
@@ -204,7 +199,7 @@ namespace CppAD {
 	template <class Base>
 	void PrintFor(
 		const VecAD_reference<Base>& pos    ,
-		const char                  *before , 
+		const char                  *before ,
 		const AD<Base>&              var    ,
 		const char                  *after  )
 	{	PrintFor(pos.ADBase(), before, var, after); }
@@ -212,7 +207,7 @@ namespace CppAD {
 	template <class Base>
 	void PrintFor(
 		const AD<Base>&              pos    ,
-		const char                  *before , 
+		const char                  *before ,
 		const VecAD_reference<Base>& var    ,
 		const char                  *after  )
 	{	PrintFor(pos, before, var.ADBase(), after); }
