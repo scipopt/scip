@@ -75,7 +75,7 @@ using CppAD::SCIPInterval;
 #endif
 
 #include <cppad/cppad.hpp>
-#include <cppad/error_handler.hpp>
+#include <cppad/utility/error_handler.hpp>
 
 /* CppAD is not thread-safe by itself, but uses some static datastructures
  * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
@@ -318,6 +318,21 @@ int Integer(
       );
 
    return 0;
+}
+
+/** absolute zero multiplication
+ *
+ * @return [0,0] if first argument is [0,0] independent of whether the second argument is an empty interval or not
+ */
+inline
+SCIPInterval azmul(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIPInterval&   y                   /**< second operand */
+   )
+{
+   if( x.inf == 0.0 && x.sup == 0.0 )
+      return SCIPInterval(0.0, 0.0);
+   return x * y;
 }
 
 /** printing of an interval (required by CppAD) */
