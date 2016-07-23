@@ -46,6 +46,7 @@ fixed bugs:
 
 misc:
 - dropped support for Ipopt < 3.11
+- updated CppAD to 20160000
 
 
 SCIP version 3.2.2

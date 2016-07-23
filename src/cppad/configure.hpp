@@ -71,7 +71,7 @@ determined that all the necessary features are avaiable.
 \def CPPAD_PACKAGE_STRING
 cppad-yyyymmdd as a C string where yyyy is year, mm is month, and dd is day.
 */
-# define CPPAD_PACKAGE_STRING "cppad-20160000.1"
+# define CPPAD_PACKAGE_STRING "CppAD 20160000.1"
 
 /*!
 def CPPAD_HAS_COLPACK
