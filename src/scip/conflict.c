@@ -2597,6 +2597,10 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualrayinfcalls = 0;
    (*conflict)->ndualrayinfsuccess = 0;
    (*conflict)->ndualrayinfseparoot = 0;
+   (*conflict)->dualrayinfminlength = LONG_MAX;
+   (*conflict)->dualrayinfmaxlength = 0;
+   (*conflict)->dualrayinfavglength = 0.0;
+   (*conflict)->dualrayinfdomreds = 0;
 
    return SCIP_OKAY;
 }
@@ -5951,6 +5955,7 @@ SCIP_RETCODE tightenDualray(
    SCIP_Real*            mirvals,
    SCIP_Real*            mirlhs,
    int                   nmirvars,
+   SCIP_Bool             applyMIR,
    SCIP_Bool*            success
    )
 {
@@ -5961,14 +5966,9 @@ SCIP_RETCODE tightenDualray(
    SCIP_Real activity;
    SCIP_Real violation;
    SCIP_Real newviolation;
-   SCIP_Real absmin;
    SCIP_Bool mirsuccess;
    SCIP_Bool stop;
-   int indabsmin;
    int i;
-
-   absmin = SCIPsetInfinity(set);
-   indabsmin = -1;
 
    /* calculate the violation and scale it with the lhs */
    activity = 0.0;
@@ -5976,22 +5976,19 @@ SCIP_RETCODE tightenDualray(
    {
       SCIP_Real absval = REALABS(mirvals[i]);
 
+      if( SCIPsetIsZero(set, absval) )
+         continue;
+
       if( mirvals[i] > 0.0 )
          activity += mirvals[i] * SCIPvarGetUbLocal(mirvars[i]);
       else
          activity += mirvals[i] * SCIPvarGetLbLocal(mirvars[i]);
-
-      if( !SCIPsetIsZero(set, absval) && SCIPsetIsLT(set, absval, absmin) )
-      {
-         absmin = absval;
-         indabsmin = i;
-      }
    }
    assert(SCIPsetIsGT(set, *mirlhs, activity));
-   assert(indabsmin > -1);
 
    violation = (*mirlhs) - activity;
 
+   /* scale with non-zero lhs */
    if( !SCIPsetIsZero(set, *mirlhs)  )
       violation /= REALABS(*mirlhs);
 
@@ -6010,45 +6007,43 @@ SCIP_RETCODE tightenDualray(
       int nnonzeros;
 
       mirsuccess = FALSE;
-      SCIP_CALL( SCIPapplyMIR(set->scip, mirvars, bestvals, newvals, bestlhs, &newlhs, nmirvars, FALSE, &nnonzeros, &mirsuccess) );
+      nnonzeros = 0;
 
-      if( mirsuccess )
+      if( applyMIR )
       {
-         /* calculate the violation and scale it with the lhs */
+         SCIP_CALL( SCIPapplyMIR(set->scip, mirvars, bestvals, newvals, bestlhs, &newlhs, nmirvars, FALSE, &nnonzeros, &mirsuccess) );
+      }
+
+      if( mirsuccess && nnonzeros >= 1 )
+      {
+         SCIP_CALL( SCIPcleanupMIRCons(set->scip, mirvars, mirvals, mirlhs, nmirvars, FALSE) );
+
+         /* calculate the violation and scale it with lhs */
          activity = 0.0;
-         absmin = SCIPsetInfinity(set);
-         indabsmin = -1;
          for( i = 0; i < nmirvars; i++ )
          {
             SCIP_Real absval = REALABS(newvals[i]);
 
-            if( newvals[i] > 0.0 )
+            if( SCIPsetIsZero(set, absval) )
+               continue;
+
+           if( newvals[i] > 0.0 )
                activity += newvals[i] * SCIPvarGetUbLocal(mirvars[i]);
             else
                activity += newvals[i] * SCIPvarGetLbLocal(mirvars[i]);
 
-            if( !SCIPsetIsZero(set, absval) && SCIPsetIsLT(set, absval, absmin) )
-            {
-               absmin = absval;
-               indabsmin = i;
-            }
          }
-         assert(indabsmin > -1);
 
+         /* check whether we still have a valid infeasibility proof */
          if( SCIPsetIsGE(set, activity, newlhs) )
          {
             stop = TRUE;
             continue;
          }
 
-         if( nnonzeros == 1 )
-         {
-            *success = TRUE;
-            stop = TRUE;
-            continue;
-         }
-
          newviolation = newlhs - activity;
+
+         /* scale with non-zero lhs */
          if( !SCIPsetIsZero(set, newlhs)  )
             newviolation /= REALABS(newlhs);
 
@@ -6061,6 +6056,9 @@ SCIP_RETCODE tightenDualray(
             bestlhs = newlhs;
             violation = newviolation;
 
+            if( nnonzeros == 1 )
+               stop = TRUE;
+
 #ifdef PRINT_MIR
          printf("new MIR (1): (violation=%.12g)\n", violation);
          for( i = 0; i < nmirvars; i++ )
@@ -6069,11 +6067,13 @@ SCIP_RETCODE tightenDualray(
          printf(" >= %.15g\n", bestlhs);
 #endif
          }
+         else
+            stop = TRUE;
       }
-
+      else
+         stop = TRUE;
 #if 0
       SCIP_CALL( shrinkDualray(set, lp, mirvars, newvals, &newlhs, nmirvars, indabsmin) );
-#endif
 
       /* calculate the violation and scale it with the lhs */
       activity = 0.0;
@@ -6083,16 +6083,15 @@ SCIP_RETCODE tightenDualray(
       {
          SCIP_Real absval = REALABS(newvals[i]);
 
-         if( newvals[i] > 0.0 )
+         if( SCIPsetIsZero(set, absval) )
+            continue;
+
+         ++nnonzeros;
+
+        if( newvals[i] > 0.0 )
             activity += newvals[i] * SCIPvarGetUbLocal(mirvars[i]);
          else
             activity += newvals[i] * SCIPvarGetLbLocal(mirvars[i]);
-
-         if( !SCIPsetIsZero(set, absval) && SCIPsetIsLT(set, absval, absmin) )
-         {
-            absmin = absval;
-            indabsmin = i;
-         }
       }
 
       if( SCIPsetIsGE(set, activity, newlhs) )
@@ -6125,6 +6124,7 @@ SCIP_RETCODE tightenDualray(
       else
          /* the constraint could not be tightend, we can stop here */
          stop = TRUE;
+#endif
    }
 
    if( *success )
@@ -6132,8 +6132,6 @@ SCIP_RETCODE tightenDualray(
       for( i = 0; i < nmirvars; i++ )
          mirvals[i] = bestvals[i];
       *mirlhs = bestlhs;
-
-//      SCIP_CALL( SCIPcleanupMIRCons(set->scip, mirvars, mirvals, &mirlhs, &nmirvars, FALSE) );
    }
 
    SCIPsetFreeBufferArray(set, &newvals);
@@ -6220,6 +6218,7 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Bool applyMIR;
    SCIP_Bool cutoffrootsol;
    char name[SCIP_MAXSTRLEN];
+   int nnonzeros;
    int ndualrayvars;
    int nmirvars;
    int v;
@@ -6241,23 +6240,22 @@ SCIP_RETCODE performDualRayAnalysis(
 
    /* check the length of the dualray */
    allintegral = TRUE;
+   applyMIR = TRUE;
    maxabsval = 0.0;
    minabsval = SCIPsetInfinity(set);
    activity = 0.0;
    mirlhs = farkaslhs;
+   nnonzeros = 0;
 
-   for( v = 0; v < ndualrayvars; )
+   for( v = 0; v < ndualrayvars; ++v)
    {
       SCIP_Real absval;
 
       /* ignore coefficients close to 0.0 */
       if( SCIPsetIsZero(set, mirvals[v]) )
       {
-         /* replace with the last, decrease number of varibales */
-         mirvars[v] = mirvars[ndualrayvars-1];
-         mirvals[v] = mirvals[ndualrayvars-1];
-         --ndualrayvars;
-
+         /* set it to a clean zero */
+         mirvals[v] = 0.0;
          continue;
       }
 
@@ -6269,13 +6267,19 @@ SCIP_RETCODE performDualRayAnalysis(
          else
             mirlhs -= mirvals[v] * SCIPvarGetLbLocal(mirvars[v]);
 
-         /* replace with the last, decrease number of varibales */
-         mirvars[v] = mirvars[ndualrayvars-1];
-         mirvals[v] = mirvals[ndualrayvars-1];
-         --ndualrayvars;
-
+         /* set it to a clean zero */
+         mirvals[v] = 0.0;
          continue;
       }
+
+      ++nnonzeros;
+
+      if( SCIPsetIsNegative(set, SCIPvarGetLbLocal(mirvars[v])) )
+         applyMIR = FALSE; 
+
+      /* try to reduce numerial troubles */
+      if( SCIPsetIsFeasIntegral(set, mirvals[v]) )
+         mirvals[v] = SCIPsetFeasRound(set, mirvals[v]);
 
       absval = REALABS(mirvals[v]);
       if( SCIPsetIsGT(set, absval, maxabsval) )
@@ -6291,8 +6295,6 @@ SCIP_RETCODE performDualRayAnalysis(
          activity += mirvals[v] * SCIPvarGetUbLocal(mirvars[v]);
       else
          activity += mirvals[v] * SCIPvarGetLbLocal(mirvars[v]);
-
-      ++v;
    }
 
    /* check whether it is still a valid proof */
@@ -6302,7 +6304,6 @@ SCIP_RETCODE performDualRayAnalysis(
    if( SCIPsetIsSumZero(set, minabsval/maxabsval) )
       goto TERMINATE;
 
-   applyMIR = TRUE;
    success = FALSE;
 
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &mirvals_tmp, mirvals, ndualrayvars) );
@@ -6315,44 +6316,55 @@ SCIP_RETCODE performDualRayAnalysis(
    printf(" >= %.15g\n", mirlhs);
 #endif
 
-   /* apply MIR function to the dualray */
-   if( applyMIR && !allintegral && !SCIPsetIsIntegral(set, mirlhs) )
+   if( nnonzeros == 1 )
    {
-      nmirvars = ndualrayvars;
-      SCIP_CALL( tightenDualray(set, lp, mirvars, mirvals, &mirlhs, nmirvars, &success) );
-   }
+      for( v = 0; v < ndualrayvars; ++v)
+      {
+         SCIP_Real newbound;
+         SCIP_BOUNDTYPE boundtype;
 
+         if( SCIPsetIsZero(set, mirvals[v]) )
+            continue;
+
+         newbound = mirlhs/mirvals[v];
+         boundtype = (mirvals[v] > 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER);
+
+         if( SCIPvarIsBinary(mirvars[v]) || SCIPvarIsIntegral(mirvars[v]))
+            newbound = SCIPsetFeasCeil(set, newbound);
+
+         SCIPdebugMessage("change %s bound of <%s>: %g -> %g\n", (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
+               SCIPvarGetName(mirvars[v]), (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(mirvars[v]) : SCIPvarGetUbGlobal(mirvars[v])),
+               newbound);
+
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+               eventqueue, cliquetable, mirvars[v], newbound, boundtype, FALSE) );
+
+         ++conflict->dualrayinfdomreds;
+
+         SCIPsetFreeBufferArray(set, &mirvals_tmp);
+         goto TERMINATE;
+      }
+   }
+   else
+   {
+      /* try to tighten dualray */
+//      if( applyMIR && !allintegral && !SCIPsetIsIntegral(set, mirlhs) )
+//      {
+      SCIP_CALL( tightenDualray(set, lp, mirvars, mirvals, &mirlhs, ndualrayvars, applyMIR, &success) );
+//      }
+   }
    /* create, add, and release new artificial constraint */
    (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualray_inf_%d", conflict->ndualrayinfsuccess);
 
    if( success )
    {
-      SCIP_CALL( SCIPcreateConsLinear(set->scip, &dualraycons, name, 0, NULL, NULL, mirlhs, SCIPsetInfinity(set),
+      SCIP_CALL( SCIPcreateConsLinear(set->scip, &dualraycons, name, ndualrayvars, mirvars, mirvals, mirlhs, SCIPsetInfinity(set),
             FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateConsLinear(set->scip, &dualraycons, name, 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set),
+      SCIP_CALL( SCIPcreateConsLinear(set->scip, &dualraycons, name, ndualrayvars, mirvars, farkascoefs, farkaslhs, SCIPsetInfinity(set),
             FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
-   }
-
-   ndualrayvars = (success ? ndualrayvars : transprob->nvars);
-   for( v = 0; v < ndualrayvars; ++v )
-   {
-      SCIP_VAR* var = mirvars[v];
-
-      /* ignore coefficients close to 0.0 */
-      if( (success && SCIPsetIsZero(set, mirvals[v])) || (!success && SCIPsetIsZero(set, farkascoefs[v])) )
-         continue;
-
-      if( success )
-      {
-         SCIP_CALL( SCIPaddCoefLinear(set->scip, dualraycons, var, mirvals[v]) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddCoefLinear(set->scip, dualraycons, var, farkascoefs[v]) );
-      }
    }
 
    cutoffrootsol = cutoffRootSol(set, transprob, dualraycons);
@@ -6360,6 +6372,14 @@ SCIP_RETCODE performDualRayAnalysis(
 
    if( cutoffrootsol )
       ++conflict->ndualrayinfseparoot;
+
+   SCIP_CALL( SCIPconsGetNVars(dualraycons, set, &nmirvars, &success) );
+   conflict->dualrayinfavglength += nmirvars;
+
+   if( nmirvars < conflict->dualrayinfminlength )
+      conflict->dualrayinfminlength = nmirvars;
+   if( nmirvars > conflict->dualrayinfmaxlength )
+      conflict->dualrayinfmaxlength = nmirvars;
 
    SCIP_CALL( SCIPconflictstoreAddDualray(conflictstore, dualraycons, blkmem, set, stat, transprob, cutoffrootsol, &success) );
 
@@ -6615,7 +6635,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
 
       /* start conflict analysis */
-      if( TRUE && valid )
+      if( !set->conf_onlydualray && valid )
       {
          int j;
 
@@ -7389,6 +7409,52 @@ SCIP_Longint SCIPconflictGetNDualrayInfSepaRootsol(
    assert(conflict != NULL);
 
    return conflict->ndualrayinfseparoot;
+}
+
+/** gets minimal length of infeasible dualrays */
+SCIP_Longint SCIPconflictGetDualrayInfLengthMin(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   if( conflict->dualrayinfminlength == LONG_MAX )
+      return 0;
+   else
+      return conflict->dualrayinfminlength;
+}
+
+/** gets average length of infeasible dualrays */
+SCIP_Real SCIPconflictGetDualrayInfLengthAvg(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   if( conflict->ndualrayinfsuccess == 0 )
+      return 0.0;
+   else
+      return conflict->dualrayinfavglength/conflict->ndualrayinfcalls;
+}
+
+/** gets maximal length of infeasible dualrays */
+SCIP_Longint SCIPconflictGetDualrayInfLengthMax(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->dualrayinfmaxlength;
+}
+
+/** gets number of domain reductions get from infeasible dualrays */
+SCIP_Longint SCIPconflictGetDualrayInfDomreds(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->dualrayinfdomreds;
 }
 
 /** gets number of calls to infeasible strong branching conflict analysis */

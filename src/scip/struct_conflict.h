@@ -140,6 +140,11 @@ struct SCIP_Conflict
    SCIP_Longint          ndualrayinfsuccess; /**< number of successfully dualray analysis calls for infeasible LPs */
    SCIP_Longint          ndualrayinfseparoot;/**< number of infeasible dualrays separating the root LP solution */
 
+   SCIP_Real             dualrayinfavglength;
+   SCIP_Longint          dualrayinfminlength;
+   SCIP_Longint          dualrayinfmaxlength;
+   SCIP_Longint          dualrayinfdomreds;
+
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 
    SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */

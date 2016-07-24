@@ -15856,6 +15856,170 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
    return SCIP_OKAY;
 }
 
+#define MAXCONSSIMPLROUNDS 10
+
+static
+SCIP_RETCODE simplifyConstraint(
+   SCIP*                 scip,
+   SCIP_CONS*            cons,
+   SCIP_CONSHDLRDATA*    conshdlrdata,
+   SCIP_Bool*            redundant
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real minactivity;
+   SCIP_Real maxactivity;
+   SCIP_Bool cutoff;
+   unsigned int minactisrelax;
+   unsigned int maxactisrelax;
+   int nchgcoefs;
+   int nchgsides;
+   int nchgbds;
+   int nfixedvars;
+   int nrounds;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(conshdlrdata != NULL);
+
+   (*redundant) = FALSE;
+   cutoff = FALSE;
+
+   /* we can only simplify linear constraints, that are not modifiable */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* incorporate fixings and aggregations in constraint */
+   SCIP_CALL( applyFixings(scip, cons, NULL) );
+   assert(consdata->removedfixings);
+
+   SCIPdebugMessage("simplify linear constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   nrounds = 0;
+   nchgbds = 0;
+   nchgcoefs = 0;
+   nchgsides = 0;
+   nfixedvars = 0;
+
+   /* apply simplification as long as possible (however, abort after a certain number of rounds to avoid nearly infinite
+    * cycling due to very small bound changes)
+    */
+   while( nrounds < MAXCONSSIMPLROUNDS && !SCIPisStopped(scip) )
+   {
+      assert(!cutoff);
+      nrounds++;
+
+      /* mark constraint being presolved and propagated */
+      consdata->propagated = TRUE;
+
+      /* normalize constraint */
+      SCIP_CALL( normalizeCons(scip, cons) );
+
+      /* tighten left and right hand side due to integrality */
+      SCIP_CALL( tightenSides(scip, cons, &nchgsides) );
+
+      /* check bounds */
+      if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s> is infeasible: sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+         cutoff = TRUE;
+         break;
+      }
+
+      /* tighten variable's bounds */
+      //SCIP_CALL( tightenBounds(scip, cons, conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds) );
+      //if( cutoff )
+      //   break;
+
+      /* check for fixed variables */
+      //SCIP_CALL( fixVariables(scip, cons, &cutoff, &nfixedvars) );
+      //if( cutoff )
+      //   break;
+
+      /* check constraint for infeasibility and redundancy */
+      consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+      if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s> is infeasible: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         cutoff = TRUE;
+         break;
+      }
+      else if( SCIPisFeasGE(scip, minactivity, consdata->lhs) && SCIPisFeasLE(scip, maxactivity, consdata->rhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         assert(!SCIPconsIsActive(cons));
+
+         (*redundant) = TRUE;
+         break;
+      }
+      else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasGE(scip, minactivity, consdata->lhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+
+         nchgsides++;
+      }
+      else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasLE(scip, maxactivity, consdata->rhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+         SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+
+         nchgsides++;
+      }
+      assert(consdata->nvars >= 1); /* otherwise, it should be redundant or infeasible */
+
+      /* handle empty constraint */
+      if( consdata->nvars == 0 )
+      {
+         if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+         {
+            SCIPdebugMessage("empty linear constraint <%s> is infeasible: sides=[%.15g,%.15g]\n",
+               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+            cutoff = TRUE;
+         }
+         else
+         {
+            SCIPdebugMessage("empty linear constraint <%s> is redundant: sides=[%.15g,%.15g]\n",
+               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            assert(!SCIPconsIsActive(cons));
+
+            (*redundant) = TRUE;
+         }
+         break;
+      }
+
+      /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
+      //SCIP_CALL( consdataTightenCoefs(scip, cons, &nchgcoefs, &nchgsides) );
+
+      /* try to simplify inequalities */
+      //if( conshdlrdata->simplifyinequalities )
+      //{
+      //   SCIP_CALL( simplifyInequalities(scip, cons, &nchgcoefs, &nchgsides) );
+      //}
+   }
+
+   /* incorporate fixings and aggregations in constraint */
+   SCIP_CALL( applyFixings(scip, cons, NULL) );
+
+   SCIPdebugMessage("simplify constraint <%s>: nchgbds=%d nchgcoefs=%d nchgsides=%d nfixedvars=%d redundant=%d\n",
+         SCIPconsGetName(cons), nchgbds, nchgcoefs, nchgsides, nfixedvars, *redundant);
+   printf("simplify constraint <%s>: nchgbds=%d nchgcoefs=%d nchgsides=%d nfixedvars=%d redundant=%d\n",
+         SCIPconsGetName(cons), nchgbds, nchgcoefs, nchgsides, nfixedvars, *redundant);
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
@@ -16174,75 +16338,75 @@ SCIP_RETCODE SCIPcreateConsLinear(
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
       {
-	 if( constant < 0.0 )
-	 {
-	    if( SCIPisInfinity(scip, lhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+         if( constant < 0.0 )
+         {
+            if( SCIPisInfinity(scip, lhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
-	    if( SCIPisInfinity(scip, rhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+            if( SCIPisInfinity(scip, rhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
 
-	    lhs = -SCIPinfinity(scip);
-	    rhs = -SCIPinfinity(scip);
-	 }
-	 else
-	 {
-	    if( SCIPisInfinity(scip, -lhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+            lhs = -SCIPinfinity(scip);
+            rhs = -SCIPinfinity(scip);
+         }
+         else
+         {
+            if( SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
-	    if( SCIPisInfinity(scip, -rhs) )
-	    {
-	       SCIPfreeBufferArray(scip, &consvals);
-	       SCIPfreeBufferArray(scip, &consvars);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+            if( SCIPisInfinity(scip, -rhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
 
-	       SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
 
-	       SCIPABORT();
-	       return SCIP_INVALIDDATA; /*lint !e527*/
-	    }
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
 
-	    lhs = SCIPinfinity(scip);
-	    rhs = SCIPinfinity(scip);
-	 }
+            lhs = SCIPinfinity(scip);
+            rhs = SCIPinfinity(scip);
+         }
       }
       else
       {
-	 if( !SCIPisInfinity(scip, REALABS(lhs)) )
-	    lhs -= constant;
-	 if( !SCIPisInfinity(scip, REALABS(rhs)) )
-	    rhs -= constant;
+         if( !SCIPisInfinity(scip, REALABS(lhs)) )
+            lhs -= constant;
+         if( !SCIPisInfinity(scip, REALABS(rhs)) )
+            rhs -= constant;
 
-	 if( SCIPisInfinity(scip, -lhs) )
-	    lhs = -SCIPinfinity(scip);
-	 else if( SCIPisInfinity(scip, lhs) )
-	    lhs = SCIPinfinity(scip);
+         if( SCIPisInfinity(scip, -lhs) )
+            lhs = -SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, lhs) )
+            lhs = SCIPinfinity(scip);
 
-	 if( SCIPisInfinity(scip, rhs) )
-	    rhs = SCIPinfinity(scip);
-	 else if( SCIPisInfinity(scip, -rhs) )
-	    rhs = -SCIPinfinity(scip);
+         if( SCIPisInfinity(scip, rhs) )
+            rhs = SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, -rhs) )
+            rhs = -SCIPinfinity(scip);
       }
 
       /* create constraint data */
@@ -16269,6 +16433,12 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIP_CALL( consCatchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
       assert(consdata->eventdata != NULL);
    }
+
+   //if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   //{
+   //   SCIP_Bool redundant;
+   //   SCIP_CALL( simplifyConstraint(scip, *cons, conshdlrdata, &redundant) );
+   //}
 
    return SCIP_OKAY;
 }
@@ -16678,7 +16848,6 @@ SCIP_Real SCIPgetLhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16702,7 +16871,6 @@ SCIP_Real SCIPgetRhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16765,7 +16933,6 @@ int SCIPgetNVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16789,7 +16956,6 @@ SCIP_VAR** SCIPgetVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16813,7 +16979,6 @@ SCIP_Real* SCIPgetValsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

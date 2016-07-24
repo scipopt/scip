@@ -591,6 +591,29 @@ SCIP_Longint SCIPconflictGetNDualrayInfSepaRootsol(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets minimal length of infeasible dualrays */
+extern
+SCIP_Longint SCIPconflictGetDualrayInfLengthMin(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets average length of infeasible dualrays */
+extern
+SCIP_Real SCIPconflictGetDualrayInfLengthAvg(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets maximal length of infeasible dualrays */
+extern
+SCIP_Longint SCIPconflictGetDualrayInfLengthMax(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of domain reductions get from infeasible dualrays */
+SCIP_Longint SCIPconflictGetDualrayInfDomreds(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of calls to infeasible strong branching conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNStrongbranchCalls(

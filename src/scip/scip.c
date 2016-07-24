@@ -27329,6 +27329,12 @@ SCIP_RETCODE SCIPapplyMIR(
          continue;
       }
 
+      if( SCIPisNegative(scip, SCIPvarGetLbGlobal(vars[i])) )
+      {
+         *success = FALSE;
+         break;
+      }
+
       if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
       {
          /* case 1: a^T x <= b */
@@ -27408,7 +27414,7 @@ SCIP_RETCODE SCIPcleanupMIRCons(
    SCIP_VAR**            mirvars,            /**< array to store MIR variables: must be of size nvars */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirside,            /**< pointer to store the lhs/lhs of the MIR constraint */
-   int*                  nvars,              /**< pointer to number of non-zero MIR coefficients */
+   int                   nvars,              /**< pointer to number of non-zero MIR coefficients */
    SCIP_Bool             local               /**< is the constraint only valid locally? */
    )
 {
@@ -27418,13 +27424,11 @@ SCIP_RETCODE SCIPcleanupMIRCons(
    assert(mirvars != NULL);
    assert(mircoef != NULL);
    assert(mirside != NULL);
-   assert(nvars != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPcleanupMIRCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    rhsinf = SCIPisInfinity(scip, *mirside);
-   i = 0;
-   while( i < *nvars )
+   for( i = 0; i < nvars; i++ )
    {
       assert(mirvars[i] != NULL);
 
@@ -27450,14 +27454,10 @@ SCIP_RETCODE SCIPcleanupMIRCons(
             bd = 0.0;
          *mirside -= bd * mircoef[i];
          mircoef[i] = 0.0;
-
-         /* remove variable, do not increase i (i-th position is filled with last entry) */
-         mirvars[i] = mirvars[*nvars-1];
-         mircoef[i] = mircoef[*nvars-1];
-         (*nvars)--;
       }
-      else
-         ++i;
+
+      if( SCIPisFeasIntegral(scip, mircoef[i]) )
+         mircoef[i] = SCIPfeasRound(scip, mircoef[i]);
    }
    if( rhsinf )
       *mirside = SCIPinfinity(scip);
@@ -40062,10 +40062,12 @@ void printDualrayStatistics(
    FILE*                 file                /**< output file */
    )
 {
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Dualray Analysis   :       Time      Calls    Success    RootSol \n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeasible LP    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Dualray Analysis   :       Time      Calls    Success    RootSol     MinLen     AvgLen     MaxLen    DomReds\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeasible LP    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " \n",
       SCIPconflictGetDualrayInfTime(scip->conflict), SCIPconflictGetNDualrayInfCalls(scip->conflict),
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict), SCIPconflictGetNDualrayInfSepaRootsol(scip->conflict));
+      SCIPconflictGetNDualrayInfSuccess(scip->conflict), SCIPconflictGetNDualrayInfSepaRootsol(scip->conflict),
+      SCIPconflictGetDualrayInfLengthMin(scip->conflict), SCIPconflictGetDualrayInfLengthAvg(scip->conflict),
+      SCIPconflictGetDualrayInfLengthMax(scip->conflict), SCIPconflictGetDualrayInfDomreds(scip->conflict));
 }
 
 static

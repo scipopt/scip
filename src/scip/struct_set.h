@@ -214,6 +214,7 @@ struct SCIP_Set
                                                     *   variable if it is part of a conflict graph
                                                     */
    SCIP_Bool             conf_analyzedualray;/**< enable dual ray analyzes */
+   SCIP_Bool             conf_onlydualray;   /**< perform only dualray analysis */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

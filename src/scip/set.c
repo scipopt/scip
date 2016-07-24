@@ -131,6 +131,7 @@
 #define SCIP_DEFAULT_CONF_CONFLITWEIGHT     0.0 /**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict */
 #define SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT 1.0/**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph */
 #define SCIP_DEFAULT_CONF_ANALYZEDUALRAY  FALSE /**< enable dual ray analyzes */
+#define SCIP_DEFAULT_CONF_ONLYDUALRAY     FALSE /**< perform dualray analysis only */
 
 
 /* Constraints */
@@ -1334,6 +1335,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/analyzedualray",
          "enable dual ray analysis",
          &(*set)->conf_analyzedualray, TRUE, SCIP_DEFAULT_CONF_ANALYZEDUALRAY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/onlydualray",
+         "perform dualray analysis only",
+         &(*set)->conf_onlydualray, TRUE, SCIP_DEFAULT_CONF_ONLYDUALRAY,
          NULL, NULL) );
 
    /* constraint parameters */

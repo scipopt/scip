@@ -113,11 +113,7 @@ SCIP_RETCODE conflictstoreEnsureMem(
 
       if( conflictstore->dualrays == NULL )
       {
-#if 1
          SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
-#else
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE) );
-#endif
       }
 
       if( conflictstore->rootdualrays == NULL )
@@ -632,22 +628,12 @@ SCIP_RETCODE SCIPconflictstoreFree(
 
    if( (*conflictstore)->dualrays != NULL )
    {
-#if 1
       while( !SCIPqueueIsEmpty((*conflictstore)->dualrays) )
       {
          SCIP_CONS* dualray = SCIPqueueRemove((*conflictstore)->dualrays);
          SCIP_CALL( SCIPconsRelease(&dualray, blkmem, set) );
       }
       SCIPqueueFree(&(*conflictstore)->dualrays);
-#else
-      int i;
-      for( i = 0; i < (*conflictstore)->ndualrays; i++ )
-      {
-         SCIP_CONS* dualray = (*conflictstore)->dualrays[i];
-         SCIP_CALL( SCIPconsRelease(&dualray, blkmem, set) );
-      }
-      BMSfreeMemoryArray(&(*conflictstore)->dualrays);
-#endif
    }
 
    if( (*conflictstore)->rootdualrays != NULL )
@@ -690,6 +676,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
 
    if( cutoffroot )
    {
+
       if( conflictstore->rootdualrays == NULL )
       {
          SCIP_CALL( SCIPqueueCreate(&conflictstore->rootdualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 2.0) );
@@ -699,16 +686,15 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
    }
    else
    {
-//      SCIP_CALL( SCIPconsGetNVars(dualray, set, &nvars, success) );
-//      assert(success);
-//
-//      if( ((SCIP_Real)nvars)/transprob->nvars > 0.4 )
-//      {
-//         *success = FALSE;
-//         return SCIP_OKAY;
-//      }
+      SCIP_CALL( SCIPconsGetNVars(dualray, set, &nvars, success) );
+      assert(success);
 
-#if 1
+      if( nvars > 40 && ((SCIP_Real)nvars)/transprob->nvars > 0.4 )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
       if( conflictstore->dualrays == NULL )
       {
          SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
@@ -729,41 +715,6 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
 
       SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
       SCIPconsCapture(dualray);
-#else
-      if( conflictstore->dualrays == NULL )
-      {
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE) );
-      }
-
-      if( conflictstore->ndualrays == DEFAULT_CONFLICTSTORE_DUALSIZE )
-      {
-         int i;
-
-         oldidx = 0;
-         oldage = SCIPconsGetAge(conflictstore->dualrays[0]);
-
-         for( i = 1; i < conflictstore->ndualrays; i++ )
-         {
-            if( SCIPconsGetAge(conflictstore->dualrays[i]) > oldage )
-            {
-               oldidx = i;
-               oldage = SCIPconsGetAge(conflictstore->dualrays[i]);
-            }
-         }
-
-         olddualray = conflictstore->dualrays[oldidx];
-         SCIP_CALL( SCIPconsDelete(olddualray, blkmem, set, stat, transprob) );
-         SCIP_CALL( SCIPconsRelease(&olddualray, blkmem, set) );
-      }
-      else
-      {
-         oldidx = conflictstore->ndualrays;
-         ++conflictstore->ndualrays;
-      }
-      conflictstore->dualrays[oldidx] = dualray;
-      SCIPconsCapture(dualray);
-#endif
-
    }
    return SCIP_OKAY;
 }
