@@ -81,7 +81,7 @@ end
 % detect SCIP library
 fprintf('Detecting SCIP library ...');
 
-pathtolibscip = [pathtoscip '/lib/libscip.a'];
+pathtolibscip = [pathtoscip '/lib/libscip.so'];
 
 if( ~isempty(dir(pathtolibscip)) )
    fprintf('\t using SCIP library <%s>.\n', pathtolibscip);
@@ -92,21 +92,21 @@ end
 % detect LPI library
 fprintf('Detecting LPI library ...');
 
-pathtoliblpi = [pathtoscip '/lib/liblpispx1.a'];
+pathtoliblpi = [pathtoscip '/lib/liblpispx1.so'];
 liblpi = '-llpispx1';
 
 if( ~isempty(dir(pathtoliblpi)) )
    fprintf('\t using LPI library <%s>.\n', pathtoliblpi);
 else
    % try old SoPlex interface
-   pathtoliblpi = [pathtoscip '/lib/liblpispx.a'];
+   pathtoliblpi = [pathtoscip '/lib/liblpispx.so'];
 
    if ( ~isempty(dir(pathtoliblpi)) )
       fprintf('\t using LPI library <%s>.\n', pathtoliblpi);
       liblpi = '-llpispx';
    else
       % try new SoPlex interface
-      pathtoliblpi = [pathtoscip '/lib/liblpispx2.a'];
+      pathtoliblpi = [pathtoscip '/lib/liblpispx2.so'];
 
       if ( ~isempty(dir(pathtoliblpi)) )
 	 fprintf('\t using LPI library <%s>.\n', pathtoliblpi);
@@ -120,7 +120,7 @@ end
 % detect NLPI library
 fprintf('Detecting NLPI library ...');
 
-pathtolibnlpi = [pathtoscip '/lib/libnlpi.cppad.a'];
+pathtolibnlpi = [pathtoscip '/lib/libnlpi.cppad.so'];
 
 if( ~isempty(dir(pathtolibnlpi)) )
    fprintf('\t using NLPI library <%s>.\n', pathtolibnlpi);
@@ -131,7 +131,7 @@ end
 % detect SoPlex library
 fprintf('Detecting SoPlex library ...');
 
-pathtolibsoplex = [pathtoscip '/lib/libsoplex.a'];
+pathtolibsoplex = [pathtoscip '/lib/libsoplex.so'];
 
 % determine type of computer
 arch = computer;
@@ -147,10 +147,10 @@ else
   case 'PCWIN64'
      error('\nDo not know how to determine soplex library on Windows.');
   case 'GLNXA64'
-     pathtolibsoplex = [pathtoscip '/lib/libsoplex.linux.x86_64.gnu.opt.a'];
-     libsoplex = ' -lsoplex.linux.x86_64.gnu.opt.a';
+     pathtolibsoplex = [pathtoscip '/lib/libsoplex.linux.x86_64.gnu.opt.so'];
+     libsoplex = ' -lsoplex.linux.x86_64.gnu.opt.so';
   case 'x86_64-pc-linux-gnu'
-     pathtolibsoplex = [pathtoscip '/lib/libsoplex.linux.x86_64.gnu.opt.a'];
+     pathtolibsoplex = [pathtoscip '/lib/libsoplex.linux.x86_64.gnu.opt.so'];
      libsoplex = ' -lsoplex.linux.x86_64.gnu.opt';
   case 'MACI64'
      error('\nDo not know how to determine soplex library on Macs.');
@@ -169,7 +169,7 @@ end
 if ( withzimpl == 1 )
    fprintf('Detecting Zimpl library ...');
 
-   pathtolibzimpl = [pathtoscip '/lib/libzimpl.a'];
+   pathtolibzimpl = [pathtoscip '/lib/libzimpl.so'];
    libszimpl = ' -lzimpl';
 
    if ( ~isempty(dir(pathtolibzimpl)) )
@@ -183,10 +183,10 @@ if ( withzimpl == 1 )
 	 case 'PCWIN64'
 	    error('\nDo not know how to determine Zimpl library on Windows.');
 	 case 'GLNXA64'
-	    pathtolibzimpl = [pathtoscip '/lib/libzimpl.linux.x86_64.gnu.opt.a'];
-	    libzimpl = ' -lzimpl.linux.x86_64.gnu.opt';
+	    pathtolibzimpl = [pathtoscip '/lib/libzimpl.linux.x86_64.gnu.opt.so'];
+	    libzimpl = ' -lzimpl.linux.x86_64.gnu.opt.so';
 	 case 'x86_64-pc-linux-gnu'
-	    pathtolibzimpl = [pathtoscip '/lib/libzimpl.linux.x86_64.gnu.opt.a'];
+	    pathtolibzimpl = [pathtoscip '/lib/libzimpl.linux.x86_64.gnu.opt.so'];
 	    libzimpl = ' -lzimpl.linux.x86_64.gnu.opt';
 	 case 'MACI64'
 	    error('\nDo not know how to determine soplex library on Macs.');

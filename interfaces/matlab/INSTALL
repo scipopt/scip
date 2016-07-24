@@ -13,7 +13,7 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-This is a very-beta-version of a functional MATLAB interface for SCIP
+This is a very-beta-version of a functional MATLAB/Octave interface for SCIP
 Up to now, it has only been tested with SCIP version 2.1.0 and MATLAB version 7.9
 
 It supports solving LPs and MIPs with SCIP that are defined via dense matrices in MATLAB.
@@ -30,8 +30,9 @@ Please let us know (e-mail to berthold@zib.de and gleixner@zib.de), if you are m
 Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
 
 To use SCIP from MATLAB, you have to do the following:
+ - Compile SoPlex and ZIMPL with 'make ... SHARED=true'
  - Compile SCIP with 'make ... LPS=spx2 SHARED=true'
- - Start MATLAB from the Matlab interface base directory, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/interfaces/matlab .
+ - Start MATLAB/Octave from the Matlab interface base directory, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/interfaces/matlab .
  - Run installscip.
  - If this works fine, you should try to run the example files diet_lp and stein9_ip.
  - Now try your own application.
