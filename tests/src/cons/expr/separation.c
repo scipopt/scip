@@ -346,8 +346,8 @@ Test(separation, exponential, .init = setup, .fini = teardown,
 
    cr_assert(cut != NULL);
    cr_assert_eq(SCIProwGetNNonz(cut), 2);
-   cr_assert_eq(SCIProwGetLhs(cut), -SCIPinfinity(scip));
-   cr_assert(SCIPisEQ(scip, SCIProwGetRhs(cut), -(exp(5) + 5 * exp(-1)) / 6.0));
+   cr_assert(SCIPisEQ(scip, SCIProwGetLhs(cut), -(exp(5) + 5 * exp(-1)) / 6.0));
+   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
 
    for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {
@@ -376,8 +376,8 @@ Test(separation, exponential, .init = setup, .fini = teardown,
 
    cr_assert(cut != NULL);
    cr_assert_eq(SCIProwGetNNonz(cut), 2);
-   cr_assert(SCIPisEQ(scip, SCIProwGetLhs(cut), exp(2)));
-   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
+   cr_assert_eq(SCIProwGetLhs(cut), -SCIPinfinity(scip));
+   cr_assert(SCIPisEQ(scip, SCIProwGetRhs(cut), exp(2)));
 
    for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {

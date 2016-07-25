@@ -235,8 +235,8 @@ SCIP_RETCODE separatePointExp(
    if( success )
    {
       SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
-            overestimate ? -SCIPinfinity(scip) : -linconstant,
-            overestimate ? -linconstant : SCIPinfinity(scip),
+            overestimate ? -linconstant : -SCIPinfinity(scip),
+            overestimate ? SCIPinfinity(scip) : -linconstant,
             FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
