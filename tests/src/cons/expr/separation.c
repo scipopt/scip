@@ -123,6 +123,7 @@ Test(separation, sum, .init = setup, .fini = teardown,
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
    /* compute cut */
@@ -170,6 +171,7 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
    /*
@@ -253,6 +255,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
    /*
@@ -343,6 +346,7 @@ Test(separation, exponential, .init = setup, .fini = teardown,
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
    /* compute a cut for which we need an overestimation (secant) */
