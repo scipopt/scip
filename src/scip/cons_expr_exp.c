@@ -171,6 +171,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
    SCIP_Bool overestimate;
+   SCIP_Real violation;
    SCIP_Real refpoint;
    SCIP_Real lincoef;
    SCIP_Real linconstant;
@@ -191,12 +192,15 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    childvar = SCIPgetConsExprExprLinearizationVar(child);
    assert(childvar != NULL);
 
+   /* compute the violation; this determines whether we need to over- or underestimate */
+   violation = exp(SCIPgetSolVal(scip, sol, childvar)) - SCIPgetSolVal(scip, sol, auxvar);
+
    /* check if there is a violation */
-   if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, auxvar) - SCIPgetSolVal(scip, sol, childvar), 0.0))
+   if( SCIPisEQ(scip, violation, 0.0) )
       return SCIP_OKAY;
 
    /* determine if we need to under- or overestimate */
-   overestimate = SCIPisLT(scip, SCIPgetSolVal(scip, sol, auxvar), SCIPgetSolVal(scip, sol, childvar));
+   overestimate = SCIPisLT(scip, violation, 0.0);
    refpoint = SCIPgetSolVal(scip, sol, childvar);
    lincoef = 0.0;
    linconstant = 0.0;
