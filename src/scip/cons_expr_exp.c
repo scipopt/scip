@@ -163,9 +163,15 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
+/** helper function to separate a given point; needed for proper unittest */
 static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
+SCIP_RETCODE separatePointExp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
 {
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* auxvar;
@@ -178,17 +184,20 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    SCIP_Bool success;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") == 0);
+   assert(cut != NULL);
 
+   *cut = NULL;
+
+   /* get expression data */
    auxvar = SCIPgetConsExprExprLinearizationVar(expr);
    assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-
-   *result = SCIP_DIDNOTFIND;
-   *ncuts = 0;
-
    childvar = SCIPgetConsExprExprLinearizationVar(child);
    assert(childvar != NULL);
 
@@ -222,46 +231,55 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
          &success);
    }
 
-   /* try to add cut if previous step was successful */
+   /* create cut if it was successful */
    if( success )
    {
-      SCIP_ROW* cut;
-      SCIP_Real efficacy;
-      SCIP_Real rhs;
-      SCIP_Real lhs;
+      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
+            overestimate ? -SCIPinfinity(scip) : -linconstant,
+            overestimate ? -linconstant : SCIPinfinity(scip),
+            FALSE, FALSE, FALSE) );
 
-      if( overestimate )
-      {
-         lhs = -SCIPinfinity(scip);
-         rhs = -linconstant;
-      }
-      else
-      {
-         lhs = -linconstant;
-         rhs = SCIPinfinity(scip);
-      }
+      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
+   }
 
-      SCIP_CALL( SCIPcreateRowCons(scip, &cut, conshdlr, "exp_cut", 0, NULL, NULL, lhs, rhs, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, -1.0) );
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, childvar, lincoef) );
+   return SCIP_OKAY;
+}
 
-      efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+/** expression separation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
+{
+   SCIP_ROW* cut;
+   SCIP_Real efficacy;
 
-      /* add cut if it is violated */
-      if( SCIPisGE(scip, efficacy, minefficacy) )
-      {
-         SCIP_Bool infeasible;
+   cut = NULL;
+   *ncuts = 0;
+   *result = SCIP_DIDNOTFIND;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-         *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-         *ncuts += 1;
+   SCIP_CALL( separatePointExp(scip, conshdlr, expr, sol, &cut) );
+
+   /* failed to compute a cut */
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+
+   /* add cut if it is violated */
+   if( SCIPisGE(scip, efficacy, minefficacy) )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
 
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
-         SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
-      }
    }
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
    return SCIP_OKAY;
 }
