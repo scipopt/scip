@@ -5076,6 +5076,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
       /* release the auxiliary variable */
       if( (*expr)->auxvar != NULL )
       {
+         /* remove variable locks of the auxiliary variable */
+         SCIP_CALL( SCIPaddVarLocks(scip, (*expr)->auxvar, -1, -1) );
+
          SCIP_CALL( SCIPreleaseVar(scip, &(*expr)->auxvar) );
       }
       assert((*expr)->auxvar == NULL);
