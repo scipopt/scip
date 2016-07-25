@@ -3345,7 +3345,6 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CONSDATA* consdata1;
          SCIP_Bool redundant;
 
-
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
 
@@ -3357,8 +3356,6 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
          redundant = FALSE;
 
          if( consdata0->resvar != consdata1->resvar )
@@ -3383,6 +3380,9 @@ SCIP_RETCODE detectRedundantConstraints(
          /* delete consdel */
          if( redundant )
          {
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
 	    /* also take the check when upgrade flag over if necessary */
 	    consdata1->checkwhenupgr = consdata1->checkwhenupgr || consdata0->checkwhenupgr;
 	    consdata1->notremovablewhenupgr = consdata1->notremovablewhenupgr || consdata0->notremovablewhenupgr;
