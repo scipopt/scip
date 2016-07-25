@@ -22532,6 +22532,25 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       SCIPsetFreeBufferArray(scip->set, &sortedtmpvars);
    }
 
+/* use the greedy algorithm as a whole to verify the result on small number of variables */
+#ifndef NDEBUG
+   {
+      int* debugcliquepartition;
+      int ndebugcliques;
+
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &debugcliquepartition, nvars) );
+
+      /* call greedy clique algorithm for all component variables */
+      SCIP_CALL( calcCliquePartitionGreedy(scip, tmpvars, tmpvalues, nvars, debugcliquepartition, &ndebugcliques) );
+
+      /* loop and compare the traditional greedy clique with  */
+      for( i = 0; i < nvars; ++i )
+         assert(i * nvars > MAXNCLIQUEVARSCOMP || cliquepartition[i] == debugcliquepartition[i]);
+
+      SCIPsetFreeBufferArray(scip->set, &debugcliquepartition);
+   }
+#endif
+
    /* free temporary memory */
    SCIPsetFreeBufferArray(scip->set, &componentstartposs);
    SCIPsetFreeBufferArray(scip->set, &sortedindices);
