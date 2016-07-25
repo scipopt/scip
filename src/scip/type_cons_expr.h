@@ -41,7 +41,7 @@ extern "C" {
  * output:
  *  - simplifiedexpr : the simplified expression
  */
-#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) int x (\
+#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
    SCIP*                 scip,               \
    SCIP_CONSEXPR_EXPR*   expr,               \
    SCIP_CONSEXPR_EXPR**  simplifiedexpr)

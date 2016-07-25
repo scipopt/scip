@@ -286,7 +286,7 @@ SCIP_RETCODE findEqualExpr(
    SCIP_HASHTABLE*       key2expr,           /**< mapping of hashes to expressions */
    SCIP_CONSEXPR_EXPR**  newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
    )
-{
+{  /*lint --e{438}*/
    SCIP_HASHTABLELIST* hashtablelist;
 
    assert(scip != NULL);
@@ -321,7 +321,7 @@ SCIP_RETCODE findEqualExpr(
          break;
       }
    }
-   while( TRUE );
+   while( TRUE ); /*lint !e506*/
 
    return SCIP_OKAY;
 }
@@ -501,7 +501,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
       default:
       {
          SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
          return SCIP_OKAY;
       }
    }
@@ -509,7 +509,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
-{
+{   /*lint --e{715}*/
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
    assert(sourcescip == targetscip);
@@ -552,7 +552,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
 /** expression walk callback to free an expression including its children (if not used anywhere else) */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
 
    /* the expression should not be used by more than the parent that is also freed */
@@ -621,7 +621,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
       default:
       {
          SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
          return SCIP_OKAY;
       }
    }
@@ -667,6 +667,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
             break;
          }
 
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
          default: ;
       }
    }
@@ -684,7 +686,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
 /** expression walk callback to print an expression in dot format */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
    SCIP_CONSEXPR_EXPR* parentbackup;
    SCIP_Real color;
@@ -795,7 +797,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
 /** expression walk callback when evaluating expression, called before child is visited */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprVisitChild)
-{
+{  /*lint --e{715}*/
    EXPREVAL_DATA* evaldata;
 
    assert(expr != NULL);
@@ -806,7 +808,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprVisitChild)
    /* skip child if it has been evaluated for that solution already */
    if( evaldata->soltag != 0 && evaldata->soltag == expr->children[expr->walkcurrentchild]->evaltag )
    {
-      if( expr->children[expr->walkcurrentchild]->evalvalue == SCIP_INVALID )
+      if( expr->children[expr->walkcurrentchild]->evalvalue == SCIP_INVALID ) /*lint !e777*/
       {
          evaldata->aborted = TRUE;
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -827,7 +829,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprVisitChild)
 /** expression walk callback when evaluating expression, called when expression is left */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
-{
+{  /*lint --e{715}*/
    EXPREVAL_DATA* evaldata;
 
    assert(expr != NULL);
@@ -839,7 +841,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
    SCIP_CALL( (*expr->exprhdlr->eval)(scip, expr, &expr->evalvalue, evaldata->sol) );
    expr->evaltag = evaldata->soltag;
 
-   if( expr->evalvalue == SCIP_INVALID )
+   if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
    {
       evaldata->aborted = TRUE;
       *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -855,7 +857,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
 /** expression walk callback when evaluating expression on intervals, called before child is visited */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
-{
+{  /*lint --e{715}*/
    EXPRINTEVAL_DATA* propdata;
 
    assert(expr != NULL);
@@ -887,7 +889,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
 /** expression walk callback when evaluating expression on intervals, called when expression is left */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
-{
+{  /*lint --e{715}*/
    EXPRINTEVAL_DATA* propdata;
    SCIP_INTERVAL interval;
 
@@ -1030,11 +1032,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
          --*depth;
          break;
       }
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
       default:
       {
          /* shouldn't be here */
          SCIPABORT();
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
          return SCIP_OKAY;
       }
    }
@@ -1093,9 +1096,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
        * this can lead to more collisions and thus a larger number of expensive expression compare calls
        */
       for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
-         hashkey += (unsigned int) expr->exprhdlr->name[i];
+         hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
 
-      hashkey = SCIPcalcFibHash(hashkey);
+      hashkey = SCIPcalcFibHash((SCIP_Real)hashkey);
    }
 
    /* put the hash key into expr2key map */
@@ -1353,7 +1356,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
       default:
       {
          SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
          return SCIP_OKAY;
       }
    }
@@ -1542,7 +1545,7 @@ SCIP_RETCODE forwardPropCons(
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL);
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL) );
    }
 
 #ifdef SCIP_DEBUG
@@ -1599,7 +1602,7 @@ SCIP_RETCODE reversePropConss(
       return SCIP_OKAY;
 
    /* create queue */
-   SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2) );
+   SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2.0) );
 
    /* add root expressions to the queue */
    for( i = 0; i < nconss; ++i )
@@ -1746,14 +1749,12 @@ SCIP_RETCODE propConss(
 
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
-   ntightenings = 0;
    cutoff = FALSE;
 
    /* main propagation loop */
    do
    {
       SCIPdebugMessage("start propagation round %d\n", roundnr);
-      success = FALSE;
 
       /* apply forward propagation; recompute expression intervals if it is called for the first time (this also marks
        * all expressions as non-tightened)
@@ -1924,7 +1925,7 @@ SCIP_RETCODE computeViolation(
    activity = SCIPgetConsExprExprValue(consdata->expr);
 
    /* consider constraint as violated if it is undefined in the current point */
-   if( activity == SCIP_INVALID )
+   if( activity == SCIP_INVALID ) /*lint !e777*/
    {
       consdata->lhsviol = SCIPinfinity(scip);
       consdata->rhsviol = SCIPinfinity(scip);
@@ -1980,7 +1981,7 @@ SCIP_RETCODE catchVarEvents(
       var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
       assert(var != NULL);
 
-      SCIP_CALL( SCIPallocBlockMemory(scip, &(consdata->vareventdata[i])) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(consdata->vareventdata[i])) ); /*lint !e866*/
       consdata->vareventdata[i]->cons = cons;
       consdata->vareventdata[i]->varexpr = consdata->varexprs[i];
 
@@ -2034,7 +2035,7 @@ SCIP_RETCODE dropVarEvents(
 
       SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) consdata->vareventdata[i], consdata->vareventdata[i]->filterpos) );
 
-      SCIPfreeBlockMemory(scip, &consdata->vareventdata[i]);
+      SCIPfreeBlockMemory(scip, &consdata->vareventdata[i]); /*lint !e866*/
       consdata->vareventdata[i] = NULL;
    }
 
@@ -2047,7 +2048,7 @@ SCIP_RETCODE dropVarEvents(
 /** processes variable fixing or bound change event */
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
-{
+{  /*lint --e{715}*/
    SCIP_EVENTTYPE eventtype;
    SCIP_CONSEXPR_EXPR* varexpr;
    SCIP_CONSDATA* consdata;
@@ -2071,10 +2072,10 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    eventtype = SCIPeventGetType(event);
    assert((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 || (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0);
 
-   SCIPdebugMessage("  exec event %d for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
+   SCIPdebugMessage("  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
    /* mark constraint to be propagated again */
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
    {
       SCIPdebugMessage("  propagate %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
@@ -2302,7 +2303,7 @@ SCIP_RETCODE parseBase(
 {
    SCIP_VAR* var;
 
-   debugParse("parsing base from %s\n", expr);
+   debugParse("parsing base from %s\n", expr); /*lint !e506 !e681*/
 
    /* ignore whitespace */
    while( isspace((unsigned char)*expr) )
@@ -2329,13 +2330,13 @@ SCIP_RETCODE parseBase(
       /* check if we have already created an expression out of this var */
       if( SCIPhashmapExists(vartoexprvarmap, (void *)var) )
       {
-         debugParse("Variable %s has been parsed, capturing its expression\n", SCIPvarGetName(var));
+         debugParse("Variable %s has been parsed, capturing its expression\n", SCIPvarGetName(var)); /*lint !e506 !e681*/
          *basetree = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(vartoexprvarmap, (void *)var);
          SCIPcaptureConsExprExpr(*basetree);
       }
       else
       {
-         debugParse("First time parsing variable %s, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var));
+         debugParse("First time parsing variable %s, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var)); /*lint !e506 !e681*/
          SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, basetree, var) );
          SCIP_CALL( SCIPhashmapInsert(vartoexprvarmap, (void*)var, (void*)(*basetree)) );
       }
@@ -2354,7 +2355,7 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       ++expr;
-      debugParse("Done parsing expression, continue with <%s>\n", expr);
+      debugParse("Done parsing expression, continue with <%s>\n", expr); /*lint !e506 !e681*/
    }
    else if( isdigit(*expr) )
    {
@@ -2365,7 +2366,7 @@ SCIP_RETCODE parseBase(
          SCIPerrorMessage("error parsing number from <%s>\n", expr);
          return SCIP_READERROR;
       }
-      debugParse("Parsed value %g, creating a value-expression.\n", value);
+      debugParse("Parsed value %g, creating a value-expression.\n", value); /*lint !e506 !e681*/
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, basetree, value) );
    }
    else if( isalpha(*expr) )
@@ -2456,7 +2457,7 @@ SCIP_RETCODE parseFactor(
 {
    SCIP_CONSEXPR_EXPR*  basetree;
 
-   debugParse("parsing factor from %s\n", expr);
+   debugParse("parsing factor from %s\n", expr); /*lint !e506 !e681*/
 
    if( *expr == '\0' )
    {
@@ -2536,7 +2537,7 @@ SCIP_RETCODE parseFactor(
          }
       }
 
-      debugParse("parsed the exponent %g\n", *exponent);
+      debugParse("parsed the exponent %g\n", *exponent); /*lint !e506 !e681*/
    }
    else
    {
@@ -2567,7 +2568,7 @@ SCIP_RETCODE parseTerm(
    SCIP_CONSEXPR_EXPR* factortree;
    SCIP_Real exponent;
 
-   debugParse("parsing term from %s\n", expr);
+   debugParse("parsing term from %s\n", expr); /*lint !e506 !e681*/
 
    /* parse Factor */
    /* ignore whitespace */
@@ -2577,7 +2578,7 @@ SCIP_RETCODE parseTerm(
    SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree) );
    expr = *newpos;
 
-   debugParse("back to parsing Term (we have a Factor with exponent %g), continue parsing from %s\n", exponent, expr);
+   debugParse("back to parsing Term (we have a Factor with exponent %g), continue parsing from %s\n", exponent, expr); /*lint !e506 !e681*/
 
    /* check if Terms has another Factor incoming */
    while( isspace((unsigned char)*expr) )
@@ -2596,7 +2597,7 @@ SCIP_RETCODE parseTerm(
 
          isdivision = (*expr == '/') ? TRUE : FALSE;
 
-         debugParse("while parsing term, read char %c\n", *expr);
+         debugParse("while parsing term, read char %c\n", *expr); /*lint !e506 !e681*/
 
          ++expr;
          retcode = parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree);
@@ -2654,7 +2655,7 @@ SCIP_RETCODE parseExpr(
    SCIP_Real sign;
    SCIP_CONSEXPR_EXPR* termtree;
 
-   debugParse("parsing expression %s\n", expr);
+   debugParse("parsing expression %s\n", expr); /*lint !e506 !e681*/
 
    /* ignore whitespace */
    while( isspace((unsigned char)*expr) )
@@ -2664,7 +2665,7 @@ SCIP_RETCODE parseExpr(
    sign = 1.0;
    if( *expr == '+' || *expr == '-' )
    {
-      debugParse("while parsing expression, read char %c\n", *expr);
+      debugParse("while parsing expression, read char %c\n", *expr); /*lint !e506 !e681*/
       sign = *expr == '+' ? 1.0 : -1.0;
       ++expr;
    }
@@ -2672,7 +2673,7 @@ SCIP_RETCODE parseExpr(
    SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
    expr = *newpos;
 
-   debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr);
+   debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
 
    /* check if Expr has another Term incoming */
    while( isspace((unsigned char)*expr) )
@@ -2725,7 +2726,7 @@ SCIP_RETCODE parseExpr(
             ++expr;
          }
 
-         debugParse("while parsing expression, read coefficient %g\n", coef);
+         debugParse("while parsing expression, read coefficient %g\n", coef); /*lint !e506 !e681*/
 
          retcode = parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree);
 
@@ -2830,16 +2831,19 @@ SCIP_RETCODE makeClassicExpr(
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "abs") == 0 )
    {
       assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_ABS, children[0]) );
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "exp") == 0 )
    {
       assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_EXP, children[0]) );
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "log") == 0 )
    {
       assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_LOG, children[0]) );
    }
    else
@@ -3099,7 +3103,7 @@ SCIP_RETCODE createAuxVars(
 
    for( i = 0; i < nconss; ++i )
    {
-      assert(conss[i] != NULL);
+      assert(conss != NULL && conss[i] != NULL);
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -3134,7 +3138,7 @@ SCIP_RETCODE freeAuxVars(
 
    for( i = 0; i < nconss; ++i )
    {
-      assert(conss[i] != NULL);
+      assert(conss != NULL && conss[i] != NULL);
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -3233,7 +3237,7 @@ SCIP_RETCODE separatePoint(
 
    for( c = 0; c < nconss; ++c )
    {
-      assert(conss[c] != NULL);
+      assert(conss != NULL && conss[c] != NULL);
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -3868,7 +3872,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   int soltag;
+   unsigned int soltag;
    int c;
 
    assert(scip != NULL);
@@ -3885,6 +3889,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
    /* check all nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL && conss[c] != NULL);
       SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
 
       consdata = SCIPconsGetData(conss[c]);
@@ -4233,7 +4238,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
       }
    }
 
-   debugParse("str should start at beginning of expr: %s\n", str);
+   debugParse("str should start at beginning of expr: %s\n", str); /*lint !e506 !e681*/
 
    /* parse expression: so far we did not allocate memory, so can just return in case of readerror */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, str, &str, &consexprtree) );
@@ -4303,7 +4308,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
 
-   debugParse("created expression constraint: <%s>\n", SCIPconsGetName(*cons));
+   debugParse("created expression constraint: <%s>\n", SCIPconsGetName(*cons)); /*lint !e506 !e681*/
 
    return SCIP_OKAY;
 }
@@ -4403,8 +4408,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeHdlr(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,          /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr)), /**< handler copy callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr))  /**< handler free callback (can be NULL) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->copyhdlr = copyhdlr;
@@ -4420,8 +4425,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,          /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRCOPYDATA((*copydata)), /**< expression data copy callback (can be NULL for expressions without data) */
    SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata))  /**< expression data free callback (can be NULL if data does not need to be freed) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->copydata = copydata;
@@ -4436,8 +4441,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSimplify(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRSIMPLIFY((*simplify))  /**< simplify callback (can be NULL) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->simplify = simplify;
@@ -4451,8 +4456,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRCMP((*compare))    /**< compare callback (can be NULL) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->compare = compare;
@@ -4466,8 +4471,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRPRINT((*print))    /**< print callback (can be NULL) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->print = print;
@@ -4481,8 +4486,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->parse = parse;
@@ -4496,8 +4501,8 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
-)
-{
+   )
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->inteval = inteval;
@@ -4512,7 +4517,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa))      /**< separation callback (can be NULL) */
    )
-{
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->sepa = sepa;
@@ -4527,7 +4532,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop))/**< reverse propagation callback (can be NULL) */
    )
-{
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->reverseprop = reverseprop;
@@ -4542,7 +4547,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash))      /**< hash callback (can be NULL) */
    )
-{
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->hash = hash;
@@ -4553,7 +4558,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
-)
+   )
 {
    assert(conshdlr != NULL);
 
@@ -4722,11 +4727,9 @@ SCIP_RETCODE SCIPcreateConsExprExpr2(
    SCIP_CONSEXPR_EXPR*     child1,           /**< first child (can be NULL) */
    SCIP_CONSEXPR_EXPR*     child2            /**< second child (can be NULL) */
    )
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(exprhdlr != NULL);
-   assert(child1 != NULL);
-   assert(child2 != NULL);
 
    if( child1 != NULL && child2 != NULL )
    {
@@ -4917,6 +4920,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
             {
                if( SCIPexprgraphGetNodeQuadraticLinearCoefs(node)[i] != 0.0 )
                {
+                  assert(children != NULL);
                   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, children[i], SCIPexprgraphGetNodeQuadraticLinearCoefs(node)[i]) );
                }
             }
@@ -4930,11 +4934,15 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
             if( quadelem.idx1 == quadelem.idx2 )
             {
                SCIP_Real two = 2.0;
+               assert(children != NULL);
                SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 1, &children[quadelem.idx1], &two, 1.0) );
             }
             else
             {
                SCIP_CONSEXPR_EXPR* prodchildren[2];
+
+               assert(children != NULL);
+
                prodchildren[0] = children[quadelem.idx1];
                prodchildren[1] = children[quadelem.idx2];
 
@@ -4966,6 +4974,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
             if( SCIPexprGetMonomialNFactors(monom) == 1 && (exponents == NULL || exponents[0] == 1.0) )
             {
+               assert(children != NULL && children[SCIPexprGetMonomialChildIndices(monom)[0]] != NULL);
+
                /* monom is linear in child -> append child itself */
                SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, children[SCIPexprGetMonomialChildIndices(monom)[0]], SCIPexprGetMonomialCoef(monom)) );
             }
@@ -4979,6 +4989,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
                for( f = 0; f < SCIPexprGetMonomialNFactors(monom); ++f )
                {
+                  assert(children != NULL && children[SCIPexprGetMonomialChildIndices(monom)[f]] != NULL);
                   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, monomial, children[SCIPexprGetMonomialChildIndices(monom)[f]], exponents ? exponents[f] : 1.0) );
                }
 
@@ -4993,7 +5004,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_EXP:
       {
          assert(nchildren == 1);
-         assert(children[0] != NULL);
+         assert(children != NULL && children[0] != NULL);
 
          SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, children[0]) );
 
@@ -5002,7 +5013,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_LOG:
       {
          assert(nchildren == 1);
-         assert(children[0] != NULL);
+         assert(children != NULL && children[0] != NULL);
 
          SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, expr, children[0]) );
 
@@ -5011,7 +5022,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_ABS:
       {
          assert(nchildren == 1);
-         assert(children[0] != NULL);
+         assert(children != NULL && children[0] != NULL);
 
          SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, expr, children[0]) );
 
@@ -5025,6 +5036,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_MAX:
       case SCIP_EXPR_SIGN:
       case SCIP_EXPR_USER:
+      case SCIP_EXPR_PARAM:
+      case SCIP_EXPR_LAST:
       default:
          goto TERMINATE;
    }
@@ -5034,6 +5047,7 @@ TERMINATE:
    /* release all created children expressions (c-1...0) */
    for( --c; c >= 0; --c )
    {
+      assert(children != NULL && children[c] != NULL);
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[c]) );
    }
 
@@ -5319,7 +5333,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
 
    /* close the pipe */
-   pclose(f);
+   (void) pclose(f);
 
    return SCIP_OKAY;
 #endif
@@ -5604,13 +5618,16 @@ unsigned int SCIPgetConsExprExprHashkey(
    )
 {
    SCIP_HASHMAP* expr2key;
+   SCIP_RETCODE retcode;
    unsigned int hashkey;
 
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   retcode = SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip)));
+   assert(retcode == SCIP_OKAY);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
+   retcode = SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key);
+   assert(retcode == SCIP_OKAY);
 
    assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
    hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
@@ -5725,7 +5742,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    SCIP_CONSEXPR_EXPR*          oldparent;
    SCIP_CONSEXPREXPRWALK_IO     oldwalkio;
    int                          oldcurrentchild;
-   SCIP_Bool                    abort;
+   SCIP_Bool                    aborted;
 
    assert(root != NULL);
 
@@ -5741,8 +5758,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    /* traverse the tree */
    result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
-   abort = FALSE;
-   while( !abort )
+   aborted = FALSE;
+   while( !aborted )
    {
       switch( stage )
       {
@@ -5759,7 +5776,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      root->walkcurrentchild = root->nchildren;
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     abort = TRUE;
+                     aborted = TRUE;
                      break;
                }
             }
@@ -5787,7 +5804,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                }
                else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
                {
-                  abort = TRUE;
+                  aborted = TRUE;
                   break;
                }
             }
@@ -5815,7 +5832,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      root->walkcurrentchild = root->nchildren;
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     abort = TRUE;
+                     aborted = TRUE;
                      break;
                }
             }
@@ -5846,7 +5863,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                      SCIPABORT();
                      break;
                   case SCIP_CONSEXPREXPRWALK_ABORT :
-                     abort = TRUE;
+                     aborted = TRUE;
                      break;
                }
 
@@ -5860,7 +5877,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
             }
             /* if we finished with the real root (walkparent == NULL), we are done */
             if( root == NULL )
-               abort = TRUE;
+               aborted = TRUE;
 
             /* goto visited */
             stage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
