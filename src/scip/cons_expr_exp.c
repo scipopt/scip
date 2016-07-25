@@ -27,7 +27,7 @@
 #include "scip/cons_expr_exp.h"
 
 #define EXP_PRECEDENCE  85000
-#define EXP_HASHKEY     SCIPcalcFibHash(10181)
+#define EXP_HASHKEY     SCIPcalcFibHash(10181.0)
 
 /*
  * Data structures
@@ -45,7 +45,7 @@
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrExp)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -54,7 +54,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrExp)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataExp)
-{
+{  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
    assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
@@ -66,7 +66,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataExp)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataExp)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
 
    SCIPsetConsExprExprData(expr, NULL);
@@ -76,7 +76,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataExp)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
 
@@ -102,6 +102,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
          break;
       }
 
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       default: ;
    }
 
@@ -110,7 +111,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* childexpr;
 
    assert(expr != NULL);
@@ -133,11 +134,11 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
    *val = exp(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 
@@ -191,7 +192,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
    assert(childvar != NULL);
 
    /* check if there is a violation */
-   if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, auxvar) - SCIPgetSolVal(scip, sol, childvar), 0))
+   if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, auxvar) - SCIPgetSolVal(scip, sol, childvar), 0.0))
       return SCIP_OKAY;
 
    /* determine if we need to under- or overestimate */
@@ -208,7 +209,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
 
    if( overestimate )
    {
-      SCIPaddExpSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
+      SCIPaddExpSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), &lincoef, &linconstant,
          &success);
    }
    else
