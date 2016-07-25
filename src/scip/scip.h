@@ -14134,7 +14134,7 @@ void SCIPaddExpLinearization(
    SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
    );
 
-/** computes coefficients of secant of an exponential term */
+/** computes coefficients of secant of a logarithmic term */
 EXTERN
 void SCIPaddLogSecant(
    SCIP*                 scip,               /**< SCIP data structure */

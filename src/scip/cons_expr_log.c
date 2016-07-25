@@ -245,7 +245,7 @@ SCIP_RETCODE separatePointLog(
    /* create cut if it was successful */
    if( success )
    {
-      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
+      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "log_cut", 0, NULL, NULL,
             overestimate ? -linconstant : -SCIPinfinity(scip),
             overestimate ? SCIPinfinity(scip) : -linconstant,
             FALSE, FALSE, FALSE) );

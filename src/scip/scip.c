@@ -30952,7 +30952,7 @@ void SCIPaddExpLinearization(
    *linconstant += constant;
 }
 
-/** computes coefficients of secant of an exponential term */
+/** computes coefficients of secant of a logarithmic term */
 void SCIPaddLogSecant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lb,                 /**< lower bound on variable */
