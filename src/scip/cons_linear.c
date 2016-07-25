@@ -12593,6 +12593,14 @@ SCIP_RETCODE detectRedundantConstraints(
           * changes applied to an upgraded constraint will not be considered in the instance */
          if( consdata1->upgraded && !consdata0->upgraded )
          {
+            /* the coefficients of both rows are negations, we need to switch lhs and rhs and multiply them with -1 */
+            if( !SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
+            {
+               SCIP_Real tmp = lhs;
+               lhs = -rhs;
+               rhs = -tmp;
+            }
+
             consstay = cons0;
             consdatastay = consdata0;
             consdel = cons1;
