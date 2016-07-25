@@ -11941,6 +11941,50 @@ SCIP_RETCODE SCIPsumLPRows(
    SCIP_Real*            sumrhs              /**< pointer to store the right hand side of the row summation */
    );
 
+/** applies the MIR function on a given set of varibales, values and rhs/lhs representing a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPapplyMIR(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< varibales in the constraint */
+   SCIP_Real*            vals,               /**< coefficients in the constraint */
+   SCIP_Real*            mirvals,            /**< coefficients in the constraint after applying MIR */
+   SCIP_Real             side,               /**< lhs/rhs of the constraint */
+   SCIP_Real*            mirside,            /**< lhs/rhs of the constraint after applying MIR */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             isleqineq,          /**< is the given constraint a lower equal inequality? (i.e., side = rhs? */
+   int*                  nnonzeros,
+   SCIP_Bool*            success
+   );
+
+/** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
+ *  prevent numerical rounding errors
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcleanupMIRCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            mirvars,            /**< array to store MIR variables: must be of size nvars */
+   SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   SCIP_Real*            mirside,            /**< pointer to store the ths/lhs of the MIR constraint */
+   int                   nvars,              /**< non-zero MIR coefficients */
+   SCIP_Bool             local               /**< is the constraint only valid locally? */
+   );
+
 /** calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
  *  rows cannot participate in a MIR cut.
  *
@@ -11986,50 +12030,6 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
    int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
-   );
-
-/** applies the MIR function on a given set of varibales, values and rhs/lhs representing a constraint
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-SCIP_RETCODE SCIPapplyMIR(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< varibales in the constraint */
-   SCIP_Real*            vals,               /**< coefficients in the constraint */
-   SCIP_Real*            mirvals,            /**< coefficients in the constraint after applying MIR */
-   SCIP_Real             side,               /**< lhs/rhs of the constraint */
-   SCIP_Real*            mirside,            /**< lhs/rhs of the constraint after applying MIR */
-   int                   nvars,              /**< number of variables */
-   SCIP_Bool             isleqineq,          /**< is the given constraint a lower equal inequality? (i.e., side = rhs? */
-   int*                  nnonzeros,
-   SCIP_Bool*            success
-   );
-
-/** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
- *  prevent numerical rounding errors
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-SCIP_RETCODE SCIPcleanupMIRCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            mirvars,            /**< array to store MIR variables: must be of size nvars */
-   SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
-   SCIP_Real*            mirside,            /**< pointer to store the ths/lhs of the MIR constraint */
-   int                   nvars,              /**< non-zero MIR coefficients */
-   SCIP_Bool             local               /**< is the constraint only valid locally? */
    );
 
 /** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
@@ -21193,15 +21193,6 @@ EXTERN
 int SCIPgetPtrarrayMaxIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
-   );
-
-EXTERN
-SCIP_RETCODE SCIPupdateDualRayStat(
-   SCIP*                 scip,
-   int                   initsize,
-   int                   heursize,
-   int                   nconfsets,
-   int                   nclauses
    );
 
 /**@} */

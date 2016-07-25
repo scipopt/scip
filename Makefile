@@ -485,6 +485,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/conflict.o \
 			scip/conflictstore.o \
 			scip/cons.o \
+			scip/cuts.o \
 			scip/cutpool.o \
 			scip/debug.o \
 			scip/dialog.o \

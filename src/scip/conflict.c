@@ -5877,77 +5877,7 @@ SCIP_RETCODE runBoundHeuristic(
    return SCIP_OKAY;
 }
 
-#if 0
 static
-SCIP_RETCODE shrinkDualray(
-   SCIP_SET*             set,
-   SCIP_LP*              lp,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   SCIP_Real*            lhs,
-   int                   nvars,
-   int                   idx
-   )
-{
-   SCIP_COL* col;
-   int minsize;
-   int minrow;
-   int v;
-   int i;
-
-   assert(0 <= idx);
-   assert(idx < nvars);
-
-   if( SCIPsetIsZero(set, vals[idx]) )
-      return SCIP_OKAY;
-
-   v = SCIPvarGetProbindex(vars[idx]);
-   assert(v >= 0);
-   assert(SCIPvarGetStatus(vars[idx]) == SCIP_VARSTATUS_COLUMN);
-
-   col = lp->cols[v];
-   minrow = 0;
-   minsize = SCIProwGetNNonz(col->rows[0]);
-
-   for( i = 1; i < col->nlprows; i++ )
-   {
-      SCIP_ROW* row = col->rows[i];
-
-      if( vals[idx] > 0.0 )
-      {
-         if( !SCIPsetIsInfinity(set, -row->lhs) )
-         {
-            if( row->len < minsize )
-            {
-               minrow = i;
-               minsize = row->len;
-            }
-         }
-      }
-      else
-      {
-         assert(vals[idx] < 0.0);
-
-         if( !SCIPsetIsInfinity(set, row->rhs) )
-         {
-            if( row->len < minsize )
-            {
-               minrow = i;
-               minsize = row->len;
-            }
-         }
-      }
-   }
-
-   SCIPprintRow(set->scip, col->rows[minrow], NULL);
-   SCIPinfoMessage(set->scip, NULL, "\n");
-
-   printf("var=<%s>, conscoef=%g\n", SCIPvarGetName(vars[idx]), vals[idx]);
-
-   return SCIP_OKAY;
-}
-#endif
-
 SCIP_RETCODE tightenDualray(
    SCIP_SET*             set,
    SCIP_LP*              lp,
@@ -6072,59 +6002,6 @@ SCIP_RETCODE tightenDualray(
       }
       else
          stop = TRUE;
-#if 0
-      SCIP_CALL( shrinkDualray(set, lp, mirvars, newvals, &newlhs, nmirvars, indabsmin) );
-
-      /* calculate the violation and scale it with the lhs */
-      activity = 0.0;
-      absmin = SCIPsetInfinity(set);
-      indabsmin = -1;
-      for( i = 0; i < nmirvars; i++ )
-      {
-         SCIP_Real absval = REALABS(newvals[i]);
-
-         if( SCIPsetIsZero(set, absval) )
-            continue;
-
-         ++nnonzeros;
-
-        if( newvals[i] > 0.0 )
-            activity += newvals[i] * SCIPvarGetUbLocal(mirvars[i]);
-         else
-            activity += newvals[i] * SCIPvarGetLbLocal(mirvars[i]);
-      }
-
-      if( SCIPsetIsGE(set, activity, newlhs) )
-      {
-         stop = TRUE;
-         continue;
-      }
-
-      newviolation = newlhs - activity;
-      if( !SCIPsetIsZero(set, newlhs)  )
-         newviolation /= REALABS(newlhs);
-
-      if( newviolation > violation )
-      {
-         *success = TRUE;
-
-         for( i = 0; i < nmirvars; i++ )
-            bestvals[i] = newvals[i];
-         bestlhs = newlhs;
-         violation = newviolation;
-
-#ifdef PRINT_MIR
-      printf("new MIR (2): (violation=%.12g)\n", violation);
-      for( i = 0; i < nmirvars; i++ )
-         if( bestvals[i] < 0.0 || bestvals[i] > 0.0 )
-            printf("%s%.15g <%s> ", bestvals[i] < 0 ? "" : "+", bestvals[i], SCIPvarGetName(mirvars[i]));
-      printf(" >= %.15g\n", bestlhs);
-#endif
-      }
-      else
-         /* the constraint could not be tightend, we can stop here */
-         stop = TRUE;
-#endif
    }
 
    if( *success )
@@ -6214,7 +6091,6 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Real minabsval;
    SCIP_Real activity;
    SCIP_Bool success;
-   SCIP_Bool allintegral;
    SCIP_Bool applyMIR;
    SCIP_Bool cutoffrootsol;
    char name[SCIP_MAXSTRLEN];
@@ -6239,7 +6115,6 @@ SCIP_RETCODE performDualRayAnalysis(
    assert(mirvals != NULL);
 
    /* check the length of the dualray */
-   allintegral = TRUE;
    applyMIR = TRUE;
    maxabsval = 0.0;
    minabsval = SCIPsetInfinity(set);
@@ -6287,9 +6162,6 @@ SCIP_RETCODE performDualRayAnalysis(
 
       if( SCIPsetIsLT(set, absval, minabsval) )
          minabsval = absval;
-
-      if( !SCIPsetIsIntegral(set, mirvals[v]) )
-         allintegral = FALSE;
 
       if( mirvals[v] > 0.0 )
          activity += mirvals[v] * SCIPvarGetUbLocal(mirvars[v]);
@@ -6347,11 +6219,7 @@ SCIP_RETCODE performDualRayAnalysis(
    }
    else
    {
-      /* try to tighten dualray */
-//      if( applyMIR && !allintegral && !SCIPsetIsIntegral(set, mirlhs) )
-//      {
       SCIP_CALL( tightenDualray(set, lp, mirvars, mirvals, &mirlhs, ndualrayvars, applyMIR, &success) );
-//      }
    }
    /* create, add, and release new artificial constraint */
    (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualray_inf_%d", conflict->ndualrayinfsuccess);
@@ -6439,13 +6307,8 @@ SCIP_RETCODE conflictAnalyzeLP(
 {
    SCIP_VAR** vars;
    SCIP_LPI* lpi;
-   SCIP_Bool resolve;
-   SCIP_Bool solvelp;
    SCIP_Bool valid;
    int nvars;
-
-   // only for tmp stats
-   int nbndchgs = 0;
    int v;
 
    assert(conflict != NULL);
@@ -6637,8 +6500,6 @@ SCIP_RETCODE conflictAnalyzeLP(
       /* start conflict analysis */
       if( !set->conf_onlydualray && valid )
       {
-         int j;
-
          SCIP_CALL( runBoundHeuristic(set, stat, transprob, tree, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity,
                curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, diving, marklpunsolved, TRUE, &valid) );
 

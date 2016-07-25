@@ -53,13 +53,6 @@ struct SCIP_ConflictStore
    int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */
    int                   nswitches;          /**< number of path switches */
    int                   maxstoresize;       /**< maximal size of the storage */
-
-   // statistics, only temp
-   int*                  dualrayinitsize;
-   int*                  dualraysize;
-   int*                  nconflictsets;
-   int*                  nclauses;
-   int                   maxsize;
 };
 
 #ifdef __cplusplus

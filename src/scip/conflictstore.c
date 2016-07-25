@@ -369,152 +369,6 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    return SCIP_OKAY;
 }
 
-static
-void printConflictDualRayStats(
-   SCIP_CONFLICTSTORE*    conflictstore
-   )
-{
-   SCIP_Real avg[4];
-   int min[4];
-   int max[4];
-   int sum[4];
-   int quant5[4];
-   int quant5_i[4];
-   int quant9[4];
-   int quant9_i[4];
-   int i;
-
-   for( i = 0; i < 4; i++ )
-   {
-      avg[i] = 0.0;
-      min[i] = conflictstore->maxsize+1;
-      max[i] = 0;
-      sum[i] = 0;
-      quant5[i] = 0;
-      quant5_i[i] = 0;
-      quant9[i] = 0;
-      quant9_i[i] = 0;
-   }
-
-   /* calculate the sum, avg, min, and max */
-   for( i = 0; i < conflictstore->maxsize; i++ )
-   {
-      /* initial set of bound changes */
-      sum[0] += conflictstore->dualrayinitsize[i];
-
-      if( conflictstore->dualrayinitsize[i] > 0 )
-      {
-         if( i < min[0] )
-            min[0] = i;
-         if( i > max[0] )
-            max[0] = i;
-         avg[0] += conflictstore->dualrayinitsize[i] * (SCIP_Real)i;
-      }
-
-      /* set of bound changes after bound heurisric */
-      sum[1] += conflictstore->dualraysize[i];
-
-      if( conflictstore->dualraysize[i] > 0 )
-      {
-         if( i < min[1] )
-            min[1] = i;
-         if( i > max[1] )
-            max[1] = i;
-         avg[1] += conflictstore->dualraysize[i] * (SCIP_Real)i;
-      }
-
-      /* number of clauses after confict analysis (per conflict) */
-      sum[2] += conflictstore->nclauses[i];
-
-      if( conflictstore->nclauses[i] > 0 )
-      {
-         if( i < min[2] )
-            min[2] = i;
-         if( i > max[2] )
-            max[2] = i;
-         avg[2] += conflictstore->nclauses[i] * (SCIP_Real)i;
-      }
-
-      /* number of generated conficts per set of bound changes */
-      sum[3] += conflictstore->nconflictsets[i];
-
-      if( conflictstore->nconflictsets[i] > 0 )
-      {
-         if( i < min[3] )
-            min[3] = i;
-         if( i > max[3] )
-            max[3] = i;
-         avg[3] += conflictstore->nconflictsets[i] * (SCIP_Real)i;
-      }
-   }
-   assert(sum[0] > 0);
-   avg[0] /= sum[0];
-
-   assert(sum[1] > 0);
-   avg[1] /= sum[1];
-
-   assert(sum[2] > 0);
-   avg[2] /= sum[2];
-
-   assert(sum[3] > 0);
-   avg[3] /= sum[3];
-
-   /* calculate quantiles */
-   for( i = 0; i < conflictstore->maxsize; i++ )
-   {
-      /* initial set size */
-      if( quant9[0] < 0.9*sum[0] )
-      {
-         quant9[0] += conflictstore->dualrayinitsize[i];
-         quant9_i[0] = i;
-         if( quant5[0] < 0.5*sum[0] )
-         {
-            quant5[0] += conflictstore->dualrayinitsize[i];
-            quant5_i[0] = i;
-         }
-      }
-      /* set size after bound heuristic */
-      if( quant9[1] < 0.9*sum[1] )
-      {
-         quant9[1] += conflictstore->dualraysize[i];
-         quant9_i[1] = i;
-         if( quant5[1] < 0.5*sum[1] )
-         {
-            quant5[1] += conflictstore->dualraysize[i];
-            quant5_i[1] = i;
-         }
-      }
-      /* number of clauses per generated conflict */
-      if( quant9[2] < 0.9*sum[2] )
-      {
-         quant9[2] += conflictstore->nclauses[i];
-         quant9_i[2] = i;
-         if( quant5[2] < 0.5*sum[2] )
-         {
-            quant5[2] += conflictstore->nclauses[i];
-            quant5_i[2] = i;
-         }
-      }
-      /* number of generated conflict */
-      if( quant9[3] < 0.9*sum[3] )
-      {
-         quant9[3] += conflictstore->nconflictsets[i];
-         quant9_i[3] = i;
-         if( quant5[3] < 0.5*sum[3] )
-         {
-            quant5[3] += conflictstore->nconflictsets[i];
-            quant5_i[3] = i;
-         }
-      }
-   }
-
-   printf("Conflict-DualRay Statistics:  %8s %8s %8s %8s %8s\n", "min", "quant5", "quant9", "max", "avg");
-   printf(" initial set size :           %8d %8d %8d %8d %8.2f\n", min[0], quant5_i[0], quant9_i[0], max[0], avg[0]);
-   printf(" shriked set size :           %8d %8d %8d %8d %8.2f\n", min[1], quant5_i[1], quant9_i[1], max[1], avg[1]);
-   printf(" conflict length  :           %8d %8d %8d %8d %8.2f\n", min[2], quant5_i[2], quant9_i[2], max[2], avg[2]);
-   printf(" conflict sets    :           %8d %8d %8d %8d %8.2f\n", min[3], quant5_i[3], quant9_i[3], max[3], avg[3]);
-}
-
 
 /** creates conflict storage */
 SCIP_RETCODE SCIPconflictstoreCreate(
@@ -543,13 +397,6 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->nswitches = 1;
    (*conflictstore)->cleanupfreq = -1;
    (*conflictstore)->lastnodenum = -1;
-
-   // statistics, only temp
-   (*conflictstore)->dualrayinitsize = NULL;
-   (*conflictstore)->dualraysize = NULL;
-   (*conflictstore)->nconflictsets = NULL;
-   (*conflictstore)->nclauses = NULL;
-   (*conflictstore)->maxsize = 0;
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL,
@@ -580,17 +427,6 @@ SCIP_RETCODE SCIPconflictstoreFree(
 
    assert(conflictstore != NULL);
    assert(*conflictstore != NULL);
-
-//   printConflictDualRayStats(*conflictstore);
-
-   /* free statistics */
-   if( (*conflictstore)->dualrayinitsize != NULL )
-   {
-      BMSfreeMemoryArray(&(*conflictstore)->dualrayinitsize);
-      BMSfreeMemoryArray(&(*conflictstore)->dualraysize);
-      BMSfreeMemoryArray(&(*conflictstore)->nclauses);
-      BMSfreeMemoryArray(&(*conflictstore)->nconflictsets);
-   }
 
    if( (*conflictstore)->nconflictsfound > 0 && set->conf_cleanboundexeedings )
    {
@@ -665,8 +501,6 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
    )
 {
    SCIP_CONS* olddualray;
-   SCIP_Real oldage;
-   int oldidx;
    int nvars;
 
    assert(conflictstore != NULL);
@@ -716,6 +550,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
       SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
       SCIPconsCapture(dualray);
    }
+
    return SCIP_OKAY;
 }
 
@@ -1073,65 +908,6 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
 
    SCIPdebugMessage("-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs+ndelconfs_del, conflictstore->nconflicts, ndelconfs);
    conflictstore->nconflicts -= (ndelconfs+ndelconfs_del);
-
-   return SCIP_OKAY;
-}
-
-SCIP_RETCODE SCIPconflictstoreDualRayStats(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
-   int                   initsize,
-   int                   heursize,
-   int                   nconfsets,
-   int                   nclauses
-   )
-{
-   int maxsize;
-
-   assert(conflictstore != NULL);
-
-   maxsize = MAX(initsize, heursize);
-   maxsize = MAX3(maxsize, nconfsets, nclauses);
-   maxsize += 1;
-
-   if( maxsize >= conflictstore->maxsize )
-   {
-      int i;
-
-      if( conflictstore->maxsize == 0 )
-      {
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->dualrayinitsize, maxsize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->dualraysize, maxsize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->nconflictsets, maxsize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->nclauses, maxsize) );
-      }
-      else
-      {
-         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->dualrayinitsize, maxsize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->dualraysize, maxsize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->nconflictsets, maxsize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->nclauses, maxsize) );
-      }
-
-      /* init everything to 0 */
-      for( i = conflictstore->maxsize; i < maxsize; i++ )
-      {
-         conflictstore->dualrayinitsize[i] = 0;
-         conflictstore->dualraysize[i] = 0;
-         conflictstore->nconflictsets[i] = 0;
-         conflictstore->nclauses[i] = 0;
-
-      }
-      conflictstore->maxsize = maxsize;
-   }
-
-   if( initsize > 0 )
-      ++conflictstore->dualrayinitsize[initsize];
-   if( heursize > 0 )
-      ++conflictstore->dualraysize[heursize];
-   if( nconfsets > 0 )
-      ++conflictstore->nconflictsets[nconfsets];
-   if( nclauses > 0 )
-      ++conflictstore->nclauses[nclauses];
 
    return SCIP_OKAY;
 }
