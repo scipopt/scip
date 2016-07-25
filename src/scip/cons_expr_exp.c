@@ -25,7 +25,6 @@
 #include <string.h>
 
 #include "scip/cons_expr_exp.h"
-#include "scip/cons_expr_var.h"
 
 #define EXP_PRECEDENCE  85000
 #define EXP_HASHKEY     SCIPcalcFibHash(10181)

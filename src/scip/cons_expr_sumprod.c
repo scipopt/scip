@@ -34,7 +34,6 @@
 #include <string.h>
 
 #include "scip/cons_expr_sumprod.h"
-#include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 
 #define SUM_PRECEDENCE      40000
