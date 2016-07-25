@@ -2920,11 +2920,7 @@ SCIP_RETCODE createNlRow(
    else
    {
       /* get an exprtree representation of the cons-expr-expression */
-      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_EXPRTREE* exprtree;
-
-      conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
-      assert(conshdlrdata != NULL);
 
       SCIP_CALL( makeClassicExprTree(scip, consdata->expr, consdata->varexprs, consdata->nvarexprs, &exprtree) );
       if( exprtree == NULL )
@@ -2951,16 +2947,12 @@ SCIP_RETCODE registerBranchingCandidates(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    int c;
    int i;
 
    *nnotify = 0;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3091,15 +3083,11 @@ SCIP_RETCODE createAuxVars(
    int                   nconss              /**< total number of constraints */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    for( i = 0; i < nconss; ++i )
    {
@@ -3126,15 +3114,11 @@ SCIP_RETCODE freeAuxVars(
    int                   nconss              /**< total number of constraints */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    for( i = 0; i < nconss; ++i )
    {
