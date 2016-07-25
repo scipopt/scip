@@ -30943,7 +30943,7 @@ void SCIPaddExpLinearization(
    }
 
    coef = exp(refpoint);
-   constant = exp(refpoint) * (1.0 - refpoint);
+   constant = coef * (1.0 - refpoint);
 
    if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
    {
