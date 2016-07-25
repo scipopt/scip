@@ -459,9 +459,10 @@ void SCIPsetConsExprExprEvalValue(
 
 /** returns the hash key of an expression */
 EXTERN
-unsigned int SCIPgetConsExprExprHashkey(
+SCIP_RETCODE SCIPgetConsExprExprHashkey(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   unsigned int*           hashkey           /**< pointer to store the hash key */
    );
 
 /** sets the evaluation interval */

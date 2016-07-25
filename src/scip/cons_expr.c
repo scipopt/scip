@@ -2941,7 +2941,6 @@ SCIP_RETCODE createNlRow(
 static
 SCIP_RETCODE registerBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
    int*                  nnotify             /**< counter for number of notifications performed */
@@ -3038,22 +3037,19 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
 {
-   SCIP_CONSHDLR* conshdlr;
-
    assert(expr != NULL);
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
 
-   conshdlr = (SCIP_CONSHDLR*)data;
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert((SCIP_CONSHDLR*)data != NULL);
+   assert(strcmp(SCIPconshdlrGetName((SCIP_CONSHDLR*)data), CONSHDLR_NAME) == 0);
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    if( expr->auxvar != NULL )
    {
-      assert(expr->exprhdlr != SCIPgetConsExprExprHdlrVar(conshdlr));
-      assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
+      assert(expr->exprhdlr != SCIPgetConsExprExprHdlrVar((SCIP_CONSHDLR*)data));
+      assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue((SCIP_CONSHDLR*)data));
 
       SCIPdebugMessage("remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
@@ -3809,7 +3805,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
       return SCIP_OKAY;
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conss, nconss, &nnotify) );
    SCIPdebugMessage("registered %d external branching candidates\n", nnotify);
 
    /* TODO do domain propagation */
@@ -5596,29 +5592,26 @@ void SCIPsetConsExprExprEvalInterval(
 }
 
 /** returns the hash key of an expression */
-unsigned int SCIPgetConsExprExprHashkey(
+SCIP_RETCODE SCIPgetConsExprExprHashkey(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   unsigned int*           hashkey           /**< pointer to store the hash key */
    )
 {
    SCIP_HASHMAP* expr2key;
-   SCIP_RETCODE retcode;
-   unsigned int hashkey;
 
    assert(expr != NULL);
 
-   retcode = SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip)));
-   assert(retcode == SCIP_OKAY);
+   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
 
-   retcode = SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key);
-   assert(retcode == SCIP_OKAY);
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
 
    assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
-   hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+   *hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
 
    SCIPhashmapFree(&expr2key);
 
-   return hashkey;
+   return SCIP_OKAY;
 }
 
 
