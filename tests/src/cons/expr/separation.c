@@ -27,6 +27,7 @@
 
 #include "scip/cons_expr_sumprod.c"
 #include "scip/cons_expr_exp.c"
+#include "scip/cons_expr_log.c"
 
 /* needed to add auxiliary variables */
 #include "scip/struct_cons_expr.h"
@@ -41,10 +42,12 @@ static SCIP* scip;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
+static SCIP_VAR* z;
 static SCIP_VAR* auxvar;
 static SCIP_SOL* sol;
 static SCIP_CONSEXPR_EXPR* xexpr;
 static SCIP_CONSEXPR_EXPR* yexpr;
+static SCIP_CONSEXPR_EXPR* zexpr;
 
 /* creates scip, problem, includes expression constraint handler, creates  and adds variables */
 static
@@ -64,13 +67,16 @@ void setup(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 5.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -6.0, -3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 1.0, 3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
 
    /* transform the problem and set it so INITSOLVE stage */
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
@@ -91,9 +97,11 @@ void teardown(void)
    /* release solution */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
@@ -389,6 +397,85 @@ Test(separation, exponential, .init = setup, .fini = teardown,
 
       if( var == SCIPvarGetTransVar(x) )
          cr_assert_eq(coef, exp(2));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_assert_eq(coef, -1.0);
+      else
+         cr_assert(FALSE, "found an unknown variable");
+   }
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+Test(separation, logarithmic, .init = setup, .fini = teardown,
+   .description = "test separation for a logarithmic expression"
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_ROW* cut;
+   int i;
+
+   SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &expr, zexpr) );
+
+   /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
+   SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
+   expr->auxvar = auxvar;
+
+   /* compute a cut for which we need an overestimation (linearization) */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 10.0) );
+
+   cut = NULL;
+   SCIP_CALL( separatePointLog(scip,  conshdlr, expr, sol, &cut) );
+
+   cr_assert(cut != NULL);
+   cr_assert_eq(SCIProwGetNNonz(cut), 2);
+   cr_assert(SCIPisEQ(scip, SCIProwGetLhs(cut), 1.0 - log(2.0)));
+   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
+
+   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real coef;
+
+      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
+      coef = SCIProwGetVals(cut)[i];
+
+      if( var == SCIPvarGetTransVar(z) )
+         cr_assert(SCIPisEQ(scip, coef, 0.5));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_assert_eq(coef, -1.0);
+      else
+         cr_assert(FALSE, "found an unknown variable");
+   }
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   /* compute a cut for which we need an underestimation (secant) */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -10.0) );
+
+   cut = NULL;
+   SCIP_CALL( separatePointLog(scip,  conshdlr, expr, sol, &cut) );
+
+   cr_assert(cut != NULL);
+   cr_assert_eq(SCIProwGetNNonz(cut), 2);
+   cr_assert_eq(SCIProwGetLhs(cut), -SCIPinfinity(scip));
+   cr_assert(SCIPisEQ(scip, SCIProwGetRhs(cut), log(3) / 2.0));
+
+   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real coef;
+
+      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
+      coef = SCIProwGetVals(cut)[i];
+
+      if( var == SCIPvarGetTransVar(z) )
+         cr_assert_eq(coef, log(3) / 2.0);
       else if( var == SCIPvarGetTransVar(auxvar) )
          cr_assert_eq(coef, -1.0);
       else

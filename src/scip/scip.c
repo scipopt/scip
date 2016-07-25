@@ -30952,6 +30952,97 @@ void SCIPaddExpLinearization(
    *linconstant += constant;
 }
 
+/** computes coefficients of secant of an exponential term */
+void SCIPaddLogSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real coef;
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lb));
+   assert(!SCIPisInfinity(scip, -ub));
+   assert(SCIPisLE(scip, lb, ub));
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( SCIPisLE(scip, lb, 0.0) || SCIPisInfinity(scip, ub) )
+   {
+      /* unboundedness */
+      *success = FALSE;
+      return;
+   }
+
+   /* if lb and ub are too close use a safe secant */
+   if( SCIPisEQ(scip, lb, ub) )
+   {
+      coef = 0.0;
+      constant = log(ub);
+   }
+   else
+   {
+      assert(lb != ub);
+      coef = (log(ub) - log(lb)) / (ub - lb);
+      constant = log(ub) - coef * ub;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
+}
+
+/** computes coefficients of linearization of a logarithmic term in a reference point */
+void SCIPaddLogLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real constant;
+   SCIP_Real coef;
+
+   assert(scip != NULL);
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   /* can not compute a valid cut if zero is contained in [lb,ub] */
+   if( SCIPisInfinity(scip, REALABS(refpoint)) || SCIPisLE(scip, refpoint, 0.0) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   assert(refpoint != 0.0);
+   coef = 1.0 / refpoint;
+   constant = log(refpoint) - 1.0;
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef += coef;
+   *linconstant += constant;
+}
+
 /**@} */
 
 /*
