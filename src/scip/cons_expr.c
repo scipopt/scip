@@ -5073,6 +5073,13 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
    if( (*expr)->nuses == 1 )
    {
+      /* release the auxiliary variable */
+      if( (*expr)->auxvar != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &(*expr)->auxvar) );
+      }
+      assert((*expr)->auxvar == NULL);
+
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, freeExpr, freeExpr, NULL, freeExpr, NULL) );
       *expr = NULL;
 
