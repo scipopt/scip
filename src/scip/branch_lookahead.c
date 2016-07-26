@@ -158,7 +158,6 @@ SCIP_RETCODE executeBranchingOnUpperBound(
 
    if( SCIPisFeasLT(scip, newupperbound, oldlowerbound) )
    {
-      resultdata->cutoff = TRUE;
       resultdata->lperror = TRUE;
    }
    else
@@ -166,6 +165,7 @@ SCIP_RETCODE executeBranchingOnUpperBound(
       SCIP_CALL( SCIPnewProbingNode(scip) );
       if( SCIPisEQ(scip, oldupperbound, oldlowerbound) )
       {
+         /* TODO: do smth with this info. */
          resultdata->nobranch = TRUE;
       }
       else if( SCIPisFeasLT(scip, newupperbound, oldupperbound) )
@@ -179,7 +179,6 @@ SCIP_RETCODE executeBranchingOnUpperBound(
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &resultdata->lperror, &resultdata->cutoff) );
       solstat = SCIPgetLPSolstat(scip);
 
-      /* TODO: add a correct handling of time/iterlimit problems. */
       resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE) ||
             (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -233,6 +232,7 @@ SCIP_RETCODE executeBranchingOnLowerBound(
       SCIP_CALL( SCIPnewProbingNode(scip) );
       if( SCIPisEQ(scip, oldupperbound, oldlowerbound) )
       {
+         /* TODO: do smth with this info. */
          resultdata->nobranch = TRUE;
       }
       else if( SCIPisFeasGT(scip, newlowerbound, oldlowerbound) )
@@ -246,7 +246,6 @@ SCIP_RETCODE executeBranchingOnLowerBound(
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &resultdata->lperror, &resultdata->cutoff) );
       solstat = SCIPgetLPSolstat(scip);
 
-      /* TODO: add a correct handling of time/iterlimit problems. */
       resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE) ||
             (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -295,6 +294,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP_VAR*             deepbranchvar,      /**< variable to branch up and down on */
    SCIP_Real             deepbranchvarsolval,/**< (fractional) solution value of the branching variable */
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
+   SCIP_Bool*            lperror,
    WeightData*           weightdata,         /**< container to be filled with the weight relevant data */
    int*                  ncutoffs            /**< current (input) and resulting (output) number of cutoffs */
 )
@@ -317,49 +317,69 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIPdebugMessage("Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
    SCIP_CALL( executeBranchingOnUpperBound(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
 
-   SCIPdebugMessage("Going back to layer 1.\n");
-   /* go back one layer (we are currently in depth 2) */
-   SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
-
-   SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
-   SCIP_CALL( executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
-
-   SCIPdebugMessage("Going back to layer 1.\n");
-   /* go back one layer (we are currently in depth 2) */
-   SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
-
-   if( !downresultdata->cutoff && !upresultdata->cutoff )
+   if( downresultdata->lperror )
    {
-      downgain = downresultdata->objval - lpobjval;
-      upgain = upresultdata->objval - lpobjval;
-
-      SCIPdebugMessage("The difference between the objective values of the base lp and the upper bounded lp is <%g>\n",
-         downgain);
-      SCIPdebugMessage("The difference between the objective values of the base lp and the lower bounded lp is <%g>\n",
-         upgain);
-
-      assert(!SCIPisFeasNegative(scip, downgain));
-      assert(!SCIPisFeasNegative(scip, upgain));
-
-      SCIP_CALL( calculateWeight(scip, upgain, downgain, &currentweight) );
-
-      weightdata->highestweight = MAX(weightdata->highestweight, currentweight);
-      weightdata->sumofweights = weightdata->sumofweights + currentweight;
-      weightdata->numberofweights++;
-
-      SCIPdebugMessage("The sum of weights is <%g>.\n", weightdata->sumofweights);
-      SCIPdebugMessage("The number of weights is <%i>.\n", weightdata->numberofweights);
-      *fullcutoff = FALSE;
-   }
-   else if( downresultdata->cutoff && upresultdata->cutoff )
-   {
-      *fullcutoff = TRUE;
-      *ncutoffs = *ncutoffs + 2;
+      /* Something went wrong while solving the lp. Maybe exceeded the time-/iterlimit or we tried to add an upper
+       * bound, which is lower than the current lower bound (may be the case if the lower bound was raised due to
+       * propagation from other branches.) */
+      *lperror = TRUE;
    }
    else
    {
-      *fullcutoff = FALSE;
-      *ncutoffs = *ncutoffs + 1;
+      SCIPdebugMessage("Going back to layer 1.\n");
+      /* go back one layer (we are currently in depth 2) */
+      SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+
+      SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+      SCIP_CALL( executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
+
+      if( upresultdata->lperror )
+      {
+         /* Something went wrong while solving the lp. Maybe exceeded the time-/iterlimit or we tried to add an upper
+          * bound, which is lower than the current lower bound (may be the case if the lower bound was raised due to
+          * propagation from other branches.) */
+         *lperror = TRUE;
+      }
+      else
+      {
+         SCIPdebugMessage("Going back to layer 1.\n");
+         /* go back one layer (we are currently in depth 2) */
+         SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+
+         if( !downresultdata->cutoff && !upresultdata->cutoff )
+         {
+            downgain = downresultdata->objval - lpobjval;
+            upgain = upresultdata->objval - lpobjval;
+
+            SCIPdebugMessage("The difference between the objective values of the base lp and the upper bounded lp is <%g>\n",
+               downgain);
+            SCIPdebugMessage("The difference between the objective values of the base lp and the lower bounded lp is <%g>\n",
+               upgain);
+
+            assert(!SCIPisFeasNegative(scip, downgain));
+            assert(!SCIPisFeasNegative(scip, upgain));
+
+            SCIP_CALL( calculateWeight(scip, upgain, downgain, &currentweight) );
+
+            weightdata->highestweight = MAX(weightdata->highestweight, currentweight);
+            weightdata->sumofweights = weightdata->sumofweights + currentweight;
+            weightdata->numberofweights++;
+
+            SCIPdebugMessage("The sum of weights is <%g>.\n", weightdata->sumofweights);
+            SCIPdebugMessage("The number of weights is <%i>.\n", weightdata->numberofweights);
+            *fullcutoff = FALSE;
+         }
+         else if( downresultdata->cutoff && upresultdata->cutoff )
+         {
+            *fullcutoff = TRUE;
+            *ncutoffs = *ncutoffs + 2;
+         }
+         else
+         {
+            *fullcutoff = FALSE;
+            *ncutoffs = *ncutoffs + 1;
+         }
+      }
    }
 
    SCIPfreeMemory(scip, &upresultdata);
@@ -373,6 +393,7 @@ SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
+   SCIP_Bool*            lperror,
    WeightData*           weightdata,
    int*                  ncutoffs
 )
@@ -398,7 +419,7 @@ SCIP_RETCODE executeDeepBranching(
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval);
 
       SCIP_CALL( executeDeepBranchingOnVar(scip, lpobjval, deepbranchvar, deepbranchvarsolval,
-         fullcutoff, weightdata, ncutoffs) );
+         fullcutoff, lperror, weightdata, ncutoffs) );
 
       if( *fullcutoff )
       {
@@ -472,34 +493,6 @@ SCIP_RETCODE calculateCurrentWeight(
 }
 
 static
-SCIP_RETCODE handleNewLowerBound(
-   SCIP*                 scip,
-   SCIP_VAR*             lowerboundvar,
-   SCIP_Real             lowerboundval
-)
-{
-   SCIP_Bool infeasible;
-   SCIP_Bool tightened;
-   SCIP_CALL( SCIPtightenVarLb(scip, lowerboundvar, lowerboundval, FALSE, &infeasible, &tightened) );
-   /* TODO: check the given pointer? */
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE handleNewUpperBound(
-   SCIP*                 scip,
-   SCIP_VAR*             upperboundvar,
-   SCIP_Real             upperboundval
-)
-{
-   SCIP_Bool infeasible;
-   SCIP_Bool tightened;
-   SCIP_CALL( SCIPtightenVarUb(scip, upperboundvar, upperboundval, FALSE, &infeasible, &tightened) );
-   /* TODO: check the given pointer? */
-   return SCIP_OKAY;
-}
-
-static
 SCIP_RETCODE handleNewBounds(
    SCIP*                 scip,
    BOUNDSTATUS*          boundstatus,
@@ -524,20 +517,40 @@ SCIP_RETCODE handleNewBounds(
       branchvar = probvars[i];
       if( status == BOUNDSTATUS_LOWERBOUND || status == BOUNDSTATUS_BOTH )
       {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
          SCIP_Real newlowerbound = newlowerbounds[i];
-         SCIP_CALL( handleNewLowerBound(scip, branchvar, newlowerbound) );
+         SCIP_CALL( SCIPtightenVarLb(scip, branchvar, newlowerbound, FALSE, &infeasible, &tightened) );
+         if( infeasible )
+         {
+            *result = SCIP_DIDNOTFIND;
+         }
+         else if( *result != SCIP_DIDNOTFIND && tightened)
+         {
+            *result = SCIP_REDUCEDDOM;
+         }
       }
       if( status == BOUNDSTATUS_UPPERBOUND || status == BOUNDSTATUS_BOTH )
       {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
          SCIP_Real newupperbound = newupperbounds[i];
-         SCIP_CALL( handleNewUpperBound(scip, branchvar, newupperbound) );
+         SCIP_CALL( SCIPtightenVarUb(scip, branchvar, newupperbound, FALSE, &infeasible, &tightened) );
+
+         if( infeasible )
+         {
+            *result = SCIP_DIDNOTFIND;
+         }
+         else if( *result != SCIP_DIDNOTFIND && tightened)
+         {
+            *result = SCIP_REDUCEDDOM;
+         }
       }
 
       if( status != BOUNDSTATUS_NONE )
       {
          /* Reset the array s.t. it only contains zero values. */
          boundstatus[i] = BOUNDSTATUS_NONE;
-         *result = SCIP_REDUCEDDOM;
       }
    }
    return SCIP_OKAY;
@@ -687,7 +700,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_CALL( SCIPstartProbing(scip) );
       SCIPdebugMessage("Start Probing Mode\n");
 
-      for( i = 0; i < nlpcands && !SCIPisStopped(scip); i++ )
+      for( i = 0; i < nlpcands && !downbranchingresult->lperror && !upbranchingresult->lperror && !SCIPisStopped(scip); i++ )
       {
          SCIP_VAR* branchvar;
          SCIP_Real branchval;
@@ -706,10 +719,15 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("First level down branching on variable <%s>\n", SCIPvarGetName(branchvar));
          SCIP_CALL( executeBranchingOnUpperBound(scip, branchvar, branchval, downbranchingresult) );
 
-         if( !downbranchingresult->cutoff )
+         if( !downbranchingresult->lperror && !downbranchingresult->cutoff )
          {
             SCIP_CALL( executeDeepBranching(scip, lpobjval,
-               &downbranchingresult->cutoff, &scoredata->upperbounddata, &scoredata->ncutoffs) );
+               &downbranchingresult->cutoff, &downbranchingresult->lperror, &scoredata->upperbounddata, &scoredata->ncutoffs) );
+         }
+         if( downbranchingresult->lperror )
+         {
+            SCIPdebugMessage("There occurred an error while solving an lp of the upper bounded branch.\n");
+            break;
          }
 
          SCIPdebugMessage("Going back to layer 0.\n");
@@ -718,10 +736,15 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
          SCIP_CALL( executeBranchingOnLowerBound(scip, branchvar, branchval, upbranchingresult) );
 
-         if( !upbranchingresult->cutoff )
+         if( ! upbranchingresult->lperror && !upbranchingresult->cutoff )
          {
             SCIP_CALL( executeDeepBranching(scip, lpobjval,
-               &upbranchingresult->cutoff, &scoredata->lowerbounddata, &scoredata->ncutoffs) );
+               &upbranchingresult->cutoff, &upbranchingresult->lperror, &scoredata->lowerbounddata, &scoredata->ncutoffs) );
+         }
+         if( upbranchingresult->lperror )
+         {
+            SCIPdebugMessage("There occurred an error while solving an lp of the lower bounded branch.\n");
+            break;
          }
 
          SCIPdebugMessage("Going back to layer 0.\n");
@@ -748,10 +771,18 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
       }
 
+
       SCIPdebugMessage("End Probing Mode\n");
       SCIP_CALL( SCIPendProbing(scip) );
 
-      SCIP_CALL( handleNewBounds(scip, boundstatus, newlowerbounds, newupperbounds, result) );
+      if( downbranchingresult->lperror || upbranchingresult->lperror )
+      {
+         *result = SCIP_DIDNOTFIND;
+      }
+      else
+      {
+         SCIP_CALL( handleNewBounds(scip, boundstatus, newlowerbounds, newupperbounds, result) );
+      }
 
       SCIPfreeCleanBufferArray(scip, &boundstatus);
       SCIPfreeBufferArray(scip, &newlowerbounds);
