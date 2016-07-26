@@ -72,9 +72,10 @@ void teardown(void)
    BMScheckEmptyMemory();
 }
 
-Test(evalexpr, absolute, .init = setup, .fini = teardown,
-   .description = "Tests expression evaluation for absolute expressions."
-   )
+TestSuite(evalexpr, .init = setup, .fini = teardown);
+
+/** TESTS **/
+Test(evalexpr, absolute, .description = "Tests expression evaluation for absolute expressions.")
 {
       SCIP_CONSEXPR_EXPR* expr;
       SCIP_INTERVAL interval;
@@ -134,9 +135,7 @@ Test(evalexpr, absolute, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-Test(evalexpr, exponential, .init = setup, .fini = teardown,
-   .description = "Tests expression evaluation for exponential expressions."
-   )
+Test(evalexpr, exponential, .description = "Tests expression evaluation for exponential expressions.")
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_INTERVAL interval;
@@ -194,9 +193,7 @@ Test(evalexpr, exponential, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-Test(evalexpr, logarithm, .init = setup, .fini = teardown,
-   .description = "Tests expression evaluation for logarithmic expressions."
-   )
+Test(evalexpr, logarithm, .description = "Tests expression evaluation for logarithmic expressions.")
 {
       SCIP_CONSEXPR_EXPR* expr;
       SCIP_INTERVAL interval;
@@ -350,9 +347,7 @@ SCIP_RETCODE checkExprEval(
    return SCIP_OKAY;
 }
 
-Test(evalexpr, complicated, .init = setup, .fini = teardown,
-   .description = "Tests expression evaluation for a large complicated expression."
-   )
+Test(evalexpr, complicated, .description = "Tests expression evaluation for a large complicated expression.")
 {
    SCIP_CONSEXPR_EXPR* xexpr;
    SCIP_CONSEXPR_EXPR* yexpr;
