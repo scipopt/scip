@@ -30,14 +30,13 @@
 #define EPS 1e-6
 
 static SCIP* scip;
+static SCIP_NLPI* nlpi;
 
 /* creates scip, problem, includes nonlinear and quadratic cons handlers, and includes NLP */
 
 static
 void setup(void)
 {
-   SCIP_NLPI* nlpi;
-
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include quadratic conshdlr (need to include nonlinear) */
@@ -46,7 +45,9 @@ void setup(void)
 
    /* include NLPI's */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
-   cr_assert_not_null(nlpi, "Couldn't create NLP solver!");
+   /* if no IPOPT available, don't run test */
+   if( nlpi == NULL )
+      return;
 
    SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
@@ -68,6 +69,9 @@ Test(separation, gauge, .init = setup,
    SCIP_Bool success;
    SCIP_Real val;
 
+   /* if no IPOPT available, don't run test */
+   if( nlpi == NULL )
+      return;
 
    /* create convex quadratic constraint */
    {

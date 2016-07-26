@@ -37,7 +37,6 @@ TESTDIRS 	= $(sort $(dir $(patsubst src/%,%,$(UNITTESTSSRC))))
 # OPTIONS
 #-----------------------------------------------------------------------------
 
-override IPOPT	=	true
 override OPT	=	dbg
 override SHARED	=	true
 
@@ -197,7 +196,7 @@ $(LPILIBFILE):
 $(SCIPLIBFILE):
 		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
 $(NLPILIBFILE):
-		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+		$(error To compile the tests with IPOPT=true, SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
