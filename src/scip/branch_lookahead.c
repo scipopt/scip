@@ -88,6 +88,15 @@ typedef struct
    SCIP_Bool             nobranch;
 } BranchingResultData;
 
+typedef struct
+{
+   SCIP_Real*            upperbounds;
+   SCIP_Real*            lowerbounds;
+   BOUNDSTATUS*          boundstatus;
+   int*                  innervars;
+   int                   ninnervars;
+} InnerBoundData;
+
 /*
  * Local methods
  */
@@ -125,6 +134,47 @@ SCIP_RETCODE initBranchingResultData(
    resultdata->cutoff = TRUE;
    resultdata->lperror = FALSE;
    resultdata->nobranch = FALSE;
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE allocInnerBoundData(
+   SCIP*                 scip,
+   InnerBoundData**      innerbounddata
+)
+{
+   int ntotalvars;
+
+   ntotalvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBuffer(scip, innerbounddata) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*innerbounddata)->upperbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*innerbounddata)->lowerbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*innerbounddata)->boundstatus, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*innerbounddata)->innervars, ntotalvars) );
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE initInnerBoundData(
+   InnerBoundData*       innerbounddata
+)
+{
+   innerbounddata->ninnervars = 0;
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE freeInnerBoundData(
+   SCIP*                 scip,
+   InnerBoundData**      innerbounddata
+)
+{
+   SCIPfreeBufferArray(scip, &(*innerbounddata)->innervars);
+   SCIPfreeCleanBufferArray(scip, &(*innerbounddata)->boundstatus);
+   SCIPfreeBufferArray(scip, &(*innerbounddata)->lowerbounds);
+   SCIPfreeBufferArray(scip, &(*innerbounddata)->upperbounds);
+   SCIPfreeBuffer(scip, innerbounddata);
    return SCIP_OKAY;
 }
 
@@ -296,7 +346,8 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
    SCIP_Bool*            lperror,
    WeightData*           weightdata,         /**< container to be filled with the weight relevant data */
-   int*                  ncutoffs            /**< current (input) and resulting (output) number of cutoffs */
+   int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
+   InnerBoundData*       innerbounddata
 )
 {
    BranchingResultData* downresultdata;
@@ -309,8 +360,8 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    assert(deepbranchvar != NULL);
    assert(ncutoffs != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, &downresultdata) );
-   SCIP_CALL( SCIPallocMemory(scip, &upresultdata) );
+   SCIP_CALL( SCIPallocBuffer(scip, &downresultdata) );
+   SCIP_CALL( SCIPallocBuffer(scip, &upresultdata) );
    SCIP_CALL( initBranchingResultData(scip, downresultdata) );
    SCIP_CALL( initBranchingResultData(scip, upresultdata) );
 
@@ -382,8 +433,8 @@ SCIP_RETCODE executeDeepBranchingOnVar(
       }
    }
 
-   SCIPfreeMemory(scip, &upresultdata);
-   SCIPfreeMemory(scip, &downresultdata);
+   SCIPfreeBuffer(scip, &upresultdata);
+   SCIPfreeBuffer(scip, &downresultdata);
 
    return SCIP_OKAY;
 }
@@ -395,7 +446,8 @@ SCIP_RETCODE executeDeepBranching(
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
    SCIP_Bool*            lperror,
    WeightData*           weightdata,
-   int*                  ncutoffs
+   int*                  ncutoffs,
+   InnerBoundData*       innerbounddata
 )
 {
    SCIP_VAR**  lpcands;
@@ -419,7 +471,7 @@ SCIP_RETCODE executeDeepBranching(
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval);
 
       SCIP_CALL( executeDeepBranchingOnVar(scip, lpobjval, deepbranchvar, deepbranchvarsolval,
-         fullcutoff, lperror, weightdata, ncutoffs) );
+         fullcutoff, lperror, weightdata, ncutoffs, innerbounddata) );
 
       if( *fullcutoff )
       {
@@ -680,6 +732,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       int highestscoreindex = -1;
       int i;
 
+      InnerBoundData* innerbounddata;
+
       nglobalvars = SCIPgetNVars(scip);
 
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
@@ -689,6 +743,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_CALL( SCIPallocBufferArray(scip, &newupperbounds, nglobalvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &newlowerbounds, nglobalvars) );
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &boundstatus, nglobalvars) );
+
+      SCIP_CALL( allocInnerBoundData(scip, &innerbounddata) );
 
       SCIP_CALL( initBranchingResultData(scip, downbranchingresult) );
       SCIP_CALL( initBranchingResultData(scip, upbranchingresult) );
@@ -704,6 +760,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          SCIP_VAR* branchvar;
          SCIP_Real branchval;
+
+         SCIP_CALL( initInnerBoundData(innerbounddata) );
 
          assert(lpcands[i] != NULL);
 
@@ -722,7 +780,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
          if( !downbranchingresult->lperror && !downbranchingresult->cutoff )
          {
             SCIP_CALL( executeDeepBranching(scip, lpobjval,
-               &downbranchingresult->cutoff, &downbranchingresult->lperror, &scoredata->upperbounddata, &scoredata->ncutoffs) );
+               &downbranchingresult->cutoff, &downbranchingresult->lperror, &scoredata->upperbounddata,
+               &scoredata->ncutoffs, innerbounddata) );
          }
          if( downbranchingresult->lperror )
          {
@@ -739,7 +798,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
          if( ! upbranchingresult->lperror && !upbranchingresult->cutoff )
          {
             SCIP_CALL( executeDeepBranching(scip, lpobjval,
-               &upbranchingresult->cutoff, &upbranchingresult->lperror, &scoredata->lowerbounddata, &scoredata->ncutoffs) );
+               &upbranchingresult->cutoff, &upbranchingresult->lperror, &scoredata->lowerbounddata, &scoredata->ncutoffs,
+               innerbounddata) );
          }
          if( upbranchingresult->lperror )
          {
@@ -783,6 +843,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          SCIP_CALL( handleNewBounds(scip, boundstatus, newlowerbounds, newupperbounds, result) );
       }
+
+      freeInnerBoundData(scip, &innerbounddata);
 
       SCIPfreeCleanBufferArray(scip, &boundstatus);
       SCIPfreeBufferArray(scip, &newlowerbounds);
