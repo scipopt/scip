@@ -3095,6 +3095,23 @@ SCIP_RETCODE createAuxVars(
       if( consdata->expr != NULL )
       {
          SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, createAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
+
+         /* set the bounds of the auxiliary variable of the root node to [lhs,rhs] */
+         if( consdata->expr->auxvar != NULL )
+         {
+            assert(SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->expr->auxvar)));
+            assert(SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->expr->auxvar)));
+
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPchgVarLb(scip, consdata->expr->auxvar, consdata->lhs) );
+            }
+
+            if( !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPchgVarUb(scip, consdata->expr->auxvar, consdata->rhs) );
+            }
+         }
       }
    }
 
