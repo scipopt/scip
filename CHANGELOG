@@ -43,6 +43,7 @@ interface:
 - CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
   was detected while building the initial LP relaxation
 - new function SCIPisDualSolAvailable() to query the dual solution availability
+- submakefile for CrayXC systems added
 
 fixed bugs:
 
