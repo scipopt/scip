@@ -96,6 +96,10 @@ UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
 CFLAGS 		:=	$(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
 CFLAGS 		+=	-std=c99
+# DFLAGS (flags for make depend) uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
+DFLAGS 		+= 	-MT
+# to find include/scip_test.h
+FLAGS 		+= 	-I.
 
 #-----------------------------------------------------------------------------
 # Criterion Framework
@@ -168,13 +172,13 @@ clean:
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
-# DFLAGS uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
+$(warning FLAGS = $(FLAGS))
 .PHONY: depend
 depend:		$(SCIPDIR)
 		@- rm -f $(UNITTESTSDEP)
 		$(foreach src, $(UNITTESTSSRC), \
-			$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(src) \
-			-MT $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
+			$(SHELL) -ec '$(DCC) $(FLAGS) $(src) \
+			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
 
 
 
@@ -200,7 +204,7 @@ $(NLPILIBFILE):
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) -I$(CR_INC) -I. $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) -I$(CR_INC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
