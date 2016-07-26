@@ -78,7 +78,6 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
-   int                   ncreatedsubmips;    /**< counter for the number of created sub-MIPs                          */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
@@ -300,7 +299,6 @@ SCIP_DECL_HEURINIT(heurInitRins)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->ncreatedsubmips = 0;
 
    return SCIP_OKAY;
 }
@@ -375,7 +373,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* reward RINS if it succeeded often */
    nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nnodes -= (SCIP_Longint)(100.0 * heurdata->ncreatedsubmips);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes -= (SCIP_Longint)(100.0 * SCIPheurGetNCalls(heur));  /* count the setup costs for the sub-MIP as 100 nodes */
    nnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
@@ -395,10 +393,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-   /* todo this is currently set up to guarantee the same execution behavior as before; result codes may need to be adjusted, as well */
-   ++heurdata->ncreatedsubmips;
-
    /* allocate buffer storage to hold the RINS fixings */
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
@@ -413,9 +407,10 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* too few variables could be fixed by the RINS scheme */
    if( !success )
    {
-      *result = SCIP_DIDNOTRUN;
       goto TERMINATE;
    }
+
+   *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMessage("RINS heuristic fixes %d out of %d binary+integer variables\n", nfixedvars, nbinvars + nintvars);
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -425,7 +420,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    valid = FALSE;
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPheuristicsInstanceCopy(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &valid) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &valid) );
 
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
    assert(valid);

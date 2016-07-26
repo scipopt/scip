@@ -385,7 +385,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPheuristicsInstanceCopy(scip, subscip, varmapfw, "mutation", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
 
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);

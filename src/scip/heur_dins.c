@@ -573,7 +573,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    eventhdlr = NULL;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPheuristicsInstanceCopy(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );

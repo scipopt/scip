@@ -406,7 +406,7 @@ SCIP_RETCODE fixVariables(
 
 /** creates a subproblem for subscip by fixing a number of variables */
 static
-SCIP_RETCODE setupSubproblem(
+SCIP_RETCODE determineVariableFixings(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_VAR**            fixedvars,          /**< array to store source SCIP variables whose copies should be fixed in the sub-SCIP */
    SCIP_Real*            fixedvals,          /**< array to store solution values for variable fixing */
@@ -801,7 +801,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( nbinvars == 0 && nintvars == 0 )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
 
    /* allocate necessary buffer storage for selection of variable fixings */
    SCIP_CALL( SCIPallocBufferArray(scip, &selection, nusedsols) );
@@ -811,7 +810,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    success = FALSE;
    nfixedvars = 0;
    /* determine fixings of variables with same value in a certain set of solutions */
-   SCIP_CALL( setupSubproblem(scip, fixedvars, fixedvals, &nfixedvars, nbinvars + nintvars, selection, heurdata, &success) );
+   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, nbinvars + nintvars, selection, heurdata, &success) );
 
    heurdata->prevbestsol = SCIPgetBestSol(scip);
    heurdata->prevlastsol = sols[heurdata->nusedsols-1];
@@ -819,8 +818,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* if creation of sub-SCIP was aborted (e.g. due to number of fixings), free sub-SCIP and abort */
    if( !success )
    {
-      *result = SCIP_DIDNOTRUN;
-
       /* this run will be counted as a failure since no new solution tuple could be generated or the neighborhood of the
        * solution was not fruitful in the sense that it was too big
        */
@@ -829,6 +826,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       goto TERMINATE;
    }
 
+   *result = SCIP_DIDNOTFIND;
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
 
@@ -837,7 +835,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    success = FALSE;
 
    /* create a copy of the transformed problem to be used by the heuristic */
-   SCIP_CALL( SCIPheuristicsInstanceCopy(scip, subscip, varmapfw, "crossover", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "crossover", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */

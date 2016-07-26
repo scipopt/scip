@@ -802,7 +802,7 @@ SCIP_RETCODE SCIPapplyProximity(
       /* copy complete SCIP instance */
       valid = FALSE;
       /* create a problem copy as sub SCIP */
-      SCIP_CALL( SCIPheuristicsInstanceCopy(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
       assert(valid);
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
