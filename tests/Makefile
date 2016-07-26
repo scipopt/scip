@@ -172,7 +172,6 @@ clean:
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
-$(warning FLAGS = $(FLAGS))
 .PHONY: depend
 depend:		$(SCIPDIR)
 		@- rm -f $(UNITTESTSDEP)
