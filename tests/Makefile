@@ -192,6 +192,13 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKRPATH)$(realpath $(CR_LIBDIR)) \
 		$(LINKCXX_o)$@
 
+$(LPILIBFILE):
+		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+$(SCIPLIBFILE):
+		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+$(NLPILIBFILE):
+		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
 		$(CC) -I$(CR_INC) -I. $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
