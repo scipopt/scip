@@ -99,6 +99,7 @@ SCIP_RETCODE determineVariableFixings(
    int nvars;
    int nbinvars;
    int nintvars;
+   int ndiscretevars;
    int i;
 
    assert(fixedvars != NULL);
@@ -120,9 +121,9 @@ SCIP_RETCODE determineVariableFixings(
    }
    assert(*nfixedvars < nbinvars + nintvars);
 
-
+   ndiscretevars = nbinvars + nintvars;
    /* copy the binary and integer variables into fixedvars */
-   BMScopyMemoryArray(fixedvars, vars, nbinvars + nintvars);
+   BMScopyMemoryArray(fixedvars, vars, ndiscretevars);
 
    /* shuffle the array randomly */
    SCIPpermuteArray((void **)fixedvars, 0, nbinvars + nintvars, randseed);

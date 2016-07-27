@@ -172,7 +172,7 @@ void computeIntegerVariableBounds(
 
 /** creates a subproblem for subscip by fixing a number of variables */
 static
-SCIP_RETCODE createSubproblem(
+SCIP_RETCODE determineVariableFixings(
    SCIP*                 scip,               /**< SCIP data structure of the original problem                    */
    SCIP_HEUR*            heur,               /**< DINS heuristic structure                                       */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data structure                                       */
@@ -223,15 +223,15 @@ SCIP_RETCODE createSubproblem(
       assert(newsize >= nbinvars);
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &heurdata->delta, heurdata->deltalength, newsize) );
-      delta = heurdata->delta;
 
       /* initialize new part of delta array */
       for( i = heurdata->deltalength; i < newsize; i++ )
-         delta[i] = TRUE;
+         heurdata->delta[i] = TRUE;
 
       heurdata->deltalength = newsize;
    }
 
+   delta = heurdata->delta;
    /* fixing for binary variables */
    /* hard fixing for some with mipsol(s)=lpsolval=rootlpsolval and preparation for soft fixing for the remaining */
    nfixedvars = 0;
@@ -695,15 +695,12 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
 
-   /* create variables and rebound them if their bounds differ by more than 0.5 */
+   /* collect variables that should be fixed in the DINS subproblem */
    binfixings = intfixings = 0;
-   SCIP_CALL( createSubproblem(scip, heur, heurdata, vars, fixedvars, fixedvals, nbinvars, nintvars, &binfixings, &intfixings) );
-   SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
-      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
+   SCIP_CALL( determineVariableFixings(scip, heur, heurdata, vars, fixedvars, fixedvals, nbinvars, nintvars, &binfixings, &intfixings) );
 
    /* abort, if all integer variables were fixed (which should not happen for MIP),
-    * but frequently happens for MINLPs using an LP relaxation
-    */
+    * but frequently happens for MINLPs using an LP relaxation */
    if( binfixings + intfixings == nbinvars + nintvars )
       goto TERMINATE;
 
@@ -724,6 +721,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", fixedvars, fixedvals, binfixings + intfixings, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
+      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );
