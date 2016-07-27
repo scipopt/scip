@@ -1119,7 +1119,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
       SCIPdebugMessage("replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
 
       SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, expr->walkcurrentchild, newchild) );
-      SCIPcaptureConsExprExpr(newchild);
 
       *result = SCIP_CONSEXPREXPRWALK_SKIP;
    }
@@ -1291,12 +1290,17 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
    {
       case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
       {
+         SCIP_CONSEXPR_EXPR* newchild;
          int currentchild;
 
          currentchild = SCIPgetConsExprExprWalkCurrentChild(expr);
+         newchild = (SCIP_CONSEXPR_EXPR*)expr->children[currentchild]->walkio.ptrval;
 
-         SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, currentchild,
-                     (SCIP_CONSEXPR_EXPR*)expr->children[currentchild]->walkio.ptrval) );
+         SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, currentchild, newchild) );
+
+         /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
+         expr->children[currentchild]->walkio.ptrval = NULL;
 
          /* continue */
          *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -5905,8 +5909,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 
 /** overwrites/replaces a child of an expressions
  *
- * @attention the old child is released, but newchild is not captured
- * @todo should we modify this so SCIPreplaceConsExprExprChild() also captures newchild ?
+ * @note the old child is released and the newchild is captured
  */
 SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -5919,6 +5922,9 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    assert(expr != NULL);
    assert(newchild != NULL);
    assert(childidx < SCIPgetConsExprExprNChildren(expr));
+
+   /* capture new child (do this before releasing the old child in case there are equal */
+   SCIPcaptureConsExprExpr(newchild);
 
    /* update locks in old child */
    SCIP_CALL( propagateLocks(scip, expr->children[childidx], -expr->nlockspos, -expr->nlocksneg) );
