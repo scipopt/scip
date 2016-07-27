@@ -451,7 +451,9 @@ private:
 		const sparsity_type&                    u  ,
 		      sparsity_type&                    v  )
 	{	size_t n = f_.Domain();
+# ifndef NDEBUG
 		size_t m = f_.Range();
+# endif
 		CPPAD_ASSERT_UNKNOWN( vx.size() == n );
 		CPPAD_ASSERT_UNKNOWN(  s.size() == m );
 		CPPAD_ASSERT_UNKNOWN(  t.size() == n );
@@ -690,8 +692,11 @@ public:
 		const vector<Base>&       ty ,
 		      vector<Base>&       px ,
 		const vector<Base>&       py )
-	{	size_t n = f_.Domain();
+	{
+# ifndef NDEBUG
+	   size_t n = f_.Domain();
 		size_t m = f_.Range();
+# endif
 		CPPAD_ASSERT_UNKNOWN( n == tx.size() / (q+1) );
 		CPPAD_ASSERT_UNKNOWN( m == ty.size() / (q+1) );
 		CPPAD_ASSERT_UNKNOWN( f_.size_var() > 0 );
@@ -912,7 +917,9 @@ public:
 		const vector< std::set<size_t> >&       u  ,
 		      vector< std::set<size_t> >&       v  )
 	{	size_t n = f_.Domain();
+# ifndef NDEBUG
 		size_t m = f_.Range();
+# endif
 		CPPAD_ASSERT_UNKNOWN( vx.size() == n );
 		CPPAD_ASSERT_UNKNOWN(  s.size() == m );
 		CPPAD_ASSERT_UNKNOWN(  t.size() == n );
