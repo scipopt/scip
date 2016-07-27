@@ -221,10 +221,10 @@ bool sparsity patterns.
 */
 atomic_base(
 		const std::string&     name,
-		option_enum            sparsity = bool_sparsity_enum
+		option_enum            sparsity__ = bool_sparsity_enum
 ) :
 index_( class_object().size() )     ,
-sparsity_( sparsity )
+sparsity_( sparsity__ )
 {	CPPAD_ASSERT_KNOWN(
 		! thread_alloc::in_parallel() ,
 		"atomic_base: constructor cannot be called in parallel mode."

@@ -538,9 +538,9 @@ public:
 		Algo&                          algo     ,
 		const ADVector&                ax       ,
 		ADVector&                      ay       ,
-		option_enum                    sparsity =
+		option_enum                    sparsity__ =
 				atomic_base<Base>::pack_sparsity_enum
-	) : atomic_base<Base>(name, sparsity)
+	) : atomic_base<Base>(name, sparsity__)
 	{	CheckSimpleVector< CppAD::AD<Base> , ADVector>();
 
 		// make a copy of ax because Independent modifies AD information
