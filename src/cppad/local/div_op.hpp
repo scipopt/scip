@@ -130,6 +130,9 @@ and the argument \a parameter is not used.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divvv_op_0(
 	size_t        i_z         ,
 	const addr_t* arg         ,
