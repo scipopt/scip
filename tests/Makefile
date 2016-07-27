@@ -195,11 +195,11 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
-		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(SCIPLIBFILE):
-		$(error SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(NLPILIBFILE):
-		$(error To compile the tests with IPOPT=true, SCIP must be compiled with OPT=dbg IPOPT=true SHARED=true)
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
