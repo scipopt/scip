@@ -3952,12 +3952,15 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
    int ngubconss;
    int nliftgubC1;
 
+   assert(gubset != NULL);
    ngubconss = gubset->ngubconss;
+#else
+   assert(gubset != NULL);
 #endif
+
    nvars = gubset->nvars;
 
    assert(scip != NULL);
-   assert(gubset != NULL);
    assert(vars != NULL);
    assert(nvars >= 0);
    assert(weights != NULL);
@@ -6870,6 +6873,8 @@ SCIP_RETCODE checkParallelObjective(
       return SCIP_OKAY;
 
    vars = consdata->vars;
+   assert(vars != NULL);
+
    applicable = TRUE;
    offset = 0.0;
    scale = 1.0;
@@ -6878,7 +6883,7 @@ SCIP_RETCODE checkParallelObjective(
    {
       negated = FALSE;
       var = vars[v];
-      assert(vars != NULL);
+      assert(var != NULL);
 
       if( SCIPvarIsNegated(var) )
       {
@@ -8153,7 +8158,7 @@ SCIP_RETCODE dualWeightsTightening(
    int v;
    int w;
 #ifndef NDEBUG
-   int oldnchgsides = *nchgsides;
+   int oldnchgsides;
 #endif
 
    assert(scip != NULL);
@@ -8162,6 +8167,10 @@ SCIP_RETCODE dualWeightsTightening(
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
    assert(naddconss != NULL);
+
+#ifndef NDEBUG
+   oldnchgsides = *nchgsides;
+#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

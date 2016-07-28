@@ -9646,13 +9646,14 @@ SCIP_Bool checkEqualObjective(
 
    vars = consdata->vars;
    nvars = consdata->nvars;
+
    assert(vars != NULL);
 
    for( v = 0; v < nvars; ++v )
    {
       negated = FALSE;
       var = vars[v];
-      assert(vars != NULL);
+      assert(var != NULL);
 
       if( SCIPvarIsNegated(var) )
       {

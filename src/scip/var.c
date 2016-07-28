@@ -11577,13 +11577,17 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_Bool active = FALSE;
 #ifndef NDEBUG
    SCIP_Real constant = 0.0;
-   SCIP_Bool orignegated = *negated;
+   SCIP_Bool orignegated;
 #endif
 
    assert(var != NULL);
    assert(*var != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
+
+#ifndef NDEBUG
+   orignegated = *negated;
+#endif
 
    while( !active && *var != NULL )
    {

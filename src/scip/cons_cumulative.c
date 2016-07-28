@@ -3337,10 +3337,13 @@ void subtractStartingJobDemands(
 
 #if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
-   oldidx = *idx;
-#endif
 
    assert(idx != NULL);
+   oldidx = *idx;
+#else
+   assert(idx != NULL);
+#endif
+
    assert(starttimes != NULL);
    assert(starttimes != NULL);
    assert(freecapacity != NULL);

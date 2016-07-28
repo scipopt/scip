@@ -3660,8 +3660,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int nrows;
    int r;
 
-   assert(lpi->cpxenv != NULL);
    assert(lpi != NULL);
+   assert(lpi->cpxenv != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binva-col %d\n", c);
