@@ -30,10 +30,21 @@ parameters:
 - new parameter lp/randomseed to set the initial seed of the LP solver
 
 performance improvements:
+- adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
+  and only create and populate a sub-SCIP if enough variables will be fixed.
+- SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
+  removal of fixed variables from constraint data at creation time to reduce memory requirements.
 - changed value of parameter separating/clique/cliquedensity to 0.0 such that the separator always constructs a dense clique table
   which proved to be faster on the benchmarks MMM and stableset.
 
 interface:
+- new library methods SCIPenableConsCompression(), SCIPisConsCompressionEnabled(), SCIPcopyConsCompression(), SCIPcopyOrigConsCompression()
+- new method SCIPcopyLargeNeighborhoodSearch() in heuristics.h that supports compressed copying and two kinds of problem copy: the MIP-relaxation or
+  a 1-1 problem copy (by copying the constraints, and not the LP relaxation)
+- new files heuristics.c/heuristics.h to collect methods that are frequently used by heuristics
+- merged dive.c/pub_dive.h with heuristics.c/heuristics.h, removed dive.c/pub_dive.h
+- new library methods SCIPcopyConsCompression(), SCIPcopyOrigConsCompression() that accept an array of variables that are immediately fixed in the copy.
+  Alternatively, local instead of global bounds can be used for compression.
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints

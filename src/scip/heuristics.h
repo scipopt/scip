@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -14,13 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_dive.h
- * @brief  library methods for diving heuristics
+/**@file   heuristics.h
+ * @brief  methods commonly used by primal heuristics
  * @author Gregor Hendel
  */
 
-#ifndef PUB_DIVE_H_
-#define PUB_DIVE_H_
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_HEURISTICS_H__
+#define __SCIP_HEURISTICS_H__
+
 
 #include "scip/scip.h"
 
@@ -64,8 +66,24 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Bool             nodeinfeasible      /**< is the current node known to be infeasible? */
    );
 
+/** get a sub-SCIP copy of the transformed problem */
+EXTERN
+SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP used by the heuristic */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
+                                              *   target variables */
+   const char*           suffix,             /**< suffix for the problem name */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             uselprows,          /**< should the linear relaxation of the problem defined by LP rows be copied? */
+   SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
+   SCIP_Bool*            success             /**< was the copying successful? */
+   );
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* PUB_DIVE_H_ */
+#endif
