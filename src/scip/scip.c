@@ -3565,6 +3565,9 @@ SCIP_RETCODE SCIPcopy(
  *     b) enable constraint compression
  *  5) copy all constraints
  *
+ *  @note: in case that a combination of local bounds and explicit fixing values should be used,
+ *         the fixing value of a variable is prefered if local bounds and fixing value disagree.
+ *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
