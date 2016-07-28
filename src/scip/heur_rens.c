@@ -271,8 +271,8 @@ SCIP_RETCODE restrictToBinaryBounds(
       else
       {
          /* the variable bounds should be already fixed to this solution value */
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(subvars[i]), solval));
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(subvars[i]), solval));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(subvars[i]), solval));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(subvars[i]), solval));
       }
    }
 
