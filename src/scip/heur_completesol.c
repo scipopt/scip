@@ -221,7 +221,7 @@ SCIP_RETCODE createSubproblem(
       solval = SCIPgetSolVal(scip, partialsol, vars[i]);
 
       /* skip variables with unknown solution value */
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          continue;
 
       idx = SCIPvarGetProbindex(vars[i]);
@@ -241,7 +241,7 @@ SCIP_RETCODE createSubproblem(
             SCIP_Real objcoef;
 
             frac = MIN(frac, 1-frac);
-            objcoef = (1 - 2*frac) * epsobj * SCIPgetObjsense(scip);
+            objcoef = (1 - 2*frac) * epsobj * (int)SCIPgetObjsense(scip);
 
             if( solval > 0.5 )
             {
@@ -338,7 +338,7 @@ SCIP_RETCODE createNewSol(
       SCIP_Real solval = SCIPgetSolVal(subscip, subsol, subvars[v]);
 
       assert(!SCIPisInfinity(subscip, solval) && !SCIPisInfinity(subscip, -solval));
-      assert(solval != SCIP_UNKNOWN);
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
       SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
    }
@@ -388,7 +388,7 @@ SCIP_RETCODE chgProbingBound(
       break;
    default:
       return SCIP_INVALIDDATA;
-   }
+   }/*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -443,7 +443,7 @@ SCIP_RETCODE tightenVariables(
       assert(SCIPvarIsActive(vars[v]));
 
 #ifndef NDEBUG
-      incontsection |= !SCIPvarIsIntegral(vars[v]);
+      incontsection |= (!SCIPvarIsIntegral(vars[v])); /*lint !e514*/
       assert(!incontsection || !SCIPvarIsIntegral(vars[v]));
 #endif
 
@@ -458,7 +458,7 @@ SCIP_RETCODE tightenVariables(
       solval = SCIPgetSolVal(scip, sol, vars[v]);
 
       /* skip unknows variables */
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          continue;
       assert(!SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval));
 
@@ -982,7 +982,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
          solval = SCIPgetSolVal(scip, sol, vars[v]);
 
          /* we only want to count variables that are unfixed after the presolving */
-         if( solval == SCIP_UNKNOWN )
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
             ++nunknown;
          else if( SCIPvarIsIntegral(vars[v]) && !SCIPisIntegral(scip, solval) )
             ++nfracints;
@@ -1016,7 +1016,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
          for( v = 0; v < norigvars; v++ )
          {
             solval = SCIPgetSolVal(scip, sol, origvars[v]);
-            assert(solval != SCIP_UNKNOWN);
+            assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
             SCIP_CALL( SCIPsetSolVal(scip, newsol, origvars[v], solval) );
          }

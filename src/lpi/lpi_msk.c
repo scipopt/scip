@@ -654,7 +654,9 @@ SCIP_RETCODE SCIPlpiCreate(
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
 #endif
       MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
+#if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
+#endif
    }
 
    numlp++;

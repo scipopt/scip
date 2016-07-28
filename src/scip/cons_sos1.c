@@ -5360,26 +5360,12 @@ SCIP_RETCODE enforceConflictgraph(
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
-
-         /* remove local conflicts from conflict graph */
-         if ( conshdlrdata->isconflocal )
-         {
-            SCIP_CALL( resetConflictgraphSOS1(conflictgraph, conshdlrdata->localconflicts, nsos1vars) );
-            conshdlrdata->isconflocal = FALSE;
-         }
-         return SCIP_OKAY;
+	 break;
       }
       if ( ngen > 0 )
       {
          *result = SCIP_REDUCEDDOM;
-
-         /* remove local conflicts from conflict graph */
-         if ( conshdlrdata->isconflocal )
-         {
-            SCIP_CALL( resetConflictgraphSOS1(conflictgraph, conshdlrdata->localconflicts, nsos1vars) );
-            conshdlrdata->isconflocal = FALSE;
-         }
-         return SCIP_OKAY;
+	 break;
       }
       assert( ngen == 0 );
 
@@ -5447,6 +5433,17 @@ SCIP_RETCODE enforceConflictgraph(
             SCIPsortInt(SCIPdigraphGetSuccessors(conshdlrdata->localconflicts, j), nsuccloc);
          }
       }
+   }
+
+   if ( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
+   {
+      /* remove local conflicts from conflict graph */
+      if ( conshdlrdata->isconflocal )
+      {
+	 SCIP_CALL( resetConflictgraphSOS1(conflictgraph, conshdlrdata->localconflicts, nsos1vars) );
+	 conshdlrdata->isconflocal = FALSE;
+      }
+      return SCIP_OKAY;
    }
 
 
@@ -5553,6 +5550,13 @@ SCIP_RETCODE enforceConflictgraph(
    /* if we shouldleave branching decision to branching rules */
    if ( ! conshdlrdata->branchsos )
    {
+      /* remove local conflicts from conflict graph */
+      if ( conshdlrdata->isconflocal )
+      {
+	 SCIP_CALL( resetConflictgraphSOS1(conflictgraph, conshdlrdata->localconflicts, nsos1vars) );
+	 conshdlrdata->isconflocal = FALSE;
+      }
+
       if ( SCIPvarIsBinary(SCIPnodeGetVarSOS1(conflictgraph, branchvertex)) )
       {
          *result = SCIP_INFEASIBLE;
@@ -6417,7 +6421,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
             break;
 
          /* store variable if relevant for bound inequality */
-         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
+         if ( ! SCIPisInfinity(scip, -val) && ! SCIPisZero(scip, val) )
          {
             vars[cnt] = var;
 
@@ -8796,6 +8800,9 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* free stack of variables fixed to nonzero (usually already freed in consExitsolSOS1 unless instance was solved during presolving) */
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
+
    SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
@@ -9539,6 +9546,7 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          }
       }
    }
+   conshdlrdata->nfixnonzerovars = 0;
 
    /* if SOS1 constraint propagation shall be used */
    if ( conshdlrdata->sosconsprop || conflictgraph == NULL )

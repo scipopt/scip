@@ -1,5 +1,5 @@
-$(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
+$(BINOBJDIR)/main.o: src/main.c src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/pub_message.h src/scip/type_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \

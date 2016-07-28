@@ -43,7 +43,7 @@
 #define DEFAULT_MAXSEPACUTS          10 /**< maximal number of clique cuts separated per separation round (-1: no limit) */
 #define DEFAULT_MAXZEROEXTENSIONS  1000 /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
 #define DEFAULT_CLIQUETABLEMEM  20000.0 /**< maximal memory size of dense clique table (in kb) */
-#define DEFAULT_CLIQUEDENSITY      0.05 /**< minimal density of cliques to use a dense clique table */
+#define DEFAULT_CLIQUEDENSITY      0.00 /**< minimal density of cliques to use a dense clique table */
 
 
 /*
@@ -362,9 +362,9 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
-#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored, 
-        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if 
-        * this feature it incorporated. 
+#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored,
+        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if
+        * this feature it incorporated.
         */
       assert(nvars <= tcliquegraph->nnodes);
 #endif
