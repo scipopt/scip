@@ -23,6 +23,7 @@
 
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/nlpioracle.h"
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletscher and S. Leyffer" /* description of solver */
