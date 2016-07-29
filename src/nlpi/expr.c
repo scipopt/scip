@@ -894,7 +894,7 @@ void polynomialdataMergeMonomials(
 
 #ifndef NDEBUG
    while( i < polynomialdata->nmonomials )
-      // cppcheck-suppress assignmentInAssert
+      /* cppcheck-suppress assignmentInAssert */
       assert(polynomialdata->monomials[i++] == NULL);
 #endif
 
@@ -6887,7 +6887,7 @@ void SCIPexprMergeMonomialFactors(
 
 #ifndef NDEBUG
    while( i < monomial->nfactors )
-      // cppcheck-suppress assignmentInAssert
+      /* cppcheck-suppress assignmentInAssert */
       assert(monomial->childidxs[i++] == -1);
 #endif
 
