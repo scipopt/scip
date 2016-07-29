@@ -58,7 +58,182 @@ struct SCIP_NlpiProblem
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/* TODO this depends on compiler+platform */
+#if 0
+# define F77_FUNC(name,NAME) NAME
+# define F77_FUNC_(name,NAME) NAME
+#else
+# define F77_FUNC(name,NAME) name ## _
+# define F77_FUNC_(name,NAME) name ## __
+#endif
+
+typedef int fint;
+typedef double real;
+typedef long ftnlen;
+
+void F77_FUNC(filtersqp,FILTERSQP)(
+  fint *n, fint *m, fint *kmax, fint *maxa,
+  fint *maxf, fint *mlp, fint *mxwk, fint *mxiwk,
+  fint *iprint, fint *nout, fint *ifail, real *rho,
+  real *x, real *c, real *f, real *fmin, real *bl,
+  real *bu, real *s, real *a, fint *la, real *ws,
+  fint *lws, real *lam, char *cstype, real *user,
+  fint *iuser, fint *maxiter, fint *istat,
+  real *rstat, ftnlen cstype_len);
+
+void F77_FUNC(objfun,OBJFUN)(real *x, fint *n, real *f, real *user, fint *iuser,
+    fint *errflag);
+
+void F77_FUNC(confun,CONFUN)(real *x, fint *n, fint *m, real *c, real *a, fint *la,
+    real *user, fint *iuser, fint *errflag);
+
+/* TODO what are the arguments of this function and does it need to be implemented?
+ * it's not in the filterSQP manual, but its an undefined symbol in the filterSQP library
+void F77_FUNC(objgrad,OBJGRAD)(fint *, fint *, fint *, real *, real *, fint *, fint
+    *, real *, fint *, fint *);
+*/
+void F77_FUNC(objgrad,OBJGRAD)(void);
+
+void F77_FUNC(gradient,GRADIENT)(fint *N, fint *M, fint *mxa, real *x, real *a, fint *la,
+    fint *maxa, real *user, fint *iuser, fint *errflag);
+
+void F77_FUNC(hessian,HESSIAN)(real *x, fint *N, fint *M, fint *phase, real *lam,
+    real *ws, fint *lws, real *user, fint *iuser,
+    fint *l_hess, fint *li_hess, fint *errflag);
+
+/* pointer to the NLPI and the NLPI problem that is currently solved by filterSQP */
+static SCIP_NLPI* nlpiSolved = NULL;
+static SCIP_NLPIPROBLEM* nlpiProblemSolved = NULL;
+
+/* access to filter common bloc */
+/* common block for problemname */
+extern struct
+{
+   fint char_l;
+   char pname[10];
+}
+F77_FUNC(cpname,CPNAME);
+
+/* common block for Hessian storage set to 0, i.e. NO Hessian */
+extern struct
+{
+   fint phl, phr, phc;
+}
+F77_FUNC(hessc,HESSC);
+
+/* common block for upper bound on filter */
+extern struct
+{
+   real ubd, tt;
+}
+F77_FUNC(ubdc,UBDC);
+
+/* common block for infinity & epsilon */
+extern struct
+{
+   real infty, eps;
+}
+F77_FUNC_(nlp_eps_inf,NLP_EPS_INF);
+
+/* common block for printing from QP solver */
+extern struct
+{
+   fint n_bqpd_calls, n_bqpd_prfint;
+}
+F77_FUNC_(bqpd_count,BQPD_COUNT);
+
+/* common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
+extern struct
+{
+   fint scale_mode, phe;
+}
+F77_FUNC(scalec,SCALEC);
+
+/* Objective function evaluation */
+void F77_FUNC(objfun,OBJFUN)(
+   real* x,
+   fint* n,
+   real* f,
+   real* user,
+   fint* iuser,
+   fint* errflag
+   )
+{
+   *errflag = 1;
+}
+
+/* Constraint functions evaluation */
+void F77_FUNC(confun,CONFUN)(
+   real* x,
+   fint* n ,
+   fint* m,
+   real* c,
+   real* a,
+   fint* la,
+   real* user,
+   fint* iuser,
+   fint* errflag
+   )
+{
+   *errflag = 1;
+}
+
+/* Objective gradient evaluation */
+/*
+void F77_FUNC(objgrad,OBJGRAD)(
+   fint*,
+   fint*,
+   fint*,
+   real*,
+   real*,
+   fint*,
+   fint*,
+   real*,
+   fint*,
+   fint*
+   )
+*/
+void F77_FUNC(objgrad,OBJGRAD)(void)
+{ }
+
+/* Objective gradient and Jacobian evaluation */
+void
+F77_FUNC(gradient,GRADIENT)(
+   fint* n,
+   fint* m,
+   fint* mxa,
+   real* x,
+   real* a,
+   fint* la,
+   fint* maxa,
+   real* user,
+   fint* iuser,
+   fint* errflag
+   )
+{
+   *errflag = 1;
+}
+
+/* Hessian of the Lagrangian evaluation */
+void
+F77_FUNC(hessian,HESSIAN)(
+   real* x,
+   fint* n,
+   fint* m,
+   fint* phase,
+   real* lam,
+   real* ws,
+   fint* lws,
+   real* user,
+   fint* iuser,
+   fint* l_hess,
+   fint* li_hess,
+   fint* errflag
+   )
+{
+   *errflag = 1;
+}
+
 
 
 /*
@@ -581,8 +756,51 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessFilterSQP )
 static
 SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   fint n;
+   fint m;
+   fint kmax;
+   fint maxa;
+   fint maxf;
+   fint mlp;
+   fint mxwk;
+   fint mxiwk;
+   fint iprint;
+   fint nout;
+   fint ifail;
+   real rho;
+   real x;
+   real c;
+   real f;
+   real fmin;
+   real bl;
+   real bu;
+   real s;
+   real a;
+   fint la;
+   real ws;
+   fint lws;
+   real lam;
+   char cstype;
+   real user;
+   fint iuser;
+   fint maxiter;
+   fint istat;
+   real rstat;
+   ftnlen cstype_len = 1;
+
+   /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
+   nlpiSolved = nlpi;
+   nlpiProblemSolved = problem;
+
+   F77_FUNC(filtersqp,FILTERSQP)(
+      &n, &m, &kmax, &maxa,
+      &maxf, &mlp, &mxwk, &mxiwk,
+      &iprint, &nout, &ifail, &rho,
+      &x, &c, &f, &fmin, &bl,
+      &bu, &s, &a, &la, &ws,
+      &lws, &lam, &cstype, &user,
+      &iuser, &maxiter, &istat,
+      &rstat, cstype_len);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
