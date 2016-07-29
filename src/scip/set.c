@@ -238,6 +238,7 @@
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_PERMUTECONSS     TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_PERMUTEVARS     FALSE /**< should order of variables be permuted (depends on permutationseed)? */
+#define SCIP_DEFAULT_MISC_RANDSEEDSHIFT       0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
@@ -1764,6 +1765,12 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/referencevalue",
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "misc/randomseedshift",
+         "global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds",
+         &(*set)->misc_randomseedshift, TRUE, SCIP_DEFAULT_MISC_RANDSEEDSHIFT, 0, INT_MAX,
          NULL, NULL) );
 
    /* node selection */
