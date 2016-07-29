@@ -26,7 +26,7 @@
 #include "nlpi/nlpioracle.h"
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
-#define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletscher and S. Leyffer" /* description of solver */
+#define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
 #define NLPI_PRIORITY          -10000                     /* priority of NLP solver */
 
 /*
@@ -101,11 +101,18 @@ SCIP_DECL_NLPICOPY( nlpiCopyFilterSQP )
 static
 SCIP_DECL_NLPIFREE( nlpiFreeFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   SCIP_NLPIDATA* data;
 
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
+   assert(nlpi != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
+
+   BMSfreeBlockMemory(data->blkmem, &data);
+   assert(data == NULL);
+
+   return SCIP_OKAY;
+}
 
 /** gets pointer for NLP solver
  * 
@@ -736,8 +743,14 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParFilterSQP )
 static
 SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   SCIP_NLPIDATA* nlpidata;
+
+   assert(nlpi != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
+
+   nlpidata->messagehdlr = messagehdlr;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -758,8 +771,11 @@ SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
    assert(nlpi   != NULL);
 
    /* create filtersqp solver interface data */
-   nlpidata = NULL;
-   /* TODO: (optional) create solver interface specific data here */
+   BMSallocBlockMemory(blkmem, &nlpidata);
+
+   nlpidata->blkmem = blkmem;
+   nlpidata->messagehdlr = NULL;
+   nlpidata->infinity = SCIP_DEFAULT_INFINITY;
 
    /* create solver interface */
    SCIP_CALL( SCIPnlpiCreate(nlpi,
@@ -777,4 +793,22 @@ SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
          nlpidata) );
 
    return SCIP_OKAY;
+}
+
+/** gets string that identifies filterSQP (version number) */
+const char* SCIPgetSolverNameFilterSQP(void)
+{
+   return "filterSQP";  /* TODO version number? */
+}
+
+/** gets string that describes filterSQP */
+const char* SCIPgetSolverDescFilterSQP(void)
+{
+   return NLPI_DESC;
+}
+
+/** returns whether filterSQP is available, i.e., whether it has been linked in */
+SCIP_Bool SCIPisFilterSQPAvailableFilterSQP(void)
+{
+   return TRUE;
 }
