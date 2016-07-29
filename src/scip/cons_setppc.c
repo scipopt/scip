@@ -67,6 +67,8 @@
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 
+#define DEFAULT_RANDSEED              3
+
 /*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
 /*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
 #ifdef BRANCHLP
@@ -7144,7 +7146,7 @@ SCIP_DECL_CONSINIT(consInitSetppc)
    conshdlrdata->nclqpresolve = 0;
    conshdlrdata->updatedsetppctype = FALSE;
    conshdlrdata->enablecliquelifting = TRUE;
-   conshdlrdata->randseed = 1010010007; /*@todo try to take a better/another value */
+   conshdlrdata->randseed = DEFAULT_RANDSEED + SCIPgetRandseedShift(scip);
 
    return SCIP_OKAY;
 }

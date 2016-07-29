@@ -9335,6 +9335,12 @@ SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the global shift of the random seeds of all plugins */
+EXTERN
+int SCIPgetRandseedShift(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** marks the variable that it must not be multi-aggregated
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

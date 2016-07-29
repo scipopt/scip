@@ -23405,6 +23405,16 @@ SCIP_Bool SCIPallowObjProp(
    return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
 }
 
+/** returns the global shift of the random seeds of all plugins */
+int SCIPgetRandseedShift(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return scip->set->misc_randomseedshift;
+}
+
 /** marks the variable that it must not be multi-aggregated
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
