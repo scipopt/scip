@@ -72,14 +72,38 @@ typedef double real;
 typedef long ftnlen;
 
 void F77_FUNC(filtersqp,FILTERSQP)(
-  fint *n, fint *m, fint *kmax, fint *maxa,
-  fint *maxf, fint *mlp, fint *mxwk, fint *mxiwk,
-  fint *iprint, fint *nout, fint *ifail, real *rho,
-  real *x, real *c, real *f, real *fmin, real *bl,
-  real *bu, real *s, real *a, fint *la, real *ws,
-  fint *lws, real *lam, char *cstype, real *user,
-  fint *iuser, fint *maxiter, fint *istat,
-  real *rstat, ftnlen cstype_len);
+  fint*                  n,                  /**< number of variables */
+  fint*                  m,                  /**< number of constraints (excluding simple bounds) */
+  fint*                  kmax,               /**< maximum size of null-space (at most n) */
+  fint*                  maxa,               /**< maximum number of nonzero entries allowd in Jacobian */
+  fint*                  maxf,               /**< maximum size of the filter - typically 100 */
+  fint*                  mlp,                /**< maximum level parameter for resolving degeneracy in bqpd - typically 100 */
+  fint*                  mxwk,               /**< maximum size of real workspace ws */
+  fint*                  mxiwk,              /**< maximum size of integer workspace lws */
+  fint*                  iprint,             /**< print flag: 0 is quiet, higher is more */
+  fint*                  nout,               /**< output channel - 6 for screen */
+  fint*                  ifail,              /**< fail flag and warmstart indicator */
+  real*                  rho,                /**< initial trust-region radius - default 10 */
+  real*                  x,                  /**< starting point and final solution (array of length n) */
+  real*                  c,                  /**< final values of general constraints (array of length m) */
+  real*                  f,                  /**< final objective value */
+  real*                  fmin,               /**< lower bound on objective value (as termination criteria) */
+  real*                  bl,                 /**< lower bounds of variables and constraints (array of length n+m) */
+  real*                  bu,                 /**< upper bounds of variables and constraints (array of length n+m) */
+  real*                  s,                  /**< scaling factors (array of length n+m) */
+  real*                  a,                  /**< objective gradient (always dense) and Jacobian (sparse or dense) entries */
+  fint*                  la,                 /**< column indices and length of rows of entries in a (if sparse) or leading dimension of a (if dense) */
+  real*                  ws,                 /**< real workspace (array of length mxwk) */
+  fint*                  lws,                /**< integer workspace (array of length mxiwk) */
+  real*                  lam,                /**< Lagrange multipliers of simple bounds and general constraints (array of length n+m) */
+  char*                  cstype,             /**< indicator whether constraint is linear ('L') or nonlinear ('N') (array of length m) */
+  real*                  user,               /**< real workspace passed through to user routines */
+  fint*                  iuser,              /**< integer workspace passed through to user routines */
+  fint*                  maxiter,            /**< iteration limit for SQP solver */
+  fint*                  istat,              /**< integer space for solution statistics (array of length 14) */
+  real*                  rstat,              /**< real space for solution statitics (array of length 7) */
+  ftnlen                 cstype_len          /**< 1 ??? */
+  );
 
 void F77_FUNC(objfun,OBJFUN)(real *x, fint *n, real *f, real *user, fint *iuser,
     fint *errflag);
@@ -787,6 +811,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint istat;
    real rstat;
    ftnlen cstype_len = 1;
+
+   n = SCIPnlpiOracleGetNVars(problem->oracle);
+   m = SCIPnlpiOracleGetNConstraints(problem->oracle);
+   kmax = n;
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
    nlpiSolved = nlpi;
