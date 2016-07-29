@@ -950,6 +950,18 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->spx;
 }
+
+//#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
+/** pass integrality information about variables to the solver */
+void SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,
+   int*                  intInfo
+   )
+{
+   lpi->spx->setIntegralityInformation(intInfo);
+}
+//#endif
+
 /**@} */
 
 

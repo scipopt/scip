@@ -98,6 +98,13 @@ void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    );
 
+/** pass integrality information about variables to the solver */
+EXTERN
+void SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,
+   int*                  intInfo
+   );
+
 /**@} */
 
 

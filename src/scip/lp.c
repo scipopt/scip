@@ -51,6 +51,8 @@
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
 
+#include "scip/scip.h"
+
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 
 
@@ -8323,6 +8325,11 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   SCIP_VAR** vars;
+   int* intInfo;
+   int nvars;
+   int i;
+
    assert(lp != NULL);
    assert(blkmem != NULL);
 
@@ -8365,6 +8372,21 @@ SCIP_RETCODE SCIPlpFlush(
       assert(nrows == lp->nrows);
    }
 #endif
+
+   /* pass integrality information to LP solver (only SoPlex) */
+   vars = SCIPgetVars(set->scip);
+   nvars = SCIPgetNVars(set->scip);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &intInfo, nvars) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( SCIPvarIsBinary(vars[i]) || SCIPvarIsIntegral(vars[i]) )
+         intInfo[i] = 1;
+      else
+         intInfo[i] = 0;
+   }
+
+   SCIPlpiSetIntegralityInformation(lp->lpi, intInfo);
+   SCIPsetFreeBufferArray(set, &intInfo);
 
    return SCIP_OKAY;
 }
