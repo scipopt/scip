@@ -9688,13 +9688,14 @@ SCIP_Bool checkEqualObjective(
 
    vars = consdata->vars;
    nvars = consdata->nvars;
+
    assert(vars != NULL);
 
    for( v = 0; v < nvars; ++v )
    {
       negated = FALSE;
       var = vars[v];
-      assert(vars != NULL);
+      assert(var != NULL);
 
       if( SCIPvarIsNegated(var) )
       {
@@ -12635,6 +12636,14 @@ SCIP_RETCODE detectRedundantConstraints(
           * changes applied to an upgraded constraint will not be considered in the instance */
          if( consdata1->upgraded && !consdata0->upgraded )
          {
+            /* the coefficients of both rows are negations, we need to switch lhs and rhs and multiply them with -1 */
+            if( !SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
+            {
+               SCIP_Real tmp = lhs;
+               lhs = -rhs;
+               rhs = -tmp;
+            }
+
             consstay = cons0;
             consdatastay = consdata0;
             consdel = cons1;

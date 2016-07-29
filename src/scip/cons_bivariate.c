@@ -803,6 +803,7 @@ SCIP_RETCODE computeViolation(
    xub = SCIPvarGetUbGlobal(x);
    ylb = SCIPvarGetLbGlobal(y);
    yub = SCIPvarGetUbGlobal(y);
+   /* @todo handle case where variables are outside of bounds as in other constraint handlers, see also #627 */
    if( sol == NULL )
    {
       assert(SCIPisFeasGE(scip, xyvals[0], xlb));

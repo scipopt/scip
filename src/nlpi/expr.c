@@ -894,6 +894,7 @@ void polynomialdataMergeMonomials(
 
 #ifndef NDEBUG
    while( i < polynomialdata->nmonomials )
+      // cppcheck-suppress assignmentInAssert
       assert(polynomialdata->monomials[i++] == NULL);
 #endif
 
@@ -5172,7 +5173,7 @@ SCIP_RETCODE exprParse(
       while( isspace((unsigned char)*str) && str != lastchar )
          ++str;
 
-      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '/' && str[0] != '^' )
+      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '^' )
       {
          if( str < lastchar )
          {
@@ -6889,6 +6890,7 @@ void SCIPexprMergeMonomialFactors(
 
 #ifndef NDEBUG
    while( i < monomial->nfactors )
+      // cppcheck-suppress assignmentInAssert
       assert(monomial->childidxs[i++] == -1);
 #endif
 
