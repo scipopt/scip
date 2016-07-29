@@ -48,6 +48,9 @@ struct SCIP_NlpiData
 struct SCIP_NlpiProblem
 {
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
+
+   SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
+   SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 };
 
 
@@ -126,9 +129,6 @@ SCIP_DECL_NLPIFREE( nlpiFreeFilterSQP )
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
-
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -142,8 +142,22 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   SCIP_NLPIDATA* data;
+
+   assert(nlpi    != NULL);
+   assert(problem != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, problem) );
+
+   SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
+   SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
+   SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
+
+   (*problem)->firstrun = TRUE;
+   (*problem)->initguess = NULL;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -157,10 +171,26 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   SCIP_NLPIDATA* data;
 
-   return SCIP_OKAY;  /*lint !e527*/
+   assert(nlpi     != NULL);
+   assert(problem  != NULL);
+   assert(*problem != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
+
+   if( (*problem)->oracle != NULL )
+   {
+      SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
+   }
+
+   BMSfreeMemoryArrayNull(&(*problem)->initguess);
+
+   BMSfreeBlockMemory(data->blkmem, problem);
+   assert(*problem == NULL);
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gets pointer to solver-internal problem instance
@@ -176,9 +206,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
 static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
-
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -195,10 +222,16 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
 static 
 SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleAddVars(problem->oracle, nvars, lbs, ubs, varnames) );
+
+   problem->firstrun = TRUE;
+   BMSfreeMemoryArrayNull(&problem->initguess);
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 
@@ -243,10 +276,19 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 static
 SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleAddConstraints(problem->oracle,
+         ncons, lhss, rhss,
+         nlininds, lininds, linvals,
+         nquadelems, quadelems,
+         exprvaridxs, exprtrees, names) );
+
+   problem->firstrun = TRUE;
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets or overwrites objective, a minimization problem is expected
@@ -279,10 +321,18 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 static
 SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
+         constant, nlins, lininds, linvals,
+         nquadelems, quadelems,
+         exprvaridxs, exprtree) );
+
+   problem->firstrun = TRUE;
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** change variable bounds
@@ -298,10 +348,13 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
 static
 SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** change constraint bounds
@@ -317,10 +370,13 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsFilterSQP )
 static
 SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgConsSides(problem->oracle, nconss, indices, lhss, rhss) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** delete a set of variables
@@ -336,10 +392,16 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesFilterSQP )
 static
 SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleDelVarSet(problem->oracle, dstats) );
+
+   problem->firstrun = TRUE;
+   BMSfreeMemoryArrayNull(&problem->initguess); /* @TODO keep initguess for remaining variables */
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** delete a set of constraints
@@ -355,10 +417,15 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 static
 SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleDelConsSet(problem->oracle, dstats) );
+
+   problem->firstrun = TRUE;
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** changes (or adds) linear coefficients in a constraint or objective
@@ -374,10 +441,13 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 static
 SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** changes (or adds) coefficients in the quadratic part of a constraint or objective
@@ -394,10 +464,13 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
 static
 SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** replaces the expression tree of a constraint or objective
@@ -412,10 +485,13 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 static
 SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** change one coefficient in the nonlinear part
@@ -432,10 +508,13 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 static
 SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** change the constant offset in the objective
@@ -448,10 +527,13 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefFilterSQP )
 static
 SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIP_CALL( SCIPnlpiOracleChgObjConstant(problem->oracle, objconstant) );
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets initial guess for primal variables
@@ -467,10 +549,27 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantFilterSQP )
 static
 SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   if( primalvalues != NULL )
+   {
+      if( problem->initguess == NULL )
+      {
+         SCIP_ALLOC( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
+      }
+      else
+      {
+         BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
+      }
+   }
+   else
+   {
+      BMSfreeMemoryArrayNull(&problem->initguess);
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** tries to solve NLP
@@ -770,8 +869,8 @@ SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
 
-   /* create filtersqp solver interface data */
-   BMSallocBlockMemory(blkmem, &nlpidata);
+   /* create filterSQP solver interface data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
 
    nlpidata->blkmem = blkmem;
    nlpidata->messagehdlr = NULL;
