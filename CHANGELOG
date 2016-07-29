@@ -29,6 +29,7 @@ Makefile:
 - fix bug in 'dll' target
 - make shared libraries aware of their dependencies
 - link binary to shared libs when compiling with SHARED=true
+- 'make install' copies now all header files
 
 SCIP version 3.2.1
 ==================
