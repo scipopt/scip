@@ -5494,7 +5494,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
-   SCIP_ROW*          row;
+   SCIP_ROW*          row = NULL;
    int                c;
    SCIP_Real          xlb;
    SCIP_Real          xub;
