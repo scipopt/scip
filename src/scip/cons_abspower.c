@@ -2297,8 +2297,9 @@ SCIP_RETCODE registerBranchingCandidates(
          onlynonfixedsign = FALSE;
          continue;
       }
+      break;
    }
-   while( FALSE );
+   while( TRUE );
 
    return SCIP_OKAY;
 }
