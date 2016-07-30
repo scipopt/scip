@@ -741,7 +741,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
       SCIP_Real newbd;
 
       SCIPdebugMessage("changed %s bound on expression graph variable <%s> from %g to %g\n",
-         eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
+         (eventtype & SCIP_EVENTTYPE_LBCHANGED) ? "lower" : "upper",
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
@@ -5656,7 +5656,7 @@ SCIP_RETCODE addLinearizationCuts(
          continue;
 
       SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, ref, TRUE,
-            consdata->curvature & SCIP_EXPRCURV_CONVEX ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
+            (consdata->curvature & SCIP_EXPRCURV_CONVEX) ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
             &row, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
 
       if( row == NULL )
