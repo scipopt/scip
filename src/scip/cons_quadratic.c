@@ -12794,6 +12794,12 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
 
    int nbilinterms;
 
+   assert(linvars != NULL || nlinvars == 0);
+   assert(lincoefs != NULL || nlinvars == 0);
+   assert(quadvars1 != NULL || nquadterms == 0);
+   assert(quadvars2 != NULL || nquadterms == 0);
+   assert(quadcoefs != NULL || nquadterms == 0);
+
    assert(modifiable == FALSE); /* we do not support column generation */
 
    /* find the quadratic constraint handler */
