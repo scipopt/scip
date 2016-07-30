@@ -796,6 +796,7 @@ SCIP_RETCODE evalFunctionValue(
       for( i = 0; i < nvars; ++i )
       {
          assert(cons->exprvaridxs[i] >= 0);
+         assert(cons->exprvaridxs[i] < oracle->nvars);
          xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613 !e644*/
       }
 
@@ -892,6 +893,7 @@ SCIP_RETCODE evalFunctionGradient(
          for( i = 0; i < nvars; ++i )
          {
             assert(cons->exprvaridxs[i] >= 0);
+            assert(cons->exprvaridxs[i] < oracle->nvars);
             xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613*/
          }
       }

@@ -2550,7 +2550,7 @@ SCIP_DECL_EXPREVAL( exprevalQuadratic )
    quadelems  = quaddata->quadelems;
 
    assert(quadelems != NULL || nquadelems == 0);
-   assert(argvals != NULL   || nargs == 0);
+   assert(argvals != NULL || nquadelems == 0);
 
    *result = quaddata->constant;
 
@@ -3983,11 +3983,13 @@ SCIP_RETCODE exprUnconvertPolynomial(
    {
       /* polynomial is product of children */
       monomial = polynomialdata->monomials[0];
+      assert(monomial->nfactors == nchildren);
 
       if( monomial->nfactors == 1 )
       {
          /* polynomial is x^k for some k */
          assert(monomial->exponents[0] != 1.0); /* should have been handled before */
+         assert(monomial->childidxs[0] == 0);
 
          if( monomial->exponents[0] == 2.0 )
          {
@@ -4072,6 +4074,8 @@ SCIP_RETCODE exprUnconvertPolynomial(
       if( monomial->nfactors == 2 && monomial->exponents[0] == 1.0 && monomial->exponents[1] == -1.0 )
       {
          /* polynomial is x/y, so turn into SCIP_EXPR_DIV */
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -4085,6 +4089,9 @@ SCIP_RETCODE exprUnconvertPolynomial(
       {
          /* polynomial is y/x, so turn into SCIP_EXPR_DIV */
          void* tmp;
+
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -7578,11 +7585,17 @@ SCIP_Bool SCIPexprAreEqual(
       if( data1->lincoefs != NULL || data2->lincoefs != NULL )
          for( i = 0; i < expr1->nchildren; ++i )
          {
-            if( data1->lincoefs == NULL && !EPSZ(data2->lincoefs[i], eps) )
-               return FALSE;
-            if( data2->lincoefs == NULL && !EPSZ(data1->lincoefs[i], eps) )
-               return FALSE;
-            if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
+            if( data1->lincoefs == NULL )
+            {
+               if( !EPSZ(data2->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( data2->lincoefs == NULL )
+            {
+               if( !EPSZ(data1->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
                return FALSE;
          }
 
@@ -15517,10 +15530,10 @@ SCIP_Bool SCIPexprgraphFindConstNode(
          break;
       }
    }
-   assert(left == right+1 || *constnode != NULL);
    if( left == right+1 )
       return FALSE;
 
+   assert(*constnode != NULL);
    assert((*constnode)->op == SCIP_EXPR_CONST);
    assert((*constnode)->data.dbl == constant);  /*lint !e777*/
 
