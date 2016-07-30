@@ -1977,8 +1977,6 @@ SCIP_RETCODE computeViolation(
    SCIP_Real val;
    SCIP_Real xval;
    SCIP_Real zval;
-   SCIP_Real lb;
-   SCIP_Real ub;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2004,14 +2002,20 @@ SCIP_RETCODE computeViolation(
       return SCIP_OKAY;
    }
 
-   lb = SCIPvarGetLbLocal(consdata->x);
-   ub = SCIPvarGetUbLocal(consdata->x);
+   if( sol == NULL )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
 
-   /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might be outside bounds */
-   if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
-      *solviolbounds = TRUE;
-   else
-      xval = MAX(lb, MIN(ub, xval));  /* project x onto local box if just slightly outside (or even not outside) */
+      lb = SCIPvarGetLbLocal(consdata->x);
+      ub = SCIPvarGetUbLocal(consdata->x);
+
+      /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might be outside bounds */
+      if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
+         *solviolbounds = TRUE;
+      else
+         xval = MAX(lb, MIN(ub, xval));  /* project x onto local box if just slightly outside (or even not outside) */
+   }
 
    xval += consdata->xoffset;
 
