@@ -741,7 +741,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
       SCIP_Real newbd;
 
       SCIPdebugMessage("changed %s bound on expression graph variable <%s> from %g to %g\n",
-         eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
+         (eventtype & SCIP_EVENTTYPE_LBCHANGED) ? "lower" : "upper",
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
@@ -2815,6 +2815,9 @@ SCIP_RETCODE reformulate(
             char                name[SCIP_MAXSTRLEN];
             SCIP_INTERVAL       bounds;
 
+            assert(children != NULL);
+            assert(nchildren == 2);
+
             bounds = SCIPexprgraphGetNodeBounds(node);
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%d", *naddcons);
 
@@ -3185,6 +3188,7 @@ SCIP_RETCODE reformulate(
             nfactors = SCIPexprGetMonomialNFactors(monomial);
             assert(nfactors >= 1); /* constant monomials should have been simplified away */
             assert(coef != 0.0);  /* zero-monomials should have been simplified away */
+            assert(children != NULL);
 
             /* check if we make monomial convex or concave by making a child linear */
             modified = FALSE;
@@ -5656,7 +5660,7 @@ SCIP_RETCODE addLinearizationCuts(
          continue;
 
       SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, ref, TRUE,
-            consdata->curvature & SCIP_EXPRCURV_CONVEX ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
+            (consdata->curvature & SCIP_EXPRCURV_CONVEX) ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
             &row, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
 
       if( row == NULL )

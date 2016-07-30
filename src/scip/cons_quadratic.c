@@ -5018,7 +5018,6 @@ SCIP_RETCODE computeViolation(
 
    *solviolbounds = FALSE;
    consdata->activity = 0.0;
-   varval = 0.0;
 
    /* @todo Take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s). */
    for( i = 0; i < consdata->nlinvars; ++i )
@@ -7298,7 +7297,6 @@ SCIP_RETCODE computeGauge(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->sepabilinvar2pos != NULL || consdata->nbilinterms == 0); /* this should have been computed in INITSOL */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7354,6 +7352,7 @@ SCIP_RETCODE computeGauge(
             continue;
 
          /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
+         assert(consdata->sepabilinvar2pos != NULL); /* this should have been computed in INITSOL */
          assert(consdata->quadvarterms[consdata->sepabilinvar2pos[bilintermidx]].var == bilinterm->var2);
 
          val2 = consdata->interiorpoint[consdata->sepabilinvar2pos[bilintermidx]];
@@ -12875,6 +12874,12 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    int var2pos;
 
    int nbilinterms;
+
+   assert(linvars != NULL || nlinvars == 0);
+   assert(lincoefs != NULL || nlinvars == 0);
+   assert(quadvars1 != NULL || nquadterms == 0);
+   assert(quadvars2 != NULL || nquadterms == 0);
+   assert(quadcoefs != NULL || nquadterms == 0);
 
    assert(modifiable == FALSE); /* we do not support column generation */
 
