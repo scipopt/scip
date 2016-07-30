@@ -2815,6 +2815,9 @@ SCIP_RETCODE reformulate(
             char                name[SCIP_MAXSTRLEN];
             SCIP_INTERVAL       bounds;
 
+            assert(children != NULL);
+            assert(nchildren == 2);
+
             bounds = SCIPexprgraphGetNodeBounds(node);
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%d", *naddcons);
 
@@ -3185,6 +3188,7 @@ SCIP_RETCODE reformulate(
             nfactors = SCIPexprGetMonomialNFactors(monomial);
             assert(nfactors >= 1); /* constant monomials should have been simplified away */
             assert(coef != 0.0);  /* zero-monomials should have been simplified away */
+            assert(children != NULL);
 
             /* check if we make monomial convex or concave by making a child linear */
             modified = FALSE;
