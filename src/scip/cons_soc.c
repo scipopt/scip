@@ -3504,8 +3504,6 @@ GENERALUPG:
       if( SCIPisZero(scip, eigvals[i]) )
          continue;
 
-      term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
-
       if( eigvals[i] > 0.0 )
       {
          lhscoefs[lhscount] = sqrt(eigvals[i]) * UPGSCALE;
