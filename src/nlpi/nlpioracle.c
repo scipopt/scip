@@ -914,7 +914,7 @@ SCIP_RETCODE evalFunctionGradient(
       {
          *val += nlval;
          for( i = 0; i < nvars; ++i )
-            if( g[i] != g[i] )  /*lint !e777*/
+            if( !SCIPisFinite(g[i]) )  /*lint !e777*/
             {
                SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", g[i]);
                BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -1153,7 +1153,7 @@ SCIP_RETCODE hessLagAddExprtree(
          if( !*hh )
             continue;
 
-         if( *hh != *hh )  /*lint !e777*/
+         if( !SCIPisFinite(*hh) )  /*lint !e777*/
          {
             SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
             BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -2730,7 +2730,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
                for( l = 0; l < nvars; ++l )
                {
                   assert(oracle->jaccols[j+l] == cons->exprvaridxs[l]);
-                  if( grad[l] != grad[l] )  /*lint !e777*/
+                  if( !SCIPisFinite(grad[l]) )  /*lint !e777*/
                   {
                      SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", grad[l]);
                      retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
