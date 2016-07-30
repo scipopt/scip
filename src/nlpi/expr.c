@@ -893,8 +893,8 @@ void polynomialdataMergeMonomials(
    }
 
 #ifndef NDEBUG
-   while( i < polynomialdata->nmonomials )
-      assert(polynomialdata->monomials[i++] == NULL);
+   for( ; i < polynomialdata->nmonomials; ++i )
+      assert(polynomialdata->monomials[i] == NULL);
 #endif
 
    polynomialdata->nmonomials -= offset;
@@ -6885,8 +6885,8 @@ void SCIPexprMergeMonomialFactors(
    }
 
 #ifndef NDEBUG
-   while( i < monomial->nfactors )
-      assert(monomial->childidxs[i++] == -1);
+   for( ; i < monomial->nfactors; ++i )
+      assert(monomial->childidxs[i] == -1);
 #endif
 
    monomial->nfactors -= offset;
