@@ -192,7 +192,6 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib) \
 		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
-		$(LIBBUILDFLAGS) \
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
