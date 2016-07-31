@@ -62,7 +62,7 @@
 #define DEFAULT_CONFIDENCELEVEL 2       /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
 #define DEFAULT_SKIPBADINITCANDS TRUE  /**< should branching rule skip candidates that have a low probability to be
                                           *  better than the best strong-branching or pseudo-candidate? */
-#define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
+#define DEFAULT_STARTRANDSEED      5    /**< start random seed for random number generation */
 #define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS TRUE     /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
@@ -1491,7 +1491,7 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    branchruledata->nlcountsize = 0;
    branchruledata->nlcountmax = 1;
 
-   branchruledata->randseed = (unsigned int)branchruledata->startrandseed;
+   branchruledata->randseed = (unsigned int)(branchruledata->startrandseed + SCIPgetRandseedShift(scip));
 
    return SCIP_OKAY;
 }
