@@ -2052,7 +2052,7 @@ SCIP_RETCODE processFixings(
 {
    SCIP_CONSDATA* consdata;
 #ifndef NDEBUG
-   int oldnfixedvars = *nfixedvars;
+   int oldnfixedvars;
 #endif
 
    assert(cons != NULL);
@@ -2062,6 +2062,10 @@ SCIP_RETCODE processFixings(
    assert(nfixedvars != NULL);
    assert(addcut != NULL);
    assert(mustcheck != NULL);
+
+#ifndef NDEBUG
+   oldnfixedvars = *nfixedvars;
+#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

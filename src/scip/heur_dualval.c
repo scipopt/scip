@@ -866,12 +866,12 @@ SCIP_RETCODE createSubSCIP(
    SCIP_Bool    feasible;
    SCIP_Bool    success;
 
+   assert( heurdata != NULL );
+   assert( heurdata->subscip == NULL );
+
    heurdata->usedcalls = 0;
    heurdata->solfound = FALSE;
    heurdata->nonimprovingRounds = 0;
-
-   assert( heurdata != NULL );
-   assert( heurdata->subscip == NULL );
 
    /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
@@ -2657,7 +2657,6 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
    heurdata->solfound = FALSE;
    heurdata->prevInfeasible = FALSE;
 
-   assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
    assert(heurdata->varsubsciptoscip == NULL);
    assert(heurdata->varsciptosubscip == NULL);

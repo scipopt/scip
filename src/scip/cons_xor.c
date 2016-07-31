@@ -3642,10 +3642,8 @@ SCIP_RETCODE detectRedundantConstraints(
             goto TERMINATE;
          }
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* delete cons0 and update flags of cons1 s.t. nonredundant information doesn't get lost */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
-
-         /* delete consdel */
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          (*ndelconss)++;
 
@@ -3961,6 +3959,9 @@ SCIP_RETCODE preprocessConstraintPairs(
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
             SCIPdebugPrintCons(scip, cons0, NULL);
             SCIPdebugPrintCons(scip, cons1, NULL);
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
 
@@ -4042,6 +4043,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             *cutoff = *cutoff || infeasible;
             if ( fixed )
                (*nfixedvars)++;
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -4083,6 +4087,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
             (*nfixedvars)++;
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -4139,6 +4146,8 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          if( redundant )
          {
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
 

@@ -1123,7 +1123,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lasttime  = stats->TotalCPUTime();
       }
    }
-   catch( IpoptException except )
+   catch( IpoptException& except )
    {
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
