@@ -104,8 +104,8 @@ FLAGS 		+= 	-I.
 #-----------------------------------------------------------------------------
 # Criterion Framework
 #-----------------------------------------------------------------------------
-CR_INC		=	Criterion/include
-CR_LIBDIR	=	Criterion/build/
+CR_INC		=	$(wildcard Criterion/include)
+CR_LIBDIR	=	$(wildcard Criterion/build)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
@@ -188,10 +188,10 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX) $< \
 		$(LINKCXX_L)$(SCIPDIR)/lib \
 		$(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
-		$(LINKCXX_L)$(CR_LIBDIR) \
+		$(addprefix $(LINKCXX_L),$(CR_LIBDIR)) \
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib) \
-		$(LINKRPATH)$(realpath $(CR_LIBDIR)) \
+		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
 		$(LIBBUILDFLAGS) \
 		$(LINKCXX_o)$@
 
@@ -204,14 +204,15 @@ $(NLPILIBFILE):
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) -I$(CR_INC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
 Criterion:
-	@echo "Criterion not found, building it"
+	@echo "Criterion not found, downloading and building it. Press Enter to continue."
+	@read
 	git clone -b v2.2.2 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \
