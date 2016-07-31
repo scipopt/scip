@@ -39,7 +39,7 @@
 
 #define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
-
+#define DEFAULT_RANDSEED      17
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -592,7 +592,7 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = 0;
+   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
