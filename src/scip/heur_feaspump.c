@@ -62,6 +62,7 @@
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
+#define DEFAULT_RANDSEED          13    /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -580,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = 0;
+   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
 
    return SCIP_OKAY;
 }
