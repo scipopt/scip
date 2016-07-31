@@ -44,7 +44,7 @@
 #define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER     65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
-#define DEFAULT_RANDSEED      3141598   /**< the default random seed for random number generation */
+#define DEFAULT_RANDSEED           29   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'v'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
@@ -1336,7 +1336,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
