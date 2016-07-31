@@ -211,8 +211,8 @@ $(OBJDIR)/%.o:	%.cpp
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
 Criterion:
-	@echo "Criterion not found, downloading and building it. Press Enter to continue."
-	@read
+	@echo -n "Criterion not found, downloading and building it in"
+	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
 	git clone -b v2.2.2 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \
