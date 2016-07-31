@@ -44,11 +44,11 @@
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
-#define DEFAULT_RANDSEED      14081986       /**< default random seed */
+#define DEFAULT_RANDSEED         23          /**< default random seed */
 #define DEFAULT_USESIMPLEROUNDING    FALSE   /**< should the heuristic apply the variable lock strategy of simple rounding,
                                                *  if possible? */
 #define DEFAULT_MAXPROPROUNDS 1              /**< limit of rounds for each propagation call */
-#define DEFAULT_PROPAGATEONLYROOT TRUE      /**< should the probing part of the heuristic be applied exclusively at the root node */
+#define DEFAULT_PROPAGATEONLYROOT TRUE       /**< should the probing part of the heuristic be applied exclusively at the root node */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -375,7 +375,7 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
 
    return SCIP_OKAY;
 }
