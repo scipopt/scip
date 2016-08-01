@@ -1761,7 +1761,7 @@ SCIP_RETCODE SCIPsetCreate(
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/randomseedshift",
-         "global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seed.",
+         "global shift of all random seeds in the plugins, this will have no impact on the LP seed and the permutation seed as long as it is set to -1.",
          &(*set)->random_randomseedshift, FALSE, SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT, 0, INT_MAX,
          NULL, NULL) );
 
