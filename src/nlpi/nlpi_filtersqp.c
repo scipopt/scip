@@ -16,7 +16,7 @@
 /**@file    nlpi_filtersqp.c
  * @ingroup NLPIS
  * @brief   filterSQP NLP interface
- * @author  you
+ * @author  Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -71,6 +71,17 @@ typedef int fint;
 typedef double real;
 typedef long ftnlen;
 
+/** FilterSQP main routine.
+ *
+ * Array a has length nnza, which is the number of nonzeros in the gradient of the objective and the Jacobian.
+ * The first entries of a is the objective gradient, next are the gradients of the constraints.
+ *
+ * Array la has length lamax, which is at least nnza+m+2.
+ * la contains the index information of a row-oriented sparse matrix storage. It stores the number of nonzeros, the column indices, and the row starts:
+ * la[0] must be set to nnza+1.
+ * la[1]..la[nnza] are indices of the variables corresponding to the entries in a (colidx).
+ * la[nnza+1]..la[nnza+1+m] contain the index where each row starts in a and la (rowstart).
+ */
 void F77_FUNC(filtersqp,FILTERSQP)(
   fint*                  n,                  /**< number of variables */
   fint*                  m,                  /**< number of constraints (excluding simple bounds) */
@@ -95,7 +106,7 @@ void F77_FUNC(filtersqp,FILTERSQP)(
   fint*                  la,                 /**< column indices and length of rows of entries in a (if sparse) or leading dimension of a (if dense) */
   real*                  ws,                 /**< real workspace (array of length mxwk) */
   fint*                  lws,                /**< integer workspace (array of length mxiwk) */
-  real*                  lam,                /**< Lagrange multipliers of simple bounds and general constraints (array of length n+m) */
+  real*                  lam,                /**< Lagrangian multipliers of simple bounds and general constraints (array of length n+m) */
   char*                  cstype,             /**< indicator whether constraint is linear ('L') or nonlinear ('N') (array of length m) */
   real*                  user,               /**< real workspace passed through to user routines */
   fint*                  iuser,              /**< integer workspace passed through to user routines */
@@ -447,7 +458,7 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 
 
 /** add constraints
- * quadratic coefficiens: row oriented matrix for each constraint
+ * quadratic coefficients: row oriented matrix for each constraint
  * 
  * input:
  *  - nlpi datastructure for solver interface
