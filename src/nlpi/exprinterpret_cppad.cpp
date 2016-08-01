@@ -203,16 +203,6 @@ SCIPInterval CondExpOp(
    return SCIPInterval();
 }
 
-/** another function that returns whether two intervals are the same (required by CppAD) */
-inline
-bool EqualOpSeq(
-   const SCIPInterval&   x,                  /**< first operand */
-   const SCIPInterval&   y                   /**< second operand */
-   )
-{
-   return x == y;
-}
-
 /** another function required by CppAD */
 inline
 bool IdenticalPar(

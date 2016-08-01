@@ -81,6 +81,7 @@ fixed bugs:
 - fixed memory leak in OSiL reader
 - writing of solutions or parameters to a file now works also with the message handler set to quiet
 - fixed bug in heur_octane with uninitialized ray direction
+- fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
@@ -93,6 +94,7 @@ Makefile:
 - fix bug in 'dll' target
 - make shared libraries aware of their dependencies
 - link binary to shared libs when compiling with SHARED=true
+- 'make install' copies now all header files
 
 SCIP version 3.2.1
 ==================
