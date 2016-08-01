@@ -129,8 +129,10 @@ void F77_FUNC(hessian,HESSIAN)(real *x, fint *N, fint *M, fint *phase, real *lam
 static SCIP_NLPI* nlpiSolved = NULL;
 static SCIP_NLPIPROBLEM* nlpiProblemSolved = NULL;
 
-/* access to filter common bloc */
-/* common block for problemname */
+/** @group access to filter common bloc
+ * @{
+ */
+/** common block for problemname */
 extern struct
 {
    fint char_l;
@@ -138,65 +140,66 @@ extern struct
 }
 F77_FUNC(cpname,CPNAME);
 
-/* common block for Hessian storage set to 0, i.e. NO Hessian */
+/** common block for Hessian storage set to 0, i.e. NO Hessian */
 extern struct
 {
    fint phl, phr, phc;
 }
 F77_FUNC(hessc,HESSC);
 
-/* common block for upper bound on filter */
+/** common block for upper bound on filter */
 extern struct
 {
    real ubd, tt;
 }
 F77_FUNC(ubdc,UBDC);
 
-/* common block for infinity & epsilon */
+/** common block for infinity & epsilon */
 extern struct
 {
    real infty, eps;
 }
 F77_FUNC_(nlp_eps_inf,NLP_EPS_INF);
 
-/* common block for printing from QP solver */
+/** common block for printing from QP solver */
 extern struct
 {
    fint n_bqpd_calls, n_bqpd_prfint;
 }
 F77_FUNC_(bqpd_count,BQPD_COUNT);
 
-/* common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
+/** common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
 extern struct
 {
    fint scale_mode, phe;
 }
 F77_FUNC(scalec,SCALEC);
+/** @} */
 
-/* Objective function evaluation */
+/** Objective function evaluation */
 void F77_FUNC(objfun,OBJFUN)(
-   real* x,
-   fint* n,
-   real* f,
-   real* user,
-   fint* iuser,
-   fint* errflag
+   real*                 x,                  /**< value of current variables (array of length n) */
+   fint*                 n,                  /**< number of variables */
+   real*                 f,                  /**< buffer to store value of objective function */
+   real*                 user,               /**< user real workspace */
+   fint*                 iuser,              /**< user integer workspace */
+   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
    *errflag = 1;
 }
 
-/* Constraint functions evaluation */
+/** Constraint functions evaluation */
 void F77_FUNC(confun,CONFUN)(
-   real* x,
-   fint* n ,
-   fint* m,
-   real* c,
-   real* a,
-   fint* la,
-   real* user,
-   fint* iuser,
-   fint* errflag
+   real*                 x,                  /**< value of current variables (array of length n) */
+   fint*                 n,                  /**< number of variables */
+   fint*                 m,                  /**< number of constraints */
+   real*                 c,                  /**< buffer to store values of constraints (array of length m) */
+   real*                 a,                  /**< Jacobian matrix entries */
+   fint*                 la,                 /**< Jacobian index information */
+   real*                 user,               /**< user real workspace */
+   fint*                 iuser,              /**< user integer workspace */
+   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
    *errflag = 1;
@@ -220,39 +223,48 @@ void F77_FUNC(objgrad,OBJGRAD)(
 void F77_FUNC(objgrad,OBJGRAD)(void)
 { }
 
-/* Objective gradient and Jacobian evaluation */
+/** Objective gradient and Jacobian evaluation
+ *
+ * \note If an arithmetic exception occurred, then the gradients must not be modified.
+ */
 void
 F77_FUNC(gradient,GRADIENT)(
-   fint* n,
-   fint* m,
-   fint* mxa,
-   real* x,
-   real* a,
-   fint* la,
-   fint* maxa,
-   real* user,
-   fint* iuser,
-   fint* errflag
+   fint*                 n,                  /**< number of variables */
+   fint*                 m,                  /**< number of constraints */
+   fint*                 mxa,                /**< actual number of entries in a */
+   real*                 x,                  /**< value of current variables (array of length n) */
+   real*                 a,                  /**< Jacobian matrix entries */
+   fint*                 la,                 /**< Jacobian index information: column indices and pointers to start of each row */
+   fint*                 maxa,               /**< maximal size of a */
+   real*                 user,               /**< user real workspace */
+   fint*                 iuser,              /**< user integer workspace */
+   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
    *errflag = 1;
 }
 
-/* Hessian of the Lagrangian evaluation */
+/** Hessian of the Lagrangian evaluation
+ *
+ * phase = 1 : Hessian of the Lagrangian without objective Hessian
+ * phase = 2 : Hessian of the Lagrangian (including objective Hessian)
+ *
+ * \note If an arithmetic exception occurred, then the Hessian must not be modified.
+ */
 void
 F77_FUNC(hessian,HESSIAN)(
-   real* x,
-   fint* n,
-   fint* m,
-   fint* phase,
-   real* lam,
-   real* ws,
-   fint* lws,
-   real* user,
-   fint* iuser,
-   fint* l_hess,
-   fint* li_hess,
-   fint* errflag
+   real*                 x,                  /**< value of current variables (array of length n) */
+   fint*                 n,                  /**< number of variables */
+   fint*                 m,                  /**< number of constraints */
+   fint*                 phase,              /**< indicates what kind of Hessian matrix is required */
+   real*                 lam,                /**< Lagrangian multipliers (array of length n+m) */
+   real*                 ws,                 /**< real workspace for Hessian, passed to Wdotd */
+   fint*                 lws,                /**< integer workspace for Hessian, passed to Wdotd */
+   real*                 user,               /**< user real workspace */
+   fint*                 iuser,              /**< user integer workspace */
+   fint*                 l_hess,             /**< space of Hessian real storage ws. On entry: maximal space allowed, on exit: actual amount used */
+   fint*                 li_hess,            /**< space of Hessian integer storage lws. On entry: maximal space allowed, on exit: actual amount used */
+   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
    *errflag = 1;
