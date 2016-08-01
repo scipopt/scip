@@ -592,7 +592,7 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;

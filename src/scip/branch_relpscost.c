@@ -1491,7 +1491,7 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    branchruledata->nlcountsize = 0;
    branchruledata->nlcountmax = 1;
 
-   branchruledata->randseed = (unsigned int)(branchruledata->startrandseed + SCIPgetRandseedShift(scip));
+   branchruledata->randseed = SCIPinitializeRandomSeed(scip, branchruledata->startrandseed);
 
    return SCIP_OKAY;
 }

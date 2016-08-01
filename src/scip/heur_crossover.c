@@ -635,7 +635,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->usednodes = 0;
    heurdata->prevlastsol = NULL;
    heurdata->prevbestsol = NULL;
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    heurdata->lasttuple = NULL;
    heurdata->nfailures = 0;
    heurdata->prevnsols = 0;
@@ -963,7 +963,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(subscip, (unsigned int) (SCIPheurGetNCalls(heur) + SCIPgetRandseedShift(scip)), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* catch LP events of sub-SCIP */

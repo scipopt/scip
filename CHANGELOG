@@ -19,6 +19,7 @@ features:
 - add new presolving step to disaggregate second order cone constraints
 - added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
+- new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -27,7 +28,9 @@ parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
 - new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
-- new parameter lp/randomseed to set the initial seed of the LP solver
+- new parameter class randomization
+- moved permutationseed from misc to randomization
+- new parameter randomization/lpseed to set the initial seed of the LP solver
 
 performance improvements:
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
@@ -55,6 +58,7 @@ interface:
   was detected while building the initial LP relaxation
 - new function SCIPisDualSolAvailable() to query the dual solution availability
 - submakefile for CrayXC systems added
+- new method SCIPinitializeRandomSeed()
 
 fixed bugs:
 

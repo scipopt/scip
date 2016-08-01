@@ -9335,10 +9335,11 @@ SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the global shift of the random seeds of all plugins */
+/** initializes a random seed based on a given value with the global shift of random seeds */
 EXTERN
-int SCIPgetRandseedShift(
-   SCIP*                 scip                /**< SCIP data structure */
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   randseed            /**< random seed to initialize */
    );
 
 /** marks the variable that it must not be multi-aggregated

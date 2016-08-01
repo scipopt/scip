@@ -262,7 +262,7 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }

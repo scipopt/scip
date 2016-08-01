@@ -7150,7 +7150,7 @@ SCIP_DECL_CONSINIT(consInitSetppc)
    conshdlrdata->nclqpresolve = 0;
    conshdlrdata->updatedsetppctype = FALSE;
    conshdlrdata->enablecliquelifting = TRUE;
-   conshdlrdata->randseed = DEFAULT_RANDSEED + SCIPgetRandseedShift(scip);
+   conshdlrdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }

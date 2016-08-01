@@ -1336,7 +1336,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;

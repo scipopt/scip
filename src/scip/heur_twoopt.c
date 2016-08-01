@@ -844,7 +844,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nbinblocks = 0;
    heurdata->nintblocks = 0;
 
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */

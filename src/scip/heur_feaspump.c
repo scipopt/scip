@@ -581,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }

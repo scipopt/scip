@@ -375,7 +375,7 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = (unsigned int)(DEFAULT_RANDSEED + SCIPgetRandseedShift(scip));
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
