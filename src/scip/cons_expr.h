@@ -115,6 +115,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
+/** set the separation callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa))      /**< separation callback (can be NULL) */
+);
+
 /** set the reverse propagation callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
@@ -284,6 +293,15 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
+/** returns the variable used for linearizing a given expression (return value might be NULL)
+ *
+ * @note for variable expression it returns the corresponding variable
+ */
+EXTERN
+SCIP_VAR* SCIPgetConsExprExprLinearizationVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 /** sets the expression data of an expression
  *
  * The pointer to possible old data is overwritten and the
@@ -441,9 +459,10 @@ void SCIPsetConsExprExprEvalValue(
 
 /** returns the hash key of an expression */
 EXTERN
-unsigned int SCIPgetConsExprExprHashkey(
+SCIP_RETCODE SCIPgetConsExprExprHashkey(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   unsigned int*           hashkey           /**< pointer to store the hash key */
    );
 
 /** sets the evaluation interval */

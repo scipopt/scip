@@ -1414,6 +1414,109 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
    return SCIP_OKAY;
 }
 
+/** helper function to separate a given point; needed for proper unittest */
+static
+SCIP_RETCODE separatePointSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
+   SCIP_VAR* auxvar;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0);
+   assert(cut != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   assert(auxvar != NULL);
+
+   *cut = NULL;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetConsExprExprNChildren(expr) + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, SCIPgetConsExprExprNChildren(expr) + 1) );
+
+   /* compute  w = sum_i alpha_i z_i + const */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[c];
+
+      /* value expressions should have been removed during simplification */
+      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
+
+      vars[c] = SCIPgetConsExprExprLinearizationVar(child);
+      assert(vars[c] != NULL);
+      coefs[c] = exprdata->coefficients[c];
+   }
+
+   vars[SCIPgetConsExprExprNChildren(expr)] = auxvar;
+   coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
+
+   /* create cut */
+   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
+         FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, *cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
+
+   /* release memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+/** expression separation callback */
+/** @todo add these cuts during INITLP only */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
+{
+   SCIP_ROW* cut;
+   SCIP_Real efficacy;
+
+   cut = NULL;
+   *ncuts = 0;
+   *result = SCIP_DIDNOTFIND;
+
+   /* try to compute a cut */
+   SCIP_CALL( separatePointSum(scip, conshdlr, expr, sol, &cut) );
+
+   /* failed to compute a cut */
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+
+   /* add cut if it is violated */
+   if( SCIPisGE(scip, efficacy, minefficacy) )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+#endif
+   }
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
@@ -1649,6 +1752,215 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
+/** helper function to separate a given point; needed for proper unittest */
+static
+SCIP_RETCODE separatePointProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_ROW**            cut                 /**< pointer to store the row */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* auxvar;
+   SCIP_VAR* var;
+   SCIP_Real violation;
+   SCIP_Bool overestimate;
+   SCIP_Bool success;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") == 0);
+   assert(cut != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   assert(auxvar != NULL);
+
+   *cut = NULL;
+
+   /* compute violation of the expression by evaluating auxiliary variables */
+   violation = exprdata->constant;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[c];
+
+      /* value expressions should have been removed during simplification */
+      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
+
+      var = SCIPgetConsExprExprLinearizationVar(child);
+      assert(var != NULL);
+
+      violation *= pow(SCIPgetSolVal(scip, sol, var), exprdata->coefficients[c]);
+   }
+   violation -= SCIPgetSolVal(scip, sol, auxvar);
+
+   /* no violation in this sub-expression */
+   if( SCIPisEQ(scip, violation, 0.0) )
+      return SCIP_OKAY;
+
+   overestimate = SCIPisLT(scip, violation, 0.0);
+   success = FALSE;
+
+   /* square term */
+   if( SCIPgetConsExprExprNChildren(expr) == 1 && exprdata->coefficients[0] == 2.0 )
+   {
+      SCIP_VAR* x;
+      SCIP_Real lincoef;
+      SCIP_Real linconstant;
+      SCIP_Real refpoint;
+
+      /* collect variable */
+      child = SCIPgetConsExprExprChildren(expr)[0];
+      x = SCIPgetConsExprExprLinearizationVar(child);
+      assert(x != NULL);
+
+      lincoef = 0.0;
+      linconstant = 0.0;
+      refpoint = SCIPgetSolVal(scip, sol, x);
+      success = TRUE;
+
+      /* adjust the reference points */
+      refpoint = SCIPisLT(scip, refpoint, SCIPvarGetLbLocal(x)) ? SCIPvarGetLbLocal(x) : refpoint;
+      refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpoint;
+      assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(x)));
+
+      /* decide whether to use linearization or secants */
+      if( (exprdata->constant < 0 && overestimate) || (exprdata->constant > 0 && !overestimate)  )
+         SCIPaddSquareLinearization(scip, exprdata->constant, refpoint, SCIPvarIsIntegral(x), &lincoef, &linconstant, &success);
+      else
+         SCIPaddSquareSecant(scip, exprdata->constant, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpoint, &lincoef, &linconstant, &success);
+
+      if( success )
+      {
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
+               SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoef) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+
+         if( overestimate )
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
+         }
+      }
+   }
+   /* bilinear term */
+   else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprdata->coefficients[0] == 1.0 && exprdata->coefficients[1] == 1.0 )
+   {
+      SCIP_VAR* x;
+      SCIP_VAR* y;
+      SCIP_Real lincoefx;
+      SCIP_Real lincoefy;
+      SCIP_Real linconstant;
+      SCIP_Real refpointx;
+      SCIP_Real refpointy;
+
+      /* collect first variable */
+      child = SCIPgetConsExprExprChildren(expr)[0];
+      x = SCIPgetConsExprExprLinearizationVar(child);
+      assert(x != NULL);
+
+      /* collect second variable */
+      child = SCIPgetConsExprExprChildren(expr)[1];
+      y = SCIPgetConsExprExprLinearizationVar(child);
+      assert(y != NULL);
+
+      lincoefx = 0.0;
+      lincoefy = 0.0;
+      linconstant = 0.0;
+      refpointx = SCIPgetSolVal(scip, sol, x);
+      refpointy = SCIPgetSolVal(scip, sol, y);
+      success = TRUE;
+
+      /* adjust the reference points */
+      refpointx = SCIPisLT(scip, refpointx, SCIPvarGetLbLocal(x)) ? SCIPvarGetLbLocal(x) : refpointx;
+      refpointx = SCIPisGT(scip, refpointx, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpointx;
+      refpointy = SCIPisLT(scip, refpointy, SCIPvarGetLbLocal(y)) ? SCIPvarGetLbLocal(y) : refpointy;
+      refpointy = SCIPisGT(scip, refpointy, SCIPvarGetUbLocal(y)) ? SCIPvarGetUbLocal(y) : refpointy;
+      assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
+      assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
+
+      SCIPaddBilinMcCormick(scip, exprdata->constant, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
+         SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
+         &success);
+
+      if( success )
+      {
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
+               SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+
+         if( overestimate )
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
+         }
+      }
+   }
+   else
+   {
+      /* @todo can not be handled so far */
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** expression separation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
+{
+   SCIP_ROW* cut;
+   SCIP_Real efficacy;
+   SCIP_Bool infeasible;
+
+   *result = SCIP_DIDNOTFIND;
+   *ncuts = 0;
+
+   /* try to find a cut */
+   SCIP_CALL( separatePointProduct(scip, conshdlr, expr, sol, &cut) );
+
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+
+   /* add cut if it is violated */
+   if( SCIPisGE(scip, efficacy, minefficacy) )
+   {
+      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+      *ncuts += 1;
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+#endif
+   }
+
+   /* release cut */
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
@@ -1733,6 +2045,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
 
@@ -1825,6 +2138,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
 
