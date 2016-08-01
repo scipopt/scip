@@ -21,6 +21,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <string.h>
+
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
@@ -86,7 +88,7 @@ void F77_FUNC(filtersqp,FILTERSQP)(
   fint*                  n,                  /**< number of variables */
   fint*                  m,                  /**< number of constraints (excluding simple bounds) */
   fint*                  kmax,               /**< maximum size of null-space (at most n) */
-  fint*                  maxa,               /**< maximum number of nonzero entries allowd in Jacobian */
+  fint*                  maxa,               /**< maximum number of nonzero entries allowed in Jacobian */
   fint*                  maxf,               /**< maximum size of the filter - typically 100 */
   fint*                  mlp,                /**< maximum level parameter for resolving degeneracy in bqpd - typically 100 */
   fint*                  mxwk,               /**< maximum size of real workspace ws */
@@ -815,29 +817,70 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint nout;
    fint ifail;
    real rho;
-   real x;
-   real c;
+   real* x;
+   real* c;
    real f;
    real fmin;
-   real bl;
-   real bu;
-   real s;
-   real a;
-   fint la;
-   real ws;
-   fint lws;
-   real lam;
-   char cstype;
-   real user;
-   fint iuser;
+   real* bl;
+   real* bu;
+   real* s;
+   real* a;
+   fint* la;
+   real* ws;
+   fint* lws;
+   real* lam;
+   char* cstype;
+   real* user;
+   fint* iuser;
    fint maxiter;
-   fint istat;
-   real rstat;
+   fint istat[14];
+   real rstat[7];
    ftnlen cstype_len = 1;
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
    m = SCIPnlpiOracleGetNConstraints(problem->oracle);
-   kmax = n;
+   kmax = n;    /* maximal nullspace dimension */
+   maxf = 100;  /* maximal filter length */
+   mlp = 100;   /* maximum level of degeneracy */
+   mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;  /* initial guess of integer workspace size */
+   /* Bonmin additional adds lh1 = nnz_h+8+2*n+m to mxwk and mxiwk */
+
+   mxiwk = 4*n + 3*m + mlp + 100 + kmax + 9*n*m;  /* initial real workspace size */
+   /* Bonmin uses mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0 */
+
+   iprint = 1;  /* print level */
+   nout = 6;   /* output to screen (for now?) */
+   ifail = 0;  /* set to -1 for warmstart */
+   rho = 10.0; /* initial trust-region radius */
+   fmin = -1e100; /* lower bound on objective */
+
+   user = (real*)nlpi;
+   iuser = (fint*)problem;
+   maxiter = 1000;  /* iteration limit */
+   memset(istat, 0, sizeof(istat));
+   memset(rstat, 0, sizeof(rstat));
+
+   /* TODO setup
+   maxa = maximal size of A
+   bl
+   bu
+   s
+   a
+   la
+   cstype
+   */
+
+   SCIP_ALLOC( BMSallocMemoryArray(&x, n) );
+   SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
+   SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
+   SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
+   SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
+   SCIP_ALLOC( BMSallocMemoryArray(&a, maxa) );  /* FIXME */
+   SCIP_ALLOC( BMSallocMemoryArray(&la, maxa) ); /* FIXME */
+   SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
+   SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
+   SCIP_ALLOC( BMSallocMemoryArray(&lam, n+m) );
+   SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
    nlpiSolved = nlpi;
@@ -847,11 +890,14 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
       &iprint, &nout, &ifail, &rho,
-      &x, &c, &f, &fmin, &bl,
-      &bu, &s, &a, &la, &ws,
-      &lws, &lam, &cstype, &user,
-      &iuser, &maxiter, &istat,
-      &rstat, cstype_len);
+      x, c, &f, &fmin, bl,
+      bu, s, a, la, ws,
+      lws, lam, cstype, user,
+      iuser, &maxiter, istat,
+      rstat, cstype_len);
+
+
+   /* TODO free mem */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
