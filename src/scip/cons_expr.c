@@ -4939,7 +4939,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       {
          SCIP_Real exponent;
 
-         exponent = (SCIP_Real)SCIPexprgraphGetNodeOperatorIndex(node);
+         exponent = (SCIP_Real)SCIPexprgraphGetNodeIntPowerExponent(node);
 
          assert(nchildren == 1);
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &exponent, 1.0) );
