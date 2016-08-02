@@ -4039,8 +4039,8 @@ SCIP_DECL_CONSLOCK(consLockExpr)
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, lockVar, NULL, NULL, NULL, &lockdata) );
 
    /* remember how the constraint was locked */
-   consdata->nlockspos += nlockspos;
-   consdata->nlocksneg += nlocksneg;
+   consdata->nlockspos += nlockspos + nlocksneg;
+   consdata->nlocksneg += nlockspos + nlocksneg;
 
    return SCIP_OKAY;
 }
