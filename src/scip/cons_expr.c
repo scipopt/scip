@@ -1166,11 +1166,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    /* add variable expression if not seen so far; there is only one variable expression representing a variable */
    if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
-      assert(SCIPgetNVars(scip) >= getvarsdata->nvarexprs + 1);
+      assert(SCIPgetNVars(scip) + SCIPgetNFixedVars(scip) >= getvarsdata->nvarexprs + 1);
 
       getvarsdata->varexprs[ getvarsdata->nvarexprs ] = expr;
+      assert(getvarsdata->varexprs[getvarsdata->nvarexprs] != NULL);
       ++(getvarsdata->nvarexprs);
       SCIP_CALL( SCIPhashmapInsert(getvarsdata->varexprsmap, (void*) expr, NULL) );
+
+      /* capture expression */
+      SCIPcaptureConsExprExpr(expr);
    }
 
    return SCIP_OKAY;
@@ -1839,7 +1843,8 @@ SCIP_RETCODE getVarExprs(
    getvarsdata.varexprs = varexprs;
 
    /* use a hash map to dicide whether we have stored a variable expression already */
-   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip),
+         SCIPcalcHashtableSize(SCIPgetNVars(scip) + SCIPgetNFixedVars(scip))) );
 
    /* collect all variable expressions */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
@@ -1869,15 +1874,16 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->nvarexprs == 0);
 
    /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNVars() */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
 
    SCIP_CALL( getVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
-   assert(SCIPgetNVars(scip) >= consdata->nvarexprs);
+   assert(SCIPgetNVars(scip) + SCIPgetNFixedVars(scip) >= consdata->nvarexprs);
 
    /* realloc array if there are less variable expression than variables */
-   if( SCIPgetNVars(scip) > consdata->nvarexprs )
+   if( SCIPgetNVars(scip) + SCIPgetNFixedVars(scip) > consdata->nvarexprs )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip), consdata->nvarexprs) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip) + SCIPgetNFixedVars(scip),
+            consdata->nvarexprs) );
    }
 
    return SCIP_OKAY;
@@ -1890,6 +1896,8 @@ SCIP_RETCODE freeVarExprs(
    SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
+   int i;
+
    assert(consdata != NULL);
 
    /* skip if we have stored the variable expressions already*/
@@ -1898,6 +1906,14 @@ SCIP_RETCODE freeVarExprs(
 
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+
+   /* release variable expressions */
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      assert(consdata->varexprs[i] != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->varexprs[i]) );
+      assert(consdata->varexprs[i] == NULL);
+   }
 
    /* free variable expressions */
    SCIPfreeBlockMemoryArrayNull(scip, &consdata->varexprs, consdata->nvarexprs);
