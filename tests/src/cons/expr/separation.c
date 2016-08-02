@@ -422,7 +422,7 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    SCIP_ROW* cut;
    int i;
 
-   SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &expr, zexpr) );
+   SCIP_CALL( SCIPcreateConsExprExprLog(scip, conshdlr, &expr, zexpr) );
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
