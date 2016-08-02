@@ -3759,27 +3759,68 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
 
-   /* TODO separate */
-   *result = SCIP_DIDNOTRUN;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlr != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* compute violations */
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+         break;
+   }
+
+   /* call separation */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, MAX(nconss - c, 0), MAX(nusefulconss - c, 0), NULL,
+         conshdlrdata->mincutefficacysepa, result) );
 
    return SCIP_OKAY;
 }
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 0
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlr != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* compute violations */
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+         break;
+   }
+
+   /* call separation */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, MAX(nconss - c, 0), MAX(nusefulconss - c, 0), sol,
+         conshdlrdata->mincutefficacysepa, result) );
 
    return SCIP_OKAY;
 }
-#else
-#define consSepasolExpr NULL
-#endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -3820,7 +3861,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    /* try to separate the LP solution */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, MAX(nconss - c, 0), MAX(nusefulconss - c, 0), NULL, minefficacy,
+         result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
