@@ -28,10 +28,6 @@
  * @author Felipe Serrano
  */
 
-/* CPLEX supports FASTMIP which fastens the lp solving process but therefor it might happen that there will be a loss in
- * precision (because e.g. the optimal basis will not be factorized again)
- */
-
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -68,7 +64,7 @@
 
 /* At several places we need to guarantee to have a factorization of an optimal basis and call the simplex to produce
  * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
- * refactorization, it might be necessary to do a few extra pivot steps, in particular if FASTMIP is used. */
+ * refactorization, it might be necessary to do a few extra pivot steps. */
 #define CPX_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
 
 /* CPLEX seems to ignore bounds with absolute value less than 1e-10. There is no interface define for this constant yet,
@@ -3665,8 +3661,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int nrows;
    int r;
 
-   assert(lpi->cpxenv != NULL);
    assert(lpi != NULL);
+   assert(lpi->cpxenv != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binva-col %d\n", c);
@@ -4050,7 +4046,11 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 /**@name Parameter Methods */
 /**@{ */
 
-/** gets integer parameter of LP */
+/** gets integer parameter of LP
+ *
+ * CPLEX supported FASTMIP in versions up to 12.6.1. FASTMIP fastens the lp solving process but therefor it might happen
+ * that there will be a loss in precision (because e.g. the optimal basis will not be factorized again).
+ */
 SCIP_RETCODE SCIPlpiGetIntpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */

@@ -196,7 +196,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, TRUE) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
    SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
@@ -1002,7 +1002,6 @@ SCIP_RETCODE solveSubNLP(
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
-   retcode = SCIP_OKAY;
    if( SCIPgetNVars(heurdata->subscip) > 0 )
    {
       /* do initial solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
@@ -1723,7 +1722,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    {
       SCIP_Real upperbound;
 
-      cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

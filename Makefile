@@ -499,10 +499,10 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \
-			scip/dive.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \
+			scip/heuristics.o \
 			scip/compr.o \
 			scip/history.o \
 			scip/implics.o \

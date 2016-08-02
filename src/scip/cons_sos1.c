@@ -3683,9 +3683,11 @@ SCIP_RETCODE propVariableNonzero(
             SCIP_VAR* var;
 
             nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(implgraph, succ[s]);
+            assert( nodedata != NULL );
             succdata = succdatas[s];
+            assert( succdata != NULL );
             var = nodedata->var;
-            assert( nodedata != NULL && succdata != NULL && var != NULL );
+            assert( var != NULL );
 
             /* tighten variable if it is not multi-aggregated */
             if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
@@ -8799,6 +8801,9 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   /* free stack of variables fixed to nonzero (usually already freed in consExitsolSOS1 unless instance was solved during presolving) */
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
 
    SCIPfreeMemory(scip, &conshdlrdata);
 

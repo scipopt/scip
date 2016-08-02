@@ -465,9 +465,6 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nchgcoefs       : pointer to count total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to count total number of changed left/right hand sides of all presolvers
  *
- *  @todo: implement a final round of presolving after SCIPisPresolveFinished(),
- *         therefore, duplicate counters to a "relevant for finishing presolve" version
- *
  *  output:
  *  - result          : pointer to store the result of the presolving call
  *

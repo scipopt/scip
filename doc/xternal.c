@@ -614,7 +614,7 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT >= 3.11)
  *
  * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
  *

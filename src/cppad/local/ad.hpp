@@ -1,12 +1,12 @@
-/* $Id: ad.hpp 3064 2013-12-28 18:01:30Z bradbell $ */
-# ifndef CPPAD_AD_INCLUDED
-# define CPPAD_AD_INCLUDED
+// $Id$
+# ifndef CPPAD_AD_HPP
+# define CPPAD_AD_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -26,8 +26,8 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 
 typedef enum {
-	tape_manage_new, 
-	tape_manage_delete, 
+	tape_manage_new,
+	tape_manage_delete,
 	tape_manage_clear
 } tape_manage_job;
 
@@ -39,24 +39,28 @@ class AD {
 
 	// template friend functions where template parameter is not bound
 	template <class VectorAD>
-	friend void Independent(VectorAD &x);
+	friend void Independent(VectorAD &x, size_t abort_op_index);
 
 	// one argument functions
-	friend bool Parameter          <Base> 
+	friend bool Parameter          <Base>
 		(const AD<Base>    &u);
 	friend bool Parameter          <Base>
 		(const VecAD<Base> &u);
-	friend bool Variable           <Base> 
+	friend bool Variable           <Base>
 		(const AD<Base>    &u);
-	friend bool Variable           <Base> 
+	friend bool Variable           <Base>
 		(const VecAD<Base> &u);
-	friend int  Integer            <Base> 
+	friend int  Integer            <Base>
 		(const AD<Base>    &u);
 	friend AD   Var2Par            <Base>
 		(const AD<Base>    &u);
 
 	// power function
 	friend AD pow <Base>
+		(const AD<Base> &x, const AD<Base> &y);
+
+	// azmul function
+	friend AD azmul <Base>
 		(const AD<Base> &x, const AD<Base> &y);
 
 	// order determining functions, see ordered.hpp
@@ -71,11 +75,11 @@ class AD {
 	friend bool IdenticalPar      <Base> (const AD<Base> &x);
 	friend bool IdenticalZero     <Base> (const AD<Base> &x);
 	friend bool IdenticalOne      <Base> (const AD<Base> &x);
-	friend bool IdenticalEqualPar <Base> 
+	friend bool IdenticalEqualPar <Base>
 		(const AD<Base> &x, const AD<Base> &y);
 
 	// EqualOpSeq function
-	friend bool EqualOpSeq <Base> 
+	friend bool EqualOpSeq <Base>
 		(const AD<Base> &u, const AD<Base> &v);
 
 	// NearEqual function
@@ -91,10 +95,10 @@ class AD {
 	// CondExp function
 	friend AD<Base> CondExpOp  <Base> (
 		enum CompareOp  cop       ,
-		const AD<Base> &left      , 
-		const AD<Base> &right     , 
-		const AD<Base> &trueCase  , 
-		const AD<Base> &falseCase 
+		const AD<Base> &left      ,
+		const AD<Base> &right     ,
+		const AD<Base> &trueCase  ,
+		const AD<Base> &falseCase
 	);
 
 	// classes
@@ -139,7 +143,7 @@ class AD {
 	friend void PrintFor <Base> (
 		const AD<Base>&    flag   ,
 		const char*        before ,
-		const AD<Base>&    var    , 
+		const AD<Base>&    var    ,
 		const char*        after
 	);
 public:
@@ -155,13 +159,13 @@ public:
 
 	// implicit construction and assingment from base type
 	inline AD(const Base &b);
-	inline AD& operator=(const Base &b); 
+	inline AD& operator=(const Base &b);
 
 	// implicit contructor and assignment from VecAD<Base>::reference
 	inline AD(const VecAD_reference<Base> &x);
 	inline AD& operator=(const VecAD_reference<Base> &x);
 
-# if CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
+# if CPPAD_DEPRECATED
 	// implicit construction from some other type (depricated)
 	template <class T> inline AD(const T &t);
 # else
@@ -205,12 +209,20 @@ public:
 	inline AD sqrt(void) const;
 	inline AD tan(void) const;
 	inline AD tanh(void) const;
+# if CPPAD_USE_CPLUSPLUS_2011
+	inline AD erf(void) const;
+	inline AD asinh(void) const;
+	inline AD acosh(void) const;
+	inline AD atanh(void) const;
+	inline AD expm1(void) const;
+	inline AD log1p(void) const;
+# endif
 
 	// ----------------------------------------------------------
 	// static public member functions
-	
+
 	// abort current AD<Base> recording
-	static void        abort_recording(void);   
+	static void        abort_recording(void);
 
 	// set the maximum number of OpenMP threads (deprecated)
 	static void        omp_max_thread(size_t number);
@@ -235,7 +247,7 @@ private:
 	// Tape identifier corresponding to taddr
 	tape_id_t tape_id_;
 
-	// taddr_ in tape for this variable 
+	// taddr_ in tape for this variable
 	addr_t taddr_;
 	//
 	// Make this variable a parameter
@@ -245,7 +257,7 @@ private:
 		tape_id_ = 0;
 	}
 	//
-	// Make this parameter a new variable 
+	// Make this parameter a new variable
 	//
 	void make_variable(size_t id,  size_t taddr)
 	{	CPPAD_ASSERT_UNKNOWN( Parameter(*this) ); // currently a par
@@ -256,18 +268,18 @@ private:
 	}
 	// ---------------------------------------------------------------
 	// tape linking functions
-	// 
+	//
 	// not static
 	inline ADTape<Base>* tape_this(void) const;
 	//
-	// static 
+	// static
 	inline static tape_id_t**    tape_id_handle(size_t thread);
 	inline static tape_id_t*     tape_id_ptr(size_t thread);
 	inline static ADTape<Base>** tape_handle(size_t thread);
 	static ADTape<Base>*         tape_manage(tape_manage_job job);
 	inline static ADTape<Base>*  tape_ptr(void);
 	inline static ADTape<Base>*  tape_ptr(tape_id_t tape_id);
-}; 
+};
 // ---------------------------------------------------------------------------
 
 } // END_CPPAD_NAMESPACE

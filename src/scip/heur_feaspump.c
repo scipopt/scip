@@ -121,7 +121,7 @@ SCIP_RETCODE setupProbingSCIP(
    *success = FALSE;
 
    /* copy SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, TRUE, success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE, TRUE, success) );
 
    if( copycuts )
    {

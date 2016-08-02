@@ -3026,8 +3026,8 @@ SCIP_RETCODE fixBounds(
    assert(blkmem != NULL);
 
    reopttree = reopt->reopttree;
-   assert(0 < id && id < reopttree->reoptnodessize);
    assert(reopttree != NULL);
+   assert(0 < id && id < reopttree->reoptnodessize);
 
    reoptnode = reopttree->reoptnodes[id];
    assert(reoptnode != NULL);

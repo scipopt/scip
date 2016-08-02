@@ -149,7 +149,7 @@ Here is what you have to do to get SCIP running:
    - "ZIMPL=false"     to disable ZIMPL file reader
    - "ZIMPL=auto"      to automatically enable ZIMPL support if and only if the GMP library is available (default)
 
-   - "IPOPT=true"      to enable IPOPT interface (needs IPOPT)
+   - "IPOPT=true"      to enable IPOPT interface (needs IPOPT >= 3.11)
    - "IPOPT=false"     to disable IPOPT interface (default)
 
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
@@ -286,8 +286,8 @@ make[1]: Entering directory `/sw/scip'
 
 - preparing missing soft-link "lib/ipopt.linux.x86_64.gnu.opt":
 > Enter soft-link target file or directory for "lib/ipopt.linux.x86_64.gnu.opt" (return if not needed):
-> /sw/ia64_lx26/ipopt-3.10.0/
--> creating softlink "lib/ipopt.linux.x86_64.gnu.opt" -> "/sw/ia64_lx26/ipopt-3.10.0/"
+> /sw/ia64_lx26/ipopt-3.12.0/
+-> creating softlink "lib/ipopt.linux.x86_64.gnu.opt" -> "/sw/ia64_lx26/ipopt-3.12.0/"
 
 make[1]: Leaving directory `/sw/scip'
 ---
@@ -423,7 +423,7 @@ make[1]: Leaving directory `/sw/scip'
          (e.g. "cd scip; ln -s /Ipopt lib/ipopt.linux.x86.gnu.opt")
          The path to the IPOPT installation is the path under where the Ipopt build has been installed.
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
-         and the directory share/coin/doc/Ipopt (Ipopt >= 3.9.0) or share/doc/coin/Ipopt (Ipopt < 3.9.0) with the ipopt_addlibs_cpp.txt file.
+         and the directory share/coin/doc/Ipopt with the ipopt_addlibs_cpp.txt file.
 
    (h) to use GAMS
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/gams.$(OSTYPE).$(ARCH).$(COMP)

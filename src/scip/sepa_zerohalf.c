@@ -3077,7 +3077,6 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
    int*                  nrowsincut          /**< pointer to store the number of combined original LP rows */   
    )
 {   /*lint --e{438}*/
-
    ZEROHALF_SUBLPDATA*   problem;
    int                   lppos;
    int                   i;
@@ -3093,7 +3092,6 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
    assert(weights != NULL);
    assert(*weights == NULL);
    assert(nrowsincut != NULL);
-
 
    /* allocate temporary memory */ 
    SCIP_CALL(SCIPallocMemoryArray(scip, weights, lpdata->nrows));
@@ -3132,7 +3130,7 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
    if( nnonz >= 5 * sepadata->maxnnonz ) 
    {
       SCIPfreeMemoryArray(scip, weights);
-      weights = NULL;/*lint !e438*/
+      *weights = NULL;
    }
 
    return SCIP_OKAY;
@@ -5390,7 +5388,7 @@ SCIP_RETCODE getZerohalfWeightvectorForSingleRow(
    if( SCIProwGetNLPNonz(lpdata->rows[rowsindex]) >= sepadata->maxnnonz )
    {
       SCIPfreeMemoryArray(scip, weights);
-      weights = NULL; 
+      *weights = NULL;
    }
 
    return SCIP_OKAY;

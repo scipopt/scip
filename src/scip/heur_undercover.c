@@ -2097,7 +2097,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    int                   coversize,          /**< size of the cover */
    int*                  cover,              /**< problem indices of the variables in the cover */
-   SCIP_Real*            fixingvals,         /**< fixing values for the variables in the cover */
+   SCIP_Real*            fixedvals,         /**< fixing values for the variables in the cover */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Longint          nodelimit,          /**< node limit */
@@ -2112,6 +2112,8 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** subvars;
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
+   SCIP_VAR** fixedvars;
+   int nfixedvars;
 
    SCIP_RETCODE retcode;
 
@@ -2121,7 +2123,7 @@ SCIP_RETCODE solveSubproblem(
    assert(scip != NULL);
    assert(heur != NULL);
    assert(cover != NULL);
-   assert(fixingvals != NULL);
+   assert(fixedvals != NULL);
    assert(coversize >= 1);
    assert(timelimit > 0.0);
    assert(memorylimit > 0.0);
@@ -2142,6 +2144,18 @@ SCIP_RETCODE solveSubproblem(
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, coversize) );
+   nfixedvars = coversize;
+   /* fix subproblem variables in the cover */
+   SCIPdebugMessage("fixing variables\n");
+   for( i = coversize-1; i >= 0; i-- )
+   {
+      assert(cover[i] >= 0);
+      assert(cover[i] < nvars);
+
+      fixedvars[i] = vars[cover[i]];
+   }
+
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -2150,7 +2164,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, TRUE, validsolved) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
@@ -2167,16 +2181,8 @@ SCIP_RETCODE solveSubproblem(
       assert(subvars[i] != NULL);
    }
 
-   /* fix subproblem variables in the cover */
-   SCIPdebugMessage("fixing variables\n");
-   for( i = coversize-1; i >= 0; i-- )
-   {
-      assert(cover[i] >= 0);
-      assert(cover[i] < nvars);
-
-      SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[cover[i]], fixingvals[i]) );
-      SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[cover[i]], fixingvals[i]) );
-   }
+   /* free variable mapping hash map */
+   SCIPhashmapFree(&varmap);
 
    /* set the parameters such that good solutions are found fast */
    SCIPdebugMessage("setting subproblem parameters\n");
@@ -2257,6 +2263,10 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( retcode );
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      /* free array of subproblem variables, and subproblem */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIPfreeBufferArray(scip, &fixedvars);
+      SCIP_CALL( SCIPfree(&subscip) );
       return SCIP_OKAY;
    }
 
@@ -2316,9 +2326,9 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
    }
 
-   /* free variable mapping hash map, array of subproblem variables, and subproblem */
-   SCIPhashmapFree(&varmap);
+   /* free array of subproblem variables, and subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+   SCIPfreeBufferArray(scip, &fixedvars);
    SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
