@@ -3209,12 +3209,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
 
       if( separesult == SCIP_CUTOFF )
       {
+         assert(ncuts > 0);
          SCIPdebugMessage("found a cutoff -> stop separation\n");
          sepadata->result = SCIP_CUTOFF;
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
       }
       else if( separesult == SCIP_SEPARATED )
       {
+         assert(ncuts > 0);
          SCIPdebugMessage("found %d cuts separating the current solution\n", ncuts);
          sepadata->result = SCIP_SEPARATED;
       }
