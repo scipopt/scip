@@ -14525,7 +14525,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool checkrelmaxabs;
    SCIP_Bool violated;
-   SCIP_Bool cutoff;
+   SCIP_Bool cutoff = FALSE;
    int c;
 
    assert(scip != NULL);
