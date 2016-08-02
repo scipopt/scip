@@ -196,7 +196,7 @@ SCIP_RETCODE separatePointLog(
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") == 0);
    assert(cut != NULL);
 
    /* get expression data */
@@ -283,6 +283,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
 
       SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+
+      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("add cut with efficacy %e\n", efficacy);

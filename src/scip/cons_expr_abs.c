@@ -284,6 +284,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 
       SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+      *ncuts += 1;
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
