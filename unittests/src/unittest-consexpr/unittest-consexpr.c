@@ -2000,18 +2000,22 @@ SCIP_RETCODE checkHashkey(
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression to be tested (might be NULL) */
    )
 {
+   unsigned int hashkey1;
+   unsigned int hashkey2;
    assert(expr1 != NULL);
 
    SCIPinfoMessage(scip, NULL, "hash key of expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, expr1, NULL) );
-   SCIPinfoMessage(scip, NULL, " = %u\n", SCIPgetConsExprExprHashkey(scip, expr1));
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1));
+   SCIPinfoMessage(scip, NULL, " = %u\n", hashkey1);
 
    if( expr2 != NULL )
    {
       SCIPinfoMessage(scip, NULL, "hash key of expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr2, NULL) );
-      SCIPinfoMessage(scip, NULL, " = %u\n", SCIPgetConsExprExprHashkey(scip, expr2));
-      assert(SCIPgetConsExprExprHashkey(scip, expr1) == SCIPgetConsExprExprHashkey(scip, expr2));
+      SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2));
+      SCIPinfoMessage(scip, NULL, " = %u\n", hashkey2);
+      assert(hashkey1 == hashkey2);
    }
 
    return SCIP_OKAY;
@@ -2863,6 +2867,7 @@ SCIP_RETCODE testGetVarExprs(void)
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3", NULL, &expr) );
 
+   /* note that this captures the variable expressions */
    SCIP_CALL( getVarExprs(scip, expr, varexprs, &nvarexprs) );
    assert(nvarexprs == 3);
 
@@ -2870,6 +2875,9 @@ SCIP_RETCODE testGetVarExprs(void)
    {
       assert(varexprs[i] != NULL);
       assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(varexprs[i])), "var") == 0);
+
+      /* release variable expression */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
    }
 
    /*
@@ -2880,6 +2888,7 @@ SCIP_RETCODE testGetVarExprs(void)
    SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, wexpr, 1.0) );
    SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, expr, 1.0) );
 
+   /* note that this captures the variable expressions */
    SCIP_CALL( getVarExprs(scip, sumexpr, varexprs, &nvarexprs) );
    assert(nvarexprs == 4);
    assert(strcmp(SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])), "w") == 0);
@@ -2888,6 +2897,9 @@ SCIP_RETCODE testGetVarExprs(void)
    {
       assert(varexprs[i] != NULL);
       assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(varexprs[i])), "var") == 0);
+
+      /* release variable expression */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
    }
 
    SCIPfreeBufferArray(scip, &varexprs);

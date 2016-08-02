@@ -1819,6 +1819,8 @@ SCIP_RETCODE propConss(
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
  * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
  * no two different variable expression sharing the same variable
+ *
+ * @note function captures variable expressions
  */
 SCIP_RETCODE getVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
