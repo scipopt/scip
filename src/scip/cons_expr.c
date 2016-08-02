@@ -2993,7 +2993,7 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
-            if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            if( !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
                ++(*nnotify);
