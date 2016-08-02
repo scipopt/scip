@@ -1831,13 +1831,14 @@ SCIP_RETCODE separatePointProduct(
       refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpoint;
       assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(x)));
 
-      /* decide whether to use linearization or secants */
-      if( (exprdata->constant < 0 && overestimate) || (exprdata->constant > 0 && !overestimate)  )
+      /* decide whether to use linearization or secant */
+      if( (exprdata->constant < 0 && overestimate) || (exprdata->constant > 0 && !overestimate) )
          SCIPaddSquareLinearization(scip, exprdata->constant, refpoint, SCIPvarIsIntegral(x), &lincoef, &linconstant, &success);
       else
          SCIPaddSquareSecant(scip, exprdata->constant, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpoint, &lincoef, &linconstant, &success);
 
-      if( success )
+      /* @todo  allow lhs/rhs of +/- infinity? */
+      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
          SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
                SCIPinfinity(scip), FALSE, FALSE, FALSE) );
@@ -1895,7 +1896,8 @@ SCIP_RETCODE separatePointProduct(
          SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
          &success);
 
-      if( success )
+      /* @todo allow lhs/rhs of +/- infinity? */
+      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
          SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
                SCIPinfinity(scip), FALSE, FALSE, FALSE) );
