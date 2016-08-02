@@ -4033,8 +4033,8 @@ SCIP_DECL_CONSLOCK(consLockExpr)
       return SCIP_OKAY;
 
    lockdata.exprvarhdlr = conshdlrdata->exprvarhdlr;
-   lockdata.nlockspos = nlockspos;
-   lockdata.nlocksneg = nlocksneg;
+   lockdata.nlockspos = nlockspos + nlocksneg;
+   lockdata.nlocksneg = nlockspos + nlocksneg;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, lockVar, NULL, NULL, NULL, &lockdata) );
 
