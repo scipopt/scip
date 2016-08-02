@@ -50,6 +50,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINITLP((*initlp));      /**< LP initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa));          /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */

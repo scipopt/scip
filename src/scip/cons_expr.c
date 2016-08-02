@@ -196,6 +196,13 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
+/** data passed on during LP initialization */
+typedef struct
+{
+   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
+   SCIP_Bool               infeasible;       /**< pointer to store whether the problem is infeasible */
+} INITLP_DATA;
+
 /** data passed on during separation */
 typedef struct
 {
@@ -3171,6 +3178,33 @@ SCIP_RETCODE freeAuxVars(
    return SCIP_OKAY;
 }
 
+/** expression walk callback for LP initialization */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(initLpEnterExpr)
+{
+   INITLP_DATA* initlpdata;
+
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   initlpdata = (INITLP_DATA*)data;
+   assert(initlpdata != NULL);
+   assert(initlpdata->conshdlr != NULL);
+   assert(!initlpdata->infeasible);
+
+   if( *(expr->exprhdlr->initlp) != NULL )
+   {
+      /* call the LP initialization callback of the expression handler */
+      SCIP_CALL( (*expr->exprhdlr->initlp)(scip, initlpdata->conshdlr, expr, &initlpdata->infeasible) );
+   }
+
+   /* stop if we detected infeasibility */
+   *result = initlpdata->infeasible ? SCIP_CONSEXPREXPRWALK_ABORT : SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
 /** expression walk callback for separating a given solution */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
@@ -3221,6 +3255,56 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          assert(ncuts > 0);
          SCIPdebugMessage("found %d cuts separating the current solution\n", ncuts);
          sepadata->result = SCIP_SEPARATED;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls LP initialization callback for each expression */
+static
+SCIP_RETCODE initLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the problem is infeasible or not */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   INITLP_DATA initlpdata;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   initlpdata.infeasible = FALSE;
+   initlpdata.conshdlr = conshdlr;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+
+      /* call LP initialization callback for 'initial' constraints only */
+      if( SCIPconsIsInitial(conss[c]) )
+      {
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         /* walk through the expression tree and call LP initialization callbacks */
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, initLpEnterExpr, NULL, NULL, NULL, (void*)&initlpdata) );
+
+         if( initlpdata.infeasible )
+         {
+            SCIPdebugMessage("detect infeasibility for constraint %s during initLP()\n", SCIPconsGetName(conss[c]));
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -3770,6 +3854,9 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 
    /* add auxiliary variables to expressions */
    SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+
+   /* call LP initialization callbacks of the expression handlers */
+   SCIP_CALL( initLP(scip, conshdlr, conss, nconss, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -4549,6 +4636,22 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    assert(exprhdlr != NULL);
 
    exprhdlr->inteval = inteval;
+
+   return SCIP_OKAY;
+}
+
+
+/** set the LP initialization callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrInitLP(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRINITLP((*initlp))  /**< LP initialization callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->initlp = initlp;
 
    return SCIP_OKAY;
 }

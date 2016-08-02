@@ -115,6 +115,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
+/** set the LP initialization callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrInitLP(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRINITLP((*initlp))  /**< LP initialization callback (can be NULL) */
+);
+
 /** set the separation callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
