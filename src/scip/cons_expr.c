@@ -3780,7 +3780,6 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3793,17 +3792,11 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
    {
       assert(conss[c] != NULL);
       SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
-         break;
    }
 
    /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, MAX(nconss - c, 0), MAX(nusefulconss - c, 0), NULL,
-         conshdlrdata->mincutefficacysepa, result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa,
+         result) );
 
    return SCIP_OKAY;
 }
@@ -3814,7 +3807,6 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3827,17 +3819,11 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
    {
       assert(conss[c] != NULL);
       SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
-         break;
    }
 
    /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, MAX(nconss - c, 0), MAX(nusefulconss - c, 0), sol,
-         conshdlrdata->mincutefficacysepa, result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa,
+         result) );
 
    return SCIP_OKAY;
 }
@@ -3857,7 +3843,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlr != NULL);
 
-   *result = SCIP_FEASIBLE;
    maxviol = 0.0;
 
    for( c = 0; c < nconss; ++c )
@@ -3867,13 +3852,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
-
-      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
-      {
-         *result = SCIP_INFEASIBLE;
-         break;
-      }
    }
+
+   *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
@@ -3881,8 +3862,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    /* try to separate the LP solution */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, MAX(nconss - c, 0), MAX(nusefulconss - c, 0), NULL, minefficacy,
-         result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
