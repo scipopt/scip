@@ -4724,6 +4724,7 @@ SCIP_RETCODE addConflictFixedVars(
    assert(vars != NULL || nvars == 0);
    assert(-1 <= inferpos && inferpos < nvars);
    assert((infervar == NULL) == (inferpos == -1));
+   assert(inferpos == -1 || vars != NULL);
    assert(inferpos == -1 || vars[inferpos] == infervar); /*lint !e613*/
 
    /* collect all fixed variables */
@@ -12627,7 +12628,7 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CALL( SCIPupdateConsFlags(scip, consstay, consdel) );
 
          /* delete consdel */
-         assert(!consdatastay->upgraded || (consdatastay->upgraded && consdatadel->upgraded));
+         assert( ! consdatastay->upgraded || consdatadel->upgraded );
          SCIP_CALL( SCIPdelCons(scip, consdel) );
          if( !consdatadel->upgraded )
             (*ndelconss)++;

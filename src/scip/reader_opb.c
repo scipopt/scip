@@ -3788,6 +3788,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }
 
+      assert( andvars != NULL && nandvars != NULL );
       assert(andvars[r] != NULL || nandvars[r] == 0); /*lint !e613 */
 
       /* print fixed and-variables */

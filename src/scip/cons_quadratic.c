@@ -12827,6 +12827,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          continue;
 
       /* if it is actually a square term, remember it's coefficient */
+      assert( quadvars1 != NULL && quadvars2 != NULL );
       if( quadvars1[i] == quadvars2[i] )
          sqrcoef = quadcoefs[i];
       else
