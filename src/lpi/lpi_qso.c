@@ -485,7 +485,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    )
 {
    register int i;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -555,7 +555,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-   int rval = 0;
+   int rval;
    register int i;
 
    assert(lpi != NULL);
@@ -594,13 +594,14 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   const int len = lastcol - firstcol +1;
-   int rval = 0;
+   int len;
+   int rval;
    register int i;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
+   len = lastcol - firstcol +1;
    lpi->solstat = 0;
    assert(0 <= firstcol && len > 0 && lastcol < QSget_colcount(lpi->prob));
 
@@ -623,7 +624,9 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    )
 {
-   int rval = 0, ncols, ccnt;
+   int rval;
+   int ncols;
+   int ccnt;
    register int i;
 
    assert(lpi != NULL);
@@ -662,7 +665,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    register int i;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -756,6 +759,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    for( j = firstcol; j <= lastcol; ++j )
    {
       const char* t;
+
+      assert( s != NULL );
+
       t = cnames[j];
       if( colnames != NULL )
          colnames[j-firstcol] = s;
@@ -815,6 +821,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    for( i = firstrow; i <= lastrow; ++i )
    {
       const char* t;
+
+      assert( s != NULL );
+
       t = rnames[i];
       if( rownames != NULL )
          rownames[i-firstrow] = s;
@@ -843,7 +852,7 @@ SCIP_RETCODE SCIPlpiDelRows(
    )
 {
    const int len = lastrow - firstrow +1;
-   int rval = 0;
+   int rval;
    register int i;
 
    assert(lpi != NULL);
@@ -871,7 +880,10 @@ SCIP_RETCODE SCIPlpiDelRowset(
                                               *   output: new position of row, -1 if row was deleted */
    )
 {
-   int rval = 0, nrows, ccnt, ndel=0;
+   int rval;
+   int nrows;
+   int ccnt;
+   int ndel = 0;
    register int i;
 
    assert(lpi != NULL);
@@ -886,7 +898,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
          ndel++;
    }
 
-   SCIPdebugMessage("deleting a row set from QSopt (%d)\n",ndel);
+   SCIPdebugMessage("deleting a row set from QSopt (%d)\n", ndel);
 
    rval = QSdelete_setrows(lpi->prob,dstat);
    QS_CONDRET(rval);
@@ -907,7 +919,9 @@ SCIP_RETCODE SCIPlpiClear(
    )
 {
    register int i;
-   int ncols, nrows, rval = 0;
+   int ncols;
+   int nrows;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -948,7 +962,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
    )
 {
    register int i;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -989,7 +1003,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    )
 {
    register int i;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1029,7 +1043,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
    SCIP_Real             newval              /**< new value of coefficient */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1049,7 +1063,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1080,7 +1094,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    )
 {
    register int i;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1108,7 +1122,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    int* rowcnt = NULL, *rowbeg = NULL, *rowind = NULL;
    double* rowval = NULL, *rhs = NULL, *range = NULL;
    char* sense = NULL;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1214,8 +1228,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    double* lb=0;
    double* ub=0;
    double* obj=0;
-
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1364,22 +1377,23 @@ SCIP_RETCODE SCIPlpiGetCols(
    double* lval = NULL;
    double* llb = NULL;
    double* lub = NULL;
-   int rval = 0;
+   int rval;
    int* lcnt = NULL;
    int* lbeg = NULL;
    int* lind = NULL;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount (lpi->prob));
-   assert((lb == 0 && ub == 0) || (lb != 0 && ub != 0));
-   assert((nnonz != 0 && beg != 0 && ind != 0 && val != 0) || (nnonz == 0 && beg == 0 && ind == 0 && val == 0));
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount(lpi->prob));
+   assert((lb == NULL && ub == NULL) || (lb != NULL && ub != NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    SCIPdebugMessage("getting columns %d to %d\n", firstcol, lastcol);
 
    /* build col-list */
    len = lastcol - firstcol + 1;
-   SCIP_CALL( ensureColMem(lpi,len) );
+   assert( len > 0 );
+   SCIP_CALL( ensureColMem(lpi, len) );
    for( i = 0; i < len; ++i )
       lpi->iccnt[i] = i + firstcol;
 
@@ -1392,18 +1406,18 @@ SCIP_RETCODE SCIPlpiGetCols(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert(lbeg != NULL);
-      assert(lcnt != NULL);
-      assert(lind != NULL);
-      assert(lval != NULL);
+      assert( beg != NULL && lbeg != NULL );
+      assert( ind != NULL && lind != NULL );
+      assert( val != NULL && lval != NULL );
+      assert( lcnt != NULL );
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len ; i++ )
-         beg[i] = lbeg[i];  /*lint !e613*/
+         beg[i] = lbeg[i];
       for( i = 0; i < *nnonz; ++i )
       {
-         ind[i] = lind[i];  /*lint !e613*/
-         val[i] = lval[i];  /*lint !e613*/
+         ind[i] = lind[i];
+         val[i] = lval[i];
       }
    }
    if( lb )
@@ -1456,7 +1470,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    double* lval = NULL;
    double* lrhs = NULL;
    double* lrng = NULL;
-   int rval = 0;
+   int rval;
    int* lcnt = NULL;
    int* lbeg = NULL;
    int* lind = NULL;
@@ -1465,8 +1479,8 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < QSget_rowcount (lpi->prob));
-   assert((lhs == 0 && rhs == 0) || (rhs != 0 && lhs != 0));
-   assert((nnonz != 0 && beg != 0 && ind != 0 && val != 0) || (nnonz == 0 && beg == 0 && ind == 0 && val == 0));
+   assert((lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
@@ -1483,44 +1497,44 @@ SCIP_RETCODE SCIPlpiGetRows(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert(lbeg != NULL);
-      assert(lcnt != NULL);
-      assert(lind != NULL);
-      assert(lval != NULL);
+      assert( beg != NULL && lbeg != NULL );
+      assert( ind != NULL && lind != NULL );
+      assert( val != NULL && lval != NULL );
+      assert( lcnt != NULL );
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len; i++ )
-         beg[i] = lbeg[i];  /*lint !e613*/
+         beg[i] = lbeg[i];
       for( i = 0; i < *nnonz; ++i )
       {
-         ind[i] = lind[i];  /*lint !e613*/
-         val[i] = lval[i];  /*lint !e613*/
+         ind[i] = lind[i];
+         val[i] = lval[i];
       }
    }
    if( rhs )
    {
-      assert(lrhs != NULL);
-      assert(lrng != NULL);
-      assert(lsense != NULL);
+      assert( lhs != NULL && lrhs != NULL );
+      assert( lrng != NULL );
+      assert( lsense != NULL );
 
       for( i = 0; i < len; ++i )
       {
          switch( lsense[i] )
          {
          case 'R':
-            lhs[i] = lrhs[i];            /*lint !e613*/
-            rhs[i] = lrhs[i] + lrng[i];  /*lint !e613*/
+            lhs[i] = lrhs[i];
+            rhs[i] = lrhs[i] + lrng[i];
             break;
          case 'E':
-            lhs[i] = rhs[i] = lrhs[i];   /*lint !e613*/
+            lhs[i] = rhs[i] = lrhs[i];
             break;
          case 'L':
-            rhs[i] = lrhs[i];            /*lint !e613*/
-            lhs[i] = -QS_MAXDOUBLE;      /*lint !e613*/
+            rhs[i] = lrhs[i];
+            lhs[i] = -QS_MAXDOUBLE;
             break;
          case 'G':
-            lhs[i] = lrhs[i];            /*lint !e613*/
-            rhs[i] = QS_MAXDOUBLE;       /*lint !e613*/
+            lhs[i] = lrhs[i];
+            rhs[i] = QS_MAXDOUBLE;
             break;
          default:
             SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
@@ -1554,7 +1568,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1566,9 +1580,9 @@ SCIP_RETCODE SCIPlpiGetObj(
    int                   lastcol,            /**< last column to get objective coefficient for */
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
-{
-   const int len = lastcol - firstcol + 1;
-   int rval = 0;
+{  /*lint --e{715}*/
+   int len;
+   int rval;
    register int i;
 
    assert(lpi != NULL);
@@ -1578,6 +1592,7 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
    /* build col-list */
+   len = lastcol - firstcol + 1;
    SCIP_CALL(ensureColMem(lpi,len));
    for( i = 0; i < len; ++i )
       lpi->iccnt[i] = i + firstcol;
@@ -1598,7 +1613,7 @@ SCIP_RETCODE SCIPlpiGetBounds(
    )
 {
    const int len = lastcol - firstcol + 1;
-   int rval = 0;
+   int rval;
    register int i;
 
    assert(lpi != NULL);
@@ -1630,7 +1645,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    const int len = lastrow - firstrow + 1;
    register int i;
    double* lrhs=0, *lrng=0;
-   int rval = 0;
+   int rval;
    char* lsense=0;
 
    assert(lpi != NULL);
@@ -1696,7 +1711,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
    SCIP_Real*            val                 /**< pointer to store the value of the coefficient */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1725,7 +1740,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1743,7 +1758,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1769,7 +1784,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{  /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -1778,7 +1793,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{  /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -1798,7 +1813,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int rval = 0;
+   int rval;
    int nit;
 
    assert(lpi != NULL);
@@ -1846,7 +1861,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int rval = 0;
+   int rval;
    int nit;
    int j;
 
@@ -1898,7 +1913,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int rval = 0;
+   int rval;
    SCIP_Real objval;
 
    assert(lpi != NULL);
@@ -1944,8 +1959,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
                                               *   otherwise, they can only be used as an estimate values */
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
-{
-   int rval = 0;
+{  /*lint --e{715}*/
+   int rval;
    SCIP_Real objval;
    int j;
 
@@ -2296,7 +2311,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2318,7 +2333,8 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {
-   int rval = 0, nrows;
+   int rval;
+   int nrows;
    register int i;
 
 #ifdef SCIP_DEBUG
@@ -2447,7 +2463,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2467,7 +2483,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
    )
 {
-   int rval = 0;
+   int rval;
    int nit;
 
    assert(lpi != NULL);
@@ -2492,7 +2508,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
-{
+{  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
 
@@ -2520,9 +2536,11 @@ SCIP_RETCODE SCIPlpiGetBase(
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {
-   int rval = 0, ncols, nrows;
-   char* icstat = NULL;
-   char* irstat = NULL;
+   int rval;
+   int ncols;
+   int nrows;
+   char* icstat;
+   char* irstat;
    register int i;
 
    assert(lpi != NULL);
@@ -2592,9 +2610,12 @@ SCIP_RETCODE SCIPlpiSetBase(
    int*                  rstat               /**< array with row basis status */
    )
 {
-   int rval = 0, ncols, nrows;
+   int rval;
+   int ncols;
+   int nrows;
    register int i;
-   char* icstat=0, *irstat = 0;
+   char* icstat;
+   char *irstat;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2658,7 +2679,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -2711,11 +2731,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
-   int rval = 0;
+{  /*lint --e{715} */
+   int rval;
 
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
+
    SCIPdebugMessage("getting binv-row %d from Qsopt %d cols, %d rows, %d nonz\n", r, QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
@@ -2775,7 +2796,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
-   int rval = 0;
+   int rval;
    int ncols;
    int nrows;
 
@@ -2886,12 +2907,12 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {  /*lint --e{715} */
-   char* icstat = 0;
-   char* irstat = 0;
+   char* icstat;
+   char* irstat;
    int i;
    int ncols;
    int nrows;
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2934,19 +2955,20 @@ SCIP_RETCODE SCIPlpiSetState(
 
       /* get bounds from qsopt */
       rval = QSget_bounds_list(lpi->prob, 1, &i, &lb, &ub);
+      QS_CONDRET(rval);
       if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
       {
          /* if lower bound is +/- infinity -> try upper bound */
          if ( SCIPlpiIsInfinity(lpi, REALABS(ub)) )
-            lpi->iccnt[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+            lpi->iccnt[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free */
          else
-            lpi->iccnt[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+            lpi->iccnt[i] = (int) SCIP_BASESTAT_UPPER; /* use finite upper bound */
       }
       else
-         lpi->iccnt[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+         lpi->iccnt[i] = (int) SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
-   for( i = lpistate->nrows; i < nrows; ++i )
-      lpi->ircnt[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+   for( i = lpistate->nrows; i < nrows; ++i )  /*lint !e850*/
+      lpi->ircnt[i] = (int) SCIP_BASESTAT_BASIC;
 
    /* convert the loaded basis into QSopt format */
    for( i = 0; i < nrows; ++i )
@@ -3040,7 +3062,7 @@ SCIP_RETCODE SCIPlpiReadState(
    const char*           fname               /**< file name */
    )
 {
-   int rval = 0;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -3063,8 +3085,8 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname               /**< file name */
    )
 {
-   QSbas bas = 0;
-   int rval = 0;
+   QSbas bas;
+   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -3106,7 +3128,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{  /*lint --e{715} */
    assert(lpinorms != NULL);
 
    (*lpinorms) = NULL;
@@ -3122,7 +3144,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
    )
-{
+{  /*lint --e{715} */
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -3135,7 +3157,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{  /*lint --e{715} */
    assert(lpinorms == NULL);
 
    /* no work necessary */
