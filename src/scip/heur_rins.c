@@ -402,13 +402,14 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    nfixedvars = 0;
    /* determine possible fixings for RINS: variables with same value in bestsol and LP relaxation */
    SCIP_CALL( determineFixings(scip, fixedvars, fixedvals, &nfixedvars, nbinvars + nintvars, heurdata->minfixingrate, &success) );
-   assert(nfixedvars > 0 && nfixedvars < nbinvars + nintvars);
 
    /* too few variables could be fixed by the RINS scheme */
    if( !success )
    {
       goto TERMINATE;
    }
+
+   assert(nfixedvars > 0 && nfixedvars < nbinvars + nintvars);
 
    *result = SCIP_DIDNOTFIND;
 
