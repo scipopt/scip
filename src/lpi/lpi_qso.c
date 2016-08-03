@@ -67,23 +67,23 @@ static char __qsstr[SCIP_MAXSTRLEN];
 /** print location of the calling line */
 #define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
 
-/** This macro is to print error messages and jump to the given point in the code, it also print the
- * file and line where this happened */
+/** This macro is to print error messages and jump to the given point in the code, it also prints the
+ *  file name and line where this happened. */
 #define QS_TESTG(A,B,...) do{{                  \
          if (A){                                \
             fprintf(stderr,__VA_ARGS__);        \
             __QS_PRINTLOC__;                    \
             goto B;}}}while(0)
 
-/** This macro is to print error messages and to exit with SCIP_LPERROR */
+/** This macro is to print error messages and to exit with SCIP_LPERROR. */
 #define QS_ERROR(A,...) do{{                    \
          if (A){                                \
             fprintf(stderr,__VA_ARGS__);        \
             __QS_PRINTLOC__;                    \
             return SCIP_LPERROR;}}}while(0)
 
-/** return value macro, if the value is non-zero, write to standard error the returning code and
- * where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
+/** Return value macro, if the value is non-zero, write to standard error the returning code and
+ *  where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
 #define QS_RETURN(A) do{                                                \
       const int __RVAL__ = (A);                                         \
       if (__RVAL__){                                                    \
@@ -92,8 +92,8 @@ static char __qsstr[SCIP_MAXSTRLEN];
          return SCIP_ERROR;}                                            \
       return SCIP_OKAY;}while(0)
 
-/** return value macro, if the value is non-zero, write to standard error the returning code and
- * where this happened, and return SCIP_ERROR, otherwise do nothing. */
+/** Return value macro, if the value is non-zero, write to standard error the returning code and
+ *  where this happened, and return SCIP_ERROR, otherwise do nothing. */
 #define QS_CONDRET(A) do{                                               \
       const int __RVAL__ = (A);                                         \
       if (__RVAL__){                                                    \
@@ -214,8 +214,8 @@ void lpistateFree(
 /** ensure size of column-related arrays */
 static
 SCIP_RETCODE ensureTabMem(
-   SCIP_LPI* const lpi,
-   int const sz
+   SCIP_LPI* const       lpi,                /**< pointer to an LP interface structure */
+   int                   sz                  /**< size */
    )
 {
    if( lpi->tbsz < sz )
@@ -230,8 +230,8 @@ SCIP_RETCODE ensureTabMem(
 /** ensure size of column-related arrays */
 static
 SCIP_RETCODE ensureColMem(
-   SCIP_LPI* const lpi,
-   int const ncols
+   SCIP_LPI* const       lpi,                /**< pointer to an LP interface structure */
+   int                   ncols               /**< number of columns */
    )
 {
    if( lpi->colspace < ncols )
@@ -246,8 +246,8 @@ SCIP_RETCODE ensureColMem(
 /** ensure size of row-related arrays */
 static
 SCIP_RETCODE ensureRowMem(
-   SCIP_LPI* const lpi,
-   int const nrows
+   SCIP_LPI* const       lpi,                /**< pointer to an LP interface structure */
+   int                   nrows               /**< number of rows */
    )
 {
    if( lpi->rowspace < nrows )
@@ -265,10 +265,10 @@ SCIP_RETCODE ensureRowMem(
 /** transform lhs/rhs into qsopt format */
 static
 SCIP_RETCODE convertSides(
-   SCIP_LPI* const lpi,
-   int const nrows,
-   const double* const lhs,
-   const double* const rhs
+   SCIP_LPI* const       lpi,                /**< pointer to an LP interface structure */
+   int                   nrows,              /**< number of rows */
+   const double* const   lhs,                /**< left hand side */
+   const double* const   rhs                 /**< right hand side */
    )
 {
    int state;
@@ -373,9 +373,7 @@ void* SCIPlpiGetSolverPointer(
 /**@name LPI Creation and Destruction Methods */
 /**@{ */
 
-/** creates an LP problem object
- * @return SCIP_OK on success
- * */
+/** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
@@ -384,8 +382,8 @@ SCIP_RETCODE SCIPlpiCreate(
    )
 {
    /* QSopt only works with doubles as floating points and bool as integers */
-   assert(sizeof (SCIP_Real) == sizeof (double));
-   assert(sizeof (SCIP_Bool) == sizeof (int));
+   assert(sizeof(SCIP_Real) == sizeof(double));
+   assert(sizeof(SCIP_Bool) == sizeof(int));
    assert(lpi != NULL);
 
    SCIPdebugMessage("SCIPlpiCreate()\n");
