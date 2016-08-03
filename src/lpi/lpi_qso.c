@@ -56,7 +56,7 @@ struct SCIP_LPi
 };
 
 /** solver name */
-static char __qsstr[1024];
+static char __qsstr[SCIP_MAXSTRLEN];
 
 
 
@@ -331,11 +331,16 @@ SCIP_RETCODE convertSides(
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(void)
 {
-   char* vname = QSversion();
+   char* vname;
    size_t vnamelen;
+
+   /* need to copy string to __qsstr, since vname will be freed */
+   vname = QSversion();
    vnamelen = strlen(vname);
-   memcpy(__qsstr, vname, MIN(sizeof(__qsstr), vnamelen+1));
-   __qsstr[sizeof(__qsstr)-1] = '\0';
+   if ( vnamelen >= SCIP_MAXSTRLEN-1 )
+      vnamelen = SCIP_MAXSTRLEN - 2;
+   memcpy(__qsstr, vname, vnamelen);
+   __qsstr[vnamelen+1] = '\0';
    QSfree(vname);
    return __qsstr;
 }
