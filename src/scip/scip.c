@@ -23405,17 +23405,15 @@ SCIP_Bool SCIPallowObjProp(
    return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
 }
 
-/** initializes a random seed based on a given value with the global shift of random seeds */
+/** modifies an initial seed value with the global shift of random seeds */
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   randseed            /**< random seed to initialize */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    )
 {
    assert(scip != NULL);
-   assert(randseed >= 0);
-   assert(SCIPisIntegral(scip, randseed));
 
-   return (unsigned int)(randseed + scip->set->random_randomseedshift);
+   return (unsigned int)(initialseedvalue + scip->set->random_randomseedshift);
 }
 
 /** marks the variable that it must not be multi-aggregated

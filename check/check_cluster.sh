@@ -153,7 +153,7 @@ do
 
             CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
-            # call tmp file configuration for SCIP
+            # call tmp file configuration for the solver
             . ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
                 $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
 

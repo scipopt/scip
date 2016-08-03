@@ -9335,11 +9335,11 @@ SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** initializes a random seed based on a given value with the global shift of random seeds */
+/** modifies an initial seed value with the global shift of random seeds */
 EXTERN
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   randseed            /**< random seed to initialize */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** marks the variable that it must not be multi-aggregated
