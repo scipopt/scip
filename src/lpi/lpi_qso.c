@@ -55,6 +55,17 @@ struct SCIP_LPi
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
+/** row norms */
+struct SCIP_LPiNorms
+{
+   int                   nrows;              /**< number of rows */
+   int                   ncols;              /**< number of columns */
+   char*                 cstat;              /**< basis status of columns */
+   char*                 rstat;              /**< basis status of rows */
+   SCIP_Real*            norms;              /**< row norms */
+};
+
+
 /** solver name */
 static char __qsstr[SCIP_MAXSTRLEN];
 
@@ -3206,9 +3217,37 @@ SCIP_RETCODE SCIPlpiGetNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {  /*lint --e{715} */
-   assert(lpinorms != NULL);
+   int ncols;
+   int nrows;
+   int rval;
 
-   (*lpinorms) = NULL;
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+   assert( lpinorms != NULL );
+
+   ncols = QSget_colcount(lpi->prob);
+   nrows = QSget_rowcount(lpi->prob);
+
+   /* allocate lpinorms data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpinorms) );
+   (*lpinorms)->ncols = ncols;
+   (*lpinorms)->nrows = nrows;
+
+   if ( QStest_row_norms(lpi->prob) )
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->cstat, ncols) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->rstat, nrows) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->norms, nrows) );
+
+      rval = QSget_basis_and_row_norms_array(lpi->prob, (*lpinorms)->cstat, (*lpinorms)->rstat, (*lpinorms)->norms);
+      QS_CONDRET(rval);
+   }
+   else
+   {
+      (*lpinorms)->cstat = NULL;
+      (*lpinorms)->rstat = NULL;
+      (*lpinorms)->norms = NULL;
+   }
 
    return SCIP_OKAY;
 }
@@ -3222,10 +3261,27 @@ SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715} */
-   assert(lpinorms == NULL);
+   int ncols;
+   int nrows;
+   int rval;
 
-   /* no work necessary */
-   return SCIP_OKAY;
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+   assert( lpinorms != NULL );
+
+   if ( lpinorms->norms == NULL )
+      return SCIP_OKAY;
+
+   ncols = QSget_colcount(lpi->prob);
+   nrows = QSget_rowcount(lpi->prob);
+   if ( nrows != lpinorms->nrows || ncols != lpinorms->ncols )
+      return SCIP_OKAY;
+
+   /* load row norms */
+   assert( lpinorms->cstat != NULL && lpinorms->rstat != NULL && lpinorms->norms != NULL );
+   rval = QSload_basis_and_row_norms_array(lpi->prob, lpinorms->cstat, lpinorms->rstat, lpinorms->norms);
+
+   QS_RETURN(rval);
 }
 
 /** frees pricing norms information */
@@ -3235,9 +3291,17 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {  /*lint --e{715} */
-   assert(lpinorms == NULL);
+   assert( lpinorms != NULL );
 
-   /* no work necessary */
+   if ( (*lpinorms)->norms != NULL )
+   {
+      assert( (*lpinorms)->cstat != NULL && (*lpinorms)->rstat != NULL );
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->norms, (*lpinorms)->nrows);
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->rstat, (*lpinorms)->nrows);
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->cstat, (*lpinorms)->ncols);
+   }
+   BMSfreeBlockMemory(blkmem, lpinorms);
+
    return SCIP_OKAY;
 }
 
