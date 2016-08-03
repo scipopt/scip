@@ -2585,26 +2585,40 @@ SCIP_RETCODE SCIPlpiGetBase(
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
 
-   SCIP_CALL(ensureTabMem(lpi, nrows + ncols));
+   SCIP_CALL( ensureTabMem(lpi, nrows + ncols) );
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
 
+   /* get senses */
+   rval = QSget_senses(lpi->prob, lpi->isen);
+   QS_CONDRET(rval);
+
+   /* get basis */
    icstat = lpi->ibas;
-   irstat = lpi->ibas+ncols;
+   irstat = lpi->ibas + ncols;
    rval = QSget_basis_array(lpi->prob, icstat, irstat);
    QS_CONDRET(rval);
 
-   /* now we must transform QSopt codes into SCIP codes */
+   /* Now we must transform QSopt codes into SCIP codes.
+    * We have the following cases:
+    * 'G': b <= ax       -> b = ax - s, s >= 0
+    * 'L': ax <= b       -> b = ax + s, s >= 0
+    * 'R': b <= ax <= c  -> c - b = ax + s, 0 <= s <= c - b
+    */
    for( i = 0; i < nrows; ++i )
    {
       switch( irstat[i] )
       {
       case QS_ROW_BSTAT_LOWER:
-         rstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
+         if ( lpi->isen[i] == 'L' )
+            rstat[i] = (char) SCIP_BASESTAT_UPPER;
+         else
+            rstat[i] = (char) SCIP_BASESTAT_LOWER;
          break;
       case QS_ROW_BSTAT_BASIC:
-         rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+         rstat[i] = (char) SCIP_BASESTAT_BASIC;
          break;
       case QS_ROW_BSTAT_UPPER:
-         rstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
+         rstat[i] = (char) SCIP_BASESTAT_UPPER;
          break;
       default:
          SCIPerrorMessage("Unknown row basic status %c", rstat[i]);
@@ -2617,16 +2631,16 @@ SCIP_RETCODE SCIPlpiGetBase(
       switch( icstat[i] )
       {
       case QS_COL_BSTAT_LOWER:
-         cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
+         cstat[i] = (char) SCIP_BASESTAT_LOWER;
          break;
       case QS_COL_BSTAT_BASIC:
-         cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+         cstat[i] = (char) SCIP_BASESTAT_BASIC;
          break;
       case QS_COL_BSTAT_UPPER:
-         cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
+         cstat[i] = (char) SCIP_BASESTAT_UPPER;
          break;
       case QS_COL_BSTAT_FREE:
-         cstat[i] = SCIP_BASESTAT_ZERO; /*lint !e641*/
+         cstat[i] = (char) SCIP_BASESTAT_ZERO;
          break;
       default:
          SCIPerrorMessage("Unknown column basic status %c", cstat[i]);
@@ -2659,7 +2673,12 @@ SCIP_RETCODE SCIPlpiSetBase(
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
 
-   SCIP_CALL(ensureTabMem(lpi, ncols));
+   SCIP_CALL( ensureTabMem(lpi, ncols) );
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
+
+   /* get senses */
+   rval = QSget_senses(lpi->prob, lpi->isen);
+   QS_CONDRET(rval);
 
    icstat = lpi->ibas;
    irstat = lpi->ibas + ncols;
@@ -2670,13 +2689,16 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
-         irstat[i] = QS_ROW_BSTAT_LOWER; /*lint !e641*/
+         irstat[i] = QS_ROW_BSTAT_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         irstat[i] = QS_ROW_BSTAT_BASIC; /*lint !e641*/
+         irstat[i] = QS_ROW_BSTAT_BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         irstat[i] = QS_ROW_BSTAT_UPPER; /*lint !e641*/
+         if ( lpi->isen[i] == 'L' )
+            irstat[i] = QS_ROW_BSTAT_LOWER;
+         else
+            irstat[i] = QS_ROW_BSTAT_UPPER;
          break;
       default:
          SCIPerrorMessage("Unknown row basic status %d", rstat[i]);
@@ -2689,16 +2711,16 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
-         icstat[i] = QS_COL_BSTAT_LOWER; /*lint !e641*/
+         icstat[i] = QS_COL_BSTAT_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         icstat[i] = QS_COL_BSTAT_BASIC; /*lint !e641*/
+         icstat[i] = QS_COL_BSTAT_BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         icstat[i] = QS_COL_BSTAT_UPPER; /*lint !e641*/
+         icstat[i] = QS_COL_BSTAT_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
-         icstat[i] = QS_COL_BSTAT_FREE; /*lint !e641*/
+         icstat[i] = QS_COL_BSTAT_FREE;
          break;
       default:
          SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
@@ -2708,7 +2730,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    }
 
    /* set the basis */
-   rval = QSget_basis_array(lpi->prob, icstat, irstat);
+   rval = QSload_basis_array(lpi->prob, icstat, irstat);
    QS_RETURN(rval);
 }
 
@@ -2737,13 +2759,13 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
       QS_CONDRET( QSopt_dual(lpi->prob, &(lpi->solstat)) );
    }
 
-   QS_CONDRET( QSget_basis_order( lpi->prob, bind) );
+   QS_CONDRET( QSget_basis_order(lpi->prob, bind) );
 
    /* transform QSopt basis header into SCIP format */
    for( i = 0; i < nrows; ++i )
    {
       if( bind[i] >= ncols )
-         bind[i] = -(bind[i] - ncols - 1);
+         bind[i] = -(bind[i] - ncols) - 1;
    }
 
    return SCIP_OKAY;
@@ -2978,6 +3000,10 @@ SCIP_RETCODE SCIPlpiSetState(
    icstat = lpi->ibas;
    irstat = lpi->ibas + ncols;
 
+   /* get senses */
+   rval = QSget_senses(lpi->prob, lpi->isen);
+   QS_CONDRET(rval);
+
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->iccnt, lpi->ircnt);
 
@@ -3016,7 +3042,10 @@ SCIP_RETCODE SCIPlpiSetState(
          irstat[i] = QS_ROW_BSTAT_BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         irstat[i] = QS_ROW_BSTAT_UPPER;
+         if ( lpi->isen[i] == 'L' )
+            irstat[i] = QS_ROW_BSTAT_LOWER;
+         else
+            irstat[i] = QS_ROW_BSTAT_UPPER;
          break;
       default:
          SCIPerrorMessage("Unknown row basic status %d", lpi->ircnt[i]);
