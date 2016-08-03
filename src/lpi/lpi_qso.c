@@ -558,32 +558,59 @@ SCIP_RETCODE SCIPlpiAddCols(
 {
    int rval;
    register int i;
+   int* lbeg;
 
-   assert(lpi != NULL);
-   assert(lpi->prob != NULL);
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+   assert( ncols >= 0 );
+   assert( nnonz == 0 || (beg != NULL && ind != NULL && val != NULL) );
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to QSopt\n", ncols, nnonz);
+
+   if ( ncols <= 0 )
+      return SCIP_OKAY;
+   assert( lb != NULL && ub != NULL );
 
    lpi->solstat = 0;
 
    /* ensure column size */
-   SCIP_CALL(ensureColMem(lpi, ncols));
+   SCIP_CALL( ensureColMem(lpi, ncols) );
 
-   /* compute column lengths */
-   for( i = 0; i < ncols - 1; ++i )
+   /* if there are no nonzeros, we have to set up an artificial beg array */
+   if ( nnonz == 0 )
    {
-      lpi->iccnt[i] = beg[i+1] - beg[i];
-      assert(lpi->iccnt[i] >= 0);
+      SCIP_ALLOC( BMSallocMemoryArray(&lbeg, ncols) );
+
+      /* compute column lengths */
+      for( i = 0; i < ncols; ++i )
+      {
+         lpi->iccnt[i] = 0;
+         lbeg[i] = 0;
+      }
    }
-   if( ncols > 0 )
+   else
    {
+      /* compute column lengths */
+      for( i = 0; i < ncols - 1; ++i )
+      {
+         lpi->iccnt[i] = beg[i+1] - beg[i];
+         assert(lpi->iccnt[i] >= 0);
+      }
+
       lpi->iccnt[ncols-1] = nnonz - beg[ncols-1];
       assert(lpi->iccnt[ncols-1] >= 0);
+      lbeg = (int*) beg;
    }
 
-   /* and add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+   /* add the columns */
+   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) lbeg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
       (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
+
+   /* possibly free space */
+   if ( nnonz == 0 )
+   {
+      BMSfreeMemoryArray(&lbeg);
+   }
 
    QS_RETURN(rval);
 }
