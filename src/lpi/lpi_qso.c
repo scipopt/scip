@@ -2788,10 +2788,15 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
+   int nrows;
    int rval;
+   int i;
 
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
+
+   nrows = QSget_rowcount(lpi->prob);
+   assert( 0 <= r && r < nrows );
 
    SCIPdebugMessage("getting binv-row %d from Qsopt %d cols, %d rows, %d nonz\n", r, QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
@@ -2801,6 +2806,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       *ninds = -1;
 
    rval = QSget_binv_row(lpi->prob, r, coef);
+
+   for (i = 0; i < nrows; i++)
+      coef[i] *= -1.0;
+
    QS_RETURN(rval);
 }
 
@@ -2855,6 +2864,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int rval;
    int ncols;
    int nrows;
+   int i;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2875,6 +2885,9 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    /* copy local information to the outside */
    memcpy(coef, lpi->itab, sizeof(double)*ncols);
+
+   for (i = 0; i < ncols; ++i)
+      coef[i] *= -1.0;
 
    return SCIP_OKAY;
 }
