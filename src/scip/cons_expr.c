@@ -3258,6 +3258,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       }
    }
 
+   /* store the separation tag at the expression */
+   expr->sepatag = sepadata->sepatag;
+
    return SCIP_OKAY;
 }
 
