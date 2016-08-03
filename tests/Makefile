@@ -38,6 +38,7 @@ TESTDIRS 	= $(sort $(dir $(patsubst src/%,%,$(UNITTESTSSRC))))
 #-----------------------------------------------------------------------------
 
 override OPT	=	dbg
+override SANITIZE	=	false
 override SHARED	=	true
 
 #-----------------------------------------------------------------------------
@@ -104,8 +105,8 @@ FLAGS 		+= 	-I.
 #-----------------------------------------------------------------------------
 # Criterion Framework
 #-----------------------------------------------------------------------------
-CR_INC		=	Criterion/include
-CR_LIBDIR	=	Criterion/build/
+CR_INC		=	$(wildcard Criterion/include)
+CR_LIBDIR	=	$(wildcard Criterion/build)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
@@ -188,29 +189,30 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX) $< \
 		$(LINKCXX_L)$(SCIPDIR)/lib \
 		$(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
-		$(LINKCXX_L)$(CR_LIBDIR) \
+		$(addprefix $(LINKCXX_L),$(CR_LIBDIR)) \
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib) \
-		$(LINKRPATH)$(realpath $(CR_LIBDIR)) \
+		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SANITIZE=false SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(SCIPLIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SANITIZE=false SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SANITIZE=false SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) -I$(CR_INC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
 Criterion:
-	@echo "Criterion not found, building it"
+	@echo -n "Criterion not found, downloading and building it in"
+	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
 	git clone -b v2.2.2 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \

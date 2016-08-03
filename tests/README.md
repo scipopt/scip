@@ -41,9 +41,10 @@ The easiest way to compile and run the tests is:
 make IPOPT=<true|false>
 ```
 
-**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg SHARED=true`.
+**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg SANITIZE=false SHARED=true`.
 
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
+If you already have installed Criterion on you system, execute `touch Criterion` or `mkdir Criterion` before calling make.
 
 **NOTE** Some tests might need to include c files from SCIP. For tests to be recompilied the included c file gets recompiled, run `make depend`.
 
