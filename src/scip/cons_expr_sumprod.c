@@ -74,6 +74,8 @@ struct SCIP_ConsExpr_ExprData
    SCIP_Real* coefficients; /**< coefficients / exponents of children */
    int        ncoefs;       /**< number of coefficients (usually also number of children, but don't count on it) */
    int        coefssize;    /**< size of the coefficients array */
+
+   SCIP_ROW*  row;          /**< row created during initLP() */
 };
 
 /** node for linked list of expressions */
@@ -834,6 +836,7 @@ SCIP_RETCODE createData(
    (*exprdata)->coefficients = edata;
    (*exprdata)->coefssize    = ncoefficients;
    (*exprdata)->constant     = constant;
+   (*exprdata)->row          = NULL;
 
    return SCIP_OKAY;
 }
@@ -1420,7 +1423,6 @@ SCIP_RETCODE separatePointSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
@@ -1477,43 +1479,63 @@ SCIP_RETCODE separatePointSum(
    return SCIP_OKAY;
 }
 
+/** LP initialization callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+   assert(exprdata->row == NULL);
+
+   *infeasible = FALSE;
+
+   /* compute initial cut */
+   SCIP_CALL( separatePointSum(scip, conshdlr, expr, &exprdata->row) );
+   assert(exprdata->row != NULL);
+
+   SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->row, FALSE, infeasible) );
+
+   return SCIP_OKAY;
+}
+
 /** expression separation callback */
-/** @todo add these cuts during INITLP only */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 {
-   SCIP_ROW* cut;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real efficacy;
 
-   cut = NULL;
-   *ncuts = 0;
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+   assert(exprdata->row != NULL);
+
    *result = SCIP_DIDNOTFIND;
 
-   /* try to compute a cut */
-   SCIP_CALL( separatePointSum(scip, conshdlr, expr, sol, &cut) );
-
-   /* failed to compute a cut */
-   if( cut == NULL )
+   /* row should not be violated if it is still in the LP */
+   if( SCIProwIsInLP(exprdata->row) )
+   {
+      assert(SCIPisFeasGE(scip, SCIPgetRowSolFeasibility(scip, exprdata->row, sol), 0.0));
       return SCIP_OKAY;
+   }
 
-   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+   /* compute efficacy */
+   efficacy = -SCIPgetRowSolFeasibility(scip, exprdata->row, sol);
 
-   /* add cut if it is violated */
    if( SCIPisGE(scip, efficacy, minefficacy) )
    {
       SCIP_Bool infeasible;
 
-      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, sol, exprdata->row, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
       *ncuts += 1;
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
-      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      SCIP_CALL( SCIPprintRow(scip, exprdata->row, NULL) );
 #endif
    }
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
    return SCIP_OKAY;
 }
@@ -1948,7 +1970,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    /* add cut if it is violated */
    if( SCIPisGE(scip, efficacy, minefficacy) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
       *ncuts += 1;
 
@@ -2048,6 +2070,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
