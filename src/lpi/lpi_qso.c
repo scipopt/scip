@@ -527,6 +527,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       lpi->iccnt[i] = beg[i+1] - beg[i];
       assert(lpi->iccnt[i] >= 0);
    }
+
    if( ncols > 0 )
    {
       lpi->iccnt[ncols-1] = nnonz - beg[ncols-1];
@@ -607,7 +608,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    SCIPdebugMessage("deleting %d columns from QSopt\n", len);
 
-   SCIP_CALL(ensureColMem(lpi, len));
+   SCIP_CALL( ensureColMem(lpi, len) );
    for( i = firstcol ; i <= lastcol ; i++ )
       lpi->iccnt[i-firstcol] = i;
 
@@ -667,11 +668,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    register int i;
    int rval;
 
-   assert(lpi != NULL);
-   assert(lpi->prob != NULL);
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+   assert( nrows >= 0 );
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("adding %d rows with %d nonzeros to QSopt\n", nrows, nnonz);
+
+   if ( nrows <= 0 )
+      return SCIP_OKAY;
 
    /* add rows with no matrix, and then the columns, first ensure space */
    SCIP_CALL( ensureRowMem(lpi, nrows) );
@@ -1239,18 +1245,18 @@ SCIP_RETCODE SCIPlpiScaleCol(
    /* get the column */
    collist[0] = col;
    rval = QSget_columns_list(lpi->prob, 1, collist, &colcnt, &colbeg, &colind, &colval, &obj, &lb, &ub, 0);
-   QS_TESTG(rval,CLEANUP," ");
+   QS_TESTG(rval, CLEANUP, " ");
 
    /* scale column coefficients */
    for( i = 0; i < colcnt[0]; ++i )
    {
       rval = QSchange_coef(lpi->prob, colind[i], col, colval[i]*scaleval);
-      QS_TESTG(rval,CLEANUP," ");
+      QS_TESTG(rval, CLEANUP, " ");
    }
 
    /* scale objective value */
    rval = QSchange_objcoef(lpi->prob, col, obj[0]*scaleval);
-   QS_TESTG(rval,CLEANUP," ");
+   QS_TESTG(rval, CLEANUP, " ");
 
    /* scale column bounds */
    if( scaleval < 0 )
@@ -1271,9 +1277,9 @@ SCIP_RETCODE SCIPlpiScaleCol(
       ub[0] = QS_MAXDOUBLE;
 
    rval = QSchange_bound(lpi->prob, col, 'L', lb[0]);
-   QS_TESTG(rval,CLEANUP," ");
+   QS_TESTG(rval, CLEANUP, " ");
    rval = QSchange_bound(lpi->prob, col, 'U', ub[0]);
-   QS_TESTG(rval,CLEANUP," ");
+   QS_TESTG(rval, CLEANUP, " ");
 
    /* ending */
  CLEANUP:
@@ -1422,13 +1428,14 @@ SCIP_RETCODE SCIPlpiGetCols(
    }
    if( lb )
    {
-      assert(llb != NULL);
-      assert(lub != NULL);
+      assert( llb != NULL );
+      assert( lub != NULL );
+      assert( ub != NULL );
 
       for( i = 0; i < len; ++i )
       {
          lb[i] = llb[i];
-         ub[i] = lub[i];   /*lint !e613*/
+         ub[i] = lub[i];
       }
    }
 
@@ -1829,7 +1836,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    *downvalid = TRUE;
    *upvalid = TRUE;
 
-   assert(!EPSISINT(psol, FEASTOL));
+   assert( ! EPSISINT(psol, FEASTOL) );
 
    /* call QSopt */
    rval = QSopt_strongbranch(lpi->prob, 1, &col, &psol, down, up, itlim, QS_MAXDOUBLE);
@@ -1881,7 +1888,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    {
       downvalid[j] = TRUE;
       upvalid[j] = TRUE;
-      assert(!EPSISINT(psols[j], FEASTOL));
+      assert( ! EPSISINT(psols[j], FEASTOL) );
    }
 
    /* call QSopt */
@@ -2615,7 +2622,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    int nrows;
    register int i;
    char* icstat;
-   char *irstat;
+   char* irstat;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2812,7 +2819,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
 
-   SCIP_CALL(ensureTabMem(lpi, nrows+ncols));
+   SCIP_CALL( ensureTabMem(lpi, nrows + ncols) );
 
    rval = QSget_tableau_row(lpi->prob, r, lpi->itab);
    QS_CONDRET(rval);
@@ -2990,6 +2997,7 @@ SCIP_RETCODE SCIPlpiSetState(
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
+
    for( i = 0; i < ncols; ++i )
    {
       switch( lpi->iccnt[i] )
