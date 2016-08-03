@@ -51,6 +51,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa));  /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa));  /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa));          /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
@@ -86,7 +87,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
    SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
-   /* LP initialization */
+   /* separation initialization */
    unsigned int            initsepatag;   /**< flag to store whether an expression has been called during the separation initialization */
 
    /* expression walker data */

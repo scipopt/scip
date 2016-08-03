@@ -1479,7 +1479,7 @@ SCIP_RETCODE separatePointSum(
    return SCIP_OKAY;
 }
 
-/** LP initialization callback */
+/** separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 {
@@ -1500,6 +1500,24 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    return SCIP_OKAY;
 }
 
+/** separation deinitialization callback */
+static
+SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   if( exprdata->row != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &exprdata->row) );
+   }
+   assert(exprdata->row == NULL);
+
+   return SCIP_OKAY;
+}
+
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
@@ -1514,11 +1532,18 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    *result = SCIP_DIDNOTFIND;
 
    /* row should not be violated if it is still in the LP */
-   if( SCIProwIsInLP(exprdata->row) )
+   if( exprdata->row != NULL && SCIProwIsInLP(exprdata->row) )
    {
       assert(SCIPisFeasGE(scip, SCIPgetRowSolFeasibility(scip, exprdata->row, sol), 0.0));
       return SCIP_OKAY;
    }
+
+   /* compute and store cut (might happen if the constraint is not 'initial') */
+   if( exprdata->row == NULL )
+   {
+      SCIP_CALL( separatePointSum(scip, conshdlr, expr, &exprdata->row) );
+   }
+   assert(exprdata->row != NULL);
 
    /* compute efficacy */
    efficacy = -SCIPgetRowSolFeasibility(scip, exprdata->row, sol);
@@ -2071,6 +2096,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );

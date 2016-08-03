@@ -3196,6 +3196,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    assert(initsepadata->conshdlr != NULL);
    assert(!initsepadata->infeasible);
 
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
    /* skip expression if it has been considered already */
    if( initsepadata->initsepatag != 0 && initsepadata->initsepatag == expr->initsepatag )
    {
@@ -3214,6 +3216,25 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 
    /* store the initspea tag */
    expr->initsepatag = initsepadata->initsepatag;
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback for separation deinitialization */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSepaEnterExpr)
+{
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   if( *(expr->exprhdlr->exitsepa) != NULL )
+   {
+      /* call the separation initialization callback of the expression handler */
+      SCIP_CALL( (*expr->exprhdlr->exitsepa)(scip, expr) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3317,7 +3338,7 @@ SCIP_RETCODE initSepa(
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
 
-         /* walk through the expression tree and call LP initialization callbacks */
+         /* walk through the expression tree and call separation initialization callbacks */
          SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, initSepaEnterExpr, NULL, NULL, NULL, (void*)&initsepadata) );
 
          if( initsepadata.infeasible )
@@ -3327,6 +3348,37 @@ SCIP_RETCODE initSepa(
             return SCIP_OKAY;
          }
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls separation deinitialization callback for each expression */
+static
+SCIP_RETCODE exitSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* walk through the expression tree and call separation deinitialization callbacks */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, exitSepaEnterExpr, NULL, NULL, NULL, NULL) );
    }
 
    return SCIP_OKAY;
@@ -3789,6 +3841,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
+
+   /* call separation deinitialization callbacks */
+   SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
 
    /* remove auxiliary variables from expressions */
    SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
@@ -4673,6 +4728,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrInitSepa(
    assert(exprhdlr != NULL);
 
    exprhdlr->initsepa = initsepa;
+
+   return SCIP_OKAY;
+}
+
+/** set the separation deinitialization callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrExitSepa(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->exitsepa = exitsepa;
 
    return SCIP_OKAY;
 }
