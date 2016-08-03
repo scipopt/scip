@@ -3132,9 +3132,9 @@ SCIP_RETCODE SCIPlpiClearState(
    SCIP_ALLOC( BMSallocMemoryArray(&rstat, nrows) );
 
    for (i = 0; i < ncols; ++i)
-      cstat[i] = SCIP_BASESTAT_LOWER;
+      cstat[i] = (char) SCIP_BASESTAT_LOWER;
    for (i = 0; i < nrows; ++i)
-      rstat[i] = SCIP_BASESTAT_BASIC;
+      rstat[i] = (char) SCIP_BASESTAT_BASIC;
 
    SCIP_CALL( SCIPlpiSetBase(lpi, cstat, rstat) );
 
