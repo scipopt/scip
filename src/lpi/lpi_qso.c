@@ -3111,10 +3111,35 @@ SCIP_RETCODE SCIPlpiClearState(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   assert(lpi != NULL);
+   int ncols;
+   int nrows;
+   int* cstat;
+   int* rstat;
+   int i;
 
-   /**@todo implement SCIPlpiClearState() for QSopt */
-   SCIPerrorMessage("QSopt interface does not implement SCIPlpiClearState()\n");
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+
+   SCIPdebugMessage("SCIPlpiClearState()\n");
+
+   ncols = QSget_colcount(lpi->prob);
+   nrows = QSget_rowcount(lpi->prob);
+
+   if ( ncols == 0 || nrows == 0 )
+      return SCIP_OKAY;
+
+   SCIP_ALLOC( BMSallocMemoryArray(&cstat, ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&rstat, nrows) );
+
+   for (i = 0; i < ncols; ++i)
+      cstat[i] = SCIP_BASESTAT_LOWER;
+   for (i = 0; i < nrows; ++i)
+      rstat[i] = SCIP_BASESTAT_BASIC;
+
+   SCIP_CALL( SCIPlpiSetBase(lpi, cstat, rstat) );
+
+   BMSfreeMemoryArray(&cstat);
+   BMSfreeMemoryArray(&rstat);
 
    return SCIP_OKAY;
 }
