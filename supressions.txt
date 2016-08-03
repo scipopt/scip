@@ -6,8 +6,6 @@ va_list_usedBeforeStarted:src/scip/message.c
 // unusedFunction doesn't work for libraries
 unusedFunction
 variableScope
-// we use some unconventional syntax in this file to test NaN e.g if (*h != *h)
-duplicateExpression:src/nlpi/nlpioracle.c
 
 // information
 ConfigurationNotChecked
