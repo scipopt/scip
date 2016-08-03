@@ -64,6 +64,12 @@ static char __qsstr[SCIP_MAXSTRLEN];
  * local defines
  */
 
+/** (feasibility) tolerance for qsopt */
+#define FEASTOL 1e-6
+
+/** tolerance for testing equality */
+#define EPSILON 1e-9
+
 /** print location of the calling line */
 #define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
 
@@ -283,7 +289,7 @@ SCIP_RETCODE convertSides(
       {
       case 0:
         /* check for equations */
-         if( lhs[i] == rhs[i] )
+         if( EPSEQ(lhs[i], rhs[i], EPSILON) )
          {
             lpi->isen[i] = 'E';
             lpi->irhs[i] = lhs[i];
@@ -1808,7 +1814,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    *downvalid = TRUE;
    *upvalid = TRUE;
 
-   assert(!EPSISINT(psol, 1e-06));
+   assert(!EPSISINT(psol, FEASTOL));
 
    /* call QSopt */
    rval = QSopt_strongbranch(lpi->prob, 1, &col, &psol, down, up, itlim, QS_MAXDOUBLE);
@@ -1860,7 +1866,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    {
       downvalid[j] = TRUE;
       upvalid[j] = TRUE;
-      assert(!EPSISINT(psols[j], 1e-06));
+      assert(!EPSISINT(psols[j], FEASTOL));
    }
 
    /* call QSopt */
@@ -1904,7 +1910,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
    SCIPdebugMessage("calling QSopt strong branching on variable %d with integral value (%d it lim)\n", col, itlim);
 
-   assert(EPSISINT(psol, 1e-06));
+   assert(EPSISINT(psol, FEASTOL));
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
     * value for both cases. Could also implement a manual search as in lpi_cpx.c
@@ -1960,7 +1966,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 
    for( j = 0; j < ncols; ++j )
    {
-      assert(EPSISINT(psols[j], 1e-06));
+      assert(EPSISINT(psols[j], FEASTOL));
       down[j] = objval;
       up[j] = objval;
       downvalid[j] = TRUE;
@@ -2353,7 +2359,7 @@ SCIP_RETCODE SCIPlpiGetSol(
          {
          case QS_COL_BSTAT_BASIC:
          case QS_COL_BSTAT_FREE:
-            if( fabs(redcost[i])> 1e-6 )
+            if( fabs(redcost[i])> FEASTOL )
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
@@ -2361,7 +2367,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             }
             break;
          case QS_COL_BSTAT_UPPER:
-            if( redcost[i]*sense > 1e-6 )
+            if( redcost[i]*sense > FEASTOL )
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
@@ -2369,7 +2375,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             }
             break;
          case QS_COL_BSTAT_LOWER:
-            if( redcost[i]*sense < -1e-6 )
+            if( redcost[i]*sense < -FEASTOL )
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
