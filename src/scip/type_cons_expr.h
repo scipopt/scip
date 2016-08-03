@@ -247,7 +247,7 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval)
 
-/** LP initialization method of an expression handler (called before the initial LP relaxation at a node is solved)
+/** separation initialization method of an expression handler (called before the initial LP relaxation at a node is solved)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -257,7 +257,7 @@ extern "C" {
  *  output:
  *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
  */
-#define SCIP_DECL_CONSEXPR_EXPRINITLP(x) SCIP_RETCODE x (\
+#define SCIP_DECL_CONSEXPR_EXPRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
       SCIP_CONSEXPR_EXPR* expr, \
