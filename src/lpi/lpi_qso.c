@@ -75,9 +75,9 @@ static char __qsstr[SCIP_MAXSTRLEN];
 
 /** This macro is to print error messages and jump to the given point in the code, it also prints the
  *  file name and line where this happened. */
-#define QS_TESTG(A,B,...) do{{                  \
+#define QS_TESTG(A,B,C) do{{                    \
          if (A){                                \
-            fprintf(stderr,__VA_ARGS__);        \
+            fprintf(stderr, C);                 \
             __QS_PRINTLOC__;                    \
             goto B;}}}while(0)
 
