@@ -9617,7 +9617,7 @@ SCIP_RETCODE SCIPreadProb(
 
             permuteconss = scip->set->misc_permuteconss;
             permutevars = scip->set->misc_permutevars;
-            permutationseed = SCIPinitializeRandomSeed(scip, scip->set->random_permutationseed);
+            permutationseed = scip->set->random_permutationseed;
 
             SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
          }
@@ -13093,7 +13093,7 @@ SCIP_RETCODE SCIPtransformProb(
 
       permuteconss = scip->set->misc_permuteconss;
       permutevars = scip->set->misc_permutevars;
-      permutationseed = SCIPinitializeRandomSeed(scip, scip->set->random_permutationseed);
+      permutationseed = scip, scip->set->random_permutationseed;
 
       SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
    }
