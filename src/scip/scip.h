@@ -9335,6 +9335,13 @@ SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** modifies an initial seed value with the global shift of random seeds */
+EXTERN
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
+   );
+
 /** marks the variable that it must not be multi-aggregated
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

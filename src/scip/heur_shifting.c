@@ -36,8 +36,9 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
+#define MAXSHIFTINGS          50     /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
+#define DEFAULT_RANDSEED      31     /**< initial random seed */
 
 
 /* locally defined heuristic data */
@@ -576,7 +577,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
