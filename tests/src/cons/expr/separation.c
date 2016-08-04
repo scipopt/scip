@@ -129,7 +129,7 @@ Test(separation, sum, .init = setup, .fini = teardown,
 
    /* compute cut */
    cut = NULL;
-   SCIP_CALL( separatePointSum(scip,  conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointSum(scip,  conshdlr, expr, &cut) );
 
    assert(cut != NULL);
    cr_assert_eq(SCIProwGetNNonz(cut), 3);
