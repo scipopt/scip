@@ -28,10 +28,16 @@
 
 #define ABS_PRECEDENCE  70000
 #define ABS_HASHKEY     SCIPcalcFibHash(7187)
+
 /*
  * Data structures
  */
 
+struct SCIP_ConsExpr_ExprData
+{
+   SCIP_ROW*  rowneg;  /**< left tangent z >= -x */
+   SCIP_ROW*  rowpos;  /**< right tangent z <= x */
+};
 
 /*
  * Local methods
@@ -67,8 +73,14 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataAbs)
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &exprdata);
    SCIPsetConsExprExprData(expr, NULL);
 
    return SCIP_OKAY;
@@ -78,7 +90,6 @@ static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printAbs)
 {
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
 
    switch( stage )
    {
@@ -135,7 +146,6 @@ static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalAbs)
 {
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID);
 
@@ -151,7 +161,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    SCIP_INTERVAL childinterval;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
@@ -162,137 +171,214 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    return SCIP_OKAY;
 }
 
-/** helper function to separate a given point; needed for proper unittest */
+/** computes both tangent underestimates and secant */
 static
-SCIP_RETCODE separatePointAbs(
+SCIP_RETCODE computeCutsAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_ROW**            cut                 /**< pointer to store the row */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< absolute expression */
+   SCIP_ROW**            rowneg,             /**< buffer to store first tangent (might be NULL) */
+   SCIP_ROW**            rowpos,             /**< buffer to store second tangent (might be NULL) */
+   SCIP_ROW**            secant              /**< buffer to store secant (might be NULL) */
    )
 {
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* childvar;
-   SCIP_Bool overestimate;
-   SCIP_Real violation;
-   SCIP_Real refpoint;
-   SCIP_Real lincoef;
-   SCIP_Real linconstant;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Bool success;
+   SCIP_VAR* x;
+   SCIP_VAR* z;
+   SCIP_VAR* vars[2];
+   SCIP_Real coefs[2];
+   char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") == 0);
-   assert(cut != NULL);
 
-   *cut = NULL;
+   x = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[0]);
+   z = SCIPgetConsExprExprLinearizationVar(expr);
+   assert(x != NULL);
+   assert(z != NULL);
 
-   /* get expression data */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
-   assert(auxvar != NULL);
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprLinearizationVar(child);
-   assert(childvar != NULL);
+   vars[0] = z;
+   vars[1] = x;
+   coefs[0] = -1.0;
 
-   /* compute the violation; this determines whether we need to over- or underestimate */
-   violation = REALABS(SCIPgetSolVal(scip, sol, childvar)) - SCIPgetSolVal(scip, sol, auxvar);
-
-   /* check if there is a violation */
-   if( SCIPisEQ(scip, violation, 0.0) )
-      return SCIP_OKAY;
-
-   /* determine whether we need to under- or overestimate */
-   overestimate = SCIPisLT(scip, violation, 0.0);
-
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-   lincoef = 0.0;
-   linconstant = 0.0;
-   success = FALSE;
-   lb = SCIPvarGetLbLocal(childvar);
-   ub = SCIPvarGetUbLocal(childvar);
-
-   if( overestimate )
+   /* compute left tangent -z -x <= 0 */
+   if( rowneg != NULL )
    {
-      printf("OVERESTIMATE\n");
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_neg_%s", SCIPvarGetName(x));
+      coefs[1] = -1.0;
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowneg, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddVarsToRow(scip, *rowneg, 2, vars, coefs) );
+   }
 
-      if( !SCIPisInfinity(scip, REALABS(lb)) && !SCIPisInfinity(scip, REALABS(ub)) )
+   /* compute right tangent 0 <= -z + x */
+   if( rowpos != NULL )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_pos_%s", SCIPvarGetName(x));
+      coefs[1] = 1.0;
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowpos, conshdlr, name, 0.0, SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddVarsToRow(scip, *rowpos, 2, vars, coefs) );
+   }
+
+   /* compute secant */
+   if( secant != NULL )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      *secant = NULL;
+      lb = SCIPvarGetLbLocal(x);
+      ub = SCIPvarGetUbLocal(x);
+
+      /* it does not make sense to add a cut if child variable is unbounded, fixed, non-positive, or non-negative */
+      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)
+         && SCIPisLT(scip, lb, 0.0) && SCIPisGT(scip, ub, 0.0)
+         && !SCIPisEQ(scip, lb, ub) )
       {
-         printf("lb = %e ub = %e\n", lb, ub);
-         success = TRUE;
-         lincoef = (REALABS(ub) - REALABS(lb)) / (ub - lb);
-         linconstant = REALABS(ub) - lincoef * ub;
+         SCIP_Real alpha;
 
-         printf("lincoef = %e linconst = %e\n", lincoef, linconstant);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_secant_%s", SCIPvarGetName(x));
+
+         /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
+          *
+          * z = |x| <= alpha * x + |ub| - alpha * ub  <=> alpha * ub - |ub| <= -z + alpha * x
+          */
+         alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
+         coefs[1] = alpha;
+
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, (alpha * ub - REALABS(ub)), SCIPinfinity(scip),
+               FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
       }
-   }
-   else
-   {
-      printf("UNDERESTIMATE\n");
-
-      /* this case can be removed after implementing the INITLP callback of the expression handler */
-      success = TRUE;
-      lincoef = SCIPisLE(scip, refpoint, 0.0) ? -1.0 : 1.0;
-      linconstant = 0.0;
-   }
-
-   /* create cut */
-   if( success )
-   {
-      /* create cut */
-      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "abs_cut", 0, NULL, NULL,
-            overestimate ? -linconstant : -SCIPinfinity(scip),
-            overestimate ? SCIPinfinity(scip) : -linconstant,
-            FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1) );
    }
 
    return SCIP_OKAY;
 }
 
+/** expression separation initialization callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_ROW* secant;
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+   assert(exprdata->rowneg == NULL);
+   assert(exprdata->rowpos == NULL);
+
+   *infeasible = FALSE;
+   secant = NULL;
+
+   /* compute initial cuts; do no store the secant in the expression data */
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &exprdata->rowneg, &exprdata->rowpos, &secant) );
+   assert(exprdata->rowneg != NULL && exprdata->rowpos != NULL);
+
+   SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowneg, FALSE, infeasible) );
+   if( !*infeasible )
+   {
+      SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowpos, FALSE, infeasible) );
+   }
+
+   /* it might happen that we could not compute a secand (because of fixed or unbounded variables) */
+   if( !*infeasible && secant != NULL )
+   {
+      SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
+   }
+
+   /* release secant */
+   if( secant != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+   }
+   assert(secant == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** expression separation deinitialization callback */
+static
+SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaAbs)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   if( exprdata->rowneg != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &exprdata->rowneg) );
+   }
+
+   if( exprdata->rowpos != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &exprdata->rowpos) );
+   }
+
+   assert(exprdata->rowneg == NULL);
+   assert(exprdata->rowpos == NULL);
+
+   return SCIP_OKAY;
+}
+
+
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 {
-   SCIP_ROW* cut;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_ROW* rows[3];
    SCIP_Real efficacy;
+   SCIP_Bool infeasible;
+   int i;
 
-   cut = NULL;
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   infeasible = FALSE;
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointAbs(scip, conshdlr, expr, sol, &cut) );
-
-   /* failed to compute a cut */
-   if( cut == NULL )
-      return SCIP_OKAY;
-
-   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
-
-   /* add cut if it is violated */
-   if( SCIPisGE(scip, efficacy, minefficacy) )
+   /* create tangents if it not happened so far (might be possible if the constraint is not 'initial') */
+   if( exprdata->rowneg == NULL || exprdata->rowpos == NULL )
    {
-      SCIP_Bool infeasible;
+      assert(exprdata->rowneg == NULL && exprdata->rowpos == NULL);
 
-      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
+      SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &exprdata->rowneg, &exprdata->rowpos, NULL) );
+   }
+   assert(exprdata->rowneg != NULL && exprdata->rowpos != NULL);
 
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
-      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
-#endif
+   rows[0] = exprdata->rowneg;
+   rows[1] = exprdata->rowpos;
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, NULL, NULL, &rows[2]) );
+
+   for( i = 0; i < 3; ++i )
+   {
+      if( rows[i] == NULL || SCIProwIsInLP(rows[i]) )
+         continue;
+
+      efficacy = -SCIPgetRowSolFeasibility(scip, rows[i], sol);
+      if( SCIPisGE(scip, efficacy, minefficacy) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, sol, rows[i], FALSE, &infeasible) );
+         *ncuts += 1;
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+         else
+            *result = SCIP_SEPARATED;
+      }
    }
 
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   /* release the secant */
+   if( rows[2] != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &rows[2]) );
+   }
 
    return SCIP_OKAY;
 }
@@ -376,6 +462,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
@@ -391,11 +479,17 @@ SCIP_RETCODE SCIPcreateConsExprExprAbs(
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
    assert(child != NULL);
    assert(SCIPfindConsExprExprHdlr(consexprhdlr, "abs") != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "abs"), NULL, 1, &child) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
+   assert(exprdata != NULL);
+   exprdata = NULL;
+
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "abs"), exprdata, 1, &child) );
 
    return SCIP_OKAY;
 }

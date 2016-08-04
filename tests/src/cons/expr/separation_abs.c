@@ -28,8 +28,16 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_ROW* cut;
+   SCIP_ROW* rowneg;
+   SCIP_ROW* rowpos;
+   SCIP_ROW* secant;
+   SCIP_VAR* var;
+   SCIP_Real coef;
    int i;
+
+   rowneg = NULL;
+   rowpos = NULL;
+   secant = NULL;
 
    SCIP_CALL( SCIPcreateConsExprExprAbs(scip, conshdlr, &expr, xexpr) );
 
@@ -38,28 +46,55 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
-   /* compute a cut for which we need an overestimation (secant) */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, -0.5) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 3.0) );
+   /* compute all possible cuts */
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &rowneg, &rowpos, &secant) );
 
-   cut = NULL;
-   SCIP_CALL( separatePointAbs(scip, conshdlr, expr, sol, &cut) );
+   /* check left tangent */
+   cr_assert(rowneg != NULL);
+   cr_assert_eq(SCIProwGetNNonz(rowneg), 2);
+   cr_assert_eq(SCIProwGetLhs(rowneg), -SCIPinfinity(scip));
+   cr_assert_eq(SCIProwGetRhs(rowneg), 0.0);
 
-   printf("%e %e\n", SCIProwGetLhs(cut), SCIProwGetRhs(cut));
-
-   cr_assert(cut != NULL);
-   cr_assert_eq(SCIProwGetNNonz(cut), 2);
-   cr_assert(SCIPisEQ(scip, SCIProwGetLhs(cut), -5.0 / 3.0));
-   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
-
-
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
+   for( i = 0; i < SCIProwGetNNonz(rowneg); ++i )
    {
-      SCIP_VAR* var;
-      SCIP_Real coef;
+      var = SCIPcolGetVar(SCIProwGetCols(rowneg)[i]);
+      coef = SCIProwGetVals(rowneg)[i];
 
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
+      if( var == SCIPvarGetTransVar(x) || var == SCIPvarGetTransVar(auxvar) )
+         cr_assert_eq(coef, -1.0);
+      else
+         cr_assert(FALSE, "found an unknown variable");
+   }
+
+   /* check right tangent */
+   cr_assert(rowpos != NULL);
+   cr_assert_eq(SCIProwGetNNonz(rowpos), 2);
+   cr_assert_eq(SCIProwGetLhs(rowpos), 0.0);
+   cr_assert_eq(SCIProwGetRhs(rowpos), SCIPinfinity(scip));
+
+   for( i = 0; i < SCIProwGetNNonz(rowpos); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(rowpos)[i]);
+      coef = SCIProwGetVals(rowpos)[i];
+
+      if( var == SCIPvarGetTransVar(x) )
+         cr_assert_eq(coef, 1.0);
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_assert_eq(coef, -1.0);
+      else
+         cr_assert(FALSE, "found an unknown variable");
+   }
+
+   /* check secant */
+   cr_assert(secant != NULL);
+   cr_assert_eq(SCIProwGetNNonz(secant), 2);
+   cr_assert(SCIPisEQ(scip, SCIProwGetLhs(secant), -5.0/3.0));
+   cr_assert_eq(SCIProwGetRhs(secant), SCIPinfinity(scip));
+
+   for( i = 0; i < SCIProwGetNNonz(secant); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(secant)[0]);
+      coef = SCIProwGetVals(secant)[0];
 
       if( var == SCIPvarGetTransVar(x) )
          cr_assert(SCIPisEQ(scip, coef, 2.0 / 3.0));
@@ -69,37 +104,10 @@ Test(separation, absolute, .init = setup, .fini = teardown,
          cr_assert(FALSE, "found an unknown variable");
    }
 
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-
-   /* compute a cut for which we need an underestimation (linearization) */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -10.0) );
-
-   cut = NULL;
-   SCIP_CALL( separatePointAbs(scip, conshdlr, expr, sol, &cut) );
-
-   cr_assert(cut != NULL);
-   cr_assert_eq(SCIProwGetNNonz(cut), 2);
-   cr_assert_eq(SCIProwGetLhs(cut), -SCIPinfinity(scip));
-   cr_assert(SCIPisEQ(scip, SCIProwGetRhs(cut), 0.0));
-
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real coef;
-
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
-
-      if( var == SCIPvarGetTransVar(x) )
-         cr_assert_eq(coef, -1.0);
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_assert_eq(coef, -1.0);
-      else
-         cr_assert(FALSE, "found an unknown variable");
-   }
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   /* release all cuts */
+   SCIP_CALL( SCIPreleaseRow(scip, &rowneg) );
+   SCIP_CALL( SCIPreleaseRow(scip, &rowpos) );
+   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
