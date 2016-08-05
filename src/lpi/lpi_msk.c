@@ -1204,10 +1204,12 @@ SCIP_RETCODE SCIPlpiChgBounds(
    MSKboundkeye* bkx;
    double* blx;
    double* bux;
+   int i;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("Calling SCIPlpiChgBounds (%d)\n",lpi->lpid);
 
@@ -1217,6 +1219,22 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    if (ncols == 0)
       return SCIP_OKAY;
+
+   /* @todo This test could be integrated into generateMskBounds, but then this function needs to be able to return an
+    * error, which requires some rewriting. */
+   for (i = 0; i < ncols; ++i)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+   }
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
    SCIP_ALLOC( BMSallocMemoryArray(&blx, ncols) );
