@@ -3223,7 +3223,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 /** expression walk callback for separation deinitialization */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSepaEnterExpr)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
@@ -3330,6 +3330,7 @@ SCIP_RETCODE initSepa(
 
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL);
       assert(conss[c] != NULL);
 
       /* call LP initialization callback for 'initial' constraints only */
@@ -3372,6 +3373,7 @@ SCIP_RETCODE exitSepa(
 
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL);
       assert(conss[c] != NULL);
 
       consdata = SCIPconsGetData(conss[c]);
@@ -4724,7 +4726,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrInitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa))  /**< separation initialization callback (can be NULL) */
    )
-{
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->initsepa = initsepa;
@@ -4739,7 +4741,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrExitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
    )
-{
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->exitsepa = exitsepa;

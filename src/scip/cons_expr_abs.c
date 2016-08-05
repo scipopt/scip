@@ -27,7 +27,7 @@
 #include "scip/cons_expr_abs.h"
 
 #define ABS_PRECEDENCE  70000
-#define ABS_HASHKEY     SCIPcalcFibHash(7187)
+#define ABS_HASHKEY     SCIPcalcFibHash(7187.0)
 
 /*
  * Data structures
@@ -51,7 +51,7 @@ struct SCIP_ConsExpr_ExprData
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -60,7 +60,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
-{
+{  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
    assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
@@ -72,7 +72,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -88,7 +88,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printAbs)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
 
    switch( stage )
@@ -113,6 +113,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printAbs)
          break;
       }
 
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       default: ;
    }
 
@@ -144,10 +145,10 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalAbs)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
    *val = REALABS(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 

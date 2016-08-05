@@ -37,9 +37,9 @@
 #include "scip/cons_expr_value.h"
 
 #define SUM_PRECEDENCE      40000
-#define SUM_HASHKEY         SCIPcalcFibHash(47161)
+#define SUM_HASHKEY         SCIPcalcFibHash(47161.0)
 #define PRODUCT_PRECEDENCE  50000
-#define PRODUCT_HASHKEY     SCIPcalcFibHash(54949)
+#define PRODUCT_HASHKEY     SCIPcalcFibHash(54949.0)
 
 /** ensures that a block memory array has at least a given size
  *
@@ -72,7 +72,6 @@ struct SCIP_ConsExpr_ExprData
 {
    SCIP_Real  constant;     /**< constant coefficient */
    SCIP_Real* coefficients; /**< coefficients / exponents of children */
-   int        ncoefs;       /**< number of coefficients (usually also number of children, but don't count on it) */
    int        coefssize;    /**< size of the coefficients array */
 
    SCIP_ROW*  row;          /**< row created during initLP() */
@@ -182,7 +181,7 @@ SCIP_RETCODE createExprlistFromExprs(
    assert(nexprs > 0);
    assert(coef != 0);
 
-   debugSimplify("building expr list from %d expressions\n", nexprs);
+   debugSimplify("building expr list from %d expressions\n", nexprs); /*lint !e506 !e681*/
    for( i = nexprs - 1; i >= 0; --i )
    {
       EXPRNODE* newnode;
@@ -286,7 +285,7 @@ SCIP_RETCODE mergeSumExprlist(
 
       compareres = SCIPcompareConsExprExprs(current->expr, tomergenode->expr);
 
-      debugSimplify("comparing exprs:\n");
+      debugSimplify("comparing exprs:\n"); /*lint !e506 !e681*/
       #ifdef SIMPLIFY_DEBUG
       SCIP_CALL( SCIPprintConsExprExpr(scip, current->expr, NULL) );
       SCIPinfoMessage(scip, NULL, " vs ");
@@ -307,7 +306,7 @@ SCIP_RETCODE mergeSumExprlist(
          /* if coef is 0, remove term: if current is the first node, pop; if not, use previous and current to remove */
          if( current->coef == 0.0 )
          {
-            debugSimplify("GOT 0 WHILE ADDING UP\n");
+            debugSimplify("GOT 0 WHILE ADDING UP\n"); /*lint !e506 !e681*/
             if( current == *finalchildren )
             {
                assert(previous == NULL);
@@ -505,8 +504,6 @@ SCIP_RETCODE simplifyTerm(
       /* distribute */
       SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
                SCIPgetConsExprExprSumCoefs(expr), coef, SCIPgetConsExprExprNChildren(expr), simplifiedterm) );
-
-      return SCIP_OKAY;
    }
    else
    {
@@ -515,7 +512,6 @@ SCIP_RETCODE simplifyTerm(
       assert(strcmp(exprtype, "val") != 0);
 
       SCIP_CALL( createExprNode(scip, expr, coef, simplifiedterm) );
-      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -554,7 +550,7 @@ SCIP_RETCODE simplifyFactor(
    if( strcmp(basetype, "val") == 0 )
    {
       /* TODO: if val < 0 and exponent non integer -> domain error/undefined etc */
-      debugSimplify("[simplifyFactor] seeing value %g, exponent %g -> include in coef\n", SCIPgetConsExprExprValueValue(base), exponent);
+      debugSimplify("[simplifyFactor] seeing value %g, exponent %g -> include in coef\n", SCIPgetConsExprExprValueValue(base), exponent); /*lint !e506 !e681*/
       *simplifiedcoef *= pow(SCIPgetConsExprExprValueValue(base), exponent);
       return SCIP_OKAY;
    }
@@ -577,7 +573,7 @@ SCIP_RETCODE simplifyFactor(
     * eg. SP3 below might still be applicable even with non-integer exponents */
    if( !SCIPisIntegral(scip, exponent) )
    {
-      debugSimplify("[simplifyFactor] seeing some expr with non-integer exponent %g -> potential child\n", exponent);
+      debugSimplify("[simplifyFactor] seeing some expr with non-integer exponent %g -> potential child\n", exponent); /*lint !e506 !e681*/
       SCIP_CALL( createExprNode(scip, base, exponent, simplifiedfactor) );
       return SCIP_OKAY;
    }
@@ -589,7 +585,7 @@ SCIP_RETCODE simplifyFactor(
     */
    if( exponent == 0.0 )
    {
-      debugSimplify("[simplifyFactor] exponent %g (zero), ignore child\n", exponent);
+      debugSimplify("[simplifyFactor] exponent %g (zero), ignore child\n", exponent); /*lint !e506 !e681*/
       return SCIP_OKAY;
    }
 
@@ -597,7 +593,7 @@ SCIP_RETCODE simplifyFactor(
    if( strcmp(basetype, "prod") == 0 )
    {
       assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
-      debugSimplify("[simplifyFactor] seing a product with exponent %g: include its children\n", exponent);
+      debugSimplify("[simplifyFactor] seing a product with exponent %g: include its children\n", exponent); /*lint !e506 !e681*/
 
       /* if `base` is a product and exponent is not 1, we have to duplicate the expression if someone else is pointing to it
        * because we will modify it; we distribute the exponent among the children of `base`. this operation can render `base`
@@ -658,15 +654,13 @@ SCIP_RETCODE simplifyFactor(
     */
    if( strcmp(basetype, "sum") == 0 && SCIPgetConsExprExprNChildren(base) == 1 && SCIPgetConsExprExprSumConstant(base) == 0.0 )
    {
-      debugSimplify("[simplifyFactor] seing a sum with one term, exponent %g: base should be its child\n", exponent);
+      debugSimplify("[simplifyFactor] seing a sum with one term, exponent %g: base should be its child\n", exponent); /*lint !e506 !e681*/
       /* assert SS7 holds */
       assert(SCIPgetConsExprExprSumCoefs(base)[0] != 1.0);
 
       /* update simplifiedcoef and simplify new base */
       *simplifiedcoef *= pow(SCIPgetConsExprExprSumCoefs(base)[0], exponent);
       SCIP_CALL( simplifyFactor(scip, SCIPgetConsExprExprChildren(base)[0], exponent, simplifiedcoef, simplifiedfactor) );
-
-      return SCIP_OKAY;
    }
    else
    {
@@ -674,7 +668,6 @@ SCIP_RETCODE simplifyFactor(
       assert(strcmp(basetype, "prod") != 0);
       assert(strcmp(basetype, "val") != 0);
       SCIP_CALL( createExprNode(scip, base, exponent, simplifiedfactor) );
-      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -957,12 +950,12 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    }
 
    /* build sum expression from finalchildren and post-simplify */
-   debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren));
+   debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren)); /*lint !e506 !e681*/
 
    /* enforces SS6: if list is empty, return value */
    if( finalchildren == NULL )
    {
-      debugSimplify("got empty list, return value\n");
+      debugSimplify("got empty list, return value\n"); /*lint !e506 !e681*/
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedconstant) );
    }
    /* enforces SS7
@@ -979,7 +972,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    }
 
    /* free memory */
-   freeExprlist(scip, &finalchildren);
+   SCIP_CALL( freeExprlist(scip, &finalchildren) );
    assert(finalchildren == NULL);
 
    return SCIP_OKAY;
@@ -1032,8 +1025,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
        */
       if( simplifiedcoef == 0.0 )
       {
-         freeExprlist(scip, &finalchildren);
-         freeExprlist(scip, &unsimplifiedchildren);
+         SCIP_CALL( freeExprlist(scip, &finalchildren) );
+         SCIP_CALL( freeExprlist(scip, &unsimplifiedchildren) );
          assert(finalchildren == NULL);
          break;
       }
@@ -1054,12 +1047,12 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    }
 
    /* build product expression from finalchildren and post-simplify */
-   debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren));
+   debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren)); /*lint !e506 !e681*/
 
    /* enforces SP10: if list is empty, return value */
    if( finalchildren == NULL )
    {
-      debugSimplify("got empty list, return value %g\n", simplifiedcoef);
+      debugSimplify("got empty list, return value %g\n", simplifiedcoef); /*lint !e506 !e681*/
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
    }
    /* enforces SP9: if finalchildren has only one expr with exponent 1.0 and coef 1.0, return that expr */
@@ -1099,7 +1092,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    }
 
    /* free memory */
-   freeExprlist(scip, &finalchildren);
+   SCIP_CALL( freeExprlist(scip, &finalchildren) );
    assert(finalchildren == NULL);
 
    assert(*simplifiedexpr != NULL);
@@ -1116,7 +1109,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
-{
+{  /*lint --e{715}*/
    return compareSumProduct(
          SCIPgetConsExprExprSumConstant(expr1), SCIPgetConsExprExprSumCoefs(expr1),
          SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
@@ -1129,7 +1122,7 @@ SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
-{
+{  /*lint --e{715}*/
    return compareSumProduct(
          SCIPgetConsExprExprProductCoef(expr1), SCIPgetConsExprExprProductExponents(expr1),
          SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
@@ -1139,7 +1132,7 @@ SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSum)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrSum(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -1148,7 +1141,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSum)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrProduct(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -1157,7 +1150,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSumProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* sourceexprdata;
 
    assert(targetexprdata != NULL);
@@ -1259,6 +1252,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       default: ;
    }
 
@@ -1360,7 +1354,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
@@ -1372,7 +1366,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
    *val = exprdata->constant;
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID);
+      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID); /*lint !e777*/
 
       *val += exprdata->coefficients[c] * SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
    }
@@ -1727,7 +1721,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real childval;
    SCIP_Real powval;
@@ -1742,7 +1736,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       childval = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(childval != SCIP_INVALID);
+      assert(childval != SCIP_INVALID); /*lint !e777*/
 
       /* according to the man page of pow(), this should also work fine for cases like pow(<negative>, <integer>) */
       powval = pow(childval, exprdata->coefficients[c]);
