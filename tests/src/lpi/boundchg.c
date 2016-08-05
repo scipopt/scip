@@ -68,6 +68,24 @@ void teardown(void)
 TestSuite(boundchg, .init = setup, .fini = teardown);
 
 /** TESTS **/
+Test(boundchg, simple_bound_test)
+{
+   SCIP_Real lb = 1.0;
+   SCIP_Real ub = 2.0;
+   SCIP_Real lbnew;
+   SCIP_Real ubnew;
+   int ind = 0;
+
+   /* change bounds to some value */
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub) );
+
+   /* get bounds and compare */
+   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
+
+   cr_assert_float_eq(lb, lbnew, EPS, "Violation of lower bounds: %g != %g\n", lb, lbnew);
+   cr_assert_float_eq(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
+}
+
 Test(boundchg, change_bound_by_small_value)
 {
    SCIP_Real lb;
