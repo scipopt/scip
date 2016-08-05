@@ -9609,7 +9609,7 @@ SCIP_RETCODE SCIPreadProb(
          }
 
          /* in case the permutation seed is different to -1, permute the original problem */
-         if( scip->set->misc_permutationseed > -1 )
+         if( scip->set->random_permutationseed > -1 )
          {
             SCIP_Bool permuteconss;
             SCIP_Bool permutevars;
@@ -9617,7 +9617,7 @@ SCIP_RETCODE SCIPreadProb(
 
             permuteconss = scip->set->misc_permuteconss;
             permutevars = scip->set->misc_permutevars;
-            permutationseed = scip->set->misc_permutationseed;
+            permutationseed = scip->set->random_permutationseed;
 
             SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
          }
@@ -13085,7 +13085,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
    /* in case the permutation seed is different to -1, permute the transformed problem */
-   if( scip->set->misc_permutationseed > -1 )
+   if( scip->set->random_permutationseed > -1 )
    {
       SCIP_Bool permuteconss;
       SCIP_Bool permutevars;
@@ -13093,7 +13093,7 @@ SCIP_RETCODE SCIPtransformProb(
 
       permuteconss = scip->set->misc_permuteconss;
       permutevars = scip->set->misc_permutevars;
-      permutationseed = scip->set->misc_permutationseed;
+      permutationseed = scip->set->random_permutationseed;
 
       SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
    }
@@ -15545,7 +15545,7 @@ SCIP_RETCODE SCIPapplyReopt(
 
    SCIP_CALL( SCIPreoptApply(scip->reopt, scip, scip->set, scip->stat, scip->transprob, scip->origprob, scip->tree,
          scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, scip->mem->probmem,
-         (unsigned int)scip->set->misc_permutationseed, reoptnode, id, estimate, childnodes, ncreatedchilds,
+         (unsigned int)scip->set->random_randomseedshift, reoptnode, id, estimate, childnodes, ncreatedchilds,
          naddedconss, childnodessize, success) );
 
    return SCIP_OKAY;
@@ -15920,7 +15920,7 @@ SCIP_RETCODE SCIPsplitReoptRoot(
    SCIP_CALL( checkStage(scip, "SCIPsplitReoptRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptSplitRoot(scip->reopt, scip->tree, scip->set, scip->mem->probmem,
-         (unsigned int)scip->set->misc_permutationseed, ncreatedchilds, naddedconss) );
+         (unsigned int)scip->set->random_randomseedshift, ncreatedchilds, naddedconss) );
 
    return SCIP_OKAY;
 }
@@ -23403,6 +23403,17 @@ SCIP_Bool SCIPallowObjProp(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
+}
+
+/** modifies an initial seed value with the global shift of random seeds */
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
+   )
+{
+   assert(scip != NULL);
+
+   return (unsigned int)(initialseedvalue + scip->set->random_randomseedshift);
 }
 
 /** marks the variable that it must not be multi-aggregated

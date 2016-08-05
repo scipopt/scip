@@ -57,8 +57,10 @@
                                               */
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
-#define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP           */
 #define DEFAULT_USEUCT        FALSE          /* should uct node selection be used at the beginning of the search?     */
+#define DEFAULT_RANDSEED         7           /* initial random seed                                                   */
+
 /* event handler properties */
 #define EVENTHDLR_NAME         "Crossover"
 #define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
@@ -633,7 +635,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->usednodes = 0;
    heurdata->prevlastsol = NULL;
    heurdata->prevbestsol = NULL;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    heurdata->lasttuple = NULL;
    heurdata->nfailures = 0;
    heurdata->prevnsols = 0;
@@ -961,7 +963,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(subscip, (unsigned int) SCIPheurGetNCalls(heur), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (unsigned int)SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* catch LP events of sub-SCIP */
