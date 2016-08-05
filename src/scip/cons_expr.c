@@ -3199,7 +3199,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* skip expression if it has been considered already */
-   if( initsepadata->initsepatag != 0 && initsepadata->initsepatag == expr->initsepatag )
+   if( initsepadata->initsepatag == expr->initsepatag )
    {
       *result = SCIP_CONSEXPREXPRWALK_SKIP;
       return SCIP_OKAY;
@@ -3326,7 +3326,7 @@ SCIP_RETCODE initSepa(
 
    initsepadata.infeasible = FALSE;
    initsepadata.conshdlr = conshdlr;
-   initsepadata.initsepatag = conshdlrdata->lastinitsepatag;
+   initsepadata.initsepatag = (++conshdlrdata->lastinitsepatag);
 
    for( c = 0; c < nconss; ++c )
    {
