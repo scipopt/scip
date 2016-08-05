@@ -50,6 +50,8 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa));  /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa));  /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa));          /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
@@ -69,7 +71,7 @@ struct SCIP_ConsExpr_Expr
    int                     nlockspos;     /**< positive locks counter */
    int                     nlocksneg ;    /**< negative locks counter */
 
-   /* separatio */
+   /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
    unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
 
@@ -84,6 +86,9 @@ struct SCIP_ConsExpr_Expr
    /* propagation */
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
    SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
+
+   /* separation initialization */
+   unsigned int            initsepatag;   /**< flag to store whether an expression has been called during the separation initialization */
 
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */

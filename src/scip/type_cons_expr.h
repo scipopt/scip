@@ -247,6 +247,33 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval)
 
+/** separation initialization method of an expression handler (called during CONSINITLP)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : expression constraint handler
+ *  - expr            : expression
+ *
+ *  output:
+ *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
+ */
+#define SCIP_DECL_CONSEXPR_EXPRINITSEPA(x) SCIP_RETCODE x (\
+      SCIP* scip, \
+      SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_Bool* infeasible)
+
+/** separation deinitialization method of an expression handler (called during CONSEXITSOL)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : expression constraint handler
+ *  - expr            : expression
+ */
+#define SCIP_DECL_CONSEXPR_EXPREXITSEPA(x) SCIP_RETCODE x (\
+      SCIP* scip, \
+      SCIP_CONSEXPR_EXPR* expr)
+
 /** expression separation callback
  *
  * The method tries to separate a given point by using linearization variables stored at each expression.

@@ -27,7 +27,7 @@
 #include "scip/cons_expr_log.h"
 
 #define LOG_PRECEDENCE  80000
-#define LOG_HASHKEY     SCIPcalcFibHash(16273)
+#define LOG_HASHKEY     SCIPcalcFibHash(16273.0)
 
 /*
  * Data structures
@@ -46,7 +46,7 @@
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrLog)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrLog(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -55,7 +55,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrLog)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataLog)
-{
+{  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
    assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
@@ -103,6 +103,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printLog)
          break;
       }
 
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       default: ;
    }
 
@@ -134,11 +135,11 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseLog)
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalLog)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
    if( SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) <= 0.0 )
    {
