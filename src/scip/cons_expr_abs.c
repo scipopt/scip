@@ -243,7 +243,7 @@ SCIP_RETCODE computeCutsAbs(
 
          /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
           *
-          * z = |x| <= alpha * x + |ub| - alpha * ub  <=> alpha * ub - |ub| <= -z + alpha * x
+          * z - |ub| <= alpha * (x - ub)  <=> alpha * ub - |ub| <= -z + alpha * x
           */
          alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
          coefs[1] = alpha;
