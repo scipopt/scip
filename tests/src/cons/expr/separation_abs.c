@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   unittest-cons_epxr.c
- * @brief  unit test for cons_epxr methods
+/**@file   separation_abs.c
+ * @brief  tests separation of abs()
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

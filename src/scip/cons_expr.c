@@ -3214,7 +3214,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    /* stop if we detected infeasibility */
    *result = initsepadata->infeasible ? SCIP_CONSEXPREXPRWALK_ABORT : SCIP_CONSEXPREXPRWALK_CONTINUE;
 
-   /* store the initspea tag */
+   /* store the initsepa tag */
    expr->initsepatag = initsepadata->initsepatag;
 
    return SCIP_OKAY;
@@ -3232,7 +3232,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSepaEnterExpr)
 
    if( *(expr->exprhdlr->exitsepa) != NULL )
    {
-      /* call the separation initialization callback of the expression handler */
+      /* call the separation deinitialization callback of the expression handler */
       SCIP_CALL( (*expr->exprhdlr->exitsepa)(scip, expr) );
    }
 
