@@ -488,7 +488,8 @@ SCIP_RETCODE SCIPcreateConsExprExprAbs(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
    assert(exprdata != NULL);
-   exprdata = NULL;
+
+   BMSclearMemory(exprdata);
 
    SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "abs"), exprdata, 1, &child) );
 
