@@ -26,7 +26,7 @@
 #include "scip/cons_expr_value.h"
 
 #define VALUE_PRECEDENCE     10000
-#define VALUE_HASHKEY        SCIPcalcFibHash(36787)
+#define VALUE_HASHKEY        SCIPcalcFibHash(36787.0)
 
 /** the order of two values is the real order */
 static
@@ -38,12 +38,12 @@ SCIP_DECL_CONSEXPR_EXPRCMP(compareValue)
    val1 = SCIPgetConsExprExprValueValue(expr1);
    val2 = SCIPgetConsExprExprValueValue(expr2);
 
-   return val1 < val2 ? -1 : val1 == val2 ? 0 : 1;
+   return val1 < val2 ? -1 : val1 == val2 ? 0 : 1; /*lint !e777*/
 }
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrValue(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -52,7 +52,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
-{
+{  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
@@ -86,7 +86,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 /** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -117,11 +117,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropValue)
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("Unexpected call of reverse propagation callback of value expression handler.");
    SCIPABORT();
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e527*/
 }
 
 /** expression hash callback */

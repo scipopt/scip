@@ -24,14 +24,14 @@
 
 #include "scip/cons_expr_var.h"
 
-#define VAR_HASHKEY     SCIPcalcFibHash(22153)
+#define VAR_HASHKEY     SCIPcalcFibHash(22153.0)
 
 
 /** the order of two variable is given by their indices
  * @note: this is affected by permutations in the problem! */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareVar)
-{
+{  /*lint --e{715}*/
    int index1;
    int index2;
 
@@ -43,7 +43,7 @@ SCIP_DECL_CONSEXPR_EXPRCMP(compareVar)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( SCIPincludeConsExprExprHdlrVar(scip, consexprhdlr) );
    *valid = TRUE;
 
@@ -53,7 +53,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
 /** expression handler free callback */
 static
 SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrVar)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
    assert(exprhdlr != NULL);
@@ -69,7 +69,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrVar)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
-{
+{  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
@@ -95,7 +95,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataVar)
-{
+{  /*lint --e{715}*/
    SCIP_HASHMAP* var2expr;
    SCIP_VAR* var;
 
@@ -120,7 +120,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataVar)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
 
@@ -134,7 +134,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
 
@@ -146,7 +146,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
 
    assert(expr != NULL);
@@ -154,8 +154,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   SCIPintervalSetBounds(interval, MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)),
-      MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+   SCIPintervalSetBounds(interval, MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)), /*lint !e666*/
+      MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /*lint !e666*/
 
    return SCIP_OKAY;
 }
@@ -163,11 +163,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropVar)
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("Unexpected call of reverse propagation callback of variable expression handler.");
    SCIPABORT();
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e527*/
 }
 
 /** variable hash callback */
@@ -186,7 +186,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
    assert(var != NULL);
 
    *hashkey = VAR_HASHKEY;
-   *hashkey ^= SCIPcalcFibHash(SCIPvarGetIndex(var));
+   *hashkey ^= SCIPcalcFibHash((SCIP_Real)SCIPvarGetIndex(var));
 
    return SCIP_OKAY;
 }
