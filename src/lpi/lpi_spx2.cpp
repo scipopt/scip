@@ -1388,6 +1388,18 @@ SCIP_RETCODE SCIPlpiChgBounds(
       for( i = 0; i < ncols; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsReal());
+
+         if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+         if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+
          lpi->spx->changeBoundsReal(ind[i], lb[i], ub[i]);
          assert(lpi->spx->lowerReal(ind[i]) <= lpi->spx->upperReal(ind[i]) + lpi->spx->realParam(SoPlex::EPSILON_ZERO));
       }

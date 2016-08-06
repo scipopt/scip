@@ -348,6 +348,24 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {  /*lint --e{715}*/
+   int j;
+
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+
+   for (j = 0; j < ncols; ++j)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+   }
+
    return SCIP_OKAY;
 }
 

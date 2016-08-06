@@ -1123,12 +1123,29 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
+   int j;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("changing %d bounds in Xpress\n", ncols);
 
    invalidateSolution(lpi);
+
+   for (j = 0; j < ncols; ++j)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+   }
 
    /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureBoundchgMem(lpi, ncols) );

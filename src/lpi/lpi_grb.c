@@ -1555,17 +1555,29 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
+   int i;
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("changing %d bounds in Gurobi\n", ncols);
-#ifdef SCIP_DEBUG
+
+   for (i = 0; i < ncols; ++i)
    {
-      int i;
-      for( i = 0; i < ncols; ++i )
-         SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+      SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
    }
-#endif
 
    invalidateSolution(lpi);
 
