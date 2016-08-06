@@ -104,7 +104,7 @@ struct SCIP_ConsData
    int                   nvarexprs;          /**< total number of variable expressions */
    SCIP_VAREVENTDATA**   vareventdata;       /**< array containing eventdata for bound change of variables */
 
-   SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
+   SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint */
    SCIP_Real             lhs;                /**< left-hand side */
    SCIP_Real             rhs;                /**< right-hand side */
 
