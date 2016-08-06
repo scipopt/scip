@@ -34,6 +34,7 @@
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
+#include "scip/debug.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -224,6 +225,16 @@ struct SCIP_ConsExpr_PrintDotData
    SCIP_HASHMAP*           visitedexprs;     /**< hashmap storing expressions that have been printed already */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
+
+/** data passed on during creating of auxiliary variables */
+typedef struct
+{
+   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
+#ifdef SCIP_DEBUG_SOLUTION
+   SCIP_SOL*               debugsol;         /**< debug solutionsolution to separate (NULL for separating the LP solution) */
+#endif
+} CREATE_AUXVARS_DATA;
+
 
 /*
  * Local methods
@@ -3021,17 +3032,20 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   CREATE_AUXVARS_DATA* createdata;
 
    assert(expr != NULL);
    assert(result != NULL);
+   assert(data != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
 
-   conshdlr = (SCIP_CONSHDLR*)data;
+   createdata = (CREATE_AUXVARS_DATA *)data;
+   conshdlr = createdata->conshdlr;
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlr != NULL);
+   assert(conshdlrdata != NULL);
    assert(conshdlrdata->auxvarid >= 0);
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -3055,6 +3069,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 
       /* add variable locks in both directions */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
+
+#ifdef SCIP_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
+      {
+         /* store debug solution of auxiliar variable */
+         assert(createdata->debugsol != NULL);
+         SCIP_CALL( SCIPevalConsExprExpr(scip, expr, createdata->debugsol, 0) );
+         SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
+      }
+#endif
    }
    else
    {
@@ -3111,12 +3135,22 @@ SCIP_RETCODE createAuxVars(
    int                   nconss              /**< total number of constraints */
    )
 {
+   CREATE_AUXVARS_DATA createdata;
    SCIP_CONSDATA* consdata;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
 
+   createdata.conshdlr = conshdlr;
+#ifdef SCIP_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      createdata.debugsol = NULL;
+      SCIP_CALL( SCIPdebugGetSol(scip, &createdata.debugsol) );
+      assert(createdata.debugsol != NULL);
+   }
+#endif
    for( i = 0; i < nconss; ++i )
    {
       assert(conss != NULL && conss[i] != NULL);
@@ -3126,7 +3160,7 @@ SCIP_RETCODE createAuxVars(
 
       if( consdata->expr != NULL && consdata->expr->auxvar == NULL )
       {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, createAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, createAuxVarsEnterExpr, NULL, NULL, NULL, &createdata) );
 
          /* set the bounds of the auxiliary variable of the root node to [lhs,rhs] */
          assert(SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->expr->auxvar)));
