@@ -2118,7 +2118,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIPdebugMessage("  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
    /* mark constraint to be propagated again */
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
+   /* TODO: is this the correct fix? https://git.zib.de/integer/scip/issues/1037 */
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
       SCIPdebugMessage("  propagate %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
@@ -5727,6 +5728,10 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval));
 
    *cutoff = FALSE;
+
+   /* FIXME: this is a hack that solves some numerical issues: see https://git.zib.de/integer/scip/issues/1037 */
+   newbounds.inf = newbounds.inf - SCIPfeastol(scip);
+   newbounds.sup = newbounds.sup + SCIPfeastol(scip);
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalGetInf(newbounds) > SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))
