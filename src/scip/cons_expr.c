@@ -3467,6 +3467,22 @@ SCIP_RETCODE separatePoint(
       sepadata.ncuts = 0;
       sepadata.sepatag = ++(conshdlrdata->lastsepatag);
 
+      #ifdef SEPA_DEBUG
+      {
+         int i;
+         printf("separating point\n");
+         for( i = 0; i < consdata->nvarexprs; ++i )
+         {
+            SCIP_VAR* var;
+            var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+            printf("%s = %g bounds: %g,%g\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         }
+         printf("in constraint\n");
+         SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+         SCIPinfoMessage(scip, NULL, ";\n");
+      }
+      #endif
+
       /* walk through the expression tree and call separation callback functions */
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, separateSolEnterExpr, NULL, NULL, NULL, (void*)&sepadata) );
 

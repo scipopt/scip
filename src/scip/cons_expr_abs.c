@@ -248,8 +248,9 @@ SCIP_RETCODE computeCutsAbs(
          alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
          coefs[1] = alpha;
 
+         /* secants are only valid locally */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, (alpha * ub - REALABS(ub)), SCIPinfinity(scip),
-               FALSE, FALSE, FALSE) );
+               TRUE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
       }
    }

@@ -1461,7 +1461,7 @@ SCIP_RETCODE separatePointSum(
    vars[SCIPgetConsExprExprNChildren(expr)] = auxvar;
    coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
 
-   /* create cut */
+   /* create cut; it is globally valid because it is linear */
    SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
          FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
@@ -1857,6 +1857,7 @@ SCIP_RETCODE separatePointProduct(
       SCIP_Real lincoef;
       SCIP_Real linconstant;
       SCIP_Real refpoint;
+      SCIP_Bool islocal;
 
       /* collect variable */
       child = SCIPgetConsExprExprChildren(expr)[0];
@@ -1875,15 +1876,21 @@ SCIP_RETCODE separatePointProduct(
 
       /* decide whether to use linearization or secant */
       if( (exprdata->constant < 0 && overestimate) || (exprdata->constant > 0 && !overestimate) )
+      {
          SCIPaddSquareLinearization(scip, exprdata->constant, refpoint, SCIPvarIsIntegral(x), &lincoef, &linconstant, &success);
+         islocal = FALSE; /* linearization are globally valid */
+      }
       else
+      {
          SCIPaddSquareSecant(scip, exprdata->constant, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpoint, &lincoef, &linconstant, &success);
+         islocal = TRUE; /* secants are only valid locally */
+      }
 
       /* @todo  allow lhs/rhs of +/- infinity? */
       if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
          SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+               SCIPinfinity(scip), islocal, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoef) );
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
@@ -1941,8 +1948,9 @@ SCIP_RETCODE separatePointProduct(
       /* @todo allow lhs/rhs of +/- infinity? */
       if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
+         /* McCormicks are only valid locally */
          SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+               SCIPinfinity(scip), TRUE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );

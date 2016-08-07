@@ -181,6 +181,7 @@ SCIP_RETCODE separatePointExp(
    SCIP_Real refpoint;
    SCIP_Real lincoef;
    SCIP_Real linconstant;
+   SCIP_Bool islocal;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -224,11 +225,13 @@ SCIP_RETCODE separatePointExp(
    {
       SCIPaddExpSecant(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), &lincoef, &linconstant,
          &success);
+      islocal = TRUE; /* secants are only valid locally */
    }
    else
    {
       SCIPaddExpLinearization(scip, SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), refpoint, &lincoef, &linconstant,
          &success);
+      islocal = FALSE; /* linearization are globally valid */
    }
 
    /* create cut if it was successful */
@@ -237,7 +240,7 @@ SCIP_RETCODE separatePointExp(
       SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "exp_cut", 0, NULL, NULL,
             overestimate ? -linconstant : -SCIPinfinity(scip),
             overestimate ? SCIPinfinity(scip) : -linconstant,
-            FALSE, FALSE, FALSE) );
+            islocal, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
       SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, lincoef) );
