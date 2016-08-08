@@ -753,7 +753,10 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
    );
 
-/** simplifies an expression */
+/** simplifies an expression
+ * The given expression will be released and overwritten with the simplified expression.
+ * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
+ */
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
