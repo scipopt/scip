@@ -58,11 +58,11 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    var = SCIPgetConsExprExprVarVar(expr);
    assert(var != NULL);
 
-   /* if var is active there is nothing to simplify */
+   /* if var is active then there is nothing to simplify */
    if( SCIPvarIsActive(var) )
    {
       *simplifiedexpr = expr;
-      /* we have to capture it, since it must simulated a "normal" simplified call in which a new expression is created */
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
       SCIPcaptureConsExprExpr(*simplifiedexpr);
       return SCIP_OKAY;
    }
@@ -86,8 +86,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
       assert(requsize <= nvars);
    }
-
-   printf("probvar linearsum has nvars %d\n", nvars);
 
    /* FIXME this should disappear when we finally remove the conshdlr argument from createConsExpr* */
    consexprhdlr = SCIPfindConshdlr(scip, "expr");
