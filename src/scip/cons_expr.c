@@ -1529,14 +1529,14 @@ SCIP_RETCODE forwardPropCons(
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   SCIP_Bool*              tightened         /**< buffer to store whether some variable bound have been reduced */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    );
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   SCIP_Bool*              tightened         /**< buffer to store whether some variable bound have been reduced */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
 {
    SCIP_INTERVAL interval;
@@ -1545,13 +1545,13 @@ SCIP_RETCODE forwardPropCons(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(infeasible != NULL);
-   assert(tightened != NULL);
+   assert(ntightenings != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    *infeasible = FALSE;
-   *tightened = FALSE;
+   *ntightenings = 0;
 
    /* propagate active constraints only */
    if( !SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
@@ -1567,8 +1567,6 @@ SCIP_RETCODE forwardPropCons(
    }
    else
    {
-      int ntightenings;
-
       /* compare root expression interval with constraint sides; store the result in the root expression */
       SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
 
@@ -1583,11 +1581,7 @@ SCIP_RETCODE forwardPropCons(
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      ntightenings = 0;
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, &ntightenings) );
-
-      if( ntightenings > 0 )
-         *tightened = TRUE;
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, ntightenings) );
    }
 
 #ifdef SCIP_DEBUG
@@ -1811,7 +1805,12 @@ SCIP_RETCODE propConss(
             SCIPdebugMessage("call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
-            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &success) );
+            cutoff = FALSE;
+            ntightenings = 0;
+
+            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &ntightenings) );
+            assert(ntightenings >= 0);
+            *nchgbds += ntightenings;
 
             if( cutoff )
             {
@@ -1820,7 +1819,7 @@ SCIP_RETCODE propConss(
                return SCIP_OKAY;
             }
 
-            if( success )
+            if( ntightenings > 0 )
                *result = SCIP_REDUCEDDOM;
 
             /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */

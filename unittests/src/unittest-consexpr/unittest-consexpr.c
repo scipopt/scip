@@ -52,7 +52,8 @@ SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   SCIP_Bool*              infeasible        /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    );
 
 /* declaration as in cons_expr.c */
@@ -2291,7 +2292,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
       assert(!infeasible);
@@ -2327,7 +2328,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.0, 1.0) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
       assert(!infeasible);
@@ -2355,7 +2356,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
       assert(!infeasible);
@@ -2377,7 +2378,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "exp(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 2.0) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
       assert(!infeasible);
@@ -2401,7 +2402,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       SCIP_CALL( reversePropConss(scip, &cons, 1, &infeasible, &ntightenings) );
       assert(!infeasible);
@@ -2472,7 +2473,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, 0.0, 2.0) );
 
       /* apply forward propagation */
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, xexpr, -1, 1));
       assert(CHECK_EXPRINTERVAL(scip, yexpr, 2, 3));
@@ -2516,7 +2517,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr, -5.0, SCIPinfinity(scip)));
 
@@ -2533,7 +2534,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr, -SCIPinfinity(scip), SCIPinfinity(scip)));
 
@@ -2552,7 +2553,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, SCIPinfinity(scip)));
 
@@ -2573,7 +2574,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.5));
 
@@ -2584,7 +2585,7 @@ SCIP_RETCODE testPropagation(void)
       expr->children[1]->interval.sup = 0.2;
 
       /* new interval should be [0,1] intersected with [-2, 0.4] */
-      SCIP_CALL( forwardPropCons(scip, cons, TRUE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, TRUE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.4));
 
@@ -2608,7 +2609,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 * <x> * <y>", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -7.0, -6.1) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(infeasible);
       assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
 
@@ -2621,7 +2622,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + <x> / (1 + <y>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, -0.1) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
       assert(infeasible);
 
@@ -2634,7 +2635,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + exp(-5 * <x> + <y>^2)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -10.0, -0.1) );
 
-      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons, FALSE, &infeasible, &ntightenings) );
       assert(SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)));
       assert(infeasible);
 
@@ -2675,10 +2676,10 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", expr2, 3.5, 5.0) );
 
       /* apply forward propagation for both constraints */
-      SCIP_CALL( forwardPropCons(scip, cons1, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons1, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr1, 0.0, 1.0));
-      SCIP_CALL( forwardPropCons(scip, cons2, FALSE, &infeasible) );
+      SCIP_CALL( forwardPropCons(scip, cons2, FALSE, &infeasible, &ntightenings) );
       assert(!infeasible);
       assert(CHECK_EXPRINTERVAL(scip, expr2, 3.5, 4.0));
 
