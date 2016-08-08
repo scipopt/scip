@@ -1528,13 +1528,15 @@ SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   SCIP_Bool*              infeasible        /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   SCIP_Bool*              tightened         /**< buffer to store whether some variable bound have been reduced */
    );
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   SCIP_Bool*              infeasible        /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   SCIP_Bool*              tightened         /**< buffer to store whether some variable bound have been reduced */
    )
 {
    SCIP_INTERVAL interval;
@@ -1543,11 +1545,13 @@ SCIP_RETCODE forwardPropCons(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(infeasible != NULL);
+   assert(tightened != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    *infeasible = FALSE;
+   *tightened = FALSE;
 
    /* propagate active constraints only */
    if( !SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
@@ -1563,6 +1567,8 @@ SCIP_RETCODE forwardPropCons(
    }
    else
    {
+      int ntightenings;
+
       /* compare root expression interval with constraint sides; store the result in the root expression */
       SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
 
@@ -1577,7 +1583,11 @@ SCIP_RETCODE forwardPropCons(
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, NULL) );
+      ntightenings = 0;
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, &ntightenings) );
+
+      if( ntightenings > 0 )
+         *tightened = TRUE;
    }
 
 #ifdef SCIP_DEBUG
@@ -1801,7 +1811,7 @@ SCIP_RETCODE propConss(
             SCIPdebugMessage("call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
-            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff) );
+            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &success) );
 
             if( cutoff )
             {
@@ -1809,6 +1819,9 @@ SCIP_RETCODE propConss(
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
+
+            if( success )
+               *result = SCIP_REDUCEDDOM;
 
             /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
             consdata->ispropagated = TRUE;
@@ -5753,12 +5766,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to add the total number of tightenings (NULL if not needed) */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings */
    )
 {
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
+   assert(ntightenings != NULL);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval));
 
    *cutoff = FALSE;
@@ -5780,6 +5794,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    if( SCIPisLbBetter(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))
       || SCIPisUbBetter(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
    {
+      SCIP_VAR* var;
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "tighten bounds of ");
@@ -5803,10 +5818,10 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
          return SCIP_OKAY;
 
-      /* apply bound tightening directly for variable expressions */
-      if( strcmp(expr->exprhdlr->name, "var") == 0 )
+      var = SCIPgetConsExprExprLinearizationVar(expr);
+
+      if( var != NULL )
       {
-         SCIP_VAR* var;
          SCIP_Bool tightened;
 
 #ifdef SCIP_DEBUG
@@ -5816,54 +5831,24 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          oldub = SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(expr));
 #endif
 
-         var = SCIPgetConsExprExprVarVar(expr);
-         assert(var != NULL);
-
          /* tighten lower bound */
          SCIP_CALL( SCIPtightenVarLb(scip, var, SCIPintervalGetInf(expr->interval), FALSE, cutoff, &tightened) );
 
-         if( ntightenings != NULL && tightened )
-            ++*ntightenings;
+         if( tightened )
+            ++(*ntightenings);
 
          /* tighten upper bound */
          if( !(*cutoff) )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, SCIPintervalGetSup(expr->interval), FALSE, cutoff, &tightened) );
 
-            if( ntightenings != NULL && tightened )
-               ++*ntightenings;
+            if( tightened )
+               ++(*ntightenings);
          }
 
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 #endif
-      }
-
-      /* tighten bounds of auxiliary variable; @todo merge this with the case above? */
-      if( expr->auxvar != NULL )
-      {
-         SCIP_Bool tightened;
-         SCIP_Bool auxvarcutoff;
-
-         SCIPdebugMessage("tighten bounds of %s: [%e, %e] -> ", SCIPvarGetName(expr->auxvar), SCIPvarGetLbLocal(expr->auxvar),
-            SCIPvarGetUbLocal(expr->auxvar));
-
-         SCIP_CALL( SCIPtightenVarLb(scip, expr->auxvar, SCIPintervalGetInf(expr->interval), FALSE, &auxvarcutoff,
-               &tightened) );
-         if( auxvarcutoff )
-         {
-            *cutoff = TRUE;
-            return SCIP_OKAY;
-         }
-
-         SCIP_CALL( SCIPtightenVarUb(scip, expr->auxvar, SCIPintervalGetSup(expr->interval), FALSE, &auxvarcutoff, &tightened) );
-         if( auxvarcutoff )
-         {
-            *cutoff = TRUE;
-            return SCIP_OKAY;
-         }
-
-         SCIPdebugPrintf("[%e, %e]\n", SCIPvarGetLbLocal(expr->auxvar), SCIPvarGetUbLocal(expr->auxvar) );
       }
    }
 
