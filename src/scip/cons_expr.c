@@ -4052,7 +4052,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    SCIP_CONSDATA* consdata;
    SCIP_Real minefficacy;
    SCIP_Real maxviol;
+   SCIP_Bool propresult;
    int nnotify;
+   int nchgbds;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4068,11 +4070,22 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
    }
+   SCIPdebugMessage("maxviol=%e\n", maxviol);
 
    *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
+
+   /* try to propagate */
+   nchgbds = 0;
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
+
+   if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
+   {
+      *result = propresult;
+      return SCIP_OKAY;
+   }
 
    /* try to separate the LP solution */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
@@ -4086,9 +4099,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    SCIP_CALL( registerBranchingCandidates(scip, conss, nconss, &nnotify) );
    SCIPdebugMessage("registered %d external branching candidates\n", nnotify);
 
-   /* TODO do domain propagation */
-   /* TODO try to separate */
-
+   /* all variables have been fixed -> cutoff node */
+   /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
+    * constraints which are obtained by replacing all fixed non-linear variables as it is done in cons_nonlinear.
+    */
+   if( nnotify > 0 )
+      *result = SCIP_CUTOFF;
 
    return SCIP_OKAY;
 }
