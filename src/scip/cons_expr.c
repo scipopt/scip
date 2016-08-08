@@ -4115,6 +4115,9 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Bool propresult;
+   int nchgbds;
+   int nnotify;
    int c;
 
    *result = SCIP_FEASIBLE;
@@ -4133,8 +4136,21 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
 
-   /* TODO do domain propagation */
-   /* TODO ask for solving LP */
+   /* try to propagate */
+   nchgbds = 0;
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
+
+   if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
+   {
+      *result = propresult;
+      return SCIP_OKAY;
+   }
+
+   /* find branching candidates */
+   SCIP_CALL( registerBranchingCandidates(scip, conss, nconss, &nnotify) );
+   SCIPdebugMessage("registered %d external branching candidates\n", nnotify);
+
+   *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
 
    return SCIP_OKAY;
 }
