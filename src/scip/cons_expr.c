@@ -1187,7 +1187,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
    /* add variable expression if not seen so far; there is only one variable expression representing a variable */
    if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
    {
-      assert(SCIPgetNVars(scip) + SCIPgetNFixedVars(scip) >= getvarsdata->nvarexprs + 1);
+      assert(SCIPgetNTotalVars(scip) >= getvarsdata->nvarexprs + 1);
 
       getvarsdata->varexprs[ getvarsdata->nvarexprs ] = expr;
       assert(getvarsdata->varexprs[getvarsdata->nvarexprs] != NULL);
@@ -1867,7 +1867,7 @@ SCIP_RETCODE getVarExprs(
 
    /* use a hash map to dicide whether we have stored a variable expression already */
    SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(SCIPgetNVars(scip) + SCIPgetNFixedVars(scip))) );
+         SCIPcalcHashtableSize(SCIPgetNTotalVars(scip))) );
 
    /* collect all variable expressions */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
@@ -1897,16 +1897,15 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->nvarexprs == 0);
 
    /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNVars() */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
 
    SCIP_CALL( getVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
-   assert(SCIPgetNVars(scip) + SCIPgetNFixedVars(scip) >= consdata->nvarexprs);
+   assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
 
    /* realloc array if there are less variable expression than variables */
-   if( SCIPgetNVars(scip) + SCIPgetNFixedVars(scip) > consdata->nvarexprs )
+   if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNVars(scip) + SCIPgetNFixedVars(scip),
-            consdata->nvarexprs) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
    }
 
    return SCIP_OKAY;
