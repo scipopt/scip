@@ -4081,7 +4081,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    nchgbds = 0;
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
+   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
       *result = propresult;
       return SCIP_OKAY;
@@ -4103,7 +4103,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
     * constraints which are obtained by replacing all fixed non-linear variables as it is done in cons_nonlinear.
     */
-   if( nnotify > 0 )
+   if( nnotify == 0 )
       *result = SCIP_CUTOFF;
 
    return SCIP_OKAY;
