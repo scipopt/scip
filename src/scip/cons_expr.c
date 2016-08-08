@@ -4065,7 +4065,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    SCIP_CONSDATA* consdata;
    SCIP_Real minefficacy;
    SCIP_Real maxviol;
-   SCIP_Bool propresult;
+   SCIP_RESULT propresult;
    int nnotify;
    int nchgbds;
    int c;
@@ -4128,7 +4128,7 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_Bool propresult;
+   SCIP_RESULT propresult;
    int nchgbds;
    int nnotify;
    int c;
@@ -4153,7 +4153,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    nchgbds = 0;
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
+   if( (propresult == SCIP_CUTOFF) || (propresult == SCIP_REDUCEDDOM) )
    {
       *result = propresult;
       return SCIP_OKAY;
