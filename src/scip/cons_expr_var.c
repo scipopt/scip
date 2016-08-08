@@ -22,10 +22,98 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <string.h>
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_sumprod.h"
 
 #define VAR_HASHKEY     SCIPcalcFibHash(22153.0)
 
+
+/** simplifies a variable expression.
+ * We replace the variable when fixed by its value
+ * If a variable is fixed, (multi)aggregated or more generally, inactive, we replace it with its active counterpart
+ * IMPLEMENTATION NOTE: - we follow the general approach of the simplify, where we replace the var expression for its
+ * simplified expression only in the current parent. So if we see that there is any performance issue in the simplify
+ * we might have to revisit this decision.
+ *                      - we build the sum expression by appending variable expressions one at a time. This may be
+ * speed-up if we allocate memory for all the variable expressions and build the sum directly.
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
+{
+   SCIP_VAR* var;
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
+   SCIP_Real constant;
+   int nvars;
+   int varssize;
+   int requsize;
+   int i;
+   SCIP_CONSHDLR* consexprhdlr;
+
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") == 0);
+
+   var = SCIPgetConsExprExprVarVar(expr);
+   assert(var != NULL);
+
+   /* if var is active there is nothing to simplify */
+   if( SCIPvarIsActive(var) )
+   {
+      *simplifiedexpr = expr;
+      /* we have to capture it, since it must simulated a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+      return SCIP_OKAY;
+   }
+
+   /* var is not active; obtain active representation var = constant + sum coefs_i vars_i */
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars,  varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, varssize) );
+
+   vars[0]  = var;
+   coefs[0] = 1.0;
+   constant = 0.0;
+   nvars = 1;
+   SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+
+   if( requsize > varssize )
+   {
+      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
+      varssize = requsize;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+      assert(requsize <= nvars);
+   }
+
+   printf("probvar linearsum has nvars %d\n", nvars);
+
+   /* FIXME this should disappear when we finally remove the conshdlr argument from createConsExpr* */
+   consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   assert(consexprhdlr != NULL);
+
+   /* create expression for constant + sum coefs_i vars_i */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, simplifiedexpr, 0, NULL, NULL, constant) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &child, vars[i]) );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *simplifiedexpr, child, coefs[i]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
+   }
+
+   /* simplify since it might not really be a sum */
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, simplifiedexpr) );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &coefs);
+
+   return SCIP_OKAY;
+}
 
 /** the order of two variable is given by their indices
  * @note: this is affected by permutations in the problem! */
@@ -209,6 +297,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, freehdlrVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );

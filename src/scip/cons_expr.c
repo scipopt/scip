@@ -1368,10 +1368,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
 
-            /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified */
+            /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
+             * we have to capture it, since it must simulated a "normal" simplified call in which a new expression is created
+             */
             simplifiedexpr = expr;
             SCIPcaptureConsExprExpr(simplifiedexpr);
          }
+         assert(simplifiedexpr != NULL);
          expr->walkio.ptrval = (void *)simplifiedexpr;
 
          *(SCIP_CONSEXPR_EXPR**)data = simplifiedexpr;
@@ -6584,7 +6587,9 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    return SCIP_OKAY;
 }
 
-/** simplifies an expression */
+/** simplifies an expression
+ * The given expression will be released and overwritten with he simplified expression; to keep the expression,
+ * duplicate it via SCIPduplicateConsExprExpr before calling this method */
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
