@@ -4351,9 +4351,11 @@ SCIP_DECL_CONSPROP(consPropExpr)
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
    int i;
 
+   /* simplify constraints */
    SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
 
    /* it might be possible that after simplification only a value expression remains in the root node */
@@ -4366,8 +4368,27 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       return SCIP_OKAY;
    }
 
+   /* replace common subexpressions */
    SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+    * been changed after simplification; now we completely recollect all variable expression and variable events
+    */
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+      SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+   }
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+   }
+
+   /* propagate constraints */
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds, ndelconss) );
    assert(*nchgbds >= 0);
    assert(*ndelconss >= 0);
