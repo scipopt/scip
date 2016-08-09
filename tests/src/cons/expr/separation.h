@@ -29,7 +29,8 @@
 
 /* needed to manipulate the stages */
 #include <strings.h>
-#include "scip/scip.c"
+#include "scip/struct_scip.h"
+#include "scip/struct_set.h"
 
 #include "include/scip_test.h"
 
