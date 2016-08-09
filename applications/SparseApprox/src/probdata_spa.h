@@ -52,7 +52,7 @@ SCIP_VAR*** SCIPspaGetBinvars(
 );
 
 extern
-SCIP_VAR***** SCIPspaGetEdgevars(
+SCIP_VAR**** SCIPspaGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
 );
 
@@ -60,6 +60,7 @@ extern
 SCIP_VAR** SCIPspaGetIndvars(
    SCIP*                 scip                /**< SCIP data structure*/
 );
+
 extern
 SCIP_VAR** SCIPspaGetAbsvars(
    SCIP*                 scip                /**< SCIP data structure*/
@@ -80,6 +81,11 @@ char SCIPspaGetModel(
    SCIP*                 scip                /**< SCIP data structure */
 );
 
+extern
+SCIP_Real SCIPspaGetScale(
+   SCIP*                 scip                /**< SCIP data structure */
+);
+
 
 /** print all the relevant solution data */
 extern
@@ -97,10 +103,14 @@ SCIP_RETCODE SCIPcreateProbSpa(
    const char*           name,               /**< problem name */
    int                   nbins,              /**< number of bins */
    int                   nedges,             /**< number of edges */
-   int                   ncluster,           /**< number of possible cluster */
    SCIP_Real**           edges,              /**< array with start- and endpoints of the edges */
-   SCIP_Real*            sd,                 /**< array with the stationary distribution */
-   SCIP_Real             objweight
+   SCIP_Real*            sd                  /**< array with the stationary distribution */
+);
+
+extern
+void SCIPspaCheckSolution(
+   SCIP* scip,
+   SCIP_SOL* sol
 );
 
 #endif /* APPLICATIONS_SPARSEAPPROX_SRC_PROBDATA_SPA_H_ */

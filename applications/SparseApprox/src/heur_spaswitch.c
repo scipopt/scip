@@ -826,7 +826,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
                      SCIPdebugMessage("in 2opt: neweps: %f, epsi: %f \n", neweps, epsI);
                   }
 
-                  SCIPtrySol(scip, worksol , FALSE, TRUE, TRUE, TRUE, &feasible);
+                  SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &feasible);
 
                   if( feasible )
                   {

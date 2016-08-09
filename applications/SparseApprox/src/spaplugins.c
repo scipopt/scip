@@ -26,8 +26,10 @@
 #include "scip/scipdefplugins.h"
 #include "event_newsol.h"
 #include "sepa_sparseapprox.h"
+#include "sepa_triangle.h"
 #include "heur_fuzzyround.h"
 #include "heur_spakerlin.h"
+#include "branch_multinode.h"
 
 /** includes default plugins for coloring into SCIP */
 SCIP_RETCODE SCIPincludeSpaPlugins(
@@ -36,16 +38,19 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
 {
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    SCIP_CALL( SCIPincludeReaderSpa(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrNewsol(scip) );
-/*   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );*/
+  /* SCIP_CALL( SCIPincludeSepaTriangle(scip) );
+   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );*/
 
    SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
-   SCIP_CALL( SCIPincludeHeurSpaswitch(scip) );
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
    SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
+   SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddCharParam(scip, "model_variant", "which variant of the problem should be used", NULL, FALSE, 'e', "ewp", NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.05, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddCharParam(scip, "model_variant", "which variant of the problem should be used", NULL, FALSE, 's', "ewpsb", NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

@@ -55,11 +55,11 @@ SCIP_RETCODE readParams(
 static
 SCIP_RETCODE fromCommandLine(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< input file name */
+   const char*           filename,           /**< input file name */
+   const char*           soluname            /**< input file name */
 )
 {
    SCIP_RETCODE retcode;
-   char outname[SCIP_MAXSTRLEN];
    SCIP_Bool outputorigsol = FALSE;
    SCIP_Real eps;
    char model;
@@ -77,7 +77,6 @@ SCIP_RETCODE fromCommandLine(
 
    retcode = SCIPreadProb(scip, filename, NULL);
 
-
    switch( retcode )
    {
    case SCIP_NOFILE:
@@ -93,28 +92,41 @@ SCIP_RETCODE fromCommandLine(
       SCIP_CALL( retcode );
    }
 
+
+   if( soluname != NULL )
+   {
+      retcode = SCIPreadProb(scip, soluname, NULL);
+
+      switch( retcode )
+      {
+      case SCIP_NOFILE:
+         SCIPinfoMessage(scip, NULL, "file <%s> not found\n", filename);
+         return SCIP_OKAY;
+      case SCIP_PLUGINNOTFOUND:
+         SCIPinfoMessage(scip, NULL, "no reader for input file <%s> available\n", filename);
+         return SCIP_OKAY;
+      case SCIP_READERROR:
+         SCIPinfoMessage(scip, NULL, "error reading file <%s>\n", filename);
+         return SCIP_OKAY;
+      default:
+         SCIP_CALL( retcode );
+      }
+   }
+
    /*******************
     * Problem Solving *
     *******************/
    model = SCIPspaGetModel(scip);
-   if( model == 'p' )
+   if( model != 'p' )
    {
-      SCIPinfoMessage(scip, NULL, "Do not solve the problem but write it to file for use in PolySCIP \n");
-      SCIPsnprintf(outname, 50, filename);
-      strcat(outname, ".mps" );
-      SCIP_CALL( SCIPwriteOrigProblem(scip, outname, NULL, FALSE) );
-   }
-   else
-   {
+      SCIP_SOL* bestsol;
       /* solve problem */
       SCIP_CALL( SCIPgetRealParam(scip, "coherence_bound", &eps) );
-      SCIPinfoMessage(scip, NULL, "Coherence bound is set to %f \n", eps);
       SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
       SCIPinfoMessage(scip, NULL, "=============\n\n");
 
-
       SCIP_CALL( SCIPsolve(scip) );
-
+      bestsol = SCIPgetBestSol(scip);
       /*******************
        * Solution Output *
        *******************/
@@ -122,20 +134,18 @@ SCIP_RETCODE fromCommandLine(
       SCIP_CALL( SCIPgetBoolParam(scip, "misc/outputorigsol", &outputorigsol) );
       if ( outputorigsol )
       {
-         SCIP_SOL* bestsol;
          SCIPinfoMessage(scip, NULL, "\nprimal solution (original space):\n");
          SCIPinfoMessage(scip, NULL, "=================================\n\n");
 
-         bestsol = SCIPgetBestSol(scip);
          if ( bestsol == NULL )
             SCIPinfoMessage(scip, NULL, "no solution available\n");
          else
          {
             SCIP_SOL* origsol;
-
             SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
             SCIP_CALL( SCIPretransformSol(scip, origsol) );
             SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
+            SCIPspaPrintSolutionValues(scip, origsol);
             SCIP_CALL( SCIPfreeSol(scip, &origsol) );
          }
       }
@@ -167,14 +177,18 @@ SCIP_RETCODE processArguments(
 )
 {
    char* probname = NULL;
+   char* soluname = NULL;
+   char* file_ending;
+   char filename[COL_MAX_LINELEN];
    char* settingsname = NULL;
    char* logname = NULL;
    char name_file[COL_MAX_LINELEN];
-   char name_eps[COL_MAX_LINELEN] ;
+   char ending[COL_MAX_LINELEN] ;
    SCIP_Bool quiet;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
    int i;
+   int ncluster;
    SCIP_Real eps=0;
    FILE* output;
 
@@ -224,6 +238,19 @@ SCIP_RETCODE processArguments(
          else
          {
             printf("missing problem filename after parameter '-f'\n");
+            paramerror = TRUE;
+         }
+      }
+      else if( strcmp(argv[i], "-x") == 0 )
+      {
+         i++;
+         if( i < argc )
+         {
+            soluname = argv[i];
+         }
+         else
+         {
+            printf("missing solution filename after parameter '-x'\n");
             paramerror = TRUE;
          }
       }
@@ -279,20 +306,45 @@ SCIP_RETCODE processArguments(
       if( probname != NULL )
       {
          /* run scip */
-         SCIP_CALL( fromCommandLine(scip, probname) );
+         SCIP_CALL( fromCommandLine(scip, probname, soluname) );
+         /*create the filename */
+         snprintf(filename, 50, "solutions/");
+         file_ending = strrchr(name_file, '/') + 1;
+         strcat(filename, file_ending);
 
-         /* create the output-name */
-         SCIPgetRealParam( scip, "coherence_bound", &eps );
-         snprintf(name_eps, 50, "_eps_%.2f", eps) ;
-         strcat(name_file, name_eps );
-         strcat(name_file, ".sol");
-
+         /* if we do not just print the problem for poly-scip, print the solution to a file */
          if( SCIPspaGetModel(scip) != 'p' )
          {
-            output = fopen(name_file, "w+");
-            SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), output, FALSE) );
+            /* create the output-name */
+            if( SCIPspaGetModel(scip) == 'e' )
+            {
+               SCIPgetRealParam( scip, "coherence_bound", &eps );
+               snprintf(ending, 50, "_eps_%.2f", eps) ;
+               strcat(filename, ending );
+            }
+            else if ( SCIPspaGetModel(scip) == 'w' )
+            {
+               SCIPgetRealParam( scip, "scale_coherence", &eps );
+               snprintf(ending, 50, "_scale_%.4f", eps);
+               strcat(filename, ending);
+            }
+            SCIP_CALL( SCIPgetIntParam(scip, "ncluster", &ncluster) );
+            snprintf(ending, 50, "_%dcluster", ncluster);
+            strcat(filename, ending);
+            strcat(filename, ".sol");
+
+            output = fopen(filename, "w+");
+            SCIP_CALL( SCIPprintBestSol(scip, output, FALSE) );
             SCIP_CALL( SCIPprintStatistics(scip, output) );
             fclose(output);
+         }
+         else
+         {
+            SCIPinfoMessage(scip, NULL, "Do not solve the problem but write it to file for use in PolySCIP \n");
+            SCIPpresolve(scip);
+            snprintf(ending, 50, ".mps");
+            strcat(filename, ending);
+            SCIP_CALL( SCIPwriteOrigProblem(scip, filename, NULL, FALSE) );
          }
       }
       else

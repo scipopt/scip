@@ -83,14 +83,12 @@ SCIP_RETCODE readSpa(
    char buf[COL_MAX_LINELEN];   /* maximal length of line */
    int nedges;
    int nbins;
-   int ncluster;
    char* char_p;
    SCIP_Real** edges;
    SCIP_Real* sd;
    SCIP_Real begin;
    SCIP_Real end;
    SCIP_Real weight;
-   SCIP_Real objweight;
    int i;
 
    assert(scip != NULL);
@@ -131,8 +129,6 @@ SCIP_RETCODE readSpa(
 
    nbins = (int) getNextNumber(&char_p);
    nedges = (int) getNextNumber(&char_p);
-   ncluster = (int) getNextNumber(&char_p);
-   objweight = getNextNumber(&char_p);
 
    if ( nbins <= 0 )
    {
@@ -214,9 +210,8 @@ SCIP_RETCODE readSpa(
       return SCIP_READERROR;
    }
 
-   ncluster = 3;
    /* create problem data */
-   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, ncluster, edges, sd, objweight) );
+   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, edges, sd) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
    for ( i = nedges-1; i >= 0; i-- )

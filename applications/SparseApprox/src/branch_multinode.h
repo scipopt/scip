@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_sparseapprox.h
- * @ingroup SEPARATORS
- * @brief  2-partition separator
+/**@file   branch_multinode.h
+ * @ingroup BRANCHINGRULES
+ * @brief  multinode branching rule
  * @author Leon Eifler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SEPA_SPARSEAPPROX_H__
-#define __SCIP_SEPA_SPARSEAPPROX_H__
+#ifndef __SCIP_BRANCH_MULTINODE_H__
+#define __SCIP_BRANCH_MULTINODE_H__
 
 
 #include "scip/scip.h"
@@ -31,9 +31,9 @@
 extern "C" {
 #endif
 
-/** creates the 2-partition separator and includes it in SCIP */
+/** creates the xyz branching rule and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludeSepaSparseApprox(
+SCIP_RETCODE SCIPincludeBranchruleMultinode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -29,19 +29,12 @@
 
 #define SEPA_NAME              "sparsapprox"
 #define SEPA_DESC              "separator for graph partitioning in sparse approximation project"
-#define SEPA_PRIORITY               1000000
+#define SEPA_PRIORITY               5000
 #define SEPA_FREQ                   10
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-/*
- * Callback methods of separator
- */
-struct SCIP_SepaData
-{
-   SCIP_Bool lexordered;
-};
 
 /** copy method for separator plugins (called when SCIP copies plugins) */
 
@@ -58,24 +51,6 @@ SCIP_DECL_SEPACOPY(sepaCopySparseApprox)
    return SCIP_OKAY;
 }
 
-/** destructor of separator to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_SEPAFREE(sepaFreeSparseApprox)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
-
-   /* free separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   SCIPfreeMemory(scip, &sepadata);
-
-   SCIPsepaSetData(sepa, NULL);
-
-   return SCIP_OKAY;
-}
 
 /** LP solution separation method of separator */
 static
@@ -87,7 +62,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    int j;
    int w;
    int k;
-   int h;
    int nbins;
    int ncluster;
    int ncuts = 0;
@@ -100,7 +74,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    int* partition;         /* at each iteration, holds the bins in the second partition */
    int counter;
    int partitionsize;
-   SCIP_SEPADATA* sepadata;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -117,38 +90,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   sepadata = SCIPsepaGetData(sepa);
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    assert(nbins > 0);
    assert(ncluster > 0 && ncluster <= nbins);
-   assert(sepadata != NULL);
-   if( !sepadata->lexordered )
-   {
-      binvars = SCIPspaGetBinvars(scip);
-      sepadata->lexordered = TRUE;
-      /* create symmetry-breaking constraint (permutation of the clusters leads to same value in the target function). Add these only as LP-rows*/
-      for( i = 1; i < nbins; ++i )
-      {
-         for( k = 1; k < ncluster; ++k )
-         {
-            (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "lexorder_%d_%d", i + 1, k + 1 );
-            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddVarToRow(scip, cut, binvars[i][k], 1.0) );
-            for( j = 0; j < i; ++j )
-            {
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, binvars[j][k-1], -1.0) );
-            }
-            SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-            if( !infeasible )
-            {
-               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-               *result = SCIP_SEPARATED;
-            }
-            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-         }
-      }
-   }
 
    /* construct the 2 partition inequalities heuristically */
 
@@ -159,107 +104,95 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &candidate, nbins) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &partition, nbins) );
 
-   /* check and add violated triangle inequalities */
+
    for( i = 0; i < nbins; ++i )
    {
+      /* construct the set candidate */
+      counter = 0;
       for( j = 0; j < i; ++j )
       {
-         for( h = 0; h < j; ++h )
+         partition[j] = -1;
+         candidate[j] = -1;
+         if( j == i )
+            continue;
+         /* only add bins where there is a fractional uncut value on the edge */
+         if( NULL == edgevars[i][j][0][0])
+            continue;
+         lpval = SCIPvarGetLPSol(edgevars[i][j][0][0]);
+         if( lpval > 0 && lpval < 1 && candidate[counter - 1] != j )
          {
-            SCIP_Real triangleval1 = 0;
-            SCIP_Real triangleval2= 0;
-            SCIP_Real triangleval3 = 0;
-            for( k = 0; k < ncluster; ++k )
-            {
-               if( NULL == edgevars[i][j][k][k] || edgevars[j][h][k][k] || edgevars[i][h][k][k] )
-                  break;
-               triangleval1 += SCIPvarGetLPSol(edgevars[i][j][k][k]) + SCIPvarGetLPSol(edgevars[j][h][k][k]) - SCIPvarGetLPSol(edgevars[h][i][k][k]);
-               triangleval2 += SCIPvarGetLPSol(edgevars[i][j][k][k]) - SCIPvarGetLPSol(edgevars[j][h][k][k]) + SCIPvarGetLPSol(edgevars[h][i][k][k]);
-               triangleval3 += - SCIPvarGetLPSol(edgevars[i][j][k][k]) + SCIPvarGetLPSol(edgevars[j][h][k][k]) + SCIPvarGetLPSol(edgevars[h][i][k][k]);
-            }
-            if( SCIPisGT(scip, triangleval1, 1.0) )
-            {
-               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "triangle_%d_%d_%d", i+1,j+1,h+1 );
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-               for( k = 0; k < ncluster; ++k )
-               {
-                  SCIPaddVarToRow(scip, cut, edgevars[i][j][k][k], 1.0);
-                  SCIPaddVarToRow(scip, cut, edgevars[j][h][k][k], 1.0);
-                  SCIPaddVarToRow(scip, cut, edgevars[h][i][k][k], -1.0);
-               }
-
-               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-               if( SCIPisCutEfficacious(scip, NULL, cut) )
-               {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                  if( !infeasible )
-                  {
-                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                     *result = SCIP_SEPARATED;
-                  }
-               }
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-               ncuts++;
-            }
-            if( SCIPisGT(scip, triangleval2, 1.0) )
-            {
-               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "triangle_%d_%d_%d", i+1,j+1,h+1 );
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-               for( k = 0; k < ncluster; ++k )
-               {
-                  SCIPaddVarToRow(scip, cut, edgevars[i][j][k][k], 1.0);
-                  SCIPaddVarToRow(scip, cut, edgevars[j][h][k][k], -1.0);
-                  SCIPaddVarToRow(scip, cut, edgevars[h][i][k][k], +1.0);
-               }
-
-               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-               if( SCIPisCutEfficacious(scip, NULL, cut) )
-               {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                  if( !infeasible )
-                  {
-                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                     *result = SCIP_SEPARATED;
-                  }
-               }
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-               ncuts++;
-            }
-            if( SCIPisGT(scip, triangleval3, 1.0) )
-            {
-               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "triangle_%d_%d_%d", i+1,j+1,h+1 );
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-               for( k = 0; k < ncluster; ++k )
-               {
-                  SCIPaddVarToRow(scip, cut, edgevars[i][j][k][k], -1.0);
-                  SCIPaddVarToRow(scip, cut, edgevars[j][h][k][k], +1.0);
-                  SCIPaddVarToRow(scip, cut, edgevars[h][i][k][k], +1.0);
-               }
-
-               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-               if( SCIPisCutEfficacious(scip, NULL, cut) )
-               {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                  if( !infeasible )
-                  {
-                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                     *result = SCIP_SEPARATED;
-                  }
-               }
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-               ncuts++;
-            }
+            candidate[counter] = j;
+            ++counter;
          }
       }
+      /* if there are no fractional edges between i and any other bin continue */
+      if( 0 == counter )
+         continue;
+      /* construcht the partition set */
+      partition[0] = candidate[0];
+      partitionsize = 1;
+
+      for( j = 1; j < counter; ++j )
+      {
+         SCIP_Bool addtopartition = TRUE;
+         /* at first, only add edges with uncut value 0 inside the partition */
+         for( w = 1; w < partitionsize; ++w )
+         {
+            if( candidate[j] < partition[w] && NULL != edgevars[partition[w]][candidate[j]][0][0] && SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][0][0]) != 0 )
+               addtopartition = FALSE;
+            if( candidate[j] > partition[w] && NULL != edgevars[candidate[j]][partition[w]][0][0] && SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][0][0]) != 0 )
+               addtopartition = FALSE;
+
+         }
+         if( addtopartition )
+         {
+            partition[partitionsize] = candidate[j];
+            partitionsize++;
+         }
+      }
+      assert( nbins > partitionsize - 1 );
+      assert( nbins > counter - 1 );
+      /* check if the current lpsol violates this constraint. This is the case if the sum over the uncut edges between i and the partition is greater than 1 */
+      lpsum = 0;
+      for( j = 0; j < partitionsize; ++j )
+      {
+         if( i > partition[j] && NULL != edgevars[i][partition[j]][0][0] )
+            lpsum += SCIPvarGetLPSol(edgevars[i][partition[j]][0][0]);
+         else if( NULL != edgevars[partition[j]][i][0][0] )
+            lpsum += SCIPvarGetLPSol(edgevars[partition[j]][i][0][0]);
+      }
+      if( lpsum > 1 )
+      {
+         (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "2partsize1_%d_%d", i+1, ncuts );
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+         for( j = 0; j < partitionsize; ++j )
+         {
+            if( i < partition[j] && NULL != edgevars[i][partition[j]][0][0] )
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][partition[j]][0][0], 1.0) );
+            else if( NULL != edgevars[partition[j]][i][0][0] )
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[partition[j]][i][0][0], 1.0) );
+         }
+         SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+         if( SCIPisCutEfficacious(scip, NULL, cut) )
+         {
+            SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+            if( !infeasible )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+               *result = SCIP_SEPARATED;
+            }
+         }
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         ncuts++;
+      }
    }
+   /* if we did not find a violated constraint yet, redo the above with the modification that the uncut edges in the partition can be non-zero */
    if( *result != SCIP_SEPARATED )
    {
       for( i = 0; i < nbins; ++i )
       {
-         /* construct the set candidate */
+         /* construct the set w as candidate */
          counter = 0;
          for( j = 0; j < i; ++j )
          {
@@ -267,26 +200,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             candidate[j] = -1;
             if( j == i )
                continue;
-            lpval = 0;
 
-            /* only add bins where there is a fractional uncut value on the edge */
-            for( k = 0; k < ncluster; ++k )
-            {
-               if( NULL == edgevars[i][j][k][k])
-                  continue;
-               lpval += SCIPvarGetLPSol(edgevars[i][j][k][k]);
-            }
+            lpval = 0;
+            if( NULL != edgevars[i][j][0][0] )
+               lpval = SCIPvarGetLPSol(edgevars[i][j][0][0]);
             if( lpval > 0 && lpval < 1 && candidate[counter - 1] != j )
             {
                candidate[counter] = j;
                ++counter;
             }
+
          }
-         /* if there are no fractional edges between i and any other bin continue */
          if( 0 == counter )
             continue;
-
-         /* construcht the partition set */
          else
          {
             partition[0] = candidate[0];
@@ -294,20 +220,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
          }
          for( j = 1; j < counter; ++j )
          {
-            SCIP_Bool addtopartition = TRUE;
-            /* at first, only add edges with uncut value 0 inside the partition */
-            for( w = 1; w < partitionsize; ++w )
+            /* we now need that the uncut value within the partition is smaller than that between i and the partition instead of 0 */
+            SCIP_Real sum = 0.0;  /* this is the uncut value within the partition */
+            for( w = 0; w < partitionsize; ++w )
             {
-               for( k = 0; k < ncluster; ++k )
-               {
-                  if( candidate[j] < partition[w] && NULL != edgevars[partition[w]][candidate[j]] && SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][k][k]) != 0 )
-                     addtopartition = FALSE;
-                  if( candidate[j] > partition[w] && NULL != edgevars[candidate[j]][partition[w]][k][k] && SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][k][k]) != 0 )
-                     addtopartition = FALSE;
-               }
-
+               if( candidate[j] < partition[w] && NULL != edgevars[partition[w]][candidate[j]][0][0] )
+                  sum += SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][0][0]);
+               else if( NULL != edgevars[candidate[j]][partition[w]][0][0] )
+                  sum += SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][0][0]);
             }
-            if( addtopartition )
+            /* lpval is the uncut value between i and the partition */
+            lpval = 0;
+            if ( candidate[j] < 1 && NULL != edgevars[i][candidate[j]][0][0] )
+               lpval += SCIPvarGetLPSol(edgevars[i][candidate[j]][0][0]);
+            else if( NULL != edgevars[candidate[j]][i][0][0] )
+               lpval += SCIPvarGetLPSol(edgevars[candidate[j]][i][0][0]);
+            if( lpval - sum > 0 )
             {
                partition[partitionsize] = candidate[j];
                partitionsize++;
@@ -315,32 +243,26 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
          }
          assert( nbins > partitionsize - 1 );
          assert( nbins > counter - 1 );
-         /* check if the current lpsol violates this constraint. This is the case if the sum over the uncut edges between i and the partition is greater than 1 */
+         /* check if the current lpsol violates this constraint */
          lpsum = 0;
          for( j = 0; j < partitionsize; ++j )
          {
-            for( k = 0; k < ncluster; ++k )
-            {
-               if( i > partition[j] && NULL != edgevars[i][partition[j]][k][k] )
-                  lpsum += SCIPvarGetLPSol(edgevars[i][partition[j]][k][k]);
-               else if( NULL != edgevars[partition[j]][i][k][k] )
-                  lpsum += SCIPvarGetLPSol(edgevars[partition[j]][i][k][k]);
-            }
+            if( i > partition[j] && NULL != edgevars[i][partition[j]][0][0] )
+               lpsum += SCIPvarGetLPSol(edgevars[i][partition[j]][0][0]);
+            else if( NULL != edgevars[partition[j]][i][0][0] )
+               lpsum += SCIPvarGetLPSol(edgevars[partition[j]][i][0][0]);
          }
          if( lpsum > 1 )
          {
-            (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "2partsize1_%d_%d", i+1, ncuts );
+            (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "2partsize2_%d_&d", i+1, ncuts );
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
             for( j = 0; j < partitionsize; ++j )
             {
-               for( k = 0; k < ncluster; ++k )
-               {
-                  if( i < partition[j] && NULL != edgevars[i][partition[j]][k][k] )
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][partition[j]][k][k], 1.0) );
-                  else if( NULL != edgevars[partition[j]][i][k][k] )
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[partition[j]][i][k][k], 1.0) );
-               }
+               if( i < partition[j] && NULL != edgevars[i][partition[j]][0][0] )
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][partition[j]][0][0], 1.0));
+               else if( NULL != edgevars[partition[j]][i][0][0] )
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[partition[j]][i][0][0], 1.0) );
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
             if( SCIPisCutEfficacious(scip, NULL, cut) )
@@ -356,114 +278,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             ncuts++;
          }
       }
-      /* if we did not find a violated constraint yet, redo the above with the modification that the uncut edges in the partition can be non-zero */
-      if( *result != SCIP_SEPARATED )
-      {
-         for( i = 0; i < nbins; ++i )
-         {
-            /* construct the set w as candidate */
-            counter = 0;
-            for( j = 0; j < i; ++j )
-            {
-               partition[j] = -1;
-               candidate[j] = -1;
-               if( j == i )
-                  continue;
-
-               lpval = 0;
-               for( k = 0; k < ncluster; ++k )
-               {
-                  if( NULL != edgevars[i][j][k][k] )
-                     lpval += SCIPvarGetLPSol(edgevars[i][j][k][k]);
-               }
-               if( lpval > 0 && lpval < 1 && candidate[counter - 1] != j )
-               {
-                  candidate[counter] = j;
-                  ++counter;
-               }
-
-            }
-            if( 0 == counter )
-               continue;
-            else
-            {
-               partition[0] = candidate[0];
-               partitionsize = 1;
-            }
-            for( j = 1; j < counter; ++j )
-            {
-               /* we now need that the uncut value within the partition is smaller than that between i and the partition instead of 0 */
-               SCIP_Real sum = 0.0;  /* this is the uncut value within the partition */
-               for( w = 0; w < partitionsize; ++w )
-               {
-                  for( k = 0; k < ncluster; ++k )
-                  {
-                     if( candidate[j] < partition[w] && NULL != edgevars[partition[w]][candidate[j]][k][k] )
-                        sum += SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][k][k]);
-                     else if( NULL != edgevars[candidate[j]][partition[w]][k][k] )
-                        sum += SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][k][k]);
-                  }
-               }
-               /* lpval is the uncut value between i and the partition */
-               lpval = 0;
-               for( k = 0; k < ncluster; ++k )
-               {
-                  if ( candidate[j] < 1 && NULL != edgevars[i][candidate[j]][k][k] )
-                     lpval += SCIPvarGetLPSol(edgevars[i][candidate[j]][k][k]);
-                  else if( NULL != edgevars[candidate[j]][i][k][k] )
-                     lpval += SCIPvarGetLPSol(edgevars[candidate[j]][i][k][k]);
-               }
-               if( lpval - sum > 0 )
-               {
-                  partition[partitionsize] = candidate[j];
-                  partitionsize++;
-               }
-            }
-            assert( nbins > partitionsize - 1 );
-            assert( nbins > counter - 1 );
-            /* check if the current lpsol violates this constraint */
-            lpsum = 0;
-            for( j = 0; j < partitionsize; ++j )
-            {
-               for( k = 0; k < ncluster; ++k )
-               {
-                  if( i > partition[j] && NULL != edgevars[i][partition[j]][k][k] )
-                     lpsum += SCIPvarGetLPSol(edgevars[i][partition[j]][k][k]);
-                  else if( NULL != edgevars[partition[j]][i][k][k] )
-                     lpsum += SCIPvarGetLPSol(edgevars[partition[j]][i][k][k]);
-               }
-            }
-            if( lpsum > 1 )
-            {
-               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "2partsize2_%d_&d", i+1, ncuts );
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-               for( j = 0; j < partitionsize; ++j )
-               {
-                  for( k = 0; k < ncluster; ++k )
-                  {
-                     if( i < partition[j] && NULL != edgevars[i][partition[j]][k][k] )
-                        SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][partition[j]][k][k], 1.0));
-                     else if( NULL != edgevars[partition[j]][i][k][k] )
-                        SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[partition[j]][i][k][k], 1.0) );
-                  }
-               }
-               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-               if( SCIPisCutEfficacious(scip, NULL, cut) )
-               {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                  if( !infeasible )
-                  {
-                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                     *result = SCIP_SEPARATED;
-                  }
-               }
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-               ncuts++;
-            }
-         }
-      }
    }
+
    if( *result != SCIP_SEPARATED )
       *result = SCIP_DIDNOTFIND;
 
@@ -479,31 +295,21 @@ SCIP_RETCODE SCIPincludeSepaSparseApprox(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_SEPADATA* sepadata;
    SCIP_SEPA* sepa;
 
-   /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
-   sepadata->lexordered = FALSE;
 
    /* include separator */
 
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
       SEPA_USESSUBSCIP, SEPA_DELAY,
       sepaExeclpSparseApprox, NULL,
-      sepadata) );
+      NULL) );
 
    assert(sepa != NULL);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopySparseApprox) );
-   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeSparseApprox) );
 
-   /* add SparseApprox separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-      "separating/sparseapprox/lexorder",
-      "have the lexorder constraints been separated?",
-      &sepadata->lexordered, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

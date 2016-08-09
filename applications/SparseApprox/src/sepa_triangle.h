@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_sparseapprox.h
+/**@file   sepa_triangle.h
  * @ingroup SEPARATORS
- * @brief  2-partition separator
+ * @brief  triangle-equation separator
  * @author Leon Eifler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SEPA_SPARSEAPPROX_H__
-#define __SCIP_SEPA_SPARSEAPPROX_H__
+#ifndef __SCIP_SEPA_TRIANGLE_H__
+#define __SCIP_SEPA_TRIANGLE_H__
 
 
 #include "scip/scip.h"
@@ -31,9 +31,9 @@
 extern "C" {
 #endif
 
-/** creates the 2-partition separator and includes it in SCIP */
+/** creates the triangle separator and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludeSepaSparseApprox(
+SCIP_RETCODE SCIPincludeSepaTriangle(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
