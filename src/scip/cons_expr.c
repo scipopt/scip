@@ -2311,6 +2311,37 @@ SCIP_RETCODE replaceCommonSubexpressions(
    return SCIP_OKAY;
 }
 
+/** simplifies expressions in constraints */
+static
+SCIP_RETCODE simplifyConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< total number of constraints */
+   )
+{
+   int i;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+
+   /* simplify each constraint's expression */
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      if( consdata->expr != NULL )
+      {
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &(consdata->expr)) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** @name Parsing methods
  * @{
@@ -4242,6 +4273,7 @@ SCIP_DECL_CONSPROP(consPropExpr)
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
+   SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
    SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds) );
@@ -6618,6 +6650,11 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, NULL, simplifyExpr, simplifyExpr, &simplified) );
    assert(simplified != NULL);
+
+   /* update locks in new expression */
+   SCIP_CALL( propagateLocks(scip, simplified, (*expr)->nlockspos, (*expr)->nlocksneg) );
+   /* update locks in old expression */
+   SCIP_CALL( propagateLocks(scip, *expr, -(*expr)->nlockspos, -(*expr)->nlocksneg) );
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, expr) );
    *expr = simplified;
