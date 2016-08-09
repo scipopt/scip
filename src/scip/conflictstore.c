@@ -534,21 +534,16 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
          SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
       }
 
-      if( SCIPqueueNElems(conflictstore->dualrays) == DEFAULT_CONFLICTSTORE_DUALSIZE )
+      while( SCIPqueueNElems(conflictstore->dualrays) >= DEFAULT_CONFLICTSTORE_DUALSIZE )
       {
-         int i;
-         for( i = 0; i < 10; i++ )
-         {
-            olddualray = (SCIP_CONS*)SCIPqueueRemove(conflictstore->dualrays);
-            SCIP_CALL( SCIPconsDelete(olddualray, blkmem, set, stat, transprob) );
-            SCIP_CALL( SCIPconsRelease(&olddualray, blkmem, set) );
-         }
+         olddualray = (SCIP_CONS*)SCIPqueueRemove(conflictstore->dualrays);
+         SCIP_CALL( SCIPconsDelete(olddualray, blkmem, set, stat, transprob) );
+         SCIP_CALL( SCIPconsRelease(&olddualray, blkmem, set) );
       }
-      else
-         return SCIP_OKAY;
+      assert(SCIPqueueNElems(conflictstore->dualrays) < DEFAULT_CONFLICTSTORE_DUALSIZE);
 
-      SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
       SCIPconsCapture(dualray);
+      SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
    }
 
    return SCIP_OKAY;

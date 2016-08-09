@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPcutsCalcStrongCG(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 extern
-SCIP_RETCODE SCIPcutsCalcMIR(
+SCIP_RETCODE SCIPcutsCalcLpMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
@@ -110,6 +110,43 @@ SCIP_RETCODE SCIPcutsCalcMIR(
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
    int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
+   );
+
+/** applies the MIR function on a constraint; the constraint is given by pairs of variables and coefficients and a rhs.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+extern
+SCIP_RETCODE SCIPcutsApplyMIR(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: 0 vlb_idx/vub_idx,
+                                              *   -1 for global lb/ub or -2 for local lb/ub
+                                              */
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
+                                              *   NULL for using closest bound for all variables */
+   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
+   SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
+   SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   int*                  varinds,
+   int*                  nvarinds,
+   SCIP_Real*            minact,
+   SCIP_Bool*            varused,
+   SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   SCIP_Bool*            islocal             /**< pointer to store whether the returned constraint is only valid locally */
    );
 
 /** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
