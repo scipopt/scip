@@ -36,9 +36,9 @@
 #define CONSHDLR_NAME          "setppc"
 #define CONSHDLR_DESC          "set partitioning / packing / covering constraints"
 #define CONSHDLR_SEPAPRIORITY   +700000 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY   -700000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY   700000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -700000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAFREQ             100 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -67,13 +67,13 @@
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 
-/*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
-/*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
+#define VARUSES   activate variable usage counting, that is necessary for LP and pseudo branching
+#define BRANCHLP  BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3 /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7 /**< maximum weight of both sets in binary set branching */
 #endif
-#define DEFAULT_NPSEUDOBRANCHES       2 /**< number of children created in pseudo branching (0: disable branching) */
+#define DEFAULT_NPSEUDOBRANCHES       4 /**< number of children created in pseudo branching (0: disable branching) */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
 #define DEFAULT_CLIQUELIFTING     FALSE /**< should we try to lift variables into other clique constraints, fix
