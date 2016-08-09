@@ -159,7 +159,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    SCIP_Real max;
    int maxrow;
    SCIP_VAR*** binvars;
-   SCIP_VAR** indvars;
    SCIP_VAR** branchcands;
    SCIP_Real* branchcandssol;
    SCIP_Real* branchcandsfrac;
@@ -168,7 +167,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    binvars = SCIPspaGetBinvars(scip);
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
-   indvars = SCIPspaGetIndvars(scip);
    *result = SCIP_DIDNOTRUN;
 
 

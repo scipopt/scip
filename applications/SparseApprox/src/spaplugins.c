@@ -38,10 +38,7 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
 {
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    SCIP_CALL( SCIPincludeReaderSpa(scip) );
-  /* SCIP_CALL( SCIPincludeSepaTriangle(scip) );
-   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );*/
 
-   SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
    SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
    SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );

@@ -67,8 +67,11 @@
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 
+
+/*
 #define VARUSES   activate variable usage counting, that is necessary for LP and pseudo branching
 #define BRANCHLP  BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value
+*/
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3 /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7 /**< maximum weight of both sets in binary set branching */

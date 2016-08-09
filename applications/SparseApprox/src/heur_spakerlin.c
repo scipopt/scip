@@ -414,13 +414,11 @@ SCIP_RETCODE assignVars(
    int c;
    int c2;
    SCIP_VAR* var;
-   SCIP_VAR** indvars;
    SCIP_VAR*** binvars;
    SCIP_VAR****  edgevars;
 
    assert(nbins > 0 && ncluster > 0);
 
-   indvars = SCIPspaGetIndvars(scip);
    binvars = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
 
