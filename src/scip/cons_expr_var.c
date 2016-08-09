@@ -50,6 +50,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    int requsize;
    int i;
    SCIP_CONSHDLR* consexprhdlr;
+   SCIP_CONSEXPR_EXPR* sumexpr;
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
@@ -92,19 +93,22 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    assert(consexprhdlr != NULL);
 
    /* create expression for constant + sum coefs_i vars_i */
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, simplifiedexpr, 0, NULL, NULL, constant) );
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 0, NULL, NULL, constant) );
 
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CONSEXPR_EXPR* child;
 
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &child, vars[i]) );
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *simplifiedexpr, child, coefs[i]) );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, child, coefs[i]) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, simplifiedexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, sumexpr, simplifiedexpr) );
+
+   /* release no longer used sumexpr */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
 
    /* free memory */
    SCIPfreeBufferArray(scip, &vars);

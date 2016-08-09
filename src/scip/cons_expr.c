@@ -2336,7 +2336,27 @@ SCIP_RETCODE simplifyConstraints(
 
       if( consdata->expr != NULL )
       {
-         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &(consdata->expr)) );
+         SCIP_CONSEXPR_EXPR* simplified;
+
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consdata->expr, &simplified) );
+
+         /* If root expression changed, then we need to take care updating the locks as well (the consdata is the one holding consdata->expr "as a child").
+          * If root expression did not change, some subexpression may still have changed, but the locks were taking care of in the corresponding SCIPreplaceConsExprExprChild() call.
+          */
+         if( simplified != consdata->expr )
+         {
+            /* remove locks on old expression */
+            SCIP_CALL( propagateLocks(scip, consdata->expr, -consdata->nlockspos, -consdata->nlocksneg) );
+
+            /* release old expression */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+
+            /* store simplified expression */
+            consdata->expr = simplified;
+
+            /* add locks on new expression */
+            SCIP_CALL( propagateLocks(scip, consdata->expr, consdata->nlockspos, consdata->nlocksneg) );
+         }
       }
    }
 
@@ -6640,24 +6660,16 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
  */
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    )
 {
-   SCIP_CONSEXPR_EXPR* simplified = NULL;
-
    assert(scip != NULL);
-   assert(*expr != NULL);
-
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, NULL, simplifyExpr, simplifyExpr, &simplified) );
+   assert(expr != NULL);
    assert(simplified != NULL);
 
-   /* update locks in new expression */
-   SCIP_CALL( propagateLocks(scip, simplified, (*expr)->nlockspos, (*expr)->nlocksneg) );
-   /* update locks in old expression */
-   SCIP_CALL( propagateLocks(scip, *expr, -(*expr)->nlockspos, -(*expr)->nlocksneg) );
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, expr) );
-   *expr = simplified;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, simplifyExpr, simplifyExpr, (void*)simplified) );
+   assert(*simplified != NULL);
 
    return SCIP_OKAY;
 }

@@ -759,7 +759,8 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
  */
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    );
 
 /** prints structure of an expression a la Maple's dismantle */

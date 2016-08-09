@@ -90,6 +90,7 @@ static
 void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
 {
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real values[2];
 
@@ -107,7 +108,9 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    values[1] = SCIPgetConsExprExprValue(expr);
 
    /* simplify */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
 
    /* check type of simplified expression */
    cr_expect_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), type);
