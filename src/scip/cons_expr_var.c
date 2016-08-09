@@ -246,16 +246,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagation callback */
-static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropVar)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("Unexpected call of reverse propagation callback of variable expression handler.");
-   SCIPABORT();
-
-   return SCIP_OKAY; /*lint !e527*/
-}
-
 /** variable hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
@@ -300,7 +290,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashVar) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropVar) );
 
    return SCIP_OKAY;
 }
