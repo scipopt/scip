@@ -2112,9 +2112,10 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	var2 = SCIPnodeGetVarSOS1(conflictgraph, succnode);
 
 	/* create SOS1 constraint */
+	assert( SCIPgetDepth(scip) == 0 );
 	(void) SCIPsnprintf(namesos, SCIP_MAXSTRLEN, "presolved_sos1_%s_%s", SCIPvarGetName(var1), SCIPvarGetName(var2) );
 	SCIP_CALL( SCIPcreateConsSOS1(scip, &soscons, namesos, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
-				      TRUE, FALSE, FALSE, FALSE) );
+				      FALSE, FALSE, FALSE, FALSE) );
 
 	/* add variables to SOS1 constraint */
 	SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var1, 1.0) );
@@ -3406,7 +3407,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
          break;
    }
 
-   /* perform conflict graph analysis */
+   /* perform implication graph analysis */
    if ( updateconfl && conshdlrdata->perfimplanalysis && ! cutoff )
    {
       SCIP_Real* implubs;
