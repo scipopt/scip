@@ -1524,19 +1524,14 @@ int SCIPcompareConsExprExprs(
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
  *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
  */
+static
 SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
-   );
-SCIP_RETCODE forwardPropCons(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS*              cons,             /**< constraint to propagate */
-   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
+   SCIP_Bool*              redundant,        /**< buffer to store whether the constraint is redundant */
+   int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings */
    )
 {
    SCIP_INTERVAL interval;
@@ -1545,20 +1540,37 @@ SCIP_RETCODE forwardPropCons(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(infeasible != NULL);
+   assert(redundant != NULL);
    assert(ntightenings != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    *infeasible = FALSE;
+   *redundant = FALSE;
    *ntightenings = 0;
 
-   /* propagate active constraints only */
-   if( !SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   /* propagate active and non-deleted constraints only */
+   if( SCIPconsIsDeleted(cons) || !SCIPconsIsActive(cons) )
       return SCIP_OKAY;
 
    /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
+
+   /* if the root expression interval could not be tightened by constraint sides, then the constraint is redundant and
+    * should be deleted (locally)
+    *
+    * @todo how to check this even if we have used the constraint sides during propagation, i.e. intersect is TRUE
+    */
+   if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, consdata->expr->interval.inf))
+      && (SCIPisInfinity(scip, consdata->rhs) ||  SCIPisFeasGE(scip, consdata->rhs, consdata->expr->interval.sup)) )
+   {
+      SCIPdebugMessage("removing constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
+         consdata->expr->interval.inf, consdata->expr->interval.sup, consdata->lhs, consdata->rhs);
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+      *redundant = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(consdata->expr)) )
@@ -1592,10 +1604,6 @@ SCIP_RETCODE forwardPropCons(
    }
 #endif
 
-   /* TODO if the root expression interval could not be tightened by constraint sides,
-    * then the constraint is redundant and should be deleted (locally)
-    */
-
    return SCIP_OKAY;
 }
 
@@ -1606,13 +1614,7 @@ SCIP_RETCODE forwardPropCons(
  *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
  *  forwardPropCons() before calling this function
  */
-SCIP_RETCODE reversePropConss(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS**             conss,            /**< constraints to propagate */
-   int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
-   );
+static
 SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
@@ -1647,9 +1649,9 @@ SCIP_RETCODE reversePropConss(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* propagate active constraints only */
-      if( !SCIPconsIsActive(conss[i]) && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-         return SCIP_OKAY;
+      /* propagate active and non-deleted constraints only */
+      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
+         continue;
 
       /* skip expressions that could not have been tightened or do not implement the reverseprop callback; */
       if( !consdata->expr->hastightened || consdata->expr->exprhdlr->reverseprop == NULL )
@@ -1740,26 +1742,21 @@ SCIP_RETCODE reversePropConss(
  *  @note when using forward and reverse propagation alternatingly we reuse expression intervals computed in previous
  *  iterations
  */
+static
 SCIP_RETCODE propConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to propagate */
    int                   nconss,             /**< total number of constraints */
    SCIP_RESULT*          result,             /**< pointer to store the result */
-   int*                  nchgbds             /**< buffer to add the number of changed bounds */
-   );
-SCIP_RETCODE propConss(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to propagate */
-   int                   nconss,             /**< total number of constraints */
-   SCIP_RESULT*          result,             /**< pointer to store the result */
-   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   int*                  nchgbds,            /**< buffer to add the number of changed bounds */
+   int*                  ndelconss           /**< buffer to add the number of deleted constraints */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
+   SCIP_Bool redundant;
    SCIP_Bool success;
    int ntightenings;
    int roundnr;
@@ -1772,6 +1769,7 @@ SCIP_RETCODE propConss(
    assert(result != NULL);
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
+   assert(ndelconss != NULL);
 
    /* no constraints to propagate */
    if( nconss == 0 )
@@ -1806,9 +1804,10 @@ SCIP_RETCODE propConss(
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
             cutoff = FALSE;
+            redundant = FALSE;
             ntightenings = 0;
 
-            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &ntightenings) );
+            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &redundant, &ntightenings) );
             assert(ntightenings >= 0);
             *nchgbds += ntightenings;
 
@@ -1818,9 +1817,10 @@ SCIP_RETCODE propConss(
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
-
             if( ntightenings > 0 )
                *result = SCIP_REDUCEDDOM;
+            if( redundant )
+               *ndelconss += 1;
 
             /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
             consdata->ispropagated = TRUE;
@@ -2312,6 +2312,9 @@ SCIP_RETCODE replaceCommonSubexpressions(
 }
 
 /** simplifies expressions in constraints */
+/* @todo put the constant to the constraint sides
+ * @todo call removeFixedConstraints() from here and remove it from CONSPRESOL
+ */
 static
 SCIP_RETCODE simplifyConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3571,6 +3574,55 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
+/** removes locally fixed constraints, i.e. constraints for which the root expression is a value */
+static
+SCIP_RETCODE removeFixedConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether the node is infeasible */
+   int*                  ndelconss           /**< buffer to add the total number of deleted constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real value;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(infeasible != NULL);
+   assert(ndelconss != NULL);
+
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
+      {
+         value = SCIPgetConsExprExprValue(consdata->expr);
+         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, value, consdata->lhs))
+            || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, value, consdata->rhs)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
+         /* delete the redundant constraint locally */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+         ++(*ndelconss);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -4118,6 +4170,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    SCIP_RESULT propresult;
    int nnotify;
    int nchgbds;
+   int ndelconss;
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4142,7 +4195,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 
    /* try to propagate */
    nchgbds = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
+   ndelconss = 0;
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds, &ndelconss) );
 
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
@@ -4180,6 +4234,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    int nchgbds;
+   int ndelconss;
    int nnotify;
    int c;
 
@@ -4201,7 +4256,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
    /* try to propagate */
    nchgbds = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
+   ndelconss = 0;
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds, &ndelconss) );
 
    if( (propresult == SCIP_CUTOFF) || (propresult == SCIP_REDUCEDDOM) )
    {
@@ -4279,10 +4335,12 @@ static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
    int nchgbds;
+   int ndelconss;
 
    nchgbds = 0;
+   ndelconss = 0;
 
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, &nchgbds) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, &nchgbds, &ndelconss) );
    assert(nchgbds >= 0);
 
    return SCIP_OKAY;
@@ -4293,11 +4351,26 @@ SCIP_DECL_CONSPROP(consPropExpr)
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
+   SCIP_Bool infeasible;
+   int i;
+
    SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
+
+   /* it might be possible that after simplification only a value expression remains in the root node */
+   SCIP_CALL( removeFixedConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
+   assert(*ndelconss >= 0);
+
+   if( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds, ndelconss) );
    assert(*nchgbds >= 0);
+   assert(*ndelconss >= 0);
 
    if( *nchgbds > 0 && *result != SCIP_CUTOFF )
       *result = SCIP_SUCCESS;
