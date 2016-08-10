@@ -3514,11 +3514,13 @@ SCIP_RETCODE conflictResolveBound(
    int i;
 
    /* store the current size of the conflict queues */
+   assert(conflict != NULL);
    nforcedbdchgqueue = SCIPpqueueNElems(conflict->forcedbdchgqueue);
    nbdchgqueue = SCIPpqueueNElems(conflict->bdchgqueue);
+#else
+   assert(conflict != NULL);
 #endif
 
-   assert(conflict != NULL);
    assert(resolved != NULL);
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 

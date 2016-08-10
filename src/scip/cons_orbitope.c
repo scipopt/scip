@@ -2216,21 +2216,24 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
 
       if ( j > nblocks )
       {
-         int newsize;
-
          if ( nspcons > 0 )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variables per row do not match.\n");
             *success = FALSE;
             return SCIP_OKAY;
          }
-
          nblocks = j;
-         newsize = SCIPcalcMemGrowSize(scip, nblocks);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e866*/
-         maxnblocks = newsize;
-         assert( nblocks <= maxnblocks );
+
+         if ( nblocks > maxnblocks )
+         {
+            int newsize;
+
+            newsize = SCIPcalcMemGrowSize(scip, nblocks);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e866*/
+            maxnblocks = newsize;
+         }
       }
+      assert( nblocks <= maxnblocks );
 
       /* skip white space and ',' */
       while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )

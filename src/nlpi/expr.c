@@ -8131,9 +8131,9 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_CONST:
       if (expr->data.dbl < 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "(%lf)", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "(%g)", expr->data.dbl );
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%lf", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", expr->data.dbl );
       break;
 
    case SCIP_EXPR_PLUS:
