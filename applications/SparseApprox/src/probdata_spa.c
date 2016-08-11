@@ -20,8 +20,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define BIG_M 1
-
 
 struct SCIP_ProbData
 {
@@ -29,96 +27,12 @@ struct SCIP_ProbData
    SCIP_VAR****          edgevars;         /**< variables for the edges cut by a partioning */
    SCIP_VAR***           binvars;          /**< variable-matrix belonging to the bin-cluster assignment */
    SCIP_Real**           cmatrix;          /**< matrix to save the transition matrix */
-   SCIP_Real             big_M;
    SCIP_Real             scale;        /**< The weight for the coherence in the objective function */
    SCIP_Real             coherence;
    char                  model_variant;     /**< The model that is used. w for weighted objective, e for normal edge-representation */
    int                   nbins;
    int                   ncluster;
 };
-
-/**Create the transition matrix from a given array of edges and a singular distribution vector */
-static
-SCIP_RETCODE createCMatrix(
-   SCIP*                 scip,               /**< SCIP data structure*/
-   SCIP_Real**           cmatrix,            /**< The transition matrix*/
-   SCIP_Real**           edges,              /**< Edge-Array*/
-   SCIP_Real*            sd,                 /**< Stationary distribution vector*/
-   int                   nedges,             /**< The number of edges*/
-   int                   nbins               /**< The number of bins*/
-)
-{
-   int i;
-   int j;
-   SCIP_Real* sum;
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &sum, nbins) );
-   /* create the matrix and check if the given data is stochastic matrix*/
-   for ( i = 0; i < nbins; ++i )
-   {
-      for ( j = 0; j < nbins; ++j )
-      {
-         cmatrix[i][j] = 0.0;
-      }
-   }
-
-   for ( i = 0; i < nedges; ++i )
-   {
-      assert((int)edges[i][0] <= nbins && (int)edges[i][1]<= nbins);
-
-      cmatrix[(int)edges[i][0] - 1][(int)edges[i][1] - 1] = sd[(int)edges[i][0] - 1] * edges[i][2];
-      sum[(int)edges[i][0] - 1] += edges[i][2];
-      if( edges[i][2] > 1.0 || edges[i][2] < 0 )
-      {
-         SCIPerrorMessage( "The given C-matrix is has an entry at %d, %d with illegal value %f \n", (int)edges[i][0], (int)edges[i][1] , edges[i][2] );
-         return SCIP_READERROR;
-      }
-   }
-
-   for ( i = 0; i < nbins; ++i )
-   {
-      if( SCIPisGT(scip, fabs(1.0 - sum[i]) , 10e-4) )
-      {
-         SCIPerrorMessage( "The given T-matrix is not stochastic, the row-sum in row %d is %f \n", i, sum[i] );
-         return SCIP_READERROR;
-      }
-   }
-   SCIPfreeMemoryArray(scip, &sum);
-   return SCIP_OKAY;
-}
-
-/**  free memory allocated for a matrix of size nbins*nbins */
-SCIP_RETCODE freeMatrix(
-   SCIP_Real**           matrix,
-   int                   nbins
-)
-{
-   int i;
-   for ( i = 0; i < nbins; ++i )
-   {
-      SCIPfreeMemoryArray(scip, &(matrix[i]));
-   }
-   SCIPfreeMemoryArray(scip, &matrix);
-   return SCIP_OKAY;
-}
-
-/** returns the sum over all entries in the matrix |cmatrix - cmatrix.T|. This is an upper bound on the irreversibility in the system */
-static
-SCIP_Real bigM(
-   SCIP_Real**           cmatrix,            /**< The transition matrix */
-   int                   nbins               /**< The number of bins */
-)
-{
-   SCIP_Real max = 0;
-   int i,j;
-   for( i = 0 ; i < nbins; ++i )
-   {
-      for( j = 0; j < i; ++j )
-      {
-         max += REALABS(cmatrix[i][j] - cmatrix[j][i]);
-      }
-   }
-   return max;
-}
 
 /** Creates all the variables for the problem. The constraints are added later, depending on the model that is used */
 static
@@ -184,132 +98,6 @@ SCIP_RETCODE createVariables(
 
    return SCIP_OKAY;
 }
-
-#if 0
-static
-SCIP_RETCODE createProbPolyScip(
-   SCIP*                 scip,               /**< SCIP Data Structure */
-   SCIP_PROBDATA*        probdata            /**< The problem data */
-)
-{
-   {
-      int i;
-      int j;
-      int c1;
-      int c2;
-      char consname[SCIP_MAXSTRLEN];
-      char varname[SCIP_MAXSTRLEN];
-      SCIP_CONS* temp;
-      int nbins = probdata->nbins;
-      int ncluster = probdata->ncluster;
-
-      SCIP_VAR* coherence;
-
-      /* create a variable that is the coherence */
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "coherence-var");
-      SCIP_CALL( SCIPcreateVarBasic(scip, &coherence, varname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-      SCIPaddVar(scip, coherence);
-
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coherence-con");
-      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 0.0, 0.0) );
-      SCIP_CALL( SCIPaddCoefLinear(scip, temp, coherence, -1.0) );
-      for( i = 0; i < nbins; ++i )
-      {
-         for( j = 0; j < i; ++j )
-         {
-            for( c1 = 0; c1 < ncluster; ++c1 )
-            {
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1][c1], (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) );
-            }
-         }
-      }
-      SCIP_CALL( SCIPaddCons(scip, temp) );
-      SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-      SCIPreleaseVar(scip, &coherence);
-
-
-      /*
-       *  create constraints
-       */
-
-      /* create the set-partitioning constraints of the bins */
-      for( i = 0; i < nbins; ++i )
-      {
-         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "setpack_%d", i+1 );
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 1.0, 1.0 ) );
-         for ( c1 = 0; c1 < ncluster; ++c1 )
-         {
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
-         }
-         SCIP_CALL( SCIPaddCons(scip, temp) );
-         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-      }
-      /* create constraints for the edge-cut variables */
-
-      SCIPinfoMessage(scip, NULL, "Using edge-representation with weighted objective \n");
-      for( i = 0; i < nbins; ++i )
-      {
-         for( j = 0; j < nbins; ++j )
-         {
-            for( c1 = 0; c1 < ncluster; ++c1 )
-            {
-               if( NULL == probdata->edgevars[i][j][1][0] )
-                  continue;
-               if( j < i )
-               {
-                  /* if two bins are in the same cluster, then the corresponding edge can not be cut */
-                  (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d", i+1, j+1, c1+1 );
-                  SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1][c1], -1.0) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c1], 1.0) );
-                  SCIP_CALL( SCIPaddCons(scip, temp) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-               }
-               if( j == i )
-                  continue;
-               c2 = (c1 + 1) % 3;
-               /* set the objective weight for the edge-variables (old irreversibiilty) */
-               SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][c1][c2], (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) );
-               /* if two bins are in a different cluster, then the corresponding edge must be cut*/
-               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d_%d", i+1, j+1, c1+1, c2+1 );
-               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1][c2], -1.0) );
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c2], 1.0) );
-               SCIP_CALL( SCIPaddCons(scip, temp) );
-               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-            }
-         }
-      }
-
-      /*    only one cluster-pair at the same time can be active for an edge*/
-      for( i = 0; i < nbins; ++i )
-      {
-         for( j = 0; j < i; ++j )
-         {
-            if( NULL == probdata->edgevars[i][j][0][1] )
-               continue;
-            (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i+1, j+1 );
-            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 0.0, 1.0 ) );
-            for( c1 = 0; c1 < ncluster; ++c1 )
-            {
-               c2 = (c1 + 1) % 3;
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1][c2], 1.0) );
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][c1][c2], 1.0) );
-
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1][c1], 1.0) );
-            }
-            SCIP_CALL( SCIPaddCons(scip, temp) );
-            SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-         }
-      }
-
-      return SCIP_OKAY;
-   }
-}
-#endif
-
 
 /** create the problem without variable amount of clusters */
 static
@@ -771,6 +559,12 @@ SCIP_DECL_PROBDELORIG(probdelorigSpa)
    SCIPfreeMemoryArray( scip, &((*probdata)->edgevars) );
    SCIPfreeMemoryArray(scip, &((*probdata)->binvars));
    SCIPfreeMemoryArray(scip, &((*probdata)->indicatorvar));
+   for ( i = 0; i < (*probdata)->nbins; ++i )
+   {
+      SCIPfreeMemoryArray(scip, &((*probdata)->cmatrix[i]));
+   }
+   SCIPfreeMemoryArray(scip, &(*probdata)->cmatrix);
+   return SCIP_OKAY;
 
    freeMatrix((*probdata)->cmatrix, (*probdata)->nbins);
 
@@ -830,7 +624,12 @@ SCIP_DECL_PROBDELORIG(probdeltransSpa)
    SCIPfreeMemoryArray(scip, &((*probdata)->binvars));
    SCIPfreeMemoryArray(scip, &((*probdata)->indicatorvar));
 
-   freeMatrix((*probdata)->cmatrix, (*probdata)->nbins);
+   for ( i = 0; i < (*probdata)->nbins; ++i )
+   {
+      SCIPfreeMemoryArray(scip, &((*probdata)->cmatrix[i]));
+   }
+   SCIPfreeMemoryArray(scip, &(*probdata)->cmatrix);
+   return SCIP_OKAY;
 
    SCIPfreeMemory(scip, probdata);
 
@@ -978,20 +777,17 @@ SCIP_RETCODE SCIPcreateProbSpa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
    int                   nbins,              /**< number of bins */
-   int                   nedges,             /**< number of edges */
-   SCIP_Real**           edges,              /**< array with start- and endpoints of the edges */
-   SCIP_Real*            sd                  /**< array with the stationary distribution */
+   SCIP_Real**           cmatrix             /**< The transition matrix */
 )
 {
    SCIP_PROBDATA* probdata = NULL;
    int i;
+   int j;
    SCIP_Real epsC;
    char model_variant;
    int ncluster;
 
    assert(nbins > 0);  /* at least one node */
-   assert(nedges >= 0); /* no negative number of edges */
-
 
    SCIP_CALL( SCIPcreateProbBasic(scip, name) );
 
@@ -1013,10 +809,11 @@ SCIP_RETCODE SCIPcreateProbSpa(
    for ( i = 0; i < nbins; ++i )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->cmatrix[i]), nbins) );
+      for( j = 0; j < nbins; ++j )
+      {
+         probdata->cmatrix[i][j] = cmatrix[i][j];
+      }
    }
-   SCIP_CALL( createCMatrix( scip, probdata->cmatrix, edges, sd, nedges, nbins) );
-
-   probdata->big_M = bigM(probdata->cmatrix, nbins);
 
    assert(epsC >= 0 && epsC <= 1.0);
    probdata->coherence = epsC;

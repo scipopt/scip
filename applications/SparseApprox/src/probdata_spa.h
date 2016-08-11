@@ -102,9 +102,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
    int                   nbins,              /**< number of bins */
-   int                   nedges,             /**< number of edges */
-   SCIP_Real**           edges,              /**< array with start- and endpoints of the edges */
-   SCIP_Real*            sd                  /**< array with the stationary distribution */
+   SCIP_Real**           cmatrix             /**< the transition matrix */
 );
 
 extern

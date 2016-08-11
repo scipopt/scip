@@ -81,15 +81,11 @@ SCIP_RETCODE readSpa(
 {
    SCIP_FILE* fp;               /* file-reader */
    char buf[COL_MAX_LINELEN];   /* maximal length of line */
-   int nedges;
    int nbins;
    char* char_p;
-   SCIP_Real** edges;
-   SCIP_Real* sd;
-   SCIP_Real begin;
-   SCIP_Real end;
-   SCIP_Real weight;
+   SCIP_Real** cmatrix;
    int i;
+   int col;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -105,7 +101,7 @@ SCIP_RETCODE readSpa(
    if( SCIPfgets(buf, (int) sizeof(buf), fp) == NULL)
       return SCIP_READERROR;
 
-   while( !SCIPfeof(fp) && (buf[0] != 'p') )
+   while( !SCIPfeof(fp) && (buf[0] != '#' || buf[2] != 'p') )
    {
       SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
    }
@@ -115,112 +111,54 @@ SCIP_RETCODE readSpa(
       SCIPerrorMessage("Error! Could not find line starting with 'p'.\n");
       return SCIP_READERROR;
    }
-   if ( buf[2] != 'e' || buf[3] != 'd' || buf[4] != 'g' || buf[5] != 'e' )
-   {
-      SCIPerrorMessage("Line starting with 'p' must continue with 'edge'!\n");
-      return SCIP_READERROR;
-   }
-   char_p = &buf[6];
+   char_p = &buf[3];
    /* if line reads 'edges' (non-standard!), instead of 'edge'. */
-   if ( *char_p == 's' )
-      ++(char_p);
 
    /* read out number of nodes and edges, the pointer char_p will be changed */
 
    nbins = (int) getNextNumber(&char_p);
-   nedges = (int) getNextNumber(&char_p);
 
    if ( nbins <= 0 )
    {
       SCIPerrorMessage("Number of bins must be positive!\n");
       return SCIP_READERROR;
    }
-   if ( nedges < 0 )
-   {	  
-      SCIPerrorMessage("Number of edges must be nonnegative!\n");
-      return SCIP_READERROR;
-   }
-   /* create array for edges */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &edges, nedges) );
-   for( i = 0; i < nedges; i++)
+
+   /* create cmatrix */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &cmatrix, nbins) );
+   for( i = 0; i < nbins; i++)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(edges[i]), 3) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) ); /*lint !e866*/
    }
    /* fill array for edges */
    i = 0;
-   while ( !SCIPfeof(fp) && i < nedges )
-   {
-      SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
-
-
-      char_p = &buf[0];
-      assert(buf[0] != 's');
-      begin = (SCIP_Real) getNextNumber(&char_p);
-      end = (SCIP_Real) getNextNumber(&char_p);
-      if( (int) begin > nbins || (int) end > nbins )
-      {
-         SCIPerrorMessage("Invalid edge from %d to %d. Only %d bins were specified", begin, end, nbins);
-         return SCIP_READERROR;
-      }
-      weight = (SCIP_Real) getNextNumber(&char_p);
-
-      if( i >= nedges )
-      {
-         SCIPerrorMessage( "more edges than expected: expected %d many, but got already %d'th (non-duplicate) edge", nedges, i+1 );
-         return SCIP_READERROR;
-      }
-      edges[i][0] = begin;
-      edges[i][1] = end;
-      edges[i][2] = weight;
-      assert((edges[i][0] > 0) && (edges[i][0] <= nbins));
-      assert((edges[i][1] > 0) && (edges[i][1] <= nbins));
-      i++;
-   }
-   /* search for the section with stationairy distribution */
-   while( !SCIPfeof(fp) && (buf[0] != 's') )
-   {
-      SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
-   }
-   /* no graph information in file! */
-   if ( SCIPfeof(fp) )
-   {
-      SCIPerrorMessage("Error! Could not find line starting with 's'.\n");
-      return SCIP_READERROR;
-   }
-   if ( buf[1] != 'd' )
-   {
-      SCIPerrorMessage("The section for the stationary distribution must be initialized by sd \n");
-      return SCIP_READERROR;
-   }
-   /* create array for stationary distribution */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &sd, nbins) );
-
-   i = 0;
-   while( !SCIPfeof(fp) && i < nbins )
+   while ( !SCIPfeof(fp) && i < nbins )
    {
       SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
       char_p = &buf[0];
+      for( col = 0; col < nbins; ++col )
+      {
+         cmatrix[i][col] = (SCIP_Real) getNextNumber(&char_p);
+      }
 
-      sd[i] = (SCIP_Real) getNextNumber(&char_p);
+      if( i >= nbins )
+      {
+         SCIPerrorMessage( "more lines than expected: expected %d many, but got already %d'th (non-duplicate) edge", nbins, i+1 );
+         return SCIP_READERROR;
+      }
       i++;
-   }
-   if( i != nbins )
-   {
-      SCIPerrorMessage("error in the stationary distribution part. Expected %d values but found only %d many\n", nbins, i );
-      return SCIP_READERROR;
    }
 
    /* create problem data */
-   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, edges, sd) );
+   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, cmatrix) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
-   for ( i = nedges-1; i >= 0; i-- )
+   for ( i = nbins - 1; i >= 0; i-- )
    {
-      SCIPfreeMemoryArray(scip, &(edges[i]));
+      SCIPfreeMemoryArray(scip, &(cmatrix[i]));
    }
 
-   SCIPfreeMemoryArray(scip, &sd);
-   SCIPfreeMemoryArray(scip, &edges);
+   SCIPfreeMemoryArray(scip, &cmatrix);
    SCIPfclose(fp);
 
    return SCIP_OKAY;
