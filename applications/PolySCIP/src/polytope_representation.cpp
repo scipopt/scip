@@ -302,36 +302,6 @@ namespace polyscip {
             return extended_v_rep;
         }
 
-        /*V_RepC DoubleDescriptionMethod::extendVRep(V_RepC&& cur_v_rep) {
-            auto extended_v_rep = V_RepC{};
-            auto plus_inds = vector<std::size_t>{};
-            auto minus_inds = vector<std::size_t>{};
-            const H_RepT& constraint = h_rep_[current_hrep_index_];
-
-            for (size_t i = 0; i < cur_v_rep.size(); ++i) { // partition current v-representation
-                auto result = std::inner_product(cur_v_rep[i]->weight_.cbegin(), cur_v_rep[i]->weight_.cend(),
-                                                 constraint.first.cbegin(), -(cur_v_rep[i]->wov_ * constraint.second));
-                if (SCIPisNegative(scip_, result)) {
-                    minus_inds.push_back(i);
-                }
-                else if (SCIPisZero(scip_, result)) {
-                    extended_v_rep.push_back(cur_v_rep[i]); // element will also be in extended v-representation
-                }
-                else {
-                    assert(SCIPisPositive(scip_, result));
-                    plus_inds.push_back(i);
-                }
-            }
-            auto adj_pairs = computeAdjacentPairs(plus_inds, minus_inds, cur_v_rep);
-            for (const auto &elem : adj_pairs)
-                extended_v_rep.push_back(make_shared<V_RepT>(scip_, *cur_v_rep[elem.first], *cur_v_rep[elem.second], current_hrep_index_, h_rep_));
-
-            for (const auto& i : plus_inds)
-                extended_v_rep.push_back(cur_v_rep[i]);
-
-            return extended_v_rep;
-        }*/
-
 
         V_RepC DoubleDescriptionMethod::extendVRep(V_RepC&& cur_v_rep) {
             auto extended_v_rep = V_RepC{};
@@ -378,19 +348,6 @@ namespace polyscip {
             return adj_pairs;
         }
 
-        /*vector<pair<size_t, size_t>> DoubleDescriptionMethod::computeAdjacentPairs(const vector<size_t> &plus_inds,
-                                                                                   const vector<size_t> &minus_inds,
-                                                                                   const V_RepC& cur_v_rep) const {
-            auto adj_pairs = vector<pair<size_t, size_t>> {};
-            for (const auto& plus : plus_inds) {
-                for (const auto& minus : minus_inds) {
-                    assert (plus != minus);
-                    if (rayPairIsAdjacent(plus, minus, cur_v_rep))
-                        adj_pairs.push_back({plus, minus});
-                }
-            }
-            return adj_pairs;
-        }*/
 
         std::bitset<V_RepT::kMaxInitialHrepSize> DoubleDescriptionMethod::getCommonZeroSlackIndices(const V_RepT &v,
                                                                                                     const V_RepT &w) const {

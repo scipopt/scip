@@ -45,8 +45,8 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
-        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of obsolete and non-obsolete vertices; default value: 1e-4",
-                                     false, 1e-4, "double");
+        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-3",
+                                     false, 1e-3, "double");
         cmd.add(epsilon_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
                                              "PATH for -w",

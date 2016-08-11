@@ -37,6 +37,9 @@ namespace polyscip {
 
     class Polyscip {
     public:
+        using betaElem = std::pair< ValueType, ValueType>;
+        using betaT = std::vector<betaElem>;
+
         explicit Polyscip(int argc, const char *const *argv);
 
         ~Polyscip();
@@ -96,6 +99,8 @@ namespace polyscip {
 
         Result getResult(bool outcome_is_bounded = false, SCIP_SOL *primal_sol = nullptr);
 
+        Result getOptimalResult();
+
         void computeNonRedundantObjectives(bool printObjectives) = delete;
 
         void printObjective(std::size_t obj_no,
@@ -127,6 +132,18 @@ namespace polyscip {
                                               const OutcomeType& successor,
                                               const OutcomeType& reference_point);
 
+        /** add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
+         */
+        SCIP_CONS* createObjFctCons(SCIP_VAR* new_var,
+                                          const std::vector<SCIP_VAR*>& orig_vars,
+                                          const std::vector<ValueType>& orig_vals,
+                                          const ValueType& rhs,
+                                          const ValueType& beta_i);
+
+        std::vector<ValueType> computeUpperBetaValues(SCIP_Real opt_value,
+                                                      const OutcomeType& new_result,
+                                                      const OutcomeType& reference_point) const;
+
         void printSol(const SolType& sol, std::ostream& os) const;
 
         /** Prints given ray to given output stream */
@@ -151,7 +168,6 @@ namespace polyscip {
         ResultContainer unsupported_;
         ResultContainer unbounded_;
 
-        int tmp_counter;
     };
 
 }

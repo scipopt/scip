@@ -24,11 +24,13 @@
 #include <iostream>
 #include <iterator> //std::advance
 #include <limits>
+#include <list>
 #include <ostream>
 #include <memory> //std::addressof
 #include <numeric> //std::inner_product
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "polytope_representation.h"
@@ -60,8 +62,7 @@ namespace polyscip {
               polyscip_status_(PolyscipStatus::Unsolved),
               scip_(nullptr),
               obj_sense_(SCIP_OBJSENSE_MINIMIZE), // default objective sense is minimization
-              clock_total_(nullptr),
-              tmp_counter(0)
+              clock_total_(nullptr)
     {
         if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0)
             throw std::domain_error("Invalid time limit.");
@@ -171,19 +172,26 @@ namespace polyscip {
             nonzero_obj_orig_vals.push_back(std::move(nonzero_obj_vals));
         }
 
+        // sort supported bounded results lexicographically and compute unsupported points for successive pairs of supported results
         std::sort(begin(supported_), end(supported_), [](const Result& res1, const Result& res2){return res1.second < res2.second;});
-        for (auto res = supported_.cbegin(); res != std::prev(supported_.cend()); ++res) {
+        auto res = supported_.cbegin();
+        while (res != std::prev(supported_.cend()) && polyscip_status_==PolyscipStatus::CompUnsupportedPhase) {
             auto& pred = res->second;
             auto& succ = std::next(res)->second;
             SCIP_CALL( computeUnsupported(z, nonzero_obj_orig_vars, nonzero_obj_orig_vals, pred, succ) );
+            ++res;
         }
+        if (polyscip_status_ == PolyscipStatus::CompUnsupportedPhase)
+            polyscip_status_ = PolyscipStatus::Finished;
 
+        // clean up
         if (SCIPisTransformed(scip_))
             SCIP_CALL( SCIPfreeTransform(scip_) );
-        SCIP_Bool var_deleted = false;
+        SCIP_Bool var_deleted {FALSE};
         SCIP_CALL( SCIPdelVar(scip_, z, addressof(var_deleted)) );
         assert (var_deleted);
         SCIP_CALL( SCIPreleaseVar(scip_, addressof(z)) );
+
         return SCIP_OKAY;
     }
 
@@ -234,89 +242,123 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    SCIP_CONS* Polyscip::createObjFctCons(SCIP_VAR* new_var,
+                                          const vector<SCIP_VAR*>& orig_vars,
+                                          const vector<ValueType>& orig_vals,
+                                          const ValueType& rhs,
+                                          const ValueType& beta_i) {
+        auto vars = vector<SCIP_VAR*>(begin(orig_vars), end(orig_vars));
+        auto vals = vector<ValueType>(orig_vals.size(), 0.);
+        std::transform(begin(orig_vals),
+                       end(orig_vals),
+                       begin(vals),
+                       [beta_i](ValueType val){return -beta_i*val;});
+        vars.push_back(new_var);
+        vals.push_back(1.);
+
+        SCIP_CONS* cons = nullptr;
+        // add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
+        SCIPcreateConsBasicLinear(scip_,
+                                  addressof(cons),
+                                  "max_abs_value_transf_cons",
+                                  global::narrow_cast<int>(vars.size()),
+                                  vars.data(),
+                                  vals.data(),
+                                  -beta_i*rhs,
+                                  SCIPinfinity(scip_));
+        assert (cons != nullptr);
+        return cons;
+    }
+
     SCIP_RETCODE Polyscip::solveWeightedTchebycheff(SCIP_VAR* new_var,
-                                            const vector<vector<SCIP_VAR*>>& orig_vars,
-                                            const vector<vector<ValueType>>& orig_vals,
-                                            const OutcomeType& pred,
-                                            const OutcomeType& succ,
-                                            const OutcomeType& ref_point) {
+                                                    const vector<vector<SCIP_VAR*>>& orig_vars,
+                                                    const vector<vector<ValueType>>& orig_vals,
+                                                    const OutcomeType& pred,
+                                                    const OutcomeType& succ,
+                                                    const OutcomeType& ref_point) {
         assert (pred.size() == succ.size());
         assert (ref_point.size() == pred.size());
         assert (ref_point.size() == orig_vars.size());
         assert (orig_vars.size() == orig_vals.size());
         assert (pred.size() > 1);
+        auto size = ref_point.size();
 
-        auto beta = vector<ValueType>(ref_point.size(), 1.);
-        auto constraints = vector<SCIP_CONS*>{};
+        auto found_unsupported = ResultContainer{};
 
-        for (size_t i=0; i<ref_point.size(); ++i) {
-            auto vars = vector<SCIP_VAR*>(begin(orig_vars[i]), end(orig_vars[i]));
-            auto vals = vector<ValueType>(orig_vals[i].size(),0.);
-            auto beta_i = beta[i];
-            std::transform(begin(orig_vals[i]),
-                           end(orig_vals[i]),
-                           begin(vals),
-                           [beta_i](ValueType val){return -beta_i*val;});
-
-            // add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
-            SCIP_CONS* cons = nullptr;
-            auto cons_name = "beta_cons_" + std::to_string(i);
-            vars.push_back(new_var);
-            vals.push_back(1.);
-            SCIP_CALL( SCIPcreateConsBasicLinear(scip_,
-                                                 addressof(cons),
-                                                 cons_name.data(),
-                                                 global::narrow_cast<int>(vars.size()),
-                                                 vars.data(),
-                                                 vals.data(),
-                                                 -beta_i*ref_point[i],
-                                                 SCIPinfinity(scip_)) );
-            assert (cons != nullptr);
-            SCIP_CALL( SCIPaddCons(scip_, cons) );
-            constraints.push_back(cons);
+        auto beta_space = std::list<betaT>{};
+        // add initial element to beta_space
+        auto beta = betaT{};
+        beta.push_back({1,1});
+        for (size_t i=1; i<size; ++i) {
+            beta.push_back({cmd_line_args_.getEpsilon(), std::numeric_limits<ValueType>::max()});
         }
+        beta_space.push_back(std::move(beta));
 
-        ++tmp_counter;
-        string instance_name = std::to_string(tmp_counter) + "_tcheby.lp";
-        SCIPwriteOrigProblem(scip_, instance_name.data(), "lp", false );
+        // while beta_space is not empty
+        while (!beta_space.empty() && polyscip_status_==PolyscipStatus::CompUnsupportedPhase) {
+            auto beta = beta_space.back();
+            beta_space.pop_back();
+            auto constraints = vector<SCIP_CONS*>{};
+            for (size_t i=0; i<size; ++i) {
+                assert (beta[i].second - beta[i].first > cmd_line_args_.getEpsilon());
+                auto obj_cons = createObjFctCons(new_var,
+                                                 orig_vars[i],
+                                                 orig_vals[i],
+                                                 ref_point[i],
+                                                 beta[i].first);
+                SCIP_CALL( SCIPaddCons(scip_, obj_cons) );
+                constraints.push_back(obj_cons);
+            }
 
-        std::cout << "solving new tchebycheff...";
-        SCIP_CALL( solve() );
-        std::cout << "finished.\n";
-        auto scip_status = SCIPgetStatus(scip_);
-                if (scip_status == SCIP_STATUS_OPTIMAL) {
-                    auto best_sol = SCIPgetBestSol(scip_);
-                    SCIP_SOL *finite_sol{nullptr};
-                   SCIP_Bool same_obj_val{FALSE};
-                   SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
+            // solve problem
+            std::cout << "solving new tchebycheff...";
+            SCIP_CALL( solve() );
+            std::cout << "finished.\n";
 
-                    if (!same_obj_val) {
-                        auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
-                                             SCIPgetSolOrigObj(scip_, finite_sol));
-                        if (diff > 1.0e-5) {
-                            std::cerr << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
-                            SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
-                           throw std::runtime_error("SCIPcreateFiniteSolCopy: unacceptable difference in objective values.");
-                        }
-                    }
-                    assert (finite_sol != nullptr);
-                    unsupported_.push_back(getResult(true, finite_sol));
+            // check status and result
+            auto scip_status = SCIPgetStatus(scip_);
+            if (scip_status == SCIP_STATUS_OPTIMAL) {
+                auto opt_val = SCIPgetPrimalbound(scip_);
+                assert ( opt_val >= 0.);
+                auto new_result = getOptimalResult();
+                auto upper_beta_values = computeUpperBetaValues(opt_val, new_result.second, ref_point);
 
-                    SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
-                }
-                else {
-                    throw std::runtime_error("unexpected status in for weighted Tchebycheff problem\n");
-                }
+                //todo incorporate upper beta vals etc
 
-        // release and delete constraints
-        if (SCIPisTransformed(scip_))
-            SCIP_CALL( SCIPfreeTransform(scip_) );
-        for (auto cons : constraints) {
-            SCIP_CALL( SCIPdelCons(scip_, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
+                // check whether new result coincides with known results
+
+            }
+            else if (scip_status == SCIP_STATUS_TIMELIMIT) {
+                polyscip_status_ = PolyscipStatus::TimeLimitReached;
+            }
+            else {
+                string error_msg = "unexpected solution status in solveWeightedTchebycheff: " +
+                                   std::to_string(SCIPgetStatus(scip_)) + "\n";
+                throw std::runtime_error(error_msg);
+            }
+
+            // release and delete constraints
+            if (SCIPisTransformed(scip_))
+                SCIP_CALL( SCIPfreeTransform(scip_) );
+            for (auto cons : constraints) {
+                SCIP_CALL( SCIPdelCons(scip_, cons) );
+                SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
+            }
         }
-
         return SCIP_OKAY;
+    }
+
+    std::vector<ValueType> Polyscip::computeUpperBetaValues(SCIP_Real opt_value,
+                                                            const OutcomeType& result,
+                                                            const OutcomeType& ref_point) const {
+        assert (result.size() == ref_point.size());
+        auto upper_values = vector<ValueType>{};
+        upper_values.push_back(1.);
+        for (size_t i=1; i<ref_point.size(); ++i) {
+            assert (SCIPisPositive(scip_, result[i]-ref_point[i]));
+            upper_values.push_back(global::narrow_cast<ValueType>(opt_value / (result[i]-ref_point[i]) + cmd_line_args_.getEpsilon()));
+        }
+        return upper_values;
     }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
@@ -457,9 +499,9 @@ namespace polyscip {
             if (!SCIPisZero(scip_, var_sol_val)) {
                 sol.emplace_back(SCIPvarGetName(vars[i]), var_sol_val);
                 auto var_obj_vals = OutcomeType(considered_objs_.size(), 0.);
-                //for (decltype(no_objs_) j=0; j<no_objs_; ++j)
-                for (auto index : considered_objs_)
+                for (auto index : considered_objs_) {
                     var_obj_vals[index] = objs_probdata->getObjVal(vars[i], index, var_sol_val);
+                }
                 std::transform(begin(outcome), end(outcome),
                                begin(var_obj_vals),
                                begin(outcome),
@@ -469,6 +511,31 @@ namespace polyscip {
         }
         return {sol, outcome};
     }
+
+
+
+    Result Polyscip::getOptimalResult() {
+        auto best_sol = SCIPgetBestSol(scip_);
+        SCIP_SOL *finite_sol{nullptr};
+        SCIP_Bool same_obj_val{FALSE};
+        auto retcode = SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val));
+        if (retcode != SCIP_OKAY)
+            throw std::runtime_error("SCIPcreateFiniteSolCopy: return code != SCIP_OKAY.\n");
+        if (!same_obj_val) {
+            auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
+                                 SCIPgetSolOrigObj(scip_, finite_sol));
+            if (diff > 1.0e-5) {
+                std::cerr << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
+                SCIPfreeSol(scip_, addressof(finite_sol));
+                throw std::runtime_error("SCIPcreateFiniteSolCopy: unacceptable difference in objective values.");
+            }
+        }
+        assert (finite_sol != nullptr);
+        auto new_result = getResult(true, finite_sol);
+        SCIPfreeSol(scip_, addressof(finite_sol));
+        return new_result;
+    }
+
 
     bool Polyscip::outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const {
         auto beg_it = outcome_is_bounded ? begin(supported_) : begin(unbounded_);
@@ -720,7 +787,7 @@ namespace polyscip {
         if (retcode != SCIP_OKAY)
             throw std::runtime_error("no SCIP_OKAY for SCIPlpiLoadColLP\n");
 
-        SCIPlpiWriteLP(lpi, "redundancy_check.lp");
+        //SCIPlpiWriteLP(lpi, "redundancy_check.lp");
 
         retcode = SCIPlpiSolvePrimal(lpi);
         if (retcode != SCIP_OKAY)
