@@ -66,6 +66,12 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"<x>^10 + <x>^9.5 + <x>^9 + <x>^8.5 + <x>^8 + <x>^7.5", "sum"},
       {"<x>/<x>", "val"},
       {"(2*<x>)^2", "sum"},
+      {"(<x> + <y>)^2", "sum"},
+      {"(<x> + <y> + 2)^2", "sum"},
+      {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "prod"},
+      {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y> - <y>^2", "val"},
+      {"(<x> + <y> + <fixvar>)^2 - <x>^2 - 2*<x>*<y> - <y>^2 - <fixvar>^2 -2*<x>*<fixvar> - 2*<fixvar>*<y>", "val"},
+      {"(1 + (<x>*<y>^2)^0.5)^2 - 1 - 2*(<x>*<y>^2)^0.5 -<y>^2*<x>", "val"},
       {"(2*<x>)*(2*<x>) - 4 * <x>^2", "val"}
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
@@ -303,3 +309,9 @@ Test(simplify, remove_fix_variables)
    SCIP_CALL( SCIPpresolve(scip) );
    SCIP_CALL( SCIPfreeTransform(scip) ); /* why do I need to call this one before freeing the sols? */
 }
+
+///* parameterized test don't work with --single :/ */
+//Test(simplify, debug)
+//{
+//   parseSimplifyCheck(scip, "(<x> + <y> + <fixvar>)^2 - <x>^2 - 2*<x>*<y> - <y>^2 - <fixvar>^2 -2*<x>*<fixvar> - 2*<fixvar>*<y>", "val");
+//}
