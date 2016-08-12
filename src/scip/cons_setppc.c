@@ -8234,7 +8234,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
 
    if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING
       || ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5) )
+         && SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5) )
    {
 #ifndef NDEBUG
       SCIP_Bool confvarfound;
@@ -8251,7 +8251,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
          if( consdata->vars[v] != infervar )
          {
             /* the reason variable must be assigned to zero */
-            assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
+            assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
          }
 #ifndef NDEBUG
@@ -8269,18 +8269,18 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
       /* the inference constraint is a set partitioning or packing constraint with the inference variable infered to 0.0:
        * the reason for the deduction is the assignment of 1.0 to a single variable
        */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
 
       if( inferinfo >= 0 )
       {
-         assert(SCIPvarGetLbAtIndex(consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
+         assert(SCIPgetVarLbAtIndex(scip, consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo]) );
       }
       else
       {
          for( v = 0; v < consdata->nvars; ++v )
          {
-            if( SCIPvarGetLbAtIndex(consdata->vars[v], bdchgidx, FALSE) > 0.5 )
+            if( SCIPgetVarLbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) > 0.5 )
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
                break;

@@ -15788,8 +15788,12 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    }
 }
 
+#ifdef SCIP_DEPRECATED
+
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -15912,6 +15916,8 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16034,6 +16040,8 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16051,7 +16059,10 @@ SCIP_Real SCIPvarGetBdAtIndex(
    }
 }
 
-/** returns whether the binary variable was fixed at the time given by the bound change index */
+/** returns whether the binary variable was fixed at the time given by the bound change index
+ *
+ *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
+ */
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -16067,6 +16078,8 @@ SCIP_Bool SCIPvarWasFixedAtIndex(
    return ((SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetLbAtIndex(var, bdchgidx, after) > 0.5)
       || (SCIPvarGetUbLocal(var) < 0.5 && SCIPvarGetUbAtIndex(var, bdchgidx, after) < 0.5));
 }
+
+#endif
 
 /** bound change index representing the initial time before any bound changes took place */
 static SCIP_BDCHGIDX initbdchgidx = {-2, 0};

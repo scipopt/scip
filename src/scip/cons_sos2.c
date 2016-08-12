@@ -1886,14 +1886,14 @@ SCIP_DECL_CONSRESPROP(consRespropSOS2)
    assert( var != infervar );
 
    /* check if lower bound of var was the reason */
-   if ( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) )
+   if ( SCIPisFeasPositive(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) )
    {
       SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;
    }
 
    /* check if upper bound of var was the reason */
-   if ( SCIPisFeasNegative(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) )
+   if ( SCIPisFeasNegative(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE)) )
    {
       SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;

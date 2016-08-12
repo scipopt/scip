@@ -12668,7 +12668,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
       {
          if( SCIPvarGetIndex(consdata->vars[i]) == inferinfo ) 
          {
-            assert( SCIPvarGetUbAtIndex(consdata->vars[i], bdchgidx, FALSE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
             break;
          }
@@ -12706,7 +12706,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
       {
          for( i = 0; i < consdata->nvars; i++ )
          {
-            if( SCIPvarGetLbAtIndex(consdata->vars[i], bdchgidx, FALSE) > 0.5 )
+            if( SCIPgetVarLbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) > 0.5 )
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
                capsum += consdata->weights[i];

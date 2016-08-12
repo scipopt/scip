@@ -32,6 +32,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/tree.h"
+#include "scip/scip.h"
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
@@ -6918,9 +6919,9 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
-         && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
    assert(set != NULL);
    assert(cons->scip == set->scip);
