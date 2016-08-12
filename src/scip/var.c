@@ -15734,7 +15734,7 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    }
 }
 
-#ifdef SCIP_DEPRECIATED
+#ifdef SCIP_DEPRECATED
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
