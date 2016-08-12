@@ -17660,28 +17660,33 @@ SCIP_Real SCIPgetVarLbAtIndex(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
       if( var->data.aggregate.scalar > 0.0 )
       {
+	 SCIP_Real lb;
+
+	 lb = SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
          /* a > 0 -> get lower bound of y */
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-         return var->data.aggregate.scalar * SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after)
-            + var->data.aggregate.constant;
+	 if ( SCIPisInfinity(scip, -lb) )
+	    return -SCIP_DEFAULT_INFINITY;
+	 else if ( SCIPisInfinity(scip, lb) )
+	    return SCIP_DEFAULT_INFINITY;
+	 else
+	    return var->data.aggregate.scalar * lb + var->data.aggregate.constant;
       }
       else if( var->data.aggregate.scalar < 0.0 )
       {
+	 SCIP_Real ub;
+
+	 ub = SCIPgetVarUbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
          /* a < 0 -> get upper bound of y */
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-         return var->data.aggregate.scalar * SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after)
-            + var->data.aggregate.constant;
+	 if ( SCIPisInfinity(scip, -ub) )
+	    return SCIP_DEFAULT_INFINITY;
+	 else if ( SCIPisInfinity(scip, ub) )
+	    return -SCIP_DEFAULT_INFINITY;
+	 else
+	    return var->data.aggregate.scalar * ub + var->data.aggregate.constant;
       }
       else
       {
@@ -17700,19 +17705,31 @@ SCIP_Real SCIPgetVarLbAtIndex(
 
          if( var->data.multaggr.scalars[0] > 0.0 )
          {
-            /* a > 0 -> get lower bound of y */
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-            return var->data.multaggr.scalars[0] * SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after)
-               + var->data.multaggr.constant;
+	    SCIP_Real lb;
+
+	    lb = SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+	    /* a > 0 -> get lower bound of y */
+	    if ( SCIPisInfinity(scip, -lb) )
+	       return -SCIP_DEFAULT_INFINITY;
+	    else if ( SCIPisInfinity(scip, lb) )
+	       return SCIP_DEFAULT_INFINITY;
+	    else
+	       return var->data.multaggr.scalars[0] * lb + var->data.multaggr.constant;
          }
          else if( var->data.multaggr.scalars[0] < 0.0 )
          {
-            /* a < 0 -> get upper bound of y */
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-            return var->data.multaggr.scalars[0] * SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after)
-               + var->data.multaggr.constant;
+	    SCIP_Real ub;
+
+	    ub = SCIPgetVarUbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+	    /* a < 0 -> get upper bound of y */
+	    if ( SCIPisInfinity(scip, -ub) )
+	       return SCIP_DEFAULT_INFINITY;
+	    else if ( SCIPisInfinity(scip, ub) )
+	       return -SCIP_DEFAULT_INFINITY;
+	    else
+	       return var->data.multaggr.scalars[0] * ub + var->data.multaggr.constant;
          }
          else
          {
@@ -17783,28 +17800,33 @@ SCIP_Real SCIPgetVarUbAtIndex(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
       if( var->data.aggregate.scalar > 0.0 )
       {
+	 SCIP_Real ub;
+
+	 ub = SCIPgetVarUbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
          /* a > 0 -> get lower bound of y */
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-         return var->data.aggregate.scalar * SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after)
-            + var->data.aggregate.constant;
+	 if ( SCIPisInfinity(scip, -ub) )
+	    return -SCIP_DEFAULT_INFINITY;
+	 else if ( SCIPisInfinity(scip, ub) )
+	    return SCIP_DEFAULT_INFINITY;
+	 else
+	    return var->data.aggregate.scalar * ub + var->data.aggregate.constant;
       }
       else if( var->data.aggregate.scalar < 0.0 )
       {
+	 SCIP_Real lb;
+
+	 lb = SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
          /* a < 0 -> get upper bound of y */
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-         assert(SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-         return var->data.aggregate.scalar * SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after)
-            + var->data.aggregate.constant;
+	 if ( SCIPisInfinity(scip, -lb) )
+	    return SCIP_DEFAULT_INFINITY;
+	 else if ( SCIPisInfinity(scip, lb) )
+	    return -SCIP_DEFAULT_INFINITY;
+	 else
+	    return var->data.aggregate.scalar * lb + var->data.aggregate.constant;
       }
       else
       {
@@ -17823,19 +17845,31 @@ SCIP_Real SCIPgetVarUbAtIndex(
 
          if( var->data.multaggr.scalars[0] > 0.0 )
          {
-            /* a > 0 -> get lower bound of y */
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-            return var->data.multaggr.scalars[0] * SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after)
-               + var->data.multaggr.constant;
+	    SCIP_Real ub;
+
+	    ub = SCIPgetVarUbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+	    /* a > 0 -> get lower bound of y */
+	    if ( SCIPisInfinity(scip, -ub) )
+	       return -SCIP_DEFAULT_INFINITY;
+	    else if ( SCIPisInfinity(scip, ub) )
+	       return SCIP_DEFAULT_INFINITY;
+	    else
+	       return var->data.multaggr.scalars[0] * ub + var->data.multaggr.constant;
          }
          else if( var->data.multaggr.scalars[0] < 0.0 )
          {
-            /* a < 0 -> get upper bound of y */
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
-            assert(SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
-            return var->data.multaggr.scalars[0] * SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after)
-               + var->data.multaggr.constant;
+	    SCIP_Real lb;
+
+	    lb = SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+	    /* a < 0 -> get upper bound of y */
+	    if ( SCIPisInfinity(scip, -lb) )
+	       return SCIP_DEFAULT_INFINITY;
+	    else if ( SCIPisInfinity(scip, lb) )
+	       return -SCIP_DEFAULT_INFINITY;
+	    else
+	       return var->data.multaggr.scalars[0] * lb + var->data.multaggr.constant;
          }
          else
          {
