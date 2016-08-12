@@ -707,8 +707,6 @@ SCIP_RETCODE simplifyFactor(
                SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &expansionchild, 2, prodchildren, NULL, 1.0) );
                SCIP_CALL( simplifyProduct(scip, expansionchild, &expandedchildren[i*(i+1)/2 + j]) );
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansionchild) );
-               printf("child[%d]:\n", i*(i+1)/2 + j);
-               SCIPdismantleConsExprExpr(scip, expandedchildren[i*(i+1)/2 + j]);
             }
             prodchildren[1] = SCIPgetConsExprExprChildren(base)[i];
             coefs[i*(i+1)/2 + i] = SCIPgetConsExprExprSumCoefs(base)[i] * SCIPgetConsExprExprSumCoefs(base)[i];
@@ -716,8 +714,6 @@ SCIP_RETCODE simplifyFactor(
             SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &expansionchild, 2, prodchildren, NULL, 1.0) );
             SCIP_CALL( simplifyProduct(scip, expansionchild, &expandedchildren[i*(i+1)/2 + i]) );
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansionchild) );
-            printf("child[%d]:\n", i*(i+1)/2 + i);
-            SCIPdismantleConsExprExpr(scip, expandedchildren[i*(i+1)/2 + i]);
          }
          for( i = 0; i < nchildren; ++i )
          {
