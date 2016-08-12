@@ -72,6 +72,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y> - <y>^2", "val"},
       {"(<x> + <y> + <fixvar>)^2 - <x>^2 - 2*<x>*<y> - <y>^2 - <fixvar>^2 -2*<x>*<fixvar> - 2*<fixvar>*<y>", "val"},
       {"(1 + (<x>*<y>^2)^0.5)^2 - 1 - 2*(<x>*<y>^2)^0.5 -<y>^2*<x>", "val"},
+      {"((<x>-<y>)^2 + (<x>+<y>)^2)^2/4 - <x>^4 - 2*(<x>*<y>)^2 - <y>^4", "val"},
       {"(2*<x>)*(2*<x>) - 4 * <x>^2", "val"}
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
