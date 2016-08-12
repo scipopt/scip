@@ -94,6 +94,7 @@ namespace polyscip {
 
         SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=false);
 
+        bool outcomesAreEqual(const OutcomeType& outcome1, const OutcomeType& outcome2) const;
 
         bool outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const;
 
@@ -130,7 +131,8 @@ namespace polyscip {
                                               const std::vector<std::vector<ValueType>>& orig_vals,
                                               const OutcomeType& predecessor,
                                               const OutcomeType& successor,
-                                              const OutcomeType& reference_point);
+                                              const OutcomeType& reference_point,
+                                              const OutcomeType& upper_point);
 
         /** add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
@@ -140,9 +142,21 @@ namespace polyscip {
                                           const ValueType& rhs,
                                           const ValueType& beta_i);
 
-        std::vector<ValueType> computeUpperBetaValues(SCIP_Real opt_value,
+        betaT getInitialBeta(std::size_t unit_index, // index for which beta_i is kept 1
+                             const OutcomeType& pred,
+                             const OutcomeType& succ,
+                             const OutcomeType& reference_point,
+                             const OutcomeType& upper_point) const;
+
+        void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
+
+        std::vector<ValueType> computeUpperBetaValues(const betaT& used_beta,
+                                                      SCIP_Real opt_value,
                                                       const OutcomeType& new_result,
-                                                      const OutcomeType& reference_point) const;
+                                                      const OutcomeType& pred,
+                                                      const OutcomeType& succ,
+                                                      const OutcomeType& reference_point,
+                                                      const OutcomeType& upper_point) const;
 
         void printSol(const SolType& sol, std::ostream& os) const;
 

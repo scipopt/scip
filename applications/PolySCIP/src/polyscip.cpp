@@ -205,7 +205,7 @@ namespace polyscip {
         auto upper_point = OutcomeType(pred.size(), 0.);
         std::transform(pred.cbegin(), pred.cend(),
                        succ.cbegin(), begin(ref_point),
-                       [](ValueType a, ValueType  b){return std::min(a,b);});
+                       [](ValueType a, ValueType  b){return std::min(a,b)-1.;}); // ref_point[i] = min(pred[i],succ[i])-1
         std::transform(pred.cbegin(), pred.cend(),
                        succ.cbegin(), begin(upper_point),
                        [](ValueType a, ValueType b){return std::max(a,b);});
@@ -229,7 +229,7 @@ namespace polyscip {
             constraints.push_back(cons);
         }
         std::cout << "entering Tchebycheff...";
-        solveWeightedTchebycheff(new_var, orig_vars, orig_vals, pred, succ, ref_point);
+        solveWeightedTchebycheff(new_var, orig_vars, orig_vals, pred, succ, ref_point, upper_point);
         std::cout << "...finished.\n";
         // release and delete constraints
         if (SCIPisTransformed(scip_))
@@ -240,6 +240,24 @@ namespace polyscip {
         }
 
         return SCIP_OKAY;
+    }
+
+    Polyscip::betaT Polyscip::getInitialBeta(size_t unit_index,
+                                             const OutcomeType& pred,
+                                             const OutcomeType& succ,
+                                             const OutcomeType& ref_point,
+                                             const OutcomeType& upper_point) const {
+        assert (unit_index < ref_point.size());
+        auto beta = betaT{};
+        for (size_t i=0; i<ref_point.size(); ++i) {
+            if (i == unit_index) {
+                beta.push_back({1,1});
+            }
+            else {
+                beta.push_back({1.0/(upper_point[i]-ref_point[i]) + cmd_line_args_.getEpsilon(), std::numeric_limits<ValueType>::max()});
+            }
+        }
+        return beta;
     }
 
     SCIP_CONS* Polyscip::createObjFctCons(SCIP_VAR* new_var,
@@ -275,7 +293,8 @@ namespace polyscip {
                                                     const vector<vector<ValueType>>& orig_vals,
                                                     const OutcomeType& pred,
                                                     const OutcomeType& succ,
-                                                    const OutcomeType& ref_point) {
+                                                    const OutcomeType& ref_point,
+                                                    const OutcomeType& upper_point) {
         assert (pred.size() == succ.size());
         assert (ref_point.size() == pred.size());
         assert (ref_point.size() == orig_vars.size());
@@ -283,16 +302,13 @@ namespace polyscip {
         assert (pred.size() > 1);
         auto size = ref_point.size();
 
+        size_t unit_index = 0;
+
         auto found_unsupported = ResultContainer{};
 
+        // initialize beta_space
         auto beta_space = std::list<betaT>{};
-        // add initial element to beta_space
-        auto beta = betaT{};
-        beta.push_back({1,1});
-        for (size_t i=1; i<size; ++i) {
-            beta.push_back({cmd_line_args_.getEpsilon(), std::numeric_limits<ValueType>::max()});
-        }
-        beta_space.push_back(std::move(beta));
+        beta_space.push_back(getInitialBeta(unit_index, pred, succ, ref_point, upper_point));
 
         // while beta_space is not empty
         while (!beta_space.empty() && polyscip_status_==PolyscipStatus::CompUnsupportedPhase) {
@@ -300,7 +316,6 @@ namespace polyscip {
             beta_space.pop_back();
             auto constraints = vector<SCIP_CONS*>{};
             for (size_t i=0; i<size; ++i) {
-                assert (beta[i].second - beta[i].first > cmd_line_args_.getEpsilon());
                 auto obj_cons = createObjFctCons(new_var,
                                                  orig_vars[i],
                                                  orig_vals[i],
@@ -321,12 +336,36 @@ namespace polyscip {
                 auto opt_val = SCIPgetPrimalbound(scip_);
                 assert ( opt_val >= 0.);
                 auto new_result = getOptimalResult();
-                auto upper_beta_values = computeUpperBetaValues(opt_val, new_result.second, ref_point);
+                deleteVarNameFromResult(new_var, new_result);
+                auto upper_beta_values = computeUpperBetaValues(beta,
+                                                                opt_val,
+                                                                new_result.second,
+                                                                pred,
+                                                                succ,
+                                                                ref_point,
+                                                                upper_point);
+                // extend beta_space
 
-                //todo incorporate upper beta vals etc
 
                 // check whether new result coincides with known results
-
+                if (!outcomesAreEqual(new_result.second,pred) && !outcomesAreEqual(new_result.second,succ)) {
+                    if (find_if(found_unsupported.cbegin(),
+                                found_unsupported.cend(),
+                                [&new_result,this](const Result& res){return this->outcomesAreEqual(new_result.second,res.second);})
+                        == found_unsupported.cend()) {
+                        if (SCIPisEQ(scip_, new_result.second[0], pred[0]) || SCIPisEQ(scip_, new_result.second[0], succ[0])) { // 0 index comes from lexicographic ordering of 0th index
+                            if (find_if(unsupported_.cbegin(),
+                                        unsupported_.cend(),
+                                        [&new_result,this](const Result& res){return this->outcomesAreEqual(new_result.second,res.second);})
+                                == unsupported_.cend()) {
+                                found_unsupported.push_back(new_result);
+                            }
+                        }
+                        else {
+                            found_unsupported.push_back(new_result);
+                        }
+                    }
+                }
             }
             else if (scip_status == SCIP_STATUS_TIMELIMIT) {
                 polyscip_status_ = PolyscipStatus::TimeLimitReached;
@@ -345,18 +384,55 @@ namespace polyscip {
                 SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
             }
         }
+        std::copy(begin(found_unsupported), end(found_unsupported), std::back_inserter(unsupported_));
         return SCIP_OKAY;
     }
 
-    std::vector<ValueType> Polyscip::computeUpperBetaValues(SCIP_Real opt_value,
+    void Polyscip::deleteVarNameFromResult(SCIP_VAR* var, Result& res) const {
+        string name = SCIPvarGetName(var);
+        auto pos = std::find_if(begin(res.first),
+                                 end(res.first),
+                     [&name](const std::pair<std::string, ValueType>& p){return name == p.first;});
+        if (pos == end(res.first)) {
+            throw std::runtime_error("Variable " + name + " expected in solution.\n");
+        }
+        res.first.erase(pos);
+    }
+
+    bool Polyscip::outcomesAreEqual(const OutcomeType& outcome1, const OutcomeType& outcome2) const {
+        assert (outcome1.size() == outcome2.size());
+        auto scip = scip_;
+        return std::equal(begin(outcome1),
+                          end(outcome1),
+                          begin(outcome2),
+                          [scip](const ValueType& val1, const ValueType& val2){return SCIPisEQ(scip, val1, val2);});
+    }
+
+    std::vector<ValueType> Polyscip::computeUpperBetaValues(const betaT& used_beta,
+                                                            SCIP_Real opt_value,
                                                             const OutcomeType& result,
-                                                            const OutcomeType& ref_point) const {
+                                                            const OutcomeType& pred,
+                                                            const OutcomeType& succ,
+                                                            const OutcomeType& ref_point,
+                                                            const OutcomeType& upper_point) const {
         assert (result.size() == ref_point.size());
         auto upper_values = vector<ValueType>{};
-        upper_values.push_back(1.);
-        for (size_t i=1; i<ref_point.size(); ++i) {
-            assert (SCIPisPositive(scip_, result[i]-ref_point[i]));
-            upper_values.push_back(global::narrow_cast<ValueType>(opt_value / (result[i]-ref_point[i]) + cmd_line_args_.getEpsilon()));
+        for (size_t i=0; i<ref_point.size(); ++i) {
+            if (SCIPisEQ(scip_, used_beta[i].first, used_beta[i].second)) {
+                upper_values.push_back(used_beta[i].first);
+            }
+            else if (SCIPisEQ(scip_, opt_value, used_beta[i].first*(result[i]-ref_point[i]))) {
+                if (outcomesAreEqual(result,pred) || outcomesAreEqual(result,succ)) {
+                    upper_values.push_back(std::numeric_limits<ValueType>::max());
+                }
+                else {
+                    upper_values.push_back(used_beta[i].first); // + epsilon ?!
+                }
+            }
+            else {
+                upper_values.push_back(global::narrow_cast<ValueType>(
+                        opt_value / (result[i] - ref_point[i]) + cmd_line_args_.getEpsilon()));
+            }
         }
         return upper_values;
     }

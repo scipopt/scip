@@ -1,3 +1,2 @@
 reoptimization/enable=FALSE
 display/verblevel=0
-numerics/epsilon = 0.000000000001
