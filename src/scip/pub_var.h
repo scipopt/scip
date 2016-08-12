@@ -1051,13 +1051,14 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
 
+#ifdef SCIP_DEPRECATED
+
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  *
  *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 EXTERN
-SCIP_DEPRECATED
 SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1070,7 +1071,6 @@ SCIP_Real SCIPvarGetLbAtIndex(
  *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 EXTERN
-SCIP_DEPRECATED
 SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -1083,7 +1083,6 @@ SCIP_Real SCIPvarGetUbAtIndex(
  *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 EXTERN
-SCIP_DEPRECATED
 SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -1096,12 +1095,13 @@ SCIP_Real SCIPvarGetBdAtIndex(
  *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
  */
 EXTERN
-SCIP_DEPRECATED
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
+
+#endif
 
 /** returns the last bound change index, at which the bounds of the given variable were tightened */
 EXTERN
