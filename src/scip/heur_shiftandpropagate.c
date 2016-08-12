@@ -285,7 +285,7 @@ void relaxVar(
 
    assert(colvals != NULL || ncolvals == 0);
 
-   SCIPdebugMessage("Relaxing variable <%s> with lb <%g> and ub <%g>\n",
+   SCIPdebugMsg(scip, "Relaxing variable <%s> with lb <%g> and ub <%g>\n",
       SCIPvarGetName(var), lb, ub);
 
    assert(matrix->normalized);
@@ -342,7 +342,7 @@ void relaxVar(
       else
          matrix->rhs[rowindex] = SCIPinfinity(scip);
 
-      SCIPdebugMessage("Row <%s> changed:Coefficient <%g>, LHS <%g> --> <%g>, RHS <%g> --> <%g>\n",
+      SCIPdebugMsg(scip, "Row <%s> changed:Coefficient <%g>, LHS <%g> --> <%g>, RHS <%g> --> <%g>\n",
          SCIProwGetName(colrow), colval, lhs, matrix->lhs[rowindex], rhs, matrix->rhs[rowindex]);
    }
 }
@@ -457,7 +457,7 @@ void transformVariable(
          assert(SCIPisFeasLE(scip, matrix->lhs[rowpos], matrix->rhs[rowpos]));
       }
    }
-   SCIPdebugMessage("Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
+   SCIPdebugMsg(scip, "Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
       SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
 }
 
@@ -493,7 +493,7 @@ SCIP_RETCODE initMatrix(
    assert(infeasible != NULL);
    assert(nmaxrows != NULL);
 
-   SCIPdebugMessage("entering Matrix Initialization method of SHIFTANDPROPAGATE heuristic!\n");
+   SCIPdebugMsg(scip, "entering Matrix Initialization method of SHIFTANDPROPAGATE heuristic!\n");
 
    /* get LP row data; column data is already initialized in heurdata */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nrows) );
@@ -524,7 +524,7 @@ SCIP_RETCODE initMatrix(
 
    if( matrix->nnonzs == 0 )
    {
-      SCIPdebugMessage("No matrix entries - Terminating initialization of matrix.\n");
+      SCIPdebugMsg(scip, "No matrix entries - Terminating initialization of matrix.\n");
 
       *initialized = FALSE;
 
@@ -573,7 +573,7 @@ SCIP_RETCODE initMatrix(
       cols = SCIProwGetCols(row);
       constant = SCIProwGetConstant(row);
 
-      SCIPdebugMessage(" %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
+      SCIPdebugMsg(scip, " %s : lhs=%g, rhs=%g, maxval=%g \n", SCIProwGetName(row), matrix->lhs[i], matrix->rhs[i], maxval);
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       assert(!SCIPisInfinity(scip, constant));
 
@@ -608,7 +608,7 @@ SCIP_RETCODE initMatrix(
       if( nrowlpnonz == 0 && (SCIPisFeasPositive(scip, matrix->lhs[i]) || SCIPisFeasNegative(scip, matrix->rhs[i])) )
       {
          *infeasible = TRUE;
-         SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
+         SCIPdebugMsg(scip, "  Matrix initialization stopped because of row infeasibility! \n");
          break;
       }
 
@@ -711,7 +711,7 @@ SCIP_RETCODE initMatrix(
    }
    *initialized = TRUE;
 
-   SCIPdebugMessage("Matrix initialized for %d discrete variables with %d cols, %d rows and %d nonzero entries\n",
+   SCIPdebugMsg(scip, "Matrix initialized for %d discrete variables with %d cols, %d rows and %d nonzero entries\n",
       matrix->ndiscvars, matrix->ncols, matrix->nrows, matrix->nnonzs);
    return SCIP_OKAY;
 }
@@ -870,7 +870,7 @@ void checkViolations(
    }
 
    assert(colidx < 0 || *nviolatedrows >= 0);
-   SCIPdebugMessage("Entering violation check for %d rows! \n", nrows);
+   SCIPdebugMsg(scip, "Entering violation check for %d rows! \n", nrows);
    /* loop over rows and check if it is violated */
    for( i = 0; i < nrows; ++i )
    {
@@ -1129,7 +1129,7 @@ SCIP_RETCODE updateTransformation(
    deltashift = 0.0;
    status = matrix->transformstatus[varindex];
 
-   SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
+   SCIPdebugMsg(scip, "  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
 
    checkviolations = FALSE;
@@ -1204,7 +1204,7 @@ SCIP_RETCODE updateTransformation(
       /* go through rows, update the rows w.r.t. the influence of the changed transformation of the variable */
       for( i = 0; i < nrows; ++i )
       {
-         SCIPdebugMessage("  update slacks of row<%d>:  coefficient <%g>, %g <= 0 <= %g \n",
+         SCIPdebugMsg(scip, "  update slacks of row<%d>:  coefficient <%g>, %g <= 0 <= %g \n",
             rows[i], vals[i], matrix->lhs[rows[i]], matrix->rhs[rows[i]]);
 
          if( !SCIPisInfinity(scip, -(matrix->lhs[rows[i]])) )
@@ -1220,7 +1220,7 @@ SCIP_RETCODE updateTransformation(
    if( checkviolations )
       checkViolations(scip, matrix, varindex, violatedrows, violatedrowpos, nviolatedrows, heurdata->rowweights, heurdata->updateweights);
 
-   SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
+   SCIPdebugMsg(scip, "  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
 
    return SCIP_OKAY;
@@ -1441,7 +1441,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    assert(eventhdlrdata != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   SCIPdebugMessage("entering execution method of shift and propagate heuristic\n");
+   SCIPdebugMsg(scip, "entering execution method of shift and propagate heuristic\n");
 
    /* heuristic is obsolete if there are only continuous variables */
    if( SCIPgetNVars(scip) - SCIPgetNContVars(scip) == 0 )
@@ -1556,7 +1556,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    /* could not initialize matrix */
    if( !initialized || infeasible )
    {
-      SCIPdebugMessage(" MATRIX not initialized -> Execution of heuristic stopped! \n");
+      SCIPdebugMsg(scip, " MATRIX not initialized -> Execution of heuristic stopped! \n");
       goto TERMINATE;
    }
 
@@ -1565,7 +1565,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
     */
    if( matrix->ndiscvars < ndiscvars )
    {
-      SCIPdebugMessage("Not all discrete variables are in the current LP. Shiftandpropagate execution terminated.\n");
+      SCIPdebugMsg(scip, "Not all discrete variables are in the current LP. Shiftandpropagate execution terminated.\n");
       goto TERMINATE;
    }
 
@@ -1645,7 +1645,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             {
                SCIPsortDownRealInt(colnorms, permutation, ndiscvars);
             }
-            SCIPdebugMessage("Variables sorted down w.r.t their normalized columns!\n");
+            SCIPdebugMsg(scip, "Variables sorted down w.r.t their normalized columns!\n");
             break;
          case 'u':
             /* variable ordering w.r.t. column norms nondecreasing */
@@ -1660,7 +1660,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             {
                SCIPsortRealInt(colnorms, permutation, ndiscvars);
             }
-            SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n");
+            SCIPdebugMsg(scip, "Variables sorted w.r.t their normalized columns!\n");
             break;
          case 'v':
             /* variable ordering w.r.t. nonincreasing number of violated rows */
@@ -1677,7 +1677,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                SCIPsortDownIntInt(violatedvarrows, permutation, ndiscvars);
             }
 
-            SCIPdebugMessage("Variables sorted down w.r.t their number of currently infeasible rows!\n");
+            SCIPdebugMsg(scip, "Variables sorted down w.r.t their number of currently infeasible rows!\n");
             break;
          case 't':
             /* variable ordering w.r.t. nondecreasing number of violated rows */
@@ -1694,7 +1694,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                SCIPsortIntInt(violatedvarrows, permutation, ndiscvars);
             }
 
-            SCIPdebugMessage("Variables sorted (upwards) w.r.t their number of currently infeasible rows!\n");
+            SCIPdebugMsg(scip, "Variables sorted (upwards) w.r.t their number of currently infeasible rows!\n");
             break;
          case 'r':
             /* random sorting */
@@ -1709,10 +1709,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             {
                SCIPpermuteIntArray(permutation, 0, ndiscvars - 1, &heurdata->randseed);
             }
-            SCIPdebugMessage("Variables permuted randomly!\n");
+            SCIPdebugMsg(scip, "Variables permuted randomly!\n");
             break;
          default:
-            SCIPdebugMessage("No variable permutation applied\n");
+            SCIPdebugMsg(scip, "No variable permutation applied\n");
             break;
       }
    }
@@ -1833,7 +1833,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    probing = heurdata->probing;
    infeasible = FALSE;
 
-   SCIPdebugMessage("SHIFT_AND_PROPAGATE heuristic starts main loop with %d violations and %d remaining variables!\n",
+   SCIPdebugMsg(scip, "SHIFT_AND_PROPAGATE heuristic starts main loop with %d violations and %d remaining variables!\n",
       nviolatedrows, ndiscvars);
 
    assert(matrix->ndiscvars == ndiscvars);
@@ -1894,7 +1894,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       status = matrix->transformstatus[permutedvarindex];
 
-      SCIPdebugMessage("Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
+      SCIPdebugMsg(scip, "Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
 
       /* ignore variable if propagation fixed it (lb and ub will be zero) */
@@ -1986,12 +1986,12 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) );
          ndomredsfound = 0;
 
-         SCIPdebugMessage("  Shift %g(%g originally) is optimal, propagate solution\n", optimalshiftvalue, origsolval);
+         SCIPdebugMsg(scip, "  Shift %g(%g originally) is optimal, propagate solution\n", optimalshiftvalue, origsolval);
          SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
          ++nprobings;
          SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-         SCIPdebugMessage("Propagation finished! <%" SCIP_LONGINT_FORMAT "> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
+         SCIPdebugMsg(scip, "Propagation finished! <%" SCIP_LONGINT_FORMAT "> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
       assert(!cutoff || probing);
@@ -2082,11 +2082,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          permutation[c] = permutation[lastindexofsusp];
          permutation[lastindexofsusp] = permutedvarindex;
 
-         SCIPdebugMessage("  Suspicious variable! Postponed from pos <%d> to position <%d>\n", c, lastindexofsusp);
+         SCIPdebugMsg(scip, "  Suspicious variable! Postponed from pos <%d> to position <%d>\n", c, lastindexofsusp);
       }
       else
       {
-         SCIPdebugMessage("Variable <%d><%s> successfully shifted by value <%g>!\n", permutedvarindex,
+         SCIPdebugMsg(scip, "Variable <%d><%s> successfully shifted by value <%g>!\n", permutedvarindex,
             SCIPvarGetName(var), optimalshiftvalue);
 
          /* update solution */
@@ -2099,7 +2099,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
       }
    }
-   SCIPdebugMessage("Heuristic finished with %d remaining violations and %d remaining variables!\n",
+   SCIPdebugMsg(scip, "Heuristic finished with %d remaining violations and %d remaining variables!\n",
       nviolatedrows, lastindexofsusp + 1);
 
    /* if constructed solution might be feasible, go through the queue of suspicious variables and set the solution
@@ -2133,7 +2133,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPsetSolVal(scip, sol, var, origsolval) );
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) ); /* only to ensure that some assertions can be made later */
 
-         SCIPdebugMessage("  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval,
+         SCIPdebugMsg(scip, "  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval,
             nviolatedrows);
       }
       /* Fixing of remaining variables led to infeasibility */
@@ -2165,7 +2165,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
 #endif
 
-         SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPwriteLP(scip, "shiftandpropagatelp.mps") );
@@ -2188,8 +2188,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
 
-         SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-         SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+         SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
          /* check if this is a feasible solution */
          if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -2216,7 +2216,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 #endif
          if( stored )
          {
-            SCIPdebugMessage("found feasible shifted solution:\n");
+            SCIPdebugMsg(scip, "found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
             SCIPstatisticMessage("  Shiftandpropagate solution value: %16.9g \n", SCIPgetSolOrigObj(scip, sol));
@@ -2225,7 +2225,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
    else
    {
-      SCIPdebugMessage("Solution constructed by heuristic is already known to be infeasible\n");
+      SCIPdebugMsg(scip, "Solution constructed by heuristic is already known to be infeasible\n");
    }
 
    SCIPstatistic( heurdata->nremainingviols = nviolatedrows; );

@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPpropCopyInclude(
 
    if( prop->propcopy != NULL )
    {
-      SCIPdebugMessage("including propagator %s in subscip %p\n", SCIPpropGetName(prop), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including propagator %s in subscip %p\n", SCIPpropGetName(prop), (void*)set->scip);
       SCIP_CALL( prop->propcopy(set->scip, prop) );
    }
    return SCIP_OKAY;
@@ -517,7 +517,7 @@ SCIP_RETCODE SCIPpropPresol(
       int nnewchgcoefs;
       int nnewchgsides;
 
-      SCIPdebugMessage("calling presolving method of propagator <%s>\n", prop->name);
+      SCIPsetDebugMsg(set, "calling presolving method of propagator <%s>\n", prop->name);
 
       /* calculate the number of changes since last call */
       nnewfixedvars = *nfixedvars - prop->lastnfixedvars;
@@ -615,7 +615,7 @@ SCIP_RETCODE SCIPpropExec(
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
 
-         SCIPdebugMessage("executing propagator <%s>\n", prop->name);
+         SCIPsetDebugMsg(set, "executing propagator <%s>\n", prop->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -660,7 +660,7 @@ SCIP_RETCODE SCIPpropExec(
       }
       else
       {
-         SCIPdebugMessage("propagator <%s> was delayed\n", prop->name);
+         SCIPsetDebugMsg(set, "propagator <%s> was delayed\n", prop->name);
          *result = SCIP_DELAYED;
       }
 

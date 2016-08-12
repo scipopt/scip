@@ -51,6 +51,7 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
+#include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
 /*
  * Default settings
@@ -744,7 +745,6 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
    return SCIP_OKAY;
 }
 
-
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -820,11 +820,11 @@ SCIP_RETCODE SCIPsetCopyPlugins(
             valid = FALSE;
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
             *allvalid = *allvalid && valid;
-            SCIPdebugMessage("Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
+            SCIPsetDebugMsg(sourceset, "Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
          }
          else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
-            SCIPdebugMessage("Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
+            SCIPsetDebugMsg(sourceset, "Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
             *allvalid = FALSE;
          }
       }
@@ -4801,7 +4801,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
     */
    if( SCIPsetFeastol(set) < SCIPsetLpfeastol(set) )
    {
-      SCIPdebugMessage("decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
+      SCIPsetDebugMsg(set, "decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
       SCIP_CALL( SCIPchgLpfeastol(set->scip, SCIPsetFeastol(set), TRUE) );
    }
 
@@ -6294,4 +6294,32 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
+}
+
+/** prints a debug message */
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   SCIP* scip;
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( set != NULL );
+
+   scip = set->scip;
+   assert( scip != NULL );
+
+   if ( SCIPgetSubscipDepth(scip) > 0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", SCIPgetSubscipDepth(scip), sourcefile, sourceline);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
 }

@@ -184,6 +184,23 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    );
 
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPstatDebugMsg(set, ...)      SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#else
+#define SCIPstatDebugMsg(set, ...)
+#endif
+
+/** prints a debug message */
+EXTERN
+void SCIPstatPrintDebugMessage(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
 #ifdef __cplusplus
 }
 #endif

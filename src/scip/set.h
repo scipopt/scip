@@ -1817,6 +1817,25 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
 #define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
 
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#else
+#define SCIPsetDebugMsg(set, ...)
+#endif
+
+/** prints a debug message */
+EXTERN
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+
 #ifdef __cplusplus
 }
 #endif

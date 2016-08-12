@@ -1213,7 +1213,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
                valpnt = SCIPmatrixGetRowValPtr(matrix, row);
                cnt = 0;
-               SCIPdebugMessage("constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
+               SCIPdebugMsg(scip, "constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
                for( ; rowpnt < rowend; rowpnt++, valpnt++ )
                {
                   if( *rowpnt == v )
@@ -1238,7 +1238,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                /* check for infeasible aggregation */
                if( infeasible )
                {
-                  SCIPdebugMessage("constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
+                  SCIPdebugMsg(scip, "constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
                   return SCIP_OKAY;
                }
 

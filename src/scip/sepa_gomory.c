@@ -328,7 +328,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMsg(scip, "searching gomory cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    cutoff = FALSE;
@@ -356,7 +356,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             if( SCIPfeasFrac(scip, primsol) >= minfrac )
             {
-               SCIPdebugMessage("trying gomory cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
+               SCIPdebugMsg(scip, "trying gomory cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
                tryrow = TRUE;
             }
          }
@@ -374,7 +374,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             primsol = SCIPgetRowActivity(scip, row);
             if( SCIPfeasFrac(scip, primsol) >= minfrac )
             {
-               SCIPdebugMessage("trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebugMsg(scip, "trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                tryrow = TRUE;
             }
          }
@@ -455,7 +455,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
           *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
           */
 
-         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMsg(scip, " -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
@@ -492,7 +492,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             if( SCIProwGetNNonz(cut) == 0 )
             {
                assert(SCIPisFeasNegative(scip, cutrhs));
-               SCIPdebugMessage(" -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+               SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
                cutoff = TRUE;
             }
             else if( SCIProwGetNNonz(cut) == 1 )
@@ -516,7 +516,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
                   assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
 
-                  SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
+                  SCIPdebugMsg(scip, " -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
                      c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                      cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
 
@@ -524,7 +524,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
                   if( useful )
                   {
-                     SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -572,7 +572,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);
 
-   SCIPdebugMessage("end searching gomory cuts: found %d cuts\n", naddedcuts);
+   SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 

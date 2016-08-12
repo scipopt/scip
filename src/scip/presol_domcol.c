@@ -1223,7 +1223,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
          {
-            SCIPdebugMessage("[ub]\tupper bound for dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[ub]\tupper bound for dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatingvar), lb, oldub, lb, newub);
             SCIP_CALL( SCIPchgVarUb(scip, dominatingvar, newub) );
             (*nchgbds)++;
@@ -1251,7 +1251,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
          {
-            SCIPdebugMessage("[lb]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[lb]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatingvar), oldlb, ub, newlb, ub);
             SCIP_CALL( SCIPchgVarLb(scip, dominatingvar, newlb) );
             (*nchgbds)++;
@@ -1280,7 +1280,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
          {
-            SCIPdebugMessage("[wcub]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[wcub]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatingvar), oldlb, ub, newlb, ub);
             SCIP_CALL( SCIPchgVarLb(scip, dominatingvar, newlb) );
             (*nchgbds)++;
@@ -1307,7 +1307,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
          {
-            SCIPdebugMessage("[ub]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[ub]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatedvar), lb, oldub, lb, newub);
             SCIP_CALL( SCIPchgVarUb(scip, dominatedvar, newub) );
             (*nchgbds)++;
@@ -1336,7 +1336,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
          {
-            SCIPdebugMessage("[wclb]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[wclb]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatedvar), lb, oldub, lb, newub);
             SCIP_CALL( SCIPchgVarUb(scip, dominatedvar, newub) );
             (*nchgbds)++;
@@ -1360,7 +1360,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
          {
-            SCIPdebugMessage("[lb]\tlower bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[lb]\tlower bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatedvar), oldlb, ub, newlb, ub);
             SCIP_CALL( SCIPchgVarLb(scip, dominatedvar, newlb) );
             (*nchgbds)++;
@@ -2304,7 +2304,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -2332,7 +2332,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -2369,7 +2369,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 #ifdef SCIP_DEBUG
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%" SCIP_LONGINT_FORMAT " dom] => fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
+         SCIPdebugMsg(scip, "### %d vars [%" SCIP_LONGINT_FORMAT " dom] => fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
             ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed, (*result != SCIP_CUTOFF) ? "no " : "");
       }
 #endif

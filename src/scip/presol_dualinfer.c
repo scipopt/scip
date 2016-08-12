@@ -1206,7 +1206,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                   SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                   if( infeasible )
                   {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
+                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
                      *result = SCIP_CUTOFF;
                      break;
                   }
@@ -1285,7 +1285,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
          if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0)
          {
-            SCIPdebugMessage("### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
+            SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
                nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
          }
       }

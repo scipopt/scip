@@ -407,6 +407,14 @@ void SCIPdisableDebugSol(
  * message output methods
  */
 
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPdebugMsg(scip, ...)         SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
+#else
+#define SCIPdebugMsg(scip, ...)
+#endif
+
+
 /**@name Message Output Methods */
 /**@{ */
 
@@ -455,6 +463,16 @@ void SCIPsetMessagehdlrQuiet(
 EXTERN
 void SCIPwarningMessage(
    SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message */
+EXTERN
+void SCIPprintDebugMessage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    );
