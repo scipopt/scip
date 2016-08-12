@@ -15734,6 +15734,8 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    }
 }
 
+#ifdef SCIP_DEPRECIATED
+
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
@@ -16013,6 +16015,8 @@ SCIP_Bool SCIPvarWasFixedAtIndex(
    return ((SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetLbAtIndex(var, bdchgidx, after) > 0.5)
       || (SCIPvarGetUbLocal(var) < 0.5 && SCIPvarGetUbAtIndex(var, bdchgidx, after) < 0.5));
 }
+
+#endif
 
 /** bound change index representing the initial time before any bound changes took place */
 static SCIP_BDCHGIDX initbdchgidx = {-2, 0};

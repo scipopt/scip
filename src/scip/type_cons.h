@@ -500,7 +500,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
- *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of
+ *  With a call to SCIPgetVarLbAtIndex(scip, z, bdchgidx, TRUE), the handler can find out, that the lower bound of
  *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
  *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  *  the reason for the deduction of the lower bound of z.

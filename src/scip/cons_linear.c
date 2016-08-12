@@ -4628,9 +4628,9 @@ SCIP_RETCODE addConflictBounds(
             }
 
             if( reasonisrhs == (vals[inferpos] > 0.0) )
-               rescap -= vals[inferpos] * (SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) + 1.0);
+               rescap -= vals[inferpos] * (SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) + 1.0);
             else
-               rescap -= vals[inferpos] * (SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) - 1.0);
+               rescap -= vals[inferpos] * (SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) - 1.0);
          }
          else
             rescap = (reasonisrhs ? consdata->rhs - minresactivity : consdata->lhs - maxresactivity);
@@ -4657,13 +4657,13 @@ SCIP_RETCODE addConflictBounds(
                {
                   /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound */
                   SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
-                  rescap -= vals[i] * (SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) - SCIPvarGetLbGlobal(vars[i]));
+                  rescap -= vals[i] * (SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) - SCIPvarGetLbGlobal(vars[i]));
                }
                else
                {
                   /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound */
                   SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-                  rescap -= vals[i] * (SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) - SCIPvarGetUbGlobal(vars[i]));
+                  rescap -= vals[i] * (SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) - SCIPvarGetUbGlobal(vars[i]));
                }
             }
             return SCIP_OKAY;
@@ -4737,13 +4737,13 @@ SCIP_RETCODE addConflictFixedVars(
       {
 	 assert(vars[v] != NULL);
 
-	 if( !SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, FALSE), SCIPvarGetLbGlobal(vars[v])) )
+	 if( !SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPvarGetLbGlobal(vars[v])) )
 	 {
 	    /* @todo get boundchange index before this last boundchange and correct the index */
 	    SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx) );
 	 }
 
-	 if( !SCIPisEQ(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, FALSE), SCIPvarGetUbGlobal(vars[v])) )
+	 if( !SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPvarGetUbGlobal(vars[v])) )
 	 {
 	    /* @todo get boundchange index before this last boundchange and correct the index */
 	    SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx) );
@@ -4753,7 +4753,7 @@ SCIP_RETCODE addConflictFixedVars(
       }
 
       /* check for fixed variables */
-      if( SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, FALSE), SCIPvarGetUbAtIndex(vars[v], bdchgidx, FALSE)) )
+      if( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, FALSE)) )
       {
 	 /* add all bounds of fixed variables which lead to the boundchange of the given inference variable */
          SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx) );

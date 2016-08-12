@@ -7241,6 +7241,49 @@ SCIP_Real SCIPgetVarFarkasCoef(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
+/** returns lower bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarLbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarUbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarBdAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns whether the binary variable was fixed at the time given by the bound change index */
+EXTERN
+SCIP_Bool SCIPgetVarWasFixedAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
 /** gets solution value for variable in current node
  *
  *  @return solution value for variable in current node

@@ -2737,7 +2737,7 @@ SCIP_RETCODE addConflictBounds(
       /* the integral variable was fixed, because all variables were fixed */
       for (i = 0; i < nvars; ++i)
       {
-         assert( SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)) );
+         assert( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)) );
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       break;
@@ -2747,15 +2747,15 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 1 before */
-         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
          /* add variables that were fixed to 0 */
-         else if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         else if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
          else
@@ -2778,9 +2778,9 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 0 */
-         if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -2797,9 +2797,9 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 1 */
-         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
