@@ -1640,7 +1640,7 @@ SCIP_RETCODE SCIPsolCheck(
 #ifdef SCIP_DEBUG
          if( !(*feasible) && !printreason )
          {
-            SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+            SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
          }
 #endif
@@ -1677,7 +1677,7 @@ SCIP_RETCODE SCIPsolCheck(
 #ifdef SCIP_DEBUG
          if( !(*feasible) && !printreason )
          {
-            SCIPdebugPrintf("infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+            SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
                solval, SCIPvarGetName(var), SCIPvarGetObj(var));
          }
 #endif
@@ -1694,7 +1694,7 @@ SCIP_RETCODE SCIPsolCheck(
 #ifdef SCIP_DEBUG
       if( !(*feasible) )
       {
-         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
+         SCIPsetDebugMsgPrint(set, "  -> infeasibility detected in constraint handler <%s>\n",
             SCIPconshdlrGetName(set->conshdlrs[h]));
       }
 #endif

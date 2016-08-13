@@ -839,7 +839,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
 
          SCIP_CALL( SCIPsepalpCons(scip, consdata->slackcons, &locresult) );
 
-         SCIPdebugPrintf(" --> locresult=%d\n", locresult);
+         SCIPdebugMsgPrint(scip, " --> locresult=%d\n", locresult);
       }
 
       /* evaluate result value */
@@ -949,7 +949,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
 
          SCIP_CALL( SCIPsepasolCons(scip, consdata->slackcons, sol, &locresult) );
 
-         SCIPdebugPrintf(" --> result=%d\n", locresult);
+         SCIPdebugMsgPrint(scip, " --> result=%d\n", locresult);
       }
 
       /* evaluate result value */
@@ -1066,7 +1066,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
 
          SCIP_CALL( SCIPenfolpCons(scip, consdata->slackcons, solinfeasible, &locresult) );
 
-         SCIPdebugPrintf(" --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
+         SCIPdebugMsgPrint(scip, " --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
       }
       /* otherwise check if we have not yet detected infeasibility */
       else if( *result == SCIP_FEASIBLE )
@@ -1177,7 +1177,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
 
          SCIP_CALL( SCIPenfopsCons(scip, consdata->slackcons, solinfeasible, objinfeasible, &locresult) );
 
-         SCIPdebugPrintf(" --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
+         SCIPdebugMsgPrint(scip, " --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
       }
       /* otherwise check if we have not yet detected infeasibility */
       else if( *result == SCIP_FEASIBLE || *result == SCIP_DIDNOTRUN )
@@ -1338,7 +1338,7 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
 
          SCIP_CALL( SCIPpropCons(scip, consdata->slackcons, proptiming, &locresult) );
 
-         SCIPdebugPrintf(" --> locresult=%d\n", locresult);
+         SCIPdebugMsgPrint(scip, " --> locresult=%d\n", locresult);
       }
       /**@todo else propagate the domain of the binvar as well: start probing mode, fix binvar to one, propagate
        *       constraint, and see whether we become infeasible; if this is implemented, the resprop callback must be
@@ -1524,7 +1524,7 @@ SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
    /* call propagation conflict resolving method for the slack constraint */
    SCIP_CALL( SCIPrespropCons(scip, consdata->slackcons, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
 
-   SCIPdebugPrintf(" --> result=%d\n", *result);
+   SCIPdebugMsgPrint(scip, " --> result=%d\n", *result);
 
    return SCIP_OKAY;
 }

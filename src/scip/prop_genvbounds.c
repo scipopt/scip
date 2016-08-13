@@ -190,35 +190,35 @@ void printGenVBound(
 
    if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
    {
-      SCIPdebugPrintf("- ");
+      SCIPdebugMsgPrint(scip, "- ");
    }
 
-   SCIPdebugPrintf("<%s> >= ", SCIPvarGetName(genvbound->var));
+   SCIPdebugMsgPrint(scip, "<%s> >= ", SCIPvarGetName(genvbound->var));
 
    first = TRUE;
    for( i = 0; i < genvbound->ncoefs; i++ )
    {
       if( !first )
       {
-         SCIPdebugPrintf(" + ");
+         SCIPdebugMsgPrint(scip, " + ");
       }
 
-      SCIPdebugPrintf("%g * <%s>", genvbound->coefs[i], SCIPvarGetName(genvbound->vars[i]));
+      SCIPdebugMsgPrint(scip, "%g * <%s>", genvbound->coefs[i], SCIPvarGetName(genvbound->vars[i]));
 
       first = FALSE;
    }
 
    if( !SCIPisZero(scip, genvbound->cutoffcoef) )
    {
-      SCIPdebugPrintf(" + %g * cutoff_bound", genvbound->cutoffcoef);
+      SCIPdebugMsgPrint(scip, " + %g * cutoff_bound", genvbound->cutoffcoef);
    }
 
    if( !SCIPisZero(scip, genvbound->constant) )
    {
-      SCIPdebugPrintf(" + %g", genvbound->constant);
+      SCIPdebugMsgPrint(scip, " + %g", genvbound->constant);
    }
 
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 }
 #endif
 
@@ -1084,7 +1084,6 @@ void printEventData(
    {
       SCIPdebugPrintf("(component %d, index %d) ", eventdata->startcomponents[i], eventdata->startindices[i]);
    }
-
    SCIPdebugPrintf("\n");
 }
 #endif
@@ -1870,27 +1869,27 @@ SCIP_RETCODE createConstraints(
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
-      SCIPdebugPrintf("add cons: ");
+      SCIPdebugMsgPrint(scip, "add cons: ");
 
       /* copy the coefs/vars array */
       for( j = 0; j < genvbound->ncoefs; j++ )
       {
          vars[j] = genvbound->vars[j];
          vals[j] = genvbound->coefs[j];
-         SCIPdebugPrintf("%e%s + ", vals[j], SCIPvarGetName(vars[j]));
+         SCIPdebugMsgPrint(scip, "%e%s + ", vals[j], SCIPvarGetName(vars[j]));
       }
 
       /* add the variable and the coefficient of the genvbound */
       vars[genvbound->ncoefs] = genvbound->var;
       vals[genvbound->ncoefs] = (genvbound->boundtype == SCIP_BOUNDTYPE_LOWER) ? -1.0 : 1.0;
 
-      SCIPdebugPrintf("%e%s + ", vals[genvbound->ncoefs], SCIPvarGetName(vars[genvbound->ncoefs]));
+      SCIPdebugMsgPrint(scip, "%e%s + ", vals[genvbound->ncoefs], SCIPvarGetName(vars[genvbound->ncoefs]));
 
       /* add cutoffcoef * cutoffboundvar */
       vars[genvbound->ncoefs + 1] = propdata->cutoffboundvar;
       vals[genvbound->ncoefs + 1] = genvbound->cutoffcoef;
 
-      SCIPdebugPrintf("%e%s <= %e\n", vals[genvbound->ncoefs + 1], SCIPvarGetName(vars[genvbound->ncoefs + 1]), -1.0*genvbound->constant);
+      SCIPdebugMsgPrint(scip, "%e%s <= %e\n", vals[genvbound->ncoefs + 1], SCIPvarGetName(vars[genvbound->ncoefs + 1]), -1.0*genvbound->constant);
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "genvbound_cons%d", genvbound->index);
 

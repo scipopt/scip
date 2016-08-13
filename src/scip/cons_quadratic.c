@@ -4135,7 +4135,7 @@ SCIP_RETCODE presolveUpgrade(
          /* add the upgraded constraints to the problem and forget them */
          for( j = 0; j < nupgdconss_; ++j )
          {
-            SCIPdebugPrintf("\t");
+            SCIPdebugMsgPrint(scip, "\t");
             SCIPdebugPrintCons(scip, upgdconss[j], NULL);
 
             SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
@@ -4871,15 +4871,15 @@ SCIP_RETCODE checkFactorable(
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       if( consdata->factorleft[i] != 0.0 )
-         SCIPdebugPrintf(" %+g<%s>", consdata->factorleft[i], SCIPvarGetName(consdata->quadvarterms[i].var));
+         SCIPdebugMsgPrint(scip, " %+g<%s>", consdata->factorleft[i], SCIPvarGetName(consdata->quadvarterms[i].var));
    }
-   SCIPdebugPrintf(") * (%g", consdata->factorright[n-1]);
+   SCIPdebugMsgPrint(scip, ") * (%g", consdata->factorright[n-1]);
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       if( consdata->factorright[i] != 0.0 )
-         SCIPdebugPrintf(" %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
+         SCIPdebugMsgPrint(scip, " %+g<%s>", consdata->factorright[i], SCIPvarGetName(consdata->quadvarterms[i].var));
    }
-   SCIPdebugPrintf(")\n");
+   SCIPdebugMsgPrint(scip, ")\n");
 #endif
 
    /* check whether factorleft * factorright^T is matrix of augmented quadratic form

@@ -6305,6 +6305,7 @@ void SCIPsetPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   int subscipdepth = 0;
    SCIP* scip;
    va_list ap;
 
@@ -6314,12 +6315,32 @@ void SCIPsetPrintDebugMessage(
    scip = set->scip;
    assert( scip != NULL );
 
-   if ( SCIPgetSubscipDepth(scip) > 0 )
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", SCIPgetSubscipDepth(scip), sourcefile, sourceline);
+   if ( scip->stat != NULL )
+      subscipdepth = scip->stat->subscipdepth;
+
+   if ( subscipdepth > 0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+void SCIPsetDebugMsgPrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( set != NULL );
+   assert( set->scip != NULL );
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(set->scip->messagehdlr, NULL, formatstr, ap);
    va_end(ap);
 }

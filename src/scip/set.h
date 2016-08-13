@@ -1835,6 +1835,14 @@ void SCIPsetPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    );
 
+/** prints a debug message without precode */
+EXTERN
+void SCIPsetDebugMsgPrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
 
 #ifdef __cplusplus
 }

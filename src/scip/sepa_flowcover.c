@@ -991,9 +991,9 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIPdebugMsg(scip, "constraint in constructed 0-1 single node flow relaxation: ");
    for( c = 0; c < *ntransvars; c++ )
    {   
-      SCIPdebugPrintf("%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
+      SCIPdebugMsgPrint(scip, "%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
    }
-   SCIPdebugPrintf("<= %g\n", *transrhs);
+   SCIPdebugMsgPrint(scip, "<= %g\n", *transrhs);
 #endif
 
  TERMINATE:

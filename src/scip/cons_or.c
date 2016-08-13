@@ -660,7 +660,7 @@ SCIP_RETCODE applyFixings(
 
    SCIPdebugMsg(scip, "after fixings: ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    return SCIP_OKAY;
 }

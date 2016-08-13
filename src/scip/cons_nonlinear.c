@@ -1730,9 +1730,9 @@ SCIP_RETCODE removeFixedNonlinearVariables(
       SCIPdebugMsg(scip, "replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
       for( j = 0; j < nvars; ++j )
       {
-         SCIPdebugPrintf(" %+g <%s>", coefs[j], SCIPvarGetName(vars[j]));
+         SCIPdebugMsgPrint(scip, " %+g <%s>", coefs[j], SCIPvarGetName(vars[j]));
       }
-      SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "\n");
 #endif
 
       SCIP_CALL( SCIPexprgraphReplaceVarByLinearSum(conshdlrdata->exprgraph, var, nvars, coefs, (void**)vars, constant) );
@@ -1968,7 +1968,7 @@ SCIP_RETCODE presolveUpgrade(
          /* add the upgraded constraints to the problem and forget them */
          for( j = 0; j < nupgdconss_; ++j )
          {
-            SCIPdebugPrintf("\t");
+            SCIPdebugMsgPrint(scip, "\t");
             SCIPdebugPrintCons(scip, upgdconss[j], NULL);
 
             SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
@@ -2070,7 +2070,7 @@ SCIP_RETCODE checkCurvature(
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
             SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], SCIPgetMessagehdlr(scip), NULL) ) );
-            SCIPdebugPrintf("\n");
+            SCIPdebugMsgPrint(scip, "\n");
          }
       }
 
@@ -2707,7 +2707,7 @@ SCIP_RETCODE reformulate(
          {
             SCIPdebugMsg(scip, "skip reformulating node %p(%d,%d) = ", (void*)node, SCIPexprgraphGetNodeDepth(node), SCIPexprgraphGetNodePosition(node));
             SCIPdebug( SCIPexprgraphPrintNode(node, SCIPgetMessagehdlr(scip), NULL) );
-            SCIPdebugPrintf(", curv = %s\n", SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(node)));
+            SCIPdebugMsgPrint(scip, ", curv = %s\n", SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(node)));
             ++i;
             continue;
          }
@@ -2722,7 +2722,7 @@ SCIP_RETCODE reformulate(
          assert(SCIPexprgraphGetNodeCurvature(node) == SCIP_EXPRCURV_UNKNOWN);
          SCIPdebugMsg(scip, "think about reformulating %s node %p(%d,%d) = ", SCIPexpropGetName(SCIPexprgraphGetNodeOperator(node)), (void*)node, SCIPexprgraphGetNodeDepth(node), SCIPexprgraphGetNodePosition(node));
          SCIPdebug( SCIPexprgraphPrintNode(node, SCIPgetMessagehdlr(scip), NULL) );
-         SCIPdebugPrintf("\n");
+         SCIPdebugMsgPrint(scip, "\n");
 
          children  = SCIPexprgraphGetNodeChildren(node);
          nchildren = SCIPexprgraphGetNodeNChildren(node);
@@ -4069,7 +4069,7 @@ SCIP_RETCODE addLinearization(
          SCIP_Real lb;
          SCIP_Real ub;
 
-         SCIPdebugPrintf("perturbing reference point and trying again\n");
+         SCIPdebugMsgPrint(scip, "perturbing reference point and trying again\n");
          for( i = 0; i < nvars; ++i )
          {
             lb = SCIPvarGetLbGlobal(SCIPexprtreeGetVars(exprtree)[i]);
@@ -4086,7 +4086,7 @@ SCIP_RETCODE addLinearization(
       }
       else
       {
-         SCIPdebugPrintf("skipping linearization\n");
+         SCIPdebugMsgPrint(scip, "skipping linearization\n");
          SCIPfreeBufferArray(scip, &grad);
          return SCIP_OKAY;
       }
@@ -4711,7 +4711,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
             val[i * ncols + j] = SCIPvarGetUbLocal(vars[j]);
          else
             val[i * ncols + j] = SCIPvarGetLbLocal(vars[j]);
-         SCIPdebugPrintf("%g, ", val[i*ncols+j]);
+         SCIPdebugMsgPrint(scip, "%g, ", val[i*ncols+j]);
          assert(!SCIPisInfinity(scip, REALABS(val[i*ncols+j])));
 
          ind[i * ncols + j] = j;
@@ -4719,7 +4719,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
 
       /* evaluate function in current corner */
       SCIP_CALL( SCIPexprtreeEval(exprtree, &val[i*ncols], &funcval) );
-      SCIPdebugPrintf(") = %g\n", funcval);
+      SCIPdebugMsgPrint(scip, ") = %g\n", funcval);
 
       if( !SCIPisFinite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
       {

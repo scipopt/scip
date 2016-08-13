@@ -668,10 +668,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }   
    }
 
-   SCIPdebugPrintf("XXX Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n", nconflicts, nbdchgs, soladded ? "found" : "no", 
-      dualboundchg ? "found" : "no");
+   SCIPdebugMsg(scip, "Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
+      nconflicts, nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
 
-   SCIPdebugPrintf("YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 
+   SCIPdebugMsg(scip, "YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n",
       100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
 
    /* change result pointer */

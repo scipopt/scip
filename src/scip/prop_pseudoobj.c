@@ -509,7 +509,7 @@ SCIP_RETCODE objimplicsDelPos(
       /* copy last upper bound variable to open slot */
       objimplics->objvars[objimplics->nlbimpls] = objimplics->objvars[objimplics->nlbimpls + objimplics->nubimpls];
 
-      SCIPdebugPrintf("remove lower bound implication\n");
+      SCIPdebugMsgPrint(scip, "remove lower bound implication\n");
    }
    else
    {
@@ -519,7 +519,7 @@ SCIP_RETCODE objimplicsDelPos(
       /* copy last upper bound variable to that position */
       objimplics->objvars[pos] = objimplics->objvars[objimplics->nlbimpls + objimplics->nubimpls];
 
-      SCIPdebugPrintf("remove upper bound implication\n");
+      SCIPdebugMsgPrint(scip, "remove upper bound implication\n");
    }
 
    return SCIP_OKAY;

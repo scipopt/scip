@@ -5587,9 +5587,9 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
          cons == NULL ? "-" : SCIPconsGetName(cons));
       for( i = 0; i < nvars; ++i )
       {
-         SCIPdebugPrintf("%+" SCIP_LONGINT_FORMAT "<%s>(%g)", weights[i], SCIPvarGetName(vars[i]), solvals[i]);
+         SCIPdebugMsgPrint(scip, "%+" SCIP_LONGINT_FORMAT "<%s>(%g)", weights[i], SCIPvarGetName(vars[i]), solvals[i]);
       }
-      SCIPdebugPrintf(" <= %" SCIP_LONGINT_FORMAT "\n", capacity);
+      SCIPdebugMsgPrint(scip, " <= %" SCIP_LONGINT_FORMAT "\n", capacity);
    }
 #endif
 
@@ -6124,11 +6124,11 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          act = 0.0;
          for( i = 0; i < nconsvars; ++i )
          {
-            SCIPdebugPrintf(" %+" SCIP_LONGINT_FORMAT "<%s>(%.15g)", consvals[i], SCIPvarGetName(consvars[i]),
+            SCIPdebugMsgPrint(scip, " %+" SCIP_LONGINT_FORMAT "<%s>(%.15g)", consvals[i], SCIPvarGetName(consvars[i]),
                SCIPgetSolVal(scip, sol, consvars[i]));
             act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
          }
-         SCIPdebugPrintf(" <= %" SCIP_LONGINT_FORMAT " (%.15g) [act: %.15g, min: %" SCIP_LONGINT_FORMAT " max: %" SCIP_LONGINT_FORMAT "]\n",
+         SCIPdebugMsgPrint(scip, " <= %" SCIP_LONGINT_FORMAT " (%.15g) [act: %.15g, min: %" SCIP_LONGINT_FORMAT " max: %" SCIP_LONGINT_FORMAT "]\n",
             capacity, rhs, act, minact, maxact);
       }
 #endif

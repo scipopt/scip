@@ -2447,30 +2447,30 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIPdebugMsg(scip, "NLP nlpdiving ABORT due to ");
    if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
-      SCIPdebugPrintf("NLP bad status - nlperror: %ud nlpsolstat: %d \n", nlperror, nlpsolstat);
+      SCIPdebugMsgPrint(scip, "NLP bad status - nlperror: %ud nlpsolstat: %d \n", nlperror, nlpsolstat);
       SCIPstatistic( heurdata->nfailnlperror++ );
    }
    else if( SCIPisStopped(scip) || cutoff )
    {
-      SCIPdebugPrintf("LIMIT hit - stop: %ud cutoff: %ud \n", SCIPisStopped(scip), cutoff);
+      SCIPdebugMsgPrint(scip, "LIMIT hit - stop: %ud cutoff: %ud \n", SCIPisStopped(scip), cutoff);
       SCIPstatistic( heurdata->nfailcutoff++ );
    }
    else if(! (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound) ) )
    {
-      SCIPdebugPrintf("TOO DEEP - divedepth: %4d cands halfed: %d ltmaxdepth: %d ltmaxiter: %d bound: %d\n", divedepth,
+      SCIPdebugMsgPrint(scip, "TOO DEEP - divedepth: %4d cands halfed: %d ltmaxdepth: %d ltmaxiter: %d bound: %d\n", divedepth,
          (nnlpcands > startnnlpcands - divedepth/2), (divedepth >= maxdivedepth), (heurdata->nnlpiterations >= maxnnlpiterations),
          (objval >= searchbound));
       SCIPstatistic( heurdata->nfaildepth++ );
    }
    else if( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
-      SCIPdebugPrintf("SUCCESS\n");
+      SCIPdebugMsgPrint(scip, "SUCCESS\n");
    }
    else
    {
-      SCIPdebugPrintf("UNKNOWN, very mysterical reason\n");  /* see also special case var == NULL (bestcand == -1) after choose*Var above */
+      SCIPdebugMsgPrint(scip, "UNKNOWN, very mysterical reason\n");  /* see also special case var == NULL (bestcand == -1) after choose*Var above */
    }
 
    /* check if a solution has been found */

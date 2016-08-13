@@ -8032,13 +8032,13 @@ SCIP_RETCODE lpFlushAddRows(
          {
             assert(lpipos < lp->ncols);
             assert(nnonz < naddcoefs);
-            SCIPdebugPrintf(" %+gx%d(<%s>)", row->vals[i], lpipos+1, SCIPvarGetName(row->cols[i]->var));
+            SCIPsetDebugMsgPrint(set, " %+gx%d(<%s>)", row->vals[i], lpipos+1, SCIPvarGetName(row->cols[i]->var));
             ind[nnonz] = lpipos;
             val[nnonz] = row->vals[i];
             nnonz++;
          }
       }
-      SCIPdebugPrintf(" <= %+g\n", rhs[pos]);
+      SCIPsetDebugMsgPrint(set, " <= %+g\n", rhs[pos]);
 #ifndef NDEBUG
       for( i = row->nlpcols; i < row->len; ++i )
       {
@@ -9053,10 +9053,10 @@ SCIP_RETCODE SCIPlpAddCol(
 #ifdef SCIP_DEBUG
    {
       int i;
-      SCIPdebugPrintf("  (obj: %g) [%g,%g]", col->obj, col->lb, col->ub);
+      SCIPsetDebugMsgPrint(set, "  (obj: %g) [%g,%g]", col->obj, col->lb, col->ub);
       for( i = 0; i < col->len; ++i )
-         SCIPdebugPrintf(" %+g<%s>", col->vals[i], col->rows[i]->name);
-      SCIPdebugPrintf("\n");
+         SCIPsetDebugMsgPrint(set, " %+g<%s>", col->vals[i], col->rows[i]->name);
+      SCIPsetDebugMsgPrint(set, "\n");
    }
 #endif
 
@@ -9113,12 +9113,12 @@ SCIP_RETCODE SCIPlpAddRow(
 #ifdef SCIP_DEBUG
    {
       int i;
-      SCIPdebugPrintf("  %g <=", row->lhs);
+      SCIPsetDebugMsgPrint(set, "  %g <=", row->lhs);
       for( i = 0; i < row->len; ++i )
-         SCIPdebugPrintf(" %+g<%s>", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+         SCIPsetDebugMsgPrint(set, " %+g<%s>", row->vals[i], SCIPvarGetName(row->cols[i]->var));
       if( !SCIPsetIsZero(set, row->constant) )
-         SCIPdebugPrintf(" %+g", row->constant);
-      SCIPdebugPrintf(" <= %g\n", row->rhs);
+         SCIPsetDebugMsgPrint(set, " %+g", row->constant);
+      SCIPsetDebugMsgPrint(set, " <= %g\n", row->rhs);
    }
 #endif
 
@@ -11069,11 +11069,11 @@ void printMIR(
    {
       if( mircoef[i] != 0.0 )
       {
-         SCIPdebugPrintf(" %+g<%s>", mircoef[i], SCIPvarGetName(prob->vars[i]));
+         SCIPsetDebugMsgPrint(set, " %+g<%s>", mircoef[i], SCIPvarGetName(prob->vars[i]));
          activity += mircoef[i] * (sol == NULL ? SCIPvarGetLPSol(prob->vars[i]) : SCIPsolGetVal(sol, set, stat, prob->vars[i]));
       }
    }
-   SCIPdebugPrintf(" <= %.6f (activity: %g)\n", mirrhs, activity);
+   SCIPsetDebugMsgPrint(set, " <= %.6f (activity: %g)\n", mirrhs, activity);
 }
 #endif
 

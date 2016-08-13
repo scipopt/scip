@@ -62,6 +62,7 @@ interface:
 - new method SCIPinitializeRandomSeed()
 - new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
   subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
 
 fixed bugs:
 

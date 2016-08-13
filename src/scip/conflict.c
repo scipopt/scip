@@ -1961,11 +1961,11 @@ SCIP_RETCODE detectImpliedBounds(
       SCIPsetDebugMsg(set, "[");
       for( v = 0; v < nbdchginfos; ++v )
       {
-         SCIPdebugPrintf("%s %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[v])), (!boundtypes[v]) ? ">=" : "<=", bounds[v]);
+         SCIPsetDebugMsgPrint(set, "%s %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[v])), (!boundtypes[v]) ? ">=" : "<=", bounds[v]);
          if( v < nbdchginfos - 1 )
-            SCIPdebugPrintf(", ");
+            SCIPsetDebugMsgPrint(set, ", ");
       }
-      SCIPdebugPrintf("]\n");
+      SCIPsetDebugMsgPrint(set, "]\n");
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &vars, v) );
       SCIP_CALL( SCIPsetAllocCleanBufferArray(set, &redundants, v) );
@@ -3547,32 +3547,32 @@ SCIP_RETCODE conflictResolveBound(
 #ifndef NDEBUG
    for( i = 0; i < conflict->conflictset->nbdchginfos; ++i )
    {
-      SCIPdebugPrintf(" [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(conflict->conflictset->bdchginfos[i]),
+      SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(conflict->conflictset->bdchginfos[i]),
          SCIPvarGetName(SCIPbdchginfoGetVar(conflict->conflictset->bdchginfos[i])),
          SCIPbdchginfoGetBoundtype(conflict->conflictset->bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          SCIPbdchginfoGetNewbound(conflict->conflictset->bdchginfos[i]), conflict->conflictset->relaxedbds[i]);
    }
-   SCIPdebugPrintf("\n");
+   SCIPsetDebugMsgPrint(set, "\n");
    SCIPsetDebugMsg(set, " - forced candidates  :");
 
    for( i = 0; i < nforcedbdchgqueue; ++i )
    {
       SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->forcedbdchgqueue)[i]);
-      SCIPdebugPrintf(" [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+      SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
          bdchginfoIsInvalid(conflict, info) ? "<!>" : SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          SCIPbdchginfoGetNewbound(info), SCIPbdchginfoGetRelaxedBound(info));
    }
-   SCIPdebugPrintf("\n");
+   SCIPsetDebugMsgPrint(set, "\n");
    SCIPsetDebugMsg(set, " - optional candidates:");
 
    for( i = 0; i < nbdchgqueue; ++i )
    {
       SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[i]);
-      SCIPdebugPrintf(" [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+      SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
          bdchginfoIsInvalid(conflict, info) ? "<!>" : SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          SCIPbdchginfoGetNewbound(info), SCIPbdchginfoGetRelaxedBound(info));
    }
-   SCIPdebugPrintf("\n");
+   SCIPsetDebugMsgPrint(set, "\n");
 #endif
 
    /* check, if the bound change can and should be resolved:

@@ -7541,8 +7541,8 @@ SCIP_RETCODE branchLP(
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "binary set branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
          for( i = 0; i < nselcands; ++i )
-            SCIPdebugPrintf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
-         SCIPdebugPrintf(" }\n");
+            SCIPdebugMsgPrint(scip, " %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
+         SCIPdebugMsgPrint(scip, " }\n");
 #endif
       }
    }

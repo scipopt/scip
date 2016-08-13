@@ -3494,9 +3494,9 @@ SCIP_RETCODE parseConstraint(
    assert(token == NULL || tokens[0] != NULL); /*lint !e771*/
    for( i = 0; i < ntokens; ++i )
    {
-      SCIPdebugPrintf("%s ", tokens[i]);
+      SCIPdebugMsgPrint(scip, "%s ", tokens[i]);
    }
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    created = FALSE;
 

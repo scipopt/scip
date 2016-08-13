@@ -9514,9 +9514,9 @@ SCIP_RETCODE convertLongEquality(
       for( v = 0; v < consdata->nvars; ++v )
       {
          scalars[v] = -consdata->vals[v]/slackcoef;
-         SCIPdebugPrintf(" %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
+         SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
       }
-      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%u\n",
+      SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%u\n",
          aggrconst, SCIPvarGetName(slackvar), SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar),
          bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay, bestremovescons);
 
@@ -10429,7 +10429,7 @@ SCIP_RETCODE dualPresolve(
          {
             aggrvars[naggrs] = consdata->vars[j];
             aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
-            SCIPdebugPrintf(" %+.15g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
+            SCIPdebugMsgPrint(scip, " %+.15g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
             if( bestisint )
             {
                /* coefficient must be integral: round it to exact integral value */
@@ -10472,7 +10472,7 @@ SCIP_RETCODE dualPresolve(
       assert(!samevar || (supinf > 0 && infinf > 0));
 
       aggrconst = (bestislhs ? consdata->lhs/bestval : consdata->rhs/bestval);
-      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n", aggrconst, SCIPvarGetName(bestvar),
+      SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g]\n", aggrconst, SCIPvarGetName(bestvar),
          SCIPvarGetLbGlobal(bestvar), SCIPvarGetUbGlobal(bestvar));
       assert(naggrs == consdata->nvars-1);
 

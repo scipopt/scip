@@ -788,7 +788,7 @@ SCIP_RETCODE SCIPpricerBinpackingActivate(
    for( c = 0; c < nitems; ++c )
    {
       SCIP_CALL( SCIPcaptureCons(scip, conss[c]) );
-      SCIPdebugPrintf("%4d %3"SCIP_LONGINT_FORMAT"\n", c, weights[c]);
+      SCIPdebugMsgPrint(scip, "%4d %3"SCIP_LONGINT_FORMAT"\n", c, weights[c]);
    }
 
    /* activate pricer */

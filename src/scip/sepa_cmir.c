@@ -874,10 +874,10 @@ SCIP_RETCODE aggregation(
       for( c = 0; c < ncols; ++c )
       {
          if( aggrcoefs[c] != 0.0 )
-            SCIPdebugPrintf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
+            SCIPdebugMsgPrint(scip, " %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
                varsolvals[SCIPvarGetProbindex(SCIPcolGetVar(cols[c]))]);
       }
-      SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "\n");
 #endif
 
       /* Step 1: 

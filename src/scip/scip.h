@@ -477,6 +477,14 @@ void SCIPprintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    );
 
+/** prints a debug message without precode */
+EXTERN
+void SCIPdebugMsgPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
 EXTERN
 void SCIPdialogMessage(

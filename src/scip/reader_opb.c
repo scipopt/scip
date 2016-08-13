@@ -1024,9 +1024,9 @@ SCIP_RETCODE readCoefficients(
             int v;
             for( v = 0; v < ntmpvars; ++v )
             {
-               SCIPdebugPrintf(" %s * ", SCIPvarGetName(tmpvars[v]));
+               SCIPdebugMsgPrint(scip, " %s * ", SCIPvarGetName(tmpvars[v]));
             }
-            SCIPdebugPrintf("\n");
+            SCIPdebugMsgPrint(scip, "\n");
          }
 #endif
          if( !SCIPisZero(scip, coef) )

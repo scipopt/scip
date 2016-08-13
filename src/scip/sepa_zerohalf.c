@@ -1368,54 +1368,54 @@ void debugPrintMod2Data(
          if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[i]], mod2data->colsind[j]) ) /*lint !e701*/
          {
             nnonz++;
-            SCIPdebugPrintf("1");        
+            SCIPdebugMsgPrint(scip, "1");
          }
          else
          {
-            SCIPdebugPrintf(".");
+            SCIPdebugMsgPrint(scip, ".");
          }
       if( mod2data->rhs[mod2data->rowsind[i]] )
       {
-         SCIPdebugPrintf("  1");
+         SCIPdebugMsgPrint(scip, "  1");
       }
       else
       {
-         SCIPdebugPrintf("  0");
+         SCIPdebugMsgPrint(scip, "  0");
       }
-      SCIPdebugPrintf("  [%4d] ", nnonz);    
-      SCIPdebugPrintf("(%6g)  ", mod2data->slacks[mod2data->rowsind[i]]);
+      SCIPdebugMsgPrint(scip, "  [%4d] ", nnonz);
+      SCIPdebugMsgPrint(scip, "(%6g)  ", mod2data->slacks[mod2data->rowsind[i]]);
 
       if( printaggregations )
       {
          for( j = 0 ; j < mod2data->relatedsubproblem->nrrows; ++j )
             if( BITARRAYBITISSET(mod2data->rowaggregations[mod2data->rowsind[i]], j) ) /*lint !e701*/
             {
-               SCIPdebugPrintf("1");
+               SCIPdebugMsgPrint(scip, "1");
             }
             else
             {
-               SCIPdebugPrintf(".");
+               SCIPdebugMsgPrint(scip, ".");
             }
       }
 
       if( mod2data->rowsind[i] < mod2data->nrows - mod2data->nvarbounds )
       {      
-         SCIPdebugPrintf("  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
+         SCIPdebugMsgPrint(scip, "  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
          if( lpdata->rrowsindexofleftrow[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]] == mod2data->rowsind[i] )
          {
-            SCIPdebugPrintf(" -\n");
+            SCIPdebugMsgPrint(scip, " -\n");
          }
          else
          {
-            SCIPdebugPrintf(" +\n");
+            SCIPdebugMsgPrint(scip, " +\n");
          }
       }
       else
       {
-         SCIPdebugPrintf("    varbound(rows[%d])\n", mod2data->rowsind[i]);
+         SCIPdebugMsgPrint(scip, "    varbound(rows[%d])\n", mod2data->rowsind[i]);
       }
    }
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 }
 #endif
 

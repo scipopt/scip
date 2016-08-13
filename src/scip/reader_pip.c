@@ -1120,7 +1120,7 @@ SCIP_RETCODE readPolynomial(
 
    SCIPdebugMsg(scip, "read polynomial of degree %d: ", *degree);
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(*exprtree, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
  TERMINATE_READPOLYNOMIAL:
    SCIPfreeBufferArray(scip, &vars);

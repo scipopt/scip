@@ -1288,6 +1288,22 @@ void SCIPprintDebugMessage(
    va_end(ap);
 }
 
+/** prints a debug message without precode */
+void SCIPdebugMsgPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( scip != NULL );
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
 void SCIPdialogMessage(
    SCIP*                 scip,               /**< SCIP data structure */

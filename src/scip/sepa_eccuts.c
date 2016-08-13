@@ -271,8 +271,8 @@ void ecaggrPrint(
    SCIPdebugMsg(scip, " nvars = %d nterms = %d\n", ecaggr->nvars, ecaggr->nterms);
    SCIPdebugMsg(scip, " vars: ");
    for( i = 0; i < ecaggr->nvars; ++i )
-      SCIPdebugPrintf("%s ", SCIPvarGetName(ecaggr->vars[i]));
-   SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "%s ", SCIPvarGetName(ecaggr->vars[i]));
+   SCIPdebugMsgPrint(scip, "\n");
 
    SCIPdebugMsg(scip, " terms: ");
    for( i = 0; i < ecaggr->nterms; ++i )
@@ -282,9 +282,9 @@ void ecaggrPrint(
 
       x = ecaggr->vars[ ecaggr->termvars1[i] ];
       y = ecaggr->vars[ ecaggr->termvars2[i] ];
-      SCIPdebugPrintf("%e %s * %s  ", ecaggr->termcoefs[i], SCIPvarGetName(x), SCIPvarGetName(y) );
+      SCIPdebugMsgPrint(scip, "%e %s * %s  ", ecaggr->termcoefs[i], SCIPvarGetName(x), SCIPvarGetName(y) );
    }
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 }
 #endif
 
@@ -599,11 +599,11 @@ void nlrowaggrPrint(
 
    SCIPdebugMsg(scip, "remaining terms: ");
    for( i = 0; i < nlrowaggr->nremterms; ++i )
-      SCIPdebugPrintf("%e %s * %s + ", nlrowaggr->remtermcoefs[i], SCIPvarGetName(nlrowaggr->remtermvars1[i]),
+      SCIPdebugMsgPrint(scip, "%e %s * %s + ", nlrowaggr->remtermcoefs[i], SCIPvarGetName(nlrowaggr->remtermvars1[i]),
          SCIPvarGetName(nlrowaggr->remtermvars2[i]) );
    for( i = 0; i < nlrowaggr->nlinvars; ++i )
-      SCIPdebugPrintf("%e %s + ", nlrowaggr->lincoefs[i], SCIPvarGetName(nlrowaggr->linvars[i]) );
-   SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "%e %s + ", nlrowaggr->lincoefs[i], SCIPvarGetName(nlrowaggr->linvars[i]) );
+   SCIPdebugMsgPrint(scip, "\n");
 
    for( i = 0; i < nlrowaggr->necaggr; ++i )
    {
@@ -1664,8 +1664,8 @@ void printFacet(
 
    SCIPdebugMsg(scip, "print facet (val=%e): ", facetval);
    for( i = 0; i < nvars; ++i )
-      SCIPdebugPrintf("%e %s + ", facet[i], SCIPvarGetName(vars[i]));
-   SCIPdebugPrintf("%e\n", facet[nvars]);
+      SCIPdebugMsgPrint(scip, "%e %s + ", facet[i], SCIPvarGetName(vars[i]));
+   SCIPdebugMsgPrint(scip, "%e\n", facet[nvars]);
 }
 #endif
 
@@ -2087,9 +2087,9 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
    SCIPdebugMsg(scip, "facet for the transformed problem: ");
    for( i = 0; i < ecaggr->nvars; ++i )
    {
-      SCIPdebugPrintf("%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
    }
-   SCIPdebugPrintf("%3.4e\n", facet[ecaggr->nvars]);
+   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[ecaggr->nvars]);
 #endif
 
    /*
@@ -2120,12 +2120,12 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
       facet[i] = facet[i] / (varub - varlb);
       *facetval += facet[i] * SCIPgetSolVal(scip, sol, ecaggr->vars[i]);
 
-      SCIPdebugPrintf("%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
    }
 
    /* add constant part to the facet value */
    *facetval += facet[ecaggr->nvars];
-   SCIPdebugPrintf("%3.4e\n", facet[ecaggr->nvars]);
+   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[ecaggr->nvars]);
 
    /*
     *  5. adjust and check facet with the algorithm of Rikun et al.

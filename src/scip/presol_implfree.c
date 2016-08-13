@@ -1220,12 +1220,12 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                      continue;
 
                   scalars[cnt] = -(*valpnt) / multiaggcoef; /*lint !e414*/
-                  SCIPdebugPrintf(" %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
+                  SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
 
                   cnt++;
                }
 
-               SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
+               SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
                   aggrconst, SCIPvarGetName(multiaggvar), SCIPvarGetLbGlobal(multiaggvar), SCIPvarGetUbGlobal(multiaggvar));
 
                /* perform multi-aggregation */

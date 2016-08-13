@@ -701,9 +701,9 @@ SCIP_RETCODE newsolCliqueAddRow(
    {
       assert(cliquenodes[i] < sepadata->tcliquegraph->nnodes);
       SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
-      /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
+      /*SCIPdebugMsgPrint(scip, " [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
    }
-   /*SCIPdebugPrintf("\n");*/
+   /*SCIPdebugMsgPrint(scip, "\n");*/
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
    /* set cut rank: for clique cuts we always set to 1 */

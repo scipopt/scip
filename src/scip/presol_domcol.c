@@ -117,7 +117,7 @@ void printRow(
    rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
    valpnt = SCIPmatrixGetRowValPtr(matrix, row);
 
-   SCIPdebugPrintf("\n(L:%g) [%c] %g  <=",
+   SCIPdebugMsgPrint(scip, "\n(L:%g) [%c] %g  <=",
       (SCIPmatrixGetRowNMinActPosInf(matrix, row) + SCIPmatrixGetRowNMinActNegInf(matrix,row) > 0) ?
       -SCIPinfinity(scip) :
       SCIPmatrixGetRowMinActivity(matrix, row), relation, SCIPmatrixGetRowLhs(matrix, row));
@@ -126,10 +126,10 @@ void printRow(
       c = *rowpnt;
       val = *valpnt;
       var = SCIPmatrixGetVar(matrix, c);
-      SCIPdebugPrintf("  %g{%s[idx:%d][bnd:%g,%g]}",
+      SCIPdebugMsgPrint(scip, "  %g{%s[idx:%d][bnd:%g,%g]}",
          val, SCIPvarGetName(var), c, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
-   SCIPdebugPrintf(" <=  %g (U:%g)", (SCIPmatrixGetRowNMaxActPosInf(matrix, row) + SCIPmatrixGetRowNMaxActNegInf(matrix, row) > 0) ?
+   SCIPdebugMsgPrint(scip, " <=  %g (U:%g)", (SCIPmatrixGetRowNMaxActPosInf(matrix, row) + SCIPmatrixGetRowNMaxActNegInf(matrix, row) > 0) ?
       SCIPinfinity(scip) :
       SCIPmatrixGetRowRhs(matrix, row), SCIPmatrixGetRowMaxActivity(matrix , row));
 }
@@ -159,13 +159,13 @@ SCIP_RETCODE printRowsOfCol(
       rows[i] = *colpnt;
    }
 
-   SCIPdebugPrintf("\n-------");
-   SCIPdebugPrintf("\ncol %d number rows: %d",col,numrows);
+   SCIPdebugMsgPrint(scip, "\n-------");
+   SCIPdebugMsgPrint(scip, "\ncol %d number rows: %d",col,numrows);
    for( i = 0; i < numrows; i++ )
    {
       printRow(scip, matrix, rows[i]);
    }
-   SCIPdebugPrintf("\n-------");
+   SCIPdebugMsgPrint(scip, "\n-------");
 
    SCIPfreeBufferArray(scip, &rows);
 
@@ -207,7 +207,7 @@ SCIP_RETCODE printDomRelInfo(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   SCIPdebugPrintf("\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
+   SCIPdebugMsgPrint(scip, "\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
       type, SCIPvarGetObj(dominatingvar), SCIPvarGetObj(dominatedvar),
       SCIPvarGetName(dominatingvar), dominatingidx, SCIPmatrixGetColNNonzs(matrix, dominatingidx),
       SCIPvarGetName(dominatedvar), dominatedidx, SCIPmatrixGetColNNonzs(matrix, dominatedidx),
