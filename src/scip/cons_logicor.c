@@ -4582,7 +4582,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
    /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
-   assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
+   assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
 
 #ifndef NDEBUG
    infervarfound = FALSE;
@@ -4592,7 +4592,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
       if( consdata->vars[v] != infervar )
       {
          /* the reason variable must have been assigned to zero */
-         assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
       }
 #ifndef NDEBUG

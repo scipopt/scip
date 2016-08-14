@@ -17928,6 +17928,324 @@ SCIP_Real SCIPgetVarFarkasCoef(
    }
 }
 
+/** returns lower bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+SCIP_Real SCIPgetVarLbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   )
+{
+   SCIP_VARSTATUS varstatus;
+   assert(var != NULL);
+
+   varstatus = SCIPvarGetStatus(var);
+
+   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
+   {
+      if( bdchgidx == NULL )
+         return SCIPvarGetLbLocal(var);
+      else
+      {
+         SCIP_BDCHGINFO* bdchginfo;
+
+         bdchginfo = SCIPvarGetLbchgInfo(var, bdchgidx, after);
+         if( bdchginfo != NULL )
+            return SCIPbdchginfoGetNewbound(bdchginfo);
+         else
+            return var->glbdom.lb;
+      }
+   }
+
+   /* get bounds of attached variables */
+   switch( varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      return SCIPgetVarLbAtIndex(scip, var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_FIXED:
+      return var->glbdom.lb;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( var->data.aggregate.scalar > 0.0 )
+      {
+         SCIP_Real lb;
+
+         lb = SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
+         /* a > 0 -> get lower bound of y */
+         if( SCIPisInfinity(scip, -lb) )
+            return -SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, lb) )
+            return SCIPinfinity(scip);
+         else
+            return var->data.aggregate.scalar * lb + var->data.aggregate.constant;
+      }
+      else if( var->data.aggregate.scalar < 0.0 )
+      {
+         SCIP_Real ub;
+
+         ub = SCIPgetVarUbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
+         /* a < 0 -> get upper bound of y */
+         if( SCIPisInfinity(scip, -ub) )
+            return SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, ub) )
+            return -SCIPinfinity(scip);
+         else
+            return var->data.aggregate.scalar * ub + var->data.aggregate.constant;
+      }
+      else
+      {
+         SCIPerrorMessage("scalar is zero in aggregation\n");
+         SCIPABORT();
+         return SCIP_INVALID; /*lint !e527*/
+      }
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+      {
+         assert(var->data.multaggr.vars != NULL);
+         assert(var->data.multaggr.scalars != NULL);
+         assert(var->data.multaggr.vars[0] != NULL);
+
+         if( var->data.multaggr.scalars[0] > 0.0 )
+         {
+            SCIP_Real lb;
+
+            lb = SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+            /* a > 0 -> get lower bound of y */
+            if( SCIPisInfinity(scip, -lb) )
+               return -SCIPinfinity(scip);
+            else if( SCIPisInfinity(scip, lb) )
+               return SCIPinfinity(scip);
+            else
+               return var->data.multaggr.scalars[0] * lb + var->data.multaggr.constant;
+         }
+         else if( var->data.multaggr.scalars[0] < 0.0 )
+         {
+            SCIP_Real ub;
+
+            ub = SCIPgetVarUbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+            /* a < 0 -> get upper bound of y */
+            if( SCIPisInfinity(scip, -ub) )
+               return SCIPinfinity(scip);
+            else if( SCIPisInfinity(scip, ub) )
+               return -SCIPinfinity(scip);
+            else
+               return var->data.multaggr.scalars[0] * ub + var->data.multaggr.constant;
+         }
+         else
+         {
+            SCIPerrorMessage("scalar is zero in multi-aggregation\n");
+            SCIPABORT();
+            return SCIP_INVALID; /*lint !e527*/
+         }
+      }
+      SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPgetVarUbAtIndex(scip, var->negatedvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN: /* for lint */
+   case SCIP_VARSTATUS_LOOSE: /* for lint */
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+   }
+}
+
+/** returns upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+SCIP_Real SCIPgetVarUbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   )
+{
+   SCIP_VARSTATUS varstatus;
+   assert(var != NULL);
+
+   varstatus = SCIPvarGetStatus(var);
+
+   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
+   {
+      if( bdchgidx == NULL )
+         return SCIPvarGetUbLocal(var);
+      else
+      {
+         SCIP_BDCHGINFO* bdchginfo;
+
+         bdchginfo = SCIPvarGetUbchgInfo(var, bdchgidx, after);
+         if( bdchginfo != NULL )
+            return SCIPbdchginfoGetNewbound(bdchginfo);
+         else
+            return var->glbdom.ub;
+      }
+   }
+
+   /* get bounds of attached variables */
+   switch( varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      return SCIPgetVarUbAtIndex(scip, var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_FIXED:
+      return var->glbdom.ub;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( var->data.aggregate.scalar > 0.0 )
+      {
+         SCIP_Real ub;
+
+         ub = SCIPgetVarUbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
+         /* a > 0 -> get lower bound of y */
+         if( SCIPisInfinity(scip, -ub) )
+            return -SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, ub) )
+            return SCIPinfinity(scip);
+         else
+            return var->data.aggregate.scalar * ub + var->data.aggregate.constant;
+      }
+      else if( var->data.aggregate.scalar < 0.0 )
+      {
+         SCIP_Real lb;
+
+         lb = SCIPgetVarLbAtIndex(scip, var->data.aggregate.var, bdchgidx, after);
+
+         /* a < 0 -> get upper bound of y */
+         if ( SCIPisInfinity(scip, -lb) )
+            return SCIPinfinity(scip);
+         else if ( SCIPisInfinity(scip, lb) )
+            return -SCIPinfinity(scip);
+         else
+            return var->data.aggregate.scalar * lb + var->data.aggregate.constant;
+      }
+      else
+      {
+         SCIPerrorMessage("scalar is zero in aggregation\n");
+         SCIPABORT();
+         return SCIP_INVALID; /*lint !e527*/
+      }
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+      {
+         assert(var->data.multaggr.vars != NULL);
+         assert(var->data.multaggr.scalars != NULL);
+         assert(var->data.multaggr.vars[0] != NULL);
+
+         if( var->data.multaggr.scalars[0] > 0.0 )
+         {
+            SCIP_Real ub;
+
+            ub = SCIPgetVarUbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+            /* a > 0 -> get lower bound of y */
+            if ( SCIPisInfinity(scip, -ub) )
+               return -SCIPinfinity(scip);
+            else if ( SCIPisInfinity(scip, ub) )
+               return SCIPinfinity(scip);
+            else
+               return var->data.multaggr.scalars[0] * ub + var->data.multaggr.constant;
+         }
+         else if( var->data.multaggr.scalars[0] < 0.0 )
+         {
+            SCIP_Real lb;
+
+            lb = SCIPgetVarLbAtIndex(scip, var->data.multaggr.vars[0], bdchgidx, after);
+
+            /* a < 0 -> get upper bound of y */
+            if ( SCIPisInfinity(scip, -lb) )
+               return SCIPinfinity(scip);
+            else if ( SCIPisInfinity(scip, lb) )
+               return -SCIPinfinity(scip);
+            else
+               return var->data.multaggr.scalars[0] * lb + var->data.multaggr.constant;
+         }
+         else
+         {
+            SCIPerrorMessage("scalar is zero in multi-aggregation\n");
+            SCIPABORT();
+            return SCIP_INVALID; /*lint !e527*/
+         }
+      }
+      SCIPerrorMessage("cannot get the bounds of a multiple aggregated variable.\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPgetVarLbAtIndex(scip, var->negatedvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN: /* for lint */
+   case SCIP_VARSTATUS_LOOSE: /* for lint */
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+   }
+}
+
+/** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+SCIP_Real SCIPgetVarBdAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   )
+{
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      return SCIPgetVarLbAtIndex(scip, var, bdchgidx, after);
+   else
+   {
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+      return SCIPgetVarUbAtIndex(scip, var, bdchgidx, after);
+   }
+}
+
+/** returns whether the binary variable was fixed at the time given by the bound change index */
+SCIP_Bool SCIPgetVarWasFixedAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsBinary(var));
+
+   /* check the current bounds first in order to decide at which bound change information we have to look
+    * (which is expensive because we have to follow the aggregation tree to the active variable)
+    */
+   return ((SCIPvarGetLbLocal(var) > 0.5 && SCIPgetVarLbAtIndex(scip, var, bdchgidx, after) > 0.5)
+      || (SCIPvarGetUbLocal(var) < 0.5 && SCIPgetVarUbAtIndex(scip, var, bdchgidx, after) < 0.5));
+}
+
 /** gets solution value for variable in current node
  *
  *  @return solution value for variable in current node

@@ -1868,11 +1868,11 @@ SCIP_RETCODE resolvePropagation(
    {
    case PROPRULE_1:
       /* the resultant was infered to FALSE, because one operand variable was FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         if( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         if( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
@@ -1884,19 +1884,19 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_2:
       /* the operand variable was infered to TRUE, because the resultant was TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
-      assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_3:
       /* the resultant was infered to TRUE, because all operand variables were TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         assert(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5);
+         assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
@@ -1904,14 +1904,14 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_4:
       /* the operand variable was infered to FALSE, because the resultant was FALSE and all other operands were TRUE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5);
+            assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }

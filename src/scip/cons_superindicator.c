@@ -1516,7 +1516,7 @@ SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
    *result = SCIP_DIDNOTFIND;
 
    /* check that we only propagated if the binvar is fixed to one */
-   assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(consdata->binvar, bdchgidx, TRUE), 1.0));
+   assert(SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, consdata->binvar, bdchgidx, TRUE), 1.0));
 
    /* add tightened lower bound on binvar to conflict set */
    SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );

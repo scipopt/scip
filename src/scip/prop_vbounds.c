@@ -1037,8 +1037,8 @@ SCIP_RETCODE analyzeConflictLowerbound(
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(infervar != NULL);
-   assert(SCIPisEQ(scip, SCIPvarGetUbLocal(infervar), SCIPvarGetUbAtIndex(infervar, NULL, FALSE)));
-   assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(infervar, NULL, TRUE), SCIPvarGetUbAtIndex(infervar, NULL, FALSE)));
+   assert(SCIPisEQ(scip, SCIPvarGetUbLocal(infervar), SCIPgetVarUbAtIndex(scip, infervar, NULL, FALSE)));
+   assert(SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, infervar, NULL, TRUE), SCIPgetVarUbAtIndex(scip, infervar, NULL, FALSE)));
    assert(SCIPisGT(scip, inferlb, SCIPvarGetUbLocal(infervar)));
    assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -1146,8 +1146,8 @@ SCIP_RETCODE analyzeConflictUpperbound(
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(infervar != NULL);
-   assert(SCIPisEQ(scip, SCIPvarGetLbLocal(infervar), SCIPvarGetLbAtIndex(infervar, NULL, FALSE)));
-   assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(infervar, NULL, TRUE), SCIPvarGetLbAtIndex(infervar, NULL, FALSE)));
+   assert(SCIPisEQ(scip, SCIPvarGetLbLocal(infervar), SCIPgetVarLbAtIndex(scip, infervar, NULL, FALSE)));
+   assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, infervar, NULL, TRUE), SCIPgetVarLbAtIndex(scip, infervar, NULL, FALSE)));
    assert(SCIPisLT(scip, inferub, SCIPvarGetLbLocal(infervar)));
    assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
