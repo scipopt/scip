@@ -1542,7 +1542,7 @@ SCIP_RETCODE separatePointSum(
    coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
 
    /* create cut; it is globally valid because it is linear */
-   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
+   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sum_cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
          FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
 
@@ -1976,7 +1976,7 @@ SCIP_RETCODE separatePointProduct(
       /* @todo  allow lhs/rhs of +/- infinity? */
       if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
-         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, islocal ? "square_secant" : "square_linearization", 0, NULL, NULL, -SCIPinfinity(scip),
                SCIPinfinity(scip), islocal, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoef) );
@@ -2036,7 +2036,7 @@ SCIP_RETCODE separatePointProduct(
       if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
          /* McCormicks are only valid locally */
-         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sumprod_cut", 0, NULL, NULL, -SCIPinfinity(scip),
+         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "mccormick", 0, NULL, NULL, -SCIPinfinity(scip),
                SCIPinfinity(scip), TRUE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
