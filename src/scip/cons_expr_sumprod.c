@@ -1967,7 +1967,7 @@ SCIP_RETCODE separatePointProduct(
       if( (exprdata->constant < 0 && overestimate) || (exprdata->constant > 0 && !overestimate) )
       {
          SCIPaddSquareLinearization(scip, exprdata->constant, refpoint, SCIPvarIsIntegral(x), &lincoef, &linconstant, &success);
-         islocal = FALSE; /* linearization are globally valid */
+         islocal = FALSE; /* linearizations are globally valid */
       }
       else
       {

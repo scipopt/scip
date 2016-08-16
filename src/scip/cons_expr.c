@@ -231,7 +231,7 @@ typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
 #ifdef SCIP_DEBUG_SOLUTION
-   SCIP_SOL*               debugsol;         /**< debug solutionsolution to separate (NULL for separating the LP solution) */
+   SCIP_SOL*               debugsol;         /**< debug solution (or NULL if not debugging) */
 #endif
 } CREATE_AUXVARS_DATA;
 
@@ -3142,7 +3142,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 #ifdef SCIP_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
-         /* store debug solution of auxiliar variable */
+         /* store debug solution of auxiliary variable */
          assert(createdata->debugsol != NULL);
          SCIP_CALL( SCIPevalConsExprExpr(scip, expr, createdata->debugsol, 0) );
          SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
