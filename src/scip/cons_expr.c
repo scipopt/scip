@@ -1582,14 +1582,16 @@ SCIP_RETCODE forwardPropCons(
       /* compare root expression interval with constraint sides; store the result in the root expression */
       SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
 
-      /* consider auxiliary variable stored in the root expression; it might happen that some other plug-ins tighten the
-       * bounds of these variables
+      /* consider auxiliary variable stored in the root expression
+       * it might happen that some other plug-ins tighten the bounds of these variables
+       * we don't trust these bounds, so relax by epsilon
        */
       if( consdata->expr->auxvar != NULL )
       {
          SCIP_INTERVAL auxvarinterval;
+         assert(SCIPvarGetLbLocal(consdata->expr->auxvar) <= SCIPvarGetUbLocal(consdata->expr->auxvar));  /* can SCIP ensure this by today? */
 
-         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar), SCIPvarGetUbLocal(consdata->expr->auxvar));
+         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar) - SCIPepsilon(scip), SCIPvarGetUbLocal(consdata->expr->auxvar) + SCIPepsilon(scip));
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 

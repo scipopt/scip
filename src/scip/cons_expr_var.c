@@ -266,7 +266,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
    else
       ub += SCIPepsilon(scip);
 
-   SCIPintervalSetBounds(interval, MIN(lb, ub), MAX(lb, ub));
+   assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
+   SCIPintervalSetBounds(interval, lb, ub);
 
    return SCIP_OKAY;
 }
