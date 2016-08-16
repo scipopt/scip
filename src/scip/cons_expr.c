@@ -2132,7 +2132,10 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIPdebugMessage("  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
    /* mark constraint to be propagated again */
-   /* TODO: is this the correct fix? https://git.zib.de/integer/scip/issues/1037 */
+   /* TODO: we only need to re-propagate if SCIP_EVENTTYPE_BOUNDTIGHTENED, but we need to reevaluate
+    * the intervals (forward-propagation) when SCIP_EVENTTYPE_BOUNDRELAXED
+    * at some point we should start using the intevaltag for this
+    */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
       SCIPdebugMessage("  propagate %s again\n", SCIPconsGetName(cons));
