@@ -6879,10 +6879,9 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
 
    /* SCIPdebugMessage("cut <%s> efficiacy %g mincoef %g maxcoef %g range %.2e side %g \n", SCIProwGetName(*cut), efficacy, mincoef, maxcoef, maxcoef/mincoef, side == SCIP_SIDETYPE_LEFT ? SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut)); */
 
-   /* check maximal coefficient */
+   /* if maximal coefficient is infinity, give up on the cut */
    if( SCIPisInfinity(scip, maxcoef) )
    {
-      /* if range of coefficients is bad, find very small coefficients and make them zero */
       SCIPdebugMessage("maximal coefficients of cut <%s> is too large: %g\n", SCIProwGetName(*cut), maxcoef);
       SCIP_CALL( SCIPreleaseRow(scip, cut) );
       return SCIP_OKAY;
