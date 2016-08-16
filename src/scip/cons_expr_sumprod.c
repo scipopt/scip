@@ -1608,7 +1608,14 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    /* row should not be violated if it is still in the LP */
    if( exprdata->row != NULL && SCIProwIsInLP(exprdata->row) )
    {
-      assert(SCIPisFeasGE(scip, SCIPgetRowSolFeasibility(scip, exprdata->row, sol), 0.0));
+      /* In lp.c, it is tested that the LP solution is feasible w.r.t. relative tolerances, so these asserts must hold. */
+      assert(SCIPisInfinity(scip,  SCIProwGetRhs(exprdata->row)) || SCIPisFeasLE(scip, SCIPgetRowSolActivity(scip, exprdata->row, sol), SCIProwGetRhs(exprdata->row)));
+      assert(SCIPisInfinity(scip, -SCIProwGetLhs(exprdata->row)) || SCIPisFeasGE(scip, SCIPgetRowSolActivity(scip, exprdata->row, sol), SCIProwGetLhs(exprdata->row)));
+      /* However, we actually expect that the LP solution is also feasible w.r.t. absolute tolerances,
+       * that is, that the row feasibility is >= -feastol.
+       */
+      assert(!SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, exprdata->row, sol)));
+
       return SCIP_OKAY;
    }
 
