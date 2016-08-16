@@ -6813,3 +6813,177 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
 
    return SCIP_OKAY;
 }
+
+/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
+ * maybe should derive this from the current feastol (e.g., 10/feastol)
+ */
+#define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
+
+/** checks a cut for efficacy and numerical stability and possibly tries to improve it
+ *
+ * If the numerical properties of the cut are too bad, the routines tries to improve this.
+ * If the efficacy of the cut will end up to be below the given minefficacy, the cut will be released.
+ */
+SCIP_RETCODE SCIPmassageConsExprExprCut(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_ROW**              cut,              /**< cut to be checked and maybe modified */
+   SCIP_SOL*               sol,              /**< solution that we try to cut off */
+   SCIP_Real               minefficacy       /**< minimal efficacy requirement */
+   )
+{
+   SCIP_Real efficacy;
+   SCIP_Real mincoef;
+   SCIP_Real maxcoef;
+   SCIP_SIDETYPE side;
+
+   assert(scip != NULL);
+   assert(cut != NULL);
+   assert(*cut != NULL);
+   assert(minefficacy >= 0.0);
+
+   /* get current efficacy */
+   efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
+
+   /* release cut if its efficacy is too low */
+   if( efficacy < minefficacy )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, cut) );
+      return SCIP_OKAY;
+   }
+
+   /* check that there is either a lhs or a rhs (if not, then probably we were overflowing SCIPinfinity for one side) */
+   if( SCIPisInfinity(scip, -SCIProwGetLhs(*cut)) && SCIPisInfinity(scip, SCIProwGetRhs(*cut)) )
+   {
+      SCIPdebugMessage("cut <%s> sides are both infinite: left %g right %g\n", SCIProwGetName(*cut), SCIProwGetLhs(*cut), SCIProwGetRhs(*cut));
+      SCIP_CALL( SCIPreleaseRow(scip, cut) );
+      return SCIP_OKAY;
+   }
+
+   /* assert that cut is an inequality */
+   assert( SCIPisInfinity(scip, -SCIProwGetLhs(*cut)) ||  SCIPisInfinity(scip, SCIProwGetRhs(*cut)));
+   /* check which side of the cut is not infinity */
+   side = SCIPisInfinity(scip, SCIProwGetRhs(*cut)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
+
+   mincoef = SCIPgetRowMinCoef(scip, *cut);
+   maxcoef = SCIPgetRowMaxCoef(scip, *cut);
+
+   /* SCIPdebugMessage("cut <%s> efficiacy %g mincoef %g maxcoef %g range %.2e side %g \n", SCIProwGetName(*cut), efficacy, mincoef, maxcoef, maxcoef/mincoef, side == SCIP_SIDETYPE_LEFT ? SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut)); */
+
+   /* check maximal coefficient */
+   if( SCIPisInfinity(scip, maxcoef) )
+   {
+      /* if range of coefficients is bad, find very small coefficients and make them zero */
+      SCIPdebugMessage("maximal coefficients of cut <%s> is too large: %g\n", SCIProwGetName(*cut), maxcoef);
+      SCIP_CALL( SCIPreleaseRow(scip, cut) );
+      return SCIP_OKAY;
+   }
+
+   /* check and possibly try to improve cut range */
+   while( maxcoef / mincoef > SCIP_CONSEXPR_CUTMAXRANGE )
+   {
+      SCIP_VAR* var;
+      SCIP_Real coef;
+      SCIP_Real constant;
+      int j;
+
+      /* if range of coefficients is bad, find very small coefficients and make them zero */
+      SCIPdebugMessage("cut coefficients for cut <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIProwGetName(*cut), mincoef, maxcoef);
+
+      /* TODO in the original code, we were not looking into cases where the minimal coefficient is due to a linear variable.
+       * This would correspond to the auxiliary variable here, which we might not want to eliminate from the cut.
+       * Maybe we pass in a variable to this function which should not be removed from the cut?
+       */
+
+      /* eliminate variables with minimal coefficient from cut */
+      constant = 0.0;
+      for( j = 0; j < SCIProwGetNNonz(*cut); ++j )
+      {
+         coef = SCIProwGetVals(*cut)[j];
+         if( !SCIPisEQ(scip, REALABS(coef), mincoef) )
+            continue;
+
+         var = SCIPcolGetVar(SCIProwGetCols(*cut)[j]);
+         assert(var != NULL);
+
+         /* try to eliminate coefficient with minimal absolute value by weakening cut and try again */
+         if( (coef > 0.0 && side == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && side == SCIP_SIDETYPE_LEFT) )
+         {
+            SCIP_Real lb;
+
+            lb = SCIProwIsLocal(*cut) ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+            if( !SCIPisInfinity(scip, -lb) )
+            {
+               SCIPdebugMessage("eliminate coefficient %g for <%s> = %g [>= %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), lb);
+
+               constant += coef * lb;
+               SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, -coef) );
+               continue;
+            }
+         }
+
+         if( (coef < 0.0 && side == SCIP_SIDETYPE_RIGHT) || (coef > 0.0 && side == SCIP_SIDETYPE_LEFT) )
+         {
+            SCIP_Real ub;
+
+            ub = SCIProwIsLocal(*cut) ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+            if( !SCIPisInfinity(scip, ub) )
+            {
+               SCIPdebugMessage("eliminate coefficient %g for <%s> = %g [<= %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), ub);
+
+               constant += coef * ub;
+               SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, -coef) );
+               continue;
+            }
+         }
+
+         /* if variable could not be eliminated, then give up */
+         SCIPdebugMessage("could not eliminate small coefficient %g of variable <%s>\n", coef, SCIPvarGetName(var));
+         SCIP_CALL( SCIPreleaseRow(scip, cut) );
+         return SCIP_OKAY;
+      }
+
+      /* adapt lhs/rhs */
+      if( side == SCIP_SIDETYPE_LEFT )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, *cut, SCIProwGetLhs(*cut) - constant) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, *cut, SCIProwGetRhs(*cut) - constant) );
+      }
+
+      /* update min/max coefficient */
+      mincoef = SCIPgetRowMinCoef(scip, *cut);
+      maxcoef = SCIPgetRowMaxCoef(scip, *cut);
+
+      /* remember that we changed the cut */
+      efficacy = SCIP_INVALID;
+   }
+   assert(maxcoef / mincoef < SCIP_CONSEXPR_CUTMAXRANGE);
+
+   /* check that left/right hand side are finite */
+   if( (side == SCIP_SIDETYPE_LEFT  && SCIPisInfinity(scip, -SCIProwGetLhs(*cut))) ||
+       (side == SCIP_SIDETYPE_RIGHT && SCIPisInfinity(scip,  SCIProwGetRhs(*cut))) )
+   {
+      SCIPdebugMessage("cut <%s> has very large side: %g\n", SCIProwGetName(*cut), side == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut));
+      SCIP_CALL( SCIPreleaseRow(scip, cut) );
+      return SCIP_OKAY;
+   }
+
+   /* check efficacy again if cut was changed */
+   if( efficacy == SCIP_INVALID )
+   {
+      efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
+
+      /* release cut if its efficacy is too low */
+      if( efficacy < minefficacy )
+      {
+         SCIP_CALL( SCIPreleaseRow(scip, cut) );
+         return SCIP_OKAY;
+      }
+   }
+
+   /* TODO we could scale up the cut (issue #7) if efficacy is >0 and <minefficacy */
+
+   return SCIP_OKAY;
+}

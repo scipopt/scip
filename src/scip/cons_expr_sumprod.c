@@ -2067,7 +2067,6 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 {
    SCIP_ROW* cut;
-   SCIP_Real efficacy;
    SCIP_Bool infeasible;
 
    *result = SCIP_DIDNOTFIND;
@@ -2079,20 +2078,23 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+   /* check whether its efficacy and numerical properties are ok (and maybe improve) */
+   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minefficacy) );
 
-   /* add cut if it is violated */
-   if( SCIPisGE(scip, efficacy, minefficacy) )
-   {
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minefficacy);
+
+   /* add cut */
+   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+   *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
-      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+   SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
-   }
 
    /* release cut */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );

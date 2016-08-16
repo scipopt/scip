@@ -781,6 +781,20 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    );
 /** @} */
 
+/** checks a cut for efficacy and numerical stability and possibly tries to improve it
+ *
+ * If the numerical properties of the cut are too bad, the routines tries to improve this.
+ * If the efficacy of the cut will end up to be below the given minefficacy, the cut will be released.
+ */
+EXTERN
+SCIP_RETCODE SCIPmassageConsExprExprCut(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_ROW**              cut,              /**< cut to be checked and maybe modified */
+   SCIP_SOL*               sol,              /**< solution that we try to cut off */
+   SCIP_Real               minefficacy       /**< minimal efficacy requirement */
+   );
+
+
 #ifdef __cplusplus
 }
 #endif
