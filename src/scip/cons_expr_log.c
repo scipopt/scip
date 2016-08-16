@@ -18,6 +18,7 @@
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  *
+ * @todo initsepaLog
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -266,7 +267,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
 {
    SCIP_ROW* cut;
-   SCIP_Real efficacy;
+   SCIP_Bool infeasible;
 
    cut = NULL;
    *ncuts = 0;
@@ -278,23 +279,22 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   efficacy = -SCIPgetRowSolFeasibility(scip, cut, sol);
+   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minefficacy) );
 
-   /* add cut if it is violated */
-   if( SCIPisGE(scip, efficacy, minefficacy) )
-   {
-      SCIP_Bool infeasible;
+   /* cut efficacy or numerics were too bad */
+   if( cut == NULL )
+      return SCIP_OKAY;
 
-      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+   /* add cut */
+   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
 
-      *ncuts += 1;
+   *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
-      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+   SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
-   }
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 

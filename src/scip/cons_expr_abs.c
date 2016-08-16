@@ -275,7 +275,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
 
    /* compute initial cuts; do no store the secant in the expression data */
    SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, &exprdata->rowneg, &exprdata->rowpos, &secant) );
-   assert(exprdata->rowneg != NULL && exprdata->rowpos != NULL);
+   assert(exprdata->rowneg != NULL);
+   assert(exprdata->rowpos != NULL);
 
    SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowneg, FALSE, infeasible) );
    if( !*infeasible )
@@ -283,10 +284,15 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
       SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->rowpos, FALSE, infeasible) );
    }
 
-   /* it might happen that we could not compute a secand (because of fixed or unbounded variables) */
+   /* it might happen that we could not compute a secant (because of fixed or unbounded variables) */
    if( !*infeasible && secant != NULL )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
+      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &secant, NULL, -SCIPinfinity(scip)) );
+
+      if( secant != NULL )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, secant, FALSE, infeasible) );
+      }
    }
 
    /* release secant */
@@ -354,6 +360,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
    rows[0] = exprdata->rowneg;
    rows[1] = exprdata->rowpos;
    SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, NULL, NULL, &rows[2]) );
+   if( rows[2] != NULL )
+   {
+      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minefficacy) );
+   }
 
    for( i = 0; i < 3; ++i )
    {

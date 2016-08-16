@@ -27,6 +27,8 @@
  * The data (a_i and constant, or e_i and coef) is currently stored as a SCIP_Real
  * array of length nchildren + 1, storing the constant/coef in the first position,
  * and the a_i/e_i afterwards.
+ *
+ * @todo initsepaProduct
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
