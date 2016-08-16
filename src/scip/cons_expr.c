@@ -5382,7 +5382,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
       case SCIP_EXPR_PRODUCT:
       {
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nchildren, children, NULL, 0.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nchildren, children, NULL, 1.0) );
 
          break;
       }
