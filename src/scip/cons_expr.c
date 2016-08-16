@@ -1557,6 +1557,10 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
 
+   /* @todo delete constraint locally if they are redundant w.r.t. bounds used by the LP solver; the LP solution might
+    * violate variable bounds by more than SCIPfeastol() because of relative comparisons
+    */
+#ifdef SCIP_DISABLED_CODE
    /* if the root expression interval could not be tightened by constraint sides, then the constraint is redundant and
     * should be deleted (locally)
     *
@@ -1571,6 +1575,7 @@ SCIP_RETCODE forwardPropCons(
       *redundant = TRUE;
       return SCIP_OKAY;
    }
+#endif
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(consdata->expr)) )
