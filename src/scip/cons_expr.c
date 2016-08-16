@@ -1562,8 +1562,8 @@ SCIP_RETCODE forwardPropCons(
     *
     * @todo how to check this even if we have used the constraint sides during propagation, i.e. intersect is TRUE
     */
-   if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasLE(scip, consdata->lhs, consdata->expr->interval.inf))
-      && (SCIPisInfinity(scip, consdata->rhs) ||  SCIPisFeasGE(scip, consdata->rhs, consdata->expr->interval.sup)) )
+   if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLE(scip, consdata->lhs - consdata->expr->interval.inf, SCIPfeastol(scip)))
+      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGE(scip, consdata->rhs - consdata->expr->interval.sup, SCIPfeastol(scip))) )
    {
       SCIPdebugMessage("removing constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
          consdata->expr->interval.inf, consdata->expr->interval.sup, consdata->lhs, consdata->rhs);
@@ -3073,7 +3073,7 @@ SCIP_RETCODE registerBranchingCandidates(
       assert(consdata != NULL);
 
       /* violations have been computed during CONSENFOLP */
-      if( SCIPisFeasGT(scip, consdata->lhsviol, 0.0) || SCIPisFeasGT(scip, consdata->rhsviol, 0.0) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          assert(consdata->varexprs != NULL);
 
@@ -3607,8 +3607,8 @@ SCIP_RETCODE removeFixedConstraints(
       if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
       {
          value = SCIPgetConsExprExprValue(consdata->expr);
-         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, value, consdata->lhs))
-            || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, value, consdata->rhs)) )
+         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisLT(scip, value - consdata->lhs, SCIPfeastol(scip)))
+            || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisGT(scip, value - consdata->rhs, SCIPfeastol(scip))) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -4304,7 +4304,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisFeasGT(scip, consdata->lhsviol, 0.0) || SCIPisFeasGT(scip, consdata->rhsviol, 0.0) )
+      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          *result = SCIP_INFEASIBLE;
 
@@ -4314,11 +4314,11 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
-            if( SCIPisFeasGE(scip, consdata->lhsviol, 0.0) )
+            if( SCIPisGE(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
             }
-            if( SCIPisFeasGE(scip, consdata->rhsviol, 0.0) )
+            if( SCIPisGE(scip, consdata->rhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
