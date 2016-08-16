@@ -6823,12 +6823,13 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
  *
  * If the numerical properties of the cut are too bad, the routines tries to improve this.
  * If the efficacy of the cut will end up to be below the given minefficacy, the cut will be released.
+ * Passing -SCIPinfinity(scip) as minefficacy will disable the efficacy check.
  */
 SCIP_RETCODE SCIPmassageConsExprExprCut(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_ROW**              cut,              /**< cut to be checked and maybe modified */
    SCIP_SOL*               sol,              /**< solution that we try to cut off */
-   SCIP_Real               minefficacy       /**< minimal efficacy requirement */
+   SCIP_Real               minefficacy       /**< minimal efficacy requirement (need to be nonnegative or -SCIPinfinity(scip)) */
    )
 {
    SCIP_Real efficacy;
@@ -6839,16 +6840,19 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    assert(scip != NULL);
    assert(cut != NULL);
    assert(*cut != NULL);
-   assert(minefficacy >= 0.0);
+   assert(minefficacy >= 0.0 || minefficacy == -SCIPinfinity(scip));
 
-   /* get current efficacy */
-   efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
-
-   /* release cut if its efficacy is too low */
-   if( efficacy < minefficacy )
+   if( minefficacy != -SCIPinfinity(scip) )
    {
-      SCIP_CALL( SCIPreleaseRow(scip, cut) );
-      return SCIP_OKAY;
+      /* get current efficacy */
+      efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
+
+      /* release cut if its efficacy is too low */
+      if( efficacy < minefficacy )
+      {
+         SCIP_CALL( SCIPreleaseRow(scip, cut) );
+         return SCIP_OKAY;
+      }
    }
 
    /* check that there is either a lhs or a rhs (if not, then probably we were overflowing SCIPinfinity for one side) */
@@ -6971,7 +6975,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    }
 
    /* check efficacy again if cut was changed */
-   if( efficacy == SCIP_INVALID )
+   if( efficacy == SCIP_INVALID && minefficacy != -SCIPinfinity(scip) )
    {
       efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
 
