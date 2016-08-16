@@ -323,6 +323,9 @@ this operations is for the case where x is a parameter and y is a variable.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divpv_op_0(
 	size_t        i_z         ,
 	const addr_t* arg         ,
@@ -358,6 +361,9 @@ this operations is for the case where x is a parameter and y is a variable.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void reverse_divpv_op(
 	size_t        d           ,
 	size_t        i_z         ,
