@@ -1565,7 +1565,7 @@ SCIP_RETCODE forwardPropCons(
    if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLE(scip, consdata->lhs, consdata->expr->interval.inf))
       && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGE(scip, consdata->rhs, consdata->expr->interval.sup)) )
    {
-      SCIPdebugMessage("removing constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
+      SCIPdebugMessage("removing redundant constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
          consdata->expr->interval.inf, consdata->expr->interval.sup, consdata->lhs, consdata->rhs);
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       *redundant = TRUE;
@@ -5921,10 +5921,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval));
 
    *cutoff = FALSE;
-
-   /* FIXME: this is a hack that solves some numerical issues: see https://git.zib.de/integer/scip/issues/1037 */
-   newbounds.inf = newbounds.inf - SCIPfeastol(scip);
-   newbounds.sup = newbounds.sup + SCIPfeastol(scip);
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalGetInf(newbounds) > SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))

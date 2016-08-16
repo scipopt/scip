@@ -238,14 +238,35 @@ static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
+   SCIP_Real lb;
+   SCIP_Real ub;
 
    assert(expr != NULL);
 
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   SCIPintervalSetBounds(interval, MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)), /*lint !e666*/
-      MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /*lint !e666*/
+   /* we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
+    * don't relax so much that the variable sign is changing, though
+    * (this is to ensure that an original positive variable does not get negative by this,
+    * which may have an adverse effect on convexity recoginition, for example)
+    */
+
+   lb = SCIPvarGetLbLocal(var);
+   /* if bound in [0,eps], then relax to 0.0, otherwise relax by -epsilon */
+   if( lb >= 0.0 && lb <= SCIPepsilon(scip) )
+      lb = 0.0;
+   else
+      lb -= SCIPepsilon(scip);
+
+   ub = SCIPvarGetUbLocal(var);
+   /* if bound in [-eps,0], then relax to 0.0, otherwise relax by +epsilon */
+   if( ub <= 0.0 && ub >= -SCIPepsilon(scip) )
+      ub = 0.0;
+   else
+      ub += SCIPepsilon(scip);
+
+   SCIPintervalSetBounds(interval, MIN(lb, ub), MAX(lb, ub));
 
    return SCIP_OKAY;
 }
