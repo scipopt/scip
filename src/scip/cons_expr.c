@@ -1562,8 +1562,8 @@ SCIP_RETCODE forwardPropCons(
     *
     * @todo how to check this even if we have used the constraint sides during propagation, i.e. intersect is TRUE
     */
-   if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLE(scip, consdata->lhs - consdata->expr->interval.inf, SCIPfeastol(scip)))
-      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGE(scip, consdata->rhs - consdata->expr->interval.sup, SCIPfeastol(scip))) )
+   if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLE(scip, consdata->lhs, consdata->expr->interval.inf))
+      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGE(scip, consdata->rhs, consdata->expr->interval.sup)) )
    {
       SCIPdebugMessage("removing constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
          consdata->expr->interval.inf, consdata->expr->interval.sup, consdata->lhs, consdata->rhs);
