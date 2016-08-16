@@ -4314,11 +4314,11 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
-            if( SCIPisGE(scip, consdata->lhsviol, SCIPfeastol(scip)) )
+            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
             }
-            if( SCIPisGE(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+            if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
