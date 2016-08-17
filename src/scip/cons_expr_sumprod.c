@@ -1599,7 +1599,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_Real efficacy;
+   SCIP_Real violation;
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
@@ -1628,10 +1628,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    }
    assert(exprdata->row != NULL);
 
-   /* compute efficacy */
-   efficacy = -SCIPgetRowSolFeasibility(scip, exprdata->row, sol);
+   /* compute violation */
+   violation = -SCIPgetRowSolFeasibility(scip, exprdata->row, sol);
 
-   if( SCIPisGE(scip, efficacy, minefficacy) )
+   if( SCIPisGE(scip, violation, minviolation) )
    {
       SCIP_Bool infeasible;
 
@@ -1640,7 +1640,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+      SCIPdebugMessage("add cut with violation %e\n", violation);
       SCIP_CALL( SCIPprintRow(scip, exprdata->row, NULL) );
 #endif
    }
@@ -2080,13 +2080,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   /* check whether its efficacy and numerical properties are ok (and maybe improve) */
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minefficacy) );
+   /* check whether its violation and numerical properties are ok (and maybe improve) */
+   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
 
    if( cut == NULL )
       return SCIP_OKAY;
 
-   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minefficacy);
+   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
 
    /* add cut */
    SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
@@ -2094,7 +2094,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+   SCIPdebugMessage("add cut with violation %e\n", violation);
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 

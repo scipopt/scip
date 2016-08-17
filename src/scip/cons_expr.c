@@ -144,8 +144,8 @@ struct SCIP_ConshdlrData
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 
    /* separation parameters */
-   SCIP_Real                mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real                mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
+   SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
+   SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
 
 };
 
@@ -213,7 +213,7 @@ typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
    SCIP_SOL*               sol;              /**< solution to separate (NULL for separating the LP solution) */
-   SCIP_Real               minefficacy;      /**< minimal efficacy of a cut if it should be added to the LP */
+   SCIP_Real               minviolation;     /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT             result;           /**< buffer to store a result */
    int                     ncuts;            /**< buffer to store the total number of added cuts */
    unsigned int            sepatag;          /**< separation tag */
@@ -3385,7 +3385,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
 
       /* call the separation callback of the expression handler */
-      SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minefficacy, &separesult, &ncuts) );
+      SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
 
       assert(ncuts >= 0);
       sepadata->ncuts += ncuts;
@@ -3511,7 +3511,7 @@ SCIP_RETCODE separatePoint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
-   SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
+   SCIP_Real             minviolation,       /**< minimal violation of a cut if it should be added to the LP */
    SCIP_RESULT*          result              /**< result of separation */
    )
 {
@@ -3522,7 +3522,7 @@ SCIP_RETCODE separatePoint(
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= nusefulconss);
-   assert(minefficacy >= 0.0);
+   assert(minviolation >= 0.0);
    assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3544,7 +3544,7 @@ SCIP_RETCODE separatePoint(
       /* initialize separation data */
       sepadata.conshdlr = conshdlr;
       sepadata.sol = sol;
-      sepadata.minefficacy = minefficacy;
+      sepadata.minviolation = minviolation;
       sepadata.result = SCIP_DIDNOTFIND;
       sepadata.ncuts = 0;
       sepadata.sepatag = ++(conshdlrdata->lastsepatag);
@@ -4138,7 +4138,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
    }
 
    /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa,
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutviolationsepa,
          result) );
 
    return SCIP_OKAY;
@@ -4165,7 +4165,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
    }
 
    /* call separation */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa,
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutviolationsepa,
          result) );
 
    return SCIP_OKAY;
@@ -4178,7 +4178,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Real minefficacy;
+   SCIP_Real minviolation;
    SCIP_Real maxviol;
    SCIP_RESULT propresult;
    int nnotify;
@@ -4218,9 +4218,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    }
 
    /* try to separate the LP solution */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, result) );
+   minviolation = MIN(0.75*maxviol, conshdlrdata->mincutviolationenfofac * SCIPfeastol(scip));  /*lint !e666*/
+   minviolation = MAX(minviolation, SCIPfeastol(scip));  /*lint !e666*/
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minviolation, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
@@ -6498,13 +6498,13 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minviolationsepa",
+         "minimal violation for a cut to be added to the LP during separation; overwrites separating/efficacy",
+         &conshdlrdata->mincutviolationsepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minviolationenfofac",
+         "minimal target violation of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
+         &conshdlrdata->mincutviolationenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
@@ -6833,20 +6833,21 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
  */
 #define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
 
-/** checks a cut for efficacy and numerical stability and possibly tries to improve it
+/** checks a cut for violation and numerical stability and possibly tries to improve it
  *
  * If the numerical properties of the cut are too bad, the routines tries to improve this.
- * If the efficacy of the cut will end up to be below the given minefficacy, the cut will be released.
- * Passing -SCIPinfinity(scip) as minefficacy will disable the efficacy check.
+ * If the violation of the cut in the given solution will end up to be below the given minviolation,
+ * the cut will be released.
+ * Passing -SCIPinfinity(scip) as minviolation will disable the violation check.
  */
 SCIP_RETCODE SCIPmassageConsExprExprCut(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_ROW**              cut,              /**< cut to be checked and maybe modified */
    SCIP_SOL*               sol,              /**< solution that we try to cut off */
-   SCIP_Real               minefficacy       /**< minimal efficacy requirement (need to be nonnegative or -SCIPinfinity(scip)) */
+   SCIP_Real               minviolation      /**< minimal violation requirement (need to be nonnegative or -SCIPinfinity(scip)) */
    )
 {
-   SCIP_Real efficacy;
+   SCIP_Real violation;
    SCIP_Real mincoef;
    SCIP_Real maxcoef;
    SCIP_SIDETYPE side;
@@ -6854,15 +6855,15 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    assert(scip != NULL);
    assert(cut != NULL);
    assert(*cut != NULL);
-   assert(minefficacy >= 0.0 || minefficacy == -SCIPinfinity(scip));
+   assert(minviolation >= 0.0 || minviolation == -SCIPinfinity(scip));
 
-   if( minefficacy != -SCIPinfinity(scip) )
+   if( minviolation != -SCIPinfinity(scip) )
    {
-      /* get current efficacy */
-      efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
+      /* get current violation */
+      violation = -SCIPgetRowSolFeasibility(scip, *cut, sol);
 
-      /* release cut if its efficacy is too low */
-      if( efficacy < minefficacy )
+      /* release cut if its violation is too low */
+      if( violation < minviolation )
       {
          SCIP_CALL( SCIPreleaseRow(scip, cut) );
          return SCIP_OKAY;
@@ -6885,7 +6886,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    mincoef = SCIPgetRowMinCoef(scip, *cut);
    maxcoef = SCIPgetRowMaxCoef(scip, *cut);
 
-   /* SCIPdebugMessage("cut <%s> efficiacy %g mincoef %g maxcoef %g range %.2e side %g \n", SCIProwGetName(*cut), efficacy, mincoef, maxcoef, maxcoef/mincoef, side == SCIP_SIDETYPE_LEFT ? SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut)); */
+   /* SCIPdebugMessage("cut <%s> violation %g mincoef %g maxcoef %g range %.2e side %g \n", SCIProwGetName(*cut), violation, mincoef, maxcoef, maxcoef/mincoef, side == SCIP_SIDETYPE_LEFT ? SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut)); */
 
    /* if maximal coefficient is infinity, give up on the cut */
    if( SCIPisInfinity(scip, maxcoef) )
@@ -6974,7 +6975,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
       maxcoef = SCIPgetRowMaxCoef(scip, *cut);
 
       /* remember that we changed the cut */
-      efficacy = SCIP_INVALID;
+      violation = SCIP_INVALID;
    }
    assert(maxcoef / mincoef < SCIP_CONSEXPR_CUTMAXRANGE);
 
@@ -6987,20 +6988,20 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
       return SCIP_OKAY;
    }
 
-   /* check efficacy again if cut was changed */
-   if( efficacy == SCIP_INVALID && minefficacy != -SCIPinfinity(scip) )
+   /* check violation again if cut was changed */
+   if( violation == SCIP_INVALID && minviolation != -SCIPinfinity(scip) )
    {
-      efficacy = -SCIPgetRowSolFeasibility(scip, *cut, sol);
+      violation = -SCIPgetRowSolFeasibility(scip, *cut, sol);
 
-      /* release cut if its efficacy is too low */
-      if( efficacy < minefficacy )
+      /* release cut if its violation is too low */
+      if( violation < minviolation )
       {
          SCIP_CALL( SCIPreleaseRow(scip, cut) );
          return SCIP_OKAY;
       }
    }
 
-   /* TODO we could scale up the cut (issue #7) if efficacy is >0 and <minefficacy */
+   /* TODO we could scale up the cut (issue #7) if violation is >0 and <minviolation */
 
    return SCIP_OKAY;
 }

@@ -284,7 +284,7 @@ extern "C" {
  *  - scip : SCIP main data structure
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
- *  - minefficacy : minimal efficacy of a cut if it should be added to the LP
+ *  - minviolation : minimal violation of a cut if it should be added to the LP
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -293,7 +293,7 @@ extern "C" {
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
-   SCIP_Real minefficacy, \
+   SCIP_Real minviolation, \
    SCIP_RESULT* result, \
    int* ncuts)
 

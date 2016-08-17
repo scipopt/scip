@@ -279,9 +279,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
    if( cut == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minefficacy) );
+   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
 
-   /* cut efficacy or numerics were too bad */
+   /* cut violation or numerics were too bad */
    if( cut == NULL )
       return SCIP_OKAY;
 
@@ -292,7 +292,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
    *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("add cut with efficacy %e\n", efficacy);
+   SCIPdebugMessage("add cut with violation %e\n", violation);
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 

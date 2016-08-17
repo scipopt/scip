@@ -337,7 +337,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_ROW* rows[3];
-   SCIP_Real efficacy;
+   SCIP_Real violation;
    SCIP_Bool infeasible;
    int i;
 
@@ -362,7 +362,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
    SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, NULL, NULL, &rows[2]) );
    if( rows[2] != NULL )
    {
-      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minefficacy) );
+      SCIP_CALL( SCIPmassageConsExprExprCut(scip, &rows[2], sol, minviolation) );
    }
 
    for( i = 0; i < 3; ++i )
@@ -370,8 +370,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       if( rows[i] == NULL || SCIProwIsInLP(rows[i]) )
          continue;
 
-      efficacy = -SCIPgetRowSolFeasibility(scip, rows[i], sol);
-      if( SCIPisGE(scip, efficacy, minefficacy) )
+      violation = -SCIPgetRowSolFeasibility(scip, rows[i], sol);
+      if( SCIPisGE(scip, violation, minviolation) )
       {
          SCIP_CALL( SCIPaddCut(scip, sol, rows[i], FALSE, &infeasible) );
          *ncuts += 1;
