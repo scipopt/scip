@@ -57,6 +57,8 @@ void setup(void)
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", 1.0e-8) );
 }
 
 /* releases variables, frees scip */
@@ -69,7 +71,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   BMScheckEmptyMemory();
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 TestSuite(evalexpr, .init = setup, .fini = teardown);
@@ -77,62 +79,63 @@ TestSuite(evalexpr, .init = setup, .fini = teardown);
 /** TESTS **/
 Test(evalexpr, absolute, .description = "Tests expression evaluation for absolute expressions.")
 {
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_INTERVAL interval;
-      const char* inputs[2] = {"abs(<x>[C]) + abs(<x>[C])", "abs(abs(abs(<x>[C]) + abs(<y>[C])) * abs(<x>[C])^3 * abs(<y>[C]))"};
-      int i;
+   int i;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_INTERVAL interval;
+   const char* inputs[2] = {"abs(<x>[C]) + abs(<x>[C])",
+      "abs(abs(abs(<x>[C]) + abs(<y>[C])) * abs(<x>[C])^3 * abs(<y>[C]))"};
 
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr)) );
-      SCIPinfoMessage(scip, NULL, "testing expression: ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[0], NULL, &expr)) );
+   SCIPinfoMessage(scip, NULL, "testing expression: ");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
 
-      /* evaluate expression for different points */
-      for( i = -10; i <= 10; ++i )
-      {
-         /* evaluate expression */
-         SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
-         SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
+   /* evaluate expression for different points */
+   for( i = -10; i <= 10; ++i )
+   {
+      /* evaluate expression */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
 
-         cr_assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr),  2 * REALABS(i)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr),  2 * REALABS(i)));
 
-         /* propagate expression */
-         SCIP_CALL( SCIPchgVarLb(scip, x, -REALABS(i)) );
-         SCIP_CALL( SCIPchgVarUb(scip, x, i*i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
-         interval = SCIPgetConsExprExprInterval(expr);
+      /* propagate expression */
+      SCIP_CALL( SCIPchgVarLb(scip, x, -REALABS(i)) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, i*i) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
+      interval = SCIPgetConsExprExprInterval(expr);
 
-         cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 0));
-         cr_assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2 * i*i));
-      }
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), 0));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), 2 * i*i));
+   }
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
-      /* test a more complicated expression */
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
-      SCIPinfoMessage(scip, NULL, "testing expression: ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
+   /* test a more complicated expression */
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)inputs[1], NULL, &expr)) );
+   SCIPinfoMessage(scip, NULL, "testing expression: ");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
 
-      /* evaluate expression for different points */
-      for( i = -10; i <= 10; ++i )
-      {
-         /* evaluate expression */
-         SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
-         SCIP_CALL( SCIPsetSolVal(scip, sol, y, (SCIP_Real) i) );
-         SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
-         cr_assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), 2 * pow(REALABS(i),5)));
+   /* evaluate expression for different points */
+   for( i = -10; i <= 10; ++i )
+   {
+      /* evaluate expression */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, y, (SCIP_Real) i) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr), 2 * pow(REALABS(i),5)));
 
-         /* propagate expression */
-         SCIP_CALL( SCIPchgVarLb(scip, x, -REALABS(i)) );
-         SCIP_CALL( SCIPchgVarUb(scip, x, REALABS(i)) );
-         SCIP_CALL( SCIPchgVarLb(scip, y, -REALABS(i)) );
-         SCIP_CALL( SCIPchgVarUb(scip, y, REALABS(i)) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
-         interval = SCIPgetConsExprExprInterval(expr);
-         cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 0));
-         cr_assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2 * pow(REALABS(i),5)));
-      }
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      /* propagate expression */
+      SCIP_CALL( SCIPchgVarLb(scip, x, -REALABS(i)) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, REALABS(i)) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, -REALABS(i)) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, REALABS(i)) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
+      interval = SCIPgetConsExprExprInterval(expr);
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), 0));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), 2 * pow(REALABS(i),5)));
+   }
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(evalexpr, exponential, .description = "Tests expression evaluation for exponential expressions.")
@@ -153,15 +156,15 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
       /* evaluate expression */
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
-      cr_assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(i) + exp(i)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr), exp(i) + exp(i)));
 
       /* propagate expression */
       SCIP_CALL( SCIPchgVarLb(scip, x, i) );
       SCIP_CALL( SCIPchgVarUb(scip, x, i + 1.0 / (ABS(i) + 1)) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
       interval = SCIPgetConsExprExprInterval(expr);
-      cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 2*exp(i)));
-      cr_assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2*exp(i + 1.0 / (ABS(i) + 1))));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), 2*exp(i)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), 2*exp(i + 1.0 / (ABS(i) + 1))));
    }
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
@@ -178,7 +181,7 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) 1.0 / i) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, (SCIP_Real) i) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
-      cr_assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(exp(1.0 / i)) * exp(2*i)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr), exp(exp(1.0 / i)) * exp(2*i)));
 
       /* propagate expression */
       SCIP_CALL( SCIPchgVarLb(scip, x, -1.0 / i) );
@@ -187,8 +190,8 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
       SCIP_CALL( SCIPchgVarUb(scip, y, i + 1.0 / i) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
       interval = SCIPgetConsExprExprInterval(expr);
-      cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), exp(exp(-1.0 / i)) * exp(2*i)));
-      cr_assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), exp(exp(1.0 / i)) * exp(2*i + 2.0 / i)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), exp(exp(-1.0 / i)) * exp(2*i)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), exp(exp(1.0 / i)) * exp(2*i + 2.0 / i)));
    }
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -215,9 +218,9 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
          SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
 
          if( i <= 0 )
-            cr_assert_eq(SCIPgetConsExprExprValue(expr), SCIP_INVALID);
+            cr_expect_eq(SCIPgetConsExprExprValue(expr), SCIP_INVALID);
          else
-            cr_assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), log(i) + log(i)));
+            cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr), log(i) + log(i)));
 
          /* propagate expression */
          xlb = i;
@@ -229,15 +232,15 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
 
          /* interval is empty if both bounds are non-positive */
          if( xub <= 0 )
-            cr_assert(SCIPintervalIsEmpty(SCIPinfinity(scip), interval));
+            cr_expect(SCIPintervalIsEmpty(SCIPinfinity(scip), interval));
          else
          {
-            cr_assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2*log(xub)));
+            cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), 2*log(xub)));
 
             if( xlb <= 0 )
-               cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), -SCIPinfinity(scip)));
+               cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), -SCIPinfinity(scip)));
             else
-               cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 2*log(xlb)));
+               cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), 2*log(xlb)));
          }
       }
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -255,7 +258,7 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
          SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
          SCIP_CALL( SCIPsetSolVal(scip, sol, y, (SCIP_Real) i + 1) );
          SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
-         cr_assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), log(2*i + 1) ));
+         cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr), log(2*i + 1) ));
 
          /* propagate expression */
          SCIP_CALL( SCIPchgVarLb(scip, x,  1.0 / i) );
@@ -264,8 +267,8 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
          SCIP_CALL( SCIPchgVarUb(scip, y,  4.0 / i) );
          SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
-         cr_assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), log(1.0 / i + 3.0 / i)));
-         cr_assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), log(2.0 / i + 4.0 / i)));
+         cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), log(1.0 / i + 3.0 / i)));
+         cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), log(2.0 / i + 4.0 / i)));
       }
 
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -400,8 +403,8 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.0) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 0) );
-   cr_assert_eq(SCIPgetConsExprExprValue(mainexpr), SCIP_INVALID);
-   cr_assert_eq(SCIPgetConsExprExprValue(prodexpr), SCIP_INVALID);
+   cr_expect_eq(SCIPgetConsExprExprValue(mainexpr), SCIP_INVALID);
+   cr_expect_eq(SCIPgetConsExprExprValue(prodexpr), SCIP_INVALID);
 
    /* set values for variable expression explicitly */
    printf("evaluate expression after setting value for variable expressions\n");
