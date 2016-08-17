@@ -242,29 +242,33 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
    SCIP_Real ub;
 
    assert(expr != NULL);
+   assert(varboundrelax >= 0.0);
 
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   /* we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
-    * don't relax so much that the variable sign is changing, though
-    * (this is to ensure that an original positive variable does not get negative by this,
-    * which may have an adverse effect on convexity recoginition, for example)
-    */
-
    lb = SCIPvarGetLbLocal(var);
-   /* if bound in [0,eps], then relax to 0.0, otherwise relax by -epsilon */
-   if( lb >= 0.0 && lb <= SCIPepsilon(scip) )
-      lb = 0.0;
-   else
-      lb -= SCIPepsilon(scip);
-
    ub = SCIPvarGetUbLocal(var);
-   /* if bound in [-eps,0], then relax to 0.0, otherwise relax by +epsilon */
-   if( ub <= 0.0 && ub >= -SCIPepsilon(scip) )
-      ub = 0.0;
-   else
-      ub += SCIPepsilon(scip);
+
+   if( varboundrelax > 0.0 )
+   {
+      /* relax bounds by given amount, but not as much as that the variable sign is changing, though
+       * (this is to ensure that an original positive variable does not get negative by this,
+       * which may have an adverse effect on convexity recognition, for example)
+       */
+
+      /* if bound in [0,varboundrelax], then relax to 0.0, otherwise relax by -varboundrelax */
+      if( lb >= 0.0 && lb <= varboundrelax )
+         lb = 0.0;
+      else
+         lb -= varboundrelax;
+
+      /* if bound in [-varboundrelax,0], then relax to 0.0, otherwise relax by +varboundrelax */
+      if( ub <= 0.0 && ub >= -varboundrelax )
+         ub = 0.0;
+      else
+         ub += varboundrelax;
+   }
 
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
    SCIPintervalSetBounds(interval, lb, ub);

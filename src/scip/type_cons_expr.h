@@ -241,11 +241,13 @@ extern "C" {
  *  - scip : SCIP main data structure
  *  - interval : buffer where to store interval
  *  - expr : expression to be evaluated
+ *  - varboundrelax : a suggested amount by which to relax variable bounds
  */
 #define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_INTERVAL* interval)
+   SCIP_INTERVAL* interval, \
+   SCIP_Real varboundrelax)
 
 /** separation initialization method of an expression handler (called during CONSINITLP)
  *

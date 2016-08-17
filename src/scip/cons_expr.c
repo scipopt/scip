@@ -163,6 +163,7 @@ typedef struct
    unsigned int          boxtag;             /**< box tag */
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
    SCIP_Bool             intersect;          /**< should the computed expression interval be intersected with the existing one? */
+   SCIP_Real             varboundrelax;      /**< by how much to relax variable bounds (at most) */
 } EXPRINTEVAL_DATA;
 
 /** data passed on during variable locking  */
@@ -938,7 +939,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    }
 
    /* evaluate current expression and move on */
-   SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval) );
+   SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval, propdata->varboundrelax) );
 
    /* update expression interval */
    if( !SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
@@ -1554,8 +1555,10 @@ SCIP_RETCODE forwardPropCons(
    if( SCIPconsIsDeleted(cons) || !SCIPconsIsActive(cons) )
       return SCIP_OKAY;
 
-   /* use 0 tag to recompute intervals */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0) );
+   /* use 0 tag to recompute intervals
+    * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
+    */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, intersect, 0, SCIPepsilon(scip)) );
 
    /* @todo delete constraint locally if they are redundant w.r.t. bounds used by the LP solver; the LP solution might
     * violate variable bounds by more than SCIPfeastol() because of relative comparisons
@@ -5877,7 +5880,10 @@ SCIP_RETCODE SCIPevalConsExprExpr(
  * If the box does not overlap with the domain of the function behind the expression
  * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
  *
- * For variables, the local variable bounds are used as interval.
+ * For variables, the local variable bounds, possibly relaxed by the amount given
+ * by varboundrelax, are used as interval. In the current implementation, variable
+ * bounds are relaxed by varboundrelax if that does not change the sign of the bound,
+ * and to 0.0 otherwise.
  *
  * If a nonzero \p boxtag is passed, then only (sub)expressions are
  * reevaluated that have a different tag. If a tag of 0 is passed,
@@ -5889,7 +5895,8 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
-   unsigned int            boxtag            /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   SCIP_Real               varboundrelax     /**< amount by which variable bounds should be relaxed (at most) */
    )
 {
    EXPRINTEVAL_DATA propdata;
@@ -5901,6 +5908,7 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    propdata.aborted = FALSE;
    propdata.boxtag = boxtag;
    propdata.intersect = intersect;
+   propdata.varboundrelax = varboundrelax;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, intevalExprVisitChild, NULL, intevalExprLeaveExpr, &propdata) );
 
