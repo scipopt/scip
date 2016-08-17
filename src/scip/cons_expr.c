@@ -147,6 +147,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
    SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
 
+   unsigned int             restart;         /**< whether we are running after a restart */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -3918,6 +3919,9 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   if( conshdlrdata->restart )
+      return SCIP_OKAY;
+
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
@@ -3982,8 +3986,15 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->restart )
+      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4009,8 +4020,19 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
+   SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
+
+   conshdlrdata->restart = restart;
+   if( conshdlrdata->restart )
+      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4023,9 +4045,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
-
-   /* call separation deinitialization callbacks */
-   SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
 
    /* remove auxiliary variables from expressions */
    SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
@@ -4109,9 +4128,16 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* add auxiliary variables to expressions */
-   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+   if( !conshdlrdata->restart )
+   {
+      SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+   }
 
    /* call LP initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
@@ -4370,6 +4396,15 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    SCIP_Bool infeasible;
    int i;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+   if( conshdlrdata->restart )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
    /* simplify constraints */
    SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
 
@@ -4386,8 +4421,6 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    /* replace common subexpressions */
    SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
     * been changed after simplification; now we completely recollect all variable expression and variable events
