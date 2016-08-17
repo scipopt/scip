@@ -3620,7 +3620,7 @@ SCIP_RETCODE removeFixedConstraints(
       if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
       {
          value = SCIPgetConsExprExprValue(consdata->expr);
-         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisLT(scip, value - consdata->lhs, SCIPfeastol(scip)))
+         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisLT(scip, value - consdata->lhs, -SCIPfeastol(scip)))
             || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisGT(scip, value - consdata->rhs, SCIPfeastol(scip))) )
          {
             *infeasible = TRUE;
