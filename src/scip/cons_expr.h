@@ -761,6 +761,7 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
  * The given expression will be released and overwritten with the simplified expression.
  * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
  */
+EXTERN
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
@@ -768,6 +769,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    );
 
 /** prints structure of an expression a la Maple's dismantle */
+EXTERN
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
@@ -777,6 +779,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
  *
  * @note the old child is released and the newchild is captured
  */
+EXTERN
 SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
