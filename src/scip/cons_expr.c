@@ -1437,6 +1437,7 @@ int SCIPcompareConsExprExprs(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr1;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr2;
+   int retval;
 
    exprhdlr1 = SCIPgetConsExprExprHdlr(expr1);
    exprhdlr2 = SCIPgetConsExprExprHdlr(expr2);
@@ -1516,7 +1517,8 @@ int SCIPcompareConsExprExprs(
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
    /* enforces OR9 */
-   return strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
+   retval = strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
+   return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
 /**@} */  /* end of simplifying methods */
