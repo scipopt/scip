@@ -310,9 +310,9 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
-#elif defined(__GNUC__) && defined(__linux__)
+#elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED
