@@ -27,11 +27,9 @@
 #include "scip/cons_expr_sumprod.h"
 #include "scip/cons_expr_value.h"
 
-#include "include/scip_test.h"
-
 
 /*
- * TESTS
+ * SCIP CODE
  */
 
 static
@@ -103,6 +101,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_count_all)
    return SCIP_OKAY;
 }
 
+/* TESTS */
+#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_CONSHDLR* conshdlr;
@@ -113,13 +113,10 @@ static SCIP_CONSEXPR_EXPR* expr_y;
 static SCIP_CONSEXPR_EXPR* expr_5;
 static SCIP_CONSEXPR_EXPR* expr_xy5;
 static SCIP_CONSEXPR_EXPR* expr_sum;
-static int nsetup = 0;
 
 static
 void setup(void)
 {
-   nsetup++;
-   fprintf(stderr, "setup number %d\n", nsetup);
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include cons_expr: this adds the operator handlers */
@@ -133,6 +130,7 @@ void setup(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
+   /* create expression x + (-2)*x/y*(-5) */
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPaddVar(scip, x) );
