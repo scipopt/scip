@@ -3632,8 +3632,11 @@ SCIP_RETCODE removeFixedConstraints(
          if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisLT(scip, value - consdata->lhs, -SCIPfeastol(scip)))
             || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisGT(scip, value - consdata->rhs, SCIPfeastol(scip))) )
          {
+            /* we should not stop here since SCIP is calling initSolve() independent if the problem is infeasible or
+             * not; having some value expression as the root node of some other constraints trigger asserts at different
+             * places, e.g. the creation of a sub-SCIP in the subnlp heuristic
+             */
             *infeasible = TRUE;
-            return SCIP_OKAY;
          }
 
          /* delete the redundant constraint locally */
