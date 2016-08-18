@@ -890,6 +890,10 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
+      else if( !feasible && solstatus[prob] != "inf" )
+      {
+         setStatusToFail("fail (objective value)")
+      }
       else if( solstatus[prob] == "opt" )
       {
 
