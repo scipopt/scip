@@ -5629,6 +5629,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
       }
       assert((*expr)->auxvar == NULL);
 
+      (*expr)->walkparent = NULL; /* this prevents SCIPwalkConsExprExprDF from trying to restore walkdata in *expr after *expr has been freed */
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, freeExpr, freeExpr, NULL, freeExpr, NULL) );
       *expr = NULL;
 
@@ -6394,11 +6395,14 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
       }
    }
 
-   /* recover previous information */
-   root = oldroot;
-   root->walkcurrentchild = oldcurrentchild;
-   root->walkparent       = oldparent;
-   root->walkio           = oldwalkio;
+   /* recover previous information, if root was part of another walk, i.e., had a walkparent */
+   if( oldparent != NULL )
+   {
+      root = oldroot;
+      root->walkcurrentchild = oldcurrentchild;
+      root->walkparent       = oldparent;
+      root->walkio           = oldwalkio;
+   }
 
    return SCIP_OKAY;
 }
