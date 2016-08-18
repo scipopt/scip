@@ -291,7 +291,7 @@ void teardown(void)
    SCIP_CALL( SCIPfreeSol(scip, &sol1) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /***** TEST SUITE: all tests of the form Test(simplify, xxx) belong to the same suite and share the setup and teardown *****/

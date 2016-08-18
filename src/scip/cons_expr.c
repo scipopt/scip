@@ -2382,6 +2382,13 @@ SCIP_RETCODE simplifyConstraints(
             /* add locks on new expression */
             SCIP_CALL( propagateLocks(scip, consdata->expr, consdata->nlockspos, consdata->nlocksneg) );
          }
+         else
+         {
+            /* The simplify captures simplified in any case, also if nothing has changed.
+             * Therefore, we have to release it here.
+             */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+         }
       }
    }
 
@@ -4010,7 +4017,7 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      /* add nlrow representation to NLP, if NLP had been constructed */
       if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
       {
          if( consdata->nlrow == NULL )
