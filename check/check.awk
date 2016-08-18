@@ -1074,6 +1074,10 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
+      else if( !feasible && solstatus[prob] != "inf" )
+      {
+         setStatusToFail("fail (objective value)")
+      }
       else if( solstatus[prob] == "opt" )
       {
          # in case a solution was found we compare primal and dual bound
