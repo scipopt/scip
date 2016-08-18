@@ -25,6 +25,7 @@
 
 #include <string.h>
 
+#include "scip/cons_expr_value.h"
 #include "scip/cons_expr_exp.h"
 
 #define EXP_PRECEDENCE  85000
@@ -43,6 +44,42 @@
  * Callback methods of expression handler
  */
 
+/** simplifies an exp expression.
+ * Evaluates the exponential function when its child is a value expression
+ * TODO: exp(log(*)) = *
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyExp)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* check for value expression */
+   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, exp(SCIPgetConsExprExprValueValue(child))) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrExp)
@@ -353,6 +390,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrExp, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataExp, freedataExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );

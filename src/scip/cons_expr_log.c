@@ -25,6 +25,7 @@
 
 #include <string.h>
 
+#include "scip/cons_expr_value.h"
 #include "scip/cons_expr_log.h"
 
 #define LOG_PRECEDENCE  80000
@@ -44,6 +45,46 @@
  * Callback methods of expression handler
  */
 
+/** simplifies a log expression.
+ * Evaluates the logarithm function when its child is a value expression
+ * TODO: split products ?
+ * TODO: log(exp(*)) = *
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyLog)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* check for value expression */
+   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      /* TODO how to handle a non-positive value? */
+      assert(SCIPgetConsExprExprValueValue(child) > 0.0);
+
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, log(SCIPgetConsExprExprValueValue(child))) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrLog)
@@ -359,6 +400,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrLog, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataLog, freedataLog) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalLog) );

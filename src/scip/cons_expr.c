@@ -1246,7 +1246,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
  *    SS8: no child has coefficient 0
  *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
- * - it is a function with simplified arguments
+ * - it is a function with simplified arguments, but not all of them can be values
  * ? a logarithm doesn't have a product as a child
  * ? the exponent of an exponential is always 1
  *
@@ -1375,6 +1375,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
          {
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
 
             /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
              * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created

@@ -24,6 +24,7 @@
 
 #include <string.h>
 
+#include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
 
 #define ABS_PRECEDENCE  70000
@@ -48,6 +49,42 @@ struct SCIP_ConsExpr_ExprData
  * Callback methods of expression handler
  */
 
+/** simplifies an abs expression.
+ * Evaluates the absolute value function when its child is a value expression
+ * TODO: abs(*) = * if * >= 0 or - * if * < 0
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyAbs)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* check for value expression */
+   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, REALABS(SCIPgetConsExprExprValueValue(child))) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
@@ -471,6 +508,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrAbs, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataAbs, freedataAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );

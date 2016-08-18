@@ -1037,7 +1037,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    /* enforces SS6: if list is empty, return value */
    if( finalchildren == NULL )
    {
-      debugSimplify("got empty list, return value\n"); /*lint !e506 !e681*/
+      debugSimplify("[sum] got empty list, return value %g\n", simplifiedconstant); /*lint !e506 !e681*/
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedconstant) );
    }
    /* enforces SS7
