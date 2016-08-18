@@ -4414,19 +4414,8 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    /* simplify constraints */
    SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
 
-   /* it might be possible that after simplification only a value expression remains in the root node */
-   SCIP_CALL( removeFixedConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
-   assert(*ndelconss >= 0);
-
-   if( infeasible )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
    /* replace common subexpressions */
    SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
-
 
    /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
     * been changed after simplification; now we completely recollect all variable expression and variable events
@@ -4440,6 +4429,16 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    {
       SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+   }
+
+   /* it might be possible that after simplification only a value expression remains in the root node */
+   SCIP_CALL( removeFixedConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
+   assert(*ndelconss >= 0);
+
+   if( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
    }
 
    /* propagate constraints */
