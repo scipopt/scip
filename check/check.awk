@@ -890,8 +890,9 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
-      else if( !feasible && solstatus[prob] != "inf" )
+      else if( !feasible && !timeout && solstatus[prob] != "inf" && solstatus[prob] != "unkn" )
       {
+         printf "solstatus[%s] = %s\n", prob, solstatus[prob]
          setStatusToFail("fail (objective value)")
       }
       else if( solstatus[prob] == "opt" )
