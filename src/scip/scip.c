@@ -623,6 +623,27 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "%s\n", SCIP_COPYRIGHT);
 }
 
+/** prints detailed information on the compile-time flags
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
+void SCIPprintBuildOptions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   assert( scip != NULL );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Build options:\n");
+
+   /**@todo extend this list */
+#ifdef WITH_ZLIB
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  ZLIB=true\n");
+#else
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  ZLIB=false\n");
+#endif
+}
+
 /** prints error message for the given SCIP_RETCODE via the error prints method */
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
