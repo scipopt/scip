@@ -24,7 +24,7 @@ grep -Iq . $f || continue
 [[ $f =~ "updatedates.sh" ]] && continue
 
 # process files with ZIB copyright string that do not include current year
-if grep -o 'Copyright (C) [0-9]*-[0-9]* Konrad-Zuse-Zentrum' $f | grep -v $NEWYEAR ; then
+if grep -o 'Copyright (C) [0-9]*-[0-9]* Konrad-Zuse-Zentrum' $f | grep -vq $NEWYEAR ; then
    echo "Updating $f"
    sed -i "s/Copyright (C) \([0-9]*\)-[0-9]* Konrad-Zuse-Zentrum/Copyright (C) \1-$NEWYEAR Konrad-Zuse-Zentrum/g" $f
 fi

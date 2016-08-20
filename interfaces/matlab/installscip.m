@@ -19,7 +19,7 @@
 %@author  Timo Berthold
 
 fprintf('Starting installer for SCIP interface.\n');
-fprintf('Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
+fprintf('Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
 
 % ask for SCIP directory %
 pathtoscip = '';
