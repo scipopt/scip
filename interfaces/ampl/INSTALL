@@ -13,7 +13,7 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-This is a beta-version of an AMPL interface for SCIP
+This is an AMPL interface for SCIP.
 
 Currently not supported, but planned for future versions:
  - setting user parameters in SCIP from AMPL (AMPL solver options)
