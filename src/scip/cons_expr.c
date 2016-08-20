@@ -578,25 +578,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   /* the expression should not be used by more than the parent that is also freed */
-   assert(expr->nuses == 1);
+   /* expression should be used by its parent and maybe by the walker (only the root!)
+    * in VISITEDCHILD we assert that expression is only used by its parent
+    */
+   assert(0 <= expr->nuses && expr->nuses <= 2);
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      {
-         /* free expression data, if any, when entering expression */
-
-         if( expr->exprdata != NULL && expr->exprhdlr->freedata != NULL )
-         {
-            SCIP_CALL( expr->exprhdlr->freedata(scip, expr) );
-            assert(expr->exprdata == NULL);
-         }
-
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
          /* check whether a child needs to be visited (nuses == 1)
@@ -605,7 +593,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          SCIP_CONSEXPR_EXPR* child;
 
          assert(expr->walkcurrentchild < expr->nchildren);
-
          child = expr->children[expr->walkcurrentchild];
          if( child->nuses > 1 )
          {
@@ -616,31 +603,58 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          else
          {
             assert(child->nuses == 1);
+
+            if( child->exprdata != NULL )
+            {
+               /* free child's expression data when entering child */
+               if( child->exprhdlr->freedata != NULL )
+               {
+                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+                  assert(child->exprdata == NULL);
+               }
+               else
+               {
+                  child->exprdata = NULL;
+               }
+            }
+
             *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
          }
 
          return SCIP_OKAY;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       {
-         /* free expression when leaving it */
+         /* free child after visiting it */
+         SCIP_CONSEXPR_EXPR* child;
 
-         /* free children array, if any */
-         SCIPfreeBlockMemoryArrayNull(scip, &expr->children, expr->childrensize);
+         assert(expr->walkcurrentchild < expr->nchildren);
+
+         child = expr->children[expr->walkcurrentchild];
+         /* child should only be used by its parent */
+         assert(child->nuses == 1);
+
+         /* child should have no data associated */
+         assert(child->exprdata == NULL);
+
+         /* free child's children array, if any */
+         SCIPfreeBlockMemoryArrayNull(scip, &child->children, child->childrensize);
 
          /* expression should not be locked anymore */
-         assert(expr->nlockspos == 0);
-         assert(expr->nlocksneg == 0);
+         assert(child->nlockspos == 0);
+         assert(child->nlocksneg == 0);
 
-         SCIPfreeBlockMemory(scip, &expr);
-         assert(expr == NULL);
+         SCIPfreeBlockMemory(scip, &child);
+         assert(child == NULL);
+         expr->children[expr->walkcurrentchild] = NULL;
 
          *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
          return SCIP_OKAY;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       default:
       {
          SCIPABORT(); /* we should never be called in this stage */
@@ -5643,9 +5657,26 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
       }
       assert((*expr)->auxvar == NULL);
 
-      (*expr)->walkparent = NULL; /* this prevents SCIPwalkConsExprExprDF from trying to restore walkdata in *expr after *expr has been freed */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, freeExpr, freeExpr, NULL, freeExpr, NULL) );
-      *expr = NULL;
+      /* handle the root expr separately: free its data here */
+      if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
+      {
+         SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
+      }
+
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExpr, freeExpr, NULL,  NULL) );
+
+      /* handle the root expr separately: free its children and itself here */
+      assert((*expr)->nuses == 1);
+
+      /* free children array, if any */
+      SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
+
+      /* expression should not be locked anymore */
+      assert((*expr)->nlockspos == 0);
+      assert((*expr)->nlocksneg == 0);
+
+      SCIPfreeBlockMemory(scip, expr);
+      assert(*expr == NULL);
 
       return SCIP_OKAY;
    }
@@ -6267,16 +6298,19 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
 
    assert(root != NULL);
 
-   /* remember the current root, data, child and parent of incoming root, in case we are called from within another walk */
+   /* remember the current root, data, child and parent of incoming root, in case we are called from within another walk
+    * furthermore, we need to capture the root, because we don't want nobody somebody to invalidate it while we have it
+    * NOTE: no callback should touch walkparent, nor walkcurrentchild: these are internal fields of the walker!
+    */
+   SCIPcaptureConsExprExpr(root);
    oldroot         = root;
    oldcurrentchild = root->walkcurrentchild;
    oldparent       = root->walkparent;
    oldwalkio       = root->walkio;
 
+   /* traverse the tree */
    root->walkcurrentchild = 0;
    root->walkparent = NULL;
-
-   /* traverse the tree */
    result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
    aborted = FALSE;
@@ -6409,14 +6443,14 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
       }
    }
 
-   /* recover previous information, if root was part of another walk, i.e., had a walkparent */
-   if( oldparent != NULL )
-   {
-      root = oldroot;
-      root->walkcurrentchild = oldcurrentchild;
-      root->walkparent       = oldparent;
-      root->walkio           = oldwalkio;
-   }
+   /* recover previous information */
+   root                   = oldroot;
+   root->walkcurrentchild = oldcurrentchild;
+   root->walkparent       = oldparent;
+   root->walkio           = oldwalkio;
+
+   /* release root captured by walker */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &root) );
 
    return SCIP_OKAY;
 }
