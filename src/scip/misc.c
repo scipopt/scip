@@ -10182,7 +10182,7 @@ SCIP_Longint SCIPcalcBinomCoef(
 
 #ifndef NDEBUG
 /** calculates hash for floating-point number by using Fibonacci hashing */
-#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 unsigned int SCIPcalcFibHash(
