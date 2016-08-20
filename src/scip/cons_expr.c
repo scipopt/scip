@@ -585,20 +585,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      {
-         /* free expression data, if any, when entering expression */
-
-         if( expr->exprdata != NULL && expr->exprhdlr->freedata != NULL )
-         {
-            SCIP_CALL( expr->exprhdlr->freedata(scip, expr) );
-            assert(expr->exprdata == NULL);
-         }
-
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
          /* check whether a child needs to be visited (nuses == 1)
@@ -607,7 +593,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          SCIP_CONSEXPR_EXPR* child;
 
          assert(expr->walkcurrentchild < expr->nchildren);
-
          child = expr->children[expr->walkcurrentchild];
          if( child->nuses > 1 )
          {
@@ -618,6 +603,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          else
          {
             assert(child->nuses == 1);
+
+            if( child->exprdata != NULL )
+            {
+               /* free child's expression data when entering child */
+               if( child->exprhdlr->freedata != NULL )
+               {
+                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+                  assert(child->exprdata == NULL);
+               }
+               else
+               {
+                  child->exprdata = NULL;
+               }
+            }
+
             *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
          }
 
@@ -635,6 +635,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          /* child should only be used by its parent */
          assert(child->nuses == 1);
 
+         /* child should have no data associated */
+         assert(child->exprdata == NULL);
+
          /* free child's children array, if any */
          SCIPfreeBlockMemoryArrayNull(scip, &child->children, child->childrensize);
 
@@ -650,6 +653,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          return SCIP_OKAY;
       }
 
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       default:
       {
@@ -5653,9 +5657,15 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
       }
       assert((*expr)->auxvar == NULL);
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, freeExpr, freeExpr, freeExpr, NULL,  NULL) );
+      /* handle the root expr separately: free its data here */
+      if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
+      {
+         SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
+      }
 
-      /* handle the root expr separately: free it here */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExpr, freeExpr, NULL,  NULL) );
+
+      /* handle the root expr separately: free its children and itself here */
       assert((*expr)->nuses == 1);
 
       /* free children array, if any */
