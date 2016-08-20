@@ -13,15 +13,23 @@ set -euo pipefail
 
 NEWYEAR=`date +"%Y"`
 
+echo "Updating copyright of all files under version control and list findings of possibly incorrect copyright string."
+
 for f in `git ls-files` ; do
 
-# TODO list files which may miss a copyright or have a copyright in wrong format
+# skip binary files
+grep -Iq . $f || continue
 
-# skip files that are not text or do not have copyright string
-grep -Iq "Copyright (C) .* Konrad-Zuse-Zentrum" $f || continue
+# skip this file
+[[ $f =~ "updatedates.sh" ]] && continue
 
-#echo $f
-# fixup copyright date
-sed -i "s/Copyright (C) \([0-9]*\)-[0-9]* Konrad-Zuse-Zentrum/Copyright (C) \1-$NEWYEAR Konrad-Zuse-Zentrum/g" $f
+# process files with ZIB copyright string that do not include current year
+if grep -o 'Copyright (C) [0-9]*-[0-9]* Konrad-Zuse-Zentrum' $f | grep -v $NEWYEAR ; then
+   echo "Updating $f"
+   sed -i "s/Copyright (C) \([0-9]*\)-[0-9]* Konrad-Zuse-Zentrum/Copyright (C) \1-$NEWYEAR Konrad-Zuse-Zentrum/g" $f
+fi
+
+# print matches for lines that have "Copyright" and "Zuse" but are not a valid ZIB copyright
+grep -iH "Copyright.*Zuse" $f | grep -v "Copyright (C) [0-9]*-2016 Konrad-Zuse-Zentrum" || true
 
 done
