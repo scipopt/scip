@@ -8004,7 +8004,7 @@ SCIP_Longint SCIPcalcBinomCoef(
 
 #ifndef NDEBUG
 /** returns a non-negative integer hash key for a given real number by using Fibonacci hashing */
-#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 unsigned int SCIPcalcFibHash(
