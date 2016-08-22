@@ -365,8 +365,17 @@ SCIP_RETCODE mergeSumExprlist(
    if( tomergenode == NULL )
       return SCIP_OKAY;
 
-   /* there are still nodes of tomerge unmerged; these nodes are larger than finalchildren, so append at end */
    assert(current == NULL);
+
+   /* if all nodes of finalchildren were cancelled by nodes of tomerge, then the rest of tomerge is finalchildren */
+   if( *finalchildren == NULL )
+   {
+      assert(previous == NULL);
+      *finalchildren = tomergenode;
+      return SCIP_OKAY;
+   }
+
+   /* there are still nodes of tomerge unmerged; these nodes are larger than finalchildren, so append at end */
    assert(previous != NULL && previous->next == NULL);
    previous->next = tomergenode;
 
@@ -873,8 +882,18 @@ SCIP_RETCODE mergeProductExprlist(
    if( tomergenode == NULL )
       return SCIP_OKAY;
 
-   /* there are still nodes of tomerge unmerged; these nodes are larger than finalchildren, so append at end */
    assert(current == NULL);
+
+   /* if all nodes of finalchildren were cancelled by nodes of tomerge (ie, transfered to unsimplifiedchildren),
+    * then the rest of tomerge is finalchildren */
+   if( *finalchildren == NULL )
+   {
+      assert(previous == NULL);
+      *finalchildren = tomergenode;
+      return SCIP_OKAY;
+   }
+
+   /* there are still nodes of tomerge unmerged; these nodes are larger than finalchildren, so append at end */
    assert(previous != NULL && previous->next == NULL);
    previous->next = tomergenode;
 
