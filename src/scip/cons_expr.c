@@ -2353,7 +2353,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
 /** simplifies expressions in constraints */
 /* @todo put the constant to the constraint sides
- * @todo call removeFixedConstraints() from here and remove it from CONSPRESOL
+ * @todo call removeFixedAndBoundConstraints() from here and remove it from CONSPRESOL
  */
 static
 SCIP_RETCODE simplifyConstraints(
@@ -3621,9 +3621,9 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
-/** removes locally fixed constraints, i.e. constraints for which the root expression is a value */
+/** removes locally fixed/bound constraints, i.e. constraints for which the root expression is a value or var */
 static
-SCIP_RETCODE removeFixedConstraints(
+SCIP_RETCODE removeFixedAndBoundConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_CONS**           conss,              /**< constraints */
@@ -3633,6 +3633,7 @@ SCIP_RETCODE removeFixedConstraints(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    SCIP_Real value;
    int c;
 
@@ -3663,6 +3664,19 @@ SCIP_RETCODE removeFixedConstraints(
              */
             *infeasible = TRUE;
          }
+
+         /* delete the redundant constraint locally */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+         ++(*ndelconss);
+      }
+
+      if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      {
+         var = SCIPgetConsExprExprVarVar(consdata->expr);
+
+         /* backward propagation should have tighthened the bounds of the variable */
+         assert(SCIPvarGetLbLocal(var) - consdata->lhs >= -SCIPfeastol(scip));
+         assert(SCIPvarGetUbLocal(var) - consdata->rhs <=  SCIPfeastol(scip));
 
          /* delete the redundant constraint locally */
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
@@ -4459,22 +4473,26 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
-   /* it might be possible that after simplification only a value expression remains in the root node */
-   SCIP_CALL( removeFixedConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
-   assert(*ndelconss >= 0);
-
-   if( infeasible )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
    /* propagate constraints */
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds, ndelconss) );
    assert(*nchgbds >= 0);
    assert(*ndelconss >= 0);
 
-   if( *nchgbds > 0 && *result != SCIP_CUTOFF )
+   /* it might be possible that after simplification only a value expression remains in the root node
+    * FIXME: we can't terminate presolve before calling this function, since constraints' expression
+    * can't be value nor variable expression in several functions! */
+   SCIP_CALL( removeFixedAndBoundConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
+   assert(*ndelconss >= 0);
+
+   if( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+   }
+
+   if( *result == SCIP_CUTOFF )
+      return SCIP_OKAY;
+
+   if( *ndelconss > 0 || *nchgbds > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
