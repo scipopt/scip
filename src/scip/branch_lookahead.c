@@ -90,6 +90,13 @@ typedef struct
    SCIP_Bool             nobranch;
 } BranchingResultData;
 
+typedef struct
+{
+   BOUNDSTATUS*          boundstatus;
+   SCIP_Real*            newlowerbounds;
+   SCIP_Real*            newupperbounds;
+} ValidBounds;
+
 /**
  * This struct collects the bounds, that are given implicitly on the second branching level.
  * Concrete: If a variable is regarded on both sides of the second level and is infeasible (in the same bound direction) on
@@ -103,15 +110,17 @@ typedef struct
    SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
                                               *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
                                               *   BOUNDSTATUS_BOTH. */
+   int*                  nupperboundupdates; /**< The number of times the corresponding upper bound was updated. */
    SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
                                               *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
                                               *   BOUNDSTATUS_BOTH. */
+   int*                  nlowerboundupdates; /**< The number of times the corresponding lower bound was updated. */
    BOUNDSTATUS*          boundstatus;        /**< The current boundstatus for each active variable. Depending on this value
                                               *   the corresponding upperbound and lowerbound values are meaningful.*/
    int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
                                               *   may be used to only iterate over the relevant variables. */
    int                   nboundedvars;       /**< The length of the boundedvars array. */
-} InnerBoundData;
+} SupposedBounds;
 
 /*
  * Local methods
@@ -156,7 +165,7 @@ SCIP_RETCODE initBranchingResultData(
 static
 SCIP_RETCODE allocInnerBoundData(
    SCIP*                 scip,
-   InnerBoundData**      innerbounddata
+   SupposedBounds**      innerbounddata
 )
 {
    int ntotalvars;
@@ -165,7 +174,9 @@ SCIP_RETCODE allocInnerBoundData(
 
    SCIP_CALL( SCIPallocBuffer(scip, innerbounddata) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*innerbounddata)->upperbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*innerbounddata)->nupperboundupdates, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*innerbounddata)->lowerbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*innerbounddata)->nlowerboundupdates, ntotalvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*innerbounddata)->boundstatus, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*innerbounddata)->boundedvars, ntotalvars) );
    return SCIP_OKAY;
@@ -180,7 +191,7 @@ SCIP_RETCODE allocInnerBoundData(
  */
 static
 void initInnerBoundData(
-   InnerBoundData*       innerbounddata      /*< The struct that should get cleared.*/
+   SupposedBounds*       innerbounddata      /*< The struct that should get cleared.*/
 )
 {
    innerbounddata->nboundedvars = 0;
@@ -189,11 +200,14 @@ void initInnerBoundData(
 static
 void freeInnerBoundData(
    SCIP*                 scip,
-   InnerBoundData**      innerbounddata
+   SupposedBounds**      innerbounddata
 )
 {
+   SCIPfreeBufferArray(scip, &(*innerbounddata)->boundedvars);
    SCIPfreeCleanBufferArray(scip, &(*innerbounddata)->boundstatus);
+   SCIPfreeCleanBufferArray(scip, &(*innerbounddata)->nlowerboundupdates);
    SCIPfreeBufferArray(scip, &(*innerbounddata)->lowerbounds);
+   SCIPfreeCleanBufferArray(scip, &(*innerbounddata)->nupperboundupdates);
    SCIPfreeBufferArray(scip, &(*innerbounddata)->upperbounds);
    SCIPfreeBuffer(scip, innerbounddata);
 }
@@ -332,11 +346,11 @@ SCIP_RETCODE executeBranchingOnLowerBound(
 }
 
 /**
- * Returns the probindex of the given branching variable, if it had no bound set.
- * Returns -1 otherwise.
+ * Returns TRUE, if a bound of the given type was not yet set.
+ * Returns FALSE, otherwise.
  */
 static
-int addBound(
+SCIP_Bool addBound(
    SCIP*                 scip,
    SCIP_VAR*             branchvar,
    SCIP_Real             newbound,
@@ -347,12 +361,12 @@ int addBound(
    )
 {
    int varindex;
-   int newindex;
    BOUNDSTATUS status;
+   SCIP_Bool newboundadded;
 
    varindex = SCIPvarGetProbindex(branchvar);
-   newindex = -1;
    status = boundstatus[varindex];
+   newboundadded = FALSE;
 
    if( status == boundtype || status == BOUNDSTATUS_BOTH )
    {
@@ -379,14 +393,14 @@ int addBound(
       if( status == BOUNDSTATUS_NONE )
       {
          boundstatus[varindex] = boundtype;
-         newindex = varindex;
+         newboundadded = TRUE;
       }
       else
       {
          boundstatus[varindex] = BOUNDSTATUS_BOTH;
       }
    }
-   return newindex;
+   return newboundadded;
 }
 
 static
@@ -418,17 +432,26 @@ void addSupposedUpperBound(
    SCIP*                 scip,               /**/
    SCIP_VAR*             branchvar,          /**/
    SCIP_Real             newupperbound,      /**/
-   InnerBoundData*       innerbounddata      /**/
+   SupposedBounds*       innerbounddata      /**/
 )
 {
-   int newindex = addBound(scip, branchvar, newupperbound, FALSE, BOUNDSTATUS_UPPERBOUND, innerbounddata->upperbounds,
-      innerbounddata->boundstatus);
+   SCIP_Bool newboundadded;
+   int varindex;
 
-   if( newindex != -1 )
+   newboundadded = addBound(scip, branchvar, newupperbound, FALSE, BOUNDSTATUS_UPPERBOUND, innerbounddata->upperbounds,
+      innerbounddata->boundstatus);
+   varindex = SCIPvarGetProbindex( branchvar );
+
+   if( newboundadded )
    {
       int nboundedvars = innerbounddata->nboundedvars;
-      innerbounddata->boundedvars[nboundedvars] = newindex;
+      innerbounddata->boundedvars[nboundedvars] = varindex;
       innerbounddata->nboundedvars = nboundedvars + 1;
+   }
+   else
+   {
+      int prevnupdated = innerbounddata->nupperboundupdates[varindex];
+      innerbounddata->nupperboundupdates[varindex] = prevnupdated + 1;
    }
 }
 
@@ -437,17 +460,26 @@ void addSupposedLowerBound(
    SCIP*                 scip,               /**/
    SCIP_VAR*             branchvar,          /**/
    SCIP_Real             newlowerbound,      /**/
-   InnerBoundData*       innerbounddata      /**/
+   SupposedBounds*       innerbounddata      /**/
 )
 {
-   int newindex = addBound(scip, branchvar, newlowerbound, TRUE, BOUNDSTATUS_LOWERBOUND, innerbounddata->lowerbounds,
-      innerbounddata->boundstatus);
+   SCIP_Bool newboundadded;
+   int varindex;
 
-   if( newindex != -1 )
+   newboundadded = addBound(scip, branchvar, newlowerbound, TRUE, BOUNDSTATUS_LOWERBOUND, innerbounddata->lowerbounds,
+      innerbounddata->boundstatus);
+   varindex = SCIPvarGetProbindex( branchvar );
+
+   if( newboundadded )
    {
       int nboundedvars = innerbounddata->nboundedvars;
-      innerbounddata->boundedvars[nboundedvars] = newindex;
+      innerbounddata->boundedvars[nboundedvars] = varindex;
       innerbounddata->nboundedvars = nboundedvars + 1;
+   }
+   else
+   {
+      int prevnupdated = innerbounddata->nupperboundupdates[varindex];
+      innerbounddata->nupperboundupdates[varindex] = prevnupdated + 1;
    }
 }
 
@@ -487,7 +519,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP_Bool*            lperror,
    WeightData*           weightdata,         /**< container to be filled with the weight relevant data */
    int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
-   InnerBoundData*       innerbounddata
+   SupposedBounds*       innerbounddata
 )
 {
    BranchingResultData* downresultdata;
@@ -597,7 +629,7 @@ SCIP_RETCODE executeDeepBranching(
    SCIP_Bool*            lperror,
    WeightData*           weightdata,
    int*                  ncutoffs,
-   InnerBoundData*       innerbounddata
+   SupposedBounds*       innerbounddata
 )
 {
    SCIP_VAR**  lpcands;
@@ -761,7 +793,7 @@ SCIP_RETCODE handleNewBounds(
 static
 void transferBoundData(
    SCIP*                 scip,
-   InnerBoundData*       innerbounddata,
+   SupposedBounds*       innerbounddata,
    SCIP_Real*            newupperbounds,
    SCIP_Real*            newlowerbounds,
    BOUNDSTATUS*          boundstatus
@@ -778,6 +810,10 @@ void transferBoundData(
       int boundedvarindex = innerbounddata->boundedvars[i];
       BOUNDSTATUS varstatus = innerbounddata->boundstatus[boundedvarindex];
       SCIP_VAR* boundedvar = problemvars[boundedvarindex];
+
+      /* TODO CS: Another check is needed: was the upper/lower bound added twice or just once? If only once it was only
+       * added on one second level branch and must not be transfered. If twice, it was added on both second level branches
+       * and can be transferred. */
 
       if( varstatus == BOUNDSTATUS_LOWERBOUND || varstatus == BOUNDSTATUS_BOTH )
       {
@@ -839,7 +875,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       int highestscoreindex = -1;
       int i;
 
-      InnerBoundData* innerbounddata;
+      SupposedBounds* innerbounddata;
 
       nglobalvars = SCIPgetNVars(scip);
 
@@ -948,7 +984,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          *result = SCIP_DIDNOTFIND;
       }
-      else
+      else if( *result != SCIP_CUTOFF )
       {
          SCIP_CALL( handleNewBounds(scip, boundstatus, newlowerbounds, newupperbounds, result) );
       }
