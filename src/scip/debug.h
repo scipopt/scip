@@ -24,7 +24,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-#define SCIP_DEBUG_SOLUTION "bley_xl1.sol"
+/* #define SCIP_DEBUG_SOLUTION "debug.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */

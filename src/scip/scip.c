@@ -13638,8 +13638,21 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   ncliquecomponents = -1;
-   SCIP_CALL( SCIPcomputeCliqueComponents(scip, &ncliquecomponents) );
+   /* update clique components if necessary */
+   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
+   {
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int nimplvars;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
+   }
+   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
+   ncliquecomponents = SCIPcliquetableGetNCliqueComponents(scip->cliquetable);
+
 
    if( *infeasible || *unbounded )
    {
@@ -21846,7 +21859,6 @@ SCIP_RETCODE SCIPaddVarImplication(
    return SCIP_OKAY;
 }
 
-SCIP_Bool cliquecomponentsneedupdate = FALSE;
 /** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1;
  *  if a variable appears twice in the same clique, the corresponding implications are performed
  *
@@ -21877,174 +21889,11 @@ SCIP_RETCODE SCIPaddClique(
 
    if( nvars > 1 )
    {
-      int i;
       /* add the clique to the clique table */
       SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
             scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, vars, values, nvars, isequation,
             infeasible, nbdchgs) );
-
-
-      /* check if we can skip a clique components update because this clique does not connect two previously unconnected components */
-      for( i = 0; i < nvars - 1 && !cliquecomponentsneedupdate; ++i )
-      {
-         if( SCIPvarGetCliqueComponentIdx(vars[i]) == -1 || SCIPvarGetCliqueComponentIdx(vars[i]) != SCIPvarGetCliqueComponentIdx(vars[i + 1]) )
-         {
-            cliquecomponentsneedupdate = TRUE;
-            break;
-         }
-      }
-
-      /* check if last variable was a single component so far */
-      cliquecomponentsneedupdate = cliquecomponentsneedupdate || SCIPvarGetCliqueComponentIdx(vars[nvars - 1]) == -1;
    }
-
-   return SCIP_OKAY;
-}
-
-/** computes clique components for all binary variables */
-SCIP_RETCODE SCIPcomputeCliqueComponents(
-   SCIP*                scip,               /**< SCIP data structure */
-   int*                 ncomponents         /**< pointer to store the number of found components */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_DIGRAPH* digraph;
-   int nbinvars;
-   int nimplbinvars;
-   int* components;
-   int* sizes;
-   int v;
-   int c;
-   int nintvars;
-   int nimplvars;
-   int nbinvarstotal;
-   SCIP_Bool infeasible;
-   SCIP_CLIQUE** cliques;
-
-   assert(scip != NULL);
-   assert(ncomponents != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPcomputeCliqueComponents", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
-
-   nimplbinvars = 0;
-
-   /* detect implicit integer variables with bounds {0,1} because they might appear in cliques, as well */
-   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
-   {
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
-
-      if( SCIPvarIsBinary(vars[v]) )
-         ++nimplbinvars;
-   }
-
-   /* count binary and implicit binary variables */
-   nbinvarstotal = nbinvars + nimplbinvars;
-
-   /* if there are no binary variables, continue */
-   if( nbinvarstotal == 0 )
-   {
-      *ncomponents = 0;
-      return SCIP_OKAY;
-   }
-
-   /* no cliques are present */
-   if( SCIPgetNCliques(scip) == 0 )
-   {
-      *ncomponents = nbinvarstotal;
-      return SCIP_OKAY;
-   }
-
-   /* clean up cliques first to have only active variables */
-   infeasible = FALSE;
-   SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
-   if( infeasible )
-   {
-      *ncomponents = -1;
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &components, nbinvars + nimplvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &sizes, nbinvars + nimplvars) );
-
-   /* collect clique list sizes as an upper bound for the edges for each variable node in the digraph */
-   for( v = 0; v < nbinvars; ++v )
-   {
-      assert(SCIPvarIsActive(vars[v]));
-      assert(SCIPvarGetProbindex(vars[v]) == v);
-      sizes[v] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
-   }
-   /* collect sizes also for the implicit binary variables */
-   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
-   {
-      if( SCIPvarIsBinary(vars[v]) )
-         sizes[v - nintvars] = SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE);
-      else
-         sizes[v - nintvars] = 0;
-   }
-
-   SCIP_CALL( SCIPdigraphCreate(&digraph, nbinvars + nimplvars) );
-   SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
-
-   cliques = SCIPgetCliques(scip);
-
-   /* loop over cliques and add them as paths to the digraph */
-   for( c = 0; c < SCIPgetNCliques(scip); ++c )
-   {
-      SCIP_CLIQUE* clique;
-      SCIP_VAR** cliquevars;
-      int nclqvars;
-      int cv;
-
-      clique = cliques[c];
-      cliquevars = SCIPcliqueGetVars(clique);
-      nclqvars = SCIPcliqueGetNVars(clique);
-      assert(nclqvars > 0);
-
-      /* add a variable and its predecessor in this clique as an arc to the digraph */
-      for( cv = 1; cv < nclqvars; ++cv )
-      {
-         int startnode;
-         int endnode;
-         assert(SCIPvarIsActive(cliquevars[cv]));
-         assert(SCIPvarIsBinary(cliquevars[cv]));
-         assert(SCIPvarGetType(cliquevars[cv]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(cliquevars[cv]) == SCIP_VARTYPE_IMPLINT);
-
-         startnode = SCIPvarGetType(cliquevars[cv]) == SCIP_VARTYPE_BINARY ? SCIPvarGetProbindex(cliquevars[cv]) : SCIPvarGetProbindex(cliquevars[cv]) - nintvars;
-         assert(startnode >= 0);
-         assert(startnode < nbinvars + nimplvars);
-
-         endnode = SCIPvarGetType(cliquevars[cv - 1]) == SCIP_VARTYPE_BINARY ? SCIPvarGetProbindex(cliquevars[cv - 1]) : SCIPvarGetProbindex(cliquevars[cv - 1]) - nintvars;
-         assert(endnode >= 0);
-         assert(endnode < nbinvars + nimplvars);
-
-         SCIP_CALL( SCIPdigraphAddArc(digraph, startnode, endnode, NULL) );
-      }
-   }
-
-   *ncomponents = -1;
-   SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, ncomponents) );
-
-   /* subtract superfluous implicit integer variables added to the auxiliary graph */
-   *ncomponents -= (nimplvars - nimplbinvars);
-   assert(*ncomponents >= 0);
-   assert(*ncomponents <= nbinvarstotal);
-
-   /* save variable component in variable data structure */
-   for( v = 0; v < nbinvars; ++v )
-      SCIPvarSetCliqueComponentIdx(vars[v], components[v]);
-
-   /* save variable components for implicit binary variables */
-   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
-   {
-      /* component of this variable is saved with an offset of -nintvars */
-      SCIPvarSetCliqueComponentIdx(vars[v], components[v - nintvars]);
-   }
-
-   SCIPdigraphFree(&digraph);
-   SCIPfreeBufferArray(scip, &sizes);
-   SCIPfreeBufferArray(scip, &components);
 
    return SCIP_OKAY;
 }
@@ -22067,54 +21916,54 @@ SCIP_RETCODE relabelOrderConsistent(
    int*                  nclasses            /**< pointer to store the total number of distinct labels */
    )
 {
-   SCIP_HASHMAP* compidx2varcomp;
+   SCIP_HASHMAP* classidx2newlabel;
 
-   int componentidx;
+   int classidx;
    int i;
 
-   SCIP_CALL( SCIPhashmapCreate(&compidx2varcomp, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nlabels)) );
+   SCIP_CALL( SCIPhashmapCreate(&classidx2newlabel, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nlabels)) );
 
-   componentidx = 0;
+   classidx = 0;
 
-   /* loop over variables to create local component indices that obey the variable order */
+   /* loop over labels to create local class indices that obey the variable order */
    for( i = 0; i < nlabels; ++i )
    {
       int currentlabel = labels[i];
-      int localclqcompidx;
+      int localclassidx;
 
-      /* variables with component index -1 are stored as singleton components */
-      if( currentlabel == - 1 )
+      /* labels equal to -1 are stored as singleton classes */
+      if( currentlabel == -1 )
       {
-         ++componentidx;
-         localclqcompidx = componentidx;
+         ++classidx;
+         localclassidx = classidx;
       }
       else
       {
          assert(currentlabel >= 0);
-         /* look up the component index image in the hash map; if it is not stored yet, new component index is created and stored */
-         if( !SCIPhashmapExists(compidx2varcomp, (void*)(size_t)currentlabel) )
+         /* look up the class index image in the hash map; if it is not stored yet, new class index is created and stored */
+         if( !SCIPhashmapExists(classidx2newlabel, (void*)(size_t)currentlabel) )
          {
-            ++componentidx;
-            localclqcompidx = componentidx;
-            SCIPhashmapInsert(compidx2varcomp, (void*)(size_t)currentlabel, (void *)(size_t)componentidx);
+            ++classidx;
+            localclassidx = classidx;
+            SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx);
          }
          else
          {
-            localclqcompidx = (int)(size_t)SCIPhashmapGetImage(compidx2varcomp, (void*)(size_t)currentlabel);
+            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
          }
       }
-      assert(localclqcompidx - 1 >= 0);
-      assert(localclqcompidx - 1 <= i);
+      assert(localclassidx - 1 >= 0);
+      assert(localclassidx - 1 <= i);
 
       /* indices start with zero, but we have an offset of 1 because we cannot store 0 in a hashmap */
-      labels[i] = localclqcompidx - 1;
+      labels[i] = localclassidx - 1;
    }
 
-   assert(componentidx > 0);
-   assert(componentidx <= nlabels);
-   *nclasses = componentidx;
+   assert(classidx > 0);
+   assert(classidx <= nlabels);
+   *nclasses = classidx;
 
-   SCIPhashmapFree(&compidx2varcomp);
+   SCIPhashmapFree(&classidx2newlabel);
 
    return SCIP_OKAY;
 }
@@ -22191,7 +22040,7 @@ SCIP_RETCODE labelSortStable(
    assert(nextpos == nvars);
    classesstartposs[c] = nextpos;
 
-   /* now we copy all variable to the right order and */
+   /* now we copy all variables to the right order */
    for( v = 0; v < nvars; ++v )
    {
       /* copy variable itself to the right position */
@@ -22429,12 +22278,19 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    ncomponents = -1;
 
    /* update clique components if necessary */
-   if( cliquecomponentsneedupdate )
+   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
    {
-      int nclqcomponents;
-      SCIPcomputeCliqueComponents(scip, &nclqcomponents);
-      cliquecomponentsneedupdate = FALSE;
+      SCIP_VAR** allvars;
+      int nallbinvars;
+      int nallintvars;
+      int nallimplvars;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &allvars, NULL, &nallbinvars, &nallintvars, &nallimplvars, NULL) );
+
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, allvars, nallbinvars, nallintvars, nallimplvars) );
    }
+
+   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
 
    /* store the global clique component labels */
    for( i = 0; i < nvars; ++i )
@@ -22460,7 +22316,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedtmpvalues, nvars) );
       SCIP_CALL( labelSortStable(scip, tmpvars, componentlabels, sortedtmpvars, sortedindices, componentstartposs, nvars, ncomponents) );
 
-      /* reassign the tmpvalues respecting the sorting */
+      /* reassign the tmpvalues with respect to the sorting */
       for( i = 0; i < nvars; ++i )
       {
          assert(tmpvars[sortedindices[i]] == sortedtmpvars[i]);
@@ -22533,7 +22389,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    }
 
 /* use the greedy algorithm as a whole to verify the result on small number of variables */
-#ifndef NDEBUG
+#ifdef SCIP_DISABLED_CODE
    {
       int* debugcliquepartition;
       int ndebugcliques;
@@ -25311,9 +25167,6 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
    return SCIP_OKAY;
 }
-
-
-
 
 /*
  * constraint methods

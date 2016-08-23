@@ -8649,13 +8649,6 @@ SCIP_RETCODE SCIPaddClique(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
-/** computes clique components for all binary variables */
-EXTERN
-SCIP_RETCODE SCIPcomputeCliqueComponents(
-   SCIP*                scip,               /**< SCIP data structure */
-   int*                 ncomponents         /**< pointer to store the number of found components */
-   );
-
 /** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
  *
  *  The algorithm performs the following steps:
