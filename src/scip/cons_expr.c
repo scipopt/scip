@@ -3633,7 +3633,6 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
    SCIP_Real value;
    int c;
 
@@ -3672,11 +3671,9 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
 
       if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
       {
-         var = SCIPgetConsExprExprVarVar(consdata->expr);
-
          /* backward propagation should have tighthened the bounds of the variable */
-         assert(SCIPvarGetLbLocal(var) - consdata->lhs >= -SCIPfeastol(scip));
-         assert(SCIPvarGetUbLocal(var) - consdata->rhs <=  SCIPfeastol(scip));
+         assert(SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->lhs >= -SCIPfeastol(scip));
+         assert(SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->rhs <=  SCIPfeastol(scip));
 
          /* delete the redundant constraint locally */
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
@@ -6957,7 +6954,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    SCIP_Real               minviolation      /**< minimal violation requirement (need to be nonnegative or -SCIPinfinity(scip)) */
    )
 {
-   SCIP_Real violation;
+   SCIP_Real violation = SCIP_INVALID;
    SCIP_Real mincoef;
    SCIP_Real maxcoef;
    SCIP_SIDETYPE side;
