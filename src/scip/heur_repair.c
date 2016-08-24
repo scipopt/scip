@@ -1223,7 +1223,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
     }
 
    /*todo delete all redudant code, especially all addings of original variables and constraints !!!*/
-   /*todo add all slack variables*/
    if( heurdata->useslackvars )
    {
       SCIP_VAR** tmpvars = NULL;
@@ -1267,6 +1266,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             slack = orlb - value;
             nviolatedrows[i]++;
             heurdata->nviolatedvars++;
+            SCIPchgVarLbGlobal(subscip,tmpvars[i],lb);
          }
          else
          {
@@ -1280,6 +1280,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             slack = orub - value;
             nviolatedrows[i]++;
             heurdata->nviolatedvars++;
+            SCIPchgVarUbGlobal(subscip,tmpvars[i],ub);
          }
          else
          {
@@ -1294,20 +1295,10 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          }
          /* if an binary variable is out of bound, generalize it to an integer variable */
          if( !SCIPisFeasZero(scip, slack) && SCIP_VARTYPE_BINARY == vartype )
+         {
             vartype = SCIP_VARTYPE_INTEGER;
-
-         /* Adds the sub representing variable to the subscip. */
-         SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
-         SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
-         SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
-
-         /*todo */
-         SCIPvarChgType(tmpvars[i],vartype);
-         SCIPvarChgLbGlobal()
-         SCIPvarChgLbLazy()
-         SCIPvarChgLbOriginal()
-         SCIPvarChgLbLocal()
-
+            SCIPchgVarType(subscip,tmpvars[i],vartype, &success);
+         }
 
          /* if necessary adds an constraint to represent the original bounds of x.*/
          if( !SCIPisFeasEQ(scip, slack, 0.0) )
@@ -1340,10 +1331,9 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             heurdata->nviolatedvars++;
             }
          }
-      }
       /* todo iterate over slack*/
       /* Adds all original constraints and decides which variables should be fixed */
-      for (i = 0; i < nrows; ++i)
+      for (i = 0; i < ntmprows; ++i)
       {
          SCIP_COL** cols;
          SCIP_VAR** consvars;
@@ -1352,7 +1342,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          SCIP_CONS* fixcons;
          SCIP_VAR* newvar;
          SCIP_Real* vals;
-         SCIP_Real* potentials;
          SCIP_Real slack;
          char varname[1024];
          int nnonz;
@@ -1365,20 +1354,18 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          heurdata->norcons++;
 
          /* gets the values to check the constraint */
-         constant = SCIProwGetConstant(rows[i]);
-         lhs = SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) ?
-               SCIProwGetLhs(rows[i]) : SCIProwGetLhs(rows[i]) - constant;
-         rhs = SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) ?
-               SCIProwGetRhs(rows[i]) : SCIProwGetRhs(rows[i]) - constant;
-         rowsolact = SCIPgetRowSolActivity(scip, rows[i], sol) - constant;
-         vals = SCIProwGetVals(rows[i]);
-         potentials = SCIProwGetVals(rows[i]);
-         potential[i] = 0.0;
+         constant = SCIProwGetConstant(tmprows[i]);
+         lhs = SCIPisInfinity(scip, -SCIProwGetLhs(tmprows[i])) ?
+               SCIProwGetLhs(tmprows[i]) : SCIProwGetLhs(tmprows[i]) - constant;
+         rhs = SCIPisInfinity(scip, SCIProwGetRhs(tmprows[i])) ?
+               SCIProwGetRhs(tmprows[i]) : SCIProwGetRhs(tmprows[i]) - constant;
+         rowsolact = SCIPgetRowSolActivity(scip, tmprows[i], sol) - constant;
+         vals = SCIProwGetVals(tmprows[i]);
 
          assert(SCIPisFeasLE(scip, lhs, rhs));
 
-         nnonz = SCIProwGetNNonz(rows[i]);
-         cols = SCIProwGetCols(rows[i]);
+         nnonz = SCIProwGetNNonz(tmprows[i]);
+         cols = SCIProwGetCols(tmprows[i]);
          SCIP_CALL(SCIPallocBufferArray(scip, &consvars, nnonz));
 
          /* Sets the slack if its necessary */
@@ -1399,27 +1386,37 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          for (j = 0; j < nnonz; ++j)
          {
             int pos;
-
             pos = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
             consvars[j] = subvars[pos];
-
-            /* compute potentials */
-            if( 0 < vals[j] )
-            {
-               potentials[j] *= (SCIPgetSolVal(scip, sol, vars[pos])-SCIPvarGetLbGlobal(vars[pos]));
-            }
-            else{
-               potentials[j] *= (SCIPgetSolVal(scip, sol, vars[pos])-SCIPvarGetUbGlobal(vars[pos]));
-            }
-            potential[i] += potentials[j];
-            if( !SCIPisZero(scip, slack) )
-            {
-               nviolatedrows[pos]++;
-               heurdata->nviolatedcons++;
-            }
          }
-   }
 
+         /* Sets the slack if its necessary */
+         if( SCIPisFeasLT(scip, rowsolact, lhs) )
+         {
+            slack = lhs - rowsolact;
+         }
+         else if( SCIPisFeasGT(scip, rowsolact, rhs) )
+         {
+            slack = rhs - rowsolact;
+         }
+         else
+         {
+            slack = 0;
+         }
+
+         /*if necessary adds an new artificial slack variable*/
+         if( !SCIPisFeasEQ(subscip, slack, 0.0) )
+         {
+            sprintf(varname, "artificialslack_%s", SCIProwGetName(tmprows[i]));
+            SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL( SCIPaddVar(subscip, newvar) );
+            SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(subscip, tmprows[i], newvar, slack) );
+            SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
+            heurdata->nviolatedcons++;
+         }
+      }
+   }
 
    /*Adds the given solution to the subscip. */
    heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, subsol);
