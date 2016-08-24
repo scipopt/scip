@@ -41,6 +41,8 @@
 #define BRANCHRULE_NARYMAXDEPTH_DEFAULT    -1 /**< default maximal depth where to do n-ary branching */
 #define BRANCHRULE_NARYMINWIDTH_DEFAULT 0.001 /**< default minimal domain width in children when doing n-ary branching */
 #define BRANCHRULE_NARYWIDTHFAC_DEFAULT   2.0 /**< default factor of domain width in n-ary branching */
+#define BRANCHRULE_RANDSEED_DEFAULT        23 /**< initial random seed */
+
 
 #define WEIGHTEDSCORING(data, min, max, sum) \
    ((data)->scoreminweight * (min) + (data)->scoremaxweight * (max) + (data)->scoresumweight * (sum))
@@ -59,6 +61,7 @@ struct SCIP_BranchruleData
    int                   narymaxdepth;       /**< maximal depth where to do n-ary branching, -1 to turn off */
    SCIP_Real             naryminwidth;       /**< minimal domain width in children when doing n-ary branching, relative to global bounds */
    SCIP_Real             narywidthfactor;    /**< factor of domain width in n-ary branching */
+   unsigned int          randseed;           /**< seed value for random number generator                              */
 };
 
 /*
@@ -346,6 +349,15 @@ SCIP_RETCODE updateBestCandidate(
          (*bestvar)     = cand;
          (*bestbrpoint) = candbrpoint;
       }
+      else if( SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed) <= 0.5 )
+      {
+         /* candidate seems to be as good as the currently best one; take candidate with 50% probability to reduce
+          * performance variability
+          */
+         (*bestscore)   = branchscore;
+         (*bestvar)     = cand;
+         (*bestbrpoint) = candbrpoint;
+      }
    }
 
    return SCIP_OKAY;
@@ -487,6 +499,20 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
    return SCIP_OKAY;
 }
 
+/** initialization method of branching rule (called after problem was transformed) */
+static
+SCIP_DECL_BRANCHINIT(branchInitPscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   branchruledata->randseed = SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT);
+
+   return SCIP_OKAY;
+}
 
 /** branching execution method for fractional LP solutions */
 static
@@ -650,6 +676,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 
