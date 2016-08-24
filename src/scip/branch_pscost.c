@@ -676,7 +676,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
-   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchInitPscost) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 
