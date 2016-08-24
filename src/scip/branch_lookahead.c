@@ -56,17 +56,6 @@ struct SCIP_BranchruleData
    SCIP_Bool somerandomfield;
 };
 
-/**
- * This enum is used to represent whether an upper bound, lower bound or both are set for a variable.
- */
-typedef enum
-{
-   BOUNDSTATUS_NONE = 0,
-   BOUNDSTATUS_UPPERBOUND,
-   BOUNDSTATUS_LOWERBOUND,
-   BOUNDSTATUS_BOTH
-} BOUNDSTATUS;
-
 typedef struct
 {
    SCIP_Real             highestweight;
@@ -89,52 +78,6 @@ typedef struct
    SCIP_Bool             lperror;
    SCIP_Bool             nobranch;
 } BranchingResultData;
-
-/**
- * This scruct collect the bounds, which can be used in the root problem. Therefore it contains two types of bounds:
- * - The bounds that occur when both up and down branches of a variable after a first level branch are cutoff. In this case
- *   the whole first level branch can be added as a restriction.
- * - The bounds that occur implicitly while branching on the second level. See SupposedBoundData for more information.
- */
-typedef struct
-{
-   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   BOUNDSTATUS*          boundstatus;        /**< The current boundstatus for each active variable. Depending on this value
-                                              *   the corresponding upperbound and lowerbound values are meaningful.*/
-   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
-                                              *   may be used to only iterate over the relevant variables. */
-   int                   nboundedvars;       /**< The length of the boundedvars array. */
-} ValidBoundData;
-
-/**
- * This struct collects the bounds, that are given implicitly on the second branching level.
- * Concrete: If a variable is regarded on both sides of the second level and is infeasible (in the same bound direction) on
- * both sides, the weaker bound can be applied.
- * Even more concrete: First level branching on variable x, second level branching on variable y (and may others). If the
- * constraint y <= 3 on the up branch of x and y <= 6 on the down branch of x are both infeasible, the y <= 3 bound can be
- * applied on the first level.
- */
-typedef struct
-{
-   /* TODO CS: maybe remove the boundstatus, as this information is contained in the nupper/lowerbounds fields. */
-
-   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   int*                  nupperboundupdates; /**< The number of times the corresponding upper bound was updated. */
-   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   int*                  nlowerboundupdates; /**< The number of times the corresponding lower bound was updated. */
-   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
-                                              *   may be used to only iterate over the relevant variables. */
-   int                   nboundedvars;       /**< The length of the boundedvars array. */
-} SupposedBoundData;
 
 /*
  * Local methods
@@ -171,100 +114,6 @@ void initBranchingResultData(
    resultdata->cutoff = TRUE;
    resultdata->lperror = FALSE;
    resultdata->nobranch = FALSE;
-}
-
-static
-SCIP_RETCODE allocValidBoundData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   ValidBoundData**      validbounddata
-)
-{
-   int ntotalvars;
-
-   ntotalvars = SCIPgetNVars(scip);
-
-   SCIP_CALL( SCIPallocBuffer(scip, validbounddata) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->upperbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->lowerbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*validbounddata)->boundstatus, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->boundedvars, ntotalvars) );
-   return SCIP_OKAY;
-}
-
-/**
- * Clears the given struct.
- * Assumptions:
- * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
- * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
- * - The boundedvars array is only read in connection with the nboundedvars value, which will be set to 0.
- */
-static
-void initValidBoundData(
-   ValidBoundData*       validbounddata      /*< The struct that should get cleared.*/
-)
-{
-   validbounddata->nboundedvars = 0;
-}
-
-static
-void freeValidBoundData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   ValidBoundData**      validbounddata
-)
-{
-   SCIPfreeBufferArray(scip, &(*validbounddata)->boundedvars);
-   SCIPfreeCleanBufferArray(scip, &(*validbounddata)->boundstatus);
-   SCIPfreeBufferArray(scip, &(*validbounddata)->lowerbounds);
-   SCIPfreeBufferArray(scip, &(*validbounddata)->upperbounds);
-   SCIPfreeBuffer(scip, validbounddata);
-}
-
-static
-SCIP_RETCODE allocSupposedBoundData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SupposedBoundData**   supposedbounddata
-)
-{
-   int ntotalvars;
-
-   ntotalvars = SCIPgetNVars(scip);
-
-   SCIP_CALL( SCIPallocBuffer(scip, supposedbounddata) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*supposedbounddata)->upperbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*supposedbounddata)->nupperboundupdates, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*supposedbounddata)->lowerbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*supposedbounddata)->nlowerboundupdates, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*supposedbounddata)->boundedvars, ntotalvars) );
-   return SCIP_OKAY;
-}
-
-/**
- * Clears the given struct.
- * Assumptions:
- * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
- * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
- * - The boundedvars array is only read in connection with the nboundedvars value, which will be set to 0.
- */
-static
-void initSupposedBoundData(
-   SupposedBoundData*    supposedbounddata   /*< The struct that should get cleared.*/
-)
-{
-   supposedbounddata->nboundedvars = 0;
-}
-
-static
-void freeSupposedBoundData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SupposedBoundData**   supposedbounddata
-)
-{
-   SCIPfreeBufferArray(scip, &(*supposedbounddata)->boundedvars);
-   SCIPfreeCleanBufferArray(scip, &(*supposedbounddata)->nlowerboundupdates);
-   SCIPfreeBufferArray(scip, &(*supposedbounddata)->lowerbounds);
-   SCIPfreeCleanBufferArray(scip, &(*supposedbounddata)->nupperboundupdates);
-   SCIPfreeBufferArray(scip, &(*supposedbounddata)->upperbounds);
-   SCIPfreeBuffer(scip, supposedbounddata);
 }
 
 /**
@@ -714,10 +563,12 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
             if( upresultdata->cutoff )
             {
+               /* TODO CS: add the binary grand child implications here */
                addSupposedUpperBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
             if( downresultdata->cutoff )
             {
+               /* TODO CS: add the binary grand child implications here */
                addSupposedLowerBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
          }
@@ -946,8 +797,8 @@ SCIP_RETCODE handleNewBounds(
 static
 void transferBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedBoundData*    supposedbounds,
-   ValidBoundData*       validbounds
+   SupposedBoundData*    supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
+   ValidBoundData*       validbounds         /**< Bound data from the first level branches. Target for the transfer. */
 )
 {
    int i;
@@ -1016,11 +867,12 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
    if( nlpcands == 1)
    {
-      /** if there is only one branching variable we can directly branch there */
+      /* if there is only one branching variable we can directly branch there */
       *bestcand = 0;
       return SCIP_OKAY;
    }
 
+   /* we need to branch at least 2 steps deep */
    if( SCIPgetDepthLimit(scip) <= (SCIPgetDepth(scip) + 2) )
    {
       SCIPdebugMessage("Cannot perform probing in selectVarLookaheadBranching, depth limit reached.\n");
@@ -1030,6 +882,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
    if( nlpcands > 1 )
    {
+      /* declare all variables */
       BranchingResultData* downbranchingresult;
       BranchingResultData* upbranchingresult;
       ScoreData* scoredata;
@@ -1042,6 +895,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       ValidBoundData* validbounds;
       SupposedBoundData* supposedbounds;
 
+      /* allocate all structs */
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &scoredata) );
@@ -1049,6 +903,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_CALL( allocValidBoundData(scip, &validbounds) );
       SCIP_CALL( allocSupposedBoundData(scip, &supposedbounds) );
 
+      /* init all structs */
       initBranchingResultData(scip, downbranchingresult);
       initBranchingResultData(scip, upbranchingresult);
       initValidBoundData(validbounds);
@@ -1139,8 +994,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          *result = SCIP_DIDNOTFIND;
       }
-
-      SCIP_CALL( handleNewBounds(scip, validbounds, result) );
+      else if( *result != SCIP_CUTOFF )
+      {
+         SCIP_CALL( handleNewBounds(scip, validbounds, result) );
+      }
 
       freeSupposedBoundData(scip, &supposedbounds);
       freeValidBoundData(scip, &validbounds);
@@ -1231,7 +1088,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    assert(scip != NULL);
    assert(result != NULL);
 
-   /*SCIPdebugMessage("Execlp method of lookahead branching\n");*/
    *result = SCIP_DIDNOTRUN;
 
    /* get branching candidates */
@@ -1240,8 +1096,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    assert(npriolpcands > 0);
 
    /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
-    * solution
-    */
+    * solution during the second level branchings */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
