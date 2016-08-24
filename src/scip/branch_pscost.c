@@ -41,6 +41,8 @@
 #define BRANCHRULE_NARYMAXDEPTH_DEFAULT    -1 /**< default maximal depth where to do n-ary branching */
 #define BRANCHRULE_NARYMINWIDTH_DEFAULT 0.001 /**< default minimal domain width in children when doing n-ary branching */
 #define BRANCHRULE_NARYWIDTHFAC_DEFAULT   2.0 /**< default factor of domain width in n-ary branching */
+#define BRANCHRULE_RANDSEED_DEFAULT        47 /**< initial random seed */
+
 
 #define WEIGHTEDSCORING(data, min, max, sum) \
    ((data)->scoreminweight * (min) + (data)->scoremaxweight * (max) + (data)->scoresumweight * (sum))
@@ -59,6 +61,7 @@ struct SCIP_BranchruleData
    int                   narymaxdepth;       /**< maximal depth where to do n-ary branching, -1 to turn off */
    SCIP_Real             naryminwidth;       /**< minimal domain width in children when doing n-ary branching, relative to global bounds */
    SCIP_Real             narywidthfactor;    /**< factor of domain width in n-ary branching */
+   unsigned int          randseed;           /**< seed value for random number generator                              */
 };
 
 /*
@@ -313,39 +316,101 @@ SCIP_RETCODE updateBestCandidate(
       (*bestscore)   = branchscore;
       (*bestvar)     = cand;
       (*bestbrpoint) = candbrpoint;
+      return SCIP_OKAY;
+
    }
-   else if( SCIPisSumEQ(scip, branchscore, *bestscore)
-      && !(SCIPisInfinity(scip, -SCIPvarGetLbLocal(*bestvar)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(*bestvar))) )
+
+   /* if score of candidate is worse than bestscore, stay with best candidate */
+   if( !SCIPisSumEQ(scip, branchscore, *bestscore) )
+      return SCIP_OKAY;
+
+   if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(*bestvar)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(*bestvar)) )
    {
-      /* if best candidate so far is not unbounded to both sides, maybe take new candidate */
-      if( (SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand))     || SCIPisInfinity(scip, SCIPvarGetUbLocal(cand))) &&
-          (SCIPisInfinity(scip, -SCIPvarGetLbLocal(*bestvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(*bestvar))) )
-      { 
-         /* if both variables are unbounded but one of them is bounded on one side, take the one with the larger bound on this side (hope that this avoids branching on always the same variable) */
-         if( SCIPvarGetUbLocal(cand) > SCIPvarGetUbLocal(*bestvar) || SCIPvarGetLbLocal(cand) < SCIPvarGetLbLocal(*bestvar) )
-         {
-            (*bestscore)   = branchscore;
-            (*bestvar)     = cand;
-            (*bestbrpoint) = candbrpoint;
-         }
-      }
-      else if( SCIPvarGetType(*bestvar) == SCIPvarGetType(cand) )
-      { 
-         /* if both have the same type, take the one with larger relative diameter */
-         if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) < SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
-         {
-            (*bestscore)   = branchscore;
-            (*bestvar)     = cand;
-            (*bestbrpoint) = candbrpoint;
-         }
-      }
-      else if( SCIPvarGetType(*bestvar) > SCIPvarGetType(cand) )
-      { 
-         /* take the one with better type ("more discrete") */
+      /* best candidate is unbounded -> we prefer to branch on it */
+      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(cand)) &&
+          SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed) <= 0.5
+        )
+      {
+         /* but if the new candidate is also unbounded (thus as good as best candidate),
+          * then switch to the candidate with 50% probability to reduce performance variability
+          */
          (*bestscore)   = branchscore;
          (*bestvar)     = cand;
          (*bestbrpoint) = candbrpoint;
       }
+
+      return SCIP_OKAY;
+   }
+
+   /* best candidate has a finite lower or upper bound -> consider taking the other candidate */
+
+   if( (SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand))     || SCIPisInfinity(scip, SCIPvarGetUbLocal(cand))) &&
+       (SCIPisInfinity(scip, -SCIPvarGetLbLocal(*bestvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(*bestvar))) )
+   {
+      /* both candidates are unbounded, but one side may be finite (for bestcand we know there is one)
+       * take the candidate with the larger bound on the bounded side (hope that this avoids branching on always the same variable)
+       * this will also prefer unbounded variables over bounded ones
+       */
+      if( SCIPvarGetUbLocal(cand) > SCIPvarGetUbLocal(*bestvar) || SCIPvarGetLbLocal(cand) < SCIPvarGetLbLocal(*bestvar) )
+      {
+         /* cand is better than bestvar */
+         (*bestscore)   = branchscore;
+         (*bestvar)     = cand;
+         (*bestbrpoint) = candbrpoint;
+         return SCIP_OKAY;
+      }
+
+      if( SCIPvarGetUbLocal(*bestvar) > SCIPvarGetUbLocal(cand) || SCIPvarGetLbLocal(*bestvar) < SCIPvarGetLbLocal(cand) )
+      {
+         /* bestvar is better than cand */
+         return SCIP_OKAY;
+      }
+
+      /* both are equally good */
+   }
+
+   if( SCIPvarGetType(*bestvar) == SCIPvarGetType(cand) )
+   {
+      /* if both have the same type, take the one with larger relative diameter */
+      if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) < SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
+      {
+         /* cand has larger diameter than bestvar*/
+         (*bestscore)   = branchscore;
+         (*bestvar)     = cand;
+         (*bestbrpoint) = candbrpoint;
+         return SCIP_OKAY;
+      }
+
+      if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) > SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
+      {
+         /* bestvar has larger diameter than cand */
+         return SCIP_OKAY;
+      }
+   }
+
+   /* take the one with better type ("more discrete") */
+   if( SCIPvarGetType(*bestvar) > SCIPvarGetType(cand) )
+   {
+      /* cand is more discrete than bestvar */
+      (*bestscore)   = branchscore;
+      (*bestvar)     = cand;
+      (*bestbrpoint) = candbrpoint;
+      return SCIP_OKAY;
+   }
+   if( SCIPvarGetType(*bestvar) < SCIPvarGetType(cand) )
+   {
+      /* bestvar is more discrete than cand */
+      return SCIP_OKAY;
+   }
+
+   /* cand seems to be as good as the currently best one (bestvar)
+    * switch to cand with 50% probability to reduce performance variability
+    */
+   if( SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed) <= 0.5 )
+   {
+      (*bestscore)   = branchscore;
+      (*bestvar)     = cand;
+      (*bestbrpoint) = candbrpoint;
    }
 
    return SCIP_OKAY;
@@ -487,6 +552,20 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
    return SCIP_OKAY;
 }
 
+/** initialization method of branching rule (called after problem was transformed) */
+static
+SCIP_DECL_BRANCHINIT(branchInitPscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   branchruledata->randseed = SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT);
+
+   return SCIP_OKAY;
+}
 
 /** branching execution method for fractional LP solutions */
 static
@@ -650,6 +729,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 

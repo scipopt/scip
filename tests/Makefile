@@ -38,7 +38,6 @@ TESTDIRS 	= $(sort $(dir $(patsubst src/%,%,$(UNITTESTSSRC))))
 #-----------------------------------------------------------------------------
 
 override OPT	=	dbg
-override SANITIZE	=	false
 override SHARED	=	true
 
 #-----------------------------------------------------------------------------
@@ -193,14 +192,15 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib) \
 		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
+		$(SANITZERFLAGS) \
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SANITIZE=false SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(SCIPLIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SANITIZE=false SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SANITIZE=false SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
