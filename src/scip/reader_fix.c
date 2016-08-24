@@ -103,7 +103,7 @@ SCIP_RETCODE readSol(
          continue;
 
       /* parse the line */
-      (void) snprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
       nread = sscanf(buffer, format, varname, valuestring, objstring);
       if( nread < 2 )
       {
