@@ -39,6 +39,7 @@ performance improvements:
   removal of fixed variables from constraint data at creation time to reduce memory requirements.
 - changed value of parameter separating/clique/cliquedensity to 0.0 such that the separator always constructs a dense clique table
   which proved to be faster on the benchmarks MMM and stableset.
+- reduce performance variability by using a small perturbation in the undercover heuristic
 - reduce performance variability by using random numbers as tie-breaker for external branching candidates
 
 interface:

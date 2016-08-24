@@ -86,6 +86,7 @@
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
+#define DEFAULT_RANDSEED        43           /* initial random seed */
 
 /* local defines */
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
@@ -127,6 +128,7 @@ struct SCIP_HeurData
    int                   nnlpfails;          /**< number of fails when solving the NLP relaxation after last success */
    int                   npostnlpfails;      /**< number of fails of the NLP local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
+   unsigned int          randseed;           /**< seed value for random number generator */
    char                  coveringobj;        /**< objective function of the covering problem */
    char                  fixingorder;        /**< order in which variables should be fixed */
    SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation? */
@@ -1720,8 +1722,12 @@ SCIP_RETCODE computeFixingOrder(
       var = vars[cover[i]];
 
       if( heurdata->fixingorder == 'C' || heurdata->fixingorder == 'c' )
+      {
+         /* add a small pertubation value to the score to reduce performance variability */
          scores[i] = heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
-            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight);
+            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight)
+            + SCIPgetRandomReal(0.0, SCIPepsilon(scip), &heurdata->randseed);
+      }
       else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
          scores[i] = cover[i];
       else
@@ -3112,6 +3118,24 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    return SCIP_OKAY;
 }
 
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitUndercover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   return SCIP_OKAY;
+}
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
@@ -3368,6 +3392,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 

@@ -41,7 +41,7 @@
 #define BRANCHRULE_NARYMAXDEPTH_DEFAULT    -1 /**< default maximal depth where to do n-ary branching */
 #define BRANCHRULE_NARYMINWIDTH_DEFAULT 0.001 /**< default minimal domain width in children when doing n-ary branching */
 #define BRANCHRULE_NARYWIDTHFAC_DEFAULT   2.0 /**< default factor of domain width in n-ary branching */
-#define BRANCHRULE_RANDSEED_DEFAULT        23 /**< initial random seed */
+#define BRANCHRULE_RANDSEED_DEFAULT        47 /**< initial random seed */
 
 
 #define WEIGHTEDSCORING(data, min, max, sum) \
