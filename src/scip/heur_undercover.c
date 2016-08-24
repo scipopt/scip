@@ -86,7 +86,7 @@
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
-#define DEFAULT_RANDSEED        21           /* initial random seed */
+#define DEFAULT_RANDSEED        43           /* initial random seed */
 
 /* local defines */
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
