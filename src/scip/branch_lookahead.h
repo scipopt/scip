@@ -63,6 +63,41 @@ typedef struct
    int                   nboundedvars;       /**< The length of the boundedvars array. */
 } ValidBoundData;
 
+/**
+ * This struct collects the bounds, that are given implicitly on the second branching level.
+ * Concrete: If a variable is regarded on both sides of the second level and is infeasible (in the same bound direction) on
+ * both sides, the weaker bound can be applied.
+ * Even more concrete: First level branching on variable x, second level branching on variable y (and may others). If the
+ * constraint y <= 3 on the up branch of x and y <= 6 on the down branch of x are both infeasible, the y <= 3 bound can be
+ * applied on the first level.
+ */
+typedef struct
+{
+   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
+                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
+                                              *   BOUNDSTATUS_BOTH. */
+   int*                  nupperboundupdates; /**< The number of times the corresponding upper bound was updated. */
+   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
+                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
+                                              *   BOUNDSTATUS_BOTH. */
+   int*                  nlowerboundupdates; /**< The number of times the corresponding lower bound was updated. */
+   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
+                                              *   may be used to only iterate over the relevant variables. */
+   int                   nboundedvars;       /**< The length of the boundedvars array. */
+} SupposedBoundData;
+
+typedef struct
+{
+   SCIP_VAR*             eithervariable;
+   SCIP_VAR*             othervariable;
+} BinaryBoundEntry;
+
+typedef struct
+{
+   BinaryBoundEntry**    entries;
+   int                   nentries;
+} BinaryBoundData;
+
 static
 SCIP_RETCODE allocValidBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -108,29 +143,6 @@ void freeValidBoundData(
    SCIPfreeBufferArray(scip, &(*validbounddata)->upperbounds);
    SCIPfreeBuffer(scip, validbounddata);
 }
-
-/**
- * This struct collects the bounds, that are given implicitly on the second branching level.
- * Concrete: If a variable is regarded on both sides of the second level and is infeasible (in the same bound direction) on
- * both sides, the weaker bound can be applied.
- * Even more concrete: First level branching on variable x, second level branching on variable y (and may others). If the
- * constraint y <= 3 on the up branch of x and y <= 6 on the down branch of x are both infeasible, the y <= 3 bound can be
- * applied on the first level.
- */
-typedef struct
-{
-   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   int*                  nupperboundupdates; /**< The number of times the corresponding upper bound was updated. */
-   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   int*                  nlowerboundupdates; /**< The number of times the corresponding lower bound was updated. */
-   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
-                                              *   may be used to only iterate over the relevant variables. */
-   int                   nboundedvars;       /**< The length of the boundedvars array. */
-} SupposedBoundData;
 
 static
 SCIP_RETCODE allocSupposedBoundData(
@@ -178,6 +190,67 @@ void freeSupposedBoundData(
    SCIPfreeCleanBufferArray(scip, &(*supposedbounddata)->nupperboundupdates);
    SCIPfreeBufferArray(scip, &(*supposedbounddata)->upperbounds);
    SCIPfreeBuffer(scip, supposedbounddata);
+}
+
+static
+SCIP_RETCODE allocBinaryBoundEntry(
+   SCIP*                 scip,
+   BinaryBoundEntry**    binaryboundentry,
+   int                   nentries
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, binaryboundentry) );
+   return SCIP_OKAY;
+}
+
+static
+void initBinaryBoundEntry(
+   BinaryBoundEntry*     binaryboundentry,
+   SCIP_VAR*             eithervariable,
+   SCIP_VAR*             othervariable
+)
+{
+   binaryboundentry->eithervariable = eithervariable;
+   binaryboundentry->othervariable = othervariable;
+}
+
+static
+void freeBinaryBoundEntry(
+   SCIP*                 scip,
+   BinaryBoundEntry**    binaryboundentry
+)
+{
+   SCIPfreeBuffer(scip, binaryboundentry);
+}
+
+static
+SCIP_RETCODE allocBinaryBoundData(
+   SCIP*                 scip,
+   BinaryBoundData**     binarybounddata,
+   int                   nentries
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, binarybounddata) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->entries, nentries) );
+   return SCIP_OKAY;
+}
+
+static
+void initBinaryBoundData(
+   BinaryBoundData*      binarybounddata
+)
+{
+   binarybounddata->nentries = 0;
+}
+
+static
+void freeBinaryBoundData(
+   SCIP*                 scip,
+   BinaryBoundData**     binarybounddata
+)
+{
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->entries);
+   SCIPfreeBuffer(scip, binarybounddata);
 }
 
 /** creates the Lookahead branching rule and includes it in SCIP */
