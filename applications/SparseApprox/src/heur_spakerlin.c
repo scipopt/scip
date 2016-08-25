@@ -26,9 +26,6 @@
 #include "probdata_spa.h"
 #include "heur_spakerlin.h"
 #include "scip/cons_and.h"
-/* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
- *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
- */
 
 #define HEUR_NAME             "spakerlin"
 #define HEUR_DESC             "switch heuristic that tries to improve solution by trading bins betweeen clusters, similar to the famous kernighan/lin heuristic"
@@ -55,17 +52,14 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/**
- * This method changes the cluster of @p newbin and updates the qmatrix as well as the clustermatrix.
- */
-
+/** Get the bin-var assignment from scip and save it as a matrix */
 static
 void getSolutionValues(
-   SCIP*                 scip,
-   SCIP_SOL*             bestsol,
-   SCIP_Real**           solclustering,
-   SCIP_Bool**           binfixed,
-   int*                  clusterofbin
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             bestsol,            /**< The solution */
+   SCIP_Real**           solclustering,      /**< Matrix to save the bin-vars*/
+   SCIP_Bool**           binfixed,           /**< Matrix to save if a bin is fixed in scip */
+   int*                  clusterofbin        /**< Array containing the cluster of each bin */
 )
 {
    int i;
@@ -138,12 +132,13 @@ void getSolutionValues(
    }
 }
 
+/** check if a clustermatrix is a valid paritioning of the bins */
 static
 SCIP_Bool isPartition(
-   SCIP*                 scip,
-   SCIP_Real**           solclustering,
-   int                   nbins,
-   int                   ncluster
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real**           solclustering,      /**< Matrix with the clustering */
+   int                   nbins,              /**< The number of bins */
+   int                   ncluster            /**< The number of clusters */
 )
 {
    int i;
@@ -163,6 +158,8 @@ SCIP_Bool isPartition(
    return TRUE;
 }
 
+
+/** Set a bin to a new cluster */
 static
 void setBinToCluster(
    SCIP_Real**           solclustering,      /**< The matrix with the clustering of the bins */
@@ -473,17 +470,17 @@ SCIP_RETCODE assignVars(
                }
                else if( c2 == c - 1 || ( c == 0 && c2 == ncluster -1) )
                {
+                  if( SCIPvarIsTransformed(edgevars[j][i][1]) )
+                     var = edgevars[j][i][1];
+                  else
+                     var = SCIPvarGetTransVar(edgevars[j][i][1]);
+               }
+               else
+               {
                   if( SCIPvarIsTransformed(edgevars[i][j][2]) )
                      var = edgevars[i][j][2];
                   else
                      var = SCIPvarGetTransVar(edgevars[i][j][2]);
-               }
-               else
-               {
-                  if( SCIPvarIsTransformed(edgevars[i][j][3]) )
-                     var = edgevars[i][j][3];
-                  else
-                     var = SCIPvarGetTransVar(edgevars[i][j][3]);
                }
                if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                {

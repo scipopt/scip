@@ -81,7 +81,7 @@ SCIP_RETCODE getBranchCands(
    return SCIP_OKAY;
 }
 
-/** Branch on a selected bin -> Create at moste |Cluster| childnodes */
+/** Branch on a selected bin -> Create at most |Cluster| children */
 static
 SCIP_RETCODE branchOnBin(
    SCIP*                 scip,               /**< SCIP data structure */

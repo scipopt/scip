@@ -41,15 +41,15 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
-/*
- * Data structures
- */
-
 
 /*
  * Local methods
  */
 
+
+/**
+ * assign the variables in scip according to the found clusterassignment
+ */
 
 /**
  * assign the variables in scip according to the found clusterassignment
@@ -105,9 +105,9 @@ SCIP_RETCODE assignVars(
                var = edgevars[i][j][0];
             else
                var = SCIPvarGetTransVar(edgevars[i][j][0]);
-            if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+            if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
             {
-               if( 1 == clustering[j][c] * clustering[i][c] )
+               if( SCIPisEQ(scip, 1.0, clustering[j][c] * clustering[i][c]) )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[j][c] * clustering[i][c]  ) );
             }
             for( c2 = 0; c2 < ncluster; ++c2 )
@@ -123,27 +123,28 @@ SCIP_RETCODE assignVars(
                }
                else if( c2 == c - 1 || ( c == 0 && c2 == ncluster -1) )
                {
+                  if( SCIPvarIsTransformed(edgevars[j][i][1]) )
+                     var = edgevars[j][i][1];
+                  else
+                     var = SCIPvarGetTransVar(edgevars[j][i][1]);
+               }
+               else
+               {
                   if( SCIPvarIsTransformed(edgevars[i][j][2]) )
                      var = edgevars[i][j][2];
                   else
                      var = SCIPvarGetTransVar(edgevars[i][j][2]);
                }
-               else
+               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                {
-                  if( SCIPvarIsTransformed(edgevars[i][j][3]) )
-                     var = edgevars[i][j][3];
-                  else
-                     var = SCIPvarGetTransVar(edgevars[i][j][3]);
-               }
-               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
-               {
-                  if( 1 == clustering[j][c2] * clustering[i][c])
+                  if( SCIPisEQ(scip, 1.0, clustering[j][c2] * clustering[i][c]) )
                      SCIP_CALL( SCIPsetSolVal( scip, sol, var, 1.0 ) );
                }
             }
          }
       }
    }
+
    return SCIP_OKAY;
 }
 

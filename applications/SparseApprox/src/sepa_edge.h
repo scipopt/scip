@@ -1,13 +1,3 @@
-/*
- * heur_spaswitch.h
- *
- *  Created on: Feb 23, 2016
- *      Author: bzfeifle
- */
-
-#ifndef APPLICATIONS_SPARSEAPPROX_SRC_HEUR_SPASWITCH_H_
-#define APPLICATIONS_SPARSEAPPROX_SRC_HEUR_SPASWITCH_H_
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -23,15 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_spaswitch.h
- * @ingroup PRIMALHEURISTICS
- * @brief  Improvement heuristic that trades variables between clusters
+/**@file   sepa_edge.h
+ * @ingroup SEPARATORS
+ * @brief  simple edge-separator
  * @author Leon Eifler
- *
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_SEPA_EDGE_H__
+#define __SCIP_SEPA_EDGE_H__
+
 
 #include "scip/scip.h"
 
@@ -39,9 +31,9 @@
 extern "C" {
 #endif
 
-/** creates the oneopt primal heuristic and includes it in SCIP */
+
 EXTERN
-SCIP_RETCODE SCIPincludeHeurSpaswitch(
+SCIP_RETCODE SCIPincludeSepaEdge(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -49,7 +41,4 @@ SCIP_RETCODE SCIPincludeHeurSpaswitch(
 }
 #endif
 
-
-
-
-#endif /* APPLICATIONS_SPARSEAPPROX_SRC_HEUR_SPASWITCH_H_ */
+#endif
