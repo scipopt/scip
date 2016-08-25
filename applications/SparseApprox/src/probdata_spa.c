@@ -564,9 +564,6 @@ SCIP_DECL_PROBDELORIG(probdelorigSpa)
       SCIPfreeMemoryArray(scip, &((*probdata)->cmatrix[i]));
    }
    SCIPfreeMemoryArray(scip, &(*probdata)->cmatrix);
-   return SCIP_OKAY;
-
-   freeMatrix((*probdata)->cmatrix, (*probdata)->nbins);
 
    SCIPfreeMemory(scip, probdata);
 
@@ -629,7 +626,6 @@ SCIP_DECL_PROBDELORIG(probdeltransSpa)
       SCIPfreeMemoryArray(scip, &((*probdata)->cmatrix[i]));
    }
    SCIPfreeMemoryArray(scip, &(*probdata)->cmatrix);
-   return SCIP_OKAY;
 
    SCIPfreeMemory(scip, probdata);
 

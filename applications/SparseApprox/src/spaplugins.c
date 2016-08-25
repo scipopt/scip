@@ -26,7 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "event_newsol.h"
 #include "sepa_sparseapprox.h"
-#include "sepa_triangle.h"
+#include "sepa_edge.h"
 #include "heur_fuzzyround.h"
 #include "heur_spakerlin.h"
 #include "branch_multinode.h"
@@ -39,9 +39,10 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    SCIP_CALL( SCIPincludeReaderSpa(scip) );
 
-   SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
-   SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
+   /*SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
+   SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );*/
    SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
+/*   SCIP_CALL( SCIPincludeSepaEdge(scip) );*/
 
    SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.05, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );

@@ -171,11 +171,17 @@ SCIP_RETCODE fromCommandLine(
       SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
       SCIPinfoMessage(scip, NULL, "====================================\n\n");
    }
-   SCIP_CALL( SCIPprintBestSol(scip, solufile, FALSE) );
 
-   if( savesol && solufile )
+   if( savesol )
+   {
+      SCIP_CALL( SCIPprintBestSol(scip, solufile, FALSE) );
       fclose(solufile);
-
+   }
+   else
+   {
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      SCIP_CALL( SCIPspaPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
+   }
    /**************
     * Statistics *
     **************/

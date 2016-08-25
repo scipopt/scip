@@ -42,7 +42,7 @@
 #define READER_DESC             "file reader for a .spa-file representing an adjacency matrix for a clustering problem"
 #define READER_EXTENSION        "spa"
 
-#define COL_MAX_LINELEN 1024
+#define COL_MAX_LINELEN 10000
 
 
 /*

@@ -455,9 +455,9 @@ SCIP_RETCODE assignVars(
                var = edgevars[i][j][0];
             else
                var = SCIPvarGetTransVar(edgevars[i][j][0]);
-            if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+            if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
             {
-               if( 1 == clustering[j][c] * clustering[i][c] )
+               if( SCIPisEQ(scip, 1.0, clustering[j][c] * clustering[i][c]) )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[j][c] * clustering[i][c]  ) );
             }
             for( c2 = 0; c2 < ncluster; ++c2 )
@@ -485,9 +485,9 @@ SCIP_RETCODE assignVars(
                   else
                      var = SCIPvarGetTransVar(edgevars[i][j][3]);
                }
-               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                {
-                  if( 1 == clustering[j][c2] * clustering[i][c])
+                  if( SCIPisEQ(scip, 1.0, clustering[j][c2] * clustering[i][c]) )
                      SCIP_CALL( SCIPsetSolVal( scip, sol, var, 1.0 ) );
                   qmatrix[c][c2] += cmatrix[i][j] * clustering[i][c] * clustering[j][c2];
                   qmatrix[c2][c] += cmatrix[j][i] * clustering[i][c] * clustering[j][c2];
@@ -496,6 +496,7 @@ SCIP_RETCODE assignVars(
          }
       }
    }
+
    return SCIP_OKAY;
 }
 /*
