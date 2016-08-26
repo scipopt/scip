@@ -473,47 +473,110 @@ SCIP_RETCODE calculateWeight(
 }
 
 static
+SCIP_RETCODE createConstraintName(
+   SCIP*                 scip,
+   SCIP_VAR*             basevarforbound,
+   SCIP_VAR*             deepvarforbound,
+   char**                constraintname
+
+)
+{
+   const char* basevarname;
+   const char* deepvarname;
+   int nbasevarname;
+   int ndeepvarname;
+
+   basevarname = SCIPvarGetName(basevarforbound);
+   deepvarname = SCIPvarGetName(deepvarforbound);
+   nbasevarname = strlen(basevarname);
+   ndeepvarname = strlen(deepvarname);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, constraintname, 7 + nbasevarname + ndeepvarname) );
+
+   memcpy(&(*constraintname)[0], "cons_", 5);
+   memcpy(&(*constraintname)[5], basevarname, nbasevarname);
+   memcpy(&(*constraintname)[5+nbasevarname], "_", 1);
+   memcpy(&(*constraintname)[6+nbasevarname], deepvarname, ndeepvarname);
+   memcpy(&(*constraintname)[6+nbasevarname+ndeepvarname], "\0", 1);
+
+   return SCIP_OKAY;
+}
+
+static
+void deleteConstraintName(
+   SCIP*                 scip,
+   char**                constraintname
+)
+{
+   SCIPfreeBufferArray(scip, constraintname);
+}
+
+static
+SCIP_Bool isConstraintInvalidInBaseSolution(
+   SCIP*                 scip,
+   SCIP_SOL*             baselpsol,
+   SCIP_VAR*             basevarforbound,
+   SCIP_VAR*             deepvarforbound
+)
+{
+   SCIP_Real basesolval;
+   SCIP_Real deepsolval;
+
+   basesolval = SCIPgetSolVal(scip, baselpsol, basevarforbound);
+   deepsolval = SCIPgetSolVal(scip, baselpsol, deepvarforbound);
+
+   return SCIPisGT(scip, basesolval + deepsolval, 1);
+}
+
+static
 SCIP_RETCODE addGrandChildIntegerBound(
    SCIP*                 scip,
+   SCIP_SOL*             baselpsol,
    SCIP_NODE*            basenode,
    SCIP_VAR*             basevarforbound,
    SCIP_VAR*             deepvarforbound,
+   BinaryBoundData*      binarybounddata,
    SCIP_Bool*            newconstadded
 )
 {
-   SCIP_VAR** vars;
-   SCIP_CONS* constraint;
-   SCIP_Bool consIsAdded;
-
-   SCIPallocBufferArray(scip, &vars, 2);
-   vars[0] = basevarforbound;
-   vars[1] = deepvarforbound;
-
-   /* TODO CS: set helpful name */
-   SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, "TODO", 2, vars, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE,
-      FALSE, FALSE) );
-
-   /* TODO CS: doesn't work */
-   consIsAdded = SCIPconsIsAdded(constraint);
-   if( consIsAdded )
+   if( isConstraintInvalidInBaseSolution(scip, baselpsol, basevarforbound, deepvarforbound) )
    {
-      *newconstadded = FALSE;
+      SCIP_VAR** vars;
+      SCIP_CONS* constraint;
+      char* constraintname;
+      /* add the constraint directly and return from the branching rule. */
+      SCIPallocBufferArray(scip, &vars, 2);
+      vars[0] = basevarforbound;
+      vars[1] = deepvarforbound;
+
+      SCIP_CALL( createConstraintName(scip, basevarforbound, deepvarforbound, &constraintname) );
+      SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, constraintname, 2, vars, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
+         FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
+      SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
+
+      deleteConstraintName(scip, &constraintname);
+      SCIPfreeBufferArray(scip, &vars);
+
+      *newconstadded = TRUE;
    }
    else
    {
-      SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
-      *newconstadded = TRUE;
+      /* add the constraint to the buffer and add them all later to the problem */
+      BinaryBoundEntry** newentry = &binarybounddata->entries[binarybounddata->nentries];
+      SCIP_CALL( allocBinaryBoundEntry(scip, newentry) );
+      initBinaryBoundEntry(*newentry, basevarforbound, deepvarforbound);
+
+      *newconstadded = FALSE;
    }
 
-   SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
-
-   SCIPfreeBufferArray(scip, &vars);
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,
    SCIP_NODE*            basenode,
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary
@@ -525,6 +588,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    WeightData*           weightdata,         /**< container to be filled with the weight relevant data */
    int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
    SupposedBoundData*    supposedbounds,
+   BinaryBoundData*      binarybounddata,
    SCIP_RESULT*          result              /**< pointer to store results of branching */
 )
 {
@@ -610,33 +674,33 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
             if( upresultdata->cutoff )
             {
-               if( SCIPvarIsBinary(deepbranchvar) )
+               /*if( SCIPvarIsBinary(deepbranchvar) )
                {
                   SCIP_Bool consadded;
-                  SCIP_CALL( addGrandChildIntegerBound(scip, basenode, basevarforbound, deepbranchvar, &consadded) );
+                  SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepbranchvar, binarybounddata, &consadded) );
 
                   if( consadded )
                   {
                      *result = SCIP_CONSADDED;
                   }
-               }
+               }*/
                addSupposedUpperBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
             if( downresultdata->cutoff )
             {
-               if( SCIPvarIsBinary(deepbranchvar) )
+               /*if( SCIPvarIsBinary(deepbranchvar) )
                {
                   SCIP_Bool consadded;
                   SCIP_VAR* deepvarforbound;
                   SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound);
 
-                  SCIP_CALL( addGrandChildIntegerBound(scip, basenode, basevarforbound, deepvarforbound, &consadded) );
+                  SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepvarforbound, binarybounddata, &consadded) );
 
                   if( consadded )
                   {
                      *result = SCIP_CONSADDED;
                   }
-               }
+               }*/
                addSupposedLowerBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
          }
@@ -653,6 +717,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 static
 SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,
    SCIP_NODE*            basenode,
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary
@@ -662,6 +727,7 @@ SCIP_RETCODE executeDeepBranching(
    WeightData*           weightdata,
    int*                  ncutoffs,
    SupposedBoundData*    supposedbounds,
+   BinaryBoundData*      binarybounddata,
    SCIP_RESULT*          result              /**< pointer to store results of branching */
 )
 {
@@ -685,8 +751,8 @@ SCIP_RETCODE executeDeepBranching(
       SCIPdebugMessage("Start deeper branching on variable <%s> with solution value <%g>.\n",
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval);
 
-      SCIP_CALL( executeDeepBranchingOnVar(scip, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
-         fullcutoff, lperror, weightdata, ncutoffs, supposedbounds, result) );
+      SCIP_CALL( executeDeepBranchingOnVar(scip, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
+         fullcutoff, lperror, weightdata, ncutoffs, supposedbounds, binarybounddata, result) );
 
       if( *fullcutoff )
       {
@@ -925,6 +991,7 @@ void transferBoundData(
 static
 SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
    int                   nlpcands,           /**< number of fractional variables/solution values */
@@ -965,9 +1032,13 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_Real highestscore = 0;
       int highestscoreindex = -1;
       int i;
+      int nvars;
 
       ValidBoundData* validbounds;
       SupposedBoundData* supposedbounds;
+      BinaryBoundData* binarybounddata;
+
+      nvars = SCIPgetNVars(scip);
 
       /* allocate all structs */
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
@@ -976,11 +1047,13 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       SCIP_CALL( allocValidBoundData(scip, &validbounds) );
       SCIP_CALL( allocSupposedBoundData(scip, &supposedbounds) );
+      SCIP_CALL( allocBinaryBoundData(scip, &binarybounddata, nvars*nvars) );
 
       /* init all structs */
       initBranchingResultData(scip, downbranchingresult);
       initBranchingResultData(scip, upbranchingresult);
       initValidBoundData(validbounds);
+      initBinaryBoundData(binarybounddata);
 
       basenode = SCIPgetCurrentNode(scip);
       lpobjval = SCIPgetLPObjval(scip);
@@ -1014,9 +1087,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
             {
                SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &basevarforbound) );
             }
-            SCIP_CALL( executeDeepBranching(scip, basenode, lpobjval, basevarforbound,
+            SCIP_CALL( executeDeepBranching(scip, baselpsol, basenode, lpobjval, basevarforbound,
                &downbranchingresult->cutoff, &downbranchingresult->lperror, &scoredata->upperbounddata,
-               &scoredata->ncutoffs, supposedbounds, result) );
+               &scoredata->ncutoffs, supposedbounds, binarybounddata, result) );
          }
          if( downbranchingresult->lperror )
          {
@@ -1038,9 +1111,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
             {
                basevarforbound = branchvar;
             }
-            SCIP_CALL( executeDeepBranching(scip, basenode, lpobjval, basevarforbound,
+            SCIP_CALL( executeDeepBranching(scip, baselpsol, basenode, lpobjval, basevarforbound,
                &upbranchingresult->cutoff, &upbranchingresult->lperror, &scoredata->lowerbounddata, &scoredata->ncutoffs,
-               supposedbounds, result) );
+               supposedbounds, binarybounddata, result) );
          }
          if( upbranchingresult->lperror )
          {
@@ -1086,6 +1159,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIP_CALL( handleNewBounds(scip, validbounds, result) );
       }
 
+      freeBinaryBoundData(scip, &binarybounddata);
       freeSupposedBoundData(scip, &supposedbounds);
       freeValidBoundData(scip, &validbounds);
 
@@ -1130,7 +1204,7 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPfreeMemory(scip, &branchruledata->previoussolution);
+   /*SCIPfreeMemory(scip, &branchruledata->previoussolution);*/
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -1158,6 +1232,7 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 {  /*lint --e{715}*/
+   SCIP_SOL* baselpsol;
    SCIP_VAR** tmplpcands;
    SCIP_VAR** lpcands;
    SCIP_Real* tmplpcandssol;
@@ -1177,6 +1252,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* create temporary solution */
+   SCIP_CALL( SCIPcreateSol(scip, &baselpsol, NULL) );
+   /* copy the current LP solution to the working solution */
+   SCIP_CALL( SCIPlinkLPSol(scip, baselpsol) );
+   /* */
+   SCIP_CALL( SCIPunlinkSol(scip, baselpsol) );
+
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands, NULL) );
    assert(nlpcands > 0);
@@ -1190,7 +1272,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", nlpcands);
 
-   SCIP_CALL( selectVarLookaheadBranching(scip, lpcands, lpcandssol, nlpcands, &bestcand, result) );
+   SCIP_CALL( selectVarLookaheadBranching(scip, baselpsol, lpcands, lpcandssol, nlpcands, &bestcand, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && *result != SCIP_DIDNOTFIND
       && (0 <= bestcand && bestcand < nlpcands) )
@@ -1236,6 +1318,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIPdebugMessage("Could not find any variable to branch on.\n");
    }
 
+   SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
+
    SCIPfreeBufferArray(scip, &lpcandsfrac);
    SCIPfreeBufferArray(scip, &lpcandssol);
    SCIPfreeBufferArray(scip, &lpcands);
@@ -1260,10 +1344,9 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
 
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->previoussolution) );
+   /*SCIP_CALL( SCIPallocMemory(scip, &branchruledata->previoussolution) );*/
 
    /* TODO: (optional) create branching rule specific data here */
-
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );

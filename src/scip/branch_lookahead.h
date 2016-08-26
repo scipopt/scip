@@ -195,8 +195,7 @@ void freeSupposedBoundData(
 static
 SCIP_RETCODE allocBinaryBoundEntry(
    SCIP*                 scip,
-   BinaryBoundEntry**    binaryboundentry,
-   int                   nentries
+   BinaryBoundEntry**    binaryboundentry
 )
 {
    SCIP_CALL( SCIPallocBuffer(scip, binaryboundentry) );
@@ -249,6 +248,12 @@ void freeBinaryBoundData(
    BinaryBoundData**     binarybounddata
 )
 {
+   int i;
+
+   for( i = 0; i < (*binarybounddata)->nentries; i++)
+   {
+      freeBinaryBoundEntry(scip, &(*binarybounddata)->entries[i]);
+   }
    SCIPfreeBufferArray(scip, &(*binarybounddata)->entries);
    SCIPfreeBuffer(scip, binarybounddata);
 }
