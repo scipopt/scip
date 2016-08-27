@@ -1822,7 +1822,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #ifdef SCIP_DEBUG
 #define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
 #else
-#define SCIPsetDebugMsg(set, ...)
+#define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
 #endif
 
 /** prints a debug message */

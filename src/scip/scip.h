@@ -411,7 +411,7 @@ void SCIPdisableDebugSol(
 #ifdef SCIP_DEBUG
 #define SCIPdebugMsg(scip, ...)         SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
 #else
-#define SCIPdebugMsg(scip, ...)
+#define SCIPdebugMsg(scip, ...)         while ( FALSE ) SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
 #endif
 
 

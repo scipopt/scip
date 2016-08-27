@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 #ifdef SCIP_DEBUG
 #define SCIPstatDebugMsg(set, ...)      SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
 #else
-#define SCIPstatDebugMsg(set, ...)
+#define SCIPstatDebugMsg(set, ...)      while ( FALSE ) SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
 #endif
 
 /** prints a debug message */
