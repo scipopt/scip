@@ -85,6 +85,7 @@ using CppAD::SCIPInterval;
 #ifndef NPARASCIP
 #include <pthread.h>
 
+#if 0  // this workaround does not compile anymore when updating to CppAD 2016 - is it still necessary?
 /* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
 namespace CppAD
 {
@@ -103,6 +104,7 @@ template <> AD<SCIPInterval> erf_template(
    return AD<SCIPInterval>();
 }
 }
+#endif
 
 /** mutex for locking in pthread case */
 static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
@@ -178,7 +180,7 @@ char init_parallel(void)
    return 0;
 }
 
-/** a dummy variable that can is initialized to the result of init_parallel
+/** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
