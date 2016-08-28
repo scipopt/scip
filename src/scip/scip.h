@@ -407,11 +407,26 @@ void SCIPdisableDebugSol(
  * message output methods
  */
 
+/* if we have a C99 compiler */
+#if ( __STDC_VERSION__ >= 199901L )
+
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
 #define SCIPdebugMsg(scip, ...)         SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
 #else
 #define SCIPdebugMsg(scip, ...)         while ( FALSE ) SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPdebugMsg                    printf("debug: "), SCIPdebugMsgPrint
+#else
+#define SCIPdebugMsg                    while ( FALSE ) SCIPdebugMsgPrint
+#endif
+
 #endif
 
 

@@ -703,3 +703,18 @@ void SCIPstatPrintDebugMessage(
    printf(formatstr, ap);
    va_end(ap);
 }
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMsgPrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{  /*lint --e{715}*/
+   va_list ap;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
+}

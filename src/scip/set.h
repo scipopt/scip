@@ -1817,6 +1817,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
 #define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
 
+/* if we have a C99 compiler */
+#if ( __STDC_VERSION__ >= 199901L )
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
@@ -1824,6 +1826,19 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #else
 #define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
 #endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg                 printf("debug: "), SCIPsetDebugMsgPrint
+#else
+#define SCIPsetDebugMsg                 while ( FALSE ) SCIPsetDebugMsgPrint
+#endif
+
+#endif
+
 
 /** prints a debug message */
 EXTERN

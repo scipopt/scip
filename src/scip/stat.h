@@ -184,6 +184,10 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    );
 
+
+/* if we have a C99 compiler */
+#if ( __STDC_VERSION__ >= 199901L )
+
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
 #define SCIPstatDebugMsg(set, ...)      SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
@@ -191,12 +195,33 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 #define SCIPstatDebugMsg(set, ...)      while ( FALSE ) SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
 #endif
 
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPstatDebugMsg                printf("debug: "), SCIPstatDebugMsgPrint
+#else
+#define SCIPstatDebugMsg                while ( FALSE ) SCIPstatDebugMsgPrint
+#endif
+
+#endif
+
+
 /** prints a debug message */
 EXTERN
 void SCIPstatPrintDebugMessage(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           sourcefile,         /**< name of the source file that called the function */
    int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMsgPrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    );
