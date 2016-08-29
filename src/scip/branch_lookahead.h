@@ -88,14 +88,10 @@ typedef struct
 
 typedef struct
 {
-   SCIP_VAR*             eithervariable;
-   SCIP_VAR*             othervariable;
-} BinaryBoundEntry;
-
-typedef struct
-{
-   BinaryBoundEntry**    entries;
+   SCIP_VAR**            eithervars;
+   SCIP_VAR**            othervars;
    int                   nentries;
+   int                   memsize;
 } BinaryBoundData;
 
 static
@@ -193,36 +189,6 @@ void freeSupposedBoundData(
 }
 
 static
-SCIP_RETCODE allocBinaryBoundEntry(
-   SCIP*                 scip,
-   BinaryBoundEntry**    binaryboundentry
-)
-{
-   SCIP_CALL( SCIPallocBuffer(scip, binaryboundentry) );
-   return SCIP_OKAY;
-}
-
-static
-void initBinaryBoundEntry(
-   BinaryBoundEntry*     binaryboundentry,
-   SCIP_VAR*             eithervariable,
-   SCIP_VAR*             othervariable
-)
-{
-   binaryboundentry->eithervariable = eithervariable;
-   binaryboundentry->othervariable = othervariable;
-}
-
-static
-void freeBinaryBoundEntry(
-   SCIP*                 scip,
-   BinaryBoundEntry**    binaryboundentry
-)
-{
-   SCIPfreeBuffer(scip, binaryboundentry);
-}
-
-static
 SCIP_RETCODE allocBinaryBoundData(
    SCIP*                 scip,
    BinaryBoundData**     binarybounddata,
@@ -230,7 +196,9 @@ SCIP_RETCODE allocBinaryBoundData(
 )
 {
    SCIP_CALL( SCIPallocBuffer(scip, binarybounddata) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->entries, nentries) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->eithervars, nentries) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->othervars, nentries) );
+   (*binarybounddata)->memsize = nentries;
    return SCIP_OKAY;
 }
 
@@ -243,18 +211,47 @@ void initBinaryBoundData(
 }
 
 static
+SCIP_RETCODE addBinaryBoundEntry(
+   SCIP*                 scip,
+   BinaryBoundData*      container,
+   SCIP_VAR*             eithervar,
+   SCIP_VAR*             othervar
+)
+{
+   int emptyindex = container->nentries;
+
+   if( emptyindex == container->memsize )
+   {
+      /* calculate new size, that can at least hold the old number of entries + 1 for the new entry */
+      int newmemsize = SCIPcalcMemGrowSize(scip, emptyindex + 1);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &container->eithervars, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &container->othervars, newmemsize) );
+      container->memsize = newmemsize;
+   }
+
+   container->eithervars[emptyindex] = eithervar;
+   container->othervars[emptyindex] = othervar;
+   container->nentries = emptyindex + 1;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_Bool isBinaryBoundDataEmpty(
+   BinaryBoundData*      container
+)
+{
+   return container->nentries == 0;
+}
+
+static
 void freeBinaryBoundData(
    SCIP*                 scip,
    BinaryBoundData**     binarybounddata
 )
 {
-   int i;
-
-   for( i = 0; i < (*binarybounddata)->nentries; i++)
-   {
-      freeBinaryBoundEntry(scip, &(*binarybounddata)->entries[i]);
-   }
-   SCIPfreeBufferArray(scip, &(*binarybounddata)->entries);
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->othervars);
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->eithervars);
    SCIPfreeBuffer(scip, binarybounddata);
 }
 
