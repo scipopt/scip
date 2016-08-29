@@ -99,7 +99,7 @@
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
-#define SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS TRUE /**< should conflicts based on an old cutoff bound removed? */
+#define SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS FALSE /**< should conflicts based on an old cutoff bound removed? */
 #define SCIP_DEFAULT_CONF_CLEANAFTERSWITCHING FALSE /**< should conflicts not depending on a cutoffbound be removed after
                                                      *   switching the focusnode with a switching length of than maxswitchinglength?
                                                      */
@@ -132,7 +132,11 @@
 #define SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT 1.0/**< the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph */
 #define SCIP_DEFAULT_CONF_ANALYZEDUALRAY  FALSE /**< enable dual ray analyzes */
 #define SCIP_DEFAULT_CONF_ONLYDUALRAY     FALSE /**< perform dualray analysis only */
-
+#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR in dual rays */
+#define SCIP_DEFAULT_CONF_USEBOTH         FALSE /**< use both the dual ray before and after appling MIR */
+#define SCIP_DEFAULT_CONF_WEIGHTSIZE      0.001 /**< weight of the size of a conflict used in score calculation */
+#define SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH 0.1 /**< weight of the repropagation depth of a conflict used in score calculation */
+#define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
 
 /* Constraints */
 
@@ -1341,6 +1345,28 @@ SCIP_RETCODE SCIPsetCreate(
          "perform dualray analysis only",
          &(*set)->conf_onlydualray, TRUE, SCIP_DEFAULT_CONF_ONLYDUALRAY,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/useMIR",
+         "apply the MIR function on the dual ray",
+         &(*set)->conf_usemir, TRUE, SCIP_DEFAULT_CONF_APPLYMIR,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/useboth",
+         "use the dual ray before and after applying MIR",
+         &(*set)->conf_useboth, TRUE, SCIP_DEFAULT_CONF_USEBOTH,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/weightsize",
+         "weight of the size of a conflict used in score calculation",
+         &(*set)->conf_weightsize, TRUE, SCIP_DEFAULT_CONF_WEIGHTSIZE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/weightrepropdepth",
+         "weight of the repropagation depth of a conflict used in score calculation",
+         &(*set)->conf_weightrepropdepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/weightvaliddepth",
+         "weight of the valid depth of a conflict used in score calculation",
+         &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

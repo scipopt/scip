@@ -169,6 +169,7 @@ struct SCIP_ConsData
    SCIP_Real             lhs;                /**< left hand side of row (for ranged rows) */
    SCIP_Real             rhs;                /**< right hand side of row */
    SCIP_Real             maxabsval;          /**< maximum absolute value of all coefficients */
+   SCIP_Real             minabsval;          /**< minimal absolute value of all coefficients */
    SCIP_Real             minactivity;        /**< minimal value w.r.t. the variable's local bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
    SCIP_Real             maxactivity;        /**< maximal value w.r.t. the variable's local bounds for the constraint's
@@ -215,6 +216,7 @@ struct SCIP_ConsData
                                               *   sorting in stage >= SCIP_STAGE_INITSOLVE
                                               */
    unsigned int          validmaxabsval:1;   /**< is the maximum absolute value valid? */
+   unsigned int          validminabsval:1;   /**< is the minimum absolute value valid? */
    unsigned int          validactivities:1;  /**< are the activity bounds (local and global) valid? */
    unsigned int          validminact:1;      /**< is the local minactivity valid? */
    unsigned int          validmaxact:1;      /**< is the local maxactivity valid? */
@@ -911,6 +913,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->maxabsval = SCIP_INVALID;
+   (*consdata)->minabsval = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
    (*consdata)->maxactivity = SCIP_INVALID;
    (*consdata)->lastminactivity = SCIP_INVALID;
@@ -940,6 +943,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->possignature = 0;
    (*consdata)->negsignature = 0;
    (*consdata)->validmaxabsval = FALSE;
+   (*consdata)->validminabsval = FALSE;
    (*consdata)->validactivities = FALSE;
    (*consdata)->validminact = FALSE;
    (*consdata)->validmaxact = FALSE;
@@ -1068,12 +1072,14 @@ void consdataInvalidateActivities(
    consdata->validglbminact = FALSE;
    consdata->validglbmaxact = FALSE;
    consdata->validmaxabsval = FALSE;
+   consdata->validminabsval = FALSE;
    consdata->hasnonbinvalid = FALSE;
    consdata->minactivity = SCIP_INVALID;
    consdata->maxactivity = SCIP_INVALID;
    consdata->lastminactivity = SCIP_INVALID;
    consdata->lastmaxactivity = SCIP_INVALID;
    consdata->maxabsval = SCIP_INVALID;
+   consdata->minabsval = SCIP_INVALID;
    consdata->maxactdelta = SCIP_INVALID;
    consdata->maxactdeltavar = NULL;
    consdata->minactivityneginf = -1;
@@ -1281,6 +1287,32 @@ void consdataCalcMaxAbsval(
    }
 }
 
+/** calculates minimum absolute value of coefficients */
+static
+void consdataCalcMinAbsval(
+   SCIP_CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   SCIP_Real absval;
+   int i;
+
+   assert(consdata != NULL);
+   assert(!consdata->validminabsval);
+   assert(consdata->minabsval >= SCIP_INVALID);
+
+   consdata->validminabsval = TRUE;
+   absval = consdata->vals[0];
+   absval = REALABS(absval);
+   consdata->minabsval = absval;
+   for( i = 1; i < consdata->nvars; ++i )
+   {
+      absval = consdata->vals[i];
+      absval = REALABS(absval);
+      if( absval < consdata->minabsval )
+         consdata->minabsval = absval;
+   }
+}
+
 /** checks the type of all variables of the constraint and sets hasnonbinvar and hascontvar flags accordingly */
 static
 void consdataCheckNonbinvar(
@@ -1439,8 +1471,14 @@ void consdataUpdateActivities(
    int* activityneginf;
    int* activityposhuge;
    int* activityneghuge;
+   SCIP_Real oldcontribution;
+   SCIP_Real newcontribution;
    SCIP_Real delta;
    SCIP_Bool validact;
+   SCIP_Bool finiteoldbound;
+   SCIP_Bool hugevaloldcont;
+   SCIP_Bool finitenewbound;
+   SCIP_Bool hugevalnewcont;
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -1586,155 +1624,181 @@ void consdataUpdateActivities(
       }
    }
 
-   /* old bound was +infinity */
-   if( SCIPisInfinity(scip, oldbound) )
+   oldcontribution = val * oldbound;
+   hugevaloldcont = SCIPisHugeValue(scip, REALABS(oldcontribution));
+   finiteoldbound = !SCIPisInfinity(scip, REALABS(oldbound));
+
+   newcontribution = val * newbound;
+   hugevalnewcont = SCIPisHugeValue(scip, REALABS(newcontribution));
+   finitenewbound = !SCIPisInfinity(scip, REALABS(newbound));
+
+   if( !finiteoldbound )
    {
-      assert((*activityposinf) >= 1);
-
-      /* we only have to do something if the new bound is not again +infinity */
-      if( !SCIPisInfinity(scip, newbound) )
+      /* old bound was +infinity */
+      if( oldbound > 0.0 )
       {
-         /* decrease the counter for positive infinite contributions */
-         (*activityposinf)--;
+         assert((*activityposinf) >= 1);
 
-         /* if the bound changed to -infinity, increase the counter for negative infinite contributions */
-         if( SCIPisInfinity(scip, -newbound) )
-            (*activityneginf)++;
-         /* if the contribution of this variable is too large, increase the counter for huge values */
-         else if( SCIPisHugeValue(scip, val * newbound) )
+         /* we only have to do something if the new bound is not again +infinity */
+         if( finitenewbound || newbound < 0.0 )
          {
-            (*activityposhuge)++;
+            /* decrease the counter for positive infinite contributions */
+            (*activityposinf)--;
+
+            /* if the bound changed to -infinity, increase the counter for negative infinite contributions */
+            if( !finitenewbound && newbound < 0.0 )
+               (*activityneginf)++;
+            else if( hugevalnewcont )
+            {
+               /* if the contribution of this variable is too large, increase the counter for huge values */
+               if( newcontribution > 0.0 )
+                  (*activityposhuge)++;
+               else
+                  (*activityneghuge)++;
+            }
+            /* "normal case": just add the contribution to the activity */
+            else
+               delta = newcontribution;
          }
-         else if( SCIPisHugeValue(scip, -val * newbound) )
+      }
+      /* old bound was -infinity */
+      else
+      {
+         assert(oldbound < 0.0);
+         assert((*activityneginf) >= 1);
+
+         /* we only have to do something ig the new bound is not again -infinity */
+         if( finitenewbound || newbound > 0.0 )
          {
-            (*activityneghuge)++;
+            /* decrease the counter for negative infinite contributions */
+            (*activityneginf)--;
+
+            /* if the bound changed to +infinity, increase the counter for positive infinite contributions */
+            if( !finitenewbound && newbound > 0.0 )
+               (*activityposinf)++;
+            else if( hugevalnewcont )
+            {
+               /* if the contribution of this variable is too large, increase the counter for huge values */
+               if( newcontribution > 0.0 )
+                  (*activityposhuge)++;
+               else
+                  (*activityneghuge)++;
+            }
+            /* "normal case": just add the contribution to the activity */
+            else
+               delta = newcontribution;
+         }
+      }
+   }
+   else if( hugevaloldcont )
+   {
+      /* old contribution was too large and positive */
+      if( oldcontribution > 0.0 )
+      {
+         assert((*activityposhuge) >= 1);
+
+         /* decrease the counter for huge positive contributions; it might be increased again later,
+          * but checking here that the bound is not huge again would not handle a change from a huge to an infinite bound
+          */
+         (*activityposhuge)--;
+
+         if( !finitenewbound )
+         {
+            /* if the bound changed to +infinity, increase the counter for positive infinite contributions */
+            if( newbound > 0.0 )
+               (*activityposinf)++;
+            /* if the bound changed to -infinity, increase the counter for negative infinite contributions */
+            else
+               (*activityneginf)++;
+         }
+         else if( hugevalnewcont )
+         {
+            /* if the contribution of this variable is too large and positive, increase the corresponding counter */
+            if( newcontribution > 0.0 )
+               (*activityposhuge)++;
+            /* if the contribution of this variable is too large and negative, increase the corresponding counter */
+            else
+               (*activityneghuge)++;
          }
          /* "normal case": just add the contribution to the activity */
          else
-            delta = val * newbound;
+            delta = newcontribution;
       }
-   }
-   /* old bound was -infinity */
-   else if( SCIPisInfinity(scip, -oldbound) )
-   {
-      assert((*activityneginf) >= 1);
-
-      /* we only have to do something ig the new bound is not again -infinity */
-      if( !SCIPisInfinity(scip, -newbound) )
+      /* old contribution was too large and negative */
+      else
       {
-         /* decrease the counter for negative infinite contributions */
-         (*activityneginf)--;
+         assert(oldcontribution < 0.0);
+         assert((*activityneghuge) >= 1);
 
-         /* if the bound changed to +infinity, increase the counter for positive infinite contributions */
-         if( SCIPisInfinity(scip, newbound) )
-            (*activityposinf)++;
-         /* if the contribution of this variable is too large, increase the counter for huge values */
-         else if( SCIPisHugeValue(scip, val * newbound) )
+         /* decrease the counter for huge negative contributions; it might be increased again later,
+          * but checking here that the bound is not huge again would not handle a change from a huge to an infinite bound
+          */
+         (*activityneghuge)--;
+
+         if( !finitenewbound )
          {
-            (*activityposhuge)++;
+            /* if the bound changed to +infinity, increase the counter for positive infinite contributions */
+            if( newbound > 0.0 )
+               (*activityposinf)++;
+            /* if the bound changed to -infinity, increase the counter for negative infinite contributions */
+            else
+               (*activityneginf)++;
          }
-         else if( SCIPisHugeValue(scip, -val * newbound) )
+         else if( hugevalnewcont )
          {
-            (*activityneghuge)++;
+            /* if the contribution of this variable is too large and positive, increase the corresponding counter */
+            if( newcontribution > 0.0 )
+               (*activityposhuge)++;
+            /* if the contribution of this variable is too large and negative, increase the corresponding counter */
+            else
+               (*activityneghuge)++;
          }
          /* "normal case": just add the contribution to the activity */
          else
-            delta = val * newbound;
+            delta = newcontribution;
       }
-   }
-   /* old contribution was too large and positive */
-   else if( SCIPisHugeValue(scip, val * oldbound) )
-   {
-      assert((*activityposhuge) >= 1);
-
-      /* decrease the counter for huge positive contributions; it might be increased again later,
-       * but checking here that the bound is not huge again would not handle a change from a huge to an infinite bound
-       */
-      (*activityposhuge)--;
-
-      /* if the bound changed to +infinity, increase the counter for positive infinite contributions */
-      if( SCIPisInfinity(scip, newbound) )
-         (*activityposinf)++;
-      /* if the bound changed to -infinity, increase the counter for negative infinite contributions */
-      else if( SCIPisInfinity(scip, -newbound) )
-         (*activityneginf)++;
-      /* if the contribution of this variable is too large and positive, increase the corresponding counter */
-      else if( SCIPisHugeValue(scip, val * newbound) )
-      {
-         (*activityposhuge)++;
-      }
-      /* if the contribution of this variable is too large and negative, increase the corresponding counter */
-      else if( SCIPisHugeValue(scip, -val * newbound) )
-      {
-         (*activityneghuge)++;
-      }
-      /* "normal case": just add the contribution to the activity */
-      else
-         delta = val * newbound;
-   }
-   /* old contribution was too large and negative */
-   else if( SCIPisHugeValue(scip, -val * oldbound) )
-   {
-      assert((*activityneghuge) >= 1);
-
-      /* decrease the counter for huge negative contributions; it might be increased again later,
-       * but checking here that the bound is not huge again would not handle a change from a huge to an infinite bound
-       */
-      (*activityneghuge)--;
-
-      /* if the bound changed to +infinity, increase the counter for positive infinite contributions */
-      if( SCIPisInfinity(scip, newbound) )
-         (*activityposinf)++;
-      /* if the bound changed to -infinity, increase the counter for negative infinite contributions */
-      else if( SCIPisInfinity(scip, -newbound) )
-         (*activityneginf)++;
-      /* if the contribution of this variable is too large and positive, increase the corresponding counter */
-      else if( SCIPisHugeValue(scip, val * newbound) )
-      {
-         (*activityposhuge)++;
-      }
-      /* if the contribution of this variable is too large and negative, increase the corresponding counter */
-      else if( SCIPisHugeValue(scip, -val * newbound) )
-      {
-         (*activityneghuge)++;
-      }
-      /* "normal case": just add the contribution to the activity */
-      else
-         delta = val * newbound;
    }
    /* old bound was finite and not too large */
    else
    {
-      /* if the new bound is +infinity, the old contribution has to be subtracted
-       * and the counter for positive infinite contributions has to be increased
-       */
-      if( SCIPisInfinity(scip, newbound) )
+      if( !finitenewbound )
       {
-         (*activityposinf)++;
-         delta = -val * oldbound;
-      }
-      /* if the new bound is -infinity, the old contribution has to be subtracted
-       * and the counter for negative infinite contributions has to be increased
-       */
-      else if( SCIPisInfinity(scip, -newbound) )
-      {
-         (*activityneginf)++;
-         delta = -val * oldbound;
+         /* if the new bound is +infinity, the old contribution has to be subtracted
+          * and the counter for positive infinite contributions has to be increased
+          */
+         if( newbound > 0.0 )
+         {
+            (*activityposinf)++;
+            delta = -oldcontribution;
+         }
+         /* if the new bound is -infinity, the old contribution has to be subtracted
+          * and the counter for negative infinite contributions has to be increased
+          */
+         else
+         {
+            assert(newbound < 0.0 );
+
+            (*activityneginf)++;
+            delta = -oldcontribution;
+         }
       }
       /* if the contribution of this variable is too large, increase the counter for huge values */
-      else if( SCIPisHugeValue(scip, val * newbound) )
+      else if( hugevalnewcont )
       {
-         (*activityposhuge)++;
-         delta = -val * oldbound;
-      }
-      else if( SCIPisHugeValue(scip, -val * newbound) )
-      {
-         (*activityneghuge)++;
-         delta = -val * oldbound;
+         if( newcontribution > 0.0 )
+         {
+            (*activityposhuge)++;
+            delta = -oldcontribution;
+         }
+         else
+         {
+            (*activityneghuge)++;
+            delta = -oldcontribution;
+         }
       }
       /* "normal case": just update the activity */
       else
-         delta = val * (newbound - oldbound);
+         delta = newcontribution - oldcontribution;
    }
 
    /* update the activity, if the current value is valid and there was a change in the finite part */
@@ -1898,6 +1962,16 @@ void consdataUpdateAddCoef(
       consdata->maxabsval = MAX(consdata->maxabsval, absval);
    }
 
+   if( consdata->validminabsval )
+   {
+      SCIP_Real absval;
+
+      assert(consdata->minabsval < SCIP_INVALID);
+
+      absval = REALABS(val);
+      consdata->minabsval = MIN(consdata->minabsval, absval);
+   }
+
    /* update minimal and maximal activity */
    if( consdata->validactivities )
    {
@@ -1938,6 +2012,20 @@ void consdataUpdateDelCoef(
       {
          consdata->validmaxabsval = FALSE;
          consdata->maxabsval = SCIP_INVALID;
+      }
+   }
+
+   /* invalidate minimum absolute value, if this coefficient was the minimum */
+   if( consdata->validminabsval )
+   {
+      SCIP_Real absval;
+
+      absval = REALABS(val);
+
+      if( SCIPisEQ(scip, absval, consdata->minabsval) )
+      {
+         consdata->validminabsval = FALSE;
+         consdata->minabsval = SCIP_INVALID;
       }
    }
 
@@ -2001,6 +2089,31 @@ void consdataUpdateChgCoef(
       }
    }
 
+   /* update minimum absolute value */
+   if( consdata->validminabsval )
+   {
+      SCIP_Real absval;
+
+      absval = REALABS(newval);
+
+      if( SCIPisLE(scip, absval, consdata->minabsval) )
+      {
+         consdata->minabsval = absval;
+      }
+      else
+      {
+         absval = REALABS(oldval);
+
+         /* invalidate minimum absolute value */
+         if( SCIPisEQ(scip, absval, consdata->minabsval) )
+         {
+            consdata->validminabsval = FALSE;
+            consdata->minabsval = SCIP_INVALID;
+         }
+      }
+   }
+
+
    /* update maximum activity delta */
    if( !SCIPisInfinity(scip, consdata->maxactdelta ) )
    {
@@ -2047,6 +2160,22 @@ SCIP_Real consdataGetMaxAbsval(
    return consdata->maxabsval;
 }
 
+/** returns the minimum absolute value of all coefficients in the constraint */
+static
+SCIP_Real consdataGetMinAbsval(
+   SCIP_CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( !consdata->validminabsval )
+      consdataCalcMinAbsval(consdata);
+   assert(consdata->validminabsval);
+   assert(consdata->minabsval < SCIP_INVALID);
+
+   return consdata->minabsval;
+}
+
 /** calculates minimum and maximum local and global activity for constraint from scratch;
  *  additionally recalculates maximum absolute value of coefficients
  */
@@ -2066,13 +2195,15 @@ void consdataCalcActivities(
    assert(consdata->glbminactivity >= SCIP_INVALID || consdata->validglbminact);
    assert(consdata->glbmaxactivity >= SCIP_INVALID || consdata->validglbmaxact);
 
-   consdata->validmaxabsval = TRUE;
+   consdata->validmaxabsval = FALSE;
+   consdata->validminabsval = FALSE;
    consdata->validactivities = TRUE;
    consdata->validminact = TRUE;
    consdata->validmaxact = TRUE;
    consdata->validglbminact = TRUE;
    consdata->validglbmaxact = TRUE;
-   consdata->maxabsval = 0.0;
+   consdata->maxabsval = SCIP_INVALID;
+   consdata->minabsval = SCIP_INVALID;
    consdata->minactivity = 0.0;
    consdata->maxactivity = 0.0;
    consdata->lastminactivity = 0.0;
@@ -3903,6 +4034,7 @@ SCIP_RETCODE normalizeCons(
    SCIP_Real epsilon;
    SCIP_Real feastol;
    SCIP_Real maxabsval;
+   SCIP_Real minabsval;
    SCIP_Bool success;
    SCIP_Bool onlyintegral;
    int nvars;
@@ -3943,8 +4075,13 @@ SCIP_RETCODE normalizeCons(
    assert(vars != NULL);
    assert(vals != NULL);
 
-   /* get maximal absolute coefficient */
+   /* get maximal and minimal absolute coefficient */
    maxabsval = consdataGetMaxAbsval(consdata);
+   minabsval = consdataGetMinAbsval(consdata);
+
+   /* return if scaling by maxval will eliminate coefficients */
+   if( SCIPisZero(scip, minabsval/maxabsval) )
+      return SCIP_OKAY;
 
    /* check if all coefficients are in absolute value equal, and not 1.0 */
    if( !SCIPisEQ(scip, maxabsval, 1.0) )
@@ -3955,40 +4092,44 @@ SCIP_RETCODE normalizeCons(
 
       for( v = nvars - 1; v >= 0; --v )
       {
-	 if( !SCIPisEQ(scip, REALABS(vals[v]), maxabsval) )
-	 {
-	    abscoefsequ = FALSE;
-	    break;
-	 }
+         if( !SCIPisEQ(scip, REALABS(vals[v]), maxabsval) )
+         {
+            abscoefsequ = FALSE;
+            break;
+         }
       }
 
       /* all coefficients are in absolute value equal, so change them to (-)1.0 */
       if( abscoefsequ )
       {
-	 SCIPdebugMessage("divide linear constraint with %g, because all coefficients are in absolute value the same\n", maxabsval);
-	 SCIPdebugPrintCons(scip, cons, NULL);
-	 SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
+         SCIPdebugMessage("divide linear constraint with %g, because all coefficents are in absolute value the same\n", maxabsval);
+         SCIPdebugPrintCons(scip, cons, NULL);
+         SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
 
-	 if( consdata->validmaxabsval )
-	 {
-	    if( !SCIPisEQ(scip, consdata->maxabsval, 1.0) )
-	       consdata->maxabsval = 1.0;
+         if( consdata->validmaxabsval )
+         {
+            if( !SCIPisEQ(scip, consdata->maxabsval, 1.0) )
+               consdata->maxabsval = 1.0;
+            if( !SCIPisEQ(scip, consdata->minabsval, 1.0) )
+               consdata->minabsval = 1.0;
 
-	    maxabsval = 1.0;
-	 }
-	 else
-	 {
-	    /* get maximal absolute coefficient */
-	    maxabsval = consdataGetMaxAbsval(consdata);
-	 }
+            maxabsval = 1.0;
+            minabsval = 1.0;
+         }
+         else
+         {
+            /* get maximal absolute coefficient */
+            maxabsval = consdataGetMaxAbsval(consdata);
+            minabsval = consdataGetMinAbsval(consdata);
+         }
 
-	 /* get new consdata information, because scalecons() might have deleted variables */
-	 vals = consdata->vals;
-	 nvars = consdata->nvars;
-	 vars = consdata->vars;
+         /* get new consdata information, because scalecons() might have deleted variables */
+         vals = consdata->vals;
+         nvars = consdata->nvars;
+         vars = consdata->vars;
 
-	 assert(nvars == 0 || vars != NULL);
-	 assert(nvars == 0 || vals != NULL);
+         assert(nvars == 0 || vars != NULL);
+         assert(nvars == 0 || vals != NULL);
       }
    }
 
@@ -4155,12 +4296,23 @@ SCIP_RETCODE normalizeCons(
 
       if( consdata->validmaxabsval )
       {
-	 consdata->maxabsval *= REALABS((SCIP_Real)scm);
+         consdata->maxabsval *= REALABS((SCIP_Real)scm);
          if( !SCIPisIntegral(scip, consdata->maxabsval) )
          {
             consdata->validmaxabsval = FALSE;
             consdata->maxabsval = SCIP_INVALID;
             consdataCalcMaxAbsval(consdata);
+         }
+      }
+
+      if( consdata->validminabsval )
+      {
+         consdata->minabsval *= REALABS((SCIP_Real)scm);
+         if( !SCIPisIntegral(scip, consdata->minabsval) )
+         {
+            consdata->validminabsval = FALSE;
+            consdata->minabsval = SCIP_INVALID;
+            consdataCalcMinAbsval(consdata);
          }
       }
 
@@ -4195,6 +4347,10 @@ SCIP_RETCODE normalizeCons(
          if( consdata->validmaxabsval )
          {
             consdata->maxabsval /= REALABS((SCIP_Real)gcd);
+         }
+         if( consdata->validminabsval )
+         {
+            consdata->minabsval /= REALABS((SCIP_Real)gcd);
          }
       }
    }
@@ -8469,7 +8625,8 @@ SCIP_RETCODE tightenSides(
    return SCIP_OKAY;
 }
 
-#define MAXVALRECOMP 1e+06
+#define MAXVALRECOMP  1e+06
+#define MINVALRECOMP -1e+05
 
 /** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
  *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continuous variable  li <= xi <= ui
@@ -8544,7 +8701,8 @@ SCIP_RETCODE consdataTightenCoefs(
 
    /* @todo Is this still needed with automatic recomputation of activities? */
    /* if the maximal coefficient is too large, recompute the activities */
-   if( consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP )
+   if( (consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP)
+      || (consdata->validminabsval && consdata->minabsval < MINVALRECOMP) )
    {
       consdataRecomputeMinactivity(scip, consdata);
       consdataRecomputeMaxactivity(scip, consdata);
@@ -10942,8 +11100,10 @@ SCIP_RETCODE simplifyInequalities(
 
    /* normalize constraint */
    SCIP_CALL( normalizeCons(scip, cons) );
-   assert(consdata->normalized);
    assert(nvars == consdata->nvars);
+
+   if( !consdata->normalized )
+      return SCIP_OKAY;
 
    lhs = consdata->lhs;
    rhs = consdata->rhs;
@@ -11226,7 +11386,8 @@ SCIP_RETCODE simplifyInequalities(
       else
          ++v;
 
-      SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n", v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
+      SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n",
+            v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
       /* check if we can remove redundant variables */
       if( v < nvars && (redundant ||
@@ -11816,7 +11977,6 @@ SCIP_RETCODE simplifyInequalities(
    assert(nvars >= 2);
 
    /* start gcd procedure for all variables */
-
    do
    {
       oldnchgcoefs = *nchgcoefs;
@@ -15548,6 +15708,9 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
 
@@ -15566,14 +15729,19 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
-      /* update the activity values */
-      if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-         consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
-      else
+      if( SCIPconsIsActive(cons) )
       {
-         assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-         consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         /* update the activity values */
+         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+            consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         else
+         {
+            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+            consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         }
       }
+      else
+         consdataInvalidateActivities(consdata);
 
       consdata->presolved = FALSE;
       consdata->rangedrowpropagation = FALSE;

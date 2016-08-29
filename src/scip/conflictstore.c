@@ -115,11 +115,6 @@ SCIP_RETCODE conflictstoreEnsureMem(
       {
          SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
       }
-
-      if( conflictstore->rootdualrays == NULL )
-      {
-         SCIP_CALL( SCIPqueueCreate(&conflictstore->rootdualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 2.0) );
-      }
    }
    assert(num <= conflictstore->conflictsize);
 
@@ -382,7 +377,6 @@ SCIP_RETCODE SCIPconflictstoreCreate(
 
    (*conflictstore)->conflicts = NULL;
    (*conflictstore)->dualrays = NULL;
-   (*conflictstore)->rootdualrays = NULL;
    (*conflictstore)->primalbounds = NULL;
    (*conflictstore)->slotqueue = NULL;
    (*conflictstore)->orderqueue = NULL;
@@ -472,16 +466,6 @@ SCIP_RETCODE SCIPconflictstoreFree(
       SCIPqueueFree(&(*conflictstore)->dualrays);
    }
 
-   if( (*conflictstore)->rootdualrays != NULL )
-   {
-      while( !SCIPqueueIsEmpty((*conflictstore)->rootdualrays) )
-      {
-         SCIP_CONS* dualray = SCIPqueueRemove((*conflictstore)->rootdualrays);
-         SCIP_CALL( SCIPconsRelease(&dualray, blkmem, set) );
-      }
-      SCIPqueueFree(&(*conflictstore)->rootdualrays);
-   }
-
    BMSfreeMemoryArrayNull(&(*conflictstore)->conflicts);
    BMSfreeMemoryArrayNull(&(*conflictstore)->primalbounds);
    BMSfreeMemory(conflictstore);
@@ -496,8 +480,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_Bool             cutoffroot,         /**< the dual ray separates the root LP solution */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< pointer to store whether the dualray was excepted */
    )
 {
    SCIP_CONS* olddualray;
@@ -508,43 +491,25 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
 
    *success = TRUE;
 
-   if( cutoffroot )
+   SCIP_CALL( SCIPconsGetNVars(dualray, set, &nvars, success) );
+   assert(success);
+
+   if( conflictstore->dualrays == NULL )
    {
-
-      if( conflictstore->rootdualrays == NULL )
-      {
-         SCIP_CALL( SCIPqueueCreate(&conflictstore->rootdualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 2.0) );
-      }
-      SCIP_CALL( SCIPqueueInsert(conflictstore->rootdualrays, (void*)dualray) );
-      SCIPconsCapture(dualray);
+      SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
    }
-   else
+
+   while( SCIPqueueNElems(conflictstore->dualrays) >= DEFAULT_CONFLICTSTORE_DUALSIZE )
    {
-      SCIP_CALL( SCIPconsGetNVars(dualray, set, &nvars, success) );
-      assert(success);
+      olddualray = (SCIP_CONS*)SCIPqueueRemove(conflictstore->dualrays);
 
-      if( nvars > 40 && ((SCIP_Real)nvars)/transprob->nvars > 0.4 )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
-
-      if( conflictstore->dualrays == NULL )
-      {
-         SCIP_CALL( SCIPqueueCreate(&conflictstore->dualrays, DEFAULT_CONFLICTSTORE_DUALSIZE, 1.0) );
-      }
-
-      while( SCIPqueueNElems(conflictstore->dualrays) >= DEFAULT_CONFLICTSTORE_DUALSIZE )
-      {
-         olddualray = (SCIP_CONS*)SCIPqueueRemove(conflictstore->dualrays);
-         SCIP_CALL( SCIPconsDelete(olddualray, blkmem, set, stat, transprob) );
-         SCIP_CALL( SCIPconsRelease(&olddualray, blkmem, set) );
-      }
-      assert(SCIPqueueNElems(conflictstore->dualrays) < DEFAULT_CONFLICTSTORE_DUALSIZE);
-
-      SCIPconsCapture(dualray);
-      SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
+      SCIP_CALL( SCIPconsDelete(olddualray, blkmem, set, stat, transprob) );
+      SCIP_CALL( SCIPconsRelease(&olddualray, blkmem, set) );
    }
+   assert(SCIPqueueNElems(conflictstore->dualrays) < DEFAULT_CONFLICTSTORE_DUALSIZE);
+
+   SCIP_CALL( SCIPqueueInsert(conflictstore->dualrays, (void*)dualray) );
+   SCIPconsCapture(dualray);
 
    return SCIP_OKAY;
 }
@@ -575,7 +540,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(transprob != NULL);
-   assert(eventfilter != NULL);
    assert(cons != NULL);
    assert(node != NULL);
    assert(validnode != NULL);
@@ -905,4 +869,14 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    conflictstore->nconflicts -= (ndelconfs+ndelconfs_del);
 
    return SCIP_OKAY;
+}
+
+/* return the maximal size of the conflict pool */
+int SCIPconflictstoreGetMaxPoolSize(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   )
+{
+   assert(conflictstore != NULL);
+
+   return conflictstore->maxstoresize;
 }

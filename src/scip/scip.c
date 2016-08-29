@@ -795,6 +795,10 @@ SCIP_RETCODE SCIPfree(
    return SCIP_OKAY;
 }
 
+#undef SCIPgetStage
+#undef SCIPhasPerformedPresolve
+#undef SCIPisStopped
+
 /** returns current stage of SCIP
  *
  *  @return the current SCIP stage
@@ -11963,7 +11967,7 @@ SCIP_RETCODE SCIPaddConflict(
          validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, conftype, cutoffinvolved,
          primalbound) );
 
-   SCIPconsMarkConflict(cons);
+//   SCIPconsMarkConflict(cons);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;
@@ -39747,7 +39751,17 @@ void printConflictStatistics(
    FILE*                 file                /**< output file */
    )
 {
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success    DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
+   char poolsize[SCIP_MAXSTRLEN];
+
+   if( scip->set->conf_maxstoresize == 0 )
+   {
+      (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "-");
+   }
+   else
+   {
+      (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "%d", SCIPconflictstoreGetMaxPoolSize(scip->conflictstore));
+   }
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success    DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters   (maximal pool size: %s)\n", poolsize);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),

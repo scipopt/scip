@@ -64,8 +64,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_Bool             cutoffroot,         /**< the dual ray separates the root LP solution */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< pointer to store whether the dualray was excepted */
    );
 
 /** adds a conflict to the conflict storage */
@@ -108,13 +107,10 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    SCIP_Real             cutoffbound         /**< current cutoff bound */
    );
 
+/* return the maximal size of the conflict pool */
 extern
-SCIP_RETCODE SCIPconflictstoreDualRayStats(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
-   int                   initsize,
-   int                   heursize,
-   int                   nconfsets,
-   int                   nclauses
+int SCIPconflictstoreGetMaxPoolSize(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
    );
 
 #ifdef __cplusplus
