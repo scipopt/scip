@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+/*#define SCIP_DEBUG*/
+#define BINARY_CONSTRAINT
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -41,7 +42,7 @@
 #include "type_var.h"
 
 #define BRANCHRULE_NAME            "lookahead"
-#define BRANCHRULE_DESC            "fullstrong branching with depth of 2" /* TODO CS: expand description */
+#define BRANCHRULE_DESC            "fullstrong branching over two levels"
 #define BRANCHRULE_PRIORITY        536870911
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
@@ -50,14 +51,18 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary branching rule data */
-
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   /* TODO CS: fix this!!! */
-   SCIP_SOL**              previoussolution;
+   /* TODO CS: fix this pointer */
+   SCIP_SOL**            previoussolution;
    SCIP_VAR*             prviousbranchinvar;
+#ifdef SCIP_STATISTICS
+   int                   nfirstlvllps;       /**/
+   int                   nsecondlvllps;      /**/
+   int                   nfirstlvlcutoffs;   /**/
+   int                   nsecondlvlcutoffs;  /**/
+#endif
 };
 
 typedef struct
@@ -521,11 +526,17 @@ SCIP_Bool isConstraintInvalidInBaseSolution(
 {
    SCIP_Real basesolval;
    SCIP_Real deepsolval;
+   SCIP_Bool result;
 
    basesolval = SCIPgetSolVal(scip, baselpsol, basevarforbound);
    deepsolval = SCIPgetSolVal(scip, baselpsol, deepvarforbound);
+   result = SCIPisGT(scip, basesolval + deepsolval, 1);
+#ifdef BINARY_CONSTRAINT
+   SCIPinfoMessage(scip, NULL, "The given values <%g> from <%s> and <%g> from <%s> have result <%s>.\n", basesolval,
+      SCIPvarGetName(basevarforbound), deepsolval, SCIPvarGetName(deepvarforbound), result ? "true" : "false");
+#endif
 
-   return SCIPisGT(scip, basesolval + deepsolval, 1);
+   return result;
 }
 
 static
@@ -552,6 +563,13 @@ SCIP_RETCODE addGrandChildIntegerBound(
       SCIP_CALL( createConstraintName(scip, basevarforbound, deepvarforbound, &constraintname) );
       SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, constraintname, 2, vars, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
          FALSE, FALSE, FALSE, FALSE) );
+
+#ifdef BINARY_CONSTRAINT
+      SCIPinfoMessage(scip, NULL, "Adding following constraint:\n");
+      SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
       SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
 
@@ -563,9 +581,9 @@ SCIP_RETCODE addGrandChildIntegerBound(
    else
    {
       /* add the constraint to the buffer and add them all later to the problem */
-      BinaryBoundEntry** newentry = &binarybounddata->entries[binarybounddata->nentries];
+      /*BinaryBoundEntry** newentry = &binarybounddata->entries[binarybounddata->nentries];
       SCIP_CALL( allocBinaryBoundEntry(scip, newentry) );
-      initBinaryBoundEntry(*newentry, basevarforbound, deepvarforbound);
+      initBinaryBoundEntry(*newentry, basevarforbound, deepvarforbound);*/
 
       *newconstadded = FALSE;
    }
@@ -607,7 +625,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    initBranchingResultData(scip, downresultdata);
    initBranchingResultData(scip, upresultdata);
 
-   SCIPdebugMessage("Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+#ifdef BINARY_CONSTRAINT
+   SCIPinfoMessage(scip, NULL, "Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+#endif
    SCIP_CALL( executeBranchingOnUpperBound(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
 
    if( downresultdata->lperror )
@@ -623,7 +643,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
       /* go back one layer (we are currently in depth 2) */
       SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
 
-      SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+#ifdef BINARY_CONSTRAINT
+      SCIPinfoMessage(scip, NULL, "Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+#endif
       SCIP_CALL( executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
 
       if( upresultdata->lperror )
@@ -674,7 +696,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
             if( upresultdata->cutoff )
             {
-               /*if( SCIPvarIsBinary(deepbranchvar) )
+               if( SCIPvarIsBinary(deepbranchvar) )
                {
                   SCIP_Bool consadded;
                   SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepbranchvar, binarybounddata, &consadded) );
@@ -683,12 +705,12 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                   {
                      *result = SCIP_CONSADDED;
                   }
-               }*/
+               }
                addSupposedUpperBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
             if( downresultdata->cutoff )
             {
-               /*if( SCIPvarIsBinary(deepbranchvar) )
+               if( SCIPvarIsBinary(deepbranchvar) )
                {
                   SCIP_Bool consadded;
                   SCIP_VAR* deepvarforbound;
@@ -700,7 +722,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                   {
                      *result = SCIP_CONSADDED;
                   }
-               }*/
+               }
                addSupposedLowerBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
          }
@@ -758,6 +780,15 @@ SCIP_RETCODE executeDeepBranching(
       {
          SCIPdebugMessage("The deeper lp on variable <%s> is cutoff, as both lps are cutoff.\n",
             SCIPvarGetName(deepbranchvar));
+         break;
+      }
+
+      if( *result == SCIP_CONSADDED )
+      {
+#ifdef BINARY_CONSTRAINT
+         SCIPinfoMessage(scip, NULL, "The deep branching is stopped, as a implied binary constraint was found, which invalidated the base LP.\n",
+            SCIPvarGetName(deepbranchvar));
+#endif
          break;
       }
    }
@@ -1077,7 +1108,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
          branchval = lpcandssol[i];
 
          SCIPdebugMessage("Start branching on variable <%s>\n", SCIPvarGetName(branchvar));
-         SCIPdebugMessage("First level down branching on variable <%s>\n", SCIPvarGetName(branchvar));
+#ifdef BINARY_CONSTRAINT
+         SCIPinfoMessage(scip, NULL, "First level down branching on variable <%s>\n", SCIPvarGetName(branchvar));
+#endif
          SCIP_CALL( executeBranchingOnUpperBound(scip, branchvar, branchval, downbranchingresult) );
 
          if( !downbranchingresult->lperror && !downbranchingresult->cutoff )
@@ -1098,10 +1131,17 @@ SCIP_RETCODE selectVarLookaheadBranching(
             break;
          }
 
+         if( *result == SCIP_CONSADDED )
+         {
+            break;
+         }
+
          SCIPdebugMessage("Going back to layer 0.\n");
          SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
 
-         SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
+#ifdef BINARY_CONSTRAINT
+         SCIPinfoMessage(scip, NULL, "First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
+#endif
          SCIP_CALL( executeBranchingOnLowerBound(scip, branchvar, branchval, upbranchingresult) );
 
          if( !upbranchingresult->lperror && !upbranchingresult->cutoff )
@@ -1119,6 +1159,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
          {
             *result = SCIP_DIDNOTFIND;
             SCIPdebugMessage("There occurred an error while solving an lp of the lower bounded branch.\n");
+            break;
+         }
+
+         if( *result == SCIP_CONSADDED )
+         {
             break;
          }
 
@@ -1324,7 +1369,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIPfreeBufferArray(scip, &lpcandssol);
    SCIPfreeBufferArray(scip, &lpcands);
 
-   SCIPdebugMessage("Exiting branchExeclpLookahead.\n");
+#ifdef BINARY_CONSTRAINT
+   SCIPinfoMessage(scip, NULL, "Exiting branchExeclpLookahead.\n");
+#endif
 
    return SCIP_OKAY;
 }
