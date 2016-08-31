@@ -191,8 +191,10 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
 #define SCIPstatDebugMsg(set, ...)      SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPstatDebugMsgPrint(set, ...) SCIPstatPrintDebugMessagePrint(stat, __VA_ARGS__)
 #else
 #define SCIPstatDebugMsg(set, ...)      while ( FALSE ) SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPstatDebugMsgPrint(set, ...) while ( FALSE ) SCIPstatPrintDebugMessagePrint(stat, __VA_ARGS__)
 #endif
 
 #else
@@ -200,9 +202,11 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
-#define SCIPstatDebugMsg                printf("debug: "), SCIPstatDebugMsgPrint
+#define SCIPstatDebugMsg                printf("debug: "), SCIPstatDebugMessagePrint
+#define SCIPstatDebugMsgPrint           SCIPstatDebugMessagePrint
 #else
-#define SCIPstatDebugMsg                while ( FALSE ) SCIPstatDebugMsgPrint
+#define SCIPstatDebugMsg                while ( FALSE ) SCIPstatDebugMessagePrint
+#define SCIPstatDebugMsgPrint           while ( FALSE ) SCIPstatDebugMessagePrint
 #endif
 
 #endif
@@ -220,7 +224,7 @@ void SCIPstatPrintDebugMessage(
 
 /** prints a debug message without precode */
 EXTERN
-void SCIPstatDebugMsgPrint(
+void SCIPstatDebugMessagePrint(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */

@@ -413,8 +413,10 @@ void SCIPdisableDebugSol(
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
 #define SCIPdebugMsg(scip, ...)         SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPdebugMsgPrint(scip, ...)    SCIPdebugMessagePrint(scip, __VA_ARGS__)
 #else
 #define SCIPdebugMsg(scip, ...)         while ( FALSE ) SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPdebugMsgPrint(scip, ...)    while ( FALSE ) SCIPdebugMessagePrint(scip, __VA_ARGS__)
 #endif
 
 #else
@@ -422,9 +424,11 @@ void SCIPdisableDebugSol(
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
-#define SCIPdebugMsg                    printf("debug: "), SCIPdebugMsgPrint
+#define SCIPdebugMsg                    printf("debug: "), SCIPdebugMessagePrint
+#define SCIPdebugMsgPrint               SCIPdebugMessagePrint
 #else
-#define SCIPdebugMsg                    while ( FALSE ) SCIPdebugMsgPrint
+#define SCIPdebugMsg                    while ( FALSE ) SCIPdebugMessagePrint
+#define SCIPdebugMsgPrint               while ( FALSE ) SCIPdebugMessagePrint
 #endif
 
 #endif
@@ -494,7 +498,7 @@ void SCIPprintDebugMessage(
 
 /** prints a debug message without precode */
 EXTERN
-void SCIPdebugMsgPrint(
+void SCIPdebugMessagePrint(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */

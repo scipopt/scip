@@ -1289,7 +1289,7 @@ void SCIPprintDebugMessage(
 }
 
 /** prints a debug message without precode */
-void SCIPdebugMsgPrint(
+void SCIPdebugMessagePrint(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */

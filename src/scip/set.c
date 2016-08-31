@@ -6329,7 +6329,7 @@ void SCIPsetPrintDebugMessage(
 }
 
 /** prints a debug message without precode */
-void SCIPsetDebugMsgPrint(
+void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */

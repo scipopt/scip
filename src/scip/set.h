@@ -1823,8 +1823,10 @@ SCIP_Bool SCIPsetIsSumRelGE(
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
 #define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(scip, ...) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
 #else
 #define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(scip, ...) while ( FALSE ) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
 #endif
 
 #else
@@ -1832,9 +1834,11 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
-#define SCIPsetDebugMsg                 printf("debug: "), SCIPsetDebugMsgPrint
+#define SCIPsetDebugMsg                 printf("debug: "), SCIPsetDebugMessagePrint
+#define SCIPsetDebugMsgPrint            printf("debug: "), SCIPsetDebugMessagePrint
 #else
 #define SCIPsetDebugMsg                 while ( FALSE ) SCIPsetDebugMsgPrint
+#define SCIPsetDebugMsgPrint            while ( FALSE ) SCIPsetDebugMessagePrint
 #endif
 
 #endif
@@ -1852,7 +1856,7 @@ void SCIPsetPrintDebugMessage(
 
 /** prints a debug message without precode */
 EXTERN
-void SCIPsetDebugMsgPrint(
+void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
