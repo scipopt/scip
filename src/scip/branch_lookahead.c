@@ -13,7 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*#define SCIP_DEBUG*/
-/*#define BINARY_CONSTRAINT*/
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -21,25 +20,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/* TODO CS: with or without "scip/" as prefix? */
 #include "scip/branch_lookahead.h"
 
 #include <assert.h>
 #include <string.h>
 
-#include "cons_setppc.h"
-#include "def.h"
-#include "pub_branch.h"
-#include "pub_message.h"
-#include "pub_var.h"
-#include "scip.h"
-#include "type_branch.h"
-#include "type_lp.h"
-#include "type_result.h"
-#include "type_retcode.h"
-#include "type_scip.h"
-#include "type_sol.h"
-#include "type_tree.h"
-#include "type_var.h"
+#include "scip/cons_setppc.h"
+#include "scip/def.h"
+#include "scip/pub_branch.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip.h"
+#include "scip/type_branch.h"
+#include "scip/type_lp.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #define BRANCHRULE_NAME            "lookahead"
 #define BRANCHRULE_DESC            "fullstrong branching over two levels"
@@ -76,8 +76,8 @@ typedef struct
 {
    int                   varindex;
    int                   ncutoffs;
-   WeightData            upperbounddata;
-   WeightData            lowerbounddata;
+   WeightData*           upperbounddata;
+   WeightData*           lowerbounddata;
 } ScoreData;
 
 typedef struct
@@ -109,8 +109,8 @@ void initScoreData(
 {
    scoredata->ncutoffs = 0;
    scoredata->varindex = currentbranchvar;
-   initWeightData(&scoredata->lowerbounddata);
-   initWeightData(&scoredata->upperbounddata);
+   initWeightData(scoredata->lowerbounddata);
+   initWeightData(scoredata->upperbounddata);
 }
 
 static
@@ -509,16 +509,14 @@ SCIP_Bool isConstraintViolatedByBaseSolution(
 
    basesolval = SCIPgetSolVal(scip, baselpsol, basevarforbound);
    deepsolval = SCIPgetSolVal(scip, baselpsol, deepvarforbound);
-   result = SCIPisGT(scip, basesolval + deepsolval, 1);
-#ifdef BINARY_CONSTRAINT
-   SCIPinfoMessage(scip, NULL, "The given base lp values <%g> from <%s> (binary) and <%g> from <%s> (binary) have the sum <%g>.\n",
+   result = SCIPisGT(scip, basesolval + deepsolval, 1.0);
+   SCIPdebugMessage("The given base lp values <%g> from <%s> (binary) and <%g> from <%s> (binary) have the sum <%g>.\n",
       basesolval, SCIPvarGetName(basevarforbound), deepsolval, SCIPvarGetName(deepvarforbound), basesolval + deepsolval);
    if( result )
    {
-      SCIPinfoMessage(scip, NULL, "Thus the implied binary constraint <%s> + <%s> <= 1 is violated by the base lp.\n",
+      SCIPdebugMessage("Thus the implied binary constraint <%s> + <%s> <= 1 is violated by the base lp.\n",
          SCIPvarGetName(basevarforbound), SCIPvarGetName(deepvarforbound));
    }
-#endif
 
    return result;
 }
@@ -547,8 +545,8 @@ SCIP_RETCODE addGrandChildIntegerBound(
       SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, constraintname, 2, vars, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE,
          FALSE, FALSE, FALSE, FALSE) );
 
-#ifdef BINARY_CONSTRAINT
-      SCIPinfoMessage(scip, NULL, "Adding following constraint:\n");
+#ifdef PRINTNODECONS
+      SCIPdebugMessage("Adding following constraint:\n");
       SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -561,7 +559,7 @@ SCIP_RETCODE addGrandChildIntegerBound(
    else
    {
       /* add the constraint to the buffer and add them all later to the problem */
-      addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound);
+      SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound) );
 
       *newconstadded = FALSE;
    }
@@ -590,8 +588,6 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 {
    BranchingResultData* downresultdata;
    BranchingResultData* upresultdata;
-   SCIP_Real downgain;
-   SCIP_Real upgain;
    SCIP_Real currentweight;
 
    assert(scip != NULL);
@@ -637,6 +633,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
          if( !downresultdata->cutoff && !upresultdata->cutoff )
          {
+            SCIP_Real downgain;
+            SCIP_Real upgain;
+
             downgain = downresultdata->objval - lpobjval;
             upgain = upresultdata->objval - lpobjval;
 
@@ -688,7 +687,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                {
                   SCIP_Bool consadded;
                   SCIP_VAR* deepvarforbound;
-                  SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound);
+                  SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
 
                   SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepvarforbound, binarybounddata, &consadded) );
 
@@ -759,10 +758,7 @@ SCIP_RETCODE executeDeepBranching(
 
       if( *result == SCIP_CONSADDED )
       {
-#ifdef BINARY_CONSTRAINT
-         SCIPinfoMessage(scip, NULL, "The deep branching is stopped, as an implied binary constraint was found, which is violated by the base LP.\n",
-            SCIPvarGetName(deepbranchvar));
-#endif
+         SCIPdebugMessage("The deep branching is stopped, as an implied binary constraint was found, which is violated by the base LP.\n");
          break;
       }
    }
@@ -773,18 +769,18 @@ SCIP_RETCODE executeDeepBranching(
 static
 SCIP_RETCODE calculateAverageWeight(
    SCIP*                 scip,               /**< SCIP data structure */
-   WeightData            weightdata,         /**< calculation data for the average weight */
+   WeightData*           weightdata,         /**< calculation data for the average weight */
    SCIP_Real*            averageweight       /**< resulting average weight */
 )
 {
    assert(scip != NULL);
-   assert(!SCIPisFeasNegative(scip, weightdata.sumofweights));
-   assert(weightdata.numberofweights >= 0);
+   assert(!SCIPisFeasNegative(scip, weightdata->sumofweights));
+   assert(weightdata->numberofweights >= 0);
    assert(averageweight != NULL);
 
-   if( weightdata.numberofweights > 0 )
+   if( weightdata->numberofweights > 0 )
    {
-      *averageweight = (1 / weightdata.numberofweights) * weightdata.sumofweights;
+      *averageweight = (1.0 / weightdata->numberofweights) * weightdata->sumofweights;
    }
    else
    {
@@ -796,7 +792,7 @@ SCIP_RETCODE calculateAverageWeight(
 static
 SCIP_RETCODE calculateCurrentWeight(
    SCIP*                 scip,               /**< SCIP data structure */
-   ScoreData             scoredata,
+   ScoreData*            scoredata,
    SCIP_Real*            highestweight,
    int*                  highestweightindex
 )
@@ -807,25 +803,25 @@ SCIP_RETCODE calculateCurrentWeight(
    SCIP_Real totalweight;
 
    assert(scip != NULL);
-   assert(!SCIPisFeasNegative(scip, scoredata.upperbounddata.highestweight));
-   assert(!SCIPisFeasNegative(scip, scoredata.lowerbounddata.highestweight));
-   assert(!SCIPisFeasNegative(scip, scoredata.ncutoffs));
+   assert(!SCIPisFeasNegative(scip, scoredata->upperbounddata->highestweight));
+   assert(!SCIPisFeasNegative(scip, scoredata->lowerbounddata->highestweight));
+   assert(!SCIPisFeasNegative(scip, (SCIP_Real)scoredata->ncutoffs));
    assert(highestweight != NULL);
    assert(highestweightindex != NULL);
 
-   SCIP_CALL( calculateAverageWeight(scip, scoredata.upperbounddata, &averageweightupperbound) );
-   SCIP_CALL( calculateAverageWeight(scip, scoredata.lowerbounddata, &averageweightlowerbound) );
+   SCIP_CALL( calculateAverageWeight(scip, scoredata->upperbounddata, &averageweightupperbound) );
+   SCIP_CALL( calculateAverageWeight(scip, scoredata->lowerbounddata, &averageweightlowerbound) );
    lambda = averageweightupperbound + averageweightlowerbound;
 
    assert(!SCIPisFeasNegative(scip, lambda));
 
    SCIPdebugMessage("The lambda value is <%g>.\n", lambda);
 
-   totalweight = scoredata.lowerbounddata.highestweight + scoredata.upperbounddata.highestweight + scoredata.ncutoffs;
+   totalweight = scoredata->lowerbounddata->highestweight + scoredata->upperbounddata->highestweight + scoredata->ncutoffs;
    if( SCIPisFeasGT(scip, totalweight, *highestweight) )
    {
       *highestweight = totalweight;
-      *highestweightindex = scoredata.varindex;
+      *highestweightindex = scoredata->varindex;
    }
    return SCIP_OKAY;
 }
@@ -950,20 +946,17 @@ SCIP_RETCODE handleImpliedBinaryBounds(
 
    nentries = binarybounddata->nentries;
 
-#ifdef BINARY_CONSTRAINT
-      SCIPinfoMessage(scip, NULL, "Adding <%i> implied binary bounds.\n", nentries);
-#endif
+   SCIPdebugMessage("Adding <%i> implied binary bounds.\n", nentries);
    for( i = 0; i < nentries; i++ )
    {
       SCIP_VAR* eithervar;
       SCIP_VAR* othervar;
-      SCIP_VAR** constraintvars;
+      SCIP_VAR* constraintvars[2];
       SCIP_CONS* constraint;
       char constraintname[SCIP_MAXSTRLEN];
 
       eithervar = binarybounddata->eithervars[i];
       othervar = binarybounddata->othervars[i];
-      SCIPallocBufferArray(scip, &constraintvars, 2);
       constraintvars[0] = eithervar;
       constraintvars[1] = othervar;
 
@@ -971,16 +964,14 @@ SCIP_RETCODE handleImpliedBinaryBounds(
       SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, constraintname, 2, constraintvars, TRUE, TRUE, FALSE, FALSE, TRUE,
          TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-#ifdef BINARY_CONSTRAINT
-      SCIPinfoMessage(scip, NULL, "Adding following constraint:\n");
+#ifdef PRINTNODECONS
+      SCIPdebugMessage("Adding following constraint:\n");
       SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
       SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
-
-      SCIPfreeBufferArray(scip, &constraintvars);
    }
    return SCIP_OKAY;
 }
@@ -1086,22 +1077,21 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_Real highestscore = 0;
       int highestscoreindex = -1;
       int i;
-      int nvars;
 
       ValidBoundData* validbounds;
       SupposedBoundData* supposedbounds;
       BinaryBoundData* binarybounddata;
 
-      nvars = SCIPgetNVars(scip);
-
       /* allocate all structs */
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &scoredata) );
+      SCIP_CALL( SCIPallocBuffer(scip, &scoredata->lowerbounddata) );
+      SCIP_CALL( SCIPallocBuffer(scip, &scoredata->upperbounddata) );
 
       SCIP_CALL( allocValidBoundData(scip, &validbounds) );
       SCIP_CALL( allocSupposedBoundData(scip, &supposedbounds) );
-      SCIP_CALL( allocBinaryBoundData(scip, &binarybounddata, nvars*nvars) );
+      SCIP_CALL( allocBinaryBoundData(scip, &binarybounddata, 42) ); /* some random value. */
 
       /* init all structs */
       initBranchingResultData(scip, downbranchingresult);
@@ -1142,7 +1132,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &basevarforbound) );
             }
             SCIP_CALL( executeDeepBranching(scip, baselpsol, basenode, lpobjval, basevarforbound,
-               &downbranchingresult->cutoff, &downbranchingresult->lperror, &scoredata->upperbounddata,
+               &downbranchingresult->cutoff, &downbranchingresult->lperror, scoredata->upperbounddata,
                &scoredata->ncutoffs, supposedbounds, binarybounddata, result) );
          }
          if( downbranchingresult->lperror )
@@ -1171,7 +1161,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                basevarforbound = branchvar;
             }
             SCIP_CALL( executeDeepBranching(scip, baselpsol, basenode, lpobjval, basevarforbound,
-               &upbranchingresult->cutoff, &upbranchingresult->lperror, &scoredata->lowerbounddata, &scoredata->ncutoffs,
+               &upbranchingresult->cutoff, &upbranchingresult->lperror, scoredata->lowerbounddata, &scoredata->ncutoffs,
                supposedbounds, binarybounddata, result) );
          }
          if( upbranchingresult->lperror )
@@ -1207,7 +1197,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
          else
          {
-            SCIP_CALL( calculateCurrentWeight(scip, *scoredata, &highestscore, &highestscoreindex) );
+            SCIP_CALL( calculateCurrentWeight(scip, scoredata, &highestscore, &highestscoreindex) );
          }
       }
 
@@ -1238,6 +1228,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       freeSupposedBoundData(scip, &supposedbounds);
       freeValidBoundData(scip, &validbounds);
 
+      SCIPfreeBuffer(scip, &scoredata->upperbounddata);
+      SCIPfreeBuffer(scip, &scoredata->lowerbounddata);
       SCIPfreeBuffer(scip, &scoredata);
       SCIPfreeBuffer(scip, &upbranchingresult);
       SCIPfreeBuffer(scip, &downbranchingresult);
@@ -1403,9 +1395,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_VAR* var;
       SCIP_Real val;
 
-#ifdef BINARY_CONSTRAINT
-      SCIPinfoMessage(scip, NULL, "Branching based on previous solution.\n");
-#endif
+      SCIPdebugMessage("Branching based on previous solution.\n");
 
       var = branchruledata->prevbinbranchvar;
       val = branchruledata->prevbinbranchsol;
