@@ -13,10 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*
- * Global variables
- */
-
 #include "scip/nodesel_dfs.h"
 #include "scip/cons_integral.h"
 
@@ -39,6 +35,7 @@ SCIP_DECL_HEUREXEC(heurExecTest)
 }
 
 /* it can be called in SCIP_STAGE_PROBLEM and can get to
+ *  SCIP_STAGE_TRANSFORMED
  *  SCIP_STAGE_PRESOLVING
  *  SCIP_STAGE_PRESOLVED
  *  SCIP_STAGE_SOLVING
