@@ -16558,8 +16558,8 @@ SCIP_RETCODE SCIPlpGetSol(
       if( stillprimalfeasible )
       {
          stillprimalfeasible =
-            (SCIPsetIsInfinity(set,-lpirows[r]->lhs) ||SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs))
-            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs));
+            (SCIPsetIsInfinity(set,-lpirows[r]->lhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->activity - lpirows[r]->lhs))
+            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->activity - lpirows[r]->rhs));
       }
       if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
       {
@@ -16824,8 +16824,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
-            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs))
-            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs));
+            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->activity - lpirows[r]->lhs))
+            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->activity - lpirows[r]->rhs));
    }
 
    /* free temporary memory */
