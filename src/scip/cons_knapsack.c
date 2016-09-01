@@ -1486,12 +1486,16 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    return SCIP_OKAY;
 }
 
+#define SETIDX_SMALLER 0
+#define SETIDX_EQUAL 1
+#define SETIDX_LARGER 2
 
-/** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
- *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not 
- *  selected items
- */
-SCIP_RETCODE SCIPsolveKnapsackApproximately(
+/* minimal number of items to use Balas and Zemel */
+#define MINITEMSBALASZEMEL 25
+
+
+static
+SCIP_RETCODE solveKnapsackApproximatelyDantzig(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nitems,             /**< number of available items */
    SCIP_Longint*         weights,            /**< item weights */
@@ -1503,7 +1507,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
-   ) 
+   )
 {
    SCIP_Real* tempsort;
    SCIP_Longint solitemsweight;
@@ -1523,8 +1527,8 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    if( solval != NULL )
       *solval = 0.0;
 
-   /* sort items (plus corresponding arrays weights and profits) such that 
-    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n 
+   /* sort items (plus corresponding arrays weights and profits) such that
+    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    for( j = nitems - 1; j >= 0; --j )
@@ -1553,6 +1557,314 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    }
 
    SCIPfreeBufferArray(scip, &tempsort);
+
+   return SCIP_OKAY;
+}
+
+/** solves a knapsack problem (max profit sum s.t. capacity is not exceeded) approximately by using the
+ *  algorithm of Balas and Zemel that does not require sorting the items */
+static
+SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  items,              /**< item numbers */
+   int*                  solitems,           /**< array to store items in solution, or NULL */
+   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   )
+{
+   int* allitems;
+
+   int* subsets[3];
+   int subsetsize[3];
+   SCIP_Real* c2weightratios;
+   SCIP_Longint rescapa;
+   int i;
+   int nremainingitems;
+   SCIP_Real profit;
+
+   /* initialize data */
+   SCIP_CALL( SCIPallocBufferArray(scip, &allitems, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &c2weightratios, nitems) );
+
+   /* initialize the items  */
+   for( i = 0; i < nitems; ++i )
+   {
+      allitems[i] = i;
+      c2weightratios[i] = profits[i] / (SCIP_Real)weights[i];
+   }
+
+   /* initialize subsets */
+   for( i = 0; i < 3; ++i )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(subsets[i]), nitems) );
+   }
+
+
+   rescapa = capacity;
+   profit = 0.0;
+   nremainingitems = nitems;
+   /* perform a binary search of the median item */
+   while( nremainingitems >= MINITEMSBALASZEMEL )
+   {
+      SCIP_Longint weightlarger;
+      SCIP_Longint weightequal;
+      SCIP_Longint weightlargerorequal;
+      SCIP_Real lambda;
+      SCIP_Real firstvalues[3];
+      int subsettokeep;
+      int subsetstofix[2];
+      int* fixsolitems;
+      int* fixnsolitems;
+      SCIP_Real zeroprofit;
+      SCIP_Real* profitptr;
+
+      weightlarger = 0;
+      weightequal = 0;
+
+      zeroprofit = 0;
+      /* guess a lambda: we pick the median of the first three entries */
+      for( i = 0; i < 3; ++i )
+      {
+         firstvalues[i] = c2weightratios[allitems[i]];
+      }
+      SCIPsortReal(firstvalues, 3);
+      lambda = firstvalues[1];
+
+      /* reset subsets by setting their sizes to 0 */
+      for( i = 0; i < 3; ++i )
+         subsetsize[i] = 0;
+
+      /* loop over remaining items and fill sets with cost2weight ratios that are  >,=,< lambda */
+      for( i = 0; i < nremainingitems; ++i )
+      {
+         SCIP_Real c2weightratio = c2weightratios[allitems[i]];
+         SCIP_Longint weight = weights[allitems[i]];
+         int setidx = -1;
+
+         if( SCIPisGT(scip, c2weightratio, lambda) )
+         {
+            setidx = SETIDX_LARGER;
+            weightlarger += weight;
+         }
+         else if( SCIPisLT(scip, c2weightratio, lambda) )
+         {
+            setidx = SETIDX_SMALLER;
+         }
+         else
+         {
+            setidx = SETIDX_EQUAL;
+            weightequal += weight;
+         }
+
+         subsets[setidx][subsetsize[setidx]] = allitems[i];
+         subsetsize[setidx]++;
+      }
+
+      weightlargerorequal = weightlarger + weightequal;
+
+      fixsolitems = NULL;
+
+      /* we have found the critical ratio lambda */
+      if( weightlarger < rescapa && weightlargerorequal >= rescapa )
+      {
+         if( subsetsize[SETIDX_LARGER] > 0 )
+         {
+            /* loop over elements that are larger and copy the items into the solution */
+            for( i = 0; i < subsetsize[SETIDX_LARGER]; ++i )
+            {
+               int item;
+               int itemidx;
+               SCIP_Longint weight;
+
+               itemidx = subsets[SETIDX_EQUAL][i];
+               item = items[itemidx];
+               weight = weights[itemidx];
+               profit += profits[itemidx];
+               rescapa -= weight;
+
+               if( solitems != NULL )
+                  solitems[(*nsolitems)++] = item;
+            }
+         }
+
+         assert(rescapa > 0);
+
+         /* loop over equal ratios and fit in as many as possible */
+         for( i = 0; i < subsetsize[SETIDX_EQUAL]; ++i )
+         {
+            int item;
+            int itemidx;
+            SCIP_Longint weight;
+
+            itemidx = subsets[SETIDX_EQUAL][i];
+            item = items[itemidx];
+            weight = weights[itemidx];
+
+            /* does the item fit in? */
+            if( weight <= rescapa )
+            {
+               profit += profits[itemidx];
+               rescapa -= weight;
+
+               if( solitems != NULL )
+                  solitems[(*nsolitems)++] = item;
+            }
+            else if( nonsolitems != NULL )
+               nonsolitems[(*nnonsolitems)++] = item;
+         }
+
+         if( subsetsize[SETIDX_SMALLER] > 0 )
+         {
+            if( nonsolitems != NULL )
+            {
+               /* append remaining items with smaller cost 2 weight ratio to the items not taken */
+               for( i = 0; i < subsetsize[SETIDX_SMALLER]; ++i )
+               {
+                  int itemidx;
+                  int item;
+                  itemidx = subsets[SETIDX_SMALLER][i];
+                  item = items[itemidx];
+                  assert(weights[itemidx] > rescapa);
+                  nonsolitems[(*nnonsolitems)++] = item;
+               }
+            }
+         }
+         nremainingitems = 0;
+         break;
+      }
+      /* lambda was chosen too small -> fix items that are smaller or equal to 0 */
+      else if( weightlarger >= rescapa )
+      {
+         fixsolitems = nonsolitems;
+         fixnsolitems = nnonsolitems;
+         subsettokeep = SETIDX_LARGER;
+         subsetstofix[0] = SETIDX_EQUAL;
+         subsetstofix[1] = SETIDX_SMALLER;
+         profitptr = &zeroprofit;
+
+      }
+      else
+      {
+         assert(rescapa > weightlargerorequal);
+         fixsolitems = solitems;
+         fixnsolitems = nsolitems;
+         subsettokeep = SETIDX_SMALLER;
+         subsetstofix[0] = SETIDX_EQUAL;
+         subsetstofix[1] = SETIDX_LARGER;
+         rescapa -= weightlargerorequal;
+         profitptr = &profit;
+      }
+
+      /* loop over the two fixable subsets and fix them */
+      for( i = 0; i < 2; ++i )
+      {
+         int j;
+         int subsetidx = subsetstofix[i];
+         int* subset = subsets[subsetidx];
+
+         for( j = 0; j < subsetsize[subsetidx]; ++j )
+         {
+            (*profitptr) += profits[subset[j]];
+            if( fixsolitems != NULL )
+            {
+               fixsolitems[(*fixnsolitems)++] = items[subset[j]];
+            }
+         }
+      }
+
+      BMScopyMemoryArray(allitems, subsets[subsettokeep], subsetsize[subsettokeep]);
+      nremainingitems = subsetsize[subsettokeep];
+   }
+
+   /* perform Dantzig's algorithm on the remaining items */
+   if( nremainingitems > 0 )
+   {
+      SCIP_Longint* dweights;
+      SCIP_Real* dprofits;
+      int* ditems;
+      int dnsolitems;
+      int dnnonsolitems;
+      int* dsolitems;
+      int* dnonsolitems;
+      SCIP_Real dsolval;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &dweights, nremainingitems) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &dprofits, nremainingitems) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ditems, nremainingitems) );
+
+      /* collect remaining profits and weights */
+      for( i = 0; i < nremainingitems; ++i )
+      {
+         int itemidx = allitems[i];
+         dweights[i] = weights[itemidx];
+         dprofits[i] = profits[itemidx];
+         ditems[i] = items[itemidx];
+      }
+      dnsolitems = dnnonsolitems = 0;
+      /* reuse existing solution and nonsolution item arrays in Dantzig's algorithm, only if needed */
+      dsolitems = solitems != NULL ? &(solitems[*nsolitems]) : NULL;
+      dnonsolitems = nonsolitems != NULL ? &(nonsolitems[*nnonsolitems]) : NULL;
+      dsolval = 0.0;
+
+      SCIP_CALL( solveKnapsackApproximatelyDantzig(scip, nremainingitems, dweights, dprofits, rescapa, ditems, dsolitems, dnonsolitems, &dnsolitems, &dnnonsolitems, &dsolval) );
+
+      profit += dsolval;
+
+      /* update solution information */
+      if( solitems != NULL )
+      {
+         *nsolitems += dnsolitems;
+         *nnonsolitems += dnnonsolitems;
+      }
+
+      SCIPfreeBufferArray(scip, &ditems);
+      SCIPfreeBufferArray(scip, &dprofits);
+      SCIPfreeBufferArray(scip, &dweights);
+   }
+
+   /* free subset memory */
+   for( i = 2; i >= 0; --i )
+      SCIPfreeBufferArray(scip, &(subsets[i]));
+
+   SCIPfreeBufferArray(scip, &c2weightratios);
+   SCIPfreeBufferArray(scip, &allitems);
+
+   return SCIP_OKAY;
+}
+
+
+/** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
+ *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not
+ *  selected items
+ */
+SCIP_RETCODE SCIPsolveKnapsackApproximately(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  items,              /**< item numbers */
+   int*                  solitems,           /**< array to store items in solution, or NULL */
+   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   )
+{
+   if( nitems < MINITEMSBALASZEMEL )
+   {
+      SCIP_CALL( solveKnapsackApproximatelyDantzig(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, nsolitems, nnonsolitems, solval) );
+   }
+   else
+   {
+      SCIP_CALL( solveKnapsackApproximatelyBalasZemel(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, nsolitems, nnonsolitems, solval) );
+   }
 
    return SCIP_OKAY;
 }
