@@ -1366,6 +1366,21 @@ MINLP/instances/MINLPLib2/data/osil/weapons.osil
 #MINLP/instances/MINLPLib2/data/osil/windfac.osil
 MINLP/instances/MINLPLib2/data/osil/worst.osil
 
+MINLP/instances/Anstreicher/lp/spar30-100-1.lp
+MINLP/instances/Anstreicher/lp/spar30-100-2.lp
+MINLP/instances/Anstreicher/lp/spar30-100-3.lp
+MINLP/instances/Anstreicher/lp/spar30-60-1.lp
+MINLP/instances/Anstreicher/lp/spar30-60-2.lp
+MINLP/instances/Anstreicher/lp/spar30-60-3.lp
+MINLP/instances/Anstreicher/lp/spar30-70-1.lp
+MINLP/instances/Anstreicher/lp/spar30-70-2.lp
+MINLP/instances/Anstreicher/lp/spar30-70-3.lp
+MINLP/instances/Anstreicher/lp/spar30-80-1.lp
+MINLP/instances/Anstreicher/lp/spar30-80-2.lp
+MINLP/instances/Anstreicher/lp/spar30-80-3.lp
+MINLP/instances/Anstreicher/lp/spar30-90-1.lp
+MINLP/instances/Anstreicher/lp/spar30-90-2.lp
+MINLP/instances/Anstreicher/lp/spar30-90-3.lp
 MINLP/instances/EuclidianSteinerTree/zpl/estein1_t4Nr22.zpl
 MINLP/instances/EuclidianSteinerTree/zpl/estein1_t5Nr1.zpl
 MINLP/instances/EuclidianSteinerTree/zpl/estein1_t5Nr21.zpl
