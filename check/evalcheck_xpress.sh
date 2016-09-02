@@ -22,9 +22,9 @@ for i in $@
 do
     if test ! -e $i
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="$AWKARGS $i"
     else
-	FILES="$FILES $i"
+        FILES="$FILES $i"
     fi
 done
 
@@ -38,16 +38,16 @@ do
 
     TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
-    if test -f testset/$TSTNAME.solu
-    then
-	SOLUFILE=testset/$TSTNAME.solu
-    else if test -f testset/all.solu
-    then
-	SOLUFILE=testset/all.solu
-    else
-        SOLUFILE=""
-    fi
-    fi
+    # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
+    SOLUFILE=""
+    for f in $TSTNAME ${TSTNAME%%_*} all
+    do
+        if test -f testset/${f}.solu
+        then
+            SOLUFILE=testset/${f}.solu
+            break
+        fi
+    done
 
     awk -f check_xpress.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
 done

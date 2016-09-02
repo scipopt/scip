@@ -72,6 +72,10 @@ misc:
 SCIP version 3.2.2
 ==================
 
+features:
+- for users of the ampl interface, the display/logfile option has been added to set the name of a
+  file to write the SCIP log to (additionally to stdout)
+
 fixed bugs:
 - fixed bug in XML reader concerning comments
 - fixed wrong representation of SOC constraints in NLP
