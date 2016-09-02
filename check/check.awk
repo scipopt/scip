@@ -116,16 +116,16 @@ function isPrimalBoundBetterThanBestDual()
    return 0;
 }
 
-# write status and primal bound to solu file in case that the status requires a primal bound
-function writeToSoluFile(status, thepb)
+# write status and bound to solu file in case that the status requires a bound
+function writeToSoluFile(status, thebound)
 {
    # write status and problem name
    printf("=%s= %-18s",status, prob) > NEWSOLUFILE;
 
-   #write primal bound for appropriate statusses
-   if( status == "opt" || status == "best" )
+   #write bound for appropriate statusses
+   if( status == "opt" || status == "best" || status == "bestdual" )
    {
-      printf(" %16.9g", thepb) > NEWSOLUFILE;
+      printf(" %16.9g", thebound) > NEWSOLUFILE;
    }
 
    printf("\n") > NEWSOLUFILE;
@@ -1147,6 +1147,17 @@ BEGIN {
          }
 
          writeToSoluFile(newsolstatus, newsolpb);
+
+         # write dual bound, if we wrote a best known primal bound
+         if( newsolstatus == "best" && abs(db) < +infty )
+         {
+            # in update mode, use value from solu-file if present and better
+            if( writesolufile == 2 && (prob in bestdual) )
+               newsoldb = (objsense == 1) ? max(bestdual[prob], db) : min(bestdual[prob], db);
+            else
+               newsoldb = db;
+            writeToSoluFile("bestdual", newsoldb);
+         }
       }
 
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
