@@ -49,16 +49,17 @@ do
         TESTFILE=""
     fi
 
-    if test -f testset/$TSTNAME.solu
-    then
-        SOLUFILE=testset/$TSTNAME.solu
-    else if test -f testset/all.solu
-    then
-        SOLUFILE=testset/all.solu
-    else
-        SOLUFILE=""
-    fi
-    fi
+    # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
+    SOLUFILE=""
+    for f in $TSTNAME ${TSTNAME%%_*} all
+    do
+        if test -f testset/${f}.solu
+        then
+            SOLUFILE=testset/${f}.solu
+            break
+        fi
+    done
+    echo $SOLUFILE
 
     awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done
