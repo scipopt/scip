@@ -989,7 +989,8 @@ BEGIN {
          {
             setStatusToFail("fail (objective value)");
          }
-         else if( !feasible && objlimitreached ) {
+         else if( !feasible && objlimitreached )
+         {
             # if the objective limit was at least as tight as the optimal solution value, we accept the infeasibility
             if( (objsense == 1 && sol[prob]-objectivelimit >= -reltol) || (objsense == -1 && (objectivelimit - sol[prob] >= -reltol)) )
             {
@@ -1043,7 +1044,6 @@ BEGIN {
       }
       else if( solstatus[prob] == "unkn" )
       {
-
          if( isLimitReached() )
          {
             setStatusToLimit();
@@ -1104,7 +1104,6 @@ BEGIN {
          setStatusToFail("fail (valgrind)")
       }
 
-
       # write some solu file information
       if( writesolufile )
       {
@@ -1142,8 +1141,8 @@ BEGIN {
       {
          if (TEXFILE != "")
          {
-	    if( reoptimization == 0 )
-	    {
+            if( reoptimization == 0 )
+            {
                printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
                       namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
             }
