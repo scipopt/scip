@@ -22,9 +22,9 @@ for i in $@
 do
     if test ! -e $i
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="$AWKARGS $i"
     else
-	FILES="$FILES $i"
+        FILES="$FILES $i"
     fi
 done
 
@@ -44,17 +44,17 @@ do
 
     if test -f testset/$TSTNAME.test
     then
-	TESTFILE=testset/$TSTNAME.test
+        TESTFILE=testset/$TSTNAME.test
     else
-	TESTFILE=""
+        TESTFILE=""
     fi
 
     if test -f testset/$TSTNAME.solu
     then
-	SOLUFILE=testset/$TSTNAME.solu
+        SOLUFILE=testset/$TSTNAME.solu
     else if test -f testset/all.solu
     then
-	SOLUFILE=testset/all.solu
+        SOLUFILE=testset/all.solu
     else
         SOLUFILE=""
     fi
