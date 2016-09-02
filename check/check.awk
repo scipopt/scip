@@ -99,8 +99,8 @@ BEGIN {
       printf("* NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables\n") > PAVFILE;
    }
 }
-/^IP\// {  # TEMPORARY HACK to parse .test files
-   n  = split ($1, a, "/");
+/^IP\// || /^MINLP\// {  # HACK to parse .test files
+   n = split ($1, a, "/");
    m = split(a[n], b, ".");
    prob = b[1];
    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
@@ -109,10 +109,20 @@ BEGIN {
       prob = prob "." b[i];
    intestfile[prob] = 1;
 }
-/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
-/=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
-/=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
-/=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
+/=opt=/  {  # get optimum
+   solstatus[$2] = "opt";
+   sol[$2] = $3;
+}
+/=inf=/  {  # problem infeasible (no feasible solution exists)
+   solstatus[$2] = "inf";
+}
+/=best=/ {  # get best known solution value
+   solstatus[$2] = "best";
+   sol[$2] = $3;
+}
+/=unkn=/ {  # no feasible solution known
+   solstatus[$2] = "unkn";
+}
 #
 # problem name
 #
@@ -120,7 +130,7 @@ BEGIN {
    filename = $2;
    grepresult = ""
 
-   n  = split ($2, a, "/");
+   n = split ($2, a, "/");
    m = split(a[n], b, ".");
    prob = b[1];
    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
@@ -192,8 +202,12 @@ BEGIN {
    niter = 0;
 }
 
-/@03/ { starttime = $2; }
-/@04/ { endtime = $2; }
+/@03/ {
+   starttime = $2;
+}
+/@04/ {
+   endtime = $2;
+}
 
 /^SCIP version/ {
    # get SCIP version
@@ -219,8 +233,8 @@ BEGIN {
       lpsname = "grb";
    else if( $13 == "QSopt" )
       lpsname = "qso";
-#   else if( $13 == "???" )
-#      lpsname = "xprs";
+   else if( $13 == "Xpress" )
+      lpsname = "xprs";
 
     # get LP solver version
    if( NF >= 16 )
@@ -235,12 +249,28 @@ BEGIN {
       githash = v[1];
    }
 }
-/^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
-/^SCIP> / { $0 = substr($0, 7, length($0)-6); }
-/^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
-/^reading user parameter file/ { settings = $5; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
-/^parameter <limits\/time> set to/ { timelimit = $5; }
-/^limits\/time =/ { timelimit = $3; }
+/^SCIP> SCIP> / {
+   $0 = substr($0, 13, length($0)-12);
+}
+/^SCIP> / {
+   $0 = substr($0, 7, length($0)-6);
+}
+/^loaded parameter file/ {
+   settings = $4;
+   sub(/<.*settings\//, "", settings);
+   sub(/\.set>/, "", settings);
+}
+/^reading user parameter file/ {
+   settings = $5;
+   sub(/<.*settings\//, "", settings);
+   sub(/\.set>/, "", settings);
+}
+/^parameter <limits\/time> set to/ {
+   timelimit = $5;
+}
+/^limits\/time =/ {
+   timelimit = $3;
+}
 
 /^read problem/ { niter += 1; }
 
@@ -251,7 +281,7 @@ BEGIN {
 }
 
 # check for primalbound before statitic printing
-/^Primal Bound       :/{
+/^Primal Bound       :/ {
    pb = $4
 }
 
@@ -269,52 +299,77 @@ BEGIN {
 #
 # conflict analysis
 #
-/^Conflict Analysis  :/ { inconflict = 1; }
+/^Conflict Analysis  :/ {
+   inconflict = 1;
+}
 /^  propagation      :/ {
    if( inconflict == 1 )
    {
-      conftime += $3; #confclauses += $5 + $7; confliterals += $5 * $6 + $7 * $8;
+      conftime += $3;
+      #confclauses += $5 + $7;
+      #confliterals += $5 * $6 + $7 * $8;
    }
 }
 /^  infeasible LP    :/ {
    if( inconflict == 1 )
    {
-      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conftime += $4;
+      #confclauses += $6 + $8;
+      #confliterals += $6 * $7 + $8 * $9;
    }
 }
 /^  strong branching :/ {
    if( inconflict == 1 )
    {
-      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conftime += $4;
+      #confclauses += $6 + $8;
+      #confliterals += $6 * $7 + $8 * $9;
    }
 }
 /^  pseudo solution  :/ {
    if( inconflict == 1 )
    {
-      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conftime += $4;
+      #confclauses += $6 + $8;
+      #confliterals += $6 * $7 + $8 * $9;
    }
 }
 /^  applied globally :/ {
    if( inconflict == 1 )
    {
-      confclauses += $7; confliterals += $7 * $8;
+      confclauses += $7;
+      #confliterals += $7 * $8;
    }
 }
 /^  applied locally  :/ {
    if( inconflict == 1 )
    {
-      confclauses += $7; confliterals += $7 * $8;
+      confclauses += $7;
+      #confliterals += $7 * $8;
    }
 }
-/^Separators         :/ { inconflict = 0; }
-/^Constraint Timings :/ { inconstime = 1; }
-#/^  logicor          :/ { if( inconstime == 1 ) { overheadtime += $3; } }
-/^Propagators        :/ { inconstime = 0; }
-/^  switching time   :/ { overheadtime += $4; }
+/^Separators         :/ {
+   inconflict = 0;
+}
+/^Constraint Timings :/ {
+   inconstime = 1;
+}
+#/^  logicor          :/ {
+#   if( inconstime == 1 )
+#      overheadtime += $3;
+#}
+/^Propagators        :/ {
+   inconstime = 0;
+}
+/^  switching time   :/ {
+   overheadtime += $4;
+}
 #
 # problem size
 #
-/^Presolved Problem  :/ { inoriginalprob = 0; }
+/^Presolved Problem  :/ {
+   inoriginalprob = 0;
+}
 /^  Variables        :/ {
    if( inoriginalprob )
       origvars = $3;
@@ -343,70 +398,21 @@ BEGIN {
    quadcons = 0;
    nonlincons = 0;
 }
-/^  knapsack         :/ {
+/^  knapsack         :/ || /^  setppc           :/ || /^  linear           :/ || /^  logicor          :/ || /^  varbound         :/ {
    if( incons == 1 )
    {
       n = split ($3, a, "+");
       lincons += a[1];
    }
 }
-/^  setppc           :/ {
-   if( incons == 1 )
-   {
-      n = split ($3, a, "+");
-      lincons += a[1];
-   }
-}
-/^  linear           :/ {
-   if( incons  == 1 )
-   {
-      n = split ($3, a, "+");
-      lincons += a[1];
-   }
-}
-/^  logicor          :/ {
-   if( incons == 1 )
-   {
-      n = split ($3, a, "+");
-      lincons += a[1];
-   }
-}
-/^  varbound         :/ {
-   if( incons == 1 )
-   {
-      n = split ($3, a, "+");
-      lincons += a[1];
-   }
-}
-/^  quadratic        :/ {
+/^  quadratic        :/ || /^  soc              :/ {
    if( incons == 1 )
    {
       n = split ($3, a, "+");
       quadcons += a[1];
    }
 }
-/^  soc              :/ {
-   if( incons == 1 )
-   {
-      n = split ($3, a, "+");
-      quadcons += a[1];
-   }
-}
-/^  bivariate        :/ {
-   if( incons == 1 )
-   {
-      n = split ($3, a, "+");
-      nonlincons += a[1];
-   }
-}
-/^  nonlinear        :/ {
-   if( incons == 1 )
-   {
-      n = split ($3, a, "+");
-      nonlincons += a[1];
-   }
-}
-/^  abspower         :/ {
+/^  bivariate        :/ || /^  nonlinear        :/ || /^  abspower         :/ {
    if( incons == 1 )
    {
       n = split ($3, a, "+");
@@ -420,7 +426,9 @@ BEGIN {
 #
 # solution
 #
-/^Original Problem   : no problem exists./ { readerror = 1; }
+/^Original Problem   : no problem exists./ {
+   readerror = 1;
+}
 /^SCIP Status        :/ {
    # replace / by \/ in filename
    fname = filename
@@ -437,13 +445,27 @@ BEGIN {
    close(command)
 }
 
-/solving was interrupted/ { timeout = 1; }
-/gap limit reached/ { gapreached = 1; }
-/solution limit reached/ { sollimitreached = 1; }
-/memory limit reached/ { memlimitreached = 1; }
-/node limit reached/ { nodelimitreached = 1; }
-/problem is solved/ { timeout = 0; }
-/best solution is not feasible in original problem/  { bestsolfeas = 0; }
+/solving was interrupted/ {
+   timeout = 1;
+}
+/gap limit reached/ {
+   gapreached = 1;
+}
+/solution limit reached/ {
+   sollimitreached = 1;
+}
+/memory limit reached/ {
+   memlimitreached = 1;
+}
+/node limit reached/ {
+   nodelimitreached = 1;
+}
+/problem is solved/ {
+   timeout = 0;
+}
+/best solution is not feasible in original problem/ {
+   bestsolfeas = 0;
+}
 
 /Check SOL:/ {
    intcheck = $4;
@@ -495,9 +517,15 @@ BEGIN {
 #
 # iterations
 #
-/^  primal LP        :/ { simpiters += $6; }
-/^  dual LP          :/ { simpiters += $6; }
-/^  barrier LP       :/ { simpiters += $6; }
+/^  primal LP        :/ {
+   simpiters += $6;
+}
+/^  dual LP          :/ {
+   simpiters += $6;
+}
+/^  barrier LP       :/ {
+   simpiters += $6;
+}
 /^  nodes \(total\)    :/ {
    if( reoptimization == 1 )
       bbnodes += $4;
@@ -543,15 +571,27 @@ BEGIN {
 #
 # time
 #
-/^Solving Time       :/ { tottime = $4 } # for older scip version ( < 2.0.1.3 )
-/^  solving          :/ { tottime = $3 }
+/^Solving Time       :/ {  # for older scip version ( < 2.0.1.3 )
+   tottime = $4;
+}
+/^  solving          :/ {
+   tottime = $3;
+}
 #
 # valgrind check
 #
-/^==[0-9]*== ERROR SUMMARY:/       { valgrinderror = $4 }
-/^==[0-9]*==    definitely lost:/  { valgrindleaks += $4 }
-/^==[0-9]*==    indirectly lost:/  { valgrindleaks += $4 }
-/^==[0-9]*==    possibly lost:/    { valgrindleaks += $4 }
+/^==[0-9]*== ERROR SUMMARY:/       {
+   valgrinderror = $4
+}
+/^==[0-9]*==    definitely lost:/  {
+   valgrindleaks += $4
+}
+/^==[0-9]*==    indirectly lost:/  {
+   valgrindleaks += $4
+}
+/^==[0-9]*==    possibly lost:/    {
+   valgrindleaks += $4
+}
 #
 # solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
