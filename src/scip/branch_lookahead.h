@@ -25,7 +25,7 @@
 #define __SCIP_BRANCH_LOOKAHEAD_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
