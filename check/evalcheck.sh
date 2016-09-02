@@ -59,7 +59,6 @@ do
             break
         fi
     done
-    echo $SOLUFILE
 
     awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done
