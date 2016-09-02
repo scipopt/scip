@@ -88,6 +88,8 @@ function isDualBoundBetter()
 # 'Better' means smaller for minimization problems, else 'larger'.
 function isPrimalBoundBetter()
 {
+   if( prob not in sol )
+      return 0;
    # objective sense of 1 means minimization
    if( (objsense == 1 && sol[prob] - pb > reltol) || (objsense == -1 && pb - sol[prob] > reltol) )
       return 1;
@@ -102,6 +104,16 @@ function isPrimalDualBoundEqual()
       return 1;
    else
       return 0;
+}
+
+function isPrimalBoundBetterThanBestDual()
+{
+   if( !(prob in bestdual) )
+      return 0;
+   # objective sense of 1 means minimization
+   if( (objsense == 1 && bestdual[prob] - pb > reltol) || (objsense == -1 && pb - bestdual[prob] > reltol) )
+      return 1;
+   return 0;
 }
 
 # write status and primal bound to solu file in case that the status requires a primal bound
@@ -211,13 +223,15 @@ BEGIN {
    solstatus[$2] = "inf";
    sol[$2] = +infty;
 }
-/=best=/ {  # get best known solution value
+/=best=/ {  # get best known primal bound
    solstatus[$2] = "best";
    sol[$2] = $3;
 }
+/=bestdual=/ {  # get best known dual bound
+   bestdual[$2] = $3;
+}
 /=unkn=/ {  # no feasible solution known
    solstatus[$2] = "unkn";
-   sol[$2] = $3;  # ???
 }
 #
 # problem name
@@ -793,10 +807,10 @@ BEGIN {
       headerprinted = 1;
    }
 
-   if( (!onlyinsolufile || prob in solstatus) &&
+   if( (!onlyinsolufile || prob in solstatus || prob in bestdual) &&
        (!onlyintestfile || intestfile[prob]) )
    {
-      # if sol file could not be read, fix status to be "unkown"
+      # if sol file could not be read, fix status to be "unknown"
       if( !(prob in solstatus) )
          solstatus[prob] = "unkn";
 
@@ -983,7 +997,6 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-
          # in case a solution was found we compare primal and dual bound
          if( feasible && ( isPrimalBoundBetter() || isDualBoundBetter() ) )
          {
@@ -1016,21 +1029,23 @@ BEGIN {
             setStatusToFail("fail");
          }
       }
-      else if( solstatus[prob] == "best" )
+      else if( solstatus[prob] == "best" || prob in bestdual )
       {
          # we failed if the dual bound was higher/lower than the best known primal bound
          if( isDualBoundBetter() )
          {
             setStatusToFail("fail (dual bound)");
          }
+         else if( isPrimalBoundBetterThanBestDual() )
+         {
+            setStatusToFail("fail (primal bound)");
+         }
          else if( isLimitReached() )
          {
             setStatusToLimit();
 
             if( isPrimalBoundBetter() )
-            {
                status = "better";
-            }
          }
          else if( isPrimalDualBoundEqual() )
          {
@@ -1039,7 +1054,7 @@ BEGIN {
          }
          else
          {
-             setStatusToFail("fail");
+             setStatusToFail("fail (stopped unsolved before limit)");
          }
       }
       else if( solstatus[prob] == "unkn" )
@@ -1049,9 +1064,7 @@ BEGIN {
             setStatusToLimit();
 
             if( abs(pb) < infty )
-            {
                status = "better";
-            }
          }
          else if( isPrimalDualBoundEqual() )
          {
