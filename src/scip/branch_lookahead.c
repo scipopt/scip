@@ -53,9 +53,6 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_Bool             useimpliedbinaryconstraints;
-   SCIP_Bool             useimpliedcutoffs;
-
    SCIP_SOL*             prevbinsolution;
    SCIP_VAR*             prevbinbranchvar;
    SCIP_Real             prevbinbranchsol;
@@ -934,17 +931,20 @@ SCIP_RETCODE handleNewBounds(
 
    return SCIP_OKAY;
 }
-
+/**
+ * Add the constraints found during the lookahead branching.
+ * The implied binary bounds were found when two consecutive branching of binary variables were cutoff. Then these two
+ * branching constraints can be combined into a single set packing constraint.
+ */
 static
 SCIP_RETCODE handleImpliedBinaryBounds(
-   SCIP*                 scip,
-   SCIP_NODE*            basenode,
-   BinaryBoundData*      binarybounddata
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            basenode,           /**< the base node to which the bounds should be added */
+   BinaryBoundData*      binarybounddata     /**< the container with the bounds to be added */
 )
 {
    int i;
    int nentries;
-
 
    nentries = binarybounddata->nentries;
 
@@ -957,14 +957,16 @@ SCIP_RETCODE handleImpliedBinaryBounds(
       SCIP_CONS* constraint;
       char constraintname[SCIP_MAXSTRLEN];
 
+      /* BinaryBoundData is sequentially filled, so we can access the arrays with the for variable */
       eithervar = binarybounddata->eithervars[i];
       othervar = binarybounddata->othervars[i];
       constraintvars[0] = eithervar;
       constraintvars[1] = othervar;
 
+      /* create the constraint with a meaningful name */
       createConstraintName(scip, eithervar, othervar, constraintname);
-      SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, constraintname, 2, constraintvars, TRUE, TRUE, FALSE, FALSE, TRUE,
-         TRUE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsSetpack(scip, &constraint, constraintname, 2, constraintvars, TRUE, TRUE, FALSE, FALSE,
+         TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
 #ifdef PRINTNODECONS
       SCIPdebugMessage("Adding following constraint:\n");
@@ -972,12 +974,22 @@ SCIP_RETCODE handleImpliedBinaryBounds(
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
+      /* add the constraint to the given node */
       SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
+      /* release the constraint, as it is no longer needed */
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
    }
    return SCIP_OKAY;
 }
 
+/**
+ * Transfers the valid bounds contained in the supposed bounds to the valid bounds.
+ * Supposed bounds are found by buffering all second level cutoffs for one first level variable. If, for the same first
+ * level variable, both upper or lower branchings for the same second level variable are cutoff, this second level
+ * variable can already be cutoff in the base problem.
+ * This method finds those "implicit" cutoffs and adds them to the struct which is later used to add the bounds to the
+ * base problem.
+ */
 static
 void transferBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -989,16 +1001,18 @@ void transferBoundData(
    int nofsecondlevelbounds = 0;
    SCIP_VAR** problemvars;
 
+   /* the supposed bound data ise indexed by the global prob index, so we can use the problemvars array directly */
    problemvars = SCIPgetVars(scip);
 
    SCIPdebugMessage("Transferring implicit bound data to the valid bound data.\n");
    SCIPdebugMessage("Number of entries <%d>\n", supposedbounds->nboundedvars);
    for(i = 0; i < supposedbounds->nboundedvars; i++ )
    {
+      /* get all data from the supposedbounds */
       int boundedvarindex = supposedbounds->boundedvars[i];
-      SCIP_VAR* boundedvar = problemvars[boundedvarindex];
       int nupperboundupdates = supposedbounds->nupperboundupdates[boundedvarindex];
       int nlowerboundupdates = supposedbounds->nlowerboundupdates[boundedvarindex];
+      SCIP_VAR* boundedvar = problemvars[boundedvarindex];
 
       SCIPdebugMessage("Var: <%s>, nupperboundupdates: <%d>, nlowerboundupdates: <%d>\n", SCIPvarGetName(boundedvar),
          nupperboundupdates, nlowerboundupdates);
@@ -1035,7 +1049,7 @@ void transferBoundData(
 }
 
 /**
- * Selects a variable from a set of candidates by applying strong branching on a depth of 2.
+ * Selects a variable from a set of candidates by applying strong branching with a depth of 2.
  * If the branching generated additional bounds, like domain reductions from cutoffs, those are added and a suitable result
  * code is set.
  *
@@ -1293,6 +1307,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
 /**
  * Executes the branching on a given variable with a given value.
+ * If everything worked the result pointer is set to SCIP_BRANCHED.
  *
  * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1320,27 +1335,56 @@ SCIP_RETCODE branchOnVar(
    return SCIP_OKAY;
 }
 
-static
-SCIP_Bool areSolsEqualAndNotNull(
-   SCIP*                 scip,
-   SCIP_SOL*             eithersol,
-   SCIP_SOL*             othersol
-)
-{
-   return eithersol != NULL && othersol != NULL && SCIPareSolsEqual(scip, eithersol, othersol);
-}
-
+/**
+ * We can use teh previous result, stored in the branchruledata, if the branchingvariable (as an indicator) is set and
+ * the current lp solution is equal to the previous lp solution.
+ *
+ * @return \ref TRUE, if we can branch on the previous decision, \ref FALSE, else.
+ */
 static
 SCIP_Bool isUsePreviousResult(
-   SCIP*                 scip,
-   SCIP_SOL*             currentsol,
-   SCIP_BRANCHRULEDATA*  branchruledata
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             currentsol,         /**< the current base lp solution */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< the branchruledata containing the prev branching decision */
 )
 {
-   return branchruledata->useimpliedbinaryconstraints && branchruledata->prevbinbranchvar != NULL
-      && areSolsEqualAndNotNull(scip, currentsol, branchruledata->prevbinsolution);
+   return branchruledata->prevbinbranchvar != NULL
+      && SCIPareSolsEqual(scip, currentsol, branchruledata->prevbinsolution);
 }
 
+/**
+ * Uses the results from the previous run saved in the branchruledata to branch.
+ * This is the case, if in the previous run only non-violating constraints were added. In that case we can use the
+ * branching decision we would have made then.
+ * If everything worked the result pointer contains SCIP_BRANCHED.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+static
+SCIP_RETCODE usePreviousResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< the branchruledata containing the prev branching decision */
+   SCIP_Bool*            result              /**< the pointer to the branching result */
+)
+{
+   SCIP_VAR* var;
+   SCIP_Real val;
+
+   SCIPdebugMessage("Branching based on previous solution.\n");
+
+   /* extract the prev branching decision */
+   var = branchruledata->prevbinbranchvar;
+   val = branchruledata->prevbinbranchsol;
+
+   /* execute the actual branching */
+   SCIP_CALL( branchOnVar(scip, var, val, result) );
+
+   /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
+   branchruledata->prevbinbranchvar = NULL;
+
+   return SCIP_OKAY;
+}
 /*
  * Callback methods of branching rule
  */
@@ -1432,20 +1476,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    if( isUsePreviousResult(scip, baselpsol, branchruledata) )
    {
-      SCIP_VAR* var;
-      SCIP_Real val;
+      SCIP_CALL( usePreviousResult(scip, branchruledata, result) );
 
-      SCIPdebugMessage("Branching based on previous solution.\n");
-
-      var = branchruledata->prevbinbranchvar;
-      val = branchruledata->prevbinbranchsol;
-
-      SCIP_CALL( branchOnVar(scip, var, val, result) );
-
-      SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n", SCIPvarGetName(var));
-      branchruledata->prevbinbranchvar = NULL;
-
-      *result = SCIP_BRANCHED;
+      SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n",
+         SCIPvarGetName(branchruledata->prevbinbranchvar));
    }
    else
    {
@@ -1556,14 +1590,6 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookahead) );
 
    /* add lookahead branching rule parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-            "branching/lookahead/useimpliedbinaryconstraints",
-            "find and add the constraints found by cutting of after two binary branchings",
-            &branchruledata->useimpliedbinaryconstraints, TRUE, DEFAULT_USEIMPLIEDBINARYCONSTRAINTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-            "branching/lookahead/useimpliedcutoffs",
-            "add a cutoff for second level branches in same direction following the same first level variable",
-            &branchruledata->useimpliedcutoffs, TRUE, DEFAULT_USEIMPLIEDCUTOFFS, NULL, NULL) );
-
+   /* none yet */
    return SCIP_OKAY;
 }
