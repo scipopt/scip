@@ -6678,7 +6678,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
             SCIPinfoMessage(scip, NULL, ";\n");
          }
 
-         if( conshdlrdata->subnlpheur == NULL && !dolinfeasshift )
+         if( conshdlrdata->subnlpheur == NULL && !dolinfeasshift && !completely )
             return SCIP_OKAY;
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = MAX(consdata->lhsviol, consdata->rhsviol);

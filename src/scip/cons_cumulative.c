@@ -12946,19 +12946,18 @@ SCIP_DECL_CONSCHECK(consCheckCumulative)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
+   *result = SCIP_FEASIBLE;
    violated = FALSE;
 
    SCIPdebugMessage("check %d cumulative constraints\n", nconss);
 
-   for( c = 0; c < nconss && !violated; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_CALL( checkCons(scip, conss[c], sol, &violated, printreason) );
-   }
 
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
-      *result = SCIP_FEASIBLE;
+      if( violated )
+         *result = SCIP_INFEASIBLE;
+   }
 
    return SCIP_OKAY;
 }

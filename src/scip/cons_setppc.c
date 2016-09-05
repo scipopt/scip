@@ -7793,7 +7793,7 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
    *result = SCIP_FEASIBLE;
 
    /* check all set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -7821,7 +7821,6 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
                SCIPinfoMessage(scip, NULL, ";\n");
                SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
             }
-            return SCIP_OKAY;
          }
       }
    }

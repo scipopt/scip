@@ -536,11 +536,16 @@ SCIP_DECL_CONSCHECK(consCheckDisjunction)
 
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_RESULT tmpres;
+
       /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], sol, checkintegrality, checklprows, printreason, result) );
-      assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
+      SCIP_CALL( checkCons(scip, conss[c], sol, checkintegrality, checklprows, printreason, &tmpres) );
+      assert(tmpres == SCIP_FEASIBLE || tmpres == SCIP_INFEASIBLE);
+
+      if( tmpres == SCIP_INFEASIBLE )
+         *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;

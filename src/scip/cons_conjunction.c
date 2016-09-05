@@ -214,6 +214,7 @@ SCIP_RETCODE checkAllConss(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -223,23 +224,34 @@ SCIP_RETCODE checkAllConss(
 
    assert(result != NULL);
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   *result = SCIP_FEASIBLE;
+
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_RESULT subresult;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
+      subresult = SCIP_FEASIBLE;
+
       /* check all constraints */
-      for( i = 0; i < consdata->nconss && *result == SCIP_FEASIBLE; ++i )
+      for( i = 0; i < consdata->nconss && subresult == SCIP_FEASIBLE; ++i )
       {
-         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, result) );
-	 assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
+         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, &subresult) );
+         assert(subresult == SCIP_FEASIBLE || subresult == SCIP_INFEASIBLE);
       }
 
-      if( printreason && *result == SCIP_INFEASIBLE )
+      if( subresult == SCIP_INFEASIBLE )
       {
-	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n",
-            SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         /* mark solution as violated */
+         *result = SCIP_INFEASIBLE;
+         if( printreason && subresult == SCIP_INFEASIBLE )
+         {
+            SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n",
+               SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         }
       }
    }
 
@@ -353,7 +365,7 @@ SCIP_DECL_CONSCHECK(consCheckConjunction)
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the conjunction */
-   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, printreason, result) );
+   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, printreason, completely, result) );
 
    return SCIP_OKAY;
 }

@@ -2180,7 +2180,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
    *result = SCIP_FEASIBLE;
 
    /* check all bound disjunction constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_Bool violated;
 
@@ -2210,7 +2210,6 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
 
          /* constraint is violated */
          *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
       }
    }
 

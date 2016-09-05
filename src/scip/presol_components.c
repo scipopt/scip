@@ -581,13 +581,13 @@ SCIP_RETCODE copyAndSolveComponent(
                   }
 
                   /* check the solution; integrality and bounds should be fulfilled and do not have to be checked */
-                  SCIP_CALL( SCIPcheckSol(subscip, sol, FALSE, FALSE, FALSE, TRUE, &feasible) );
+                  SCIP_CALL( SCIPcheckSol(subscip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &feasible) );
 
 #ifndef NDEBUG
                   /* in debug mode, we additionally check integrality and bounds */
                   if( feasible )
                   {
-                     SCIP_CALL( SCIPcheckSol(subscip, sol, FALSE, TRUE, TRUE, FALSE, &feasible) );
+                     SCIP_CALL( SCIPcheckSol(subscip, sol, FALSE, FALSE, TRUE, TRUE, FALSE, &feasible) );
                      assert(feasible);
                   }
 #endif

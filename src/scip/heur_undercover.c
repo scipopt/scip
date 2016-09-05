@@ -2292,7 +2292,7 @@ SCIP_RETCODE solveSubproblem(
          SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], sol) );
 
          /* try to add new solution to scip */
-         SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       }
 
       if( success )

@@ -3915,7 +3915,9 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *result = SCIP_FEASIBLE;
+
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
    {
       if( !checkCons(scip, conss[i], sol, checklprows) )
       {
@@ -3943,10 +3945,8 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", sum - consdata->rhs);
             }
          }
-         return SCIP_OKAY;
       }
    }
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

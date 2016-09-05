@@ -1272,7 +1272,7 @@ SCIP_DECL_CONSCHECK(consCheckSuperindicator)
 
    *result = SCIP_FEASIBLE;
 
-   for( i = nconss-1; i >= 0 && *result == SCIP_FEASIBLE; i-- )
+   for( i = nconss-1; i >= 0 && (*result == SCIP_FEASIBLE || completely); i-- )
    {
       SCIP_CONSDATA* consdata;
 

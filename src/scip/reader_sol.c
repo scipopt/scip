@@ -183,7 +183,7 @@ SCIP_RETCODE readSol(
       /* add and free the solution */
       if( SCIPisTransformed(scip) )
       {
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 
          /* display result */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
@@ -351,7 +351,7 @@ SCIP_RETCODE readXMLSol(
       /* add and free the solution */
       if( SCIPisTransformed(scip) )
       {
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 
          /* display result */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",

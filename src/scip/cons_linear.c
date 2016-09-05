@@ -14652,39 +14652,39 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    /*debugMessage("Check method of linear constraints\n");*/
 
    /* check all linear constraints for feasibility */
-   violated = FALSE;
-   for( c = 0; c < nconss && !violated; ++c )
+   *result = SCIP_FEASIBLE;
+
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      violated = FALSE;
       SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, checkrelmaxabs, &violated) );
-   }
 
-   if( violated )
-   {
-      *result = SCIP_INFEASIBLE;
-
-      if( printreason )
+      if( violated )
       {
-         SCIP_CONSDATA* consdata;
-         SCIP_Real activity;
+         *result = SCIP_INFEASIBLE;
 
-         consdata = SCIPconsGetData(conss[c-1]);
-         assert( consdata != NULL);
+         if( printreason )
+         {
+            SCIP_CONSDATA* consdata;
+            SCIP_Real activity;
 
-         activity = consdataGetActivity(scip, consdata, sol);
+            consdata = SCIPconsGetData(conss[c-1]);
+            assert( consdata != NULL);
 
-         SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
-         SCIPinfoMessage(scip, NULL, ";\n");
+            activity = consdataGetActivity(scip, consdata, sol);
 
-         if( activity == SCIP_INVALID ) /*lint !e777*/
-            SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
-         else if( SCIPisFeasLT(scip, activity, consdata->lhs) )
-            SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
-         else if( SCIPisFeasGT(scip, activity, consdata->rhs) )
-            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", activity - consdata->rhs);
+            SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
+            if( activity == SCIP_INVALID ) /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
+            else if( SCIPisFeasLT(scip, activity, consdata->lhs) )
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
+            else if( SCIPisFeasGT(scip, activity, consdata->rhs) )
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", activity - consdata->rhs);
+         }
       }
    }
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

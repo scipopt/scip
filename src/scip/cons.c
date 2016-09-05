@@ -3470,6 +3470,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3497,8 +3498,8 @@ SCIP_RETCODE SCIPconshdlrCheck(
       SCIPclockStart(conshdlr->checktime, set);
 
       /* call external method */
-      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
-            sol, checkintegrality, checklprows, printreason, result) );
+      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss,
+            sol, checkintegrality, checklprows, printreason, completely, result) );
       SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
       /* stop timing */
@@ -7013,7 +7014,8 @@ SCIP_RETCODE SCIPconsCheck(
    /* call external method */
    assert(conshdlr->conscheck != NULL);
 
-   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
+   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason,
+         FALSE, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
    if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )

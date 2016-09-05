@@ -8007,7 +8007,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
             }
          }
 
-         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
+         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible && !completely )
             return SCIP_OKAY;
 
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
