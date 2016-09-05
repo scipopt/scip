@@ -29,4 +29,4 @@ jobidsstr=${jobids:1}
 sbatch --dependency=afterok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --output=${PWD}/check/results/out.txt check/rbcliwrapper.sh
 
 # send cristina an email if there is a failure
-sbatch --dependency=afternotok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --mail-user=BEGIN --mail-user=munoz@zib.de ls
+sbatch --dependency=afternotok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --mail-type=BEGIN --mail-user=munoz@zib.de --output=/dev/null --job-name=failed-run <<< "#! /bin/bash"
