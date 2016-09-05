@@ -1071,11 +1071,36 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
          (*solval) += profits[j];
       solitemsweight += weights[j];
    }
+
+#ifdef KNAPSACK_GREEDY_TEST
+   /* continue to put items into the knapsack if they entirely fit */
+   for( ; j < nitems; j++ )
+   {
+      if( SCIPisFeasLT(scip, solitemsweight + weights[j], capacity) )
+      {
+         if( solitems != NULL )
+         {
+            solitems[*nsolitems] = items[j];
+            (*nsolitems)++;
+         }
+         if( solval != NULL )
+            (*solval) += profits[j];
+         solitemsweight += weights[j];
+      }
+      else if( solitems != NULL )
+      {
+         nonsolitems[*nnonsolitems] = items[j];
+         (*nnonsolitems)++;
+      }
+   }
+
+#else
    for( ; j < nitems && solitems != NULL; j++ )
    {
       nonsolitems[*nnonsolitems] = items[j];
       (*nnonsolitems)++;
    }
+#endif
 
    return SCIP_OKAY;
 }
