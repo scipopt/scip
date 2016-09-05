@@ -1511,7 +1511,12 @@ SCIP_RETCODE solveKnapsackApproximatelyDantzig(
 {
    SCIP_Real* tempsort;
    SCIP_Longint solitemsweight;
+   SCIP_Real* realweights;
+   int* indices;
    int j;
+   int leftmedianidx;
+   int rightmedianidx;
+   SCIP_Real median;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1531,31 +1536,39 @@ SCIP_RETCODE solveKnapsackApproximatelyDantzig(
     * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &realweights, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indices, nitems) );
    for( j = nitems - 1; j >= 0; --j )
    {
       tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
+      realweights[j] = (SCIP_Real)weights[j];
+      indices[j] = j;
+
    }
-   SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
+
+   SCIPselectWeightedMedian(tempsort, indices, realweights, nitems, &median, capacity, &leftmedianidx, &rightmedianidx);
 
    /* selects items as long as they fit into the knapsack */
    solitemsweight = 0;
-   for( j = 0; j < nitems && solitemsweight + weights[j] <= capacity; j++ )
+   for( j = 0; j < nitems && solitemsweight + weights[indices[j]] <= capacity; ++j )
    {
       if( solitems != NULL )
       {
-         solitems[*nsolitems] = items[j];
+         solitems[*nsolitems] = items[indices[j]];
          (*nsolitems)++;
       }
       if( solval != NULL )
-         (*solval) += profits[j];
-      solitemsweight += weights[j];
+         (*solval) += profits[indices[j]];
+      solitemsweight += weights[indices[j]];
    }
    for( ; j < nitems && solitems != NULL; j++ )
    {
-      nonsolitems[*nnonsolitems] = items[j];
+      nonsolitems[*nnonsolitems] = items[indices[j]];
       (*nnonsolitems)++;
    }
 
+   SCIPfreeBufferArray(scip, &indices);
+   SCIPfreeBufferArray(scip, &realweights);
    SCIPfreeBufferArray(scip, &tempsort);
 
    return SCIP_OKAY;
@@ -1867,14 +1880,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    )
 {
-   if( nitems < MINITEMSBALASZEMEL )
-   {
-      SCIP_CALL( solveKnapsackApproximatelyDantzig(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, nsolitems, nnonsolitems, solval) );
-   }
-   else
-   {
-      SCIP_CALL( solveKnapsackApproximatelyBalasZemel(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, nsolitems, nnonsolitems, solval) );
-   }
+   SCIP_CALL( solveKnapsackApproximatelyDantzig(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, nsolitems, nnonsolitems, solval) );
 
    return SCIP_OKAY;
 }

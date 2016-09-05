@@ -4770,6 +4770,13 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealPtr
@@ -8632,6 +8639,210 @@ void SCIPsplitFilename(
    }
 }
 
+#define MINREMAININGKEYSSIZE 25
+#define NELEMSMEDIANSEL 3
+/** partially sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
+ *  that are smaller, equal, and larger than the weighted median
+ */
+void SCIPselectWeightedMedian(
+   SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
+   int*                  indices,            /**< indices array that should be partially sorted inplace */
+   SCIP_Real*            weights,            /**< (optional) weights array for weighted median, or NULL (all weights are equal to 1) */
+   int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
+   SCIP_Real*            median,             /**< pointer to store the weighted median */
+   SCIP_Real             capacity,           /**< (positive) capacity for the weights */
+   int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
+   int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
+   )
+{
+   SCIP_Real keysbuffer[MINREMAININGKEYSSIZE];
+   int indicesbuffer[MINREMAININGKEYSSIZE];
+   SCIP_Real weightsbuffer[MINREMAININGKEYSSIZE];
+   int left;
+   int right;
+   int j;
+   SCIP_Real residualcapacity;
+
+   assert(keys != NULL);
+   assert(indices != NULL);
+
+   left = 0;
+   right = nkeys - 1;
+   residualcapacity = capacity;
+
+   while( right - left + 1 > MINREMAININGKEYSSIZE )
+   {
+      int i;
+      int smalleridx;
+      int largeridx;
+      int pivotindex;
+      int npivots;
+      SCIP_Real largeweightsum;
+      SCIP_Real equalweightsum;
+
+      SCIP_Real pivot;
+      /* select a pivot element */
+      SCIP_Real elements[NELEMSMEDIANSEL];
+      int elementidxs[NELEMSMEDIANSEL];
+
+      /* todo maybe select pivot randomized */
+      for( i = 0; i < NELEMSMEDIANSEL; ++i )
+      {
+         int index = left + (right - left) * i / (NELEMSMEDIANSEL - 1);
+         elements[i] = keys[indices[index]];
+         elementidxs[i] = index;
+      }
+
+      SCIPsortRealInt(elements, elementidxs, NELEMSMEDIANSEL);
+      pivot = elements[NELEMSMEDIANSEL / 2];
+      pivotindex = elementidxs[NELEMSMEDIANSEL / 2];
+
+      largeridx = left;
+      smalleridx = right - 1;
+
+      /* swap pivot to the rightmost position */
+      SCIPswapInts(&indices[right], &indices[pivotindex]);
+      npivots = 1;
+
+      /* loop over elements and swap if one is too small and one is too large */
+      while( largeridx <= smalleridx )
+      {
+         if( keys[indices[largeridx]] < pivot && keys[indices[smalleridx]] > pivot )
+         {
+            SCIPswapInts(&indices[smalleridx], &indices[largeridx]);
+            ++largeridx;
+            --smalleridx;
+         }
+         /* loop until an element is detected that is larger than the key indexed by smalleridx */
+         while( keys[indices[smalleridx]] <= pivot )
+         {
+            /* ensure that all pivot elements are swapped to the rightmost npivots elements right, right - 1, right - npivots + 1 */
+            if( keys[indices[smalleridx]] == pivot )
+            {
+               if( smalleridx < right - npivots )
+               {
+                  SCIPswapInts(&indices[smalleridx], &indices[right - npivots]);
+                  ++npivots;
+               }
+            }
+            --smalleridx;
+         }
+
+
+         while( keys[indices[largeridx]] >= pivot )
+         {
+            /* ensure that all pivot elements are swapped to the rightmost npivots elements right, right - 1, right - npivots + 1 */
+            if( keys[indices[largeridx]] == pivot )
+            {
+               if( smalleridx == right - npivots )
+                  --smalleridx;
+
+               /* swap elements at index largeridx and the rightmost non-pivot element */
+               SCIPswapInts(&indices[largeridx], &indices[right - npivots]);
+               ++npivots;
+            }
+            else
+               ++largeridx;
+         }
+      }
+      assert(smalleridx == largeridx - 1);
+
+      /* place pivot elements back to where they belong */
+      for( i = 0; i < npivots; ++i )
+         SCIPswapInts(&indices[largeridx + i], &indices[right - i]);
+
+
+      if( weights != NULL )
+      {
+         largeweightsum = 0.0;
+         /* collect weights of elements larger than the pivot  */
+         for( i = left; i < largeridx; ++i )
+         {
+            assert(keys[indices[i]] > pivot);
+            largeweightsum += weights[indices[i]];
+         }
+
+         equalweightsum = 0.0;
+
+         /* collect weights of elements that are equal to the pivot */
+         for( ; i < largeridx + npivots; ++i )
+         {
+            assert(keys[indices[i]] == pivot);
+            equalweightsum += weights[indices[i]];
+         }
+      }
+      else
+      {
+         /* if all weights are equal to one, we directly know the larger and the equal weight sum */
+         largeweightsum = largeridx;
+         equalweightsum = npivots;
+      }
+      if( largeweightsum < residualcapacity && largeweightsum + equalweightsum >= residualcapacity)
+      {
+         *median = pivot;
+         *leftmedianidx = largeridx;
+         *rightmedianidx = largeridx + npivots - 1;
+
+         return;
+      }
+      /* pivot is too large; continue search in the left half of the array */
+      else if( largeweightsum >= residualcapacity )
+      {
+         right = largeridx - 1;
+      }
+      else
+      {
+         assert(largeweightsum + equalweightsum < residualcapacity);
+         left = largeridx + npivots;
+         residualcapacity -= largeweightsum + equalweightsum;
+      }
+   }
+
+   assert(left < right);
+   assert(right - left + 1 <= MINREMAININGKEYSSIZE);
+
+   /* collect data for explicit sorting */
+   for( j = 0; j <= right - left; ++j )
+   {
+      int index = indices[left + j];
+      keysbuffer[j] = keys[index];
+      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
+      indicesbuffer[j] = index;
+   }
+
+   SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, right - left + 1);
+
+   /* insert the elements sorted back into the indices array */
+   for( j = 0; j < right - left + 1; ++j )
+   {
+      SCIP_Real weight = weightsbuffer[j];
+      /* we finally found the median element */
+      if( weight > residualcapacity )
+      {
+         *median = keysbuffer[j];
+         *leftmedianidx = left + j;
+         *rightmedianidx = left + j;
+         break;
+      }
+      else
+      {
+         residualcapacity -= weight;
+      }
+   }
+
+   if( j == right - left + 1 )
+   {
+      *median = SCIP_INVALID;
+      *leftmedianidx = nkeys;
+      *rightmedianidx = nkeys;
+   }
+
+   /* copy back the final indices sorting */
+   for( j = 0; j < right - left + 1; ++j )
+   {
+      indices[left + j] = indicesbuffer[j];
+   }
+}
 
 
 

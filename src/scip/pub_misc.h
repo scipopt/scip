@@ -2162,6 +2162,15 @@ void SCIPsortDownRealIntPtr(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealRealInt(
+   SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   int*                  intarray,           /**< integer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortDownRealRealPtr(
@@ -3614,6 +3623,7 @@ void SCIPsortedvecInsertDownRealIntPtr(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+
 /** insert a new element into three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownRealRealPtr(
@@ -4919,6 +4929,16 @@ void SCIPsortedvecDelPosDownRealIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownRealRealInt(
+   SCIP_Real*            realarray1,         /**< first SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be deleted */
+   int*                  intarray,           /**< integer array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownRealRealPtr(
@@ -5591,6 +5611,23 @@ EXTERN
 SCIP_Longint SCIPcalcBinomCoef(
    int                   n,                  /**< number of different elements */
    int                   m                   /**< number to choose out of the above */
+   );
+
+/** partially sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
+ *  that are smaller, equal, and larger than the weighted median
+ *
+ *  the entries of the keys array are not changed, neither are the entries of the weights array; only indices are rearranged, if necessary
+ */
+EXTERN
+void SCIPselectWeightedMedian(
+   SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
+   int*                  indices,            /**< indices array that should be partially sorted inplace */
+   SCIP_Real*            weights,            /**< (optional) weights array for weighted median, or NULL (all weights are equal to 1) */
+   int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
+   SCIP_Real*            median,             /**< pointer to store the weighted median */
+   SCIP_Real             capacity,           /**< (positive) capacity for the weights */
+   int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
+   int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
    );
 
 /**@} */
