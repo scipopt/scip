@@ -16,12 +16,17 @@ do
   if [[ $line == Submitted[[:space:]]batch[[:space:]]job[[:space:]]* ]]
   then
     stringarray=($line)
-    field[$i]=${stringarray[-1]}
+    slurmjobids[$i]=${stringarray[-1]}
     ((i++))
   fi
 done < "${1:-/dev/stdin}"
 
-# build sbatch command
-jobids=$(printf ",%s" "${field[@]}")
-jobids=${jobids:1}
-sbatch --dependency=afterok:${jobids} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --output=/OPTI/jenkins/workspace/SCIP_COMP\=gnu_OPT\=dbg_LPS\=spx_IPOPT\=true_nightly/check/results/out.txt check/rbcliwrapper.sh
+# build job ids string for sbatch dependency
+jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
+jobidsstr=${jobids:1}
+
+# execute rbcliwrapper if all jobs succeed
+sbatch --dependency=afterok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --output=${PWD}/check/results/out.txt check/rbcliwrapper.sh
+
+# send cristina an email if there is a failure
+sbatch --dependency=afternotok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --mail-user=BEGIN --mail-user=munoz@zib.de ls
