@@ -61,7 +61,7 @@ typedef struct
    int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
                                               *   may be used to only iterate over the relevant variables. */
    int                   nboundedvars;       /**< The length of the boundedvars array. */
-} ValidBoundData;
+} ValidDomRedData;
 
 /**
  * This struct collects the bounds, that are given implicitly on the second branching level.
@@ -84,7 +84,7 @@ typedef struct
    int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
                                               *   may be used to only iterate over the relevant variables. */
    int                   nboundedvars;       /**< The length of the boundedvars array. */
-} SupposedBoundData;
+} SupposedDomRedData;
 
 typedef struct
 {
@@ -97,7 +97,7 @@ typedef struct
 static
 SCIP_RETCODE allocValidBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   ValidBoundData**      validbounddata
+   ValidDomRedData**      validbounddata
 )
 {
    int ntotalvars;
@@ -121,7 +121,7 @@ SCIP_RETCODE allocValidBoundData(
  */
 static
 void initValidBoundData(
-   ValidBoundData*       validbounddata      /*< The struct that should get cleared.*/
+   ValidDomRedData*       validbounddata      /*< The struct that should get cleared.*/
 )
 {
    validbounddata->nboundedvars = 0;
@@ -130,7 +130,7 @@ void initValidBoundData(
 static
 void freeValidBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   ValidBoundData**      validbounddata
+   ValidDomRedData**      validbounddata
 )
 {
    SCIPfreeBufferArray(scip, &(*validbounddata)->boundedvars);
@@ -143,7 +143,7 @@ void freeValidBoundData(
 static
 SCIP_RETCODE allocSupposedBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedBoundData**   supposedbounddata
+   SupposedDomRedData**   supposedbounddata
 )
 {
    int ntotalvars;
@@ -168,7 +168,7 @@ SCIP_RETCODE allocSupposedBoundData(
  */
 static
 void initSupposedBoundData(
-   SupposedBoundData*    supposedbounddata   /*< The struct that should get cleared.*/
+   SupposedDomRedData*    supposedbounddata   /*< The struct that should get cleared.*/
 )
 {
    supposedbounddata->nboundedvars = 0;
@@ -177,7 +177,7 @@ void initSupposedBoundData(
 static
 void freeSupposedBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedBoundData**   supposedbounddata
+   SupposedDomRedData**   supposedbounddata
 )
 {
    SCIPfreeBufferArray(scip, &(*supposedbounddata)->boundedvars);

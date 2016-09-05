@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define SCIP_DEBUG*/
+#define SCIP_DEBUG
+#define SCIP_STATISTICS
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -61,6 +62,7 @@ struct SCIP_BranchruleData
    int                   nsecondlvllps;      /**/
    int                   nfirstlvlcutoffs;   /**/
    int                   nsecondlvlcutoffs;  /**/
+   int*                  nresults;
 #endif
 };
 
@@ -154,7 +156,7 @@ SCIP_RETCODE executeBranchingOnUpperBound(
 
    if( SCIPisFeasLT(scip, newupperbound, oldlowerbound) )
    {
-      resultdata->lperror = TRUE;
+      resultdata->cutoff = TRUE;
    }
    else
    {
@@ -221,7 +223,6 @@ SCIP_RETCODE executeBranchingOnLowerBound(
    if( SCIPisFeasGT(scip, newlowerbound, oldupperbound) )
    {
       resultdata->cutoff = TRUE;
-      resultdata->lperror = TRUE;
    }
    else
    {
@@ -323,7 +324,7 @@ void addValidUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,
    SCIP_Real             newupperbound,
-   ValidBoundData*       validbounds
+   ValidDomRedData*      validbounds
 )
 {
    int varindex;
@@ -354,7 +355,7 @@ void addValidLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,
    SCIP_Real             newlowerbound,
-   ValidBoundData*       validbounds
+   ValidDomRedData*      validbounds
 )
 {
    int varindex;
@@ -385,7 +386,7 @@ void addSupposedUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**/
    SCIP_Real             newupperbound,      /**/
-   SupposedBoundData*    supposedbounds      /**/
+   SupposedDomRedData*   supposedbounds      /**/
 )
 {
    int varindex;
@@ -420,7 +421,7 @@ void addSupposedLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**/
    SCIP_Real             newlowerbound,      /**/
-   SupposedBoundData*    supposedbounds      /**/
+   SupposedDomRedData*   supposedbounds      /**/
 )
 {
    int varindex;
@@ -451,29 +452,28 @@ void addSupposedLowerBound(
 }
 
 static
-SCIP_RETCODE calculateWeight(
+SCIP_Real calculateWeight(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             upgain,
-   SCIP_Real             downgain,
-   SCIP_Real*            result
+   SCIP_Real             downgain
 )
 {
+   SCIP_Real result;
    SCIP_Real min;
    SCIP_Real max;
    SCIP_Real minweight = 4;
    SCIP_Real maxweight = 1;
 
    assert(scip != NULL);
-   assert(result != NULL);
 
    min = MIN(downgain, upgain);
    max = MAX(upgain, downgain);
 
-   *result = minweight * min + maxweight * max;
+   result = minweight * min + maxweight * max;
 
-   SCIPdebugMessage("The calculated weight of <%g> and <%g> is <%g>.\n", upgain, downgain, *result);
+   SCIPdebugMessage("The calculated weight of <%g> and <%g> is <%g>.\n", upgain, downgain, result);
 
-   return SCIP_OKAY;
+   return result;
 }
 
 static
@@ -566,11 +566,18 @@ SCIP_RETCODE addGrandChildIntegerBound(
    return SCIP_OKAY;
 }
 
+/**
+ * Executes the second level branching on a given variable.
+ * Set the value of result to SCIP_CONSADDED, if a constraint was added to the base node.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 static
 SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             baselpsol,
-   SCIP_NODE*            basenode,
+   SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
+   SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary
                                               *   bounds. Can be NULL.*/
@@ -580,8 +587,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP_Bool*            lperror,            /**< Pointer that gets filled in case there occurred an error */
    WeightData*           weightdata,         /**< container to be filled with the weight relevant data */
    int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
-   SupposedBoundData*    supposedbounds,
-   BinaryBoundData*      binarybounddata,
+   SupposedDomRedData*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
+                                              *   second level */
+   BinaryBoundData*      binarybounddata,    /**< pointer which gets filled with the data for implicit binary bounds */
    SCIP_RESULT*          result              /**< pointer to store results of branching */
 )
 {
@@ -599,6 +607,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    initBranchingResultData(scip, upresultdata);
 
    SCIPdebugMessage("Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+   /* execute the second level down branching */
    SCIP_CALL( executeBranchingOnUpperBound(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
 
    if( downresultdata->lperror )
@@ -615,6 +624,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
       SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
 
       SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+      /* execute the second level up branching */
       SCIP_CALL( executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
 
       if( upresultdata->lperror )
@@ -632,9 +642,11 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
          if( !downresultdata->cutoff && !upresultdata->cutoff )
          {
+            /* if both branches are not cutoff we can calculate the weight for the current first level branching node */
             SCIP_Real downgain;
             SCIP_Real upgain;
 
+            /* in SCIP we minimize, so the (non-negative) gain is difference between the new obj value and the base lp one */
             downgain = downresultdata->objval - lpobjval;
             upgain = upresultdata->objval - lpobjval;
 
@@ -646,8 +658,10 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             assert(!SCIPisFeasNegative(scip, downgain));
             assert(!SCIPisFeasNegative(scip, upgain));
 
-            SCIP_CALL( calculateWeight(scip, upgain, downgain, &currentweight) );
+            /* calculate the weight of both gains */
+            currentweight = calculateWeight(scip, upgain, downgain);
 
+            /* add the new weight to the weight data */
             weightdata->highestweight = MAX(weightdata->highestweight, currentweight);
             weightdata->sumofweights = weightdata->sumofweights + currentweight;
             weightdata->numberofweights++;
@@ -670,31 +684,49 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             {
                if( basevarforbound != NULL && SCIPvarIsBinary(deepbranchvar) )
                {
+                  /* if the up branching was cutoff and both branching variables are binary we can deduce a binary
+                   * constraint */
                   SCIP_Bool consadded;
-                  SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepbranchvar, binarybounddata, &consadded) );
+                  SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepbranchvar,
+                     binarybounddata, &consadded) );
 
                   if( consadded )
                   {
+                     /* the deduced binary constraint is violated by the base lp solution and was added directly on the base
+                      * node. So we set the result value to stop the branching and return to SCIP. */
                      *result = SCIP_CONSADDED;
                   }
                }
+
+               /* we add the cutoff to the "supposed" buffer, so that it may be transferred to the "valid" buffer later on */
                addSupposedUpperBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
             if( downresultdata->cutoff )
             {
                if( basevarforbound != NULL && SCIPvarIsBinary(deepbranchvar) )
                {
+                  /* if the down branching was cutoff and both branching variables are binary we can deduce a binary
+                   * constraint */
                   SCIP_Bool consadded;
                   SCIP_VAR* deepvarforbound;
-                  SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
 
-                  SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepvarforbound, binarybounddata, &consadded) );
+                  /* To create an implied binary bound, we need the negated var (1-y) for this up branching case.
+                   * Description: The down branching condition for binary variables is y <= 0 <=> (1-y) <= 1. As this branch
+                   * is cutoff we can build, together with the binary first level variable x and the branching constraint
+                   * f(x) >= 1, the constraint f(x) + (1-y) <= 1.*/
+                  SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
+                  SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepvarforbound,
+                     binarybounddata, &consadded) );
 
                   if( consadded )
                   {
+                     /* the deduced binary constraint is violated by the base lp solution and was added directly on the base
+                      * node. So we set the result value to stop the branching and return to SCIP. */
                      *result = SCIP_CONSADDED;
                   }
                }
+
+               /* we add the cutoff to the "supposed" buffer, so that it may be transferred to the "valid" buffer later on */
                addSupposedLowerBound(scip, deepbranchvar, deepbranchvarsolval, supposedbounds);
             }
          }
@@ -708,20 +740,27 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    return SCIP_OKAY;
 }
 
+/**
+ * Executes the second level branching over all lp candidates for one first level branching variable.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 static
 SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             baselpsol,
-   SCIP_NODE*            basenode,
+   SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
+   SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary
                                               *   bounds. Can be NULL.*/
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
-   SCIP_Bool*            lperror,
-   WeightData*           weightdata,
-   int*                  ncutoffs,
-   SupposedBoundData*    supposedbounds,
-   BinaryBoundData*      binarybounddata,
+   SCIP_Bool*            lperror,            /**< pointer which gets filled if an error occurrs during the lp solving */
+   WeightData*           weightdata,         /**< pointer which gets filled with the relevant weight data */
+   int*                  ncutoffs,           /**< pointer which gets filled with the number of second level cutoffs */
+   SupposedDomRedData*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
+                                              *   second level */
+   BinaryBoundData*      binarybounddata,    /**< pointer which gets filled with the data for implicit binary bounds */
    SCIP_RESULT*          result              /**< pointer to store results of branching */
 )
 {
@@ -733,23 +772,28 @@ SCIP_RETCODE executeDeepBranching(
    assert(scip != NULL);
    assert(ncutoffs != NULL);
 
+   /* get the branching candidates for the current probing node */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
 
    SCIPdebugMessage("The deeper lp has <%i> variables with fractional value.\n", nlpcands);
 
-   for( j = 0; j < nlpcands; j++ )
+   for( j = 0; j < nlpcands && !*lperror; j++ )
    {
+      /* get the current variable and solution value */
       SCIP_VAR* deepbranchvar = lpcands[j];
       SCIP_Real deepbranchvarsolval = lpcandssol[j];
 
       SCIPdebugMessage("Start deeper branching on variable <%s> with solution value <%g>.\n",
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval);
 
+      /* execute the second level branching for a variable */
       SCIP_CALL( executeDeepBranchingOnVar(scip, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
          fullcutoff, lperror, weightdata, ncutoffs, supposedbounds, binarybounddata, result) );
 
       if( *fullcutoff )
       {
+         /* if both second level branches for a variable are cutoff, we stop the calculation, as the current first level
+          * branch has to be cutoff */
          SCIPdebugMessage("The deeper lp on variable <%s> is cutoff, as both lps are cutoff.\n",
             SCIPvarGetName(deepbranchvar));
          break;
@@ -757,6 +801,8 @@ SCIP_RETCODE executeDeepBranching(
 
       if( *result == SCIP_CONSADDED )
       {
+         /* if we found a constraint, that violates the base lp we want to stop and start the branching rule again (handled
+          * by SCIP) */
          SCIPdebugMessage("The deep branching is stopped, as an implied binary constraint was found, which is violated by the base LP.\n");
          break;
       }
@@ -765,35 +811,44 @@ SCIP_RETCODE executeDeepBranching(
    return SCIP_OKAY;
 }
 
+/**
+ * Calculates the average weight of the weight data given.
+ */
 static
-SCIP_RETCODE calculateAverageWeight(
+SCIP_Real calculateAverageWeight(
    SCIP*                 scip,               /**< SCIP data structure */
-   WeightData*           weightdata,         /**< calculation data for the average weight */
-   SCIP_Real*            averageweight       /**< resulting average weight */
+   WeightData*           weightdata          /**< calculation data for the average weight */
 )
 {
+   SCIP_Real averageweight;
+
    assert(scip != NULL);
    assert(!SCIPisFeasNegative(scip, weightdata->sumofweights));
    assert(weightdata->numberofweights >= 0);
-   assert(averageweight != NULL);
 
    if( weightdata->numberofweights > 0 )
    {
-      *averageweight = (1.0 / weightdata->numberofweights) * weightdata->sumofweights;
+      averageweight = (1.0 / weightdata->numberofweights) * weightdata->sumofweights;
    }
    else
    {
-      *averageweight = 0;
+      /* in case of no weights we have define the average as 0. */
+      averageweight = 0;
    }
-   return SCIP_OKAY;
+   return averageweight;
 }
 
+/**
+ * Calculates the weight for the branching on a first level variable. All data needed for the weight calculation is stored
+ * in the scoredata.
+ */
 static
-SCIP_RETCODE calculateCurrentWeight(
+void calculateCurrentWeight(
    SCIP*                 scip,               /**< SCIP data structure */
-   ScoreData*            scoredata,
-   SCIP_Real*            highestweight,
-   int*                  highestweightindex
+   ScoreData*            scoredata,          /**< the information to calculate the new weight on */
+   SCIP_Real*            highestweight,      /**< pointer to the current highest weight; gets updated with the new highest
+                                              *   weight */
+   int*                  highestweightindex  /**< pointer to the index with the highest weight; gets updated accordingly */
 )
 {
    SCIP_Real averageweightupperbound = 0;
@@ -808,27 +863,47 @@ SCIP_RETCODE calculateCurrentWeight(
    assert(highestweight != NULL);
    assert(highestweightindex != NULL);
 
-   SCIP_CALL( calculateAverageWeight(scip, scoredata->upperbounddata, &averageweightupperbound) );
-   SCIP_CALL( calculateAverageWeight(scip, scoredata->lowerbounddata, &averageweightlowerbound) );
+   /* calculate the average weights of up and down branches */
+   averageweightupperbound = calculateAverageWeight(scip, scoredata->upperbounddata);
+   averageweightlowerbound = calculateAverageWeight(scip, scoredata->lowerbounddata);
+
+   /* sum both averages to use it as a normalization for the number of cutoffs */
    lambda = averageweightupperbound + averageweightlowerbound;
 
+   SCIPdebugMessage("The lambda value is <%g>.\n", lambda);
    assert(!SCIPisFeasNegative(scip, lambda));
 
-   SCIPdebugMessage("The lambda value is <%g>.\n", lambda);
+   /* calculate the weight by adding up the max weights of up and down branches as well as the normalized number of cutoffs */
+   totalweight = scoredata->lowerbounddata->highestweight + scoredata->upperbounddata->highestweight
+      + lambda * scoredata->ncutoffs;
 
-   totalweight = scoredata->lowerbounddata->highestweight + scoredata->upperbounddata->highestweight + scoredata->ncutoffs;
    if( SCIPisFeasGT(scip, totalweight, *highestweight) )
    {
+      /* if the new weight is higher than the old one: replace it and update date index accordingly */
       *highestweight = totalweight;
       *highestweightindex = scoredata->varindex;
    }
-   return SCIP_OKAY;
 }
 
+/**
+ * Adds the domain reductions found throughout the execution of the branching rule.
+ * Domain reductions of a variable occur if:
+ * - one branch on the first level is cutoff (directly or because both branches of a second level variable were cutoff)
+ * - both second level branches in the same direction for the same first level variable are cutoff
+ *
+ * Sets the result pointer to SCIP_CUTOFF, if the reduction of at least one var led to an infeasible state.
+ * Otherwise sets the result pointer to SCIP_REDUCEDDOM, if an actual domain reduction was executed.
+ * Otherwise leaves the result as is.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ * @see ValidDomRedData
+ * @see SupposedDomRedData
+ */
 static
-SCIP_RETCODE handleNewBounds(
+SCIP_RETCODE addDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
-   ValidBoundData*       validbounds,        /**< The struct containing all bounds that should be added. */
+   ValidDomRedData*      validbounds,        /**< The struct containing all bounds that should be added. */
    SCIP_RESULT*          result              /**< Pointer to the result flag. Used to set the correct flags. */
 )
 {
@@ -844,8 +919,8 @@ SCIP_RETCODE handleNewBounds(
    nboundedvars = validbounds->nboundedvars;
    probvars = SCIPgetVars(scip);
 
-   /* Instead of iterating over all problem vars, we iterate only over those, that have a new bound set. */
-   SCIPdebugMessage("Trying to add <%d> variable bounds.\n", nboundedvars);
+   /* Instead of iterating over all problem vars, we iterate only over those that have a new bound set. */
+   SCIPdebugMessage("Trying to add domain reductions for <%d> variables.\n", nboundedvars);
    for( i = 0; i < nboundedvars && *result != SCIP_CUTOFF; i++ )
    {
       int probvarindex;
@@ -853,7 +928,7 @@ SCIP_RETCODE handleNewBounds(
       SCIP_VAR* branchvar;
 
       /* The iteration index is only valid as an index for the boundedvars array. Every other array in validbounds is
-       * indexed by the probindex. */
+       * indexed by the probindex contained in boundedvars. */
       probvarindex = validbounds->boundedvars[i];
       status = validbounds->boundstatus[probvarindex];
       branchvar = probvars[probvarindex];
@@ -867,9 +942,11 @@ SCIP_RETCODE handleNewBounds(
          SCIP_Real proposedlowerbound;
          SCIP_Real newlowerbound;
 
+         /* get the old and the new lower bound */
          oldlowerbound = SCIPvarGetLbLocal(branchvar);
          proposedlowerbound = validbounds->lowerbounds[probvarindex];
 
+         /* add the new bound */
          SCIP_CALL( SCIPtightenVarLb(scip, branchvar, proposedlowerbound, FALSE, &infeasible, &tightened) );
 
          newlowerbound = SCIPvarGetLbLocal(branchvar);
@@ -878,11 +955,14 @@ SCIP_RETCODE handleNewBounds(
 
          if( infeasible )
          {
+            /* the domain reduction may result in an empty model (ub < lb) */
             *result = SCIP_CUTOFF;
-            SCIPdebugMessage("The lower bound of variable <%s> could not be tightened.\n", SCIPvarGetName(branchvar));
+            SCIPdebugMessage("The domain reduction of variable <%s> resulted in an empty model.\n",
+               SCIPvarGetName(branchvar));
          }
          else if( tightened )
          {
+            /* the lb is now strictly greater than before */
             *result = SCIP_REDUCEDDOM;
             SCIPdebugMessage("The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(branchvar));
             nboundsadded++;
@@ -898,9 +978,11 @@ SCIP_RETCODE handleNewBounds(
          SCIP_Real proposedupperbound;
          SCIP_Real newupperbound;
 
+         /* get the old and the new upper bound */
          oldupperbound = SCIPvarGetUbLocal(branchvar);
          proposedupperbound = validbounds->upperbounds[probvarindex];
 
+         /* add the new bound */
          SCIP_CALL( SCIPtightenVarUb(scip, branchvar, proposedupperbound, FALSE, &infeasible, &tightened) );
 
          newupperbound = SCIPvarGetUbLocal(branchvar);
@@ -909,11 +991,13 @@ SCIP_RETCODE handleNewBounds(
 
          if( infeasible )
          {
+            /* the domain reduction may result in an empty model (ub < lb) */
             *result = SCIP_CUTOFF;
             SCIPdebugMessage("The upper bound of variable <%s> could not be tightened.\n", SCIPvarGetName(branchvar));
          }
          else if( tightened )
          {
+            /* the ub is now strictly smaller than before */
             *result = SCIP_REDUCEDDOM;
             SCIPdebugMessage("The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(branchvar));
             nboundsadded++;
@@ -927,7 +1011,7 @@ SCIP_RETCODE handleNewBounds(
       }
    }
 
-   SCIPdebugMessage("Added <%d> bounds to the problem.\n", nboundsadded);
+   SCIPdebugMessage("Added <%d> real domain reductions to the problem.\n", nboundsadded);
 
    return SCIP_OKAY;
 }
@@ -993,8 +1077,8 @@ SCIP_RETCODE handleImpliedBinaryBounds(
 static
 void transferBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedBoundData*    supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
-   ValidBoundData*       validbounds         /**< Bound data from the first level branches. Target for the transfer. */
+   SupposedDomRedData*   supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
+   ValidDomRedData*      validbounds         /**< Bound data from the first level branches. Target for the transfer. */
 )
 {
    int i;
@@ -1061,6 +1145,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
    SCIP_SOL*             baselpsol,          /**< the lp solution of the base node */
+   SCIP_Bool*            depthtoosmall,      /**< pointer to store the result of the depth check */
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
    int                   nlpcands,           /**< number of fractional variables/solution values */
@@ -1084,8 +1169,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
    if( SCIPgetDepthLimit(scip) <= (SCIPgetDepth(scip) + 2) )
    {
       /* we need to branch at least 2 steps deep */
-      SCIPdebugMessage("Cannot perform probing in selectVarLookaheadBranching, depth limit reached.\n");
-      *result = SCIP_DIDNOTRUN;
+      SCIPdebugMessage("Cannot perform probing in selectVarLookaheadBranching, depth limit reached. Current:<%i>, Max:<%i>\n",
+         SCIPgetDepthLimit(scip), SCIPgetDepth(scip));
+      *depthtoosmall = TRUE;
       return SCIP_OKAY;
    }
 
@@ -1102,8 +1188,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       int highestscoreindex = -1;
       int i;
 
-      ValidBoundData* validbounds;
-      SupposedBoundData* supposedbounds;
+      ValidDomRedData* validbounds;
+      SupposedDomRedData* supposedbounds;
       BinaryBoundData* binarybounddata;
 
       /* allocate all structs */
@@ -1231,6 +1317,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
+            /* if both first level branchings of one variable were cutoff, the whole base node can be cutoff */
             *result = SCIP_CUTOFF;
             SCIPdebugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(branchvar));
             break;
@@ -1254,7 +1341,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
             else
             {
                /* if neither of both branches was cutoff we can calculate the weight for the current variable */
-               SCIP_CALL( calculateCurrentWeight(scip, scoredata, &highestscore, &highestscoreindex) );
+               calculateCurrentWeight(scip, scoredata, &highestscore, &highestscoreindex);
             }
          }
       }
@@ -1281,7 +1368,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       else if( *result != SCIP_DIDNOTFIND && *result != SCIP_CUTOFF && *result != SCIP_CONSADDED )
       {
          /* if we have no other result status set and found (potential) implied domain reductions, we add those here */
-         SCIP_CALL( handleNewBounds(scip, validbounds, result) );
+         SCIP_CALL( addDomainReductions(scip, validbounds, result) );
       }
 
       /* free the structs (in reverse order of allocation) */
@@ -1296,9 +1383,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPfreeBuffer(scip, &downbranchingresult);
 
       /* save the highest score index in the result parameter */
+      SCIPdebugMessage("The current best candidate is <%i>\n", *bestcand);
       if( highestscoreindex != -1 )
       {
          *bestcand = highestscoreindex;
+         SCIPdebugMessage("The new best candidate is <%i>\n", *bestcand);
       }
    }
 
@@ -1323,7 +1412,7 @@ SCIP_RETCODE branchOnVar(
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
 
-   assert(*result == SCIP_DIDNOTRUN);
+   /*assert(*result == SCIP_DIDNOTRUN);*/
 
    SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
 
@@ -1380,6 +1469,9 @@ SCIP_RETCODE usePreviousResult(
    /* execute the actual branching */
    SCIP_CALL( branchOnVar(scip, var, val, result) );
 
+   SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n",
+      SCIPvarGetName(branchruledata->prevbinbranchvar));
+
    /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
    branchruledata->prevbinbranchvar = NULL;
 
@@ -1412,6 +1504,7 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+   SCIPfreeMemoryArray(scip, &branchruledata->nresults);
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -1423,8 +1516,16 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
 static
 SCIP_DECL_BRANCHINIT(branchInitLookahead)
 {  /*lint --e{715}*/
+   int i;
    SCIP_BRANCHRULEDATA* branchruledata;
+
    branchruledata = SCIPbranchruleGetData(branchrule);
+
+   for( i = 0; i < 18; i++)
+   {
+      branchruledata->nresults[i] = 0;
+   }
+
    /* Create an empty solution. Gets filled in case of implied binary bounds. */
    SCIP_CALL( SCIPcreateSol(scip, &branchruledata->prevbinsolution, NULL) );
    branchruledata->prevbinbranchvar = NULL;
@@ -1472,14 +1573,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIP_CALL( SCIPunlinkSol(scip, baselpsol) );
 
    /* default result value */
-   *result = SCIP_DIDNOTRUN;
+   /**result = SCIP_DIDNOTRUN;*/
 
    if( isUsePreviousResult(scip, baselpsol, branchruledata) )
    {
       SCIP_CALL( usePreviousResult(scip, branchruledata, result) );
-
-      SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n",
-         SCIPvarGetName(branchruledata->prevbinbranchvar));
    }
    else
    {
@@ -1487,6 +1585,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_VAR** lpcands;
       SCIP_Real* tmplpcandssol;
       SCIP_Real* lpcandssol;
+      SCIP_Bool depthtoosmall = FALSE;
       int nlpcands;
       int bestcand = -1;
 
@@ -1502,14 +1601,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", nlpcands);
 
       /* execute the main logic */
-      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata, baselpsol, lpcands, lpcandssol, nlpcands, &bestcand, result) );
+      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata, baselpsol, &depthtoosmall, lpcands, lpcandssol, nlpcands,
+         &bestcand, result) );
+
+      SCIPdebugMessage("Result is <%i>\n", *result);
 
       if( *result != SCIP_CUTOFF /* a variable could not be branched in any direction or any of the calculated domain
                                   * reductions was infeasible */
          && *result != SCIP_REDUCEDDOM /* the domain of a variable was reduced by evaluating the calculated cutoffs */
          && *result != SCIP_CONSADDED /* implied binary constraints were already added */
          && *result != SCIP_DIDNOTFIND /* an lp error occurred on the way */
-         && *result != SCIP_DIDNOTRUN /* branching depth wasn't high enough */
+         && !depthtoosmall /* branching depth wasn't high enough */
          && (0 <= bestcand && bestcand < nlpcands) ) /* no valid candidate index could be found */
       {
          SCIP_VAR* var;
@@ -1541,7 +1643,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       {
          SCIPdebugMessage("Result: An error occurred during the solving of one of the lps.\n");
       }
-      else if( *result == SCIP_DIDNOTRUN )
+      else if( depthtoosmall )
       {
          SCIPdebugMessage("Result: The branching depth wasn't high enough for a 2 level branching.\n");
       }
@@ -1557,6 +1659,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
 
    SCIPdebugMessage("Exiting branchExeclpLookahead.\n");
+
+#ifdef SCIP_STATISTICS
+   branchruledata->nresults[*result]++;
+   {
+      int i;
+      for( i = 1; i < 18; i++ )
+      {
+         /* see type_result.h for the id <-> enum mapping */
+         SCIPinfoMessage(scip, NULL, "Result with index <%i> was chosen <%i> times\n", i, branchruledata->nresults[i]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -1575,6 +1689,11 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
 
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+
+#ifdef SCIP_STATISTICS
+   /* current number of result entries*/
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nresults, 17 + 1) );
+#endif
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
