@@ -23,7 +23,7 @@ done < "${1:-/dev/stdin}"
 
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
-jobidsstr=${jobids:1}
+jobidsstr=${jobidsstr:1}
 
 # execute rbcliwrapper if all jobs succeed
 sbatch --dependency=afterok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip check/rbcliwrapper.sh
