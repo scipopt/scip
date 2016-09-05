@@ -1752,6 +1752,15 @@ void SCIPsortIntIntLong(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortIntRealLong(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortIntIntPtr(
@@ -2996,6 +3005,19 @@ void SCIPsortedvecInsertIntIntLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
+   SCIP_Longint          field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into three joint arrays of ints/SCIP_Real/SCIP_Longint, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertIntRealLong(
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Real*            realarray,          /**< SCIP_Real where an element is to be inserted */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be inserted */
+   int                   keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
    SCIP_Longint          field2val,          /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
@@ -4440,6 +4462,16 @@ EXTERN
 void SCIPsortedvecDelPosIntIntLong(
    int*                  intarray1,          /**< int array where an element is to be deleted */
    int*                  intarray2,          /**< second int array where an element is to be deleted */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from three joint arrays of ints/SCIP_Real/SCIP_Longint, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosIntRealLong(
+   int*                  intarray,           /**< int array where an element is to be deleted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
