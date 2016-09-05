@@ -24,4 +24,4 @@ done < "${1:-/dev/stdin}"
 # build sbatch command
 jobids=$(printf ",%s" "${field[@]}")
 jobids=${jobids:1}
-sbatch --dependency=afterok:${jobids} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip check/rbcliwrapper.sh
+sbatch --dependency=afterok:${jobids} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --output=/OPTI/jenkins/workspace/SCIP_COMP\=gnu_OPT\=dbg_LPS\=spx_IPOPT\=true_nightly/check/results/out.txt check/rbcliwrapper.sh
