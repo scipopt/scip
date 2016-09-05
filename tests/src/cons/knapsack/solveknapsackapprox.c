@@ -245,10 +245,10 @@ Test(knapprox, bigandbad, .description = "tests big instance that is already sor
    cr_assert_float_eq(profit, expectedprofit, 1e-4, "Expectedprofit %g ~= profit %g\n", expectedprofit, profit);
 }
 
-Test(knapprox, manybiginstances, .description = "tests many big instances for timing)")
+Test(knapprox, manybiginstances, .description = "tests many big instances for timing")
 {
    unsigned int randseed = 113;
-   int ntries = 50;
+   int ntries = 20;
    int trial = 1;
    nitems = 999999; /* more than 25 items to call Balas Zemel algorithm */
 
@@ -261,4 +261,36 @@ Test(knapprox, manybiginstances, .description = "tests many big instances for ti
       callAndTestSolveKnapsackApproximately();
 
    } while( trial++ <= ntries );
+}
+
+Test(knapprox, shuffledata, .description = "tests consistent result when shuffling data")
+{
+   unsigned int randseed = 121;
+
+   int npermutations = 20;
+   int permutation = 1;
+   SCIP_Real lastprofit;
+   nitems = 999;
+
+   randomDataInit(&randseed, 2);
+   capacity /= 4;
+
+   lastprofit = -1.0;
+   do
+   {
+      /* by permuting and sorting, the items costs and weights are shuffled; the profit of the greedy solution, however, must not change */
+      SCIPpermuteIntArray(items, 0, nitems, &randseed);
+
+      SCIPsortIntRealLong(items, profits, weights, nitems);
+
+      callAndTestSolveKnapsackApproximately();
+
+      if( lastprofit >= 0.0 )
+         cr_assert_float_eq(lastprofit, profit, 1e-6, "Permutation %d has a different result from the previous: %.1g ~= %.1g", permutation, lastprofit, profit);
+
+      lastprofit = profit;
+
+   } while( permutation++ <= npermutations );
+
+
 }
