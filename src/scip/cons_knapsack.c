@@ -1561,6 +1561,8 @@ SCIP_RETCODE solveKnapsackApproximatelyDantzig(
    return SCIP_OKAY;
 }
 
+static unsigned int bzrandomseed = 109;
+
 /** solves a knapsack problem (max profit sum s.t. capacity is not exceeded) approximately by using the
  *  algorithm of Balas and Zemel that does not require sorting the items */
 static
@@ -1605,6 +1607,10 @@ SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
       SCIP_CALL( SCIPallocBufferArray(scip, &(subsets[i]), nitems) );
    }
 
+   /* initialize number of solution items */
+   if( solitems != NULL )
+      *nsolitems = *nnonsolitems = 0;
+
 
    rescapa = capacity;
    profit = 0.0;
@@ -1631,7 +1637,8 @@ SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
       /* guess a lambda: we pick the median of the first three entries */
       for( i = 0; i < 3; ++i )
       {
-         firstvalues[i] = c2weightratios[allitems[i]];
+         int randidx = SCIPgetRandomInt(0, nremainingitems, &bzrandomseed);
+         firstvalues[i] = c2weightratios[allitems[randidx]];
       }
       SCIPsortReal(firstvalues, 3);
       lambda = firstvalues[1];
@@ -1647,12 +1654,12 @@ SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
          SCIP_Longint weight = weights[allitems[i]];
          int setidx = -1;
 
-         if( SCIPisGT(scip, c2weightratio, lambda) )
+         if( c2weightratio > lambda )
          {
             setidx = SETIDX_LARGER;
             weightlarger += weight;
          }
-         else if( SCIPisLT(scip, c2weightratio, lambda) )
+         else if( c2weightratio < lambda )
          {
             setidx = SETIDX_SMALLER;
          }
@@ -1682,7 +1689,7 @@ SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
                int itemidx;
                SCIP_Longint weight;
 
-               itemidx = subsets[SETIDX_EQUAL][i];
+               itemidx = subsets[SETIDX_LARGER][i];
                item = items[itemidx];
                weight = weights[itemidx];
                profit += profits[itemidx];
@@ -1730,7 +1737,7 @@ SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
                   int item;
                   itemidx = subsets[SETIDX_SMALLER][i];
                   item = items[itemidx];
-                  assert(weights[itemidx] > rescapa);
+
                   nonsolitems[(*nnonsolitems)++] = item;
                }
             }
@@ -1827,6 +1834,9 @@ SCIP_RETCODE solveKnapsackApproximatelyBalasZemel(
       SCIPfreeBufferArray(scip, &dprofits);
       SCIPfreeBufferArray(scip, &dweights);
    }
+
+   if( solval != NULL )
+      *solval = profit;
 
    /* free subset memory */
    for( i = 2; i >= 0; --i )
