@@ -576,6 +576,7 @@ SCIP_RETCODE addGrandChildIntegerBound(
 static
 SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
@@ -609,6 +610,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIPdebugMessage("Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
    /* execute the second level down branching */
    SCIP_CALL( executeBranchingOnUpperBound(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
+#ifdef SCIP_STATISTICS
+   branchruledata->nsecondlvllps++;
+#endif
 
    if( downresultdata->lperror )
    {
@@ -626,6 +630,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
       SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
       /* execute the second level up branching */
       SCIP_CALL( executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
+#ifdef SCIP_STATISTICS
+      branchruledata->nsecondlvllps++;
+#endif
 
       if( upresultdata->lperror )
       {
@@ -674,11 +681,17 @@ SCIP_RETCODE executeDeepBranchingOnVar(
          {
             *fullcutoff = TRUE;
             *ncutoffs = *ncutoffs + 2;
+#ifdef SCIP_STATISTICS
+            branchruledata->nsecondlvlcutoffs = branchruledata->nsecondlvlcutoffs + 2;
+#endif
          }
          else
          {
             *fullcutoff = FALSE;
             *ncutoffs = *ncutoffs + 1;
+#ifdef SCIP_STATISTICS
+            branchruledata->nsecondlvlcutoffs++;
+#endif
 
             if( upresultdata->cutoff )
             {
@@ -749,6 +762,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 static
 SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
@@ -777,7 +791,7 @@ SCIP_RETCODE executeDeepBranching(
 
    SCIPdebugMessage("The deeper lp has <%i> variables with fractional value.\n", nlpcands);
 
-   for( j = 0; j < nlpcands && !*lperror; j++ )
+   for( j = 0; j < nlpcands && !*lperror && !SCIPisStopped(scip); j++ )
    {
       /* get the current variable and solution value */
       SCIP_VAR* deepbranchvar = lpcands[j];
@@ -787,7 +801,7 @@ SCIP_RETCODE executeDeepBranching(
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval);
 
       /* execute the second level branching for a variable */
-      SCIP_CALL( executeDeepBranchingOnVar(scip, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
+      SCIP_CALL( executeDeepBranchingOnVar(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
          fullcutoff, lperror, weightdata, ncutoffs, supposedbounds, binarybounddata, result) );
 
       if( *fullcutoff )
@@ -1238,6 +1252,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("First level down branching on variable <%s>\n", SCIPvarGetName(branchvar));
          /* execute the down branching on first level for the variable "branchvar" */
          SCIP_CALL( executeBranchingOnUpperBound(scip, branchvar, branchval, downbranchingresult) );
+#ifdef SCIP_STATISTICS
+         branchruledata->nfirstlvllps++;
+#endif
 
          /* if an error/cutoff occurred on the first level, we cannot branch deeper*/
          if( !downbranchingresult->lperror && !downbranchingresult->cutoff )
@@ -1252,7 +1269,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &basevarforbound) );
             }
             /* execute the branchings on the second level after the down branching on the first level */
-            SCIP_CALL( executeDeepBranching(scip, baselpsol, basenode, lpobjval, basevarforbound,
+            SCIP_CALL( executeDeepBranching(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound,
                &downbranchingresult->cutoff, &downbranchingresult->lperror, scoredata->upperbounddata,
                &scoredata->ncutoffs, supposedbounds, binarybounddata, result) );
          }
@@ -1279,7 +1296,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
          /* execute the up branching on first level for the variable "branchvar" */
          SCIP_CALL( executeBranchingOnLowerBound(scip, branchvar, branchval, upbranchingresult) );
-
+#ifdef SCIP_STATISTICS
+         branchruledata->nfirstlvllps++;
+#endif
          /* if an error/cutoff occurred on the first level, we cannot branch deeper*/
          if( !upbranchingresult->lperror && !upbranchingresult->cutoff )
          {
@@ -1292,7 +1311,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                basevarforbound = branchvar;
             }
             /* execute the branchings on the second level after the up branching on the first level */
-            SCIP_CALL( executeDeepBranching(scip, baselpsol, basenode, lpobjval, basevarforbound,
+            SCIP_CALL( executeDeepBranching(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound,
                &upbranchingresult->cutoff, &upbranchingresult->lperror, scoredata->lowerbounddata, &scoredata->ncutoffs,
                supposedbounds, binarybounddata, result) );
          }
@@ -1320,6 +1339,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
             /* if both first level branchings of one variable were cutoff, the whole base node can be cutoff */
             *result = SCIP_CUTOFF;
             SCIPdebugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(branchvar));
+#ifdef SCIP_STATISTICS
+            branchruledata->nfirstlvlcutoffs = branchruledata->nfirstlvlcutoffs + 2;
+#endif
             break;
          }
          else
@@ -1332,11 +1354,17 @@ SCIP_RETCODE selectVarLookaheadBranching(
             {
                /* if the up branching (on the lower bound) was cutoff, we can add this as a new upper bound for the var */
                addValidUpperBound(scip, branchvar, branchval, validbounds);
+#ifdef SCIP_STATISTICS
+               branchruledata->nfirstlvlcutoffs++;
+#endif
             }
             else if( downbranchingresult->cutoff )
             {
                /* if the down branching (on the upper bound) was cutoff, we can add this as a new lower bound for the var */
                addValidLowerBound(scip, branchvar, branchval, validbounds);
+#ifdef SCIP_STATISTICS
+               branchruledata->nfirstlvlcutoffs++;
+#endif
             }
             else
             {
@@ -1572,9 +1600,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    /* unlink the solution, so that newly solved lps don't have any influence on our copy */
    SCIP_CALL( SCIPunlinkSol(scip, baselpsol) );
 
-   /* default result value */
-   /**result = SCIP_DIDNOTRUN;*/
-
    if( isUsePreviousResult(scip, baselpsol, branchruledata) )
    {
       SCIP_CALL( usePreviousResult(scip, branchruledata, result) );
@@ -1661,14 +1686,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIPdebugMessage("Exiting branchExeclpLookahead.\n");
 
 #ifdef SCIP_STATISTICS
-   branchruledata->nresults[*result]++;
    {
       int i;
+      branchruledata->nresults[*result]++;
       for( i = 1; i < 18; i++ )
       {
          /* see type_result.h for the id <-> enum mapping */
          SCIPinfoMessage(scip, NULL, "Result with index <%i> was chosen <%i> times\n", i, branchruledata->nresults[i]);
       }
+      SCIPinfoMessage(scip, NULL, "Solved <%i> lps on the first level and <%i> lps on the second level\n",
+         branchruledata->nfirstlvllps, branchruledata->nsecondlvllps);
+      SCIPinfoMessage(scip, NULL, "Cutoff <%i> branches on the first level and <%i> on the second level\n",
+         branchruledata->nfirstlvlcutoffs, branchruledata->nsecondlvlcutoffs);
    }
 #endif
 
@@ -1691,7 +1720,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
 
 #ifdef SCIP_STATISTICS
-   /* current number of result entries*/
+   /* current number of possible result values */
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nresults, 17 + 1) );
 #endif
 
