@@ -241,6 +241,8 @@ SCIP_Bool isBinaryBoundDataEmpty(
    BinaryBoundData*      container
 )
 {
+   assert(container != NULL);
+
    return container->nentries == 0;
 }
 
