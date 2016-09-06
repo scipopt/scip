@@ -8786,7 +8786,7 @@ void SCIPselectWeightedMedian(
       }
    }
 
-   assert(left < right);
+   assert(left <= right);
    assert(right - left + 1 <= MINREMAININGKEYSSIZE);
 
    /* collect data for explicit sorting */

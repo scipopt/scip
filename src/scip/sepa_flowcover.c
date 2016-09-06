@@ -1025,9 +1025,13 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    ) 
 {
    SCIP_Real* tempsort;
+   int* indices;
    SCIP_Real solitemsweight;
    int j;
    int i;
+   SCIP_Real median;
+   int leftmedianidx;
+   int rightmedianidx;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1045,37 +1049,45 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
       *solval = 0.0;
 
    /* allocate memory for temporary array used for sorting; array should contain profits divided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &indices, nitems) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+
    /* initialize temporary array */ 
    for( i = nitems - 1; i >= 0; --i )
    {
       tempsort[i] = profits[i] / weights [i];
+      indices[i] = i;
    }
 
-   /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIPsortDownRealRealRealInt ( tempsort, weights, profits, items, nitems);
+   /* decrease capacity slightly to make it tighter than the original capacity */
+   capacity *= (1 - SCIPfeastol(scip));
+
+   /* rearrange indices for the break item */
+   SCIPselectWeightedMedian(tempsort, indices, weights, nitems, &median, capacity, &leftmedianidx, &rightmedianidx);
 
    /* free temporary array */
    SCIPfreeBufferArray(scip, &tempsort);
 
    /* select items as long as they fit into the knapsack */
    solitemsweight = 0.0;
-   for( j = 0; j < nitems && SCIPisFeasLT(scip, solitemsweight + weights[j], capacity); j++ )
+   for( j = 0; j < nitems && SCIPisFeasLT(scip, solitemsweight + weights[indices[j]], capacity); j++ )
    {
       if( solitems != NULL )
       {
-         solitems[*nsolitems] = items[j];
+         solitems[*nsolitems] = items[indices[j]];
          (*nsolitems)++;
       }
       if( solval != NULL )
-         (*solval) += profits[j];
-      solitemsweight += weights[j];
+         (*solval) += profits[indices[j]];
+      solitemsweight += weights[indices[j]];
    }
    for( ; j < nitems && solitems != NULL; j++ )
    {
-      nonsolitems[*nnonsolitems] = items[j];
+      nonsolitems[*nnonsolitems] = items[indices[j]];
       (*nnonsolitems)++;
    }
+
+   SCIPfreeBufferArray(scip, &indices);
 
    return SCIP_OKAY;
 }

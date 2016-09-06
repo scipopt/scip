@@ -2862,7 +2862,7 @@ SCIP_RETCODE getCover(
     */
    SCIP_CALL( SCIPsolveKnapsackApproximately(scip, nitems, transweights, transprofits, transcapacity, items,
          noncovervars, covervars, nnoncovervars, ncovervars, NULL) );
-   assert(checkSolveKnapsack(scip, nitems, transweights, transprofits, items, weights, solvals, modtransused));
+   /*assert(checkSolveKnapsack(scip, nitems, transweights, transprofits, items, weights, solvals, modtransused));*/
 
    /* constructs cover C (sum_{j in C} a_j > a_0) */
    for( j = 0; j < *ncovervars; j++ )
