@@ -8661,6 +8661,7 @@ void SCIPselectWeightedMedian(
    int left;
    int right;
    int j;
+   int recursiondepth;
    SCIP_Real residualcapacity;
 
    assert(keys != NULL);
@@ -8669,6 +8670,7 @@ void SCIPselectWeightedMedian(
    left = 0;
    right = nkeys - 1;
    residualcapacity = capacity;
+   recursiondepth = 0;
 
    while( right - left + 1 > MINREMAININGKEYSSIZE )
    {
@@ -8684,6 +8686,8 @@ void SCIPselectWeightedMedian(
       /* select a pivot element */
       SCIP_Real elements[NELEMSMEDIANSEL];
       int elementidxs[NELEMSMEDIANSEL];
+
+      ++recursiondepth;
 
       /* todo maybe select pivot randomized */
       for( i = 0; i < NELEMSMEDIANSEL; ++i )
@@ -8702,55 +8706,38 @@ void SCIPselectWeightedMedian(
 
       /* swap pivot to the rightmost position */
       SCIPswapInts(&indices[right], &indices[pivotindex]);
-      npivots = 1;
 
       /* loop over elements and swap if one is too small and one is too large */
       while( largeridx <= smalleridx )
       {
-         if( keys[indices[largeridx]] < pivot && keys[indices[smalleridx]] > pivot )
+         if( keys[indices[largeridx]] <= pivot && keys[indices[smalleridx]] > pivot )
          {
             SCIPswapInts(&indices[smalleridx], &indices[largeridx]);
             ++largeridx;
             --smalleridx;
          }
          /* loop until an element is detected that is larger than the key indexed by smalleridx */
-         while( keys[indices[smalleridx]] <= pivot )
-         {
-            /* ensure that all pivot elements are swapped to the rightmost npivots elements right, right - 1, right - npivots + 1 */
-            if( keys[indices[smalleridx]] == pivot )
-            {
-               if( smalleridx < right - npivots )
-               {
-                  SCIPswapInts(&indices[smalleridx], &indices[right - npivots]);
-                  ++npivots;
-               }
-            }
+         while( smalleridx >= left && keys[indices[smalleridx]] <= pivot )
             --smalleridx;
-         }
 
 
-         while( keys[indices[largeridx]] >= pivot )
-         {
-            /* ensure that all pivot elements are swapped to the rightmost npivots elements right, right - 1, right - npivots + 1 */
-            if( keys[indices[largeridx]] == pivot )
-            {
-               if( smalleridx == right - npivots )
-                  --smalleridx;
-
-               /* swap elements at index largeridx and the rightmost non-pivot element */
-               SCIPswapInts(&indices[largeridx], &indices[right - npivots]);
-               ++npivots;
-            }
-            else
-               ++largeridx;
-         }
+         while( largeridx < right - 1 && keys[indices[largeridx]] > pivot )
+            ++largeridx;
       }
       assert(smalleridx == largeridx - 1);
+      npivots = 0;
 
-      /* place pivot elements back to where they belong */
-      for( i = 0; i < npivots; ++i )
-         SCIPswapInts(&indices[largeridx + i], &indices[right - i]);
+      /* place pivot element(s) back to where they belong */
+      for( i = largeridx; i <= right; ++i )
+      {
+         if( keys[indices[i]] == pivot )
+         {
+            SCIPswapInts(&indices[largeridx + npivots], &indices[i]);
+            ++npivots;
+         }
+      }
 
+      assert(npivots > 0);
 
       if( weights != NULL )
       {
@@ -8785,6 +8772,7 @@ void SCIPselectWeightedMedian(
 
          return;
       }
+
       /* pivot is too large; continue search in the left half of the array */
       else if( largeweightsum >= residualcapacity )
       {
