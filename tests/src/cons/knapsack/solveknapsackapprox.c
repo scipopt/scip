@@ -221,6 +221,24 @@ Test(knapprox, biginstance, .description = "tests big random data")
    callAndTestSolveKnapsackApproximately();
 }
 
+Test(knapprox, equalratios, .description = "tests small instance with all ratios being equal")
+{
+   int i;
+   SCIP_Real expectedprofit;
+   nitems = 100; /* more than 25 items to call Balas Zemel algorithm */
+
+   /* initialize decreasing profits and weights, such that all ratios profits/weight are equal to 1 */
+   for( i = 0; i < nitems; ++i )
+   {
+      profits[i] = nitems - i;
+      weights[i] = nitems - i;
+   }
+
+   capacity = 2 * nitems;
+
+   callAndTestSolveKnapsackApproximately();
+}
+
 Test(knapprox, bigandbad, .description = "tests big instance that is already sorted (which should yield almost worst case run time)")
 {
    int i;
