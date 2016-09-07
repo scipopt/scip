@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <ostream>
+#include <list>
 #include <memory>
 #include <string>
 #include <utility>
@@ -37,8 +38,8 @@ namespace polyscip {
 
     class Polyscip {
     public:
-        using betaElem = std::pair< ValueType, ValueType>;
-        using betaT = std::vector<betaElem>;
+        using ValPair = std::pair< ValueType, ValueType>;
+        using betaT = std::vector<ValPair>;
 
         explicit Polyscip(int argc, const char *const *argv);
 
@@ -120,19 +121,21 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
+        std::list<ValPair> getNondomProjectedPoints(unsigned obj_1, unsigned obj_2) const;
+
         SCIP_RETCODE computeUnsupported(SCIP_VAR* new_var,
                                         std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                         std::vector<std::vector<ValueType>>& orig_vals,
-                                        const OutcomeType& predecessor,
-                                        const OutcomeType& successor);
+                                        const ValPair& predecessor,
+                                        const ValPair& successor,
+                                        std::pair<unsigned, unsigned> considered_objs);
 
         SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
-                                              const OutcomeType& predecessor,
-                                              const OutcomeType& successor,
-                                              const OutcomeType& reference_point,
-                                              const OutcomeType& upper_point);
+                                              const ValPair& predecessor,
+                                              const ValPair& successor);
+
 
         /** add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
