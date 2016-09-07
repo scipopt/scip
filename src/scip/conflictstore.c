@@ -62,10 +62,6 @@ SCIP_DECL_EVENTEXEC(eventExecConflictstore)
    return SCIP_OKAY;
 }
 
-/*
- * dynamic memory arrays
- */
-
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
 SCIP_RETCODE conflictstoreEnsureMem(

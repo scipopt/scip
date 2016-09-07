@@ -195,6 +195,9 @@ struct SCIP_Set
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
+   SCIP_Real             conf_proofscorefac;
+   SCIP_Real             conf_uplockscorefac;
+   SCIP_Real             conf_downlockscorefac;
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
    int                   conf_restartnum;    /**< number of successful conflict analysis calls that trigger a restart
                                               *   (0: disable conflict restarts) */

@@ -140,10 +140,6 @@
 #include "scip/struct_conflict.h"
 #include "scip/cons_linear.h"
 
-
-#define CONFLICTSETSCORE(conflictset) (-(conflictset)->nbdchginfos - 100*(conflictset)->repropdepth \
-      - 1000*(conflictset)->validdepth)
-
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                   FALSE /**< use variable bounds - see SCIPcalcMIR() */
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see SCIPcalcMIR() */
@@ -1041,15 +1037,60 @@ SCIP_RETCODE conflictsetEnsureBdchginfosMem(
    return SCIP_OKAY;
 }
 
-/** updates the score of the conflict set */
+/** calculates the score of the conflict set */
 static
 SCIP_Real conflictsetCalcScore(
-   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
+   SCIP_CONFLICTSET*     conflictset,        /**< conflict set */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conflictset != NULL);
 
-   return (SCIP_Real)CONFLICTSETSCORE(conflictset); /*lint !e790*/
+   return -(set->conf_weightsize * conflictset->nbdchginfos
+         + set->conf_weightrepropdepth * conflictset->repropdepth
+         + set->conf_weightvaliddepth * conflictset->validdepth);
+}
+
+static
+SCIP_Real calcBdchgScore(
+   SCIP_Real             prooflhs,
+   SCIP_Real             proofact,
+   SCIP_Real             proofactdelta,
+   SCIP_Real             proofcoef,
+   int                   depth,
+   int                   currentdepth,
+   SCIP_VAR*             var,
+   SCIP_SET*             set
+   )
+{
+   SCIP_COL* col;
+   SCIP_Real score = 0.0;
+
+   score = set->conf_proofscorefac * (1.0 - proofactdelta/(prooflhs - proofact));
+   score = MAX(score, 0.0);
+   score += set->conf_depthscorefac * (SCIP_Real)(depth+1)/(SCIP_Real)(currentdepth+1);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      col = SCIPvarGetCol(var);
+   else
+      col = NULL;
+
+   if( proofcoef > 0.0 )
+   {
+      if( col != NULL )
+         score += set->conf_uplockscorefac * (SCIP_Real)(SCIPvarGetNLocksUp(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
+      else
+         score += set->conf_uplockscorefac * SCIPvarGetNLocksUp(var);
+   }
+   else
+   {
+      if( col != NULL )
+         score += set->conf_downlockscorefac * (SCIP_Real)(SCIPvarGetNLocksDown(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
+      else
+         score += set->conf_downlockscorefac * SCIPvarGetNLocksDown(var);
+   }
+
+   return score;
 }
 
 /** check if the bound change info (which is the potential next candidate which is queued) is valid for the current
@@ -1577,7 +1618,7 @@ SCIP_RETCODE conflictInsertConflictset(
    SCIPdebug(conflictsetPrint(*conflictset));
 
    /* get the score of the conflict set */
-   score = conflictsetCalcScore(*conflictset);
+   score = conflictsetCalcScore(*conflictset, set);
 
    /* check, if conflict set is redundant to a better conflict set */
    for( pos = 0; pos < conflict->nconflictsets && score < conflict->conflictsetscores[pos]; ++pos )
@@ -4717,9 +4758,8 @@ SCIP_RETCODE addCand(
 
 
    /* calculate score for undoing the bound change */
-   score = 1.0 - proofactdelta/(prooflhs - proofact);
-   score = MAX(score, 0.0);
-   score += set->conf_depthscorefac * (SCIP_Real)(depth+1)/(SCIP_Real)(currentdepth+1);
+   score = calcBdchgScore(prooflhs, proofact, proofactdelta, proofcoef, depth, currentdepth, var, set);
+
    if( !resolvable )
    {
       score += 10.0;
@@ -5897,6 +5937,7 @@ SCIP_RETCODE runBoundHeuristic(
    return SCIP_OKAY;
 }
 
+static
 SCIP_Real getMinActivity(
    SCIP_SET*             set,
    SCIP_PROB*            prob,
@@ -5975,8 +6016,6 @@ SCIP_RETCODE tightenDualray(
    SCIP_Real* wc_vals;
    SCIP_Bool* wc_varused;
    int* wc_varinds;
-   int* sorted_varinds;
-   int* depth;
    SCIP_Real wc_rhs;
    SCIP_Real minact;
    SCIP_Real violation;
@@ -5987,8 +6026,6 @@ SCIP_RETCODE tightenDualray(
    int wc_nvars;
    int round;
    int nvars;
-   int i;
-   int v;
 
    nvars = prob->nvars;
 
@@ -6088,7 +6125,7 @@ SCIP_RETCODE tightenDualray(
             }
 
             /* the new constraint is tighter and we keep it */
-            if( *success )
+            if( *success && tightened )
             {
                BMScopyMemoryArray(mirvals, wc_vals, nvars);
                BMScopyMemoryArray(varused, wc_varused, nvars);
@@ -6229,6 +6266,7 @@ SCIP_RETCODE createAndAddDualray(
    return SCIP_OKAY;
 }
 
+static
 SCIP_RETCODE handleSingleVar(
    SCIP_CONFLICT*        conflict,
    SCIP_CONFLICTSTORE*   conflictstore,
@@ -6310,7 +6348,6 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Bool             diving
    )
 {
-   SCIP_CONS* dualraycons;
    SCIP_VAR** mirvars;
    SCIP_Real* mirvals;
    int* varinds;
@@ -6318,7 +6355,6 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Real mirrhs;
    SCIP_Real minact;
    SCIP_Bool success;
-   char name[SCIP_MAXSTRLEN];
    int ndualrayvars;
    int nmirvars;
    int v;
@@ -6411,9 +6447,6 @@ SCIP_RETCODE performDualRayAnalysis(
 
       if( !success || set->conf_useboth  )
       {
-
-         SCIP_Bool cutoffrootsol = cutoffRootSol(set, transprob, mirvars, farkascoefs, farkaslhs, ndualrayvars, TRUE);
-
          /* create and add the original proof */
          SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, blkmem, ndualrayvars, mirvars,
                farkascoefs, farkaslhs, SCIPsetInfinity(set), TRUE, TRUE) );

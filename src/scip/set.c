@@ -121,6 +121,9 @@
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 #define SCIP_DEFAULT_CONF_DEPTHSCOREFAC     1.0 /**< score factor for depth level in bound relaxation heuristic of LP analysis */
+#define SCIP_DEFAULT_CONF_PROOFSCOREFAC     1.0 /**< score factor for impact on acticity in bound relaxation heuristic of LP analysis */
+#define SCIP_DEFAULT_CONF_UPLOCKSCOREFAC    0.0 /**< score factor for up locks in bound relaxation heuristic of LP analysis */
+#define SCIP_DEFAULT_CONF_DOWNLOCKSCOREFAC  0.0 /**< score factor for down locks in bound relaxation heuristic of LP analysis */
 #define SCIP_DEFAULT_CONF_SCOREFAC         0.98 /**< factor to decrease importance of variables' earlier conflict scores */
 #define SCIP_DEFAULT_CONF_RESTARTNUM          0 /**< number of successful conflict analysis calls that trigger a restart
                                                  *   (0: disable conflict restarts) */
@@ -1294,6 +1297,21 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/depthscorefac",
          "score factor for depth level in bound relaxation heuristic of LP analysis",
          &(*set)->conf_depthscorefac, TRUE, SCIP_DEFAULT_CONF_DEPTHSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/proofscorefac",
+         "score factor for impact on acticity in bound relaxation heuristic of LP analysis",
+         &(*set)->conf_proofscorefac, TRUE, SCIP_DEFAULT_CONF_PROOFSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/uplockscorefac",
+         "score factor for up locks in bound relaxation heuristic of LP analysis",
+         &(*set)->conf_uplockscorefac, TRUE, SCIP_DEFAULT_CONF_UPLOCKSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/downlockscorefac",
+         "score factor for down locks in bound relaxation heuristic of LP analysis",
+         &(*set)->conf_downlockscorefac, TRUE, SCIP_DEFAULT_CONF_DOWNLOCKSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/scorefac",
