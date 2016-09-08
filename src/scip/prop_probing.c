@@ -63,6 +63,7 @@
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
 #define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
+#define DEFAULT_RANDSEED            53  /**< random initial seed */
 
 /*
  * Data structures
@@ -97,6 +98,7 @@ struct SCIP_PropData
    int                   nsumuseless;        /**< current number of useless probings */
    int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
+   unsigned int          randseed;           /**< random seed for variable selection */
 };
 
 
@@ -106,6 +108,7 @@ struct SCIP_PropData
 /** initializes the propagator data */
 static
 void initPropdata(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -116,7 +119,7 @@ void initPropdata(
    propdata->noldtotalvars = 0;
    propdata->nsortedvars = 0;
    propdata->nsortedbinvars = 0;
-   propdata->startidx = 0;
+   propdata->startidx = -1;
    propdata->lastsortstartidx = -1;
    propdata->nfixings = 0;
    propdata->naggregations = 0;
@@ -126,6 +129,7 @@ void initPropdata(
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
    propdata->lastnode = -2;
+   propdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 }
 
 /** frees the sorted vars array */
@@ -359,6 +363,7 @@ SCIP_RETCODE applyProbing(
    int maxtotaluseless;
    int maxsumuseless;
    int i;
+   int curidx;
    int oldstartidx;
    SCIP_Bool aborted;
    SCIP_Bool looped;
@@ -373,7 +378,7 @@ SCIP_RETCODE applyProbing(
    aborted = FALSE;
    looped = FALSE;
    oldstartidx = *startidx;
-   i = *startidx;
+   i = 0;
 
    /* get temporary memory for storing probing results */
    SCIP_CALL( SCIPallocBufferArray(scip, &zeroimpllbs, nvars) );
@@ -396,12 +401,14 @@ SCIP_RETCODE applyProbing(
          SCIP_Bool probingzero;
          SCIP_Bool probingone;
 
+         curidx = (i + *startidx) % nbinvars;
+
          /* check whether probing should be aborted */
          if( propdata->nuseless >= maxuseless || propdata->ntotaluseless >= maxtotaluseless || propdata->nsumuseless >= maxsumuseless || SCIPisStopped(scip) )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n",
-               SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(SCIP_Real)(i+1)/(SCIP_Real)nbinvars,
+               SCIPgetSolvingTime(scip), curidx+1, nbinvars, 100.0*(SCIP_Real)(curidx+1)/(SCIP_Real)nbinvars,
                propdata->nfixings, propdata->naggregations, propdata->nimplications, propdata->nbdchgs);
 
             aborted = TRUE;
@@ -434,7 +441,7 @@ SCIP_RETCODE applyProbing(
          }
 
          /* check if we already fixed enough variables for this round, or probed on all variables */
-         if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars >= maxfixings || (looped && oldstartidx == i) )
+         if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars >= maxfixings || (looped && oldstartidx == curidx) )
          {
             if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars > 0 )
                *delay = TRUE;
@@ -444,20 +451,20 @@ SCIP_RETCODE applyProbing(
          }
 
          /* display probing status */
-         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (i+1) % 100 == 0 )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (curidx+1) % 100 == 0 )
          {
             SCIP_VERBLEVEL verblevel;
 
-            verblevel = ((i+1) % 1000 == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL);
+            verblevel = ((curidx+1) % 1000 == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL);
             SCIPverbMessage(scip, verblevel, NULL,
                "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n",
-               SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(SCIP_Real)(i+1)/(SCIP_Real)nbinvars,
+               SCIPgetSolvingTime(scip), curidx+1, nbinvars, 100.0*(SCIP_Real)(curidx+1)/(SCIP_Real)nbinvars,
                propdata->nfixings, propdata->naggregations, propdata->nimplications, propdata->nbdchgs);
          }
 
          /* ignore variables, that were fixed, aggregated, or deleted in prior probings */
-         if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
-            || SCIPvarGetLbLocal(vars[i]) > 0.5 || SCIPvarGetUbLocal(vars[i]) < 0.5 )
+         if( !SCIPvarIsActive(vars[curidx]) || SCIPvarIsDeleted(vars[curidx])
+            || SCIPvarGetLbLocal(vars[curidx]) > 0.5 || SCIPvarGetUbLocal(vars[curidx]) < 0.5 )
             continue;
 
          if( propdata->nuseless > 0 )
@@ -469,13 +476,13 @@ SCIP_RETCODE applyProbing(
 
          /* determine whether one probing should happen */
          probingone = TRUE;
-         if( SCIPvarGetNLocksUp(vars[i]) == 0 )
+         if( SCIPvarGetNLocksUp(vars[curidx]) == 0 )
             probingone = FALSE;
 
          if( probingone )
          {
             /* apply probing for fixing the variable to one */
-            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, i, SCIP_BOUNDTYPE_LOWER, 1.0, propdata->proprounds,
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, curidx, SCIP_BOUNDTYPE_LOWER, 1.0, propdata->proprounds,
                   oneimpllbs, oneimplubs, oneproplbs, onepropubs, &localcutoff) );
 
             if( localcutoff )
@@ -485,18 +492,18 @@ SCIP_RETCODE applyProbing(
 	       if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
                {
                   /* the variable can be fixed to FALSE */
-                  SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, cutoff, &fixed) );
+                  SCIP_CALL( SCIPfixVar(scip, vars[curidx], 0.0, cutoff, &fixed) );
                   assert(fixed);
                }
                else
                {
-                  SCIP_CALL( SCIPtightenVarUb(scip, vars[i], 0.0, TRUE, cutoff, &fixed) );
+                  SCIP_CALL( SCIPtightenVarUb(scip, vars[curidx], 0.0, TRUE, cutoff, &fixed) );
                }
 
                if( fixed )
                {
                   SCIPdebugMessage("fixed probing variable <%s> to 0.0, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+                     SCIPvarGetName(vars[curidx]), SCIPvarGetNLocksDown(vars[curidx]), SCIPvarGetNLocksUp(vars[curidx]));
                   (*nfixedvars)++;
                   propdata->nfixings++;
                   propdata->nuseless = 0;
@@ -505,7 +512,7 @@ SCIP_RETCODE applyProbing(
                else if( *cutoff )
                {
                   SCIPdebugMessage("tightening upper bound of probing variable <%s> to 0.0 led to a cutoff\n",
-                     SCIPvarGetName(vars[i]));
+                     SCIPvarGetName(vars[curidx]));
                }
                continue; /* don't try downwards direction, because the variable is already fixed */
             }
@@ -513,20 +520,20 @@ SCIP_RETCODE applyProbing(
             /* ignore variables, that were fixed, aggregated, or deleted in prior probings
              * (propagators in one-probe might have found global fixings but did not trigger the localcutoff)
              */
-            if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
-               || SCIPvarGetLbLocal(vars[i]) > 0.5 || SCIPvarGetUbLocal(vars[i]) < 0.5 )
+            if( !SCIPvarIsActive(vars[curidx]) || SCIPvarIsDeleted(vars[curidx])
+               || SCIPvarGetLbLocal(vars[curidx]) > 0.5 || SCIPvarGetUbLocal(vars[curidx]) < 0.5 )
                continue;
          }
 
          /* determine whether zero probing should happen */
          probingzero = TRUE;
-         if( SCIPvarGetNLocksDown(vars[i]) == 0 )
+         if( SCIPvarGetNLocksDown(vars[curidx]) == 0 )
             probingzero = FALSE;
 
          if( probingzero )
          {
             /* apply probing for fixing the variable to zero */
-            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, i, SCIP_BOUNDTYPE_UPPER, 0.0, propdata->proprounds,
+            SCIP_CALL( SCIPapplyProbingVar(scip, vars, nvars, curidx, SCIP_BOUNDTYPE_UPPER, 0.0, propdata->proprounds,
                   zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, &localcutoff) );
 
             if( localcutoff )
@@ -536,17 +543,17 @@ SCIP_RETCODE applyProbing(
                if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
                {
                   /* the variable can be fixed to TRUE */
-                  SCIP_CALL( SCIPfixVar(scip, vars[i], 1.0, cutoff, &fixed) );
+                  SCIP_CALL( SCIPfixVar(scip, vars[curidx], 1.0, cutoff, &fixed) );
                }
                else
                {
-                  SCIP_CALL( SCIPtightenVarLb(scip, vars[i], 1.0, TRUE, cutoff, &fixed) );
+                  SCIP_CALL( SCIPtightenVarLb(scip, vars[curidx], 1.0, TRUE, cutoff, &fixed) );
                }
 
                if( fixed )
                {
                   SCIPdebugMessage("fixed probing variable <%s> to 1.0, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+                     SCIPvarGetName(vars[curidx]), SCIPvarGetNLocksDown(vars[curidx]), SCIPvarGetNLocksUp(vars[curidx]));
                   (*nfixedvars)++;
                   propdata->nfixings++;
                   propdata->nuseless = 0;
@@ -555,7 +562,7 @@ SCIP_RETCODE applyProbing(
                else if( *cutoff )
                {
                   SCIPdebugMessage("tightening lower bound of probing variable <%s> to 1.0 led to a cutoff\n",
-                     SCIPvarGetName(vars[i]));
+                     SCIPvarGetName(vars[curidx]));
                }
                continue; /* don't analyze probing deductions, because the variable is already fixed */
             }
@@ -565,17 +572,17 @@ SCIP_RETCODE applyProbing(
          if( !probingzero || !probingone )
             continue;
 
-         assert(propdata->noldtotalvars > SCIPvarGetIndex(vars[i]));
+         assert(propdata->noldtotalvars > SCIPvarGetIndex(vars[curidx]));
 
          /* count number of probings on each variable */
-         propdata->nprobed[SCIPvarGetIndex(vars[i])] += 1;
+         propdata->nprobed[SCIPvarGetIndex(vars[curidx])] += 1;
 
          /* analyze probing deductions */
          localnfixedvars    = 0;
          localnaggrvars     = 0;
          localnimplications = 0;
          localnchgbds       = 0;
-         SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[i], 0.0, 1.0,
+         SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[curidx], 0.0, 1.0,
                nvars, vars, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
                &localnfixedvars, &localnaggrvars, &localnimplications, &localnchgbds, cutoff) );
 
@@ -589,7 +596,7 @@ SCIP_RETCODE applyProbing(
 
          if( localnfixedvars > 0 || localnaggrvars > 0 )
          {
-            SCIPdebugMessage("probing on <%s> led to %d fixed and %d aggregated variables\n", SCIPvarGetName(vars[i]), localnfixedvars, localnaggrvars);
+            SCIPdebugMessage("probing on <%s> led to %d fixed and %d aggregated variables\n", SCIPvarGetName(vars[curidx]), localnfixedvars, localnaggrvars);
             propdata->nuseless = 0;
             propdata->ntotaluseless = 0;
          }
@@ -673,7 +680,7 @@ SCIP_RETCODE applyProbing(
 
             if( nnewbinvars == 0 )
             {
-               *startidx = 0;
+               *startidx = SCIPgetRandomInt(0, propdata->nsortedbinvars, &propdata->randseed);
                propdata->lastsortstartidx = -1;
                propdata->nuseless = 0;
                propdata->ntotaluseless = 0;
@@ -683,14 +690,14 @@ SCIP_RETCODE applyProbing(
 
             /* resorting here might lead to probing a second time on the same variable */
             SCIP_CALL( sortVariables(scip, propdata, propdata->sortedvars, propdata->nsortedbinvars, 0) );
-            propdata->lastsortstartidx = 0;
+            propdata->lastsortstartidx = oldstartidx;
          }
       }
 
    }
    while( i == 0 && !(*cutoff) && !(*delay) && !aborted );
 
-   *startidx = i;
+   *startidx = ((i + *startidx) % nbinvars);
 
  TERMINATE:
    /* free temporary memory */
@@ -755,7 +762,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   initPropdata(propdata);
+   initPropdata(scip, propdata);
 
    return SCIP_OKAY;
 }
@@ -890,7 +897,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       int lastidx;
       int v;
 
-      assert(propdata->startidx == 0);
+      assert(propdata->startidx == -1);
 
       nvars = SCIPgetNVars(scip);
 
@@ -914,6 +921,9 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
       {
          SCIP_CALL( SCIPcaptureVar(scip, propdata->sortedvars[v]) );
       }
+
+      /* initialize variable index to start with */
+      propdata->startidx = SCIPgetRandomInt(0, nbinvars, &propdata->randseed);
    }
 
    if( propdata->nsortedbinvars == 0 )
@@ -933,7 +943,7 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    propdata->lastnode = -1;
 
    /* sort the binary variables by number of rounding locks, if at least 100 variables were probed since last sort */
-   if( propdata->lastsortstartidx < 0 || propdata->startidx - propdata->lastsortstartidx >= 100 )
+   if( propdata->lastsortstartidx < 0 || (propdata->startidx - propdata->lastsortstartidx) % nbinvars >= 100 )
    {
       SCIP_CALL( sortVariables(scip, propdata, propdata->sortedvars, propdata->nsortedbinvars, propdata->startidx) );
       propdata->lastsortstartidx = propdata->startidx;
@@ -945,7 +955,8 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    oldnimplications = propdata->nimplications;
 
    /* start probing on variables */
-   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars, &(propdata->startidx), nfixedvars, naggrvars, nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
+   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars,
+         &(propdata->startidx), nfixedvars, naggrvars, nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
 
    /* adjust result code */
    if( cutoff )
@@ -1067,7 +1078,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    nfixedvars = 0;
    naggrvars = 0;
    nchgbds = 0;
-   startidx = 0;
+   startidx = SCIPgetRandomInt(0, nbinvars, &propdata->randseed);
    oldnimplications = propdata->nimplications;
 
    /* start probing on found variables */
@@ -1117,7 +1128,7 @@ SCIP_RETCODE SCIPincludePropProbing(
 
    /* create probing propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-   initPropdata(propdata);
+   initPropdata(scip, propdata);
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
