@@ -317,7 +317,7 @@ SCIP_Bool tryFixVar(
    SCIP_VAR*             var                 /**< Variable to be fixed? */
    )
 {
-   /*SCIP_ROW** rows;
+   SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
    SCIP_Real alpha = 2.0;
@@ -338,13 +338,13 @@ SCIP_Bool tryFixVar(
    col = SCIPvarGetCol(var);
    rows = SCIPcolGetRows(col);
    nrows = SCIPcolGetNLPNonz(col);
-   vals = SCIPcolGetVals(col);*/
+   vals = SCIPcolGetVals(col);
 
    /*todo iterate over nonzero rows*/
-   /*for(i=0; i<nrows; ++i)
-   {*/
+   for(i=0; i<nrows; ++i)
+   {
       /*rowindex = SCIProwGetIndex(rows[i]);*/
-      /*rowindex = SCIProwGetLPPos(rows[i]);
+      rowindex = SCIProwGetLPPos(rows[i]);
       sgn = 1;
       if( 0 > slack[rowindex])
       {
@@ -357,15 +357,15 @@ SCIP_Bool tryFixVar(
       }
       else{
          potential[rowindex] += vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
-      }*/
+      }
       /*todo comment*/
-      /*if( potential[rowindex] < alpha * slack[rowindex] )
+      if( potential[rowindex] < alpha * slack[rowindex] )
       {
          for( ; i>=0; --i)
          {
-            sgn = 1;*/
+            sgn = 1;
             /*rowindex = SCIProwGetIndex(rows[i]);*/
-            /*rowindex = SCIProwGetLPPos(rows[i]);
+            rowindex = SCIProwGetLPPos(rows[i]);
             if( 0 > slack[rowindex])
             {
                sgn = -1;
@@ -378,13 +378,13 @@ SCIP_Bool tryFixVar(
             else{
                potential[rowindex] -= vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
             }
-            return FALSE;
          }
+         return FALSE;
       }
    }
 
-   return TRUE;*/
-   return FALSE;
+   return TRUE;
+   /*return FALSE;*/
 }
 /** checks if all integral variables in the given solution are integral. */
 static
@@ -1072,6 +1072,11 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
+
+      if( SCIPisFeasLT(scip, value, lb) || SCIPisFeasGT(scip,value,ub) )
+      {
+         heurdata->nviolatedvars++;
+      }
    }
 
    /* check solution for feasibility regarding the LP rows (SCIPgetRowSolActivity()) */
@@ -1116,10 +1121,12 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       if( SCIPisFeasLT(scip, rowsolact, lhs) )
       {
          slack[i] = lhs - rowsolact;
+         heurdata->nviolatedcons++;
       }
       else if( SCIPisFeasGT(scip, rowsolact, rhs) )
       {
          slack[i] = rhs - rowsolact;
+         heurdata->nviolatedcons++;
       }
       else
       {
@@ -1153,7 +1160,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          if( !SCIPisZero(scip, slack[i]) )
          {
             nviolatedrows[pos]++;
-            heurdata->nviolatedcons++;
          }
       }
 
@@ -1248,7 +1254,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          char slackvarname[1024];
          char consvarname[1024];
 
-         heurdata->norvars++;
          sla = 0.0;
          orlb = SCIPvarGetLbGlobal(subvars[i]);
          orub = SCIPvarGetUbGlobal(subvars[i]);
@@ -1264,8 +1269,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          {
             lb = value;
             sla = orlb - value;
-            nviolatedrows[i]++;
-            heurdata->nviolatedvars++;
             SCIPchgVarLbGlobal(subscip,subvars[i],lb);
          }
          else
@@ -1278,8 +1281,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          {
             ub = value;
             sla = orub - value;
-            nviolatedrows[i]++;
-            heurdata->nviolatedvars++;
             SCIPchgVarUbGlobal(subscip,subvars[i],ub);
          }
          else
