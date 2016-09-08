@@ -317,12 +317,14 @@ SCIP_Bool tryFixVar(
    SCIP_VAR*             var                 /**< Variable to be fixed? */
    )
 {
-   SCIP_ROW** rows;
+   /*SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
    SCIP_Real alpha = 2.0;
    int nrows;
    int i;
+   int sgn;
+   int rowindex;
 
    if(SCIPisFeasLT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var)))
    {
@@ -336,13 +338,14 @@ SCIP_Bool tryFixVar(
    col = SCIPvarGetCol(var);
    rows = SCIPcolGetRows(col);
    nrows = SCIPcolGetNLPNonz(col);
-   vals = SCIPcolGetVals(col);
+   vals = SCIPcolGetVals(col);*/
 
    /*todo iterate over nonzero rows*/
-   for(i=0; i<nrows; ++i)
-   {
-      int sgn = 1;
-      int rowindex = SCIProwGetIndex(rows[i]);
+   /*for(i=0; i<nrows; ++i)
+   {*/
+      /*rowindex = SCIProwGetIndex(rows[i]);*/
+      /*rowindex = SCIProwGetLPPos(rows[i]);
+      sgn = 1;
       if( 0 > slack[rowindex])
       {
          sgn = -1;
@@ -354,14 +357,15 @@ SCIP_Bool tryFixVar(
       }
       else{
          potential[rowindex] += vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
-      }
+      }*/
       /*todo comment*/
-      if( potential[rowindex] < alpha * slack[rowindex] )
+      /*if( potential[rowindex] < alpha * slack[rowindex] )
       {
          for( ; i>=0; --i)
          {
-            sgn = 1;
-            rowindex = SCIProwGetIndex(rows[i]);
+            sgn = 1;*/
+            /*rowindex = SCIProwGetIndex(rows[i]);*/
+            /*rowindex = SCIProwGetLPPos(rows[i]);
             if( 0 > slack[rowindex])
             {
                sgn = -1;
@@ -374,12 +378,13 @@ SCIP_Bool tryFixVar(
             else{
                potential[rowindex] -= vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
             }
-           break;
+            return FALSE;
          }
       }
    }
 
-   return TRUE;
+   return TRUE;*/
+   return FALSE;
 }
 /** checks if all integral variables in the given solution are integral. */
 static
@@ -865,6 +870,10 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             retcode);
 
       /* free */
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+      }
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL(SCIPfree(&subscip));
       return SCIP_OKAY;
@@ -900,6 +909,10 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 TERMINATE:
    SCIPfreeSol(scip, &sol);
    /*SCIPfreeSol(subscip, &subsol);*/
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+   }
    SCIPfreeBufferArrayNull(scip, &subvars);
    if( NULL != subscip )
    {
@@ -976,7 +989,9 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          SCIPwarningMessage(scip, "cannot open file <%s> for reading\n",
                heurdata->filename);
 
-      goto TERMINATE;
+      /* todo clean up goto TERMINATE;*/
+      SCIPfreeSol(scip, &sol);
+      return SCIP_OKAY;
    }
    else if( retcode != SCIP_OKAY )
    {
@@ -1032,7 +1047,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          factor = 0.0;
       }
 
-   /* Adds all original variables and decides which variables should be fixed */
+   /* Adds all original variables */
    for( i = 0; i < nvars; ++i )
    {
       SCIP_Real lb;
@@ -1066,13 +1081,12 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIP_CALL( SCIPallocBufferArray(scip, &potential, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &slack, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subcons, nrows) );
-   /* Adds all original constraints and decides which variables should be fixed */
+   /* Adds all original constraints and computes potentials and slacks */
    for (i = 0; i < nrows; ++i)
    {
       SCIP_COL** cols;
       SCIP_VAR** consvars;
       SCIP_Real* vals;
-      SCIP_Real* potentials;
       SCIP_Real constant;
       SCIP_Real lhs;
       SCIP_Real rhs;
@@ -1090,14 +1104,13 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             SCIProwGetRhs(rows[i]) : SCIProwGetRhs(rows[i]) - constant;
       rowsolact = SCIPgetRowSolActivity(scip, rows[i], sol) - constant;
       vals = SCIProwGetVals(rows[i]);
-      potentials = SCIProwGetVals(rows[i]);
       potential[i] = 0.0;
 
       assert(SCIPisFeasLE(scip, lhs, rhs));
 
       nnonz = SCIProwGetNNonz(rows[i]);
       cols = SCIProwGetCols(rows[i]);
-      SCIP_CALL(SCIPallocBufferArray(scip, &consvars, nnonz));
+      SCIP_CALL(SCIPallocBufferArray(subscip, &consvars, nnonz));
 
       /* Sets the slack if its necessary */
       if( SCIPisFeasLT(scip, rowsolact, lhs) )
@@ -1128,14 +1141,15 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          consvars[j] = subvars[pos];
 
          /* compute potentials */
+         assert(!SCIPisZero(scip,vals[j]));
          if( 0 > sgn * vals[j] )
          {
-            potentials[j] *= (SCIPgetSolVal(scip, sol, vars[pos])-SCIPvarGetLbGlobal(vars[pos]));
+            potential[i] += vals[j] * (SCIPgetSolVal(scip, sol, vars[pos]) - SCIPvarGetLbGlobal(vars[pos]));
          }
-         else{
-            potentials[j] *= (SCIPgetSolVal(scip, sol, vars[pos])-SCIPvarGetUbGlobal(vars[pos]));
+         else
+         {
+            potential[i] += vals[j] * (SCIPgetSolVal(scip, sol, vars[pos]) - SCIPvarGetUbGlobal(vars[pos]));
          }
-         potential[i] += potentials[j];
          if( !SCIPisZero(scip, slack[i]) )
          {
             nviolatedrows[pos]++;
@@ -1151,7 +1165,31 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       /*Adds the Constraint and release it.*/
       SCIP_CALL( SCIPaddCons(subscip, subcons[i]) );
       SCIP_CALL( SCIPreleaseCons(subscip, &subcons[i]) );
-      SCIPfreeBufferArray(scip, &consvars);
+      SCIPfreeBufferArray(subscip, &consvars);
+   }
+
+   {
+      FILE* probfile;
+      char* bfilename;
+      char probfilename[SCIP_MAXSTRLEN];
+
+      bfilename = basename(heurdata->filename);
+
+      sprintf(probfilename, "%s.lp", bfilename);
+
+      SCIPdebugMessage("All temp vars initialized");
+
+      probfile = fopen(probfilename, "w");
+      /* test if file exists */
+      if( NULL != probfile )
+      {
+         SCIP_CALL(SCIPprintOrigProblem(subscip, probfile, "lp", FALSE));
+         fclose(probfile);
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "Could not open file <%s> for storing infeasible repair subproblem\n", probfilename);
+      }
    }
 
    /* get the greedy order */
@@ -1165,7 +1203,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    heurdata->nvarfixed = 0;
    for( i = 0; i < nvars; ++i )
    {
-      printf("Try to fix %s\n",SCIPvarGetName(vars[permutaion[i]]));
+      printf("Try to fix %s",SCIPvarGetName(vars[permutaion[i]]));
       if(tryFixVar(scip, sol, potential, slack, vars[permutaion[i]] ))
       {
          SCIP_Bool infeasible = FALSE;
@@ -1173,23 +1211,29 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          SCIP_CALL( SCIPfixVar(subscip, subvars[permutaion[i]], SCIPgetSolVal(scip, sol, vars[permutaion[i]]), &infeasible, &fixed) );
          assert(!infeasible && fixed);
          heurdata->nvarfixed++;
+         printf("  fixed!!!");
       }
+      else
+      {
+         printf("  not.");
+      }
+      printf("\n");
     }
+   printf("fixings finished\n\n");
 
    /*todo delete all redudant code, especially all addings of original variables and constraints !!!*/
    if( heurdata->useslackvars )
    {
-      SCIP_VAR** tmpvars = NULL;
+      /*SCIP_VAR** tmpvars = NULL;*/
       SCIP_ROW** tmprows = NULL;
-      int ntmpvars;
       int ntmprows;
       /* Gets all original variables */
-      SCIP_CALL( SCIPgetVarsData(scip, &tmpvars, &ntmpvars, NULL, NULL, NULL, NULL) );
+      /*SCIP_CALL( SCIPgetVarsData(scip, &tmpvars, &ntmpvars, NULL, NULL, NULL, NULL) );*/
       tmprows = SCIPgetLPRows(scip);
       ntmprows = SCIPgetNLPRows(scip);
 
       /* Adds all original variables and decides which variables should be fixed */
-      for( i = 0; i < ntmpvars; ++i )
+      for( i = 0; i < nvars; ++i )
       {
          SCIP_CONS* cons;
          SCIP_Real orlb;
@@ -1206,14 +1250,14 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 
          heurdata->norvars++;
          sla = 0.0;
-         orlb = SCIPvarGetLbGlobal(tmpvars[i]);
-         orub = SCIPvarGetUbGlobal(tmpvars[i]);
-         value = SCIPgetSolVal(scip, sol, tmpvars[i]);
-         vartype = SCIPvarGetType(tmpvars[i]);
+         orlb = SCIPvarGetLbGlobal(subvars[i]);
+         orub = SCIPvarGetUbGlobal(subvars[i]);
+         value = SCIPgetSolVal(scip, sol, subvars[i]);
+         vartype = SCIPvarGetType(subvars[i]);
 
          nviolatedrows[i]=0;
 
-         sprintf(varname, "sub_%s", SCIPvarGetName(tmpvars[i]));
+         sprintf(varname, "sub_%s", SCIPvarGetName(subvars[i]));
 
          /* if the value of x is lower than the lower bound, sets the slack to an correcting value*/
          if( SCIPisFeasLT(scip, value, orlb) )
@@ -1222,7 +1266,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             sla = orlb - value;
             nviolatedrows[i]++;
             heurdata->nviolatedvars++;
-            SCIPchgVarLbGlobal(subscip,tmpvars[i],lb);
+            SCIPchgVarLbGlobal(subscip,subvars[i],lb);
          }
          else
          {
@@ -1236,7 +1280,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             sla = orub - value;
             nviolatedrows[i]++;
             heurdata->nviolatedvars++;
-            SCIPchgVarUbGlobal(subscip,tmpvars[i],ub);
+            SCIPchgVarUbGlobal(subscip,subvars[i],ub);
          }
          else
          {
@@ -1253,7 +1297,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          if( !SCIPisFeasZero(scip, sla) && SCIP_VARTYPE_BINARY == vartype )
          {
             vartype = SCIP_VARTYPE_INTEGER;
-            SCIPchgVarType(subscip,tmpvars[i],vartype, &success);
+            SCIPchgVarType(subscip,subvars[i],vartype, &success);
          }
 
          /* if necessary adds an constraint to represent the original bounds of x.*/
@@ -1303,7 +1347,6 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
             SCIP_CALL( SCIPaddCoefLinear(subscip, subcons[i], newvar, slack[i]) );
             SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
-            heurdata->nviolatedcons++;
          }
       }
    }
@@ -1389,11 +1432,16 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             retcode);
 
       /* free */
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+      }
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL(SCIPfree(&subscip));
       return SCIP_OKAY;
    }
 
+   success = FALSE;
    if( SCIPgetBestSol(subscip) != NULL )
    {
       heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
@@ -1402,8 +1450,13 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 
       assert(SCIPgetNSols(subscip) > 0);
       SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
+      /*assert(success);*/
 
       *result = SCIP_FOUNDSOL;
+   }
+   else
+   {
+      printf("No solution found!\n");
    }
 
    heurdata->subiters = SCIPgetNLPIterations(subscip);
@@ -1416,12 +1469,20 @@ TERMINATE:
    SCIPfreeSol(scip, &sol);
    /*SCIPfreeSol(subscip, &subsol);*/
    SCIPfreeBufferArrayNull(scip, &nviolatedrows);
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+   }
    SCIPfreeBufferArrayNull(scip, &subvars);
+   SCIPfreeBufferArrayNull(scip, &permutaion);
+   SCIPfreeBufferArrayNull(scip, &potential);
+   SCIPfreeBufferArrayNull(scip, &slack);
+   SCIPfreeBufferArrayNull(scip, &subcons);
    if( NULL != subscip )
    {
       SCIPfree(&subscip);
    }
-
+   printf("repair finished\n");
    return SCIP_OKAY;
 }
 
@@ -1474,6 +1535,7 @@ SCIP_DECL_HEURINIT(heurInitRepair)
    heurdata->subiters = -1;
    heurdata->subnodes = -1;
    heurdata->subpresoltime = 0;
+   heurdata->runs = 0;
 
    heurdata->nviolatedvars = 0;
    heurdata->norvars = 0;
@@ -1503,7 +1565,7 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    SCIP_Real relcons;
    SCIP_Real relfixed;
    char solval[1024];
-   char message[1024];
+   char message[2048];
    int violateds;
    int ninvars;
    int ninvcons;
@@ -1545,13 +1607,13 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    relfixed = heurdata->relvarfixed;
 
 
+   sprintf(message, "<repair> \n\t total violateds: %d\n\n\t violated variables: %d\n\t total variables: %d\n\t relative violated variables: %.2f%%\n", violateds, ninvars, nvars, 100 * relvars);
+   sprintf(message, "%s  \n\n\t violated constraints: %d\n\t total constraints: %d\n\t relative violated constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
+   sprintf(message, "%s  \n\n\t fixed variables: %d\n\t relative fixed varibales: %.2f%%\n", message, heurdata->nvarfixed, 100* relfixed);
+   sprintf(message, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
+   sprintf(message, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
    /* Prints all statistic data for an user*/
    SCIPstatistic(
-      sprintf(message, "<repair> \n\t total violateds: %d\n\n\t violated variables: %d\n\t total variables: %d\n\t relative violated variables: %.2f%%\n", violateds, ninvars, nvars, 100 * relvars);
-      sprintf(message, "%s  \n\n\t violated constraints: %d\n\t total constraints: %d\n\t relative violated constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
-      sprintf(message, "%s  \n\n\t fixed variables: %d\n\t relative fixed varibales: %.2f%%\n", message, heurdata->nvarfixed, 100* relfixed);
-      sprintf(message, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
-      sprintf(message, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
    )
    return SCIP_OKAY;
@@ -1601,7 +1663,7 @@ SCIP_RETCODE writeDebugInformation(
       if( NULL != probfile )
       {
          SCIP_CALL(SCIPprintOrigProblem(subscip, probfile, "cip", FALSE));
-         fclose(solfile);
+         fclose(probfile);
       }
       else
       {
@@ -1655,6 +1717,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    retcode = SCIP_OKAY;
    heurdata = SCIPheurGetData(heur);
+   printf("%s\n",heurdata->filename);
    if(heurdata->usevarfix)
    {
       retcode = varFixings(scip, heur, result);
