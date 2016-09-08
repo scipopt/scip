@@ -378,7 +378,7 @@ SCIP_RETCODE applyProbing(
    aborted = FALSE;
    looped = FALSE;
    oldstartidx = *startidx;
-   i = 0;
+   i = nbinvars-1;
 
    /* get temporary memory for storing probing results */
    SCIP_CALL( SCIPallocBufferArray(scip, &zeroimpllbs, nvars) );
@@ -395,7 +395,7 @@ SCIP_RETCODE applyProbing(
    *cutoff = FALSE;
    do
    {
-      for( ; i < nbinvars && !(*cutoff); ++i )
+      for( ; i >= 0 && !(*cutoff); --i )
       {
          SCIP_Bool localcutoff;
          SCIP_Bool probingzero;
@@ -607,11 +607,11 @@ SCIP_RETCODE applyProbing(
       looped = TRUE;
 
       /* check if we reached the end of all binary variables but did not stop, so we start from the beginning */
-      if( i == nbinvars && !(*cutoff) && !(*delay) && !aborted )
+      if( i == 0 && !(*cutoff) && !(*delay) && !aborted )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
-         i = 0;
+         i = nbinvars-1;
 
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
@@ -695,7 +695,7 @@ SCIP_RETCODE applyProbing(
       }
 
    }
-   while( i == 0 && !(*cutoff) && !(*delay) && !aborted );
+   while( i == nbinvars-1 && !(*cutoff) && !(*delay) && !aborted );
 
    *startidx = ((i + *startidx) % nbinvars);
 
