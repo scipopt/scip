@@ -48,6 +48,7 @@
 #define DEFAULT_USEDIRECTDOMRED              TRUE
 #define DEFAULT_USEIMPLIEDDOMRED             TRUE
 #define DEFAULT_USEIMPLIEDBINARYCONSTRAINTS  TRUE
+
 /*
  * Data structures
  */
@@ -55,13 +56,19 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_Bool             useimplieddomred;
-   SCIP_Bool             usedirectdomred;
-   SCIP_Bool             useimpliedbincons;
+   SCIP_Bool             useimplieddomred;   /**< indicates whether the second level domain reduction data should be
+                                              *   gathered and used */
+   SCIP_Bool             usedirectdomred;    /**< indicates whether the first level domain reduction data should be
+                                              *   gathered and used */
+   SCIP_Bool             useimpliedbincons;  /**< indicates whether the data for the implied binary constraints should
+                                              *   be gathered and used */
 
-   SCIP_SOL*             prevbinsolution;
-   SCIP_VAR*             prevbinbranchvar;
-   SCIP_Real             prevbinbranchsol;
+   SCIP_SOL*             prevbinsolution;    /**< the previous solution in the case that in the previous run only
+                                              *   non-violating implied binary constraints were added */
+   SCIP_VAR*             prevbinbranchvar;   /**< the previous branching decision in the case that in the previous run
+                                              *   only non-violating implied binary constraints were added */
+   SCIP_Real             prevbinbranchsol;   /**< the previous branching value in case that in the previous run only
+                                              *   non-violating implied binary constraints were added */
 #ifdef SCIP_STATISTICS
    int                   nfirstlvllps;       /**/
    int                   nsecondlvllps;      /**/
@@ -94,8 +101,71 @@ typedef struct
    SCIP_Bool             nobranch;
 } BranchingResultData;
 
+/**
+ * This enum is used to represent whether an upper bound, lower bound or both are set for a variable.
+ */
+typedef enum
+{
+   BOUNDSTATUS_NONE = 0,
+   BOUNDSTATUS_UPPERBOUND,
+   BOUNDSTATUS_LOWERBOUND,
+   BOUNDSTATUS_BOTH
+} BOUNDSTATUS;
+
+/**
+ * This struct collect the bounds, which can be used in the root problem. Therefore it contains two types of bounds:
+ * - The bounds that occur when both up and down branches of a variable after a first level branch are cutoff. In this case
+ *   the whole first level branch can be added as a restriction.
+ * - The bounds that occur implicitly while branching on the second level. See SupposedBoundData for more information.
+ */
+typedef struct
+{
+   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
+                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
+                                              *   BOUNDSTATUS_BOTH. */
+   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
+                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
+                                              *   BOUNDSTATUS_BOTH. */
+   BOUNDSTATUS*          boundstatus;        /**< The current boundstatus for each active variable. Depending on this value
+                                              *   the corresponding upperbound and lowerbound values are meaningful.*/
+   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
+                                              *   may be used to only iterate over the relevant variables. */
+   int                   nboundedvars;       /**< The length of the boundedvars array. */
+} ValidDomRedData;
+
+/**
+ * This struct collects the bounds, that are given implicitly on the second branching level.
+ * Concrete: If a variable is regarded on both sides of the second level and is infeasible (in the same bound direction) on
+ * both sides, the weaker bound can be applied.
+ * Even more concrete: First level branching on variable x, second level branching on variable y (and may others). If the
+ * constraint y <= 3 on the up branch of x and y <= 6 on the down branch of x are both infeasible, the y <= 3 bound can be
+ * applied on the first level.
+ */
+typedef struct
+{
+   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
+                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
+                                              *   BOUNDSTATUS_BOTH. */
+   int*                  nupperboundupdates; /**< The number of times the corresponding upper bound was updated. */
+   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
+                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
+                                              *   BOUNDSTATUS_BOTH. */
+   int*                  nlowerboundupdates; /**< The number of times the corresponding lower bound was updated. */
+   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
+                                              *   may be used to only iterate over the relevant variables. */
+   int                   nboundedvars;       /**< The length of the boundedvars array. */
+} SupposedDomRedData;
+
+typedef struct
+{
+   SCIP_VAR**            eithervars;
+   SCIP_VAR**            othervars;
+   int                   nentries;
+   int                   memsize;
+} BinaryBoundData;
+
 /*
- * Local methods
+ * Local methods for the data structures
  */
 static
 void initWeightData(
@@ -131,15 +201,186 @@ void initBranchingResultData(
    resultdata->nobranch = FALSE;
 }
 
+static
+SCIP_RETCODE allocValidBoundData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   ValidDomRedData**      validbounddata
+)
+{
+   int ntotalvars;
+
+   ntotalvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBuffer(scip, validbounddata) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->upperbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->lowerbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*validbounddata)->boundstatus, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->boundedvars, ntotalvars) );
+   return SCIP_OKAY;
+}
+
 /**
- * Executes the branching on the current probing node by adding a probing node with a new upper bound.
+ * Clears the given struct.
+ * Assumptions:
+ * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
+ * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
+ * - The boundedvars array is only read in connection with the nboundedvars value, which will be set to 0.
  */
 static
-SCIP_RETCODE executeBranchingOnUpperBound(
+void initValidBoundData(
+   ValidDomRedData*       validbounddata      /*< The struct that should get cleared.*/
+)
+{
+   validbounddata->nboundedvars = 0;
+}
+
+static
+void freeValidBoundData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   ValidDomRedData**      validbounddata
+)
+{
+   SCIPfreeBufferArray(scip, &(*validbounddata)->boundedvars);
+   SCIPfreeCleanBufferArray(scip, &(*validbounddata)->boundstatus);
+   SCIPfreeBufferArray(scip, &(*validbounddata)->lowerbounds);
+   SCIPfreeBufferArray(scip, &(*validbounddata)->upperbounds);
+   SCIPfreeBuffer(scip, validbounddata);
+}
+
+static
+SCIP_RETCODE allocSupposedBoundData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SupposedDomRedData**   supposedbounddata
+)
+{
+   int ntotalvars;
+
+   ntotalvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBuffer(scip, supposedbounddata) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*supposedbounddata)->upperbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*supposedbounddata)->nupperboundupdates, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*supposedbounddata)->lowerbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*supposedbounddata)->nlowerboundupdates, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*supposedbounddata)->boundedvars, ntotalvars) );
+   return SCIP_OKAY;
+}
+
+/**
+ * Clears the given struct.
+ * Assumptions:
+ * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
+ * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
+ * - The boundedvars array is only read in connection with the nboundedvars value, which will be set to 0.
+ */
+static
+void initSupposedBoundData(
+   SupposedDomRedData*    supposedbounddata   /*< The struct that should get cleared.*/
+)
+{
+   supposedbounddata->nboundedvars = 0;
+}
+
+static
+void freeSupposedBoundData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SupposedDomRedData**   supposedbounddata
+)
+{
+   SCIPfreeBufferArray(scip, &(*supposedbounddata)->boundedvars);
+   SCIPfreeCleanBufferArray(scip, &(*supposedbounddata)->nlowerboundupdates);
+   SCIPfreeBufferArray(scip, &(*supposedbounddata)->lowerbounds);
+   SCIPfreeCleanBufferArray(scip, &(*supposedbounddata)->nupperboundupdates);
+   SCIPfreeBufferArray(scip, &(*supposedbounddata)->upperbounds);
+   SCIPfreeBuffer(scip, supposedbounddata);
+}
+
+static
+SCIP_RETCODE allocBinaryBoundData(
+   SCIP*                 scip,
+   BinaryBoundData**     binarybounddata,
+   int                   nentries
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, binarybounddata) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->eithervars, nentries) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->othervars, nentries) );
+   (*binarybounddata)->memsize = nentries;
+   return SCIP_OKAY;
+}
+
+static
+void initBinaryBoundData(
+   BinaryBoundData*      binarybounddata
+)
+{
+   binarybounddata->nentries = 0;
+}
+
+static
+SCIP_RETCODE addBinaryBoundEntry(
+   SCIP*                 scip,
+   BinaryBoundData*      container,
+   SCIP_VAR*             eithervar,
+   SCIP_VAR*             othervar
+)
+{
+   int emptyindex = container->nentries;
+
+   if( emptyindex == container->memsize )
+   {
+      /* calculate new size, that can at least hold the old number of entries + 1 for the new entry */
+      int newmemsize = SCIPcalcMemGrowSize(scip, emptyindex + 1);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &container->eithervars, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &container->othervars, newmemsize) );
+      container->memsize = newmemsize;
+   }
+
+   container->eithervars[emptyindex] = eithervar;
+   container->othervars[emptyindex] = othervar;
+   container->nentries = emptyindex + 1;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_Bool isBinaryBoundDataEmpty(
+   BinaryBoundData*      container
+)
+{
+   assert(container != NULL);
+
+   return container->nentries == 0;
+}
+
+static
+void freeBinaryBoundData(
+   SCIP*                 scip,
+   BinaryBoundData**     binarybounddata
+)
+{
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->othervars);
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->eithervars);
+   SCIPfreeBuffer(scip, binarybounddata);
+}
+
+/*
+ * Local methods for the logic
+ */
+
+/**
+ * Executes the branching on the current probing node by adding a probing node with a new upper bound.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+static
+SCIP_RETCODE executeDownBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< variable to branch on */
-   SCIP_Real             branchvarsolval,    /**< current (fractional) solution value of the variable */
-   BranchingResultData*  resultdata
+   SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
+                                              *   rounded down will be the upper bound of the new node. */
+   BranchingResultData*  resultdata          /**< pointer to the result data which gets filled with the status */
    )
 {
    SCIP_Real oldupperbound;
@@ -152,15 +393,17 @@ SCIP_RETCODE executeBranchingOnUpperBound(
    assert(!SCIPisFeasIntegral(scip, branchvarsolval));
    assert(resultdata != NULL);
 
+   /* round the given value down, so that it can be used as the new upper bound */
    newupperbound = SCIPfeasFloor(scip, branchvarsolval);
+
    oldupperbound = SCIPvarGetUbLocal(branchvar);
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
-
    SCIPdebugMessage("New upper bound: <%g>, old lower bound: <%g>, old upper bound: <%g>\n", newupperbound, oldlowerbound,
       oldupperbound);
 
    if( SCIPisFeasLT(scip, newupperbound, oldlowerbound) )
    {
+      /* if lb > ub we can cutoff this node */
       resultdata->cutoff = TRUE;
    }
    else
@@ -168,8 +411,9 @@ SCIP_RETCODE executeBranchingOnUpperBound(
       SCIP_CALL( SCIPnewProbingNode(scip) );
       if( SCIPisEQ(scip, oldupperbound, oldlowerbound) )
       {
-         /* TODO: do smth with this info. */
+         /*nothing has changed, so we cannot change any bound*/
          resultdata->nobranch = TRUE;
+         /* TODO: do smth with this info. */
       }
       else if( SCIPisFeasLT(scip, newupperbound, oldupperbound) )
       {
@@ -181,13 +425,16 @@ SCIP_RETCODE executeBranchingOnUpperBound(
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &resultdata->lperror, &resultdata->cutoff) );
       solstat = SCIPgetLPSolstat(scip);
-
-      resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE) ||
-            (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+      /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
+       * cutoff, or if the iter or time limit was reached. */
+      resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE)
+         || (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
 
       if( !resultdata->lperror )
       {
+         /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
          resultdata->objval = SCIPgetLPObjval(scip);
          resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
          assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || resultdata->cutoff);
@@ -199,14 +446,18 @@ SCIP_RETCODE executeBranchingOnUpperBound(
 
 /**
  * Executes the branching on the current probing node by adding a probing node with a new lower bound.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 static
-SCIP_RETCODE executeBranchingOnLowerBound(
+SCIP_RETCODE executeUpBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< variable to branch on */
-   SCIP_Real             branchvarsolval,    /**< current (fractional) solution value of the variable */
-   BranchingResultData*  resultdata
-   )
+   SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
+                                              *   rounded up will be the lower bound of the new node. */
+   BranchingResultData*  resultdata          /**< pointer to the result data which gets filled with the status */
+)
 {
    SCIP_Real oldlowerbound;
    SCIP_Real oldupperbound;
@@ -218,15 +469,17 @@ SCIP_RETCODE executeBranchingOnLowerBound(
    assert(!SCIPisFeasIntegral(scip, branchvarsolval));
    assert(resultdata != NULL );
 
+   /* round the given value up, so that it can be used as the new lower bound */
    newlowerbound = SCIPfeasCeil(scip, branchvarsolval);
+
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
    oldupperbound = SCIPvarGetUbLocal(branchvar);
-
-   SCIPdebugMessage("New lower bound: <%g>, old lower bound: <%g>, old upper bound: <%g>\n", newlowerbound, oldlowerbound,
-      oldupperbound);
+   SCIPdebugMessage("New lower bound: <%g>, old lower bound: <%g>, old upper bound: <%g>\n", newlowerbound,
+      oldlowerbound, oldupperbound);
 
    if( SCIPisFeasGT(scip, newlowerbound, oldupperbound) )
    {
+      /* if lb > ub we can cutoff this node */
       resultdata->cutoff = TRUE;
    }
    else
@@ -234,8 +487,9 @@ SCIP_RETCODE executeBranchingOnLowerBound(
       SCIP_CALL( SCIPnewProbingNode(scip) );
       if( SCIPisEQ(scip, oldupperbound, oldlowerbound) )
       {
-         /* TODO: do smth with this info. */
+         /*nothing has changed, so we cannot change any bound*/
          resultdata->nobranch = TRUE;
+         /* TODO: do smth with this info. */
       }
       else if( SCIPisFeasGT(scip, newlowerbound, oldlowerbound) )
       {
@@ -247,13 +501,16 @@ SCIP_RETCODE executeBranchingOnLowerBound(
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &resultdata->lperror, &resultdata->cutoff) );
       solstat = SCIPgetLPSolstat(scip);
-
-      resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE) ||
-            (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+      /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
+       * cutoff, or if the iter or time limit was reached. */
+      resultdata->lperror = resultdata->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE)
+         || (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
 
       if( !resultdata->lperror )
       {
+         /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
          resultdata->objval = SCIPgetLPObjval(scip);
          resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
          assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || resultdata->cutoff);
@@ -264,21 +521,24 @@ SCIP_RETCODE executeBranchingOnLowerBound(
 }
 
 /**
- * Returns TRUE, if no bound for the given var was yet set.
- * Returns FALSE, otherwise.
+ * Handles the assignment of ne bounds (valid and supposed). Therefore the new bound is written directly over the old
+ * bound. Analog the new bound status is written directly over the old one.
+ *
+ * @return TRUE, if no upper and lower bound for the given var were yet set; FALSE, else.
  */
 static
 SCIP_Bool addBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< The variable for which a bound should be added. */
    SCIP_Real             newbound,           /**< The value of the new bound. */
-   SCIP_Bool             keepminbound,       /**< In case there is already a bound for the variable, this Indicates whether
-                                              *   the min or the max value of the new and the old bound should be kept. */
+   SCIP_Bool             keepminbound,       /**< In case there is already a bound for the variable, this Indicates
+                                              *   whether the min or the max value of the new and the old bound should
+                                              *   be kept. */
    BOUNDSTATUS           boundtype,          /**< The type of the new bound. Must be BOUNDSTATUS_UPPERBOUND or
                                               *   BOUNDSTATUS_LOWERBOUND. */
    SCIP_Real*            oldbound,           /**< Pointer to the old bound. Depending on the oldboundstatus this may contain
-                                              *   no meaningful data. */
-   BOUNDSTATUS*          oldboundstatus      /**< Pointer to the old boundstatus. */
+                                              *   no meaningful data. Also gets the new bound set */
+   BOUNDSTATUS*          oldboundstatus      /**< Pointer to the old boundstatus. Also gets the new status set*/
    )
 {
    SCIP_Bool newboundadded = FALSE;
@@ -291,10 +551,7 @@ SCIP_Bool addBound(
 
    if( *oldboundstatus == boundtype || *oldboundstatus == BOUNDSTATUS_BOTH )
    {
-      /* we already have a valid bound with a fitting type set, so we can take min/max of this and the "newbound. */
-
-      SCIPdebugMessage("Updating an existent new bound. var <%s> type <%d> oldbound <%g> newbound <%g>.\n",
-         SCIPvarGetName(branchvar), boundtype, *oldbound, newbound);
+      /* we already have a valid bound with a fitting type set, so we can take min/max of this and the "newbound". */
       if (keepminbound)
       {
          *oldbound = MIN(newbound, *oldbound);
@@ -303,6 +560,8 @@ SCIP_Bool addBound(
       {
          *oldbound = MAX(newbound, *oldbound);
       }
+      SCIPdebugMessage("Updating an existent new bound. var <%s> type <%d> oldbound <%g> newbound <%g>.\n",
+         SCIPvarGetName(branchvar), boundtype, *oldbound, newbound);
    }
    else
    {
@@ -324,12 +583,16 @@ SCIP_Bool addBound(
    return newboundadded;
 }
 
+/**
+ * Adds the given upper bound as a valid bound to the ValidDomRedData container.
+ * A valid bound comes from a cutoff on the first level.
+ */
 static
 void addValidUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,
-   SCIP_Real             newupperbound,
-   ValidDomRedData*      validbounds
+   SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
+   SCIP_Real             newupperbound,      /**< the new upper bound */
+   ValidDomRedData*      validbounds         /**< the container to a add the bound to */
 )
 {
    int varindex;
@@ -341,26 +604,34 @@ void addValidUpperBound(
    assert(branchvar != NULL);
    assert(validbounds != NULL);
 
+   /* the container is indexed with the probindex */
    varindex = SCIPvarGetProbindex( branchvar );
    oldupperbound = &validbounds->upperbounds[varindex];
    oldboundstatus = &validbounds->boundstatus[varindex];
 
+   /* Add the given bound to the container and keep the min of the new and the old bound.
+    * We want to keep the min bound, as the minimum of both valid upper bounds is tighter and still valid. */
    newboundadded = addBound(scip, branchvar, newupperbound, TRUE, BOUNDSTATUS_UPPERBOUND, oldupperbound, oldboundstatus);
 
    if( newboundadded )
    {
+      /* in case of a new entry add the varindex to the container */
       int nboundedvars = validbounds->nboundedvars;
       validbounds->boundedvars[nboundedvars] = varindex;
       validbounds->nboundedvars = nboundedvars + 1;
    }
 }
 
+/**
+ * Adds the given lower bound as a valid bound to the ValidDomRedData container.
+ * A valid bound comes from a cutoff on the first level.
+ */
 static
 void addValidLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,
-   SCIP_Real             newlowerbound,
-   ValidDomRedData*      validbounds
+   SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
+   SCIP_Real             newlowerbound,      /**< the new lower bound */
+   ValidDomRedData*      validbounds         /**< the container to a add the bound to */
 )
 {
    int varindex;
@@ -372,18 +643,55 @@ void addValidLowerBound(
    assert(branchvar != NULL);
    assert(validbounds != NULL);
 
+   /* the container is indexed with the probindex */
    varindex = SCIPvarGetProbindex( branchvar );
    oldlowerbound = &validbounds->lowerbounds[varindex];
    oldboundstatus = &validbounds->boundstatus[varindex];
 
+   /* Add the given bound to the container and keep the max of the new and the old bound.
+    * We want to keep the max bound, as the maximum of both valid lower bounds is tighter and still valid. */
    newboundadded = addBound(scip, branchvar, newlowerbound, FALSE, BOUNDSTATUS_LOWERBOUND, oldlowerbound, oldboundstatus);
 
    if( newboundadded )
    {
+      /* in case of a new entry add the varindex to the container */
       int nboundedvars = validbounds->nboundedvars;
       validbounds->boundedvars[nboundedvars] = varindex;
       validbounds->nboundedvars = nboundedvars + 1;
    }
+}
+
+/**
+ * Determines the status for a given number of upper and lower bound updates.
+ * Used in context of the "supposed bound adding" as we only have the status indirectly through the number of updates of
+ * the respective bound.
+ */
+static
+BOUNDSTATUS getStatus(
+   int                   nupperupdates,      /**< number of updates of the upper bound */
+   int                   nlowerupdates       /**< number of updates of the lower bound */
+)
+{
+   BOUNDSTATUS status;
+
+   if( nupperupdates > 0 && nlowerupdates > 0 )
+   {
+      status = BOUNDSTATUS_BOTH;
+   }
+   else if( nupperupdates > 0 )
+   {
+      status = BOUNDSTATUS_UPPERBOUND;
+   }
+   else if( nlowerupdates > 0 )
+   {
+      status = BOUNDSTATUS_LOWERBOUND;
+   }
+   else
+   {
+      status = BOUNDSTATUS_NONE;
+   }
+
+   return status;
 }
 
 /**
@@ -407,8 +715,8 @@ void addSupposedUpperBound(
 )
 {
    int varindex;
-   int prevnupupdated;
-   int prevndownupdated;
+   int prevnupperupdates;
+   int prevnlowerupdates;
    SCIP_Real* oldupperbound;
    SCIP_Bool newboundadded;
    BOUNDSTATUS oldboundstatus;
@@ -420,28 +728,17 @@ void addSupposedUpperBound(
    /* the container is indexed with the probindex */
    varindex = SCIPvarGetProbindex( branchvar );
    oldupperbound = &supposedbounds->upperbounds[varindex];
-   prevnupupdated = supposedbounds->nupperboundupdates[varindex];
-   prevndownupdated = supposedbounds->nlowerboundupdates[varindex];
-   oldboundstatus = BOUNDSTATUS_NONE;
-   if( prevnupupdated > 0 && prevndownupdated > 0 )
-   {
-      oldboundstatus = BOUNDSTATUS_BOTH;
-   }
-   else if( prevnupupdated > 0 )
-   {
-      oldboundstatus = BOUNDSTATUS_UPPERBOUND;
-   }
-   else if( prevndownupdated > 0 )
-   {
-      oldboundstatus = BOUNDSTATUS_LOWERBOUND;
-   }
+   prevnupperupdates = supposedbounds->nupperboundupdates[varindex];
+   prevnlowerupdates = supposedbounds->nlowerboundupdates[varindex];
+   oldboundstatus = getStatus(prevnupperupdates, prevnlowerupdates);
 
    /* Add the given bound to the container and keep the max of the new and the old bound.
     * We want to keep the max bound, as the maximum of both second level upper bounds (where the supposed data comes from)
     * is the value we can transfer as a valid upper bound. */
    newboundadded = addBound(scip, branchvar, newupperbound, FALSE, BOUNDSTATUS_UPPERBOUND, oldupperbound, &oldboundstatus);
 
-   supposedbounds->nupperboundupdates[varindex] = prevnupupdated + 1;
+   /* increment the update counter */
+   supposedbounds->nupperboundupdates[varindex] = prevnupperupdates + 1;
    assert(supposedbounds->nupperboundupdates[varindex] >= 1);
    assert(supposedbounds->nupperboundupdates[varindex] <= 2);
 
@@ -475,7 +772,8 @@ void addSupposedLowerBound(
 )
 {
    int varindex;
-   int prevnupdated;
+   int prevnupperupdates;
+   int prevnlowerupdates;
    SCIP_Real* oldlowerbound;
    SCIP_Bool newboundadded;
    BOUNDSTATUS oldboundstatus;
@@ -487,9 +785,9 @@ void addSupposedLowerBound(
    /* the container is indexed with the probindex */
    varindex = SCIPvarGetProbindex( branchvar );
    oldlowerbound = &supposedbounds->lowerbounds[varindex];
-   prevnupdated = supposedbounds->nlowerboundupdates[varindex];
-   /* if no update happened before the current status is none, otherwise it's lowerbound */
-   oldboundstatus = prevnupdated > 0 ? BOUNDSTATUS_LOWERBOUND : BOUNDSTATUS_NONE;
+   prevnupperupdates = supposedbounds->nupperboundupdates[varindex];
+   prevnlowerupdates = supposedbounds->nlowerboundupdates[varindex];
+   oldboundstatus = getStatus(prevnupperupdates, prevnlowerupdates);
 
    /* Add the given bound to the container and keep the min of the new and the old bound.
     * We want to keep the min bound, as the minimum of both second level lower bounds (where the supposed data comes from)
@@ -497,7 +795,7 @@ void addSupposedLowerBound(
    newboundadded = addBound(scip, branchvar, newlowerbound, TRUE, BOUNDSTATUS_LOWERBOUND, oldlowerbound, &oldboundstatus);
 
    /* increment the update counter */
-   supposedbounds->nlowerboundupdates[varindex] = prevnupdated + 1;
+   supposedbounds->nlowerboundupdates[varindex] = prevnlowerupdates + 1;
    assert(supposedbounds->nlowerboundupdates[varindex] >= 1);
    assert(supposedbounds->nlowerboundupdates[varindex] <= 2);
 
@@ -512,6 +810,8 @@ void addSupposedLowerBound(
 
 /**
  * Calculate the weight of a node for given up and down gains.
+ *
+ * @return the node weight for the given gains.
  */
 static
 SCIP_Real calculateNodeWeight(
@@ -720,7 +1020,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
    SCIPdebugMessage("Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
    /* execute the second level down branching */
-   SCIP_CALL( executeBranchingOnUpperBound(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
+   SCIP_CALL( executeDownBranching(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
 #ifdef SCIP_STATISTICS
    branchruledata->nsecondlvllps++;
 #endif
@@ -740,7 +1040,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
       SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
       /* execute the second level up branching */
-      SCIP_CALL( executeBranchingOnLowerBound(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
+      SCIP_CALL( executeUpBranching(scip, deepbranchvar, deepbranchvarsolval, upresultdata) );
 #ifdef SCIP_STATISTICS
       branchruledata->nsecondlvllps++;
 #endif
@@ -1380,7 +1680,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
          SCIPdebugMessage("First level down branching on variable <%s>\n", SCIPvarGetName(branchvar));
          /* execute the down branching on first level for the variable "branchvar" */
-         SCIP_CALL( executeBranchingOnUpperBound(scip, branchvar, branchval, downbranchingresult) );
+         SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult) );
 #ifdef SCIP_STATISTICS
          branchruledata->nfirstlvllps++;
 #endif
@@ -1424,7 +1724,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
          SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
          /* execute the up branching on first level for the variable "branchvar" */
-         SCIP_CALL( executeBranchingOnLowerBound(scip, branchvar, branchval, upbranchingresult) );
+         SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult) );
 #ifdef SCIP_STATISTICS
          branchruledata->nfirstlvllps++;
 #endif
