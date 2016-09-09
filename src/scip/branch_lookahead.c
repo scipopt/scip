@@ -53,7 +53,21 @@
  * Data structures
  */
 
-/** branching rule data */
+/**
+ * This enum is used to represent whether an upper bound, lower bound or both are set for a variable in the ValidDomRedData
+ * container.
+ */
+typedef enum
+{
+   BOUNDSTATUS_NONE        = 0,              /**< The corresponding variable has no new bound set. Has to have the value 0! */
+   BOUNDSTATUS_UPPERBOUND  = 1,              /**< The corresponding variable only has a new upper bound set. */
+   BOUNDSTATUS_LOWERBOUND  = 2,              /**< The corresponding variable only has a new lower bound set. */
+   BOUNDSTATUS_BOTH        = 3               /**< The corresponding variable has both, an upper and a lower bound set. */
+} BOUNDSTATUS;
+
+/**
+ * branching rule data
+ */
 struct SCIP_BranchruleData
 {
    SCIP_Bool             useimplieddomred;   /**< indicates whether the second level domain reduction data should be
@@ -70,47 +84,50 @@ struct SCIP_BranchruleData
    SCIP_Real             prevbinbranchsol;   /**< the previous branching value in case that in the previous run only
                                               *   non-violating implied binary constraints were added */
 #ifdef SCIP_STATISTICS
-   int                   nfirstlvllps;       /**/
-   int                   nsecondlvllps;      /**/
-   int                   nfirstlvlcutoffs;   /**/
-   int                   nsecondlvlcutoffs;  /**/
-   int*                  nresults;
+   int                   nfirstlvllps;       /**< counter for the number of lps that were solved on the first level */
+   int                   nsecondlvllps;      /**< counter for the number of lps that were solved on the second level */
+   int                   nfirstlvlcutoffs;   /**< counter for the number of cutoffs that were made on the first level */
+   int                   nsecondlvlcutoffs;  /**< counter for the number of cutoffs that were made on the second level */
+   int*                  nresults;           /**< Array of counters for each result state the lookahead branching finished.
+                                              *   The first (0) entry is unused, as the result states are indexed 1-based
+                                              *   and we use this index as our array index. */
 #endif
 };
 
+/**
+ * A container to hold the data needed to calculate the weight of branch after a first level node.
+ */
 typedef struct
 {
-   SCIP_Real             highestweight;
-   SCIP_Real             sumofweights;
-   int                   numberofweights;
+   SCIP_Real             highestweight;      /**< the highest weight that occurred over all second level nodes */
+   SCIP_Real             sumofweights;       /**< the sum of the weights of all second level nodes */
+   int                   numberofweights;    /**< the number of all weights that could be calculated (in case of an
+                                              *   infeasible second level node we cannot calculate a weight) */
 } WeightData;
 
+/**
+ * A container to hold the data needed to calculate the weight of a first level node.
+ */
 typedef struct
 {
-   int                   varindex;
-   int                   ncutoffs;
-   WeightData*           upperbounddata;
-   WeightData*           lowerbounddata;
+   int                   varindex;           /**< the index of the first level variable currently branched on */
+   int                   ncutoffs;           /**< counter for the the number of second level cutoffs */
+   WeightData*           upperbounddata;     /**< the WeightData of the down branch (branched on upper bound) */
+   WeightData*           lowerbounddata;     /**< the WeightData of the up branch (branched on lower bound) */
 } ScoreData;
 
+/**
+ * A container to hold the result of a branching.
+ */
 typedef struct
 {
-   SCIP_Real             objval;
-   SCIP_Bool             cutoff;
-   SCIP_Bool             lperror;
-   SCIP_Bool             nobranch;
+   SCIP_Real             objval;             /**< The objective value of the solved lp. Only contains meaningful data, if
+                                              *   cutoff == TRUE. */
+   SCIP_Bool             cutoff;             /**< Indicates whether the node was infeasible and was cutoff. */
+   SCIP_Bool             lperror;            /**< Indicates whether the solving of the lp resulted in an error. */
+   SCIP_Bool             nobranch;           /**< Indicates whether the lp wasn't solved, as domain reduction for the
+                                              *   branching didn't change the domain. Currently unused. */
 } BranchingResultData;
-
-/**
- * This enum is used to represent whether an upper bound, lower bound or both are set for a variable.
- */
-typedef enum
-{
-   BOUNDSTATUS_NONE = 0,
-   BOUNDSTATUS_UPPERBOUND,
-   BOUNDSTATUS_LOWERBOUND,
-   BOUNDSTATUS_BOTH
-} BOUNDSTATUS;
 
 /**
  * This struct collect the bounds, which can be used in the root problem. Therefore it contains two types of bounds:
@@ -156,20 +173,34 @@ typedef struct
    int                   nboundedvars;       /**< The length of the boundedvars array. */
 } SupposedDomRedData;
 
+/**
+ * A container to hold the implied binary bounds found, as these are added after the main loop of the branching rule. The
+ * size of both arrays is changed dynamically, as we otherwise would need up to nvar*nvars number of entries to represent
+ * all possible pairs. Therefore we hold the current max size of the arrays in "memsize" and reallocate the size if needed.
+ * The arrays are consecutively filled, and therefore can be accessed 0-based up until the "nentries".
+ */
 typedef struct
 {
-   SCIP_VAR**            eithervars;
-   SCIP_VAR**            othervars;
-   int                   nentries;
-   int                   memsize;
+   SCIP_VAR**            eithervars;         /**< An array containing one of the variables needed to create the implied
+                                              *   binary constraint. */
+   SCIP_VAR**            othervars;          /**< An array containing the other variable needed to create the implied binary
+                                              *   constraint. */
+   int                   nentries;           /**< The number of entries in both arrays. */
+   int                   memsize;            /**< The number of entries that currently fit in the arrays. Only for internal
+                                              *   usage! */
 } BinaryBoundData;
+
 
 /*
  * Local methods for the data structures
  */
+
+/**
+ * Initiates the WeightData struct.
+ */
 static
 void initWeightData(
-   WeightData*           weightdata
+   WeightData*           weightdata          /**< The struct to be initiated. */
 )
 {
    weightdata->highestweight = 0;
@@ -177,22 +208,28 @@ void initWeightData(
    weightdata->sumofweights = 0;
 }
 
+/**
+ * Initiates the ScoreData struct and the contained WeightData container.
+ */
 static
 void initScoreData(
-   ScoreData*            scoredata,
-   int                   currentbranchvar
+   ScoreData*            scoredata,          /**< The struct to be initiated. */
+   int                   currvarindex        /**< The current first level branching var index. */
 )
 {
    scoredata->ncutoffs = 0;
-   scoredata->varindex = currentbranchvar;
+   scoredata->varindex = currvarindex;
    initWeightData(scoredata->lowerbounddata);
    initWeightData(scoredata->upperbounddata);
 }
 
+/**
+ * Initiates the BranchingResultData struct.
+ */
 static
 void initBranchingResultData(
    SCIP*                 scip,               /**< SCIP data structure */
-   BranchingResultData*  resultdata
+   BranchingResultData*  resultdata          /**< The struct to be initiated. */
 )
 {
    resultdata->objval = SCIPinfinity(scip);
@@ -201,10 +238,13 @@ void initBranchingResultData(
    resultdata->nobranch = FALSE;
 }
 
+/**
+ * Allocates buffer memory for the given ValidDomRedData and the contained arrays.
+ */
 static
 SCIP_RETCODE allocValidBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   ValidDomRedData**      validbounddata
+   ValidDomRedData**     validbounddata      /**< The struct to be allocated. */
 )
 {
    int ntotalvars;
@@ -220,7 +260,7 @@ SCIP_RETCODE allocValidBoundData(
 }
 
 /**
- * Clears the given struct.
+ * Resets the given struct.
  * Assumptions:
  * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
  * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
@@ -228,16 +268,19 @@ SCIP_RETCODE allocValidBoundData(
  */
 static
 void initValidBoundData(
-   ValidDomRedData*       validbounddata      /*< The struct that should get cleared.*/
+   ValidDomRedData*       validbounddata     /*< The struct that should get reset.*/
 )
 {
    validbounddata->nboundedvars = 0;
 }
 
+/**
+ * Frees the buffer memory of the given ValidDomRedData and the contained arrays.
+ */
 static
 void freeValidBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   ValidDomRedData**      validbounddata
+   ValidDomRedData**     validbounddata      /**< The struct that should be freed. */
 )
 {
    SCIPfreeBufferArray(scip, &(*validbounddata)->boundedvars);
@@ -247,10 +290,13 @@ void freeValidBoundData(
    SCIPfreeBuffer(scip, validbounddata);
 }
 
+/**
+ * Allocates buffer memory for the given SupposedDomRedData and the contained arrays.
+ */
 static
 SCIP_RETCODE allocSupposedBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedDomRedData**   supposedbounddata
+   SupposedDomRedData**  supposedbounddata   /**< The struct to be allocated. */
 )
 {
    int ntotalvars;
@@ -267,7 +313,7 @@ SCIP_RETCODE allocSupposedBoundData(
 }
 
 /**
- * Clears the given struct.
+ * Resets the given struct.
  * Assumptions:
  * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
  * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
@@ -275,16 +321,19 @@ SCIP_RETCODE allocSupposedBoundData(
  */
 static
 void initSupposedBoundData(
-   SupposedDomRedData*    supposedbounddata   /*< The struct that should get cleared.*/
+   SupposedDomRedData*    supposedbounddata   /*< The struct that should get reset.*/
 )
 {
    supposedbounddata->nboundedvars = 0;
 }
 
+/**
+ * Frees the buffer memory of the given ValidDomRedData and the contained arrays.
+ */
 static
 void freeSupposedBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedDomRedData**   supposedbounddata
+   SupposedDomRedData**  supposedbounddata   /**< The struct that should be freed. */
 )
 {
    SCIPfreeBufferArray(scip, &(*supposedbounddata)->boundedvars);
@@ -295,11 +344,15 @@ void freeSupposedBoundData(
    SCIPfreeBuffer(scip, supposedbounddata);
 }
 
+/**
+ * Allocates buffer memory for the given SupposedDomRedData and the contained arrays. The "nentries" is just a starting
+ * value. The size of the arrays will be reallocated if needed.
+ */
 static
 SCIP_RETCODE allocBinaryBoundData(
-   SCIP*                 scip,
-   BinaryBoundData**     binarybounddata,
-   int                   nentries
+   SCIP*                 scip,               /**< SCIP data structure */
+   BinaryBoundData**     binarybounddata,    /**< The struct to be allocated. */
+   int                   nentries            /**< The number of entries the contained arrays should support. */
 )
 {
    SCIP_CALL( SCIPallocBuffer(scip, binarybounddata) );
@@ -309,23 +362,36 @@ SCIP_RETCODE allocBinaryBoundData(
    return SCIP_OKAY;
 }
 
+/**
+ * Resets the given BinaryBoundData struct.
+ */
 static
 void initBinaryBoundData(
-   BinaryBoundData*      binarybounddata
+   BinaryBoundData*      binarybounddata     /**< The struct to be reset. */
 )
 {
    binarybounddata->nentries = 0;
 }
 
+/**
+ * Adds the data for an implied binary constraint to the container.
+ */
 static
 SCIP_RETCODE addBinaryBoundEntry(
-   SCIP*                 scip,
-   BinaryBoundData*      container,
-   SCIP_VAR*             eithervar,
-   SCIP_VAR*             othervar
+   SCIP*                 scip,               /**< SCIP data structure */
+   BinaryBoundData*      container,          /**< The container for the implied binary constraints. */
+   SCIP_VAR*             eithervar,          /**< One of both vars for the constraint. */
+   SCIP_VAR*             othervar            /**< The other one of the vars for the constraint. */
 )
 {
-   int emptyindex = container->nentries;
+   int emptyindex;
+
+   assert(scip != NULL);
+   assert(container != NULL);
+   assert(eithervar != NULL);
+   assert(othervar != NULL);
+
+   emptyindex = container->nentries;
 
    if( emptyindex == container->memsize )
    {
@@ -343,9 +409,12 @@ SCIP_RETCODE addBinaryBoundEntry(
    return SCIP_OKAY;
 }
 
+/**
+ * Checks whether the given BinaryBoundData struct is empty.
+ */
 static
 SCIP_Bool isBinaryBoundDataEmpty(
-   BinaryBoundData*      container
+   BinaryBoundData*      container           /**< The container to be checked. */
 )
 {
    assert(container != NULL);
@@ -353,10 +422,13 @@ SCIP_Bool isBinaryBoundDataEmpty(
    return container->nentries == 0;
 }
 
+/**
+ * Frees the memory occupied by the BinaryBoundData and the contained arrays.
+ */
 static
 void freeBinaryBoundData(
-   SCIP*                 scip,
-   BinaryBoundData**     binarybounddata
+   SCIP*                 scip,               /**< SCIP data structure */
+   BinaryBoundData**     binarybounddata     /**< The container to be freed. */
 )
 {
    SCIPfreeBufferArray(scip, &(*binarybounddata)->othervars);
@@ -381,7 +453,7 @@ SCIP_RETCODE executeDownBranching(
    SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
                                               *   rounded down will be the upper bound of the new node. */
    BranchingResultData*  resultdata          /**< pointer to the result data which gets filled with the status */
-   )
+)
 {
    SCIP_Real oldupperbound;
    SCIP_Real oldlowerbound;
@@ -539,7 +611,7 @@ SCIP_Bool addBound(
    SCIP_Real*            oldbound,           /**< Pointer to the old bound. Depending on the oldboundstatus this may contain
                                               *   no meaningful data. Also gets the new bound set */
    BOUNDSTATUS*          oldboundstatus      /**< Pointer to the old boundstatus. Also gets the new status set*/
-   )
+)
 {
    SCIP_Bool newboundadded = FALSE;
 
