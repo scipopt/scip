@@ -104,7 +104,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	    SCIPdebug( SCIProwPrint(row, NULL) );
+	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -138,7 +138,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	       SCIPdebug( SCIProwPrint(row, NULL) );
+	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	       SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -306,7 +306,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	    SCIPdebug( SCIProwPrint(row, NULL) );
+	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -472,7 +472,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	       SCIPdebug( SCIProwPrint(row, NULL) );
+	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -510,7 +510,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 		  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-		  SCIPdebug( SCIProwPrint(row, NULL) );
+		  SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 		  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 		  SCIP_CALL( SCIPreleaseRow(scip, &row));

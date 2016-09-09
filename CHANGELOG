@@ -33,6 +33,7 @@ parameters:
 - new parameter randomization/lpseed to set the initial seed of the LP solver
 
 performance improvements:
+- improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
   and only create and populate a sub-SCIP if enough variables will be fixed.
 - SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
@@ -71,6 +72,10 @@ misc:
 
 SCIP version 3.2.2
 ==================
+
+features:
+- for users of the ampl interface, the display/logfile option has been added to set the name of a
+  file to write the SCIP log to (additionally to stdout)
 
 fixed bugs:
 - fixed bug in XML reader concerning comments

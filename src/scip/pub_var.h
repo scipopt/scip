@@ -1051,8 +1051,6 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
 
-#ifdef SCIP_DEPRECATED
-
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  *
@@ -1100,8 +1098,6 @@ SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
-
-#endif
 
 /** returns the last bound change index, at which the bounds of the given variable were tightened */
 EXTERN
