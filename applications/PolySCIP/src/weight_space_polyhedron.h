@@ -218,9 +218,6 @@ namespace polyscip {
         NodeMap nodes_to_vertices_;
         /**< maps vertices to nodes */
         VertexMap vertices_to_nodes_;
-        //FacetMap facets_to_vertices_;
-        //FacetContainer facets_;
-
 
     };
 

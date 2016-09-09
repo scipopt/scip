@@ -38,8 +38,7 @@ namespace polyscip {
 
     class Polyscip {
     public:
-        using ValPair = std::pair< ValueType, ValueType>;
-        using betaT = std::vector<ValPair>;
+        using ValPair = std::pair<ValueType, ValueType>;
 
         explicit Polyscip(int argc, const char *const *argv);
 
@@ -57,10 +56,14 @@ namespace polyscip {
 
         void printResults(std::ostream &os = std::cout, bool withSolution = true) const;
 
+        void printStatus(std::ostream& os = std::cout) const;
+
+        bool dominatedPointsFound() const;
+
     private:
 
         enum class PolyscipStatus {
-            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached,
+            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, ErrorStatus
         };
 
         bool filenameIsOkay(const std::string &filename);
@@ -74,11 +77,13 @@ namespace polyscip {
 
         SCIP_RETCODE computeUnitWeightOutcomes();
 
-        void deleteWeaklyNondomResults();
+        void deleteWeaklyNondomSupportedResults();
 
         /* Return true if other element exists which dominates 'it' or has objective values coinciding with 'it
          */
-        bool isDominatedOrEqual(ResultContainer::const_iterator it) const;
+        bool isDominatedOrEqual(ResultContainer::const_iterator it,
+                                ResultContainer::const_iterator beg,
+                                ResultContainer::const_iterator end) const;
 
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
@@ -95,15 +100,11 @@ namespace polyscip {
 
         SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=false);
 
-        bool outcomesAreEqual(const OutcomeType& outcome1, const OutcomeType& outcome2) const;
-
         bool outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const;
 
         Result getResult(bool outcome_is_bounded = false, SCIP_SOL *primal_sol = nullptr);
 
         Result getOptimalResult();
-
-        void computeNonRedundantObjectives(bool printObjectives) = delete;
 
         void printObjective(std::size_t obj_no,
                             const std::vector<int>& nonzero_indices,
@@ -121,45 +122,46 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
-        std::list<ValPair> getNondomProjectedPoints(unsigned obj_1, unsigned obj_2) const;
-
-        SCIP_RETCODE computeUnsupported(SCIP_VAR* new_var,
-                                        std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                        std::vector<std::vector<ValueType>>& orig_vals,
-                                        const ValPair& predecessor,
-                                        const ValPair& successor,
-                                        std::pair<unsigned, unsigned> considered_objs);
+        std::list<ValPair> getNondomProjectedPoints(std::size_t obj_1, std::size_t obj_2) const;
 
         SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
-                                              const ValPair& predecessor,
-                                              const ValPair& successor);
+                                              const std::pair<std::size_t, std::size_t>& considered_objs,
+                                              std::list<ValPair>&& nondom_projected_points);
 
 
-        /** add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
+        /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
-        SCIP_CONS* createObjFctCons(SCIP_VAR* new_var,
-                                          const std::vector<SCIP_VAR*>& orig_vars,
-                                          const std::vector<ValueType>& orig_vals,
-                                          const ValueType& rhs,
-                                          const ValueType& beta_i);
+        SCIP_CONS* createNewVarTransformCons(SCIP_VAR *new_var,
+                                             const std::vector<SCIP_VAR *> &orig_vars,
+                                             const std::vector<ValueType> &orig_vals,
+                                             const ValueType &rhs,
+                                             const ValueType &beta_i);
 
-        betaT getInitialBeta(std::size_t unit_index, // index for which beta_i is kept 1
-                             const OutcomeType& pred,
-                             const OutcomeType& succ,
-                             const OutcomeType& reference_point,
-                             const OutcomeType& upper_point) const;
+        /** create constraint: lhs <= c_i^T x <= rhs*
+         * @param new_var
+         * @param orig_vars
+         * @param orig_vals
+         * @param rhs
+         * @param beta_i
+         * @return
+         */
+        SCIP_CONS* createObjValCons(const std::vector<SCIP_VAR *>& vars,
+                                    const std::vector<ValueType>& vals,
+                                    const ValueType& lhs,
+                                    const ValueType& rhs);
+
+        SCIP_RETCODE addNewUnsupportedNondomPoint(SCIP_VAR* new_var,
+                                                  SCIP_CONS* cons1,
+                                                  SCIP_CONS* cons2,
+                                                  const ValueType& new_lhs,
+                                                  const ValueType& new_rhs);
+
+        ValPair getInitialBetaPair(const ValueType& upper_bound_obj1, const ValueType& upper_bound_obj2, const ValPair& reference_point) const;
+
 
         void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
-
-        std::vector<ValueType> computeUpperBetaValues(const betaT& used_beta,
-                                                      SCIP_Real opt_value,
-                                                      const OutcomeType& new_result,
-                                                      const OutcomeType& pred,
-                                                      const OutcomeType& succ,
-                                                      const OutcomeType& reference_point,
-                                                      const OutcomeType& upper_point) const;
 
         void printSol(const SolType& sol, std::ostream& os) const;
 
@@ -169,14 +171,18 @@ namespace polyscip {
         /** Prints given point to given output stream */
         void printPoint(const OutcomeType &point, std::ostream& os) const;
 
+        bool lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const;
+
+        bool lhsCoincidesWithRhs(const ValPair &lhs, const ValPair &rhs, double eps=0.001) const;
+
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
-        SCIP *scip_;
+        SCIP* scip_;
         /**< objective sense of given problem */
         SCIP_Objsense obj_sense_;
         /**< number of objectives */
-        std::size_t no_all_objs_;
-        std::vector<std::size_t> considered_objs_;
+        std::size_t no_objs_;
+        //std::vector<std::size_t> considered_objs_;
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;
 

@@ -119,6 +119,9 @@ namespace polyscip {
 
             std::size_t size() const { return v_rep_.size(); };
 
+            H_RepC getHRep() {return h_rep_;};
+            V_RepC getVRep() {return v_rep_;};
+
             H_RepC&& moveHRep() {return std::move(h_rep_);};
             V_RepC&& moveVRep() {return std::move(v_rep_);};
 

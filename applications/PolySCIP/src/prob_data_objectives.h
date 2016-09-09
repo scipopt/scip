@@ -40,7 +40,7 @@ public:
     /** Get number of objectives of given problem
      * @return number of objectives
      */
-    std::size_t getNoAllObjs() const {return name_to_no_.size();};
+    std::size_t getNoObjs() const {return name_to_no_.size();};
 
     /** Adds objective identifier */
     void addObjName(const char* name);
@@ -53,11 +53,11 @@ public:
     /** Returns scalar product of given weight and objectives w.r.t. given variable;
         if given variable is unknown, return 0.0 (since var can only have zero objective
         coefficients in given problem) */
-    polyscip::ValueType getWeightedObjVal(SCIP_VAR* var, const polyscip::WeightType& weight) = delete;
+    polyscip::ValueType getWeightedObjVal(SCIP_VAR* var, const polyscip::WeightType& weight);
 
     polyscip::ValueType getWeightedObjVal(SCIP_VAR* var,
                                           const polyscip::WeightType& weight,
-                                          const std::vector<std::size_t>& non_redundant_objs);
+                                          const std::vector<std::size_t>& non_redundant_objs) = delete;
 
     /** Returns product of given solution value and objective coefficient w.r.t. given
         variable and objective number */

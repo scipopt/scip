@@ -32,6 +32,8 @@ int main(int argc, char** argv) {
         Polyscip polyscip(argc, (const char *const *) argv);
         SCIP_CALL( polyscip.readProblem() );
         SCIP_CALL( polyscip.computeNondomPoints() );
+        polyscip.printStatus();
+        assert (polyscip.dominatedPointsFound() == false);
 
         if (polyscip.writeResults())
             polyscip.writeSupportedResults();

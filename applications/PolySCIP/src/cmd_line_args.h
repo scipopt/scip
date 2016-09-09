@@ -32,9 +32,8 @@ namespace polyscip {
 
         CmdLineArgs(int argc, const char *const *argv);
 
-        bool checkForRedundantObjs() const { return check_for_redundant_objs_;};
         bool beVerbose() const {return be_verbose_;};
-        bool withUnsupported() const {return with_unsupported_;};
+        bool onlyExtremal() const {return only_extremal_;};
         bool writeSolutions() const {return write_sols_;};
         bool hasTimeLimit() const {return time_limit_ != kTimeLimitInf;}
         bool hasParameterFile() const {return !param_file_.empty();};
@@ -49,9 +48,8 @@ namespace polyscip {
         std::string version_no_;
 
         // arguments read from command line
-        bool check_for_redundant_objs_;
         bool be_verbose_;
-        bool with_unsupported_;
+        bool only_extremal_;
         bool write_sols_;
         TimeLimitType time_limit_;
         double epsilon_;

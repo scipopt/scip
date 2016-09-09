@@ -35,7 +35,7 @@ void ProbDataObjectives::addObjName(const char* name)  {
     string obj_name(name);
     if (name_to_no_.count(obj_name) != 0)
         throw std::runtime_error("Name of objective already encountered: " + obj_name);
-    name_to_no_.emplace(obj_name, getNoAllObjs());
+    name_to_no_.emplace(obj_name, getNoObjs());
     name_to_nonzero_coeffs_.emplace(obj_name, vector<SCIP_VAR*>{});
     no_to_name_.push_back(obj_name);
 }
@@ -43,7 +43,7 @@ void ProbDataObjectives::addObjName(const char* name)  {
 void ProbDataObjectives::addObjCoeff(SCIP_VAR *var, const char* obj_name, ValueType val) {
     if (val != 0) {
         if (var_to_coeffs_.count(var) == 0)
-            var_to_coeffs_.emplace(var, OutcomeType(getNoAllObjs(), 0));
+            var_to_coeffs_.emplace(var, OutcomeType(getNoObjs(), 0));
         auto obj_no = name_to_no_.at(obj_name);
         var_to_coeffs_[var].at(obj_no) = val;
         name_to_nonzero_coeffs_.at(obj_name).push_back(var);
@@ -59,13 +59,13 @@ ValueType ProbDataObjectives::getObjCoeff(SCIP_VAR* var, size_t obj_no) {
         return 0;
 }
 
-std::size_t ProbDataObjectives::getNumberNonzeroCoeffs(std::size_t obj_index) const {
-    assert (obj_index < getNoAllObjs());
+size_t ProbDataObjectives::getNumberNonzeroCoeffs(std::size_t obj_index) const {
+    assert (obj_index < getNoObjs());
     auto obj_name = no_to_name_.at(obj_index);
     return name_to_nonzero_coeffs_.at(obj_name).size();
 }
 
-/*ValueType ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const WeightType& weight) {
+ValueType ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const WeightType& weight) {
     if (var_to_coeffs_.count(var)) {
         return std::inner_product(begin(weight),
                                   end(weight),
@@ -75,9 +75,9 @@ std::size_t ProbDataObjectives::getNumberNonzeroCoeffs(std::size_t obj_index) co
     else {
         return 0.0;
     }
-}*/
+}
 
-ValueType ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const WeightType& weight,
+/*ValueType ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const WeightType& weight,
                                                 const vector<size_t>& non_redundant_objs) {
     assert (non_redundant_objs.size() == weight.size());
     if (var_to_coeffs_.count(var)) {
@@ -92,10 +92,10 @@ ValueType ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const WeightType&
     else {
         return 0;
     }
-}
+}*/
 
 vector<SCIP_VAR*> ProbDataObjectives::getNonZeroCoeffVars(std::size_t obj_index) const {
-    assert (obj_index < getNoAllObjs());
+    assert (obj_index < getNoObjs());
     auto obj_name = no_to_name_.at(obj_index);
     return name_to_nonzero_coeffs_.at(obj_name);
 }
