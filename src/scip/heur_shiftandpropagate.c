@@ -1459,11 +1459,15 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       /* @note this call can have the side effect that variables are created */
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIPcutoffNode(scip, SCIPgetCurrentNode(scip));
          return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
