@@ -1462,6 +1462,14 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       nodecutoff = FALSE;
       /* @note this call can have the side effect that variables are created */
       SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
+
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
+      if( nodecutoff )
+      {
+         SCIPcutoffNode(scip, SCIPgetCurrentNode(scip));
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
