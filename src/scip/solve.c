@@ -2948,7 +2948,8 @@ SCIP_RETCODE solveNodeRelax(
       case SCIP_CUTOFF:
          *cutoff = TRUE;
          SCIPdebugMessage(" -> relaxator <%s> detected cutoff\n", SCIPrelaxGetName(set->relaxs[r]));
-         break;
+         /* @todo does it make sense to proceed if the node is proven to be infeasible? */
+         return SCIP_OKAY;
 
       case SCIP_CONSADDED:
          *solvelpagain = TRUE;   /* the separation for new constraints should be called */
