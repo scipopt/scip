@@ -274,6 +274,21 @@ void initValidBoundData(
    validbounddata->nboundedvars = 0;
 }
 
+static
+void resetValidBoundData(
+   ValidDomRedData*      validbounddata      /**<  */
+)
+{
+   int i;
+
+   for( i = 0; i < validbounddata->nboundedvars; i++ )
+   {
+      int probvarindex = validbounddata->boundedvars[i];
+      validbounddata->boundstatus[probvarindex] = 0;
+   }
+   initValidBoundData(validbounddata);
+}
+
 /**
  * Frees the buffer memory of the given ValidDomRedData and the contained arrays.
  */
@@ -312,6 +327,20 @@ SCIP_RETCODE allocSupposedBoundData(
    return SCIP_OKAY;
 }
 
+static
+void resetSupposedBoundData(
+   SupposedDomRedData*    supposedbounddata
+)
+{
+   int i;
+   for( i = 0; i < supposedbounddata->nboundedvars; i++ )
+   {
+      int varindex = supposedbounddata->boundedvars[i];
+      supposedbounddata->nupperboundupdates[varindex] = 0;
+      supposedbounddata->nlowerboundupdates[varindex] = 0;
+   }
+}
+
 /**
  * Resets the given struct.
  * Assumptions:
@@ -324,6 +353,7 @@ void initSupposedBoundData(
    SupposedDomRedData*    supposedbounddata   /*< The struct that should get reset.*/
 )
 {
+   resetSupposedBoundData(supposedbounddata);
    supposedbounddata->nboundedvars = 0;
 }
 
@@ -803,6 +833,7 @@ void addSupposedUpperBound(
    prevnupperupdates = supposedbounds->nupperboundupdates[varindex];
    prevnlowerupdates = supposedbounds->nlowerboundupdates[varindex];
    oldboundstatus = getStatus(prevnupperupdates, prevnlowerupdates);
+
 
    /* Add the given bound to the container and keep the max of the new and the old bound.
     * We want to keep the max bound, as the maximum of both second level upper bounds (where the supposed data comes from)
@@ -1286,8 +1317,8 @@ SCIP_RETCODE executeDeepBranching(
       SCIP_VAR* deepbranchvar = lpcands[j];
       SCIP_Real deepbranchvarsolval = lpcandssol[j];
 
-      SCIPdebugMessage("Start deeper branching on variable <%s> with solution value <%g>.\n",
-         SCIPvarGetName(deepbranchvar), deepbranchvarsolval);
+      SCIPdebugMessage("Start deeper branching on variable <%s> with solution value <%g> in [<%g>..<%g>].\n",
+         SCIPvarGetName(deepbranchvar), deepbranchvarsolval, SCIPvarGetLbLocal(deepbranchvar), SCIPvarGetUbLocal(deepbranchvar));
 
       /* execute the second level branching for a variable */
       SCIP_CALL( executeDeepBranchingOnVar(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
@@ -1919,8 +1950,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          if( branchruledata->useimplieddomred )
          {
+            resetSupposedBoundData(supposedbounds);
             freeSupposedBoundData(scip, &supposedbounds);
          }
+         resetValidBoundData(validbounds);
          freeValidBoundData(scip, &validbounds);
       }
 
@@ -2025,10 +2058,11 @@ SCIP_RETCODE usePreviousResult(
 
    return SCIP_OKAY;
 }
+
+
 /*
  * Callback methods of branching rule
  */
-
 
 /** copy method for branchrule plugins (called when SCIP copies plugins) */
 static
@@ -2042,6 +2076,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
 
    return SCIP_OKAY;
 }
+
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
@@ -2135,7 +2170,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_Real* lpcandssol;
       SCIP_Bool depthtoosmall = FALSE;
       int nlpcands;
-      int bestcand = -1;
+      int bestcand = 0;
 
       /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
       SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, NULL, &nlpcands, NULL, NULL) );
@@ -2194,6 +2229,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       else if( depthtoosmall )
       {
          SCIPdebugMessage("Result: The branching depth wasn't high enough for a 2 level branching.\n");
+      }
+      else if( *result == SCIP_DIDNOTRUN )
+      {
+         SCIPdebugMessage("Result: Did not run");
       }
       else
       {
