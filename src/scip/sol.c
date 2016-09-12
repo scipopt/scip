@@ -1505,7 +1505,7 @@ SCIP_RETCODE SCIPsolCheck(
    {
       int v;
 
-      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -1551,7 +1551,7 @@ SCIP_RETCODE SCIPsolCheck(
    {
       int v;
 
-      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -1584,7 +1584,7 @@ SCIP_RETCODE SCIPsolCheck(
    }
 
    /* check whether the solution fulfills all constraints */
-   for( h = 0; h < set->nconshdlrs && (*feasible || printreason); ++h )
+   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
    {
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
             checkintegrality, checklprows, printreason, completely, &result) );
