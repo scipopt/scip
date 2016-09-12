@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_rootsoldiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME         "rootsoldiving"
 #define HEUR_DESC         "LP diving heuristic that changes variable's objective values using root LP solution as guide"

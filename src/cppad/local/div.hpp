@@ -1,12 +1,12 @@
-/* $Id: div.hpp 2773 2013-03-09 06:00:18Z bradbell $ */
-# ifndef CPPAD_DIV_INCLUDED
-# define CPPAD_DIV_INCLUDED
+// $Id$
+# ifndef CPPAD_DIV_HPP
+# define CPPAD_DIV_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -98,4 +98,4 @@ CPPAD_FOLD_AD_VALUED_BINARY_OPERATOR(/)
 
 } // END CppAD namespace
 
-# endif 
+# endif

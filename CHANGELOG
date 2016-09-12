@@ -1,3 +1,75 @@
+SCIP version NEXT
+==================
+
+features:
+- new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
+- new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
+- added leaf statistics about LP objective limit|feasible|infeasible leaves to the statistics output and
+  to the callable library: SCIPgetNObjlimLeaves(), SCIPgetNFeasibleLeaves(), SCIPgetNInfeasibleLeaves()
+- added adaptive solving behavior of SCIP based on solving phases and heuristic transitions, if enabled via "solvingphases/enabled"
+- new presolving step for variables contained in a single quadratic constraint with proper square coefficients
+- can now solve relaxations within probing
+- can now separate perspective cuts for indicator constraints
+- added write callback for reader_bnd
+- new target "dll" to build Windows dlls with MSVC
+- added possibility to use a reference value for advanced analysis of the tree search. If a finite reference value
+  (an objective value in original objective space) is passed via misc/referencevalue, SCIP keeps track of the
+  number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
+  a child node with lower bound smaller than the reference value was available.
+- add new presolving step to disaggregate second order cone constraints
+- added reading capabilities for partial solutions with extension *.mst
+- new heuristic that tries to complete partial solutions
+- new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
+
+parameters:
+- new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
+  in the solvingphases-section to control how to switch the parameters, and whether a restart should be performed between the phases.
+- new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
+- new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
+- new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
+- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
+- new parameter class randomization
+- moved permutationseed from misc to randomization
+- new parameter randomization/lpseed to set the initial seed of the LP solver
+
+performance improvements:
+- improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
+- adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
+  and only create and populate a sub-SCIP if enough variables will be fixed.
+- SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
+  removal of fixed variables from constraint data at creation time to reduce memory requirements.
+- changed value of parameter separating/clique/cliquedensity to 0.0 such that the separator always constructs a dense clique table
+  which proved to be faster on the benchmarks MMM and stableset.
+- reduce performance variability by using a small perturbation in the undercover heuristic
+- reduce performance variability by using random numbers as tie-breaker for external branching candidates
+
+interface:
+- new library methods SCIPenableConsCompression(), SCIPisConsCompressionEnabled(), SCIPcopyConsCompression(), SCIPcopyOrigConsCompression()
+- new method SCIPcopyLargeNeighborhoodSearch() in heuristics.h that supports compressed copying and two kinds of problem copy: the MIP-relaxation or
+  a 1-1 problem copy (by copying the constraints, and not the LP relaxation)
+- new files heuristics.c/heuristics.h to collect methods that are frequently used by heuristics
+- merged dive.c/pub_dive.h with heuristics.c/heuristics.h, removed dive.c/pub_dive.h
+- new library methods SCIPcopyConsCompression(), SCIPcopyOrigConsCompression() that accept an array of variables that are immediately fixed in the copy.
+  Alternatively, local instead of global bounds can be used for compression.
+- spx2 is the new default LP solver interface
+- new function SCIPsolveProbingRelax() to solve a relaxation within probing
+- new function SCIPgetIntVarXor() to access integer variable of XOR constraints
+- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
+- next to the number of found solution, also the number of new best solutions is now printed for each heuristic
+  (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
+- CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
+  was detected while building the initial LP relaxation
+- new function SCIPisDualSolAvailable() to query the dual solution availability
+- submakefile for CrayXC systems added
+- new method SCIPinitializeRandomSeed()
+
+fixed bugs:
+
+misc:
+- dropped support for Ipopt < 3.11
+- updated CppAD to 20160000
+
+
 SCIP version 3.2.2
 ==================
 

@@ -451,7 +451,42 @@ SCIP_RETCODE copyAndSolveComponent(
 
    if( presoldata->maxintvars == -1 || (SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars) )
    {
+      SCIP_SOL** partialsols;
       SCIP_RETCODE retcode;
+      int npartialsols;
+      int s;
+
+      /* copy stored partial solutions into the components */
+      npartialsols = SCIPgetNPartialSols(scip);
+      partialsols = SCIPgetPartialSols(scip);
+
+      for( s = 0; s < npartialsols; s++ )
+      {
+         SCIP_VAR* subvar;
+         SCIP_SOL* sol;
+         SCIP_Real solval;
+         SCIP_Bool stored;
+         int v;
+
+         SCIP_CALL( SCIPcreatePartialSol(subscip, &sol, NULL) );
+         assert(sol != NULL);
+
+         for( v = 0; v < nvars; v++ )
+         {
+            solval = SCIPgetSolVal(scip, partialsols[s], vars[v]);
+
+            /* skip unknown variables */
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+               continue;
+
+            subvar = SCIPhashmapGetImage(varmap, vars[v]);
+            assert(subvar != NULL);
+
+            SCIP_CALL( SCIPsetSolVal(subscip, sol, subvar, solval) );
+         }
+
+         SCIP_CALL( SCIPaddSolFree(subscip, &sol, &stored) );
+      }
 
       /* solve the subproblem */
       retcode = SCIPsolve(subscip);

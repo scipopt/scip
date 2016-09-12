@@ -1,12 +1,12 @@
-/* $Id: num_skip.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
-# ifndef CPPAD_NUM_SKIP_INCLUDED
-# define CPPAD_NUM_SKIP_INCLUDED
+// $Id$
+# ifndef CPPAD_NUM_SKIP_HPP
+# define CPPAD_NUM_SKIP_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -21,12 +21,9 @@ $spell
 	taylor_
 $$
 
-$index number_skip$$
-$index number, skip variables$$
-$index skip, number variables$$
-$index variables, skip$$
 
 $section Number of Variables that Can be Skipped$$
+$mindex number_skip$$
 
 $head Syntax$$
 $icode%n% = %f%.number_skip()%$$
@@ -39,13 +36,13 @@ The $cref/conditional expressions/CondExp/$$ use either the
 $cref/if_true/CondExp/$$ or $cref/if_false/CondExp/$$.
 This leads to the fact that some terms only need to be evaluated
 depending on the value of the comparison in the conditional expression.
-The $cref optimize$$ option is capable of detecting some of these 
+The $cref optimize$$ option is capable of detecting some of these
 case and determining variables that can be skipped.
 This routine returns the number such variables.
 
 $head n$$
 The return value $icode n$$ has type $code size_t$$
-is the number of variables that the optimizer has determined can be skipped 
+is the number of variables that the optimizer has determined can be skipped
 (given the independent variable values specified by the previous call to
 $cref/f.Forward/Forward/$$ for order zero).
 
@@ -84,11 +81,11 @@ size_t ADFun<Base>::number_skip(void)
 	size_t n_skip = 0;
 
 	// start playback
-	play_.start_forward(op, arg, i_op, i_var);
+	play_.forward_start(op, arg, i_op, i_var);
 	CPPAD_ASSERT_UNKNOWN(op == BeginOp)
 	while(op != EndOp)
 	{	// next op
-		play_.next_forward(op, arg, i_op, i_var);
+		play_.forward_next(op, arg, i_op, i_var);
 		if( op == CSumOp)
 			play_.forward_csum(op, arg, i_op, i_var);
 		else if (op == CSkipOp)
@@ -101,6 +98,6 @@ size_t ADFun<Base>::number_skip(void)
 }
 
 } // END CppAD namespace
-	
+
 
 # endif

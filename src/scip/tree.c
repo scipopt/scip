@@ -4447,6 +4447,21 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
 
+         /* encounter an early backtrack if there is a child which does not exceed given reference bound */
+         if( !SCIPsetIsInfinity(set, stat->referencebound) )
+         {
+            int c;
+
+            /* loop over children and stop if we find a child with a lower bound below given reference bound */
+            for( c = 0; c < tree->nchildren; ++c )
+            {
+               if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(tree->children[c]), stat->referencebound) )
+               {
+                  ++stat->nearlybacktracks;
+                  break;
+               }
+            }
+         }
          /* move children to the queue, make them LEAFs */
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, childrenlpstatefork,
                primal->cutoffbound) );
@@ -6977,6 +6992,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetEstimate
 #undef SCIPnodeGetDomchg
 #undef SCIPnodeGetParent
+#undef SCIPnodeGetConssetchg
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -7776,6 +7792,16 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    assert(node != NULL);
 
    return node->reprop;
+}
+
+/* returns the set of changed constraints for a particular node */
+SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
+   SCIP_NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->conssetchg;
 }
 
 /** gets number of children of the focus node */

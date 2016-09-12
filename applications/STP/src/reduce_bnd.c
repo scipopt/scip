@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dirreduce.c
+/**@file   reduce_bnd.c
  * @brief  bound based reductions for Steiner tree problems
  * @author Daniel Rehfeldt
  *

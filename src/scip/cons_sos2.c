@@ -1564,8 +1564,10 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+   *infeasible = FALSE;
+
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && !(*infeasible); ++c)
    {
       SCIP_CONSDATA* consdata;
 
@@ -1585,12 +1587,9 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       /* put corresponding rows into LP */
       if ( consdata->row != NULL && ! SCIProwIsInLP(consdata->row) )
       {
-         SCIP_Bool infeasible;
-
          assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
-         assert( ! infeasible );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, infeasible) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       }
    }

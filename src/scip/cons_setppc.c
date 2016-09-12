@@ -67,6 +67,8 @@
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 
+#define DEFAULT_RANDSEED              3
+
 /*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
 /*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
 #ifdef BRANCHLP
@@ -545,14 +547,55 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->signature = 0;
    (*consdata)->row = NULL;
    (*consdata)->existmultaggr = FALSE;
+   (*consdata)->nfixedzeros = 0;
+   (*consdata)->nfixedones = 0;
 
    if( nvars > 0 )
    {
       int v;
 
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      (*consdata)->varssize = nvars;
-      (*consdata)->nvars = nvars;
+      if( SCIPisConsCompressionEnabled(scip) )
+      {
+         SCIP_VAR** varsbuffer;
+         int k;
+
+         /* allocate temporary buffer storage for active variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
+
+         k = 0;
+         /* collect fixed variables to compress the required memory */
+         for( v = 0; v < nvars; ++v )
+         {
+            assert(SCIPvarIsBinary(vars[v]));
+
+            /* already fixed variables account as fixed ones or zero, only unfixed are appended */
+            if( SCIPvarGetLbGlobal(vars[v]) > 0.5 )
+               (*consdata)->nfixedones++;
+            else if( SCIPvarGetUbGlobal(vars[v]) < 0.5 )
+               (*consdata)->nfixedzeros++;
+            else
+               varsbuffer[k++] = vars[v];
+         }
+
+         (*consdata)->varssize = k;
+         (*consdata)->nvars = k;
+         /* copy unfixed variables into constraint data */
+         if( k > 0 )
+         {
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
+         }
+
+         /* free temporary storage */
+         SCIPfreeBufferArray(scip, &varsbuffer);
+      }
+      else
+      {
+         /* for uncompressed copies, simply duplicate the whole array */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+         (*consdata)->varssize = nvars;
+         (*consdata)->nvars = nvars;
+      }
+
 
       if( SCIPisTransformed(scip) )
       {
@@ -585,8 +628,6 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->varssize = 0;
       (*consdata)->nvars = 0;
    }
-   (*consdata)->nfixedzeros = 0;
-   (*consdata)->nfixedones = 0;
    (*consdata)->setppctype = setppctype; /*lint !e641*/
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->cliqueadded = FALSE;
@@ -698,7 +739,7 @@ SCIP_Longint getVarSignature(
    int sigidx;
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((SCIP_Longint)1) << sigidx; /*lint !e703*/
+   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** returns the bit signature of the given constraint data */
@@ -2580,7 +2621,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
 
    return hashval;
 }
@@ -7109,7 +7150,7 @@ SCIP_DECL_CONSINIT(consInitSetppc)
    conshdlrdata->nclqpresolve = 0;
    conshdlrdata->updatedsetppctype = FALSE;
    conshdlrdata->enablecliquelifting = TRUE;
-   conshdlrdata->randseed = 1010010007; /*@todo try to take a better/another value */
+   conshdlrdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
@@ -7248,14 +7289,14 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
 static
 SCIP_DECL_CONSINITLP(consInitlpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
-      /* ignore cutoff, cannot return value */
+      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;

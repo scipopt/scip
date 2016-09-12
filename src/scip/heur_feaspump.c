@@ -62,6 +62,7 @@
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
+#define DEFAULT_RANDSEED          13    /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -121,7 +122,7 @@ SCIP_RETCODE setupProbingSCIP(
    *success = FALSE;
 
    /* copy SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, TRUE, success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE, TRUE, success) );
 
    if( copycuts )
    {
@@ -580,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }

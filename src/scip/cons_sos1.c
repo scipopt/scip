@@ -9219,12 +9219,12 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   *infeasible = FALSE;
+
    /* checking for initial rows for SOS1 constraints */
    if( conshdlrdata->boundcutsfromsos1 || conshdlrdata->switchcutsfromsos1 )
    {
-      SCIP_Bool cutoff;
-      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, -1, NULL, &cutoff) );
-      assert( ! cutoff );
+      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, -1, NULL, infeasible) );
    }
 
    return SCIP_OKAY;

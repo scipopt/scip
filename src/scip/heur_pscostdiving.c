@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_pscostdiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "pscostdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the pseudo cost values"

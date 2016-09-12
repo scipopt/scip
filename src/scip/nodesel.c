@@ -794,7 +794,7 @@ SCIP_RETCODE SCIPnodeselCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/stdpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/4,
+                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/2,
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/memsavepriority", name);
@@ -955,6 +955,7 @@ SCIP_RETCODE SCIPnodeselSelect(
    SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
+
    assert(nodesel != NULL);
    assert(nodesel->nodeselselect != NULL);
    assert(set != NULL);

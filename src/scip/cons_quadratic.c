@@ -41,6 +41,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_and.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/intervalarith.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
@@ -85,12 +86,6 @@
 
 /* scaling factor for gauge function */
 #define GAUGESCALE 0.99999
-
-/* enable assert on feasibility of cuts added in INITLP (see also 82ec3324)
- * off by default, as I (SV) believe we cannot ensure that infeasibility
- * can always be ensured by other means (propagation)
- */
-/* #define ASSERT_INITLP_FEASCUT */
 
 /*
  * Data structures
@@ -194,6 +189,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
    SCIP_Bool             checkcurvature;     /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             checkfactorable;    /**< whether functions should be checked to be factorable */
+   char                  checkquadvarlocks;  /**< whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             disaggregate;       /**< whether to disaggregate quadratic constraints */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
@@ -964,6 +960,37 @@ void consdataUpdateLinearActivityUbChange(
 
       SCIPintervalSetRoundingMode(prevroundmode);
    }
+}
+
+/** returns whether a quadratic variable domain can be reduced to its lower or upper bound; this is the case if the
+ *  quadratic variable is in just one single quadratic constraint and (sqrcoef > 0 and LHS = -infinity), or
+ *  (sqrcoef < 0 and RHS = +infinity) hold
+ */
+static
+SCIP_Bool hasQuadvarHpProperty(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   idx                 /**< index of quadratic variable */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real quadcoef;
+   SCIP_Bool haslhs;
+   SCIP_Bool hasrhs;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   assert(idx >= 0 && idx < consdata->nquadvars);
+
+   var = consdata->quadvarterms[idx].var;
+   assert(var != NULL);
+
+   quadcoef = consdata->quadvarterms[idx].sqrcoef;
+   haslhs = !SCIPisInfinity(scip, -consdata->lhs);
+   hasrhs = !SCIPisInfinity(scip, consdata->rhs);
+
+   return SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
+      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((quadcoef < 0.0 && !haslhs) || (quadcoef > 0.0 && !hasrhs));
 }
 
 /** processes variable fixing or bound change event */
@@ -10853,7 +10880,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
@@ -10866,16 +10895,11 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
       if( consdata->nquadvars == 0 )
       {
-         SCIP_Bool infeasible;
-
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-         assert( ! infeasible );
-#endif
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -10922,23 +10946,18 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   FALSE, -SCIPinfinity(scip)) );  /*lint !e613 */
             if( row != NULL )
             {
-               SCIP_Bool infeasible;
-
                SCIPdebugMessage("initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));  /*lint !e613 */
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-               assert( ! infeasible );
-#endif
-
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
          }
       }
 
       /* for concave parts, add underestimator w.r.t. at most 2 reference points */
-      if( (! consdata->isconvex && !SCIPisInfinity(scip,  consdata->rhs)) || (! consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+      if( !(*infeasible) && ((! consdata->isconvex && !SCIPisInfinity(scip,  consdata->rhs))
+            || (! consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs))) )
       {
          SCIP_Bool unbounded;
          SCIP_Bool possquare;
@@ -10999,35 +11018,23 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                      conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_Bool infeasible;
-
                   SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-                  assert( ! infeasible );
-#endif
-
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }
-            if( !consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
+            if( !(*infeasible) && !consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
             {
                SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, SCIP_SIDETYPE_LEFT, &row, NULL,
                      conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_Bool infeasible;
-
                   SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-                  assert( ! infeasible );
-#endif
-
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }
@@ -11806,6 +11813,77 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          {
             *result = SCIP_SUCCESS;
             continue;
+         }
+      }
+
+      /* fix quadratic variables with proper square coefficients contained in a single quadratic constraint to their
+       * upper or lower bounds
+       */
+      if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && conshdlrdata->checkquadvarlocks != 'd'
+         && SCIPisPresolveFinished(scip) )
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR* vars[2];
+         SCIP_BOUNDTYPE boundtypes[2];
+         SCIP_Real bounds[2];
+         char name[SCIP_MAXSTRLEN];
+
+         /* merge variables in order to get correct locks for quadratic variables */
+         if( !consdata->initialmerge )
+         {
+            SCIP_CALL( mergeAndCleanBilinearTerms(scip, conss[c]) );
+            SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
+            SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
+            consdata->initialmerge = TRUE;
+         }
+
+         for( i = 0; i < consdata->nquadvars; ++i )
+         {
+            if( hasQuadvarHpProperty(scip, consdata, i) )
+            {
+               SCIP_VAR* var;
+
+               var = consdata->quadvarterms[i].var;
+               assert(var != NULL);
+
+               /* try to change the variable type to binary */
+               if( conshdlrdata->checkquadvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
+               {
+                  SCIP_Bool infeasible;
+
+                  assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+                  havechange = TRUE;
+
+                  if( infeasible )
+                  {
+                     SCIPdebugMessage("detect infeasibility after changing variable <%s> to binary type\n", SCIPvarGetName(var));
+                     *result = SCIP_CUTOFF;
+                     return SCIP_OKAY;
+                  }
+               }
+               /* add bound disjunction constraint if bounds of variable are finite */
+               else if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+               {
+                  vars[0] = var;
+                  vars[1] = var;
+                  boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
+                  boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
+                  bounds[0] = SCIPvarGetUbGlobal(var);
+                  bounds[1] = SCIPvarGetLbGlobal(var);
+
+                  SCIPdebugMessage("add bound disjunction constraint for %s\n", SCIPvarGetName(var));
+
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "quadvarbnddisj_%s", SCIPvarGetName(var));
+                  SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds, TRUE, TRUE,
+                        TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               }
+
+               *result = SCIP_SUCCESS;
+            }
          }
       }
 
@@ -12616,6 +12694,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkfactorable",
          "whether constraint functions should be checked to be factorable",
          &conshdlrdata->checkfactorable, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/checkquadvarlocks",
+         "whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)",
+         &conshdlrdata->checkquadvarlocks, TRUE, 't', "bdt", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",

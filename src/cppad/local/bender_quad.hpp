@@ -1,12 +1,12 @@
-/* $Id: bender_quad.hpp 2859 2013-05-28 06:03:21Z bradbell $ */
-# ifndef CPPAD_BENDER_QUAD_INCLUDED
-# define CPPAD_BENDER_QUAD_INCLUDED
+// $Id$
+# ifndef CPPAD_BENDER_QUAD_HPP
+# define CPPAD_BENDER_QUAD_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -30,23 +30,21 @@ $spell
 $$
 
 
-$index Hessian, Bender$$
-$index Jacobian, Bender$$
-$index BenderQuad$$
 $section Computing Jacobian and Hessian of Bender's Reduced Objective$$
+$mindex BenderQuad$$
 
 $head Syntax$$
 $codei%
 # include <cppad/cppad.hpp>
-BenderQuad(%x%, %y%, %fun%, %g%, %gx%, %gxx%)%$$  
+BenderQuad(%x%, %y%, %fun%, %g%, %gx%, %gxx%)%$$
 
 $head See Also$$
 $cref opt_val_hes$$
 
 $head Problem$$
 The type $cref/ADvector/BenderQuad/ADvector/$$ cannot be determined
-form the arguments above 
-(currently the type $icode ADvector$$ must be 
+form the arguments above
+(currently the type $icode ADvector$$ must be
 $codei%CPPAD_TESTVECTOR(%Base%)%$$.)
 This will be corrected in the future by requiring $icode Fun$$
 to define $icode%Fun%::vector_type%$$ which will specify the
@@ -61,7 +59,7 @@ $latex \[
 \] $$
 that is convex with respect to $latex y$$.
 In addition, we are given a set of equations $latex H(x, y)$$
-such that 
+such that
 $latex \[
 	H[ x , Y(x) ] = 0 \;\; \Rightarrow \;\; F_y [ x , Y(x) ] = 0
 \] $$
@@ -70,7 +68,7 @@ Furthermore, it is easy to calculate a Newton step for these equations; i.e.,
 $latex \[
 	dy = - [ \partial_y H(x, y)]^{-1} H(x, y)
 \] $$
-The purpose of this routine is to compute the 
+The purpose of this routine is to compute the
 value, Jacobian, and Hessian of the reduced objective function
 $latex \[
 	G(x) = F[ x , Y(x) ]
@@ -79,7 +77,7 @@ Note that if only the value and Jacobian are needed, they can be
 computed more quickly using the relations
 $latex \[
 	G^{(1)} (x) = \partial_x F [x, Y(x) ]
-\] $$ 
+\] $$
 
 $head x$$
 The $code BenderQuad$$ argument $icode x$$ has prototype
@@ -88,7 +86,7 @@ $codei%
 %$$
 (see $cref/BAvector/BenderQuad/BAvector/$$ below)
 and its size must be equal to $icode n$$.
-It specifies the point at which we evaluating 
+It specifies the point at which we evaluating
 the reduced objective function and its derivatives.
 
 
@@ -98,7 +96,7 @@ $codei%
 	const %BAvector% &%y%
 %$$
 and its size must be equal to $icode m$$.
-It must be equal to $latex Y(x)$$; i.e., 
+It must be equal to $latex Y(x)$$; i.e.,
 it must solve the problem in $latex y$$ for this given value of $latex x$$
 $latex \[
 \begin{array}{rcl}
@@ -107,12 +105,12 @@ $latex \[
 \] $$
 
 $head fun$$
-The $code BenderQuad$$ object $icode fun$$ 
+The $code BenderQuad$$ object $icode fun$$
 must support the member functions listed below.
 The $codei%AD<%Base%>%$$ arguments will be variables for
 a tape created by a call to $cref Independent$$ from $code BenderQuad$$
-(hence they can not be combined with variables corresponding to a 
-different tape). 
+(hence they can not be combined with variables corresponding to a
+different tape).
 
 $subhead fun.f$$
 The $code BenderQuad$$ argument $icode fun$$ supports the syntax
@@ -177,7 +175,7 @@ $codei%
 	const %BAvector% &%x%
 %$$
 and its size must be equal to $icode n$$.
-Its value will be exactly equal to the $code BenderQuad$$ argument 
+Its value will be exactly equal to the $code BenderQuad$$ argument
 $icode x$$ and values depending on it can be stored as private objects
 in $icode f$$ and need not be recalculated.
 $codei%
@@ -189,7 +187,7 @@ $codei%
 	const %BAvector% &%y%
 %$$
 and its size must be equal to $icode m$$.
-Its value will be exactly equal to the $code BenderQuad$$ argument 
+Its value will be exactly equal to the $code BenderQuad$$ argument
 $icode y$$ and values depending on it can be stored as private objects
 in $icode f$$ and need not be recalculated.
 $codei%
@@ -217,9 +215,9 @@ $latex \[
 Note that if $icode h$$ is equal to $latex H(x, y)$$,
 $latex dy$$ is the Newton step for finding a zero
 of $latex H(x, y)$$ with respect to $latex y$$;
-i.e., 
+i.e.,
 $latex y + dy$$ is an approximate solution for the equation
-$latex H (x, y + dy) = 0$$. 
+$latex H (x, y + dy) = 0$$.
 
 $head g$$
 The argument $icode g$$ has prototype
@@ -243,7 +241,7 @@ and has size $latex n $$.
 The input values of its elements do not matter.
 On output,
 it contains the Jacobian of $latex G (x)$$; i.e.,
-for $latex j = 0 , \ldots , n-1$$, 
+for $latex j = 0 , \ldots , n-1$$,
 $latex \[
 	gx[ j ] = G^{(1)} (x)_j
 \] $$
@@ -258,23 +256,23 @@ The input values of its elements do not matter.
 On output,
 it contains the Hessian of $latex G (x)$$; i.e.,
 for $latex i = 0 , \ldots , n-1$$, and
-$latex j = 0 , \ldots , n-1$$, 
+$latex j = 0 , \ldots , n-1$$,
 $latex \[
 	gxx[ i * n + j ] = G^{(2)} (x)_{i,j}
 \] $$
 
 $head BAvector$$
-The type $icode BAvector$$ must be a 
-$cref SimpleVector$$ class. 
-We use $icode Base$$ to refer to the type of the elements of 
+The type $icode BAvector$$ must be a
+$cref SimpleVector$$ class.
+We use $icode Base$$ to refer to the type of the elements of
 $icode BAvector$$; i.e.,
 $codei%
 	%BAvector%::value_type
 %$$
 
 $head ADvector$$
-The type $icode ADvector$$ must be a 
-$cref SimpleVector$$ class with elements of type 
+The type $icode ADvector$$ must be a
+$cref SimpleVector$$ class with elements of type
 $codei%AD<%Base%>%$$; i.e.,
 $codei%
 	%ADvector%::value_type
@@ -291,7 +289,7 @@ $children%
 %$$
 The file
 $cref bender_quad.cpp$$
-contains an example and test of this operation.   
+contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 
 
@@ -303,9 +301,9 @@ namespace CppAD { // BEGIN CppAD namespace
 
 template <class BAvector, class Fun>
 void BenderQuad(
-	const BAvector   &x     , 
-	const BAvector   &y     , 
-	Fun               fun   , 
+	const BAvector   &x     ,
+	const BAvector   &y     ,
+	Fun               fun   ,
 	BAvector         &g     ,
 	BAvector         &gx    ,
 	BAvector         &gxx   )
@@ -343,11 +341,11 @@ void BenderQuad(
 	ADvector vx(n);
 	for(j = 0; j < n; j++)
 		vx[j] = x[j];
-	
+
 	// declare the independent variables
 	Independent(vx);
 
-	// evaluate h = H(x, y) 
+	// evaluate h = H(x, y)
 	ADvector h(m);
 	h = fun.h(vx, y);
 
@@ -360,14 +358,14 @@ void BenderQuad(
 	for(j = 0; j < m; j++)
 		vy[j] = y[j] + dy[j];
 
-	// evaluate G~ (x) = F [ x , y + dy(x) ] 
+	// evaluate G~ (x) = F [ x , y + dy(x) ]
 	ADvector gtilde(1);
 	gtilde = fun.f(vx, vy);
 
 	// AD function object that corresponds to G~ (x)
 	// We will make heavy use of this tape, so optimize it
 	ADFun<Base> Gtilde;
-	Gtilde.Dependent(vx, gtilde); 
+	Gtilde.Dependent(vx, gtilde);
 	Gtilde.optimize();
 
 	// value of G(x)
@@ -401,7 +399,7 @@ void BenderQuad(
 
 	return;
 }
-	
+
 } // END CppAD namespace
 
 # endif

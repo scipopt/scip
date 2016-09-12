@@ -639,12 +639,13 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    if( !SCIPisLPConstructed(scip) && solvelp )
    {
-      SCIP_Bool nodecutoff;
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
-      if( nodecutoff )
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
          goto TERMINATE;
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    *result = SCIP_DIDNOTFIND;
@@ -823,7 +824,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_clique", FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

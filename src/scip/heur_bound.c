@@ -318,12 +318,15 @@ SCIP_DECL_HEUREXEC(heurExecBound)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_Bool nodecutoff;
+      SCIP_Bool cutoff;
 
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
-      if( nodecutoff )
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    if( heurdata->bound == 'l' || heurdata->bound == 'b' )

@@ -17,6 +17,8 @@
  * @brief  constraint handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
  * @author Stefan Vigerske
  * @author Marc Pfetsch
+ * @author Felipe Serrano
+ * @author Benjamin Mueller
  *
  * @todo rhsvar == NULL is supported in some routines, but not everywhere
  * @todo merge square terms with same variables in presol/exitpre
@@ -126,6 +128,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             generalsocupg;      /**< try to upgrade more general quadratics to soc? */
+   SCIP_Bool             disaggregate;       /**< try to completely disaggregate soc? */
 
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
@@ -2905,6 +2908,213 @@ SCIP_RETCODE polishSolution(
    return SCIP_OKAY;
 }
 
+/** disaggregates a (sufficiently large) SOC constraint into smaller ones; for each term on the lhs we add a quadratic
+ *  constraint (alpha_i * (x_i + beta_i))^2 <= alpha_{n+1} (x_{n+1} + beta_{n+1}) * z_i and a single linear constraint
+ *  sum { z_i } <= alpha_{n+1} * (x_{n+1} + beta_{n+1}); each quadratic constraint might be upgraded to a SOC; since the
+ *  violations of all quadratic constraints sum up we scale each constraint by the number of lhs terms + 1
+ *
+ *  @todo if rhsvar is NULL, then the disaggregation does not produce further cones. Should it then be upgraded
+ *  to a quadratic and let the quadratic desaggregate it?
+ *  The code assumes now that the rhsvar is not NULL in order build the direct SOC -> SOC disaggregation
+ */
+static
+SCIP_RETCODE disaggregate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int*                  naddconss,          /**< pointer to count total number of added constraints */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints */
+   SCIP_Bool*            success             /**< pointer to store whether disaggregation was successful */
+   )
+{
+   SCIP_CONS* discons;
+   SCIP_VAR** disvars;
+   SCIP_VAR** sumvars;
+   SCIP_VAR** difvars;
+   SCIP_Real* discoefs;
+   SCIP_VAR*  lhsvars[2];
+   SCIP_VAR*  aggvars[2];
+   SCIP_Real  coefs[2];
+   SCIP_Real  offsets[2];
+   SCIP_Real  scalars[2];
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Real constant;
+   SCIP_Real scale;
+   SCIP_Bool infeas;
+   int ndisvars;
+   int i;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* disaggregation does not make much sense if there are too few variables */
+   if( consdata->nvars < 3 )
+   {
+      SCIPdebugMessage("can not disaggregate too small soc constraint %s\n", SCIPconsGetName(cons));
+      return SCIP_OKAY;
+   }
+
+   if( consdata->rhsvar == NULL )
+   {
+      SCIPdebugMessage("can not disaggregate directly into a soc without rhs var %s\n", SCIPconsGetName(cons));
+      return SCIP_OKAY;
+   }
+
+   /* there are at most n + 2 many linear varibles */
+   SCIP_CALL( SCIPallocBufferArray(scip, &disvars, consdata->nvars + 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sumvars, consdata->nvars + 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &difvars, consdata->nvars + 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &discoefs, consdata->nvars + 2) );
+   ndisvars = 0;
+
+   scale = 1.0 * (consdata->nvars + 1)/4.0;
+
+   /* add (*) (alpha_i * (x_i + beta_i))^2 <= alpha_{n+1} * (x_{n+1} + beta_{n+1}) * z_i:
+    * create sumvar = alpha_{n+1} * (x_{n+1} + beta_{n+1}) + z_i (multiagg)
+    * create difvar = alpha_{n+1} * (x_{n+1} + beta_{n+1}) - z_i (multiagg)
+    * note that (*) is equiv to sqrt( (2 * alpha_i * (x_i + beta_i))^2 + difvar^2) <= sumvar
+    * scaling give us: sqrt( (2 * scale * alpha_i * (x_i + beta_i))^2 + (scale * difvar)^2) <= scale * sumvar
+    */
+   aggvars[0] = consdata->rhsvar;
+   scalars[0] = consdata->rhscoeff;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%s_%d", SCIPvarGetName(consdata->vars[i]), i);
+      SCIP_CALL( SCIPcreateVar(scip, &disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, disvars[i]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedisS_%s_%d", SCIPvarGetName(consdata->vars[i]), i);
+      SCIP_CALL( SCIPcreateVar(scip, &sumvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, sumvars[i]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedisD_%s_%d", SCIPvarGetName(consdata->vars[i]), i);
+      SCIP_CALL( SCIPcreateVar(scip, &difvars[i], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, difvars[i]) );
+
+      aggvars[1] = disvars[i];
+      scalars[1] = 1.0;
+      constant    = consdata->rhscoeff * consdata->rhsoffset;
+      SCIP_CALL( SCIPmultiaggregateVar(scip, sumvars[i], 2, aggvars, scalars, constant, &infeas, success) );
+      /* @todo what shall we do if multiagg fails? */
+      assert(!infeas && *success);
+
+      scalars[1] = -1.0;
+      SCIP_CALL( SCIPmultiaggregateVar(scip, difvars[i], 2, aggvars, scalars, constant, &infeas, success) );
+      assert(!infeas && *success);
+
+      /* create soc */
+      lhsvars[0] = difvars[i];
+      coefs[0]   = scale;
+      offsets[0] = 0.0;
+      lhsvars[1] = consdata->vars[i];
+      coefs[1]   = scale * 2 * consdata->coefs[i];
+      offsets[1] = consdata->offsets[i];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_%s_%d", SCIPconsGetName(cons), i);
+      SCIP_CALL( SCIPcreateConsBasicSOC(scip, &discons, name, 2, lhsvars, coefs, offsets, 0.0, sumvars[i], scale, 0.0) );
+      SCIP_CALL( SCIPaddCons(scip, discons) );
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, discons, NULL) );
+#endif
+      SCIP_CALL( SCIPreleaseCons(scip, &discons) );
+      ++(*naddconss);
+
+      /* linear coefficient in the linear constraint */
+      discoefs[ndisvars] = 1.0;
+      ++ndisvars;
+   }
+   assert(ndisvars == consdata->nvars);
+
+   /* add gamma <= alpha_{n+1} * (x_{n+1} + beta_{n+1}) * z_i
+    * sumvar and difvar are the same as before, but the equivalent soc now is
+    * sqrt(4 * gamma + difvar^2) <= sumvar
+    * scaling give us: sqrt( (4 * scale^2 * gamma + (scale * difvar)^2) <= scale * sumvar
+    */
+   if( !SCIPisZero(scip, consdata->constant) )
+   {
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateVar(scip, &disvars[ndisvars], name, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, disvars[ndisvars]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedisS_const_%s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateVar(scip, &sumvars[ndisvars], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, sumvars[ndisvars]) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedisD_const_%s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateVar(scip, &difvars[ndisvars], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, difvars[ndisvars]) );
+
+      aggvars[1] = disvars[i];
+      scalars[1] = 1.0;
+      constant   = consdata->rhscoeff * consdata->rhsoffset;
+      SCIP_CALL( SCIPmultiaggregateVar(scip, sumvars[i], 2, aggvars, scalars, constant, &infeas, success) );
+      assert(!infeas && *success);
+
+      scalars[1] = -1.0;
+      SCIP_CALL( SCIPmultiaggregateVar(scip, difvars[i], 2, aggvars, scalars, constant, &infeas, success) );
+      assert(!infeas && *success);
+
+      /* create soc */
+      lhsvars[0] = difvars[ndisvars];
+      coefs[0]   = scale;
+      offsets[0] = 0.0;
+      constant   = 4.0 * SQR(scale) * consdata->constant;
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_%s_constant", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateConsBasicSOC(scip, &discons, name, 1, lhsvars, coefs, offsets, constant,
+               sumvars[ndisvars], scale, 0.0) );
+      SCIP_CALL( SCIPaddCons(scip, discons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &discons) );
+      ++(*naddconss);
+
+      /* linear coefficient in the linear constraint */
+      discoefs[ndisvars] = 1.0;
+      ++ndisvars;
+   }
+
+   /* create linear constraint sum z_i <= alpha_{n+1} * (x_{n+1} + beta_{n+1}); first add extra coefficient for the rhs */
+   discoefs[ndisvars] = -1.0 * consdata->rhscoeff;
+   disvars[ndisvars] = consdata->rhsvar;
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_linear_%s", SCIPconsGetName(cons));
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &discons, name, ndisvars + 1, disvars, discoefs, -SCIPinfinity(scip),
+            consdata->rhscoeff * consdata->rhsoffset) );
+
+   SCIP_CALL( SCIPaddCons(scip, discons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &discons) );
+   ++(*naddconss);
+
+   /* release all variables */
+   for( i = ndisvars - 1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &disvars[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &sumvars[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &difvars[i]) );
+   }
+   SCIPfreeBufferArray(scip, &discoefs);
+   SCIPfreeBufferArray(scip, &difvars);
+   SCIPfreeBufferArray(scip, &sumvars);
+   SCIPfreeBufferArray(scip, &disvars);
+
+   /* delete constraint */
+   SCIP_CALL( SCIPdelCons(scip, cons) );
+   ++(*ndelconss);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Quadratic constraint upgrading
  */
@@ -4520,6 +4730,23 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
                return SCIP_ERROR;
          } /*lint !e788*/
       }
+
+      /* disaggregate each lhs term to a quadratic constraint by using auxiliary variables */
+      if( conshdlrdata->disaggregate && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+      {
+         SCIP_Bool success;
+
+         SCIP_CALL( disaggregate(scip, conss[c], consdata, naddconss, ndelconss, &success) ); /*lint !e613*/
+
+         if( success )
+         {
+            SCIPdebugMessage("disaggregated SOC constraint\n");
+
+            /* conss[c] has been deleted */
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -5024,6 +5251,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/generalsocupgrade",
          "try to upgrade more general quadratics to soc?",
          &conshdlrdata->generalsocupg, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/disaggregate",
+         "try to completely disaggregate soc?",
+         &conshdlrdata->disaggregate, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

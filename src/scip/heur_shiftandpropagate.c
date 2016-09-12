@@ -44,7 +44,7 @@
 #define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER     65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
-#define DEFAULT_RANDSEED      3141598   /**< the default random seed for random number generation */
+#define DEFAULT_RANDSEED           29   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'v'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
@@ -1336,7 +1336,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -1457,11 +1457,16 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_Bool nodecutoff;
-
-      nodecutoff = FALSE;
       /* @note this call can have the side effect that variables are created */
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
+      if( cutoff )
+      {
+         SCIPcutoffNode(scip, SCIPgetCurrentNode(scip));
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
@@ -1827,6 +1832,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
 
    cutoff = FALSE;
+
    lastindexofsusp = -1;
    probing = heurdata->probing;
    infeasible = FALSE;
@@ -2165,6 +2171,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPwriteLP(scip, "shiftandpropagatelp.mps") );
+#endif
          /* solve LP;
           * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.

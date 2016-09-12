@@ -36,8 +36,9 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
+#define MAXSHIFTINGS          50     /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
+#define DEFAULT_RANDSEED      31     /**< initial random seed */
 
 
 /* locally defined heuristic data */
@@ -481,16 +482,21 @@ void addFracCounter(
    nrows = SCIPcolGetNLPNonz(col);
    for( r = 0; r < nrows; ++r )
    {
-      int rowidx;
+      int rowlppos;
       int theviolrowpos;
-      rowidx = SCIProwGetLPPos(rows[r]);
-      assert(0 <= rowidx && rowidx < nlprows);
-      nfracsinrow[rowidx] += incval;
-      assert(nfracsinrow[rowidx] >= 0);
-      theviolrowpos = violrowpos[rowidx];
 
+      rowlppos = SCIProwGetLPPos(rows[r]);
+      assert(0 <= rowlppos && rowlppos < nlprows);
+      assert(!SCIProwIsLocal(rows[r]) || violrowpos[rowlppos] == -1);
+
+      /* skip local rows */
       if( SCIProwIsLocal(rows[r]) )
          continue;
+
+      nfracsinrow[rowlppos] += incval;
+      assert(nfracsinrow[rowlppos] >= 0);
+      theviolrowpos = violrowpos[rowlppos];
+
 
       /* swap positions in violrows array if fractionality has changed to 0 */
       if( theviolrowpos >= 0 )
@@ -498,7 +504,7 @@ void addFracCounter(
          /* first case: the number of fractional variables has become zero: swap row in violrows array to the
           * second part, containing only violated rows without fractional variables
           */
-         if( nfracsinrow[rowidx] == 0 )
+         if( nfracsinrow[rowlppos] == 0 )
          {
             assert(theviolrowpos <= *nviolfracrows - 1);
 
@@ -511,14 +517,14 @@ void addFracCounter(
 
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
-               violrowpos[rowidx] = *nviolfracrows - 1;
+               violrowpos[rowlppos] = *nviolfracrows - 1;
             }
             (*nviolfracrows)--;
          }
          /* second interesting case: the number of fractional variables was zero before, swap it with the first
           * violated row without fractional variables
           */
-         else if( nfracsinrow[rowidx] == incval )
+         else if( nfracsinrow[rowlppos] == incval )
          {
             assert(theviolrowpos >= *nviolfracrows);
 
@@ -530,7 +536,7 @@ void addFracCounter(
 
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
-               violrowpos[rowidx] = *nviolfracrows;
+               violrowpos[rowlppos] = *nviolfracrows;
             }
             (*nviolfracrows)++;
          }
@@ -571,7 +577,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
@@ -730,6 +736,8 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          else
             violrowpos[r] = -1;
       }
+      else
+         violrowpos[r] = -1;
    }
 
    nviolfracrows = 0;
@@ -786,21 +794,14 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          int rowpos;
          int direction;
 
-         rowidx = -1;
-
+         assert(nviolfracrows == 0 || nfrac > 0);
          /* violated rows containing fractional variables are preferred; if such a row exists, choose the last one from the list
           * (at position nviolfracrows - 1) because removing this row will cause one swapping operation less than other rows
           */
-         if( nfrac > 0 )
-         {
-            if( nviolfracrows ==  0 )
-               rowidx =  -1;
-            else
-               rowidx =  nviolfracrows - 1;
-         }
-
-         /* there is no violated row containing a fractional variable, select a violated row uniformly at random */
-         if( rowidx == -1 )
+         if( nviolfracrows > 0 )
+            rowidx =  nviolfracrows - 1;
+         else
+            /* there is no violated row containing a fractional variable, select a violated row uniformly at random */
             rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
 
          assert(0 <= rowidx && rowidx < nviolrows);

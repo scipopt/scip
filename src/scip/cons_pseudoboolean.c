@@ -3559,7 +3559,7 @@ SCIP_RETCODE checkOrigPbCons(
        */
       if( andcons == NULL )
       {
-	 andcons = consdata->consanddatas[c]->cons;
+         andcons = consdata->consanddatas[c]->cons;
       }
       assert(andcons != NULL);
 
@@ -8021,6 +8021,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
             if( consdata->issoftcons )
             {
                assert(consdata->indvar != NULL);
+
                if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, consdata->indvar), 1.0) )
                   continue;
             }

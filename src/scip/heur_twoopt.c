@@ -43,7 +43,7 @@
                                              *   associated as pair by heuristic */
 #define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
 #define DEFAULT_ARRAYSIZE                10 /**< the default array size for temporary arrays */
-
+#define DEFAULT_RANDSEED                 37 /**< initial random seed */
 
 /*
  * Data structures
@@ -844,7 +844,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nbinblocks = 0;
    heurdata->nintblocks = 0;
 
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */

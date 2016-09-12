@@ -78,9 +78,9 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 /* CPLEX parameter lists which can be changed */
 #if (CPX_VERSION < 12060100)
-#define NUMINTPARAM  10
+#define NUMINTPARAM  11
 #else
-#define NUMINTPARAM  9
+#define NUMINTPARAM  10
 #endif
 static const int intparam[NUMINTPARAM] =
 {
@@ -95,7 +95,8 @@ static const int intparam[NUMINTPARAM] =
    CPX_PARAM_DPRIIND,
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND,
-   CPX_PARAM_THREADS
+   CPX_PARAM_THREADS,
+   CPX_PARAM_RANDOMSEED
 };
 
 #define NUMDBLPARAM  7
@@ -1431,18 +1432,30 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
+   int i;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
-#ifdef SCIP_DEBUG
+
+   for( i = 0; i < ncols; ++i )
    {
-      int i;
-      for( i = 0; i < ncols; ++i )
-         SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+      SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
    }
-#endif
 
    invalidateSolution(lpi);
 
@@ -1453,7 +1466,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
 #ifndef NDEBUG
    {
-      int i;
       for( i = 0; i < ncols; ++i )
       {
          SCIP_Real cpxlb;
@@ -4233,6 +4245,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       ival = MIN(ival, CPX_INT_MAX);
 #endif
       setIntParam(lpi, CPX_PARAM_THREADS, ival);
+      break;
+   case SCIP_LPPAR_RANDOMSEED:
+      setIntParam(lpi, CPX_PARAM_RANDOMSEED, ival);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

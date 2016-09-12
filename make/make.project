@@ -65,7 +65,7 @@ MAXJOBS         =       1
 VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
-LPS		=	spx
+LPS		=	spx2
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -142,6 +142,7 @@ BLIS            =       blis
 SHELL		= 	bash
 READ		=	read -e
 LN_s		= 	ln -s
+LN_sf		=	ln -sf
 
 #initial compiler and linker flags
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
@@ -244,6 +245,10 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+ifeq ($(LPS),spx)
+override LPS	=	spx2
+endif
+
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
@@ -268,7 +273,7 @@ LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
-ifeq ($(LPS),spx)
+ifeq ($(LPS),spx1)
 LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
@@ -277,15 +282,11 @@ endif
 endif
 
 ifeq ($(LPS),spx2)
-LPSLDFLAGS  += $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS  += $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
-endif
-
-ifeq ($(LPS),spx132)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),clp)

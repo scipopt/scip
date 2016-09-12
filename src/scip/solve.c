@@ -1061,7 +1061,7 @@ SCIP_RETCODE SCIPinitConssLP(
    SCIPdebugMessage("init LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
-      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit) );
+      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
          eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
@@ -1116,7 +1116,7 @@ SCIP_RETCODE initLP(
 
       /* add all initial variables to LP */
       SCIPdebugMessage("init LP: initial columns\n");
-      for( v = 0; v < transprob->nvars; ++v )
+      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1125,6 +1125,10 @@ SCIP_RETCODE initLP(
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
          }
+
+         /* check for empty domains (necessary if no presolving was performed) */
+         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            *cutoff = TRUE;
       }
       assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
@@ -1132,6 +1136,9 @@ SCIP_RETCODE initLP(
       /* inform pricing storage, that initial LP setup is now finished */
       SCIPpricestoreEndInitialLP(pricestore);
    }
+
+   if( *cutoff )
+      return SCIP_OKAY;
 
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
@@ -2758,7 +2765,7 @@ SCIP_RETCODE solveNodeLP(
          SCIP_Bool checklprows;
          SCIP_Bool stored;
          SCIP_SOL* sol;
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+         SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
 
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
@@ -2788,8 +2795,13 @@ SCIP_RETCODE solveNodeLP(
 #endif
          if( stored )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
+            stat->nlpsolsfound++;
+
+            if( primal->nbestsolsfound != oldnbestsolsfound )
+            {
+               stat->nlpbestsolsfound++;
                SCIPstoreSolutionGap(set->scip);
+            }
 
             if( set->reopt_enable )
             {
@@ -2798,8 +2810,6 @@ SCIP_RETCODE solveNodeLP(
                      SCIPlpGetSolstat(lp), tree->root == tree->focusnode, TRUE, tree->focusnode->lowerbound,
                      tree->effectiverootdepth) );
             }
-
-            stat->nlpsolsfound++;
          }
 
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -3148,7 +3158,7 @@ SCIP_RETCODE enforceConstraints(
          *branched = TRUE;
          resolved = TRUE;
 
-         /* increase the number of interal nodes */
+         /* increase the number of internal nodes */
          stat->ninternalnodes++;
          stat->ntotalinternalnodes++;
          break;
@@ -3938,7 +3948,7 @@ SCIP_RETCODE solveNode(
        */
       if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+         SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
          SCIP_Bool stored;
 
@@ -3948,8 +3958,13 @@ SCIP_RETCODE solveNode(
 
          if( stored )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
+            stat->nlpsolsfound++;
+
+            if( primal->nbestsolsfound != oldnbestsolsfound )
+            {
+               stat->nlpbestsolsfound++;
                SCIPstoreSolutionGap(set->scip);
+            }
          }
 
          *infeasible = TRUE;
@@ -4054,7 +4069,7 @@ SCIP_RETCODE solveNode(
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             branched = TRUE;
 
-            /* increase the number of interal nodes */
+            /* increase the number of internal nodes */
             stat->ninternalnodes++;
             stat->ntotalinternalnodes++;
             break;
@@ -4191,16 +4206,37 @@ SCIP_RETCODE solveNode(
       /* the root pseudo objective value and pseudo objective value should be equal in the root node */
       assert(SCIPsetIsFeasEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set, transprob), SCIPlpGetPseudoObjval(lp, set, transprob)));
 
-      SCIPprobStoreRootSol(transprob, set, lp, SCIPtreeHasFocusNodeLP(tree));
+      SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
    }
 
    /* check for cutoff */
    if( *cutoff )
    {
       SCIPdebugMessage("node is cut off\n");
+
+      if( SCIPtreeHasFocusNodeLP(tree) && lp->flushed && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+      {
+
+      }
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
+   }
+   else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      /* update the regression statistic nlpbranchcands and LP objective value  */
+      int nlpbranchcands;
+      SCIP_Real lpobjval;
+
+      /* get number of LP candidate variables */
+      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL) );
+
+      /* get LP objective value */
+      lpobjval = SCIPlpGetObjval(lp, set, transprob);
+      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval))); /*lint !e777*/
+
+      /* add the observation to the regression */
+      SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
    }
 
    return SCIP_OKAY;
@@ -4224,7 +4260,7 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_Bool             checksol            /**< should the solution be checked? */
    )
 {
-   SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+   SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
    SCIP_SOL* sol;
    SCIP_Bool foundsol;
 
@@ -4254,8 +4290,11 @@ SCIP_RETCODE addCurrentSolution(
       {
          stat->nlpsolsfound++;
 
-         if( bestsol != SCIPgetBestSol(set->scip) )
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->nlpbestsolsfound++;
             SCIPstoreSolutionGap(set->scip);
+         }
       }
 
       /* stop clock for LP solutions */
@@ -4287,8 +4326,11 @@ SCIP_RETCODE addCurrentSolution(
       {
          stat->npssolsfound++;
 
-         if( bestsol != SCIPgetBestSol(set->scip) )
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->npsbestsolsfound++;
             SCIPstoreSolutionGap(set->scip);
+         }
       }
    }
 
@@ -4448,6 +4490,10 @@ SCIP_RETCODE SCIPsolveCIP(
       stat->nnodes++;
       stat->ntotalnodes++;
 
+      /* update reference bound statistic, if available */
+      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), stat->referencebound) )
+         stat->nnodesaboverefbound++;
+
       /* issue NODEFOCUSED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
@@ -4508,6 +4554,9 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, reopt,
                      lp, eventqueue, eventfilter, FALSE) );
 
+               /* increment number of feasible leaf nodes */
+               stat->nfeasleaves++;
+
                /* issue NODEFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
                SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
@@ -4534,6 +4583,14 @@ SCIP_RETCODE SCIPsolveCIP(
 
                /* issue NODEINFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+
+               /* we only increase the number of objective leaf nodes if we hit the LP objective limit; we might have also
+                * hit the objective limit at a node that is actually infeasible, or a dual reduction led to an infeasibility prior
+                * to LP solving such that the node will be marked as infeasible */
+               if( SCIPtreeHasCurrentNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+                  stat->nobjleaves++;
+               else
+                  stat->ninfeasleaves++;
 
                if( set->reopt_enable )
                {

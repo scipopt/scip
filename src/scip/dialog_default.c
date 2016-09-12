@@ -1177,13 +1177,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 {  /*lint --e{715}*/
    SCIP_VAR** fixedvars;
    SCIP_VAR* var;
+   SCIP_Bool printzeros;
    int nfixedvars;
    int v;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
    SCIPdialogMessage(scip, NULL, "\n");
 
    /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
@@ -1233,7 +1235,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
 
       if( retcode == SCIP_OKAY && success )
       {
-         retcode = SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIP_Bool printzeros;
+
+         SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+         retcode = SCIPprintSol(scip, sol, NULL, printzeros);
          SCIPdialogMessage(scip, NULL, "\n");
       }
       else
@@ -1249,7 +1254,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
    }
    else
    {
-      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      SCIP_Bool printzeros;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
       SCIPdialogMessage(scip, NULL, "\n");
    }
 
@@ -1314,11 +1322,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool)
 
    if ( SCIPstrToIntValue(idxstr, &idx, &endstr) )
    {
+      SCIP_Bool printzeros;
+
       if ( idx < 0 || idx >= nsols )
       {
          SCIPdialogMessage(scip, NULL, "Solution index out of bounds [0-%d].\n", nsols-1);
          return SCIP_OKAY;
       }
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
       sols = SCIPgetSols(scip);
       assert( sols[idx] != NULL );
@@ -2981,8 +2993,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          }
          else
          {
+            SCIP_Bool printzeros;
+
+            SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+
             SCIPinfoMessage(scip, file, "\n");
-            retcode = SCIPprintBestSol(scip, file, FALSE);
+            retcode = SCIPprintBestSol(scip, file, printzeros);
             if( retcode != SCIP_OKAY )
             {
                fclose(file);
@@ -3104,7 +3120,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
                   }
                   else
                   {
-                     retcode = SCIPprintSol(scip, sol, file, FALSE);
+                     SCIP_Bool printzeros;
+
+                     SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+                     retcode = SCIPprintSol(scip, sol, file, printzeros);
                      SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
                   }
 

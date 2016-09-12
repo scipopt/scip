@@ -60,6 +60,7 @@
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
 #define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
+#define DEFAULT_USEUCT        FALSE      /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -94,6 +95,7 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
    SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
    SCIP_Bool             usefinallp;         /* should the heuristic solve a final LP in case of continuous objective variables? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -284,6 +286,7 @@ SCIP_RETCODE createNewSol(
 /** sets solving parameters for the subproblem created by the heuristic */
 static
 SCIP_RETCODE setupSubproblem(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP*                 subscip             /**< copied SCIP data structure */
    )
 {
@@ -298,10 +301,16 @@ SCIP_RETCODE setupSubproblem(
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   /* use restart dfs node selection */
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* disable expensive presolving
@@ -320,9 +329,9 @@ SCIP_RETCODE setupSubproblem(
 
 
    /* todo: check branching rule in sub-SCIP */
-   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
-	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
+	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable feasibility pump and fractional diving */
@@ -355,67 +364,6 @@ SCIP_RETCODE setupSubproblem(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #endif
-
-   return SCIP_OKAY;
-}
-
-/** creates the rows of the subproblem */
-static
-SCIP_RETCODE createRows(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
-   )
-{
-   SCIP_ROW** rows;                          /* original scip rows                       */
-   SCIP_CONS* cons;                          /* new constraint                           */
-   SCIP_VAR** consvars;                      /* new constraint's variables               */
-   SCIP_COL** cols;                          /* original row's columns                   */
-
-   SCIP_Real constant;                       /* constant added to the row                */
-   SCIP_Real lhs;                            /* left hand side of the row                */
-   SCIP_Real rhs;                            /* left right side of the row               */
-   SCIP_Real* vals;                          /* variables' coefficient values of the row */
-
-   int nrows;
-   int nnonz;
-   int i;
-   int j;
-
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-
-      assert(lhs <= rhs);
-
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ )
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &consvars);
-   }
 
    return SCIP_OKAY;
 }
@@ -853,24 +801,10 @@ SCIP_RETCODE SCIPapplyProximity(
 
       /* copy complete SCIP instance */
       valid = FALSE;
-      if( !heurdata->uselprows )
-      {
-         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
-      }
-      else
-      {
-         /* create the subproblem step by step, adding plugins and variables first, and finally creating
-          * linear constraints based on current LP rows */
-         SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
-         SCIP_CALL( SCIPcreateProbBasic(subscip, "proximitysub") );
+      /* create a problem copy as sub SCIP */
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
+      assert(valid);
 
-         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-         for( i = 0; i < nvars; i++ )
-            subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-         SCIP_CALL( createRows(scip, subscip, subvars) );
-      }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
       /* create event handler for LP events */
@@ -883,7 +817,7 @@ SCIP_RETCODE SCIPapplyProximity(
       }
 
       /* set up parameters for the copied instance */
-      SCIP_CALL( setupSubproblem(subscip) );
+      SCIP_CALL( setupSubproblem(heurdata, subscip) );
 
       /* create the objective constraint in the sub scip, first without variables and values which will be added later */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
@@ -1152,6 +1086,11 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
          &heurdata->mingap, TRUE, DEFAULT_MINGAP, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

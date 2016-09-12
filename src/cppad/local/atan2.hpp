@@ -1,12 +1,12 @@
-/* $Id: atan2.hpp 3085 2014-01-20 22:53:15Z bradbell $ */
-# ifndef CPPAD_ATAN2_INCLUDED
-# define CPPAD_ATAN2_INCLUDED
+// $Id$
+# ifndef CPPAD_ATAN2_HPP
+# define CPPAD_ATAN2_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-14 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -25,11 +25,9 @@ $spell
 	const
 $$
 
-$index tan, AD inverse$$
-$index inverse, AD tan$$
-$index atan2, AD$$
 
 $section AD Two Argument Inverse Tangent Function$$
+$mindex tan atan2$$
 
 $head Syntax$$
 $icode%theta% = atan2(%y%, %x%)%$$
@@ -37,7 +35,7 @@ $icode%theta% = atan2(%y%, %x%)%$$
 
 $head Purpose$$
 Determines an angle $latex \theta \in [ - \pi , + \pi ]$$
-such that 
+such that
 $latex \[
 \begin{array}{rcl}
 	\sin ( \theta )  & = & y / \sqrt{ x^2 + y^2 }  \\
@@ -50,14 +48,14 @@ The argument $icode y$$ has one of the following prototypes
 $codei%
 	const AD<%Base%>               &%y%
 	const VecAD<%Base%>::reference &%y%
-%$$ 
+%$$
 
 $head x$$
 The argument $icode x$$ has one of the following prototypes
 $codei%
 	const AD<%Base%>               &%x%
 	const VecAD<%Base%>::reference &%x%
-%$$ 
+%$$
 
 $head theta$$
 The result $icode theta$$ has prototype
@@ -77,7 +75,7 @@ $children%
 %$$
 The file
 $cref atan2.cpp$$
-contains an example and test of this function.   
+contains an example and test of this function.
 It returns true if it succeeds and false otherwise.
 
 $end
@@ -108,23 +106,23 @@ AD<Base> atan2 (const AD<Base> &y, const AD<Base> &x)
 	AD<Base> ay = abs(y);
 
 	// if( ax > ay )
-	// 	theta = atan(ay / ax);
+	//	theta = atan(ay / ax);
 	// else	theta = pi2 - atan(ax / ay);
 	alpha = atan(ay / ax);
 	beta  = pi2 - atan(ax / ay);
 	theta = CondExpGt(ax, ay, alpha, beta);         // use of CondExp
 
 	// if( x <= 0 )
-	// 	theta = pi - theta;
+	//	theta = pi - theta;
 	theta = CondExpLe(x, zero, pi - theta, theta);  // use of CondExp
-	
+
 	// if( y <= 0 )
-	// 	theta = - theta;
+	//	theta = - theta;
 	theta = CondExpLe(y, zero, -theta, theta);      // use of CondExp
 
 	return theta;
 }
-// END CondExp 
+// END CondExp
 
 template <class Base>
 inline AD<Base> atan2 (const VecAD_reference<Base> &y, const AD<Base> &x)
@@ -135,10 +133,10 @@ inline AD<Base> atan2 (const AD<Base> &y, const VecAD_reference<Base> &x)
 {	return atan2( y , x.ADBase() ); }
 
 template <class Base>
-inline AD<Base> atan2 
+inline AD<Base> atan2
 (const VecAD_reference<Base> &y, const VecAD_reference<Base> &x)
 {	return atan2( y.ADBase() , x.ADBase() ); }
 
 } // END CppAD namespace
 
-# endif 
+# endif
