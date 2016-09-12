@@ -5896,8 +5896,10 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          }
          else
          {
-            SCIPdebugMessage("Indicator constraints are not feasible.\n");
-            return SCIP_OKAY;
+            SCIPdebugMessage("Indicator constraint %s is not feasible.\n", SCIPconsGetName(conss[c]));
+
+            if( !completely )
+               return SCIP_OKAY;
          }
       }
       else
