@@ -84,6 +84,8 @@ struct SCIP_BranchruleData
    SCIP_Real             prevbinbranchsol;   /**< the previous branching value in case that in the previous run only
                                               *   non-violating implied binary constraints were added */
 #ifdef SCIP_STATISTICS
+   int                   nviolatingbinconst; /**< counter for the number of violating binary constraints added */
+   int                   nnormalbinconst;    /**< counter for the nubmer of "normal" binary constraints added */
    int                   nfirstlvllps;       /**< counter for the number of lps that were solved on the first level */
    int                   nsecondlvllps;      /**< counter for the number of lps that were solved on the second level */
    int                   nfirstlvlcutoffs;   /**< counter for the number of cutoffs that were made on the first level */
@@ -93,6 +95,11 @@ struct SCIP_BranchruleData
                                               *   and we use this index as our array index. */
 #endif
 };
+
+typedef struct
+{
+   SCIP_Bool             addedimpbinconst;   /**<  */
+} Status;
 
 /**
  * A container to hold the data needed to calculate the weight of branch after a first level node.
@@ -194,6 +201,33 @@ typedef struct
 /*
  * Local methods for the data structures
  */
+
+static
+SCIP_RETCODE allocateStatus(
+   SCIP*                 scip,               /**< SCIP data structure */
+   Status**              status              /**< the status to be allocated */
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, status) );
+   return SCIP_OKAY;
+}
+
+static
+void initStatus(
+   Status*               status              /**< the status to be initialized */
+)
+{
+   status->addedimpbinconst = FALSE;
+}
+
+static
+void freeStatus(
+   SCIP*                 scip,               /**< SCIP data structure */
+   Status**              status              /**< the status to be freed */
+)
+{
+   SCIPfreeBuffer(scip, status);
+}
 
 /**
  * Initiates the WeightData struct.
@@ -327,20 +361,6 @@ SCIP_RETCODE allocSupposedBoundData(
    return SCIP_OKAY;
 }
 
-static
-void resetSupposedBoundData(
-   SupposedDomRedData*    supposedbounddata
-)
-{
-   int i;
-   for( i = 0; i < supposedbounddata->nboundedvars; i++ )
-   {
-      int varindex = supposedbounddata->boundedvars[i];
-      supposedbounddata->nupperboundupdates[varindex] = 0;
-      supposedbounddata->nlowerboundupdates[varindex] = 0;
-   }
-}
-
 /**
  * Resets the given struct.
  * Assumptions:
@@ -353,8 +373,22 @@ void initSupposedBoundData(
    SupposedDomRedData*    supposedbounddata   /*< The struct that should get reset.*/
 )
 {
-   resetSupposedBoundData(supposedbounddata);
    supposedbounddata->nboundedvars = 0;
+}
+
+static
+void resetSupposedBoundData(
+   SupposedDomRedData*    supposedbounddata
+)
+{
+   int i;
+   for( i = 0; i < supposedbounddata->nboundedvars; i++ )
+   {
+      int varindex = supposedbounddata->boundedvars[i];
+      supposedbounddata->nupperboundupdates[varindex] = 0;
+      supposedbounddata->nlowerboundupdates[varindex] = 0;
+   }
+   initSupposedBoundData(supposedbounddata);
 }
 
 /**
@@ -1073,8 +1107,6 @@ SCIP_RETCODE addGrandChildIntegerBound(
    {
       /* add the constraint to the buffer and add them all later to the problem */
       SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound) );
-
-      *newconstadded = FALSE;
    }
 
    return SCIP_OKAY;
@@ -1091,6 +1123,7 @@ static
 SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
+   Status*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
@@ -1104,8 +1137,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
    SupposedDomRedData*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
                                               *   second level */
-   BinaryBoundData*      binarybounddata,    /**< pointer which gets filled with the data for implicit binary bounds */
-   SCIP_RESULT*          result              /**< pointer to store results of branching */
+   BinaryBoundData*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
 )
 {
    BranchingResultData* downresultdata;
@@ -1213,16 +1245,8 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                {
                   /* if the up branching was cutoff and both branching variables are binary we can deduce a binary
                    * constraint */
-                  SCIP_Bool consadded;
                   SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepbranchvar,
-                     binarybounddata, &consadded) );
-
-                  if( consadded )
-                  {
-                     /* the deduced binary constraint is violated by the base lp solution and was added directly on the base
-                      * node. So we set the result value to stop the branching and return to SCIP. */
-                     *result = SCIP_CONSADDED;
-                  }
+                     binarybounddata, &status->addedimpbinconst) );
                }
 
                if( branchruledata->useimplieddomred )
@@ -1237,7 +1261,6 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                {
                   /* if the down branching was cutoff and both branching variables are binary we can deduce a binary
                    * constraint */
-                  SCIP_Bool consadded;
                   SCIP_VAR* deepvarforbound;
 
                   /* To create an implied binary bound, we need the negated var (1-y) for this up branching case.
@@ -1246,14 +1269,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                    * f(x) >= 1, the constraint f(x) + (1-y) <= 1.*/
                   SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
                   SCIP_CALL( addGrandChildIntegerBound(scip, baselpsol, basenode, basevarforbound, deepvarforbound,
-                     binarybounddata, &consadded) );
-
-                  if( consadded )
-                  {
-                     /* the deduced binary constraint is violated by the base lp solution and was added directly on the base
-                      * node. So we set the result value to stop the branching and return to SCIP. */
-                     *result = SCIP_CONSADDED;
-                  }
+                     binarybounddata, &status->addedimpbinconst) );
                }
 
                if( branchruledata->useimplieddomred )
@@ -1283,6 +1299,7 @@ static
 SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
+   Status*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
@@ -1294,8 +1311,7 @@ SCIP_RETCODE executeDeepBranching(
    int*                  ncutoffs,           /**< pointer which gets filled with the number of second level cutoffs */
    SupposedDomRedData*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
                                               *   second level */
-   BinaryBoundData*      binarybounddata,    /**< pointer which gets filled with the data for implicit binary bounds */
-   SCIP_RESULT*          result              /**< pointer to store results of branching */
+   BinaryBoundData*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
 )
 {
    SCIP_VAR**  lpcands;
@@ -1321,8 +1337,8 @@ SCIP_RETCODE executeDeepBranching(
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval, SCIPvarGetLbLocal(deepbranchvar), SCIPvarGetUbLocal(deepbranchvar));
 
       /* execute the second level branching for a variable */
-      SCIP_CALL( executeDeepBranchingOnVar(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
-         fullcutoff, lperror, weightdata, ncutoffs, supposedbounds, binarybounddata, result) );
+      SCIP_CALL( executeDeepBranchingOnVar(scip, branchruledata, status, baselpsol, basenode, lpobjval, basevarforbound, deepbranchvar, deepbranchvarsolval,
+         fullcutoff, lperror, weightdata, ncutoffs, supposedbounds, binarybounddata) );
 
       if( *fullcutoff )
       {
@@ -1333,7 +1349,7 @@ SCIP_RETCODE executeDeepBranching(
          break;
       }
 
-      if( *result == SCIP_CONSADDED )
+      if( status->addedimpbinconst )
       {
          /* if we found a constraint, that violates the base lp we want to stop and start the branching rule again (handled
           * by SCIP) */
@@ -1557,6 +1573,7 @@ SCIP_RETCODE addDomainReductions(
 static
 SCIP_RETCODE handleImpliedBinaryBounds(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
    SCIP_NODE*            basenode,           /**< the base node to which the bounds should be added */
    BinaryBoundData*      binarybounddata     /**< the container with the bounds to be added */
 )
@@ -1596,6 +1613,10 @@ SCIP_RETCODE handleImpliedBinaryBounds(
       SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
       /* release the constraint, as it is no longer needed */
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
+
+#ifdef SCIP_STATISTICS
+      branchruledata->nnormalbinconst++;
+#endif
    }
    return SCIP_OKAY;
 }
@@ -1716,6 +1737,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       BranchingResultData* upbranchingresult;
       ScoreData* scoredata;
 
+      Status* status;
+
       SCIP_NODE* basenode;
       SCIP_Real lpobjval;
       SCIP_Real highestscore = 0;
@@ -1727,6 +1750,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       BinaryBoundData* binarybounddata = NULL;
 
       /* allocate all structs */
+      SCIP_CALL( allocateStatus(scip, &status) );
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &scoredata) );
@@ -1750,6 +1774,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       }
 
       /* init all structs and variables */
+      initStatus(status);
       initBranchingResultData(scip, downbranchingresult);
       initBranchingResultData(scip, upbranchingresult);
 
@@ -1801,9 +1826,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
                SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &basevarforbound) );
             }
             /* execute the branchings on the second level after the down branching on the first level */
-            SCIP_CALL( executeDeepBranching(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound,
+            SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, basevarforbound,
                &downbranchingresult->cutoff, &downbranchingresult->lperror, scoredata->upperbounddata,
-               &scoredata->ncutoffs, supposedbounds, binarybounddata, result) );
+               &scoredata->ncutoffs, supposedbounds, binarybounddata) );
          }
 
          /* if an error occured during the down branch (and both following second level branchings), we want to stop
@@ -1816,8 +1841,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
 
          /* if a constraint was added to the problem we want to stop immediately (coming from implied binary bounds) */
-         if( *result == SCIP_CONSADDED )
+         if( status->addedimpbinconst )
          {
+#ifdef SCIP_STATISTICS
+            branchruledata->nviolatingbinconst++;
+#endif
             break;
          }
 
@@ -1843,9 +1871,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
                basevarforbound = branchvar;
             }
             /* execute the branchings on the second level after the up branching on the first level */
-            SCIP_CALL( executeDeepBranching(scip, branchruledata, baselpsol, basenode, lpobjval, basevarforbound,
+            SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, basevarforbound,
                &upbranchingresult->cutoff, &upbranchingresult->lperror, scoredata->lowerbounddata, &scoredata->ncutoffs,
-               supposedbounds, binarybounddata, result) );
+               supposedbounds, binarybounddata) );
          }
          /* if an error occured during the up branch (and both following second level branchings), we want to stop
           * immediately */
@@ -1857,8 +1885,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
 
          /* if a constraint was added to the problem we want to stop immediately (coming from implied binary bounds) */
-         if( *result == SCIP_CONSADDED )
+         if( status->addedimpbinconst )
          {
+#ifdef SCIP_STATISTICS
+            branchruledata->nviolatingbinconst++;
+#endif
             break;
          }
 
@@ -1926,7 +1957,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
           * be called on the next iteration with the exact same (with the added bounds, but those didn't violate any rules,
           * so the solution will be the same). In this case we can save the execution time and return directly with the
           * already obtained branching decision. */
-         SCIP_CALL( handleImpliedBinaryBounds(scip, basenode, binarybounddata) );
+         SCIP_CALL( handleImpliedBinaryBounds(scip, branchruledata, basenode, binarybounddata) );
          SCIP_CALL( SCIPlinkLPSol(scip, branchruledata->prevbinsolution) );
          SCIP_CALL( SCIPunlinkSol(scip, branchruledata->prevbinsolution) );
          branchruledata->prevbinbranchvar = lpcands[highestscoreindex];
@@ -1962,6 +1993,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPfreeBuffer(scip, &scoredata);
       SCIPfreeBuffer(scip, &upbranchingresult);
       SCIPfreeBuffer(scip, &downbranchingresult);
+      freeStatus(scip, &status);
 
       /* save the highest score index in the result parameter */
       SCIPdebugMessage("The current best candidate is <%i>\n", *bestcand);
@@ -2263,6 +2295,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          branchruledata->nfirstlvllps, branchruledata->nsecondlvllps);
       SCIPinfoMessage(scip, NULL, "Cutoff <%i> branches on the first level and <%i> on the second level\n",
          branchruledata->nfirstlvlcutoffs, branchruledata->nsecondlvlcutoffs);
+      SCIPinfoMessage(scip, NULL, "Added <%i> violated binary constraints and <%i> \"normal\" binary constraints\n",
+         branchruledata->nviolatingbinconst, branchruledata->nnormalbinconst);
    }
 #endif
 
@@ -2289,6 +2323,8 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    branchruledata->nfirstlvllps = 0;
    branchruledata->nsecondlvlcutoffs = 0;
    branchruledata->nsecondlvllps = 0;
+   branchruledata->nviolatingbinconst = 0;
+   branchruledata->nnormalbinconst = 0;
    /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nresults, 17 + 1) );
 #endif
