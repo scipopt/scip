@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+/*#define SCIP_DEBUG*/
 #define SCIP_STATISTICS
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
@@ -977,8 +977,8 @@ SCIP_Real calculateNodeWeight(
    SCIP_Real maxweight = 1;
 
    assert(scip != NULL);
-   assert(SCIPisGE(scip, upgain, 0.0));
-   assert(SCIPisGE(scip, downgain, 0.0));
+   assert(SCIPisFeasGE(scip, upgain, 0.0));
+   assert(SCIPisFeasGE(scip, downgain, 0.0));
 
    min = MIN(downgain, upgain);
    max = MAX(upgain, downgain);
