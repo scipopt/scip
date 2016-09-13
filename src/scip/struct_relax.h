@@ -52,6 +52,7 @@ struct SCIP_Relax
    int                   priority;           /**< priority of the relaxator */
    int                   freq;               /**< frequency for calling relaxator */
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
+   SCIP_Bool             fulllpinfo;         /**< Does the relaxator contain all cuts in the LP? */
 };
 
 /** relaxation information data */

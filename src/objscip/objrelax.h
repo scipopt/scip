@@ -59,19 +59,24 @@ public:
    /** frequency for calling relaxator */
    const int scip_freq_;
 
+   /** does the relaxator contain all cuts in the LP? */
+   const SCIP_Bool scip_fulllpinfo_;
+
    /** default constructor */
    ObjRelax(
       SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of relaxator */
       const char*        desc,               /**< description of relaxator */
       int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
-      int                freq                /**< frequency for calling relaxator */
+      int                freq,               /**< frequency for calling relaxator */
+      SCIP_Bool          fulllpinfo          /**< Does the relaxator contain all cuts in the LP? */
       )
       : scip_(scip),
         scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
-        scip_freq_(freq)
+        scip_freq_(freq),
+        scip_fulllpinfo_(fulllpinfo)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );

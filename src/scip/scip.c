@@ -6650,6 +6650,7 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             fulllpinfo,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -6672,7 +6673,7 @@ SCIP_RETCODE SCIPincludeRelax(
    }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq,
+         name, desc, priority, freq, fulllpinfo,
          relaxcopy,
          relaxfree, relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
@@ -6694,6 +6695,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             fulllpinfo,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    )
@@ -6710,7 +6712,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq,
+         name, desc, priority, freq, fulllpinfo,
          NULL, NULL, NULL, NULL, NULL, NULL, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
 
