@@ -128,11 +128,17 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrPow)
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataPow)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* sourceexprdata;
+
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
+
+   sourceexprdata = SCIPgetConsExprExprData(sourceexpr);
+   assert(sourceexprdata != NULL);
 
    *targetexprdata = NULL;
+
+   SCIP_CALL( createData(targetscip, targetexprdata, sourceexprdata->exponent) );
 
    return SCIP_OKAY;
 }
@@ -140,8 +146,14 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataPow)
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataPow)
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &exprdata);
    SCIPsetConsExprExprData(expr, NULL);
 
    return SCIP_OKAY;
@@ -151,7 +163,6 @@ static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 {
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
 
    switch( stage )
    {
@@ -189,7 +200,6 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
    SCIP_Real base;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
@@ -215,7 +225,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
    SCIP_Real exponent;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
