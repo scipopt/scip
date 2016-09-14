@@ -468,6 +468,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
+			scip/relax_lp.o \
 			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
