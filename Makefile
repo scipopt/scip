@@ -354,6 +354,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_expr_abs.o \
 			scip/cons_expr_exp.o \
 			scip/cons_expr_log.o \
+			scip/cons_expr_pow.o \
 			scip/cons_expr_sumprod.o \
 			scip/cons_expr_value.o \
 			scip/cons_expr_var.o \
