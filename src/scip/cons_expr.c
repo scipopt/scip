@@ -34,6 +34,7 @@
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
+#include "scip/cons_expr_pow.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -6669,6 +6670,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for absolute expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "abs") == 0);
+
+   /* include handler for power expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
 
    return SCIP_OKAY;
 }
