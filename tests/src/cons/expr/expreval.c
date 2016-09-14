@@ -24,6 +24,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sumprod.h"
+#include "scip/cons_expr_pow.h"
 
 #include "include/scip_test.h"
 
@@ -272,6 +273,53 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
       }
 
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+Test(evalexpr, power, .description = "Tests expression evaluation for power expressions.")
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_INTERVAL interval;
+
+   SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
+
+   /* create expressions */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &expr, xexpr, 2.5) );
+
+   /*
+    * evaluate expression
+    */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
+   cr_assert(SCIPisEQ(scip, SCIPgetConsExprExprValue(expr), pow(2.0, 2.5)));
+
+   /* evaluate expression for an undefined point */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
+   cr_assert(SCIPgetConsExprExprValue(expr) == SCIP_INVALID);
+
+   /*
+    * propagate expression
+    */
+   SCIP_CALL( SCIPchgVarLb(scip, x, 1.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+   interval = SCIPgetConsExprExprInterval(expr);
+   cr_assert(SCIPisEQ(scip, interval.inf, 1.0));
+   cr_assert(SCIPisEQ(scip, interval.sup, pow(3.0, 2.5)));
+
+   /* expression is not defined for the whole interval => resulting interval should be empty */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -2.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, -1.0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+   interval = SCIPgetConsExprExprInterval(expr);
+   cr_assert(SCIPintervalIsEmpty(SCIPinfinity(scip), interval));
+
+   /* free expressions */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
 }
 
 /* creates expression for f(x,y) = 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2*x + 1)^(-1) ) */
