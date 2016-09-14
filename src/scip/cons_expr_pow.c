@@ -291,7 +291,9 @@ SCIP_RETCODE separatePointPow(
       return SCIP_OKAY;
 
    overestimate = SCIPisLT(scip, violation, 0.0);
-   success = FALSE;
+   success = TRUE;
+   lincoef = 0.0;
+   linconstant = 0.0;
 
    /* adjust the reference points */
    childlb = SCIPvarGetLbLocal(childvar);
