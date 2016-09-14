@@ -1806,9 +1806,9 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
    assert(exprdata != NULL);
 
    if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") )
-      *hashkey = (unsigned int)SUM_HASHKEY;
+      *hashkey = SUM_HASHKEY;
    else
-      *hashkey = (unsigned int)PRODUCT_HASHKEY;
+      *hashkey = PRODUCT_HASHKEY;
 
    *hashkey ^= SCIPcalcFibHash(exprdata->constant);
 

@@ -291,7 +291,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   *hashkey = (unsigned int)VAR_HASHKEY;
+   *hashkey = VAR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash((SCIP_Real)SCIPvarGetIndex(var));
 
    return SCIP_OKAY;

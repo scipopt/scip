@@ -134,7 +134,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = (unsigned int)VALUE_HASHKEY;
+   *hashkey = VALUE_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
 
    return SCIP_OKAY;

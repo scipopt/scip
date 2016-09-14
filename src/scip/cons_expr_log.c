@@ -376,7 +376,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = (unsigned int)LOG_HASHKEY;
+   *hashkey = LOG_HASHKEY;
 
    assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
    childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
