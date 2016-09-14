@@ -185,30 +185,28 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
 {  /*lint --e{715}*/
+   SCIP_Real exponent;
+   SCIP_Real base;
+
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   if( SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) <= 0.0 )
-   {
-      SCIPdebugMessage("invalid evaluation of power expression\n");
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   base = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]);
+
+   /* TODO check if those are all important asserts */
+   assert(base >= 0.0 || fmod(exponent, 2.0) == 1.0);
+   assert(base != 0.0 || exponent != 0.0);
+
+   *val = pow(base, exponent);
+
+   /* if there is a domain, pole, or range error, pow() should return some kind of NaN, infinity, or HUGE_VAL
+    * we could also work with floating point exceptions or errno, but I am not sure this would be thread-safe
+    */
+   if( !SCIPisFinite(*val) || *val == HUGE_VAL || *val == -HUGE_VAL )
       *val = SCIP_INVALID;
-   }
-   else
-   {
-      SCIP_Real exponent;
-      SCIP_Real base;
-
-      exponent = SCIPgetConsExprExprPowExponent(expr);
-      base = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]);
-
-      /* TODO check if those are all important asserts */
-      assert(base >= 0.0 || fmod(exponent, 2.0) == 1.0);
-      assert(base != 0.0 || exponent != 0.0);
-
-      *val = pow(base, exponent);
-   }
 
    return SCIP_OKAY;
 }
