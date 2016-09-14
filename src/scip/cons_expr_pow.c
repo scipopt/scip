@@ -102,8 +102,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
    }
    else if( exponent == 1.0 )
    {
-      /* @todo is it necessary to copy or capture the children? */
       *simplifiedexpr = child;
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
    else
    {
@@ -178,16 +178,6 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
       case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       default: ;
    }
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parsePow)
-{
-   assert(expr != NULL);
-
-   /* @todo the parsing needs to be implemented in cons_expr.c if we want to use x^y instead of pow(x,y) */
 
    return SCIP_OKAY;
 }
