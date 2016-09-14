@@ -32,21 +32,11 @@
 #define RELAX_FULLLPINFO       TRUE
 
 
-
-
 /*
  * Data structures
  */
 
 /* TODO: fill in the necessary relaxator data */
-
-/** relaxator data */
-struct SCIP_RelaxData
-{
-
-};
-
-
 
 
 /*
@@ -54,8 +44,6 @@ struct SCIP_RelaxData
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -152,16 +140,74 @@ SCIP_DECL_RELAXEXITSOL(relaxExitsolLp)
 #define relaxExitsolLp NULL
 #endif
 
+#include "scip/struct_scip.h"
+#include "scip/lp.h"
 
 /** execution method of relaxator */
 static
 SCIP_DECL_RELAXEXEC(relaxExecLp)
 {  /*lint --e{715}*/
+   SCIP* relaxscip;
+   SCIP_HASHMAP* varmap;
+   SCIP_Real relaxval;
+   SCIP_Bool valid;
+   int i;
+
+   *lowerbound = -SCIPinfinity(scip);
+   *result = SCIP_DIDNOTRUN;
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPcreate(&relaxscip) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(relaxscip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
+   valid = FALSE;
+   SCIP_CALL( SCIPcopy(scip, relaxscip, varmap, NULL, "relaxscip", FALSE, FALSE, FALSE, &valid) );
+
+   /* change variable types */
+   for( i = 0; i < SCIPgetNVars(relaxscip); ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool infeasible;
+
+      var = SCIPgetVars(relaxscip)[i];
+      assert(var != NULL);
+
+      SCIP_CALL( SCIPchgVarType(relaxscip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+      assert(!infeasible);
+   }
+
+   SCIPsetMessagehdlrQuiet(relaxscip, TRUE);
+   SCIP_CALL( SCIPtransformProb(relaxscip) );
+   SCIP_CALL( SCIPsolve(relaxscip) );
+
+   relaxval = SCIPgetPrimalbound(relaxscip);
+   SCIPdebugMessage("relaxation bound = %e status = %d\n", relaxval, SCIPgetStatus(relaxscip));
+
+   if( SCIPgetStatus(relaxscip) == SCIP_STATUS_OPTIMAL )
+   {
+      *lowerbound = relaxval;
+      *result = SCIP_SUCCESS;
+
+      /* store relaxation solution in original SCIP */
+      for( i = 0; i < SCIPgetNVars(scip); ++i )
+      {
+         SCIP_VAR* relaxvar;
+         SCIP_Real solval;
+
+         relaxvar = SCIPhashmapGetImage(varmap, SCIPgetVars(scip)[i]);
+         assert(relaxvar != NULL);
+
+         solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
+
+         SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+      }
+   }
+
+   /* free memory */
+   SCIPhashmapFree(&varmap);
+   SCIP_CALL( SCIPfree(&relaxscip) );
+
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

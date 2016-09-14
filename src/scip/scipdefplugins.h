@@ -167,6 +167,7 @@
 #include "scip/reader_sol.h"
 #include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
+#include "scip/relax_lp.h"
 #include "scip/sepa_eccuts.h"
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
