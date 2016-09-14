@@ -196,10 +196,6 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
    exponent = SCIPgetConsExprExprPowExponent(expr);
    base = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]);
 
-   /* TODO check if those are all important asserts */
-   assert(base >= 0.0 || fmod(exponent, 2.0) == 1.0);
-   assert(base != 0.0 || exponent != 0.0);
-
    *val = pow(base, exponent);
 
    /* if there is a domain, pole, or range error, pow() should return some kind of NaN, infinity, or HUGE_VAL
