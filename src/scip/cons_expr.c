@@ -2432,7 +2432,7 @@ SCIP_RETCODE simplifyConstraints(
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
  * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * parse(Expr|Term|Base) returns an SCIP_CONSEXPR_EXPR, while parseFactor returns also the exponent
+ * parse(Expr|Term|Base) returns an SCIP_CONSEXPR_EXPR
  *
  * @todo We can change the grammar so that Factor becomes base and we allow a Term to be
  *       <pre> Term       -> Factor { ("*" | "/" | "^") Factor } </pre>
@@ -2608,14 +2608,15 @@ static
 SCIP_RETCODE parseFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_Bool             isdenominator,      /**< whether factor is in the denominator */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_Real*            exponent,           /**< buffer to store exponent of Factor */
    SCIP_CONSEXPR_EXPR**  factortree          /**< buffer to store the expr parsed by Factor */
    )
 {
    SCIP_CONSEXPR_EXPR*  basetree;
+   SCIP_Real exponent;
 
    debugParse("parsing factor from %s\n", expr); /*lint !e506 !e681*/
 
@@ -2631,7 +2632,6 @@ SCIP_RETCODE parseFactor(
       ++expr;
 
    SCIP_CALL( parseBase(scip, conshdlr, vartoexprvarmap, expr, newpos, &basetree) );
-   *factortree = basetree;
    expr = *newpos;
 
    /* check if there is an exponent */
@@ -2657,7 +2657,7 @@ SCIP_RETCODE parseFactor(
          ++expr;
 
          /* it is exponent with parenthesis; expect number possibly starting with + or - */
-         if( !SCIPstrToRealValue(expr, exponent, (char**)&expr) )
+         if( !SCIPstrToRealValue(expr, &exponent, (char**)&expr) )
          {
             SCIPerrorMessage("error parsing number from <%s>\n", expr);
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &basetree) );
@@ -2682,7 +2682,7 @@ SCIP_RETCODE parseFactor(
          /* expect a digit */
          if( isdigit(*expr) )
          {
-            if( !SCIPstrToRealValue(expr, exponent, (char**)&expr) )
+            if( !SCIPstrToRealValue(expr, &exponent, (char**)&expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &basetree) );
@@ -2697,15 +2697,28 @@ SCIP_RETCODE parseFactor(
          }
       }
 
-      debugParse("parsed the exponent %g\n", *exponent); /*lint !e506 !e681*/
+      debugParse("parsed the exponent %g\n", exponent); /*lint !e506 !e681*/
    }
    else
    {
       /* there is no explicit exponent */
-      *exponent = 1.0;
+      exponent = 1.0;
    }
-
    *newpos = expr;
+
+   /* multiply with -1 when we are in the denominator */
+   if( isdenominator )
+      exponent *= -1.0;
+
+   /* create power */
+   if( exponent != 1.0 )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, factortree, basetree, exponent) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &basetree) );
+   }
+   else
+      /* Factor consists of this unique Base */
+      *factortree = basetree;
 
    return SCIP_OKAY;
 }
@@ -2726,7 +2739,6 @@ SCIP_RETCODE parseTerm(
    )
 {
    SCIP_CONSEXPR_EXPR* factortree;
-   SCIP_Real exponent;
 
    debugParse("parsing term from %s\n", expr); /*lint !e506 !e681*/
 
@@ -2735,10 +2747,10 @@ SCIP_RETCODE parseTerm(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree) );
+   SCIP_CALL( parseFactor(scip, conshdlr, FALSE, vartoexprvarmap, expr, newpos, &factortree) );
    expr = *newpos;
 
-   debugParse("back to parsing Term (we have a Factor with exponent %g), continue parsing from %s\n", exponent, expr); /*lint !e506 !e681*/
+   debugParse("back to parsing Term, continue parsing from %s\n", expr); /*lint !e506 !e681*/
 
    /* check if Terms has another Factor incoming */
    while( isspace((unsigned char)*expr) )
@@ -2746,7 +2758,7 @@ SCIP_RETCODE parseTerm(
    if( *expr == '*' || *expr == '/' )
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &exponent, 1.0) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, NULL, 1.0) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
 
       /* loop: parse Factor, find next symbol */
@@ -2760,7 +2772,7 @@ SCIP_RETCODE parseTerm(
          debugParse("while parsing term, read char %c\n", *expr); /*lint !e506 !e681*/
 
          ++expr;
-         retcode = parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree);
+         retcode = parseFactor(scip, conshdlr, isdivision, vartoexprvarmap, expr, newpos, &factortree);
 
          /* release termtree, if parseFactor fails with a read-error */
          if( retcode == SCIP_READERROR )
@@ -2770,8 +2782,7 @@ SCIP_RETCODE parseTerm(
          SCIP_CALL( retcode );
 
          /* append newly created factor */
-         exponent = isdivision ? -exponent : exponent;
-         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, exponent) );
+         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, 1.0) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
 
          /* find next symbol */
@@ -2782,14 +2793,8 @@ SCIP_RETCODE parseTerm(
    }
    else
    {
-      /* Term consists of this unique factor^exponent */
-      if( exponent != 1.0 )
-      {
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &exponent, 1.0) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
-      }
-      else
-         *termtree = factortree;
+      /* Term consists of this unique factor */
+      *termtree = factortree;
    }
 
    *newpos = expr;
@@ -4731,7 +4736,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    const char* endptr;
    SCIP_CONSEXPR_EXPR* consexprtree;
 
-   SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
+   SCIPdebugMessage("cons_expr::consparse parsing %s\n",str);
 
    assert(scip != NULL);
    assert(success != NULL);
