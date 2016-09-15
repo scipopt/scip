@@ -14623,6 +14623,62 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff;
+   int c;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   SCIPdebugMessage("call consEnforelaxLinear\n");
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+
+   violated = FALSE;
+   cutoff = FALSE;
+
+   /* check all linear constraints for feasibility */
+   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut; note that the LP might contain the LP row but it is not contained in the, to the
+          * solution corresponding, relaxator
+          */
+         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
+
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+         }
+         else
+         {
+            /* SCIP_SEPARATED here means that the sol is not feasible for the LP but it might be feasible for the
+             * realxation since the cut is not considered in the realxator
+             */
+            *result = SCIP_SEPARATED;
+         }
+      }
+   }
+
+   SCIPdebugMessage("-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -15962,6 +16018,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
