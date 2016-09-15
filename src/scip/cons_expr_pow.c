@@ -159,6 +159,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataPow)
    return SCIP_OKAY;
 }
 
+/** @todo: use precedence for better printing */
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 {
@@ -169,7 +170,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "pow(");
+         SCIPinfoMessage(scip, file, "(");
          break;
       }
 
@@ -182,7 +183,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis */
-         SCIPinfoMessage(scip, file, ")");
+         SCIPinfoMessage(scip, file, ")^%g", SCIPgetConsExprExprPowExponent(expr));
          break;
       }
 
