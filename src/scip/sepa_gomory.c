@@ -75,7 +75,7 @@
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS     FALSE /**< choose side types of row (lhs/rhs) based on basis information? */
-#define DEFAULT_RANDSEED             13 /**< initial random seed */
+#define DEFAULT_RANDSEED             53 /**< initial random seed */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
