@@ -1063,7 +1063,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    capacity *= (1 - SCIPfeastol(scip));
 
    /* rearrange indices for the break item */
-   SCIPselectWeightedMedian(tempsort, indices, weights, nitems, &median, capacity, &leftmedianidx, &rightmedianidx);
+   SCIPselectWeightedMedian(tempsort, indices, weights, nitems, capacity, &median, &leftmedianidx, &rightmedianidx);
 
    /* free temporary array */
    SCIPfreeBufferArray(scip, &tempsort);

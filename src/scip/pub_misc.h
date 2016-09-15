@@ -3597,6 +3597,19 @@ void SCIPsortedvecInsertDownRealIntInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownRealRealInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array where an element is to be inserted */
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownRealIntLong(
@@ -5613,19 +5626,31 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
-/** partially sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are smaller, equal, and larger than the weighted median
+/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
+ *  that are larger, equal, and smaller than the weighted median
  *
- *  the entries of the keys array are not changed, neither are the entries of the weights array; only indices are rearranged, if necessary
+ *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
+ *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
+ *
+ *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
+ *
+ *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
+ *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
+ *  contains only elements that are smaller than the median.
+ *
+ *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
+ *  largest element by using a capacity k.
+ *
+ *  If no weights-array is passed, the algorithm assumes weights equal to 1.
  */
 EXTERN
 void SCIPselectWeightedMedian(
    SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
    int*                  indices,            /**< indices array that should be partially sorted inplace */
-   SCIP_Real*            weights,            /**< (optional) weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
    int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
-   SCIP_Real*            median,             /**< pointer to store the weighted median */
    SCIP_Real             capacity,           /**< (positive) capacity for the weights */
+   SCIP_Real*            median,             /**< pointer to store the weighted median */
    int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
    int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
    );

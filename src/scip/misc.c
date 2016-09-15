@@ -8641,16 +8641,30 @@ void SCIPsplitFilename(
 
 #define MINREMAININGKEYSSIZE 25
 #define NELEMSMEDIANSEL 3
-/** partially sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are smaller, equal, and larger than the weighted median
+/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
+ *  that are larger, equal, and smaller than the weighted median
+ *
+ *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
+ *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
+ *
+ *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
+ *
+ *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
+ *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
+ *  contains only elements that are smaller than the median.
+ *
+ *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
+ *  largest element by using a capacity k.
+ *
+ *  If no weights-array is passed, the algorithm assumes weights equal to 1.
  */
 void SCIPselectWeightedMedian(
    SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
    int*                  indices,            /**< indices array that should be partially sorted inplace */
-   SCIP_Real*            weights,            /**< (optional) weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
    int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
-   SCIP_Real*            median,             /**< pointer to store the weighted median */
    SCIP_Real             capacity,           /**< (positive) capacity for the weights */
+   SCIP_Real*            median,             /**< pointer to store the weighted median */
    int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
    int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
    )
@@ -8666,6 +8680,29 @@ void SCIPselectWeightedMedian(
 
    assert(keys != NULL);
    assert(indices != NULL);
+   assert(median != NULL);
+
+   *median = SCIP_INVALID;
+   /* rule out the trivial case that the capacity is larger than all weights together. In this case, no median exists */
+   if( weights == NULL && capacity > nkeys )
+   {
+      *leftmedianidx = *rightmedianidx = nkeys;
+      return;
+   }
+   else if( weights != NULL )
+   {
+      int i;
+      SCIP_Real weightsum = 0;
+      /* sum up weights */
+      for( i = 0; i < nkeys; ++i )
+         weightsum += weights[i];
+
+      if( weightsum < capacity )
+      {
+         *leftmedianidx = *rightmedianidx = nkeys;
+         return;
+      }
+   }
 
    left = 0;
    right = nkeys - 1;
