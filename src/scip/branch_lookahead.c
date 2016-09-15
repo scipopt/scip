@@ -546,8 +546,8 @@ SCIP_RETCODE executeDownBranching(
 
    oldupperbound = SCIPvarGetUbLocal(branchvar);
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
-   SCIPdebugMessage("New upper bound: <%g>, old lower bound: <%g>, old upper bound: <%g>\n", newupperbound, oldlowerbound,
-      oldupperbound);
+   SCIPdebugMessage("Proposed upper bound: <%g>, old bounds: [<%g>..<%g>], new bounds: [<%g>..<%g>]\n", newupperbound,
+      oldlowerbound, oldupperbound, oldlowerbound, newupperbound);
 
    if( SCIPisFeasLT(scip, newupperbound, oldlowerbound) )
    {
@@ -622,8 +622,8 @@ SCIP_RETCODE executeUpBranching(
 
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
    oldupperbound = SCIPvarGetUbLocal(branchvar);
-   SCIPdebugMessage("New lower bound: <%g>, old lower bound: <%g>, old upper bound: <%g>\n", newlowerbound,
-      oldlowerbound, oldupperbound);
+   SCIPdebugMessage("Proposed lower bound: <%g>, old bounds: [<%g>..<%g>], new bounds: [<%g>..<%g>]\n", newlowerbound,
+      oldlowerbound, oldupperbound, newlowerbound, oldupperbound);
 
    if( SCIPisFeasGT(scip, newlowerbound, oldupperbound) )
    {
@@ -1164,7 +1164,8 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    initBranchingResultData(scip, downresultdata);
    initBranchingResultData(scip, upresultdata);
 
-   SCIPdebugMessage("Second level down branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+   SCIPdebugMessage("Second level down branching on variable <%s> and value <%g>\n", SCIPvarGetName(deepbranchvar),
+      deepbranchvarsolval);
    /* execute the second level down branching */
    SCIP_CALL( executeDownBranching(scip, deepbranchvar, deepbranchvarsolval, downresultdata) );
 #ifdef SCIP_STATISTICS
@@ -1216,9 +1217,21 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
             SCIPdebugMessage("The difference between the objective values of the base lp and the upper bounded lp is <%g>\n",
                downgain);
+            if( SCIPisNegative(scip, downgain) )
+            {
+               /* TODO CS: is this really okay?? */
+               SCIPdebugMessage("The difference is negative. To work on we overwrite it with 0.\n");
+               downgain = 0;
+            }
+
             SCIPdebugMessage("The difference between the objective values of the base lp and the lower bounded lp is <%g>\n",
                upgain);
-
+            if( SCIPisNegative(scip, upgain) )
+            {
+               /* TODO CS: is this really okay?? */
+               SCIPdebugMessage("The difference is negative. To work on we overwrite it with 0.\n");
+               upgain = 0;
+            }
             assert(!SCIPisFeasNegative(scip, downgain));
             assert(!SCIPisFeasNegative(scip, upgain));
 
