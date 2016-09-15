@@ -99,6 +99,13 @@ void SCIPconshdlrSetProp(
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    );
 
+/** sets the relaxation enforcement method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetEnforelax(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< constraint copying method */
+   );
+
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
  *

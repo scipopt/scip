@@ -316,6 +316,30 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 #define SCIP_DECL_CONSENFOLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
       SCIP_Bool solinfeasible, SCIP_RESULT* result)
 
+/** constraint enforcing method of constraint handler for relaxation solutions
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - sol             : relaxation solution
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - solinfeasible   : was the solution already declared infeasible by a constraint handler?
+ *  - result          : pointer to store the result of the enforcing call
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
+ *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
+ *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
+ */
+#define SCIP_DECL_CONSENFORELAX(x) SCIP_RETCODE x (SCIP* scip, SCIP_SOL* sol, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      SCIP_Bool solinfeasible, SCIP_RESULT* result)
+
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
  *  The method is called at the end of the node processing loop for a node where the LP was not solved.

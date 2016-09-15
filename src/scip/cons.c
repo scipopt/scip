@@ -2010,6 +2010,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -2079,6 +2080,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->conssepalp = conssepalp;
    (*conshdlr)->conssepasol = conssepasol;
    (*conshdlr)->consenfolp = consenfolp;
+   (*conshdlr)->consenforelax = consenforelax;
    (*conshdlr)->consenfops = consenfops;
    (*conshdlr)->conscheck = conscheck;
    (*conshdlr)->consprop = consprop;
@@ -3975,6 +3977,17 @@ void SCIPconshdlrSetProp(
    conshdlr->propfreq = propfreq;
    conshdlr->delayprop = delayprop;
    conshdlr->proptiming = timingmask;
+}
+
+/** sets copy method of both the constraint handler and each associated constraint */
+void SCIPconshdlrSetEnforelax(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< constraint copying method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->consenforelax = consenforelax;
 }
 
 /** sets copy method of both the constraint handler and each associated constraint */
