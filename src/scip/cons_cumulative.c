@@ -2462,10 +2462,10 @@ SCIP_RETCODE resolvePropagationCoretimes(
       assert(duration > 0);
 
       /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
-      assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
-      assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
+      assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE)));
+      assert(SCIPisFeasIntegral(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)));
+      assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)));
+      assert(SCIPisFeasIntegral(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE)));
 
       SCIPdebugMessage("variable <%s>: glb=[%g,%g] conflict=[%g,%g] (duration %d, demand %d)\n",
          SCIPvarGetName(var),  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
@@ -2543,17 +2543,17 @@ SCIP_RETCODE resolvePropagationCoretimes(
          assert(duration > 0);
 
          /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
-         assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
-         assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
-         assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
-         assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
+         assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE)));
+         assert(SCIPisFeasIntegral(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)));
+         assert(!SCIPvarIsActive(var) || SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)));
+         assert(SCIPisFeasIntegral(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE)));
 
          /* collect local core information */
-         ect = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
-         lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+         ect = SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) + duration;
+         lst = SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE));
 
          SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
-            SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
+            SCIPvarGetName(var), SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE),
             SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[j]);
 
          /* check if the inference peak is part of the core */
@@ -2589,8 +2589,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
          duration = durations[cands[c]];
 
-         ect = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
-         lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+         ect = SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) + duration;
+         lst = SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE));
 
          maxlst = MAX(maxlst, lst);
          minect = MIN(minect, ect);
@@ -2716,8 +2716,8 @@ SCIP_RETCODE resolvePropagationEdgeFinding(
          continue;
       }
 
-      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
-      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+      lb = SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE));
+      ub = SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE));
 
       duration = durations[j];
       assert(duration > 0);
@@ -2863,7 +2863,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
          assert(relaxedbd != SCIP_UNKNOWN); /*lint !e777*/
 
          SCIPdebugMessage("inference variable <%s>[%g,%g] %s %g (duration %d, demand %d)\n",
-            SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
+            SCIPvarGetName(var), SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE),
             boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", relaxedbd, duration, demand);
 
          /* compute the amount of energy which needs to be available for enforcing the propagation and report the bound
@@ -2874,7 +2874,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             int lct;
 
             /* get the latest start time of the infer start time variable before the propagation took place */
-            lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+            lst = SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE));
 
             /* the latest start time of the inference start time variable before the propagation needs to be smaller as
              * the end of the time interval; meaning the job needs be overlap with the time interval in case the job is
@@ -2892,7 +2892,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             lct = SCIPconvertRealToInt(scip, relaxedbd) + duration;
             assert(begin <= lct);
-            assert(bdchgidx == NULL || SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) < begin);
+            assert(bdchgidx == NULL || SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)) < begin);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             left = MIN(lct - begin + 1, end - begin);
@@ -2906,7 +2906,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             if( usebdwidening )
             {
-               assert(SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) <= (end - overlap));
+               assert(SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE)) <= (end - overlap));
                SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)(end - overlap)) );
             }
             else
@@ -2921,7 +2921,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
             assert(boundtype == SCIP_BOUNDTYPE_LOWER);
 
             /* get the earliest completion time of the infer start time variable before the propagation took place */
-            ect = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
+            ect = SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) + duration;
 
             /* the earliest start time of the inference start time variable before the propagation needs to be larger as
              * than the beginning of the time interval; meaning the job needs be overlap with the time interval in case
@@ -2939,7 +2939,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             est = SCIPconvertRealToInt(scip, relaxedbd);
             assert(end >= est);
-            assert(bdchgidx == NULL || end - SCIPvarGetLbAtIndex(var, bdchgidx, TRUE) < duration);
+            assert(bdchgidx == NULL || end - SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE) < duration);
 
             /* compute the overlap of the job after the propagation but considering the relaxed bound */
             right = MIN(end - est + 1, end - begin);
@@ -2953,7 +2953,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
             if( usebdwidening )
             {
-               assert(SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) >= (begin + overlap - duration));
+               assert(SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) >= (begin + overlap - duration));
                SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(begin + overlap - duration)) );
             }
             else
@@ -2993,8 +2993,8 @@ SCIP_RETCODE analyzeEnergyRequirement(
       }
 
       /* local time points */
-      est = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
-      lst = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+      est = SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE));
+      lst = SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE));
 
       /* check if the job has any overlap w.r.t. local bound; meaning some parts of the job will run for sure within the
        * time window
@@ -3131,18 +3131,18 @@ SCIP_RETCODE respropCumulativeCondition(
          /* we propagated the latest start time (upper bound) step wise with a step length of at most the duration of
           * the inference variable
           */
-         assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) - SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < inferduration + 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) - SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < inferduration + 0.5);
 
          SCIPdebugMessage("variable <%s>: upper bound changed from %g to %g (relaxed %g)\n",
-            SCIPvarGetName(infervar), SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE),
-            SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
+            SCIPvarGetName(infervar), SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE),
+            SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the inference peak that the time point which lead to the that propagtion */
          inferpeak = inferInfoGetData2(inferinfo);
          /* the bound passed back to be resolved might be tighter as the bound propagted by the core time propagator;
           * this can happen if the variable is not activ and aggregated to an activ variable with a scale != 1.0
           */
-         assert(SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration <= inferpeak);
+         assert(SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE)) + inferduration <= inferpeak);
          relaxedpeak = SCIPconvertRealToInt(scip, relaxedbd) + inferduration;
 
          /* make sure that the relaxed peak is part of the effective horizon */
@@ -3161,15 +3161,15 @@ SCIP_RETCODE respropCumulativeCondition(
          assert(boundtype == SCIP_BOUNDTYPE_LOWER);
 
          SCIPdebugMessage("variable <%s>: lower bound changed from %g to %g (relaxed %g)\n",
-            SCIPvarGetName(infervar), SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE),
-            SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), relaxedbd);
+            SCIPvarGetName(infervar), SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE),
+            SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE), relaxedbd);
 
          /* get the time interval where the job could not be scheduled */
          inferpeak = inferInfoGetData2(inferinfo);
          /* the bound passed back to be resolved might be tighter as the bound propagted by the core time propagator;
           * this can happen if the variable is not activ and aggregated to an activ variable with a scale != 1.0
           */
-         assert(SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE)) - 1 >= inferpeak);
+         assert(SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE)) - 1 >= inferpeak);
          relaxedpeak = SCIPconvertRealToInt(scip, relaxedbd) - 1;
 
          /* make sure that the relaxed peak is part of the effective horizon */
@@ -3337,10 +3337,13 @@ void subtractStartingJobDemands(
 
 #if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
-   oldidx = *idx;
-#endif
 
    assert(idx != NULL);
+   oldidx = *idx;
+#else
+   assert(idx != NULL);
+#endif
+
    assert(starttimes != NULL);
    assert(starttimes != NULL);
    assert(freecapacity != NULL);

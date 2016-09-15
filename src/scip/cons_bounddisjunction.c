@@ -308,11 +308,93 @@ SCIP_RETCODE consdataCreate(
 
    if( nvars > 0 )
    {
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypes, nvars) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->bounds, bounds, nvars) );
-      (*consdata)->varssize = nvars;
-      (*consdata)->nvars = nvars;
+      if( SCIPisConsCompressionEnabled(scip) )
+      {
+         int k;
+         int v;
+         int nviolations;
+         SCIP_Bool redundant;
+         SCIP_VAR** varsbuffer;
+         SCIP_BOUNDTYPE* boundtypesbuffer;
+         SCIP_Real* boundsbuffer;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &boundtypesbuffer, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &boundsbuffer, nvars) );
+
+         nviolations = 0;
+         k = 0;
+         redundant = FALSE;
+         /* loop over variables, compare fixed ones against its bound disjunction */
+         for( v = 0; v < nvars && !redundant; ++v )
+         {
+            SCIP_VAR* var = vars[v];
+            SCIP_BOUNDTYPE boundtype = boundtypes[v];
+            SCIP_Real bound = bounds[v];
+
+            /* is the variable fixed? */
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            {
+               if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), bound))
+               || (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), bound)) )
+               {
+                  /* safe this feasible assignment at the first position */
+                  varsbuffer[0] = var;
+                  boundtypesbuffer[0] = boundtype;
+                  boundsbuffer[0] = bound;
+                  k = 1;
+                  redundant = TRUE;
+               }
+               else
+                  ++nviolations;
+            }
+            else
+            {
+               /* append unfixed variable to buffer */
+               varsbuffer[k] = var;
+               boundtypesbuffer[k] = boundtype;
+               boundsbuffer[k] = bound;
+               ++k;
+            }
+         }
+
+         /* duplicate a single, infeasible assignment, wlog the first one */
+         if( k == 0 )
+         {
+            assert(nviolations == nvars);
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, 1) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypes, 1) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->bounds, bounds, 1) );
+            (*consdata)->varssize = 1;
+            (*consdata)->nvars = 1;
+         }
+         else
+         {
+            /* if the bound disjunction is already trivially satisfied, we keep only a single feasible assignment */
+            assert(!redundant || k == 1);
+
+            /* we only copy the buffered variables required to represent the constraint */
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypesbuffer, k) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->bounds, boundsbuffer, k) );
+            (*consdata)->varssize = k;
+            (*consdata)->nvars = k;
+         }
+
+         /* free buffer storage */
+         SCIPfreeBufferArray(scip, &boundsbuffer);
+         SCIPfreeBufferArray(scip, &boundtypesbuffer);
+         SCIPfreeBufferArray(scip, &varsbuffer);
+      }
+      else
+      {
+         /* without problem compression, the entire vars array is copied */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypes, nvars) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->bounds, bounds, nvars) );
+         (*consdata)->varssize = nvars;
+         (*consdata)->nvars = nvars;
+      }
    }
    else
    {
@@ -2449,9 +2531,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
     * literals are violated
     */
    assert((boundtypes[inferinfo] == SCIP_BOUNDTYPE_LOWER
-         && SCIPisFeasGE(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo]))
+         && SCIPisFeasGE(scip, SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE), bounds[inferinfo]))
       || (boundtypes[inferinfo] == SCIP_BOUNDTYPE_UPPER
-         && SCIPisFeasLE(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo])));
+         && SCIPisFeasLE(scip, SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE), bounds[inferinfo])));
 
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -2465,9 +2547,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
           * because SCIPvarGetXbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
          assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
             || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
-               && SCIPisLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))
+               && SCIPisLT(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, TRUE), bounds[v]))
             || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER
-               && SCIPisGT(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE), bounds[v])));
+               && SCIPisGT(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, TRUE), bounds[v])));
          SCIP_CALL( SCIPaddConflictBd(scip, vars[v], SCIPboundtypeOpposite(boundtypes[v]), bdchgidx) );
       }
    }
@@ -2632,7 +2714,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
 
    SCIPfreeBufferArray(scip, &targetvars);
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** constraint parsing method of constraint handler */
@@ -3088,7 +3170,7 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    return SCIP_OKAY;
 }
 
-/** creates and captures an and constraint
+/** creates and captures a bound disjunction constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
  *  method SCIPcreateConsBounddisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *

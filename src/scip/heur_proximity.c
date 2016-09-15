@@ -368,67 +368,6 @@ SCIP_RETCODE setupSubproblem(
    return SCIP_OKAY;
 }
 
-/** creates the rows of the subproblem */
-static
-SCIP_RETCODE createRows(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
-   )
-{
-   SCIP_ROW** rows;                          /* original scip rows                       */
-   SCIP_CONS* cons;                          /* new constraint                           */
-   SCIP_VAR** consvars;                      /* new constraint's variables               */
-   SCIP_COL** cols;                          /* original row's columns                   */
-
-   SCIP_Real constant;                       /* constant added to the row                */
-   SCIP_Real lhs;                            /* left hand side of the row                */
-   SCIP_Real rhs;                            /* left right side of the row               */
-   SCIP_Real* vals;                          /* variables' coefficient values of the row */
-
-   int nrows;
-   int nnonz;
-   int i;
-   int j;
-
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-
-      assert(lhs <= rhs);
-
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ )
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &consvars);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** frees the subproblem */
 static
 SCIP_RETCODE deleteSubproblem(
@@ -862,24 +801,10 @@ SCIP_RETCODE SCIPapplyProximity(
 
       /* copy complete SCIP instance */
       valid = FALSE;
-      if( !heurdata->uselprows )
-      {
-         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "proximity", TRUE, FALSE, TRUE, &valid) );
-      }
-      else
-      {
-         /* create the subproblem step by step, adding plugins and variables first, and finally creating
-          * linear constraints based on current LP rows */
-         SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
-         SCIP_CALL( SCIPcreateProbBasic(subscip, "proximitysub") );
+      /* create a problem copy as sub SCIP */
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
+      assert(valid);
 
-         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-         for( i = 0; i < nvars; i++ )
-            subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-         SCIP_CALL( createRows(scip, subscip, subvars) );
-      }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
       /* create event handler for LP events */

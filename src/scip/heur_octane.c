@@ -650,6 +650,8 @@ SCIP_Bool isZero(
    iszero = TRUE; 
    for( v = nsubspacevars - 1; v >= 0; --v )
    {
+      assert(!SCIPisInfinity(scip, raydirection[v]));
+
       if( !SCIPisFeasZero(scip, raydirection[v]/100) )
          iszero = FALSE;
       else

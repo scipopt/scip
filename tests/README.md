@@ -44,6 +44,7 @@ make IPOPT=<true|false>
 **NOTE** This assumes that `SCIP` was compiled with `OPT=dbg SHARED=true`.
 
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
+If you already have installed Criterion on you system, execute `touch Criterion` or `mkdir Criterion` before calling make.
 
 **NOTE** Some tests might need to include c files from SCIP. For tests to be recompilied the included c file gets recompiled, run `make depend`.
 
@@ -82,4 +83,3 @@ The test suite is `separation` and the test name is `gauge`. To debug:
 ```
 
 Criterion by default prints all of the critical debugging information (test_suite::test_name, file and line number were to break). When a test crashes, there is no need to `break` in `gdb`. TODO: simplify debugging.
-

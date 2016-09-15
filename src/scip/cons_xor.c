@@ -2738,7 +2738,7 @@ SCIP_RETCODE addConflictBounds(
       /* the integral variable was fixed, because all variables were fixed */
       for (i = 0; i < nvars; ++i)
       {
-         assert( SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)) );
+         assert( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)) );
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       break;
@@ -2748,15 +2748,15 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 1 before */
-         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
          /* add variables that were fixed to 0 */
-         else if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         else if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
          else
@@ -2779,9 +2779,9 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 0 */
-         if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -2798,9 +2798,9 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 1 */
-         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -3642,10 +3642,8 @@ SCIP_RETCODE detectRedundantConstraints(
             goto TERMINATE;
          }
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* delete cons0 and update flags of cons1 s.t. nonredundant information doesn't get lost */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
-
-         /* delete consdel */
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          (*ndelconss)++;
 
@@ -3961,6 +3959,9 @@ SCIP_RETCODE preprocessConstraintPairs(
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
             SCIPdebugPrintCons(scip, cons0, NULL);
             SCIPdebugPrintCons(scip, cons1, NULL);
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
 
@@ -4042,6 +4043,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             *cutoff = *cutoff || infeasible;
             if ( fixed )
                (*nfixedvars)++;
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -4083,6 +4087,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
             (*nfixedvars)++;
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -4139,6 +4146,8 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          if( redundant )
          {
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
 

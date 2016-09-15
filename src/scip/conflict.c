@@ -3229,7 +3229,7 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
       {
       case SCIP_BOUNDTYPE_LOWER:
 
-         newbound = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
+         newbound = SCIPgetVarLbAtIndex(set->scip, var, bdchgidx, FALSE);
 
          if( var->conflictlbcount == conflict->count && var->conflictlb >= newbound )
          {
@@ -3241,7 +3241,7 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
          break;
       case SCIP_BOUNDTYPE_UPPER:
 
-         newbound = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+         newbound = SCIPgetVarUbAtIndex(set->scip, var, bdchgidx, FALSE);
 
          if( var->conflictubcount == conflict->count && var->conflictub <= newbound )
          {
@@ -3514,11 +3514,13 @@ SCIP_RETCODE conflictResolveBound(
    int i;
 
    /* store the current size of the conflict queues */
+   assert(conflict != NULL);
    nforcedbdchgqueue = SCIPpqueueNElems(conflict->forcedbdchgqueue);
    nbdchgqueue = SCIPpqueueNElems(conflict->bdchgqueue);
+#else
+   assert(conflict != NULL);
 #endif
 
-   assert(conflict != NULL);
    assert(resolved != NULL);
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
@@ -3608,7 +3610,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
             SCIPvarGetName(infervar),
             inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
             SCIPconsGetName(infercons),
             SCIPconsIsGlobal(infercons) ? "global" : "local",
             inferinfo);
@@ -3667,7 +3669,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
             SCIPvarGetName(infervar),
             inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
             SCIPpropGetName(inferprop), inferinfo);
 
          SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );

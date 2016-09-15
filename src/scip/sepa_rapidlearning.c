@@ -268,7 +268,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    success = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, TRUE, &success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &success) );
 
    if( sepadata->copycuts )
    {

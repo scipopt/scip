@@ -86,6 +86,7 @@ SCIP_RETCODE readSol(
       char varname[SCIP_MAXSTRLEN];
       char valuestring[SCIP_MAXSTRLEN];
       char objstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real value;
       SCIP_Bool infeasible;
@@ -102,7 +103,8 @@ SCIP_RETCODE readSol(
          continue;
 
       /* parse the line */
-      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, valuestring, objstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, filename, buffer);

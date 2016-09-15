@@ -11577,13 +11577,17 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_Bool active = FALSE;
 #ifndef NDEBUG
    SCIP_Real constant = 0.0;
-   SCIP_Bool orignegated = *negated;
+   SCIP_Bool orignegated;
 #endif
 
    assert(var != NULL);
    assert(*var != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
+
+#ifndef NDEBUG
+   orignegated = *negated;
+#endif
 
    while( !active && *var != NULL )
    {
@@ -15786,6 +15790,8 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -15908,6 +15914,8 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16030,6 +16038,8 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16047,7 +16057,10 @@ SCIP_Real SCIPvarGetBdAtIndex(
    }
 }
 
-/** returns whether the binary variable was fixed at the time given by the bound change index */
+/** returns whether the binary variable was fixed at the time given by the bound change index
+ *
+ *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
+ */
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */

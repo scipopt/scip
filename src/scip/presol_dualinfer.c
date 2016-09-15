@@ -39,7 +39,7 @@
 #define PRESOL_NAME             "dualinfer"
 #define PRESOL_DESC             "exploit dual informations for fixings and side changes"
 #define PRESOL_PRIORITY             -2000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS                0    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 #define MAX_LOOPS                       3    /**< maximal number of dual bound strengthening loops */
 

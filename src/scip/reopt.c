@@ -2075,25 +2075,26 @@ SCIP_RETCODE addNode(
 
 #ifdef SCIP_DEBUG
       {
-         int varnr;
-
          SCIPdebugMessage(" -> nvars: %d, ncons: %d, parentID: %d, reopttype: %d\n",
             reopt->reopttree->reoptnodes[id]->nvars,
             reopt->reopttree->reoptnodes[id]->nconss,
             reopt->reopttree->reoptnodes[id]->parentID, reopttype);
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMessage(" -> saved variables:\n");
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
          {
-            SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-               reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-         }
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
-         {
-            SCIPdebugMessage("  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-               reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            int varnr;
+            SCIPdebugMessage(" -> saved variables:\n");
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+            }
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            }
          }
 #endif
       }
@@ -2394,25 +2395,27 @@ SCIP_RETCODE addNode(
 
 #ifdef SCIP_DEBUG
       {
-         int varnr;
          SCIPdebugMessage("save node #%lld successful\n", SCIPnodeGetNumber(node));
          SCIPdebugMessage(" -> ID %d, nvars %d, ncons %d, reopttype %d\n",
             id, reopt->reopttree->reoptnodes[id]->nvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
             reopt->reopttree->reoptnodes[id]->nconss,
             reopttype);
 #ifdef SCIP_MORE_DEBUG
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
          {
-            SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-               reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-         }
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
-         {
-            SCIPdebugMessage("  <%s> %s %g (after dual red.)\n",
-               SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-               reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            int varnr;
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+            }
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g (after dual red.)\n",
+                  SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            }
          }
 #endif
       }
@@ -3026,8 +3029,8 @@ SCIP_RETCODE fixBounds(
    assert(blkmem != NULL);
 
    reopttree = reopt->reopttree;
-   assert(0 < id && id < reopttree->reoptnodessize);
    assert(reopttree != NULL);
+   assert(0 < id && id < reopttree->reoptnodessize);
 
    reoptnode = reopttree->reoptnodes[id];
    assert(reoptnode != NULL);

@@ -1,12 +1,12 @@
-/* $Id: ad_assign.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_AD_ASSIGN_INCLUDED
-# define CPPAD_AD_ASSIGN_INCLUDED
+// $Id$
+# ifndef CPPAD_AD_ASSIGN_HPP
+# define CPPAD_AD_ASSIGN_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,31 +22,27 @@ $spell
 	const
 $$
 
-$index assignment, AD$$
-$index AD, assignment$$
-$index assign, to AD$$
-$index Base, assign to AD$$
-$index VecAD, assign to AD$$
 
 $section AD Assignment Operator$$
+$mindex assign Base VecAD$$
 
 $head Syntax$$
 $icode%y% = %x%$$
 
 $head Purpose$$
 Assigns the value in $icode x$$ to the object $icode y$$.
-In either case, 
+In either case,
 
 $head x$$
 The argument $icode x$$ has prototype
 $codei%
 	const %Type% &%x%
-%$$ 
+%$$
 where $icode Type$$ is
 $codei%VecAD<%Base%>::reference%$$,
 $codei%AD<%Base%>%$$,
-$icode Base$$, 
-or any type that has a constructor of the form
+$icode Base$$,
+or any type that has an implicit constructor of the form
 $icode%Base%(%x%)%$$.
 
 $head y$$
@@ -69,8 +65,6 @@ $end
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 
 /*!
-\defgroup ad_assign_hpp ad_assign.hpp
-\{
 \file ad_assign.hpp
 AD<Base> constructors and and copy operations.
 */
@@ -143,6 +137,5 @@ inline AD<Base>& AD<Base>::operator=(const T &t)
 {	return *this = Base(t); }
 
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

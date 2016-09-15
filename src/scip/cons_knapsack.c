@@ -576,65 +576,73 @@ SCIP_RETCODE consdataCreate(
    )
 {
    int v;
+   SCIP_Longint constant;
 
    assert(consdata != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
+
+   constant = 0L;
+   (*consdata)->vars = NULL;
+   (*consdata)->weights = NULL;
+   (*consdata)->nvars = 0;
    if( nvars > 0 )
    {
+      SCIP_VAR** varsbuffer;
+      SCIP_Longint* weightsbuffer;
       int k;
 
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &weightsbuffer, nvars) );
 
       k = 0;
       for( v = 0; v < nvars; ++v )
       {
          assert(vars[v] != NULL);
+         assert(SCIPvarIsBinary(vars[v]));
 
-         /* all weight have to be not negative */
+         /* all weight have to be non negative */
          assert( weights[v] >= 0 );
 
          if( weights[v] > 0 )
          {
-            (*consdata)->vars[k] = vars[v];
-            (*consdata)->weights[k] = weights[v];
-            ++k;
+            /* treat fixed variables as constants if problem compression is enabled */
+            if( SCIPisConsCompressionEnabled(scip) && SCIPvarGetLbGlobal(vars[v]) > SCIPvarGetUbGlobal(vars[v]) - 0.5 )
+            {
+               /* only if the variable is fixed to 1, we add its weight to the constant */
+               if( SCIPvarGetUbGlobal(vars[v]) > 0.5 )
+                  constant += weights[v];
+            }
+            else
+            {
+               varsbuffer[k] = vars[v];
+               weightsbuffer[k] = weights[v];
+               ++k;
+            }
          }
       }
       assert(k >= 0);
 
       (*consdata)->nvars = k;
-      if( k < nvars )
-      {
-         if( k > 0 )
-         {
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*consdata)->vars, nvars, k) );
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*consdata)->weights, nvars, k) );
-         }
-         else
-         {
-            SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, nvars);
-            SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, nvars);
 
-            (*consdata)->vars = NULL;
-            (*consdata)->weights = NULL;
-            assert( (*consdata)->nvars == 0 );
-         }
+      /* copy the active variables and weights into the constraint data structure */
+      if( k > 0 )
+      {
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weightsbuffer, k) );
       }
-   }
-   else
-   {
-      (*consdata)->vars = NULL;
-      (*consdata)->weights = NULL;
-      (*consdata)->nvars = 0;
+
+      /* free buffer storage */
+      SCIPfreeBufferArray(scip, &weightsbuffer);
+      SCIPfreeBufferArray(scip, &varsbuffer);
    }
 
    /* capacity has to be greater or equal to zero */
-   assert( capacity >= 0 );
+   assert(capacity >= 0);
+   assert(constant >= 0);
 
    (*consdata)->varssize = (*consdata)->nvars;
-   (*consdata)->capacity = capacity;
+   (*consdata)->capacity = capacity - constant;
    (*consdata)->eventdata = NULL;
    (*consdata)->cliquepartition = NULL;
    (*consdata)->negcliquepartition = NULL;
@@ -3953,12 +3961,15 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
    int ngubconss;
    int nliftgubC1;
 
+   assert(gubset != NULL);
    ngubconss = gubset->ngubconss;
+#else
+   assert(gubset != NULL);
 #endif
+
    nvars = gubset->nvars;
 
    assert(scip != NULL);
-   assert(gubset != NULL);
    assert(vars != NULL);
    assert(nvars >= 0);
    assert(weights != NULL);
@@ -6871,6 +6882,8 @@ SCIP_RETCODE checkParallelObjective(
       return SCIP_OKAY;
 
    vars = consdata->vars;
+   assert(vars != NULL);
+
    applicable = TRUE;
    offset = 0.0;
    scale = 1.0;
@@ -6879,7 +6892,7 @@ SCIP_RETCODE checkParallelObjective(
    {
       negated = FALSE;
       var = vars[v];
-      assert(vars != NULL);
+      assert(var != NULL);
 
       if( SCIPvarIsNegated(var) )
       {
@@ -8154,7 +8167,7 @@ SCIP_RETCODE dualWeightsTightening(
    int v;
    int w;
 #ifndef NDEBUG
-   int oldnchgsides = *nchgsides;
+   int oldnchgsides;
 #endif
 
    assert(scip != NULL);
@@ -8163,6 +8176,10 @@ SCIP_RETCODE dualWeightsTightening(
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
    assert(naddconss != NULL);
+
+#ifndef NDEBUG
+   oldnchgsides = *nchgsides;
+#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -12651,7 +12668,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
       {
          if( SCIPvarGetIndex(consdata->vars[i]) == inferinfo ) 
          {
-            assert( SCIPvarGetUbAtIndex(consdata->vars[i], bdchgidx, FALSE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
             break;
          }
@@ -12689,7 +12706,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
       {
          for( i = 0; i < consdata->nvars; i++ )
          {
-            if( SCIPvarGetLbAtIndex(consdata->vars[i], bdchgidx, FALSE) > 0.5 )
+            if( SCIPgetVarLbAtIndex(scip, consdata->vars[i], bdchgidx, FALSE) > 0.5 )
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
                capsum += consdata->weights[i];

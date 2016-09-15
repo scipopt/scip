@@ -292,7 +292,7 @@ SCIP_Real getGenVBoundsMinActivityConflict(
       if( coefs[i] > 0.0 )
       {
          /* get bound at current bound change */
-         bound = SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE);
+         bound = SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* if bdchgidx is NULL, assert that we use local bounds */
          assert(bdchgidx != NULL || SCIPisEQ(scip, bound, SCIPvarGetLbLocal(vars[i])));
@@ -304,7 +304,7 @@ SCIP_Real getGenVBoundsMinActivityConflict(
       else
       {
          /* get bound at current bound change */
-         bound = SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE);
+         bound = SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* if bdchgidx is NULL, assert that we use local bounds */
          assert(bdchgidx != NULL || SCIPisEQ(scip, bound, SCIPvarGetUbLocal(vars[i])));
@@ -644,9 +644,9 @@ SCIP_RETCODE resolveGenVBoundPropagation(
     * left-hand side variable
     */
    assert(bdchgidx == NULL || genvbound->boundtype != SCIP_BOUNDTYPE_LOWER || SCIPisEQ(scip,
-         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, SCIPvarGetLbAtIndex(lhsvar, bdchgidx, TRUE)));
+         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, SCIPgetVarLbAtIndex(scip, lhsvar, bdchgidx, TRUE)));
    assert(bdchgidx == NULL || genvbound->boundtype != SCIP_BOUNDTYPE_UPPER || SCIPisEQ(scip,
-         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, -SCIPvarGetUbAtIndex(lhsvar, bdchgidx, TRUE)));
+         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, -SCIPgetVarUbAtIndex(scip, lhsvar, bdchgidx, TRUE)));
 
    /* when creating an initial conflict, bdchgidx is NULL and +/-boundval must exceed the upper/lower bound of the
     * left-hand side variable
@@ -693,8 +693,8 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    {
       assert(vars[i] != NULL);
       assert(!SCIPisZero(scip, genvbound->coefs[i]));
-      assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE)));
-      assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)));
+      assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE)));
+      assert(SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)));
 
       /* coefficient is positive */
       if( genvbound->coefs[i] > 0.0 )
@@ -703,7 +703,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
          SCIP_Real conflictlb;
 
          /* get bound at current bound change */
-         lbatindex = SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE);
+         lbatindex = SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* get bound already enforced by conflict set */
          conflictlb = SCIPgetConflictVarLb(scip, genvbound->vars[i]);
@@ -753,7 +753,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
          SCIP_Real conflictub;
 
          /* get bound at current bound change */
-         ubatindex = SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE);
+         ubatindex = SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE);
 
          /* get bound already enforced by conflict set */
          conflictub = SCIPgetConflictVarUb(scip, genvbound->vars[i]);
@@ -2407,8 +2407,8 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
 
    /* get value of bound change on left-hand side */
    boundval = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER
-      ? SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, TRUE)
-      : -SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, TRUE);
+      ? SCIPgetVarLbAtIndex(scip, genvbound->var, bdchgidx, TRUE)
+      : -SCIPgetVarUbAtIndex(scip, genvbound->var, bdchgidx, TRUE);
 
    /* if left-hand side variable is integral, it suffices to explain a bound change greater than boundval - 1 */
    if( SCIPvarIsIntegral(genvbound->var) )
