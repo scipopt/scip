@@ -26,7 +26,6 @@
 #include "scip/heur_multistart.h"
 #include "scip/heur_subnlp.h"
 
-#include "scip/nlp.h"
 #include "nlpi/exprinterpret.h"
 
 
@@ -60,83 +59,80 @@ struct SCIP_HeurData
  * Local methods
  */
 
+
+/** returns an unique index of a variable in the range of 0,..,SCIPgetNVars(scip)-1 */
+#ifndef NDEBUG
 static
-SCIP_RETCODE computeGradient(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
-   SCIP_SOL*             sol,                /**< solution to compute the gradient for */
-   SCIP_Real*            lingrad,            /**< array to store the gradient belonging to the linear part */
-   SCIP_Real*            quadgrad,           /**< array to store the gradient belonging to the quadratic part */
-   SCIP_Real*            treegrad,           /**< array to store the gradient belonging to the tree */
-   SCIP_Real*            norm                /**< buffer to store the square of the norm of the gradient (assume that variables are different in the linear, quadratic, and tree part) */
+int getVarIndex(
+   SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 */
+   SCIP_VAR*             var                 /**< variable */
    )
 {
-   SCIP_EXPRTREE* tree;
+   assert(varindex != NULL);
+   assert(var != NULL);
+   assert(SCIPhashmapExists(varindex, (void*)var));
+
+   return (int)(size_t)SCIPhashmapGetImage(varindex, (void*)var);
+}
+#else
+#define getVarIndex(varindex,var) ((int)(size_t)SCIPhashmapGetImage((varindex), (void*)(var)))
+#endif
+
+/** samples and stores random points */
+static
+SCIP_RETCODE sampleRandomPoints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            rndpoints,          /**< array to store all random points */
+   int                   nrndpoints,         /**< total number of random points to compute */
+   unsigned int*         rndseed,            /**< random seed */
+   SCIP_Real             intervalsize        /**< interval size for unbounded variables */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real val;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   int nvars;
    int i;
+   int k;
 
    assert(scip != NULL);
-   assert(nlrow != NULL);
-   assert(exprint != NULL);
-   assert(sol != NULL);
-   assert(lingrad != NULL);
-   assert(quadgrad != NULL);
-   assert(treegrad != NULL);
-   assert(norm != NULL);
+   assert(rndpoints != NULL);
+   assert(nrndpoints > 0);
+   assert(rndseed != NULL);
+   assert(intervalsize > 0.0);
 
-   *norm = 0.0;
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
-   /* linear part */
-   for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
+   for( k = 0; k < nrndpoints; ++k )
    {
-      lingrad[i] = SCIPnlrowGetLinearCoefs(nlrow)[i];
-      *norm += SQR(SCIPnlrowGetLinearCoefs(nlrow)[i]);
-   }
+      SCIP_CALL( SCIPcreateSol(scip, &rndpoints[k], NULL) );
 
-   /* quadratic part */
-   BMSclearMemoryArray(quadgrad, SCIPnlrowGetNQuadVars(nlrow));
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
-   {
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
-
-      var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
-      var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
-
-      quadgrad[SCIPnlrowGetQuadElems(nlrow)[i].idx1] += SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPgetSolVal(scip, sol, var2);
-      quadgrad[SCIPnlrowGetQuadElems(nlrow)[i].idx2] += SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPgetSolVal(scip, sol, var1);
-   }
-
-   for( i = 0; i < SCIPnlrowGetNQuadVars(nlrow); ++i )
-      *norm += SQR(quadgrad[i]);
-
-   /* tree part */
-   tree = SCIPnlrowGetExprtree(nlrow);
-   if( tree != NULL )
-   {
-      SCIP_Real* x;
-      SCIP_Real val;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &x, SCIPexprtreeGetNVars(tree)) );
-      assert(SCIPexprtreeGetNVars(tree) <= SCIPgetNVars(scip));
-
-      /* compile expression tree, if not done before */
-      if( SCIPexprtreeGetInterpreterData(tree) == NULL )
+      for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPexprintCompile(exprint, tree) );
+         lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
+         ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
+
+         /* use a smaller domain for unbounded variables */
+         if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+            val = SCIPgetRandomReal(lb, ub, rndseed);
+         else if( !SCIPisInfinity(scip, -lb) )
+            val = SCIPgetRandomReal(lb, lb + intervalsize, rndseed);
+         else if( !SCIPisInfinity(scip, ub) )
+            val = SCIPgetRandomReal(ub - intervalsize, ub, rndseed);
+         else
+         {
+            assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
+            val = SCIPgetRandomReal( -0.5*intervalsize, 0.5*intervalsize, rndseed);
+         }
+         assert(val >= lb && val <= ub);
+
+         /* set solution value */
+         SCIP_CALL( SCIPsetSolVal(scip, rndpoints[k], vars[i], val) );
       }
 
-      /* sets the solution value */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-         x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(tree)[i]);
-
-      SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
-      SCIPfreeBufferArray(scip, &x);
-
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-         *norm += SQR(treegrad[i]);
+      assert(rndpoints[k] != NULL);
    }
 
    return SCIP_OKAY;
@@ -144,7 +140,7 @@ SCIP_RETCODE computeGradient(
 
 /** computes the maximum violation of a given point; a negative value means that there is a violation */
 static
-SCIP_RETCODE getMaxViolation(
+SCIP_RETCODE getMaxViol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Real*            maxviol             /**< buffer to store the maximum violation */
@@ -174,307 +170,393 @@ SCIP_RETCODE getMaxViolation(
    return SCIP_OKAY;
 }
 
+/** computes the gradient for a given point and nonlinear row */
 static
-SCIP_RETCODE addSolVal(
+SCIP_RETCODE computeGradient(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< solution */
-   SCIP_VAR*             var,                /**< variable */
-   SCIP_Real             val                 /**< value to add */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
+   SCIP_SOL*             sol,                /**< solution to compute the gradient for */
+   SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 uniquely */
+   SCIP_Real*            grad,               /**< buffer to store the gradient; grad[varindex(i)] corresponds to SCIPgetVars(scip)[i] */
+   SCIP_Real*            norm                /**< buffer to store ||grad||^2  */
    )
 {
-   SCIP_Real newval;
+   SCIP_EXPRTREE* tree;
+   SCIP_VAR* var;
+   int i;
 
    assert(scip != NULL);
+   assert(nlrow != NULL);
+   assert(varindex != NULL);
+   assert(exprint != NULL);
    assert(sol != NULL);
-   assert(var != NULL);
+   assert(norm != NULL);
 
-   newval = SCIPgetSolVal(scip, sol, var) + val;
+   BMSclearMemoryArray(grad, SCIPgetNVars(scip));
+   *norm = 0.0;
 
-   /* adjust value */
-   newval = MAX(newval, SCIPvarGetLbLocal(var));
-   newval = MIN(newval, SCIPvarGetUbLocal(var));
+   /* linear part */
+   for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
+   {
+      var = SCIPnlrowGetLinearVars(nlrow)[i];
+      assert(var != NULL);
+      assert(getVarIndex(varindex, var) >= 0 && getVarIndex(varindex, var) < SCIPgetNVars(scip));
 
-   /* set new solution value */
-   SCIPdebugMessage("    change value of %s: %e  + %e -> %e in [%e,%e]\n", SCIPvarGetName(var),
-      SCIPgetSolVal(scip, sol, var), val, newval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-   SCIP_CALL( SCIPsetSolVal(scip, sol, var, newval) );
+      grad[getVarIndex(varindex, var)] += SCIPnlrowGetLinearCoefs(nlrow)[i];
+   }
+
+   /* quadratic part */
+   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
+   {
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+
+      var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
+      var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
+
+      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
+      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
+      assert(getVarIndex(varindex, var1) >= 0 && getVarIndex(varindex, var1) < SCIPgetNVars(scip));
+      assert(getVarIndex(varindex, var2) >= 0 && getVarIndex(varindex, var2) < SCIPgetNVars(scip));
+
+      grad[getVarIndex(varindex, var1)] += SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPgetSolVal(scip, sol, var2);
+      grad[getVarIndex(varindex, var2)] += SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPgetSolVal(scip, sol, var1);
+   }
+
+   /* tree part */
+   tree = SCIPnlrowGetExprtree(nlrow);
+   if( tree != NULL )
+   {
+      SCIP_Real* treegrad;
+      SCIP_Real* x;
+      SCIP_Real val;
+
+      assert(SCIPexprtreeGetNVars(tree) <= SCIPgetNVars(scip));
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &x, SCIPexprtreeGetNVars(tree)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &treegrad, SCIPexprtreeGetNVars(tree)) );
+
+      /* compile expression tree, if not done before */
+      if( SCIPexprtreeGetInterpreterData(tree) == NULL )
+      {
+         SCIP_CALL( SCIPexprintCompile(exprint, tree) );
+      }
+
+      /* sets the solution value */
+      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+         x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(tree)[i]);
+
+      SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
+
+      /* update corresponding gradient entry */
+      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+      {
+         var = SCIPexprtreeGetVars(tree)[i];
+         assert(var != NULL);
+         assert(getVarIndex(varindex, var) >= 0 && getVarIndex(varindex, var) < SCIPgetNVars(scip));
+
+         grad[getVarIndex(varindex, var)] += treegrad[i];
+      }
+
+      SCIPfreeBufferArray(scip, &treegrad);
+      SCIPfreeBufferArray(scip, &x);
+   }
+
+   /* compute ||grad||^2 */
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
+      *norm += SQR(grad[i]);
 
    return SCIP_OKAY;
 }
 
-/** moves the point in the direction of the feasible set (for the continuous relaxation) */
+/** use consensus vectors to improve feasibility for a given starting point */
 static
-SCIP_RETCODE movePoint(
+SCIP_RETCODE improvePoint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_SOL*             startsol,           /**< starting point */
-   SCIP_Real*            maxviol            /**< buffer to store the resulting maximum violation */
+   SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 */
+   SCIP_EXPRINT*         exprinterpreter,    /**< expression interpreter */
+   SCIP_SOL*             point,                /**< random generated point */
+   int                   nmaxiter,           /**< maximum number of iterations */
+   SCIP_Real             minimprfac,         /**< minimum required improving factor to proceed */
+   SCIP_Real*            maxviol             /**< pointer to store the maximum violation */
    )
 {
    SCIP_NLROW** nlrows;
-   SCIP_Real* lingrad;
-   SCIP_Real* quadgrad;
-   SCIP_Real* treegrad;
+   SCIP_Real* grad;
    SCIP_Real lastmaxviol;
    int nnlrows;
-   int nrounds;
-   int nworse;
+   int r;
+   int i;
 
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-   assert(startsol != NULL);
+   assert(varindex != NULL);
+   assert(exprinterpreter != NULL);
+   assert(point != NULL);
+   assert(nmaxiter > 0);
+   assert(minimprfac >= 0.0);
    assert(maxviol != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lingrad, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadgrad, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &treegrad, SCIPgetNVars(scip)) );
-
-   nrounds = 0;
-   nworse = 0;
 
    nnlrows = SCIPgetNNLPNlRows(scip);
    nlrows = SCIPgetNLPNlRows(scip);
    assert(nlrows != NULL);
 
-   if( heurdata->exprinterpreter == NULL )
+   SCIP_CALL( getMaxViol(scip, point, maxviol) );
+   SCIPdebugMessage("maxviol = %e\n", *maxviol);
+
+   /* stop since start point is feasible */
+   if( !SCIPisFeasLT(scip, *maxviol, 0.0) )
    {
-      SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &heurdata->exprinterpreter) );
+      SCIPdebugMessage("start point is feasible");
+      return SCIP_OKAY;
    }
 
-   /* compute start violation */
-   SCIP_CALL( getMaxViolation(scip, startsol, maxviol) );
-
-   SCIPdebugMessage("start maxviol = %e\n", *maxviol);
-   lastmaxviol = -SCIPinfinity(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &grad, SCIPgetNVars(scip)) );
 
    /* main loop */
-   while( !SCIPisFeasGE(scip, *maxviol, 0.0) && nrounds < 100 && nworse < 10 )
+   do
    {
-      int i;
+      SCIP_Real feasibility;
+      SCIP_Real activity;
+      SCIP_Real nlrownorm;
+      SCIP_Real scale;
 
+      lastmaxviol = *maxviol;
+
+      /* move point; compute acitivity and gradient first */
       for( i = 0; i < nnlrows; ++i )
       {
-         SCIP_NLROW* nlrow;
-         SCIP_EXPRTREE* tree;
-         SCIP_VAR* var;
-         SCIP_Real feasibility;
-         SCIP_Real activity;
-         SCIP_Real scale;
-         SCIP_Real norm;
          int j;
 
-         nlrow = nlrows[i];
-         assert(nlrow != NULL);
-         SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow, startsol, &feasibility) );
+         SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrows[i], point, &feasibility) );
 
          /* do not consider non-violated constraints */
          if( SCIPisFeasGE(scip, feasibility, 0.0) )
             continue;
 
-#ifdef SCIP_DEBUG
-         SCIPdebugMessage("  nlrow %d ", i);
-         SCIP_CALL( SCIPprintNlRow(scip, nlrow, NULL) );
-#endif
-         SCIPdebugMessage("    violation = %e\n", feasibility);
-
-         SCIP_CALL( computeGradient(scip, nlrow, heurdata->exprinterpreter, startsol, lingrad, quadgrad, treegrad, &norm) );
-         SCIPdebugMessage("    ||gradient|| = %e\n", norm);
-
-         /* skip nonlinear rows with a too small gradient */
-         if( SCIPisEQ(scip, norm, 0.0) )
-            continue;
-
-         SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, startsol, &activity) );
+         SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
+         SCIP_CALL( computeGradient(scip, nlrows[i], exprinterpreter, point, varindex, grad, &nlrownorm) );
 
          /* compute -g(x_k) / ||grad(g)(x_k)||^2 for a constraint g(x_k) <= 0 */
-         scale = -feasibility / norm;
-         if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) && SCIPisGT(scip, activity, SCIPnlrowGetRhs(nlrow)) )
+         scale = -feasibility / nlrownorm;
+         if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) && SCIPisGT(scip, activity, SCIPnlrowGetRhs(nlrows[i])) )
             scale *= -1.0;
 
-         SCIPdebugMessage("    scale = %e\n", scale);
-
          /* skip nonliner row of the scaler is too small or too large */
-         if( SCIPisEQ(scip, scale, 0.0) || SCIPisInfinity(scip, REALABS(scale)) )
+         if( SCIPisEQ(scip, scale, 0.0) || SCIPisHugeValue(scip, REALABS(scale)) )
             continue;
 
          /* update point */
-         for( j = 0; j < SCIPnlrowGetNLinearVars(nlrow); ++j )
+         for( j = 0; j < SCIPgetNVars(scip); ++j )
          {
-            var = SCIPnlrowGetLinearVars(nlrow)[j];
-            SCIP_CALL( addSolVal(scip, startsol, var, scale * lingrad[j]) );
-         }
+            SCIP_Real val;
 
-         for( j = 0; j < SCIPnlrowGetNQuadVars(nlrow); ++j )
-         {
-            var = SCIPnlrowGetQuadVars(nlrow)[j];
-            SCIP_CALL( addSolVal(scip, startsol, var, scale * quadgrad[j]) );
+            val = SCIPgetSolVal(scip, point, SCIPgetVars(scip)[j]) + scale * grad[j];
+            SCIP_CALL( SCIPsetSolVal(scip, point, SCIPgetVars(scip)[j], val) );
          }
-
-         tree = SCIPnlrowGetExprtree(nlrow);
-         for( j = 0; tree != NULL && j < SCIPexprtreeGetNVars(tree); ++j )
-         {
-            var = SCIPexprtreeGetVars(tree)[j];
-            SCIP_CALL( addSolVal(scip, startsol, var, scale * treegrad[j]) );
-         }
-
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow, startsol, &feasibility) );
-         SCIPdebugMessage("    violation = %e\n", feasibility);
-#endif
       }
 
-      /* update maximum violation */
-      lastmaxviol = *maxviol;
-      SCIP_CALL( getMaxViolation(scip, startsol, maxviol) );
-      SCIPdebugMessage("maxviol after round %d = %e\n", nrounds, *maxviol);
+      /* update violations */
+      SCIP_CALL( getMaxViol(scip, point, maxviol) );
+      SCIPdebugMessage("maxviol = %e\n", *maxviol);
+   }
+   while( ++r < nmaxiter
+      && SCIPisFeasLT(scip, *maxviol, 0.0)
+      && (*maxviol - lastmaxviol) / MAX(REALABS(*maxviol), REALABS(lastmaxviol)) >= minimprfac );
 
-      if( *maxviol != 0.0 && SCIPisLE(scip, (0.1 + lastmaxviol) / (0.1 + *maxviol), 1.01) )
-         ++nworse;
+   SCIPfreeBufferArray(scip, &grad);
 
-      ++nrounds;
+   return SCIP_OKAY;
+}
+
+/** sort points w.r.t their violations; filters out points with too large violation */
+static
+SCIP_RETCODE filterPoints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            points,             /**< array containing improved points */
+   SCIP_Real*            violations,         /**< array containing violations (sorted) */
+   int                   npoints,            /**< total number of points */
+   int*                  nusefulpoints       /**< pointer to store the total number of useful points */
+   )
+{
+   SCIP_Real maxviolation;
+   int i;
+
+   assert(points != NULL);
+   assert(violations != NULL);
+   assert(npoints > 0);
+   assert(nusefulpoints != NULL);
+
+   /* sort points w.r.t their violations; non-negative violations correspond to feasible points for the NLP */
+   SCIPsortDownRealPtr(violations, (void**)points, npoints);
+
+   maxviolation = violations[npoints - 1];
+   *nusefulpoints = 0;
+
+   for( i = 0; i < npoints; ++i )
+   {
+      /* consider feasible points always as useful; otherwise we take the a point if the violation is not too large,
+       * compared to the maximum violation; the latter criterion becomes more strict with the number of selected points
+       */
+      if( SCIPisFeasGE(scip, violations[i], 0.0)
+         || (1.0 - *nusefulpoints / (2.0 * npoints)) * maxviolation < violations[i] )
+         ++(*nusefulpoints);
+   }
+   assert(*nusefulpoints >= 0);
+
+   return SCIP_OKAY;
+}
+
+/** returns the relative distance between two points */
+static
+SCIP_Real getRelDistance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             x,                  /**< first point */
+   SCIP_SOL*             y                   /**< second point */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real distance;
+   int i;
+
+   vars = SCIPgetVars(scip);
+   distance = 0.0;
+
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
+   {
+      distance += (SCIPgetSolVal(scip, x, vars[i]) - SCIPgetSolVal(scip, y, vars[i]))
+         / (MAX(1.0, SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i])));
    }
 
-   SCIPdebugMessage("final maxviol = %e after %d rounds\n", *maxviol, nrounds);
-   printf("final maxviol = %e after %d rounds\n", *maxviol, nrounds);
+   return distance;
+}
 
-   /* /\* print the solution *\/ */
-   /* SCIP_CALL( SCIPprintSol(scip, startsol, NULL, FALSE) ); */
+/** cluster (useful) points with a greedy algorithm */
+static
+SCIP_RETCODE clusterPointsGreedy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            points,             /**< array containing improved points */
+   int                   npoints,            /**< total number of points */
+   int*                  clusteridx,         /**< array to store for each point the index of the cluster */
+   SCIP_Real             maxdist             /**< maximum distance to consider points in the same cluster */
+   )
+{
+   int ncluster;
+   int i;
 
-   SCIPfreeBufferArray(scip, &treegrad);
-   SCIPfreeBufferArray(scip, &quadgrad);
-   SCIPfreeBufferArray(scip, &lingrad);
+   assert(points != NULL);
+   assert(npoints > 0);
+   assert(clusteridx != NULL);
+   assert(maxdist >= 0.0);
+
+   BMSclearMemoryArray(clusteridx, npoints);
+
+   ncluster = 0;
+
+   for( i = 0; i < npoints; ++i )
+   {
+      int j;
+
+      /* point is already in a cluster */
+      if( clusteridx[i] != 0 )
+         continue;
+
+      /* create a new cluster for i */
+      clusteridx[i] = ++ncluster;
+
+      for( j = i + 1; j < npoints; ++j )
+      {
+         if( clusteridx[j] == 0 && getRelDistance(scip, points[i], points[j]) <= maxdist )
+            clusteridx[j] = ncluster;
+      }
+   }
+
+#ifndef NDEBUG
+   for( i = 0; i < npoints; ++i )
+   {
+      assert(clusteridx[i] > 0);
+      assert(clusteridx[i] <= ncluster);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** calls the sub-NLP heuristic for a given cluster */
+static
+SCIP_RETCODE solveNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< multi-start heuristic */
+   SCIP_HEUR*            nlpheur,            /**< pointer to NLP local search heuristics */
+   SCIP_SOL**            points,             /**< array containing improved points */
+   int                   npoints,            /**< total number of points */
+   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver */
+   SCIP_Real             timelimit,          /**< time limit for NLP solver */
+   SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
+   SCIP_Bool*            success             /**< pointer to store if we could find a solution */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_SOL* refpoint;
+   SCIP_RESULT nlpresult;
+   int i;
+
+   assert(points != NULL);
+   assert(npoints > 0);
+
+   vars = SCIPgetVars(scip);
+   *success = FALSE;
+
+   SCIP_CALL( SCIPcreateSol(scip, &refpoint, heur) );
+
+   /* compute reference point */
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
+   {
+      SCIP_Real val;
+      int p;
+
+      val = 0.0;
+
+      for( p = 0; p < npoints; ++p )
+      {
+         assert(points[p] != NULL);
+         val += SCIPgetSolVal(scip, points[p], vars[i]);
+      }
+
+      SCIP_CALL( SCIPsetSolVal(scip, refpoint, vars[i], val / npoints) );
+   }
+
+   /* call sub-NLP heuristic */
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL) );
+
+   if( nlpresult == SCIP_FOUNDSOL )
+      *success = TRUE;
+
+   /* free reference point */
+   SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE createSol(
+SCIP_RETCODE execHeur(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,
-   SCIP_SOL**            sol,
-   unsigned int*         seedp               /**< pointer to seed value */
+   SCIP_HEUR*            heur                /**< heuristic */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_Real val;
-   int nvars;
+   SCIP_HASHMAP* varindex;
    int i;
 
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(sol != NULL);
-   assert(seedp);
 
-   SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
-   assert(*sol != NULL);
+   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert(vars != NULL);
-
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      lb = SCIPvarGetLbLocal(vars[i]);
-      ub = SCIPvarGetUbLocal(vars[i]);
-
-      if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
-      {
-         val = SCIPgetRandomReal(-1e+4, 1e+4, seedp);
-      }
-      else if( SCIPisInfinity(scip, -lb) )
-      {
-         assert(!SCIPisInfinity(scip, ub));
-         val = SCIPgetRandomReal(ub - 1e+4, ub, seedp);
-      }
-      else if( SCIPisInfinity(scip, ub) )
-      {
-         assert(!SCIPisInfinity(scip, -lb));
-         val = SCIPgetRandomReal(lb, lb + 1e+4, seedp);
-      }
-      else
-      {
-         assert(!SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub));
-         val = SCIPgetRandomReal(lb, ub, seedp);
-      }
-
-      /* set the solution value */
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, vars[i], val) );
-   }
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_Real solDistance(
-   SCIP* scip,
-   SCIP_SOL* sol1,
-   SCIP_SOL* sol2
-   )
-{
-   SCIP_Real dist;
-   SCIP_VAR* var;
-   int i;
-
-   assert(sol1 != NULL);
-   assert(sol2 != NULL);
-   assert(sol1 != sol2);
-
-   dist = 0.0;
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      var = SCIPgetVars(scip)[i];
-      dist += SQR(SCIPgetSolVal(scip, sol1, var) - SCIPgetSolVal(scip, sol2, var));
-   }
-   return SQRT(dist);
-}
-
-static
-SCIP_RETCODE applyHeur(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur
-   )
-{
-   SCIP_HEURDATA* heurdata;
-   SCIP_SOL** sols; /* array to store all interesting points */
-   SCIP_Real* viols;
-   int r;
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &sols, heurdata->nrndpoints) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &viols, heurdata->nrndpoints) );
-
-   for( r = 0; r < heurdata->nrndpoints; ++r )
-   {
-      /* create a point randomly */
-      SCIP_CALL( createSol(scip, heur, &sols[r], &heurdata->randseed) );
-      assert(sols[r] != NULL);
-
-      /* try to reduce the infeasibility */
-      SCIP_CALL( movePoint(scip, heurdata, sols[r], &viols[r]) );
+      SCIP_CALL( SCIPhashmapInsert(varindex, (void*)SCIPgetVars(scip)[i], (void*)(size_t)i) );
    }
 
-   for( r = 0; r < heurdata->nrndpoints; ++r )
-   {
-      int p;
-
-      for( p = r + 1; p < heurdata->nrndpoints; ++p )
-      {
-         printf("distance from %d to sol %d = %e\n", r, p, solDistance(scip, sols[r], sols[p]));
-      }
-   }
-
-   /* free all generated points */
-   for( r = heurdata->nrndpoints - 1; r >= 0; --r )
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &sols[r]) );
-   }
-
-   SCIPfreeBufferArray(scip, &viols);
-   SCIPfreeBufferArray(scip, &sols);
+   SCIPhashmapFree(&varindex);
 
    return SCIP_OKAY;
 }
@@ -588,8 +670,6 @@ SCIP_DECL_HEUREXEC(heurExecMultistart)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
-   SCIP_CALL( applyHeur(scip, heur) );
 
    return SCIP_OKAY;
 }
