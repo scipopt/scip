@@ -19,7 +19,7 @@
 #include <cmath> //std::abs
 #include <cstddef> //std::size_t
 #include <fstream>
-#include <functional> //std::plus
+#include <functional> //std::plus, std::negate
 #include <iomanip> //std::set_precision
 #include <iostream>
 #include <iterator> //std::advance
@@ -806,11 +806,21 @@ namespace polyscip {
     }
 
     void Polyscip::printPoint(const OutcomeType& point, ostream& os) const {
-        global::print(point, "Point = [", "]", os);
+        if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE) {
+            global::print(point, "Point = [ ", "]", os, std::negate<ValueType>());
+        }
+        else {
+            global::print(point, "Point = [ ", "]", os);
+        }
     }
 
     void Polyscip::printRay(const OutcomeType& ray, ostream& os) const {
-        global::print(ray, "Ray = [", "]", os);
+        if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE) {
+            global::print(ray, "Ray = [ ", "]", os, std::negate<ValueType>());
+        }
+        else {
+            global::print(ray, "Ray = [ ", "]", os);
+        }
     }
 
     bool Polyscip::filenameIsOkay(const string& filename) {
