@@ -14678,13 +14678,14 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool checkrelmaxabs;
-   SCIP_Bool violated;
    int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -14694,11 +14695,9 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    /*debugMessage("Check method of linear constraints\n");*/
 
    /* check all linear constraints for feasibility */
-   *result = SCIP_FEASIBLE;
-
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
-      violated = FALSE;
+      SCIP_Bool violated = FALSE;
       SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, checkrelmaxabs, &violated) );
 
       if( violated )

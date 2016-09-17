@@ -12938,7 +12938,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsCumulative)
 static
 SCIP_DECL_CONSCHECK(consCheckCumulative)
 {  /*lint --e{715}*/
-   SCIP_Bool violated;
    int c;
 
    assert(conshdlr != NULL);
@@ -12947,12 +12946,13 @@ SCIP_DECL_CONSCHECK(consCheckCumulative)
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
-   violated = FALSE;
 
    SCIPdebugMessage("check %d cumulative constraints\n", nconss);
 
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_Bool violated = FALSE;
+
       SCIP_CALL( checkCons(scip, conss[c], sol, &violated, printreason) );
 
       if( violated )

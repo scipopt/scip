@@ -228,12 +228,10 @@ SCIP_RETCODE checkAllConss(
 
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
-      SCIP_RESULT subresult;
+      SCIP_RESULT subresult = SCIP_FEASIBLE;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-
-      subresult = SCIP_FEASIBLE;
 
       /* check all constraints */
       for( i = 0; i < consdata->nconss && subresult == SCIP_FEASIBLE; ++i )
@@ -246,9 +244,10 @@ SCIP_RETCODE checkAllConss(
       {
          /* mark solution as violated */
          *result = SCIP_INFEASIBLE;
-         if( printreason && subresult == SCIP_INFEASIBLE )
+         if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n",
+            assert( 0 < i && i <= consdata->nconss );
+            SCIPinfoMessage(scip, NULL, "Conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution.\n",
                SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
          }
