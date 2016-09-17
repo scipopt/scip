@@ -12712,7 +12712,7 @@ SCIP_RETCODE checkSolOrig(
    /* check bounds */
    if( checkbounds )
    {
-      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < scip->origprob->nvars && (*feasible || completely); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -12733,11 +12733,10 @@ SCIP_RETCODE checkSolOrig(
                SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
                   SCIPvarGetName(var), lb, ub, solval);
             }
-
-            if( !completely )
-               return SCIP_OKAY;
          }
       }
+      if( ! *feasible )
+         return SCIP_OKAY;
    }
 
    /* check original constraints
@@ -12746,7 +12745,7 @@ SCIP_RETCODE checkSolOrig(
     * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
     * have to be checked;
     */
-   for( c = 0; c < scip->origprob->nconss; ++c )
+   for( c = 0; c < scip->origprob->nconss && (*feasible || completely); ++c )
    {
       if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
       {
@@ -12755,27 +12754,21 @@ SCIP_RETCODE checkSolOrig(
                checkintegrality, checklprows, printreason, &result) );
 
          if( result != SCIP_FEASIBLE )
-         {
             *feasible = FALSE;
-            if( !completely )
-               return SCIP_OKAY;
-         }
       }
    }
+   if( ! *feasible )
+      return SCIP_OKAY;
 
    /* call constraint handlers that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   for( h = 0; h < scip->set->nconshdlrs && (*feasible || completely); ++h )
    {
       if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
       {
          SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
                checkintegrality, checklprows, printreason, completely, &result) );
          if( result != SCIP_FEASIBLE )
-         {
             *feasible = FALSE;
-            if( !completely)
-               return SCIP_OKAY;
-         }
       }
    }
 
