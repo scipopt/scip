@@ -3776,7 +3776,8 @@ SCIP_RETCODE writeOpbRelevantAnds(
       SCIP_VAR* var;
       SCIP_Bool neg;
 
-      resvar = resvars[r]; /*lint !e613 */
+      assert( resvars != NULL );
+      resvar = resvars[r];
 
       /* print fixed and-resultants */
       if( SCIPvarGetLbLocal(resvar) > 0.5 || SCIPvarGetUbLocal(resvar) < 0.5 )
@@ -3789,12 +3790,13 @@ SCIP_RETCODE writeOpbRelevantAnds(
       }
 
       assert( andvars != NULL && nandvars != NULL );
-      assert(andvars[r] != NULL || nandvars[r] == 0); /*lint !e613 */
+      assert( andvars[r] != NULL || nandvars[r] == 0 );
 
       /* print fixed and-variables */
       for( v = nandvars[r] - 1; v >= 0; --v ) /*lint !e613 */
       {
-	 assert(andvars[r][v] != NULL); /*lint !e613 */
+         assert( andvars[r] != NULL );
+	 assert( andvars[r][v] != NULL );
 
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
 
@@ -3812,7 +3814,8 @@ SCIP_RETCODE writeOpbRelevantAnds(
     */
    for( r = nresvars - 1; r >= 0; --r )
    {
-      resvar = resvars[r]; /*lint !e613 */
+      assert( resvars != NULL );
+      resvar = resvars[r];
       rhslhs = (SCIPvarGetUbLocal(resvar) < 0.5) ? 0 : ((SCIPvarGetLbLocal(resvar) > 0.5) ? 1 : -1);
 
       /* if and resultant is fixed to 0 and at least one and-variable is fixed to zero, we don't print this redundant constraint */
@@ -3822,14 +3825,16 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
          cont = FALSE;
 
-         assert(andvars[r] != NULL || nandvars[r] == 0); /*lint !e613 */
+         assert( andvars != NULL && nandvars != NULL );
+         assert( andvars[r] != NULL || nandvars[r] == 0 );
 
          /* if resultant variable and one other and variable is already zero, so we did not need to print this and
           * constraint because all other variables are free
           */
          for( v = nandvars[r] - 1; v >= 0; --v ) /*lint !e613 */
 	 {
-	    assert(andvars[r][v] != NULL); /*lint !e613 */
+            assert( andvars[r] != NULL );
+	    assert( andvars[r][v] != NULL );
 
             if( SCIPvarGetUbLocal(andvars[r][v]) < 0.5 ) /*lint !e613 */
             {
@@ -3848,12 +3853,14 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
          cont = TRUE;
 
-         assert(andvars[r] != NULL || nandvars[r] == 0); /*lint !e613 */
+         assert( andvars != NULL && nandvars != NULL );
+         assert( andvars[r] != NULL || nandvars[r] == 0 );
 
          /* if all variables are already fixed to one, we do not need to print this and constraint */
-         for( v = nandvars[r] - 1; v >= 0; --v ) /*lint !e613 */
+         for( v = nandvars[r] - 1; v >= 0; --v )
 	 {
-	    assert(andvars[r][v] != NULL); /*lint !e613 */
+            assert( andvars[r] != NULL );
+	    assert( andvars[r][v] != NULL );
 
             if( SCIPvarGetLbLocal(andvars[r][v]) < 0.5 ) /*lint !e613 */
             {
@@ -3879,11 +3886,13 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
          firstprinted = FALSE;
 
-         assert(andvars[r] != NULL || nandvars[r] == 0); /*lint !e613 */
+         assert( andvars != NULL && nandvars != NULL );
+         assert( andvars[r] != NULL || nandvars[r] == 0 );
 
-         for( v = nandvars[r] - 1; v >= 0; --v ) /*lint !e613 */
+         for( v = nandvars[r] - 1; v >= 0; --v )
          {
-	    assert(andvars[r][v] != NULL); /*lint !e613 */
+            assert( andvars[r] != NULL );
+	    assert( andvars[r][v] != NULL );
 
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
 
