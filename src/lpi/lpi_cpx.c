@@ -1246,6 +1246,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden, see the CPLEX documentation */
+      int nrows;
+      int j;
+
+      nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+#endif
+
       CHECK_ZERO( lpi->messagehdlr, CPXaddcols(lpi->cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
    }
    else
@@ -1329,6 +1339,15 @@ SCIP_RETCODE SCIPlpiAddRows(
    /* add rows to LP */
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols;
+      int j;
+
+      ncols = CPXgetnumcols(lpi->cpxenv, lpi->cpxlp);
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
       CHECK_ZERO( lpi->messagehdlr, CPXaddrows(lpi->cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
             rownames) );
    }

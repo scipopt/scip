@@ -601,6 +601,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
    else
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+
+      nrows = QSget_rowcount(lpi->prob);
+      for (i = 0; i < nnonz; ++i)
+         assert( 0 <= ind[i] && ind[i] < nrows );
+#endif
+
       /* compute column lengths */
       for( i = 0; i < ncols - 1; ++i )
       {
@@ -729,6 +738,17 @@ SCIP_RETCODE SCIPlpiAddRows(
       assert(beg != NULL);
       assert(ind != NULL);
       assert(val != NULL);
+
+#ifndef NDEBUG
+      {
+         /* perform check that no new cols are added - this is forbidden */
+         int ncols;
+
+         ncols = QSget_colcount(lpi->prob);
+         for (i = 0; i < nnonz; ++i)
+            assert( 0 <= ind[i] && ind[i] < ncols );
+      }
+#endif
 
       for( i = 0 ; i < nrows -1 ; i++ )
       {
