@@ -1463,7 +1463,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
       {
-         SCIPcutoffNode(scip, SCIPgetCurrentNode(scip));
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
       }
 
