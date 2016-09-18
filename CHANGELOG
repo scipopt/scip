@@ -21,6 +21,7 @@ fixed bugs:
 - writing of solutions or parameters to a file now works also with the message handler set to quiet
 - fixed bug in heur_octane with uninitialized ray direction
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
+- SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
