@@ -64,6 +64,27 @@ SCIP_RETCODE createData(
  * Callback methods of expression handler
  */
 
+/** the order of two pow is base_1^expo_1 < base_2^expo_2 if and only if
+ * base_1 < base2 or, base_1 = base_2 and expo_1 < expo_2
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRCMP(comparePow)
+{  /*lint --e{715}*/
+   SCIP_Real expo1;
+   SCIP_Real expo2;
+   int compareresult;
+
+   compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[0],
+              SCIPgetConsExprExprChildren(expr2)[0]);
+   if( compareresult != 0 )
+      return compareresult;
+
+   expo1 = SCIPgetConsExprExprPowExponent(expr1);
+   expo2 = SCIPgetConsExprExprPowExponent(expr2);
+
+   return  expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1;
+}
+
 /** simplifies a pow expression.
  * Evaluates the power function when its child is a value expression
  */
@@ -455,6 +476,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashPow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
 
    return SCIP_OKAY;
 }

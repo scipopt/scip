@@ -1273,22 +1273,24 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  * OR1: u,v value expressions: u < v <=> val(u) < val(v)
  * OR2: u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v))
  * OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
- * OR4: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
+ * OR4: u,v are both pow: u < v <=> base(u) < base(v) or, base(u) == base(v) and expo(u) < expo(v)
+ * OR5: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
  *      or if such a k doesn't exist, then n < m.
  *
  * Different type expressions:
- * OR5: u value, v other: u < v always
- * OR6: u sum, v product, var or func: u < v <=> u < 0+v
+ * OR6: u value, v other: u < v always
+ * OR9: u sum, v var or func: u < v <=> u < 0+v
  *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
- * OR7: u product, v var or func: u < v <=> u < 1*v
- *      In other words, u = \Pi_{i = 1}^n u_i ^ \alpha_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ * OR7: u product, v pow, sum, var or func: u < v <=> u < 1*v
+ *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
  *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
  *             do *not* have constant coefficients
- * OR8: u var, v func: u < v always
- * OR9: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
- * OR10: none of the rules apply: u < v <=> ! v < u
+ * OR8: u pow, v sum, var or func: u < v <=> u < v^1
+ * OR10: u var, v func: u < v always
+ * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
+ * OR12: none of the rules apply: u < v <=> ! v < u
  * Examples:
- * OR10: x < x^2 ?:  x is var and x^2 product, so none applies.
+ * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
  *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
  *
  * Algorithm
@@ -1421,7 +1423,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
    }
 }
 
-/** Implements OR4: default comparison method of expressions of the same type:
+/** Implements OR5: default comparison method of expressions of the same type:
  * expr1 < expr2 if and only if expr1_i = expr2_i for all i < k and expr1_k < expr2_k.
  * if there is no such k, use number of children to decide
  * if number of children is equal, both expressions are equal
@@ -1472,24 +1474,24 @@ int SCIPcompareConsExprExprs(
    if( exprhdlr1 == exprhdlr2 )
    {
       if( exprhdlr1->compare != NULL )
-         /* enforces OR1-OR3 */
+         /* enforces OR1-OR4 */
          return exprhdlr1->compare(expr1, expr2);
       else
-         /* enforces OR4 */
+         /* enforces OR5 */
          return compareConsExprExprsDefault(expr1, expr2);
    }
 
    /* expressions are of different kind/type */
-   /* enforces OR5 */
+   /* enforces OR6 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
    {
       return -1;
    }
-   /* enforces OR10 */
+   /* enforces OR12 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "val") == 0 )
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
-   /* enforces OR6 */
+   /* enforces OR7 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
    {
       int compareresult;
@@ -1508,11 +1510,11 @@ int SCIPcompareConsExprExprs(
       /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
       return 1;
    }
-   /* enforces OR10 */
+   /* enforces OR12 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "sum") == 0 )
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
-   /* enforces OR7 */
+   /* enforces OR8 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
    {
       int compareresult;
@@ -1531,18 +1533,39 @@ int SCIPcompareConsExprExprs(
       /* largest expression of product is larger or equal than expr2 => expr1 > expr2 */
       return 1;
    }
-   /* enforces OR10 */
+   /* enforces OR12 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
-   /* enforces OR8 */
+   /* enforces OR9 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "pow") == 0 )
+   {
+      int compareresult;
+
+      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[0], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* base equal to expr2, exponent might tell us that expr2 is larger */
+      if( SCIPgetConsExprExprPowExponent(expr1) < 1.0 )
+         return -1;
+
+      /* power expression is larger => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "pow") == 0 )
+      return -SCIPcompareConsExprExprs(expr2, expr1);
+
+   /* enforces OR10 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
       return -1;
-   /* enforces OR10 */
+   /* enforces OR12 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "var") == 0 )
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
-   /* enforces OR9 */
+   /* enforces OR11 */
    retval = strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
