@@ -28,6 +28,9 @@
  *
  * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
+ * @todo When making an interface change to SCIPcreateProb(), add an indication whether it is known that the objective
+ *       function is integral or whether this is not known. This avoids a manual call of SCIPsetObjIntegral(). Moreover,
+ *       then the detection could be performed incrementally, whenever a variable is added.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
