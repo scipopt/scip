@@ -756,7 +756,7 @@ void updateDualBounds(
    if( val > 0 )
    {
       newubdual = (objval - mincolresact) / val;
-      assert(SCIPisGE(scip,newubdual,0));
+      assert(SCIPisGE(scip, newubdual, 0.0));
 
       if( newubdual < ubdual[part][row] )
       {
@@ -770,7 +770,7 @@ void updateDualBounds(
    else if( val < 0 )
    {
       newlbdual = (objval - mincolresact) / val;
-      assert(SCIPisGE(scip,ubdual[part][row],newlbdual));
+      assert(SCIPisGE(scip, ubdual[part][row], newlbdual));
 
       if( newlbdual > lbdual[part][row] )
       {
