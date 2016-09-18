@@ -10322,12 +10322,47 @@ SCIP_Bool SCIPisObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   int v;
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjIntegral", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return SCIPprobIsObjIntegral(scip->origprob);
+
+      /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+      if ( scip->set->nactivepricers != 0 )
+         return FALSE;
+
+      /* if the objective value offset is fractional, the value itself is possibly fractional */
+      if ( ! SCIPisIntegral(scip, scip->origprob->objoffset) )
+         return FALSE;
+
+      /* scan through the variables */
+      for (v = 0; v < scip->origprob->nvars; ++v)
+      {
+         SCIP_Real obj;
+
+         /* get objective value of variable */
+         obj = SCIPvarGetObj(scip->origprob->vars[v]);
+
+         /* check, if objective value is non-zero */
+         if ( ! SCIPisZero(scip, obj) )
+         {
+            /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+            if ( ! SCIPisIntegral(scip, obj) )
+               break;
+
+            /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+            if ( SCIPvarGetType(scip->origprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               break;
+         }
+      }
+
+      /* we do not store the result, since we assume that the original problem might be changed */
+      if ( v == scip->origprob->nvars )
+         return TRUE;
+      return FALSE;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITPRESOLVE:
