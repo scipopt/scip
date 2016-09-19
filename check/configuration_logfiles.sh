@@ -108,6 +108,7 @@ for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflis
 do
     SHORTPROBNAME=`basename $SHORTPROBNAME $EXTENSION`
 done
+SHORTPROBNAME=`"${SHORTPROBNAME:0:25}"`
 
 # if number of permutations is positive, add postfix
 if test $PERMUTE -gt 0
