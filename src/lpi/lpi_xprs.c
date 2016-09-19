@@ -892,6 +892,18 @@ SCIP_RETCODE SCIPlpiAddCols(
    /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureValMem(lpi, ncols+1) );
 
+#ifndef NDEBUG
+   {
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+      int j;
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
+
    /* we need ncol+1 entries in the start array for Xpress */
    for( c = 0; c < ncols; c++ )
       lpi->indarray[c] = beg[c];
@@ -1002,6 +1014,18 @@ SCIP_RETCODE SCIPlpiAddRows(
    SCIPdebugMessage("adding %d rows with %d nonzeros to Xpress\n", nrows, nnonz);
 
    invalidateSolution(lpi);
+
+#ifndef NDEBUG
+   {
+      /* perform check that no new cols are added - this is forbidden */
+      int ncols;
+      int j;
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
