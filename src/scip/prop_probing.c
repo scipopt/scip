@@ -174,7 +174,6 @@ SCIP_RETCODE sortVariables(
    SCIP_VAR** sortedvars;
    int nsortedvars;
    SCIP_Real* scores;
-   SCIP_Real randomoffset;
    int i;
    int minnprobings;
    SCIP_Real maxscore;
@@ -206,9 +205,6 @@ SCIP_RETCODE sortVariables(
    maxscore = -1.0;
    minnprobings = INT_MAX;
 
-   /* get a random offset to ensure a unique ordering */
-   randomoffset = SCIPgetRandomReal(0.0, 0.5, &propdata->randseed);
-
    /* determine maximal possible score and minimal number of probings over all variables */
    for( i = 0; i < nvars; ++i )
    {
@@ -233,14 +229,12 @@ SCIP_RETCODE sortVariables(
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
 	    + 10*MIN(nimplzero, nimplone)
-	    + 100*MIN(nclqzero, nclqone)
-	    - randomoffset; /* to have a unique order */
+	    + 100*MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
 	    + MIN(nlocksdown, nlocksup)
 	    + 500 * nimplzero + 50 * nimplone
-	    + 50000 * nclqzero + 5000 * nclqone
-	    - randomoffset; /* to have a unique order */
+	    + 50000 * nclqzero + 5000 * nclqone;
 #endif
 
          if( tmp > maxscore )
@@ -274,6 +268,7 @@ SCIP_RETCODE sortVariables(
       /* prefer variables that we did not already probe on */
       if( SCIPvarIsActive(var) )
       {
+         SCIP_Real randomoffset;
          nlocksdown = SCIPvarGetNLocksDown(var);
          nlocksup = SCIPvarGetNLocksUp(var);
          nimplzero = SCIPvarGetNImpls(var, FALSE);
@@ -284,39 +279,23 @@ SCIP_RETCODE sortVariables(
          assert(propdata->noldtotalvars > SCIPvarGetIndex(var));
          assert(propdata->nprobed[SCIPvarGetIndex(var)] >= 0);
 
-         if( propdata->nprobed[SCIPvarGetIndex(var)] == 0 )
-	 {
-#ifndef VARIANT_B
-	    scores[i] = -MAX(nlocksdown, nlocksup)
-	       + 10*MIN(nimplzero, nimplone)
-	       + 100*MIN(nclqzero, nclqone)
-	       - randomoffset; /* to have a unique order */
-#else
-	    scores[i] = - ABS(nlocksdown - nlocksup)
-	       + MIN(nlocksdown, nlocksup)
-	       + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-	       + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
-	       - randomoffset; /* to have a unique order */
-#endif
+         /* use a random offset to break possible ties arbitrarily */
+         randomoffset = SCIPgetRandomReal(0.0, 0.5, &propdata->randseed);
 
-	 }
-         else
-	 {
 #ifndef VARIANT_B
-	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
-	       - MAX(nlocksdown, nlocksup)
-	       + 10*MIN(nimplzero, nimplone)
-	       + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
-	       - randomoffset; /* to have a unique order */
+         scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
+            - MAX(nlocksdown, nlocksup)
+            + 10*MIN(nimplzero, nimplone)
+            + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
+            - randomoffset; /* to break ties randomly */
 #else
-	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
-	       - ABS(nlocksdown - nlocksup)
-	       + MIN(nlocksdown, nlocksup)
-	       + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-	       + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
-	       - randomoffset; /* to have a unique order */
+         scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
+         - ABS(nlocksdown - nlocksup)
+         + MIN(nlocksdown, nlocksup)
+         + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
+         + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
+         - randomoffset; /* to break ties randomly */
 #endif
-	 }
       }
       else
          scores[i] = -SCIPinfinity(scip);
