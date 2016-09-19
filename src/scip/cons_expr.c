@@ -1404,6 +1404,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") != 0);
 
             /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
              * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
