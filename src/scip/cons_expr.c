@@ -1036,6 +1036,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
             SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
          else if(strcmp(type, "val") == 0)
             SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
+         else if(strcmp(type, "pow") == 0)
+            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
          else if(strcmp(type, "exp") == 0)
             SCIPinfoMessage(scip, NULL, "\n");
          else if(strcmp(type, "log") == 0)
