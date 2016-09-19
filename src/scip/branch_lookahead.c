@@ -230,6 +230,7 @@ void initStatus(
    status->firstlvlfullcutoff = FALSE;
    status->domred = FALSE;
    status->domredcutoff = FALSE;
+   status->propagationdomred = FALSE;
 }
 
 static
@@ -956,39 +957,6 @@ void addSupposedLowerBound(
 }
 
 /**
- * Calculate the weight of a node for given up and down gains.
- *
- * @return the node weight for the given gains.
- */
-static
-SCIP_Real calculateNodeWeight(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             upgain,             /**< the gain on the up branch */
-   SCIP_Real             downgain            /**< the gain on the down branch */
-)
-{
-   SCIP_Real result;
-   SCIP_Real min;
-   SCIP_Real max;
-   /* the weights are chosen arbitrarily */
-   SCIP_Real minweight = 4;
-   SCIP_Real maxweight = 1;
-
-   assert(scip != NULL);
-   assert(SCIPisFeasGE(scip, upgain, 0.0));
-   assert(SCIPisFeasGE(scip, downgain, 0.0));
-
-   min = MIN(downgain, upgain);
-   max = MAX(upgain, downgain);
-
-   result = minweight * min + maxweight * max;
-
-   SCIPdebugMessage("The calculated weight of <%g> and <%g> is <%g>.\n", upgain, downgain, result);
-
-   return result;
-}
-
-/**
  * Create a name for the implied binary bounds.
  */
 static
@@ -1232,7 +1200,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             assert(!SCIPisFeasNegative(scip, upgain));
 
             /* calculate the weight of both gains */
-            currentweight = calculateNodeWeight(scip, upgain, downgain);
+            currentweight = SCIPgetBranchScore(scip, NULL, downgain, upgain);
 
             /* add the new weight to the weight data */
             weightdata->highestweight = MAX(weightdata->highestweight, currentweight);
@@ -1716,7 +1684,7 @@ SCIP_Bool isExecuteFirstLevelBranching(
 }
 
 static
-SCIP_Bool boundsChanged(
+SCIP_Bool areBoundsChanged(
    SCIP*                 scip,
    SCIP_VAR*             var,
    SCIP_Real             lowerbound,
@@ -1774,8 +1742,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_NODE* basenode;
       SCIP_Real lpobjval;
       SCIP_Real highestscore = 0;
-      SCIP_Real highestscoreupperbound;
-      SCIP_Real highestscorelowerbound;
+      SCIP_Real highestscoreupperbound = SCIPinfinity(scip);
+      SCIP_Real highestscorelowerbound = -SCIPinfinity(scip);
       int highestscoreindex = -1;
       int i;
 
@@ -1970,7 +1938,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
             }
          }
 
-         if( highestscoreindex != -1 && boundsChanged(scip, lpcands[highestscoreindex], highestscorelowerbound, highestscoreupperbound) )
+         if( highestscoreindex != -1 && areBoundsChanged(scip, lpcands[highestscoreindex], highestscorelowerbound, highestscoreupperbound) )
          {
             status->propagationdomred = TRUE;
          }
@@ -2149,7 +2117,9 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+#ifdef SCIP_STATISTICS
    SCIPfreeMemoryArray(scip, &branchruledata->nresults);
+#endif
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -2161,15 +2131,19 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
 static
 SCIP_DECL_BRANCHINIT(branchInitLookahead)
 {  /*lint --e{715}*/
-   int i;
    SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
 
-   for( i = 0; i < 18; i++)
+#ifdef SCIP_STATISTICS
    {
-      branchruledata->nresults[i] = 0;
+      int i;
+      for( i = 0; i < 18; i++)
+      {
+         branchruledata->nresults[i] = 0;
+      }
    }
+#endif
 
    /* Create an empty solution. Gets filled in case of implied binary bounds. */
    SCIP_CALL( SCIPcreateSol(scip, &branchruledata->prevbinsolution, NULL) );
