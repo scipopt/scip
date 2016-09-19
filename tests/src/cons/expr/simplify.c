@@ -50,11 +50,11 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"0+0", "val"},
       {"-<x>+2*<y>-<y>-<y>", "sum"},
       {"-<x>+2*<y>+2*(0+0.5*<x>-<y>)", "val"},
-      {"<x>*<x>", "prod"},
+      {"<x>*<x>", "pow"},
       {"(2*<x>)*(2*<x>)", "sum"},
-      {"<x>*<x>^2", "prod"},
+      {"<x>*<x>^2", "pow"},
       {"(<x>^0.5)^2", "var"},
-      {"(<y>^2)^2", "prod"},
+      {"(<y>^2)^2", "pow"},
       {"1*2*(<x>+<y>)*<x>*4*0*5", "val"},
       {"(<x>^0.25)^2*(<x>^0.25)^2", "var"},
       {"(<x>)^0.25*(<x>)^0.25*(<x>)^0.25*(<x>)^0.25", "var"},
@@ -68,7 +68,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(2*<x>)^2", "sum"},
       {"(<x> + <y>)^2", "sum"},
       {"(<x> + <y> + 2)^2", "sum"},
-      {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "prod"},
+      {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "pow"},
       //{"-<x>^2 + (<x> + <y>)^2 - 2*<x>*<y> - <y>^2", "val"}, // order is important to test the internal algorithms
       {"<x>^2 * (1.0 / (<x>^2 * <y>)) * <y>", "val"}, // order is important to test the internal algorithms
       {"(<x> + <y> + <fixvar>)^2 - <x>^2 - 2*<x>*<y> - <y>^2 - <fixvar>^2 -2*<x>*<fixvar> - 2*<fixvar>*<y>", "val"},
