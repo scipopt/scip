@@ -10332,6 +10332,9 @@ SCIP_Bool SCIPisObjIntegral(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      /* if the user explicitly added the information that there is an integral objective, return TRUE */
+      if( SCIPprobIsObjIntegral(scip->origprob) )
+         return TRUE;
 
       /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
       if ( scip->set->nactivepricers != 0 )
