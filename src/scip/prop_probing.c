@@ -63,7 +63,7 @@
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
 #define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
-#define DEFAULT_RANDSEED            53  /**< random initial seed */
+#define DEFAULT_RANDSEED            57  /**< random initial seed */
 
 /*
  * Data structures
