@@ -104,6 +104,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_CONSEXPR_EXPR* simplified_again;
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real values[2];
 
@@ -122,21 +123,25 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
 
    /* simplify */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = simplified;
 
    /* check type of simplified expression */
-   cr_expect_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), type);
+   cr_expect_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(simplified)), type);
 
    /* test it evaluates to the same; expect because we want to release the expression even if this fails */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol1, 0) );
-   cr_expect_float_eq(values[0], SCIPgetConsExprExprValue(expr), SCIPfeastol(scip));
+   SCIP_CALL( SCIPevalConsExprExpr(scip, simplified, sol1, 0) );
+   cr_expect_float_eq(values[0], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip));
 
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol2, 0) );
-   cr_expect_float_eq(values[1], SCIPgetConsExprExprValue(expr), SCIPfeastol(scip));
+   SCIP_CALL( SCIPevalConsExprExpr(scip, simplified, sol2, 0) );
+   cr_expect_float_eq(values[1], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip));
 
-   /* release expression */
+   /* test that the same expression is obtained when simplifying again */
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, simplified, &simplified_again) );
+   cr_expect_eq(SCIPcompareConsExprExprs(simplified, simplified_again), 0);
+
+   /* release expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified_again) );
 }
 
 /** execution method of presolver */
