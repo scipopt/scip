@@ -1933,9 +1933,14 @@ SCIP_RETCODE storeSolution(
    {
       primalobj = SCIPsolGetOrigObj(sol);
 
-      /* why do we have to check first? */
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &stored, heurdata->heurverblevel > 0 ? TRUE : FALSE, TRUE) );
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, FALSE, TRUE, &stored) );
+      if( heurdata->heurverblevel > 0 )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, FALSE, TRUE, &stored) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
+      }
    }
    else
       stored = FALSE;
