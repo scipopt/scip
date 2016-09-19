@@ -12715,7 +12715,7 @@ SCIP_RETCODE checkSolOrig(
    /* check bounds */
    if( checkbounds )
    {
-      for( v = 0; v < scip->origprob->nvars; ++v )
+      for( v = 0; v < scip->origprob->nvars && (*feasible || completely); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -12736,11 +12736,10 @@ SCIP_RETCODE checkSolOrig(
                SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
                   SCIPvarGetName(var), lb, ub, solval);
             }
-
-            if( !completely )
-               return SCIP_OKAY;
          }
       }
+      if( !(*feasible) && !completely )
+         return SCIP_OKAY;
    }
 
    /* check original constraints
@@ -12761,7 +12760,7 @@ SCIP_RETCODE checkSolOrig(
             *feasible = FALSE;
       }
    }
-   if( ! *feasible )
+  if( !(*feasible) && !completely )
       return SCIP_OKAY;
 
    /* call constraint handlers that don't need constraints */
