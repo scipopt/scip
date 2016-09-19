@@ -27,6 +27,7 @@
 #include <scip/scip.h>
 #include <lpi/lpi.h>
 
+#include <signal.h>
 #include "include/scip_test.h"
 
 #define EPS 1e-6
@@ -52,7 +53,9 @@ void teardown(void)
 TestSuite(matrix, .init = setup, .fini = teardown);
 
 /** TESTS **/
-Test(matrix, create_matrix, .disabled = true)
+
+/* This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass. */
+Test(matrix, create_matrix, .disabled = false, .signal = SIGABRT)
 {
    SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
