@@ -25,6 +25,7 @@
 #include "scip/cons_expr_sumprod.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_pow.h"
 
 
 #include "include/scip_test.h"
