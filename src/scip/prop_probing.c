@@ -207,7 +207,7 @@ SCIP_RETCODE sortVariables(
    minnprobings = INT_MAX;
 
    /* get a random offset to ensure a unique ordering */
-   randomoffset = SCIPgetRandomReal(0.0, 1.0, &propdata->randseed);
+   randomoffset = SCIPgetRandomReal(0.0, 0.5, &propdata->randseed);
 
    /* determine maximal possible score and minimal number of probings over all variables */
    for( i = 0; i < nvars; ++i )
