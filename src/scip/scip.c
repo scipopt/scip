@@ -12712,6 +12712,20 @@ SCIP_RETCODE checkSolOrig(
    if( !printreason )
       completely = FALSE;
 
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs && (*feasible || completely); ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+         if( result != SCIP_FEASIBLE )
+            *feasible = FALSE;
+      }
+   }
+   if( !(*feasible) && !completely )
+      return SCIP_OKAY;
+
    /* check bounds */
    if( checkbounds )
    {
@@ -12756,20 +12770,6 @@ SCIP_RETCODE checkSolOrig(
          SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
                checkintegrality, checklprows, printreason, &result) );
 
-         if( result != SCIP_FEASIBLE )
-            *feasible = FALSE;
-      }
-   }
-  if( !(*feasible) && !completely )
-      return SCIP_OKAY;
-
-   /* call constraint handlers that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs && (*feasible || completely); ++h )
-   {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
          if( result != SCIP_FEASIBLE )
             *feasible = FALSE;
       }
