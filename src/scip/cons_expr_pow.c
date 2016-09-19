@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_sumprod.h"
 #include "scip/cons_expr_pow.h"
 
 #define POW_PRECEDENCE  55000
@@ -91,7 +92,7 @@ SCIP_DECL_CONSEXPR_EXPRCMP(comparePow)
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
 {
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSEXPR_EXPR* base;
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real exponent;
 
@@ -103,36 +104,226 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
    conshdlr = SCIPfindConshdlr(scip, "expr");
    assert(conshdlr != NULL);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
+   base = SCIPgetConsExprExprChildren(expr)[0];
+   assert(base != NULL);
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
+   /* when exponent is inteer, round exponent so that is actually an integer
+    * TODO: should this go in the createConsExprExprPow? */
+   if( SCIPisIntegral(scip, exponent) )
+      exponent = SCIPround(scip, exponent);
 
-   /* check for value expression */
-   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   SCIPdebugPrintf("[simplifyPow] simplifying power with expo %g\n", exponent);
+
+   /* enforces POW1 */
+   if( exponent == 0.0 )
    {
-      SCIP_Real base;
+      SCIPdebugPrintf("[simplifyPow] POW1\n");
+      /* TODO: more checks? */
+      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrValue(conshdlr) &&
+            SCIPgetConsExprExprValueValue(base) == 0.0 )
+      {
+         assert(0);
+      }
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, 1.0) );
+      return SCIP_OKAY;
+   }
 
-      base = SCIPgetConsExprExprValueValue(child);
+   /* enforces POW2 */
+   if( exponent == 1.0 )
+   {
+      SCIPdebugPrintf("[simplifyPow] POW2\n");
+      *simplifiedexpr = base;
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+      return SCIP_OKAY;
+   }
+
+   /* enforces POW3 */
+   if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      SCIP_Real baseval;
+
+      SCIPdebugPrintf("[simplifyPow] POW3\n");
+      baseval = SCIPgetConsExprExprValueValue(base);
 
       /* TODO check if those are all important asserts */
-      assert(base >= 0.0 || fmod(exponent, 2.0) == 1.0);
-      assert(base != 0.0 || exponent != 0.0);
+      assert(baseval >= 0.0 || fmod(exponent, 2.0) == 1.0);
+      assert(baseval != 0.0 || exponent != 0.0);
 
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, pow(base, exponent)) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, pow(baseval, exponent)) );
+      return SCIP_OKAY;
    }
-   else if( exponent == 1.0 )
-   {
-      *simplifiedexpr = child;
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
-   }
-   else
-   {
-      *simplifiedexpr = expr;
 
-      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
+   if( SCIPisIntegral(scip, exponent) )
+   {
+      SCIP_CONSEXPR_EXPR* aux;
+      SCIP_CONSEXPR_EXPR* simplifiedaux;
+
+      /* enforces POW5
+       * given (pow n (prod 1.0 expr_1 ... expr_k)) we distribute the exponent:
+       * -> (prod 1.0 (pow n expr_1) ... (pow n expr_k))
+       * notes: - since base is simplified and its coefficient is 1.0 (SP8)
+       *        - n is an integer (excluding 1 and 0; see POW1-2 above)
+       */
+      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      {
+         int i;
+         SCIP_CONSEXPR_EXPR* auxproduct;
+
+         /* create empty product */
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &auxproduct, 0, NULL, NULL, 1.0) );
+
+         for( i = 0; i < SCIPgetConsExprExprNChildren(base); ++i )
+         {
+            /* create (pow n expr_i) and simplify */
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux,
+                     SCIPgetConsExprExprChildren(base)[i], exponent) );
+            SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+            /* append (pow n expr_i) to product */
+            SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, auxproduct, simplifiedaux, 1.0) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
+         }
+
+         /* simplify (prod 1.0 (pow n expr_1) ... (pow n expr_k))
+          * TODO: ideally we would call simplifyProduct directly, since we know its children are simplified! */
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, auxproduct, simplifiedexpr) ); /*FIXME*/
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &auxproduct) );
+         return SCIP_OKAY;
+      }
+
+      /* enforces POW6
+       * given (pow n (sum 0.0 coef expr)) we can move `pow` inside `sum`:
+       * (pow n (sum 0.0 coef expr) ) -> (sum 0.0 coef^n (pow n expr))
+       * notes: - since base is simplified and its constant is 0, then coef != 1.0 (SS7)
+       *        - n is an integer (excluding 1 and 0; see POW1-2 above)
+       */
+      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrSum(conshdlr)
+            && SCIPgetConsExprExprNChildren(base) == 1
+            && SCIPgetConsExprExprSumConstant(base) == 0.0 )
+      {
+         SCIP_Real newcoef;
+
+         SCIPdebugPrintf("[simplifyPow] seing a sum with one term, exponent %g\n", exponent);
+         /* assert SS7 holds */
+         assert(SCIPgetConsExprExprSumCoefs(base)[0] != 1.0);
+
+         /* create (pow n expr) and simplify it
+          * note: we call simplifyPow directly, since we know that `expr` is simplified */
+         newcoef = pow(SCIPgetConsExprExprSumCoefs(base)[0], exponent);
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], exponent) );
+         SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+         /* create (sum (pow n expr)) and simplify it
+          * TODO: ideally we would call simplifySum directly, since we know its child is simplified! */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &aux, 1, &simplifiedaux, &newcoef, 0.0) );
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, aux, simplifiedexpr) ); /*FIXME*/
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
+         return SCIP_OKAY;
+      }
+
+      /* enforces POW7
+       * (const + sum alpha_i expr_i)^2 = sum alpha_i^2 expr_i^2
+       * + sum_{j < i} 2*alpha_i alpha_j expr_i expr_j
+       * + sum const alpha_i expr_i
+       * TODO: put some limits on the number of children of the sum being expanded
+       */
+      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrSum(conshdlr) && exponent == 2 )
+      {
+         int i;
+         int nchildren;
+         int nexpandedchildren;
+         SCIP_CONSEXPR_EXPR* expansion;
+         SCIP_CONSEXPR_EXPR** expandedchildren;
+         SCIP_Real* coefs;
+         SCIP_Real constant;
+
+         SCIPdebugPrintf("[simplifyPow] expanding sum^%g\n", exponent);
+
+         nchildren = SCIPgetConsExprExprNChildren(base);
+         nexpandedchildren = nchildren * (nchildren + 1) / 2 + nchildren;
+         SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nexpandedchildren) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &expandedchildren, nexpandedchildren) );
+
+         for( i = 0; i < nchildren; ++i )
+         {
+            int j;
+            SCIP_CONSEXPR_EXPR* expansionchild;
+            SCIP_CONSEXPR_EXPR* prodchildren[2];
+            prodchildren[0] = SCIPgetConsExprExprChildren(base)[i];
+
+            /* create and simplify expr_i * expr_j */
+            for( j = 0; j < i; ++j )
+            {
+               prodchildren[1] = SCIPgetConsExprExprChildren(base)[j];
+               coefs[i*(i+1)/2 + j] = 2 * SCIPgetConsExprExprSumCoefs(base)[i] * SCIPgetConsExprExprSumCoefs(base)[j];
+
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expansionchild, 2, prodchildren, NULL, 1.0) );
+               SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expansionchild, &expandedchildren[i*(i+1)/2 + j]) ); /* FIXME: call simplifyProduct */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansionchild) );
+            }
+            /* create and simplify expr_i * expr_i */
+            prodchildren[1] = SCIPgetConsExprExprChildren(base)[i];
+            coefs[i*(i+1)/2 + i] = SCIPgetConsExprExprSumCoefs(base)[i] * SCIPgetConsExprExprSumCoefs(base)[i];
+
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expansionchild, 2, prodchildren, NULL, 1.0) );
+            SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expansionchild, &expandedchildren[i*(i+1)/2 + i]) ); /* FIXME: call simplifyProduct */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansionchild) );
+         }
+         /* create const * alpha_i expr_i */
+         for( i = 0; i < nchildren; ++i )
+         {
+            coefs[i + nexpandedchildren - nchildren] = 2 * SCIPgetConsExprExprSumConstant(base) * SCIPgetConsExprExprSumCoefs(base)[i];
+            expandedchildren[i + nexpandedchildren - nchildren] = SCIPgetConsExprExprChildren(base)[i];
+         }
+
+         constant = SCIPgetConsExprExprSumConstant(base);
+         constant *= constant;
+         /* create sum of all the above and simplify it with simplifySum since all of its children are simplified! */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expansion, nexpandedchildren,
+                  expandedchildren, coefs, constant) );
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expansion, simplifiedexpr) ); /* FIXME: call simplifySum */
+
+         /* release eveything */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansion) );
+         /* release the *created* expanded children */
+         for( i = 0; i < nexpandedchildren - nchildren; ++i )
+         {
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expandedchildren[i]) );
+         }
+         SCIPfreeBufferArray(scip, &coefs);
+         SCIPfreeBufferArray(scip, &expandedchildren);
+
+         return SCIP_OKAY;
+      }
+
+      /* enforces POW8
+       * given (pow n (pow expo expr)) we distribute the exponent:
+       * -> (pow n*expo expr)
+       * notes: n is an integer (excluding 1 and 0; see POW1-2 above)
+       */
+      /* FIXME: use SCIPgetConsExprExprHdlrPow */
+      if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(base)), "pow") == 0 )
+      {
+         SCIP_Real newexponent;
+
+         newexponent = SCIPgetConsExprExprPowExponent(base) * exponent;
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], newexponent) );
+         SCIP_CALL( simplifyPow(scip, aux, simplifiedexpr) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+         return SCIP_OKAY;
+      }
    }
+
+   SCIPdebugPrintf("[simplifyPow] power is simplified\n");
+   *simplifiedexpr = expr;
+
+   /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+   SCIPcaptureConsExprExpr(*simplifiedexpr);
 
    return SCIP_OKAY;
 }
