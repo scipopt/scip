@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*#define SCIP_DEBUG*/
-#define SCIP_STATISTICS
+/*#define SCIP_STATISTICS*/
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -105,6 +105,7 @@ typedef struct
    SCIP_Bool             firstlvlfullcutoff; /**<  */
    SCIP_Bool             domredcutoff;       /**<  */
    SCIP_Bool             domred;             /**<  */
+   SCIP_Bool             propagationdomred;  /**<  */
 } Status;
 
 /**
@@ -123,7 +124,6 @@ typedef struct
  */
 typedef struct
 {
-   int                   varindex;           /**< the index of the first level variable currently branched on */
    int                   ncutoffs;           /**< counter for the the number of second level cutoffs */
    WeightData*           upperbounddata;     /**< the WeightData of the down branch (branched on upper bound) */
    WeightData*           lowerbounddata;     /**< the WeightData of the up branch (branched on lower bound) */
@@ -259,12 +259,10 @@ void initWeightData(
  */
 static
 void initScoreData(
-   ScoreData*            scoredata,          /**< The struct to be initiated. */
-   int                   currvarindex        /**< The current first level branching var index. */
+   ScoreData*            scoredata           /**< The struct to be initiated. */
 )
 {
    scoredata->ncutoffs = 0;
-   scoredata->varindex = currvarindex;
    initWeightData(scoredata->lowerbounddata);
    initWeightData(scoredata->upperbounddata);
 }
@@ -1219,7 +1217,6 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                downgain);
             if( SCIPisNegative(scip, downgain) )
             {
-               /* TODO CS: is this really okay?? */
                SCIPdebugMessage("The difference is negative. To work on we overwrite it with 0.\n");
                downgain = 0;
             }
@@ -1228,7 +1225,6 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                upgain);
             if( SCIPisNegative(scip, upgain) )
             {
-               /* TODO CS: is this really okay?? */
                SCIPdebugMessage("The difference is negative. To work on we overwrite it with 0.\n");
                upgain = 0;
             }
@@ -1430,22 +1426,19 @@ static
 void calculateCurrentWeight(
    SCIP*                 scip,               /**< SCIP data structure */
    ScoreData*            scoredata,          /**< the information to calculate the new weight on */
-   SCIP_Real*            highestweight,      /**< pointer to the current highest weight; gets updated with the new highest
+   SCIP_Real*            currentweight       /**< pointer to the current highest weight; gets updated with the new highest
                                               *   weight */
-   int*                  highestweightindex  /**< pointer to the index with the highest weight; gets updated accordingly */
 )
 {
    SCIP_Real averageweightupperbound = 0;
    SCIP_Real averageweightlowerbound = 0;
    SCIP_Real lambda;
-   SCIP_Real totalweight;
 
    assert(scip != NULL);
    assert(!SCIPisFeasNegative(scip, scoredata->upperbounddata->highestweight));
    assert(!SCIPisFeasNegative(scip, scoredata->lowerbounddata->highestweight));
    assert(!SCIPisFeasNegative(scip, (SCIP_Real)scoredata->ncutoffs));
-   assert(highestweight != NULL);
-   assert(highestweightindex != NULL);
+   assert(currentweight != NULL);
 
    /* calculate the average weights of up and down branches */
    averageweightupperbound = calculateAverageWeight(scip, scoredata->upperbounddata);
@@ -1458,15 +1451,8 @@ void calculateCurrentWeight(
    assert(!SCIPisFeasNegative(scip, lambda));
 
    /* calculate the weight by adding up the max weights of up and down branches as well as the normalized number of cutoffs */
-   totalweight = scoredata->lowerbounddata->highestweight + scoredata->upperbounddata->highestweight
+   *currentweight = scoredata->lowerbounddata->highestweight + scoredata->upperbounddata->highestweight
       + lambda * scoredata->ncutoffs;
-
-   if( SCIPisFeasGT(scip, totalweight, *highestweight) )
-   {
-      /* if the new weight is higher than the old one: replace it and update date index accordingly */
-      *highestweight = totalweight;
-      *highestweightindex = scoredata->varindex;
-   }
 }
 
 /**
@@ -1729,6 +1715,17 @@ SCIP_Bool isExecuteFirstLevelBranching(
    return !status->lperror && !status->vioimpbinconst && !status->firstlvlfullcutoff;
 }
 
+static
+SCIP_Bool boundsChanged(
+   SCIP*                 scip,
+   SCIP_VAR*             var,
+   SCIP_Real             lowerbound,
+   SCIP_Real             upperbound
+)
+{
+   return SCIPvarGetLbLocal(var) != lowerbound || SCIPvarGetUbLocal(var) != upperbound;
+}
+
 /**
  * Selects a variable from a set of candidates by applying strong branching with a depth of 2.
  * If the branching generated additional bounds, like domain reductions from cutoffs, those are added and a suitable result
@@ -1777,6 +1774,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_NODE* basenode;
       SCIP_Real lpobjval;
       SCIP_Real highestscore = 0;
+      SCIP_Real highestscoreupperbound;
+      SCIP_Real highestscorelowerbound;
       int highestscoreindex = -1;
       int i;
 
@@ -1832,7 +1831,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
          {
             initSupposedBoundData(supposedbounds);
          }
-         initScoreData(scoredata, i);
+         initScoreData(scoredata);
 
          branchvar = lpcands[i];
          branchval = lpcandssol[i];
@@ -1956,8 +1955,24 @@ SCIP_RETCODE selectVarLookaheadBranching(
             else
             {
                /* if neither of both branches was cutoff we can calculate the weight for the current variable */
-               calculateCurrentWeight(scip, scoredata, &highestscore, &highestscoreindex);
+               SCIP_Real currentScore;
+
+               calculateCurrentWeight(scip, scoredata, &currentScore);
+
+               if( SCIPisFeasGT(scip, currentScore, highestscore) )
+               {
+                  /* if the new weight is higher than the old one: replace it and update the index accordingly */
+                  highestscore = currentScore;
+                  highestscoreindex = i;
+                  highestscorelowerbound = SCIPvarGetLbLocal(branchvar);
+                  highestscoreupperbound = SCIPvarGetUbLocal(branchvar);
+               }
             }
+         }
+
+         if( highestscoreindex != -1 && boundsChanged(scip, lpcands[highestscoreindex], highestscorelowerbound, highestscoreupperbound) )
+         {
+            status->propagationdomred = TRUE;
          }
       }
 
@@ -2039,7 +2054,8 @@ SCIP_RETCODE branchOnVar(
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
 
-   /*assert(*result == SCIP_DIDNOTRUN);*/
+   SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
+      SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
    SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
 
@@ -2180,6 +2196,7 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 {  /*lint --e{715}*/
+   /* TODO CS: handle the allowaddcons flag! */
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_SOL* baselpsol = NULL;
    Status* status;
@@ -2244,6 +2261,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       {
          *result = SCIP_CUTOFF;
       }
+      else if( status->propagationdomred )
+      {
+         *result = SCIP_REDUCEDDOM;
+      }
       else if( status->vioimpbinconst || status->addimpbinconst )
       {
          *result = SCIP_CONSADDED;
@@ -2271,10 +2292,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
             nlpcands, bestcand, SCIPvarGetName(var), val);
 
          SCIP_CALL( branchOnVar(scip, var, val, result) );
-
-         SCIPdebugMessage("Result: Branched on variable <%s>\n", SCIPvarGetName(var));
       }
-      else if( *result == SCIP_REDUCEDDOM)
+
+#ifdef SCIP_DEBUG
+      if( *result == SCIP_BRANCHED )
+      {
+         SCIPdebugMessage("Result: Finished LookaheadBranching by branching.\n");
+      }
+      if( *result == SCIP_REDUCEDDOM )
       {
          SCIPdebugMessage("Result: Finished LookaheadBranching by reducing domains.\n");
       }
@@ -2298,6 +2323,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       {
          SCIPdebugMessage("Result: Could not find any variable to branch on.\n");
       }
+#endif
 
       SCIPfreeBufferArray(scip, &lpcandssol);
       SCIPfreeBufferArray(scip, &lpcands);
