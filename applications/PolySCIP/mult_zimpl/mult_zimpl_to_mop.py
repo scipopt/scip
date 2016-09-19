@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import argparse
 from collections import defaultdict
 import os
@@ -19,10 +21,10 @@ def obj_name_is_feasible(obj, names):
     
 
 def zimpl_to_mop(problem_file, path_for_mop_file, path_to_zimpl):
-    '''Takes a multicriteria problem file in extended zimpl format and
+    """Takes a multicriteria problem file in extended zimpl format and
     adjusts it such that it conforms entirely to the single-criteria zimpl format. 
     Zimpl is then called on the file and its output adjusted to the mop file format.
-    '''
+    """
     min_max_pattern = re.compile(r'[ \t]*m(ini|axi)mize[ \t]+[a-z]\w*[ \t]*:', re.IGNORECASE) 
     obj_pattern = re.compile(r'[\t]*[a-z]\w*[ \t]*:', re.IGNORECASE)
     subto_pattern = re.compile(r'[ \t]*subto[ \t]*:')

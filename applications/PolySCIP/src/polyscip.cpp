@@ -90,6 +90,9 @@ namespace polyscip {
 
 
     void Polyscip::printStatus(std::ostream& os) const {
+        os << "Number of extremal supported bounded results: " << supported_.size() << "\n";
+        os << "Number of supported unbounded results: " << unbounded_.size() << "\n";
+        os << "Number of non-extremal bounded results: " << unsupported_.size() << "\n";
         switch(polyscip_status_) {
             case PolyscipStatus::CompUnsupportedPhase:
                 os << "PolySCIP Status: ComputeUnsupportedPhase\n";
@@ -775,53 +778,52 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    void Polyscip::printResults(ostream &os, bool withSolutions) const {
-        os << "Number of extremal supported bounded results: " << supported_.size() << "\n";
+    void Polyscip::printResults(ostream &os) const {
         for (const auto& result : supported_) {
-            printPoint(result.second, os);
-            if (withSolutions)
+            if (cmd_line_args_.outputOutcomes())
+                outputOutcome(result.second, os);
+            if (cmd_line_args_.outputSols())
                 printSol(result.first, os);
             os << "\n";
         }
-        os << "Number of supported unbounded results: " << unbounded_.size() << "\n";
         for (const auto& result : unbounded_) {
-            printRay(result.second, os);
-            if (withSolutions)
+            if (cmd_line_args_.outputOutcomes())
+                outputOutcome(result.second, os, "Ray = ");
+            if (cmd_line_args_.outputSols())
                 printSol(result.first, os);
             os << "\n";
         }
-        os << "Number of non-extremal bounded results: " << unsupported_.size() << "\n";
         for (const auto& result : unsupported_) {
-            printPoint(result.second, os);
-            if (withSolutions)
+            if (cmd_line_args_.outputOutcomes())
+                outputOutcome(result.second, os);
+            if (cmd_line_args_.outputSols())
                 printSol(result.first, os);
             os << "\n";
         }
     }
 
     void Polyscip::printSol(const SolType& sol, ostream& os) const {
-        os << " Non-zero solution variables: ";
         for (const auto& elem : sol)
             os << elem.first << "=" << elem.second << " ";
     }
 
-    void Polyscip::printPoint(const OutcomeType& point, ostream& os) const {
+    void Polyscip::outputOutcome(const OutcomeType &outcome, std::ostream &os, const std::string desc) const {
         if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE) {
-            global::print(point, "Point = [ ", "]", os, std::negate<ValueType>());
+            global::print(outcome, desc + "[ ", "] ", os, std::negate<ValueType>());
         }
         else {
-            global::print(point, "Point = [ ", "]", os);
+            global::print(outcome, desc + "[ ", "] ", os);
         }
     }
 
-    void Polyscip::printRay(const OutcomeType& ray, ostream& os) const {
+    /*void Polyscip::printRay(const OutcomeType& ray, ostream& os) const {
         if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE) {
             global::print(ray, "Ray = [ ", "]", os, std::negate<ValueType>());
         }
         else {
             global::print(ray, "Ray = [ ", "]", os);
         }
-    }
+    }*/
 
     bool Polyscip::filenameIsOkay(const string& filename) {
         std::ifstream file(filename.c_str());
@@ -1015,7 +1017,7 @@ namespace polyscip {
             cout << "ERROR writing vertex enumeration file\n.";
     }
 
-    void Polyscip::writeSupportedResults() const {
+    void Polyscip::writeResultsToFile() const {
         auto prob_file = cmd_line_args_.getProblemFile();
         size_t prefix = prob_file.find_last_of("/"), //separate path/ and filename.mop
                 suffix = prob_file.find_last_of("."),      //separate filename and .mop

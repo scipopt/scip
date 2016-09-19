@@ -37,8 +37,12 @@ namespace polyscip {
         cmd.add(only_extremal_arg);
         SwitchArg be_verbose_arg("v", "verbose", "verbose PolySCIP cmd line output ", false);
         cmd.add(be_verbose_arg);
-        SwitchArg write_sols_arg("w", "writeSols", "write solutions to file; default path is ./", false);
-        cmd.add(write_sols_arg);
+        SwitchArg write_results_arg("w", "writeResults", "write results to file; default path is ./", false);
+        cmd.add(write_results_arg);
+        SwitchArg output_sols_arg("s", "noSolutions", "switching output of solutions off", true);
+        cmd.add(output_sols_arg);
+        SwitchArg output_outcomes_arg("o", "noOutcomes", "switching output of outcomes off", true);
+        cmd.add(output_outcomes_arg);
         ValueArg<TimeLimitType> time_limit_arg("t", "timeLimit",
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
@@ -50,7 +54,7 @@ namespace polyscip {
                                              "PATH for -w",
                                              false, "./", "PATH");
         cmd.add(write_sols_path_arg);
-        ValueArg<string> param_file_arg("p", "paramSets", "parameter settings file for SCIP",
+        ValueArg<string> param_file_arg("p", "params", "parameter settings file for SCIP",
                                         false, "", "paramFile.set");
         cmd.add(param_file_arg);
         UnlabeledValueArg<string> prob_file_arg("probFile", "problem file in MOP format",
@@ -60,10 +64,12 @@ namespace polyscip {
 
         be_verbose_ = be_verbose_arg.getValue();
         only_extremal_ = only_extremal_arg.getValue();
-        write_sols_ = write_sols_arg.getValue();
+        write_results_ = write_results_arg.getValue();
+        output_solutions_ = output_sols_arg.getValue();
+        output_outcomes_ = output_outcomes_arg.getValue();
         time_limit_ = time_limit_arg.getValue();
         epsilon_ = epsilon_arg.getValue();
-        write_sols_path_ = write_sols_path_arg.getValue();
+        write_results_path_ = write_sols_path_arg.getValue();
         param_file_ = param_file_arg.getValue();
         prob_file_ = prob_file_arg.getValue();
     }

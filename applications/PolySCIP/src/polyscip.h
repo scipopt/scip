@@ -48,13 +48,13 @@ namespace polyscip {
 
         SCIP_RETCODE computeNondomPoints();
 
-        bool writeResults() const {return cmd_line_args_.writeSolutions();};
+        bool writeResults() const {return cmd_line_args_.writeResults();};
 
-        void writeSupportedResults() const;
+        void writeResultsToFile() const;
 
         void writeFileForVertexEnumeration() const;
 
-        void printResults(std::ostream &os = std::cout, bool withSolution = true) const;
+        void printResults(std::ostream &os = std::cout) const;
 
         void printStatus(std::ostream& os = std::cout) const;
 
@@ -166,10 +166,10 @@ namespace polyscip {
         void printSol(const SolType& sol, std::ostream& os) const;
 
         /** Prints given ray to given output stream */
-        void printRay(const OutcomeType &ray, std::ostream &os = std::cout) const;
+        //void printRay(const OutcomeType &ray, std::ostream &os = std::cout) const;
 
         /** Prints given point to given output stream */
-        void printPoint(const OutcomeType &point, std::ostream& os) const;
+        void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
 
         bool lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const;
 

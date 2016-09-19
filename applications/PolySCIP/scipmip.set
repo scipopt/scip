@@ -1,2 +1,3 @@
 reoptimization/enable=FALSE
 display/verblevel=0
+numerics/epsilon=1e-10

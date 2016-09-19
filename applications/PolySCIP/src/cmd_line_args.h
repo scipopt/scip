@@ -34,14 +34,16 @@ namespace polyscip {
 
         bool beVerbose() const {return be_verbose_;};
         bool onlyExtremal() const {return only_extremal_;};
-        bool writeSolutions() const {return write_sols_;};
+        bool writeResults() const {return write_results_;};
+        bool outputOutcomes() const { return output_outcomes_;};
+        bool outputSols() const {return output_solutions_;};
         bool hasTimeLimit() const {return time_limit_ != kTimeLimitInf;}
         bool hasParameterFile() const {return !param_file_.empty();};
         TimeLimitType getTimeLimit() const {return time_limit_;};
         double getEpsilon() const {return epsilon_;};
         std::string getParameterFile() const {return param_file_;};
         std::string getProblemFile() const {return prob_file_;};
-        std::string getWritePath() const {return write_sols_path_;};
+        std::string getWritePath() const {return write_results_path_;};
 
     private:
         std::string executable_name_;
@@ -50,12 +52,14 @@ namespace polyscip {
         // arguments read from command line
         bool be_verbose_;
         bool only_extremal_;
-        bool write_sols_;
+        bool write_results_;
+        bool output_solutions_;
+        bool output_outcomes_;
         TimeLimitType time_limit_;
         double epsilon_;
         std::string param_file_;
         std::string prob_file_;
-        std::string write_sols_path_;
+        std::string write_results_path_;
     };
 
 }

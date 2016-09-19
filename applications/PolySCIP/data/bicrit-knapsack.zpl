@@ -1,3 +1,4 @@
+# instances from http://l1.lamsade.dauphine.fr/~hugot/instances.html
 param n := read "Type_A/100_items/2KP100-TA-0.dat" as "2n" skip 2 use 1;
 set I := {1..n};
 param weight[I] := read "Type_A/100_items/2KP100-TA-0.dat" as "2n" skip 4 use 100;
