@@ -1242,17 +1242,23 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  * - is a var expression
  * - is a product expression such that
  *    SP1:  every child is simplified
- *    SP2:  no child with integer exponent is a product
- *    SP3:  no child with integer exponent is a sum with a single term ((2*x)^2 -> 4*x^2)
+ *    SP2:  no child is a product
  *    SP4:  no two children are the same expression (those should be multiplied)
  *    SP5:  the children are sorted [commutative rule]
- *    SP6:  no exponent is 0
  *    SP7:  no child is a value
  *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
- *    SP9:  if it consists of a single child, then its exponent != 1.0
- *    SP10: it has at least one child
+ *    SP10: it has at least two children
  *    ? at most one child is an exp
  *    ? at most one child is an abs
+ * - is a power expression such that
+ *    POW1: exponent is not 0
+ *    POW2: exponent is not 1
+ *    POW3: its child is not a value
+ *    POW4: its child is simplified
+ *    POW5: if exponent is integer, its child is not a product
+ *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
+ *    POW7: if exponent is 2, its child is not a sum (expand sums)
+ *    POW8: if exponent is integer, its child is not a power
  * - is a sum expression such that
  *    SS1: every child is simplified
  *    SS2: no child is a sum
