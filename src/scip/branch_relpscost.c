@@ -63,7 +63,7 @@
 #define DEFAULT_SKIPBADINITCANDS TRUE  /**< should branching rule skip candidates that have a low probability to be
                                           *  better than the best strong-branching or pseudo-candidate? */
 #define DEFAULT_STARTRANDSEED      5    /**< start random seed for random number generation */
-#define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
+#define DEFAULT_RANDINITORDER  FALSE    /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS TRUE     /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
 /** branching rule data */
@@ -101,7 +101,7 @@ struct SCIP_BranchruleData
    int*                  nlcount;            /**< array to store nonlinear count values */
    int                   nlcountsize;        /**< length of nlcount array */
    int                   nlcountmax;         /**< maximum entry in nlcount array or 1 if NULL */
-   SCIP_Bool             randinitorder;      /**< should init candidates be processed in a random order? */
+   SCIP_Bool             randinitorder;      /**< should slight perturbation of scores be used to break ties in the prior scores? */
    unsigned int          randseed;           /**< random seed for random number generation */
    int                   startrandseed;      /**< start random seed for random number generation */
    SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
@@ -852,7 +852,7 @@ SCIP_RETCODE execRelpscost(
 
             /* assign a random score to this uninitialized candidate */
             if( branchruledata->randinitorder )
-               score = SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed);
+               score += SCIPgetRandomReal(0.0, 1e-4, &branchruledata->randseed);
 
             /* pseudo cost of variable is not reliable: insert candidate in initcands buffer */
             for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
