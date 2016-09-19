@@ -1606,7 +1606,7 @@ SCIP_RETCODE SCIPsolCheck(
       completely = FALSE;
 
    /* check whether the solution respects the global bounds of the variables */
-   if( checkbounds )
+   if( checkbounds || sol->hasinfval )
    {
       int v;
 
@@ -1626,65 +1626,53 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
 
-            /* check finite lower bound */
-            if( !SCIPsetIsInfinity(set, -lb) )
-               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
-
-            /* check finite upper bound */
-            if( !SCIPsetIsInfinity(set, ub) )
-               *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
-
-            if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
+            if( checkbounds )
             {
-               SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
-                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
-            }
-         }
+               /* check finite lower bound */
+               if( !SCIPsetIsInfinity(set, -lb) )
+                  *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+
+               /* check finite upper bound */
+               if( !SCIPsetIsInfinity(set, ub) )
+                  *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
+
+               if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
+               {
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+               }
 
 #ifdef SCIP_DEBUG
-         if( !(*feasible) && !printreason )
-         {
-            SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-               SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         }
+               if( !(*feasible) && !printreason )
+               {
+                  SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+               }
 #endif
-      }
-   }
-
-   /* check whether there are infinite variable values that lead to an objective value of +infinity */
-   if( *feasible && sol->hasinfval )
-   {
-      int v;
-
-      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-
-         var = prob->vars[v];
-         solval = SCIPsolGetVal(sol, set, stat, var);
-         assert(solval != SCIP_INVALID); /*lint !e777*/
-
-         if( solval != SCIP_UNKNOWN ) /*lint !e777*/
-         {
-            *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
-            *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
-
-            if( printreason && ((SCIPsetIsInfinity(set, solval) &&  SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) ||
-                  (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
-            {
-               SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                  solval, SCIPvarGetName(var), SCIPvarGetObj(var));
             }
-         }
+
+            /* check whether there are infinite variable values that lead to an objective value of +infinity */
+            if( *feasible && sol->hasinfval )
+            {
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
+
+               if( printreason && ((SCIPsetIsInfinity(set, solval) &&  SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) ||
+                     (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
+               {
+                  SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                     solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+               }
 
 #ifdef SCIP_DEBUG
-         if( !(*feasible) && !printreason )
-         {
-            SCIPdebugPrintf("infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-               solval, SCIPvarGetName(var), SCIPvarGetObj(var));
-         }
+               if( !(*feasible) && !printreason )
+               {
+                  SCIPdebugPrintf("infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                     solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+               }
 #endif
+            }
+         }
       }
    }
 
