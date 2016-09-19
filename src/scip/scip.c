@@ -12709,6 +12709,9 @@ SCIP_RETCODE checkSolOrig(
 
    *feasible = TRUE;
 
+   if( !printreason )
+      completely = FALSE;
+
    /* check bounds */
    if( checkbounds )
    {
@@ -37404,6 +37407,9 @@ SCIP_RETCODE SCIPtrySol(
 
    bestsol = SCIPgetBestSol(scip);
 
+   if( !printreason )
+      completely = FALSE;
+
    /* we cannot check partial solutions */
    if( SCIPsolIsPartial(sol) )
    {
@@ -37495,6 +37501,9 @@ SCIP_RETCODE SCIPtrySolFree(
 
    bestsol = SCIPgetBestSol(scip);
 
+   if( !printreason )
+      completely = FALSE;
+
    /* we cannot check partial solutions */
    if( SCIPsolIsPartial(*sol) )
    {
@@ -37580,6 +37589,9 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP_CALL( checkStage(scip, "SCIPtryCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
 
    SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
          scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, heur,
@@ -37678,6 +37690,9 @@ SCIP_RETCODE SCIPcheckSol(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || scip->set->misc_exactsolve;
 
+   if( !printreason )
+      completely = FALSE;
+
    if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
@@ -37729,6 +37744,9 @@ SCIP_RETCODE SCIPcheckSolOrig(
       SCIPerrorMessage("Cannot check feasibility of partial solutions.");
       return SCIP_INVALIDDATA;
    }
+
+   if( !printreason )
+      completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
    SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );

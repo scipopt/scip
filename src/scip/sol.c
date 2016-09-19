@@ -1602,6 +1602,9 @@ SCIP_RETCODE SCIPsolCheck(
 
    *feasible = TRUE;
 
+   if( !printreason )
+      completely = FALSE;
+
    /* check whether the solution respects the global bounds of the variables */
    if( checkbounds )
    {
