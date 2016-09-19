@@ -108,6 +108,7 @@ if test "$CONTINUE" = "true" && test -e results/$FILENAME.out
 then
     echo skipping file $INSTANCE due to existing output file results/$FILENAME.out
     SKIPINSTANCE="true"
+    return
 fi
 
 # configure global names TMPFILE (batch file) and SETFILE to save settings to
