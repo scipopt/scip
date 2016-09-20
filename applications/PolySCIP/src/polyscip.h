@@ -85,6 +85,10 @@ namespace polyscip {
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator end) const;
 
+        bool isSupportedExtremePoint(const ValPair& new_point,
+                                     const ValPair& pred,
+                                     const ValPair& succ) const;
+
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
         SCIP_RETCODE solve();
@@ -158,9 +162,6 @@ namespace polyscip {
                                                   const ValueType& new_lhs,
                                                   const ValueType& new_rhs);
 
-        ValPair getInitialBetaPair(const ValueType& upper_bound_obj1, const ValueType& upper_bound_obj2, const ValPair& reference_point) const;
-
-
         void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
 
         void printSol(const SolType& sol, std::ostream& os) const;
@@ -171,9 +172,9 @@ namespace polyscip {
         /** Prints given point to given output stream */
         void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
 
-        bool lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const;
+        bool lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const = delete;
 
-        bool lhsCoincidesWithRhs(const ValPair &lhs, const ValPair &rhs, double eps=0.001) const;
+        bool lhsCoincidesWithRhs(ValueType lhs, ValueType rhs, double eps=0.0001) const;
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
