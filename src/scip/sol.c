@@ -1572,7 +1572,12 @@ SCIP_RETCODE SCIPsolMarkPartial(
    return SCIP_OKAY;
 }
 
-/** checks primal CIP solution for feasibility */
+/** checks primal CIP solution for feasibility
+ *
+ *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
+ *        differently. There might be some variables which do not have an original counter part (e.g. in
+ *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
+ */
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
