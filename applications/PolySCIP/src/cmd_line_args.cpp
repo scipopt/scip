@@ -33,7 +33,7 @@ namespace polyscip {
         version_no_ = std::to_string(POLYSCIP_VERSION_MAJOR) + string(".") + std::to_string(POLYSCIP_VERSION_MINOR);
         CmdLine cmd(executable_name_,' ', version_no_);
         cmd.setExceptionHandling(false); // set internal exception handling
-        SwitchArg only_extremal_arg("e", "extremal", "compute only extremal supported non-dominated results", false);
+        SwitchArg only_extremal_arg("x", "extremal", "compute only extremal supported non-dominated results", false);
         cmd.add(only_extremal_arg);
         SwitchArg be_verbose_arg("v", "verbose", "verbose PolySCIP cmd line output ", false);
         cmd.add(be_verbose_arg);
@@ -47,8 +47,8 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
-        ValueArg<double> epsilon_arg("d", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-3",
-                                     false, 1e-3, "double");
+        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-4",
+                                     false, 1e-4, "double");
         cmd.add(epsilon_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
                                              "PATH for -w",

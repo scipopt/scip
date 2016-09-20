@@ -166,7 +166,7 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    list<Polyscip::ValPair> Polyscip::getNondomProjectedPoints(size_t obj_1, size_t obj_2) const {
+    list<Polyscip::ValPair> Polyscip::getProjectedNondomExtremePoints(size_t obj_1, size_t obj_2) const {
         auto projected_points = vector<ValPair>{};
         for (const auto& sup : supported_)
             projected_points.push_back({sup.second[obj_1], sup.second[obj_2]});
@@ -179,10 +179,12 @@ namespace polyscip {
                       return (SCIPisLT(scip_ptr, p1.first, p2.first) ||
                               (SCIPisEQ(scip_ptr, p1.first, p2.first) && SCIPisLT(scip_ptr, p1.second, p2.second)));});
         auto nondom_projected_points = list<ValPair>{};
+        double slope = 1.;
         nondom_projected_points.push_back(projected_points.front());
         for (auto point=std::next(projected_points.cbegin()); point!=projected_points.cend(); ++point) {
             if (SCIPisLT(scip_ptr, point->second, nondom_projected_points.back().second)) {
                 assert (SCIPisGT(scip_ptr, point->first, nondom_projected_points.back().first));
+
                 nondom_projected_points.push_back(*point);
             }
         }
@@ -235,7 +237,7 @@ namespace polyscip {
                                              nonzero_obj_orig_vars,
                                              nonzero_obj_orig_vals,
                                              {obj1, obj2},
-                                             std::move(getNondomProjectedPoints(obj1, obj2)));
+                                             std::move(getProjectedNondomExtremePoints(obj1, obj2)));
                 }
             }
         }
@@ -353,25 +355,13 @@ namespace polyscip {
             return false;
     }*/
 
-    bool Polyscip::lhsCoincidesWithRhs(ValueType lhs,ValueType rhs, double eps) const {
-        if (std::fabs(lhs - rhs) < eps)
+    bool Polyscip::lhsCoincidesWithRhs(ValueType lhs,ValueType rhs) const {
+        if (std::fabs(lhs - rhs) < cmd_line_args_.getEpsilon())
             return true;
         else
             return false;
     }
 
-    bool Polyscip::isSupportedExtremePoint(const ValPair& new_point,
-                                           const ValPair& pred,
-                                           const ValPair& succ) const {
-        assert (pred.first <= new_point.first && new_point.first <= succ.first);
-        // solve for alpha: alpha*pred.first + (1-alpha)*succ.first = new_point.first
-        double alpha = (new_point.first - succ.first) / (pred.first - succ.first);
-        auto convex_comb_y = alpha*pred.second + (1.0 - alpha)*succ.second;
-        if (SCIPisLT(scip_, new_point.second, convex_comb_y))
-            return true;
-        else
-            return false;
-    }
 
     SCIP_RETCODE Polyscip::solveWeightedTchebycheff(SCIP_VAR* new_var,
                                                     const vector<vector<SCIP_VAR*>>& orig_vars,
@@ -382,52 +372,55 @@ namespace polyscip {
         assert (orig_vars.size() == orig_vals.size());
         assert (orig_vals.size() == no_objs_);
 
+        std::cout << "cons point: \n";
+        for (const auto& p : nondom_proj_points) {
+            std::cout << p.first << ", " << p.second << "\n";
+        }
+
         if (nondom_proj_points.size() > 1) {
-            auto no_orig_cons = SCIPgetNConss(scip_);
+
             auto pred = nondom_proj_points.begin();
 
             while (pred != std::prev(end(nondom_proj_points)) && polyscip_status_==PolyscipStatus::CompUnsupportedPhase) {
 
-                assert (SCIPgetNConss(scip_) == no_orig_cons);
                 auto succ = std::next(pred);
-                
+                if (!(pred->first < succ->first)) {
+                    std::cout << pred->first << " - " << succ->first << "\n";
+                }
+
                 assert (pred->first < succ->first);
                 assert (pred->second > nondom_proj_points.back().second);
 
-                auto obj_val_cons = vector<SCIP_CONS *>{};
+                auto cons = vector<SCIP_CONS *>{};
                 // create constraint pred.first <= c_{objs.first} \cdot x <= succ.first
-                obj_val_cons.push_back(createObjValCons(orig_vars[objs.first],
+                cons.push_back(createObjValCons(orig_vars[objs.first],
                                                         orig_vals[objs.first],
                                                         pred->first,
                                                         succ->first));
                 // create constraint optimal_val_objs.second <= c_{objs.second} \cdot x <= pred.second
-                obj_val_cons.push_back(createObjValCons(orig_vars[objs.second],
+                cons.push_back(createObjValCons(orig_vars[objs.second],
                                                         orig_vals[objs.second],
                                                         nondom_proj_points.back().second,
                                                         pred->second));
-                for (auto cons : obj_val_cons)
-                    SCIP_CALL(SCIPaddCons(scip_, cons));
-
 
                 auto ref_point = std::make_pair(pred->first - 1., nondom_proj_points.back().second - 1.);
                 // set beta = (beta_1,beta_2) s.t. pred and succ are both on the norm rectangle defined by beta
                 auto beta_1 = 1.0;
                 auto beta_2 = (succ->first - ref_point.first) / (pred->second - ref_point.second);
-                auto new_var_trans_cons = vector<SCIP_CONS *>{};
                 // create constraint with respect to beta_1
-                new_var_trans_cons.push_back(createNewVarTransformCons(new_var,
-                                                                       orig_vars[objs.first],
-                                                                       orig_vals[objs.first],
-                                                                       ref_point.first,
-                                                                       beta_1));
+                cons.push_back(createNewVarTransformCons(new_var,
+                                                         orig_vars[objs.first],
+                                                         orig_vals[objs.first],
+                                                         ref_point.first,
+                                                         beta_1));
                 // create constraint with respect to beta_2
-                new_var_trans_cons.push_back(createNewVarTransformCons(new_var,
-                                                                       orig_vars[objs.second],
-                                                                       orig_vals[objs.second],
-                                                                       ref_point.second,
-                                                                       beta_2));
-                for (auto cons : new_var_trans_cons) {
-                    SCIP_CALL(SCIPaddCons(scip_, cons));
+                cons.push_back(createNewVarTransformCons(new_var,
+                                                         orig_vars[objs.second],
+                                                         orig_vals[objs.second],
+                                                         ref_point.second,
+                                                         beta_2));
+                for (auto c : cons) {
+                    SCIP_CALL(SCIPaddCons(scip_, c));
                 }
 
                 SCIP_CALL(solve());
@@ -441,9 +434,13 @@ namespace polyscip {
                         ++pred;
                     }
                     else { // new point found
+                        std::cout << "NEW POINT: \n";
+                        std::cout << "pred = " << pred->first << ", " << pred->second << "\n";
+                        std::cout << "succ " << succ->first << ", " << succ->second << "\n";
+                        std::cout << "proj = " << proj.first << ", " << proj.second << "\n";
                         addNewUnsupportedNondomPoint(new_var,
-                                                     obj_val_cons.front(),
-                                                     obj_val_cons.back(),
+                                                     cons.front(),
+                                                     *std::next(begin(cons)),
                                                      proj.first,
                                                      proj.second);
                         auto new_projection = std::make_pair(unsupported_.back().second[objs.first],
@@ -463,13 +460,9 @@ namespace polyscip {
                 // release and delete constraints
                 if (SCIPisTransformed(scip_))
                     SCIP_CALL(SCIPfreeTransform(scip_));
-                for (auto cons : new_var_trans_cons) {
-                    SCIP_CALL(SCIPdelCons(scip_, cons));
-                    SCIP_CALL(SCIPreleaseCons(scip_, addressof(cons)));
-                }
-                for (auto cons : obj_val_cons) {
-                    SCIP_CALL(SCIPdelCons(scip_, cons));
-                    SCIP_CALL(SCIPreleaseCons(scip_, addressof(cons)));
+                for (auto c : cons) {
+                    SCIP_CALL(SCIPdelCons(scip_, c));
+                    SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
                 }
             }
         }

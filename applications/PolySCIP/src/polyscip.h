@@ -85,9 +85,6 @@ namespace polyscip {
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator end) const;
 
-        bool isSupportedExtremePoint(const ValPair& new_point,
-                                     const ValPair& pred,
-                                     const ValPair& succ) const;
 
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
@@ -126,7 +123,7 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
-        std::list<ValPair> getNondomProjectedPoints(std::size_t obj_1, std::size_t obj_2) const;
+        std::list<ValPair> getProjectedNondomExtremePoints(std::size_t obj_1, std::size_t obj_2) const;
 
         SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
@@ -174,7 +171,7 @@ namespace polyscip {
 
         bool lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const = delete;
 
-        bool lhsCoincidesWithRhs(ValueType lhs, ValueType rhs, double eps=0.0001) const;
+        bool lhsCoincidesWithRhs(ValueType lhs, ValueType rhs) const;
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
