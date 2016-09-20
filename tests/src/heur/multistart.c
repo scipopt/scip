@@ -30,6 +30,11 @@ static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_HEUR* heursubnlp;
 static SCIP_HEUR* heurmultistart;
+static SCIP_HASHMAP* varindex;
+static SCIP_EXPRINT* exprint;
+static SCIP_SOL* sol;
+
+#define EPS    1e-5
 
 static
 void setup(void)
@@ -41,7 +46,7 @@ void setup(void)
    SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &origx, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &origy, "y", 0.0, 100.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &origy, "y", -10.0, 10.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, origx) );
    SCIP_CALL( SCIPaddVar(scip, origy) );
 
@@ -53,8 +58,19 @@ void setup(void)
    x = SCIPvarGetTransVar(origx);
    y = SCIPvarGetTransVar(origy);
 
+   /* create mapping between variables and 0,..,SCIPgetNVars(scip)-1 */
+   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(2)) );
+   SCIP_CALL( SCIPhashmapInsert(varindex, (void*)x, (void*)(size_t)0) );
+   SCIP_CALL( SCIPhashmapInsert(varindex, (void*)y, (void*)(size_t)1) );
+
    SCIP_CALL( SCIPreleaseVar(scip, &origx) );
    SCIP_CALL( SCIPreleaseVar(scip, &origy) );
+
+   /* expression interpreter */
+   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
+
+   /* solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
    heurmultistart = SCIPfindHeur(scip, "multistart");
    heursubnlp = SCIPfindHeur(scip, "subnlp");
@@ -65,6 +81,9 @@ void setup(void)
 static
 void teardown(void)
 {
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPexprintFree(&exprint) );
+   SCIPhashmapFree(&varindex);
    SCIP_CALL( SCIPfree(&scip) );
 }
 
@@ -106,9 +125,6 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_VAR* quadvars[2];
    SCIP_QUADELEM quadelems[3];
    SCIP_Real grad[2];
-   SCIP_EXPRINT* exprint;
-   SCIP_HASHMAP* varindex;
-   SCIP_SOL* sol;
    SCIP_EXPRTREE* tree;
    SCIP_EXPR* expexpr;
    SCIP_EXPR* xexpr;
@@ -132,13 +148,6 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    quadelems[2].idx1 = 0;
    quadelems[2].idx2 = 1;
    quadelems[2].coef = 5.0;
-
-   /* initialize data structures */
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(2)) );
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPhashmapInsert(varindex, (void*)x, (void*)(size_t)0) );
-   SCIP_CALL( SCIPhashmapInsert(varindex, (void*)y, (void*)(size_t)1) );
 
    /* compute the gradient for 2.3*x - 3.1*y at point (x,y) = (-2,3) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
@@ -187,30 +196,130 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
    SCIP_CALL( SCIPexprtreeFree(&tree) );
-
-   /* free memory */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIPhashmapFree(&varindex);
-   SCIP_CALL( SCIPexprintFree(&exprint) );
 }
 
 Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    .description = "check improvePoint subroutine of the multi-start heuristic"
    )
 {
+   SCIP_VAR* vars[2];
+   SCIP_Real lincoefs[2];
+   SCIP_QUADELEM quadelems[2];
+   SCIP_NLROW* nlrows[2];
+   SCIP_Real maxviol;
 
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
+
+   vars[0] = x;
+   vars[1] = y;
+
+   /* for one linear constraint the method should stop after one iteration (if the projection on the linear constraint
+    * is not outside the domain)
+    */
+   lincoefs[0] = 5.0;
+   lincoefs[1] = 1.0;
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0) );
+   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, &maxviol) );
+   cr_expect(SCIPisFeasEQ(scip, maxviol, 0.0));
+
+   /* consider one quadratic constraint of the form sqrt(x^2 + y^2) = 0.5 */
+   quadelems[0].idx1 = 0;
+   quadelems[0].idx2 = 0;
+   quadelems[0].coef = 1.0;
+   quadelems[1].idx1 = 1;
+   quadelems[1].idx2 = 1;
+   quadelems[1].coef = 1.0;
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow2", 0.0, 0, NULL, NULL, 2, vars, 2, quadelems, NULL, 0.25, 0.25) );
+
+   /* start inside the ball */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.2) );
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, &maxviol) );
+   cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
+
+   /* start outside the ball */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, &maxviol) );
+   cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
+
+   /* consider linear and quadratic constraint */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -10.0) );
+   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, &maxviol) );
+   cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
+
+   /* free nlrows */
+   SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[1]) );
+   SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[0]) );
 }
 
 Test(heuristic, filterPoints, .init = setup, .fini = teardown,
    .description = "check filterPoints subroutine of the multi-start heuristic"
    )
 {
+   SCIP_SOL* points[10];
+   SCIP_Real violations[10];
+   int nusefulpoints;
+   int i;
 
+   for( i = 0; i < 10; ++i )
+      violations[i] = i - 10;
+
+   /* mean violation of the points should be -6.47 which means that the points with a violation of -7, -8. -9, or -10
+    * are excluded
+    */
+   SCIP_CALL( filterPoints(scip, points, violations, 10, &nusefulpoints) );
+   cr_assert(nusefulpoints == 6);
+
+   /* check is points are ordered decreasingly w.r.t their violations */
+   for( i = 0; i < 9; ++i )
+      cr_assert(violations[i] >= violations[i+1]);
 }
 
+#define NPOINTS 10
 Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
    .description = "check clusterPointsGreedy subroutine of the multi-start heuristic"
    )
 {
+   SCIP_SOL* points[NPOINTS];
+   SCIP_Real maxreldist;
+   int clusteridx[NPOINTS];
+   int nclusters;
+   unsigned int seed;
+   int i;
 
+   maxreldist = 0.10;
+   seed = 0;
+
+   for( i = 0; i < NPOINTS; ++i )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &points[i], NULL) );
+      SCIP_CALL( SCIPsetSolVal(scip, points[i], x, SCIPgetRandomReal(-0.5, 0.5, &seed)) );
+      SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPgetRandomReal(-1.0, 1.0, &seed)) );
+   }
+
+   SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, maxreldist) );
+   cr_assert(nclusters > 0 && nclusters <= NPOINTS);
+
+   for( i = 0; i < NPOINTS; ++i )
+   {
+      int j;
+
+      cr_assert(clusteridx[i] > 0);
+      cr_assert(clusteridx[i] <= nclusters);
+
+      for( j = i + 1; j < NPOINTS; ++j )
+      {
+         SCIP_Real dist = getRelDistance(scip, points[i], points[j]);
+         cr_assert(clusteridx[i] != clusteridx[j] || dist <= maxreldist);
+      }
+   }
+
+   /* free points */
+   for( i = NPOINTS - 1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &points[i]) );
+   }
 }

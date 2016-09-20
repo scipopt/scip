@@ -142,24 +142,24 @@ SCIP_RETCODE sampleRandomPoints(
 static
 SCIP_RETCODE getMaxViol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrows,             /**< array containing all nlrows */
+   int                   nnlrows,            /**< total number of nlrows */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Real*            maxviol             /**< buffer to store the maximum violation */
    )
 {
-   SCIP_NLROW** nlrows;
    SCIP_Real tmp;
    int i;
 
    assert(scip != NULL);
    assert(sol != NULL);
    assert(maxviol != NULL);
+   assert(nlrows != NULL);
+   assert(nnlrows > 0);
 
    *maxviol = SCIPinfinity(scip);
 
-   nlrows = SCIPgetNLPNlRows(scip);
-   assert(nlrows != NULL);
-
-   for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
+   for( i = 0; i < nnlrows; ++i )
    {
       assert(nlrows[i] != NULL);
 
@@ -274,18 +274,21 @@ SCIP_RETCODE computeGradient(
 static
 SCIP_RETCODE improvePoint(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrows,             /**< array containing all nlrows */
+   int                   nnlrows,            /**< total number of nlrows */
    SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 */
    SCIP_EXPRINT*         exprinterpreter,    /**< expression interpreter */
-   SCIP_SOL*             point,                /**< random generated point */
+   SCIP_SOL*             point,              /**< random generated point */
    int                   nmaxiter,           /**< maximum number of iterations */
    SCIP_Real             minimprfac,         /**< minimum required improving factor to proceed */
    SCIP_Real*            maxviol             /**< pointer to store the maximum violation */
    )
 {
-   SCIP_NLROW** nlrows;
+   SCIP_VAR** vars;
    SCIP_Real* grad;
+   SCIP_Real* updatevec;
    SCIP_Real lastmaxviol;
-   int nnlrows;
+   int nvars;
    int r;
    int i;
 
@@ -295,12 +298,10 @@ SCIP_RETCODE improvePoint(
    assert(nmaxiter > 0);
    assert(minimprfac >= 0.0);
    assert(maxviol != NULL);
-
-   nnlrows = SCIPgetNNLPNlRows(scip);
-   nlrows = SCIPgetNLPNlRows(scip);
    assert(nlrows != NULL);
+   assert(nnlrows > 0);
 
-   SCIP_CALL( getMaxViol(scip, point, maxviol) );
+   SCIP_CALL( getMaxViol(scip, nlrows, nnlrows, point, maxviol) );
    SCIPdebugMessage("maxviol = %e\n", *maxviol);
 
    /* stop since start point is feasible */
@@ -310,7 +311,11 @@ SCIP_RETCODE improvePoint(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &grad, SCIPgetNVars(scip)) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &updatevec, nvars) );
 
    /* main loop */
    do
@@ -319,10 +324,12 @@ SCIP_RETCODE improvePoint(
       SCIP_Real activity;
       SCIP_Real nlrownorm;
       SCIP_Real scale;
+      int nviolnlrows;
 
+      BMSclearMemoryArray(updatevec, nvars);
       lastmaxviol = *maxviol;
+      nviolnlrows = 0;
 
-      /* move point; compute acitivity and gradient first */
       for( i = 0; i < nnlrows; ++i )
       {
          int j;
@@ -333,8 +340,19 @@ SCIP_RETCODE improvePoint(
          if( SCIPisFeasGE(scip, feasibility, 0.0) )
             continue;
 
+         /* increase number of violated nlrows */
+         ++nviolnlrows;
+
          SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
          SCIP_CALL( computeGradient(scip, nlrows[i], exprinterpreter, point, varindex, grad, &nlrownorm) );
+
+         /* stop if the gradient disappears at the current point */
+         if( SCIPisZero(scip, nlrownorm) )
+         {
+            r = nmaxiter - 1;
+            SCIPdebugMessage("gradient vanished at current point -> stop\n");
+            break;
+         }
 
          /* compute -g(x_k) / ||grad(g)(x_k)||^2 for a constraint g(x_k) <= 0 */
          scale = -feasibility / nlrownorm;
@@ -345,25 +363,33 @@ SCIP_RETCODE improvePoint(
          if( SCIPisEQ(scip, scale, 0.0) || SCIPisHugeValue(scip, REALABS(scale)) )
             continue;
 
-         /* update point */
-         for( j = 0; j < SCIPgetNVars(scip); ++j )
-         {
-            SCIP_Real val;
+         for( j = 0; j < nvars; ++j )
+            updatevec[j] += scale * grad[j];
+      }
+      assert(nviolnlrows > 0);
 
-            val = SCIPgetSolVal(scip, point, SCIPgetVars(scip)[j]) + scale * grad[j];
-            SCIP_CALL( SCIPsetSolVal(scip, point, SCIPgetVars(scip)[j], val) );
-         }
+      for( i = 0; i < nvars; ++i )
+      {
+         /* adjust point */
+         updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
+         updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i]));
+         updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i]));
+
+         SCIP_CALL( SCIPsetSolVal(scip, point, vars[i], updatevec[i]) );
       }
 
       /* update violations */
-      SCIP_CALL( getMaxViol(scip, point, maxviol) );
+      SCIP_CALL( getMaxViol(scip, nlrows, nnlrows, point, maxviol) );
       SCIPdebugMessage("maxviol = %e\n", *maxviol);
    }
    while( ++r < nmaxiter
       && SCIPisFeasLT(scip, *maxviol, 0.0)
       && (*maxviol - lastmaxviol) / MAX(REALABS(*maxviol), REALABS(lastmaxviol)) >= minimprfac );
 
+   SCIPdebugMessage("niter=%d maxviol=%e\n", r, *maxviol);
+
    SCIPfreeBufferArray(scip, &grad);
+   SCIPfreeBufferArray(scip, &updatevec);
 
    return SCIP_OKAY;
 }
@@ -379,6 +405,7 @@ SCIP_RETCODE filterPoints(
    )
 {
    SCIP_Real maxviolation;
+   SCIP_Real meanviol;
    int i;
 
    assert(points != NULL);
@@ -392,16 +419,23 @@ SCIP_RETCODE filterPoints(
    maxviolation = violations[npoints - 1];
    *nusefulpoints = 0;
 
+   /* compute shifted geometric mean of violations (shift value = maxviolation + 1) */
+   meanviol = 1.0;
    for( i = 0; i < npoints; ++i )
    {
-      /* consider feasible points always as useful; otherwise we take the a point if the violation is not too large,
-       * compared to the maximum violation; the latter criterion becomes more strict with the number of selected points
-       */
-      if( SCIPisFeasGE(scip, violations[i], 0.0)
-         || (1.0 - *nusefulpoints / (2.0 * npoints)) * maxviolation < violations[i] )
-         ++(*nusefulpoints);
+      assert(violations[i] - maxviolation + 1.0 >= 0.0);
+      meanviol *= pow(violations[i] - maxviolation + 1.0, 1.0 / npoints);
    }
-   assert(*nusefulpoints >= 0);
+   meanviol += maxviolation - 1.0;
+   SCIPdebugMessage("meanviol = %e\n", meanviol);
+
+   for( i = 0; i < npoints; ++i )
+   {
+      if( violations[i] <= 1.05 * meanviol )
+         break;
+
+      ++(*nusefulpoints);
+   }
 
    return SCIP_OKAY;
 }
@@ -423,11 +457,11 @@ SCIP_Real getRelDistance(
 
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      distance += (SCIPgetSolVal(scip, x, vars[i]) - SCIPgetSolVal(scip, y, vars[i]))
+      distance += REALABS(SCIPgetSolVal(scip, x, vars[i]) - SCIPgetSolVal(scip, y, vars[i]))
          / (MAX(1.0, SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i])));
    }
 
-   return distance;
+   return distance / SCIPgetNVars(scip);
 }
 
 /** cluster (useful) points with a greedy algorithm */
@@ -437,20 +471,21 @@ SCIP_RETCODE clusterPointsGreedy(
    SCIP_SOL**            points,             /**< array containing improved points */
    int                   npoints,            /**< total number of points */
    int*                  clusteridx,         /**< array to store for each point the index of the cluster */
-   SCIP_Real             maxdist             /**< maximum distance to consider points in the same cluster */
+   int*                  nclusters,          /**< pointer to store the total number of cluster */
+   SCIP_Real             maxreldist          /**< maximum relative distance between any two points of the same cluster */
    )
 {
-   int ncluster;
    int i;
 
    assert(points != NULL);
    assert(npoints > 0);
    assert(clusteridx != NULL);
-   assert(maxdist >= 0.0);
+   assert(nclusters != NULL);
+   assert(maxreldist >= 0.0);
 
    BMSclearMemoryArray(clusteridx, npoints);
 
-   ncluster = 0;
+   *nclusters = 0;
 
    for( i = 0; i < npoints; ++i )
    {
@@ -461,12 +496,13 @@ SCIP_RETCODE clusterPointsGreedy(
          continue;
 
       /* create a new cluster for i */
-      clusteridx[i] = ++ncluster;
+      ++(*nclusters);
+      clusteridx[i] = *nclusters;
 
       for( j = i + 1; j < npoints; ++j )
       {
-         if( clusteridx[j] == 0 && getRelDistance(scip, points[i], points[j]) <= maxdist )
-            clusteridx[j] = ncluster;
+         if( clusteridx[j] == 0 && getRelDistance(scip, points[i], points[j]) <= maxreldist )
+            clusteridx[j] = *nclusters;
       }
    }
 
@@ -474,7 +510,7 @@ SCIP_RETCODE clusterPointsGreedy(
    for( i = 0; i < npoints; ++i )
    {
       assert(clusteridx[i] > 0);
-      assert(clusteridx[i] <= ncluster);
+      assert(clusteridx[i] <= *nclusters);
    }
 #endif
 
