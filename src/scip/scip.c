@@ -28,6 +28,9 @@
  *
  * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
+ * @todo When making an interface change to SCIPcreateProb(), add an indication whether it is known that the objective
+ *       function is integral or whether this is not known. This avoids a manual call of SCIPsetObjIntegral(). Moreover,
+ *       then the detection could be performed incrementally, whenever a variable is added.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -10535,6 +10538,12 @@ SCIP_Real SCIPgetObjlimit(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This function should be used to inform SCIP that the objective function is integral, helping to improve the
+ *        performance. This is useful when using column generation. If no column generation (pricing) is used, SCIP
+ *        automatically detects whether the objective function is integral or can be scaled to be integral. However, in
+ *        any case, the user has to make sure that no variable is added during the solving process that destroys this
+ *        property.
  */
 SCIP_RETCODE SCIPsetObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
@@ -10573,17 +10582,60 @@ SCIP_RETCODE SCIPsetObjIntegral(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note If no pricing is performed, SCIP automatically detects whether the objective function is integral or can be
+ *        scaled to be integral, helping to improve performance. This function returns the result. Otherwise
+ *        SCIPsetObjIntegral() can be used to inform SCIP. However, in any case, the user has to make sure that no
+ *        variable is added during the solving process that destroys this property.
  */
 SCIP_Bool SCIPisObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   int v;
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjIntegral", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return SCIPprobIsObjIntegral(scip->origprob);
+      /* if the user explicitly added the information that there is an integral objective, return TRUE */
+      if( SCIPprobIsObjIntegral(scip->origprob) )
+         return TRUE;
+
+      /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+      if ( scip->set->nactivepricers != 0 )
+         return FALSE;
+
+      /* if the objective value offset is fractional, the value itself is possibly fractional */
+      if ( ! SCIPisIntegral(scip, scip->origprob->objoffset) )
+         return FALSE;
+
+      /* scan through the variables */
+      for (v = 0; v < scip->origprob->nvars; ++v)
+      {
+         SCIP_Real obj;
+
+         /* get objective value of variable */
+         obj = SCIPvarGetObj(scip->origprob->vars[v]);
+
+         /* check, if objective value is non-zero */
+         if ( ! SCIPisZero(scip, obj) )
+         {
+            /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+            if ( ! SCIPisIntegral(scip, obj) )
+               break;
+
+            /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+            if ( SCIPvarGetType(scip->origprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               break;
+         }
+      }
+
+      /* we do not store the result, since we assume that the original problem might be changed */
+      if ( v == scip->origprob->nvars )
+         return TRUE;
+      return FALSE;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITPRESOLVE:
@@ -14845,6 +14897,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
+         if( scip->set->reopt_enable && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) )
+         {
+            SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
+         }
+
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -14901,11 +14958,6 @@ SCIP_RETCODE SCIPsolve(
 
             SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
                   scip->transprob->nvars, &reoptrestart) );
-
-            if( scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol )
-            {
-               SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
-            }
          }
 
          /* try to compress the search tree if reoptimization is enabled */
