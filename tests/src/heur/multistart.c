@@ -278,7 +278,7 @@ Test(heuristic, filterPoints, .init = setup, .fini = teardown,
       cr_assert(violations[i] >= violations[i+1]);
 }
 
-#define NPOINTS 10
+#define NPOINTS 100
 Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
    .description = "check clusterPointsGreedy subroutine of the multi-start heuristic"
    )
@@ -290,14 +290,15 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
    unsigned int seed;
    int i;
 
-   maxreldist = 0.10;
-   seed = 0;
+   maxreldist = 0.05;
+   seed = 5;
 
+   /* create solutions with random values */
    for( i = 0; i < NPOINTS; ++i )
    {
       SCIP_CALL( SCIPcreateSol(scip, &points[i], NULL) );
-      SCIP_CALL( SCIPsetSolVal(scip, points[i], x, SCIPgetRandomReal(-0.5, 0.5, &seed)) );
-      SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPgetRandomReal(-1.0, 1.0, &seed)) );
+      SCIP_CALL( SCIPsetSolVal(scip, points[i], x, SCIPgetRandomReal(-1.0, 1.0, &seed)) );
+      SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPgetRandomReal(-10.0, 10.0, &seed)) );
    }
 
    SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, maxreldist) );
@@ -313,11 +314,13 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
       for( j = i + 1; j < NPOINTS; ++j )
       {
          SCIP_Real dist = getRelDistance(scip, points[i], points[j]);
-         cr_assert(clusteridx[i] != clusteridx[j] || dist <= maxreldist);
+
+         /* distance between i and j in the same cluster should not be twice as large as maxreldist */
+         cr_assert(clusteridx[i] != clusteridx[j] || dist <= 2 * maxreldist);
       }
    }
 
-   /* free points */
+   /* free solutions */
    for( i = NPOINTS - 1; i >= 0; --i )
    {
       SCIP_CALL( SCIPfreeSol(scip, &points[i]) );
