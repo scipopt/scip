@@ -15,18 +15,20 @@
 
 /**@file   branch_LookaheadAbbreviated.c
  * @brief  LookaheadAbbreviated branching rule
- * @author Tobias Achterberg
+ * @author Christoph Schubert
  */
-
+#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/branch_lookaheadabbreviated.h"
+#include "scip/pub_misc.h"
 
 
-#define BRANCHRULE_NAME            "LookaheadAbbreviated"
-#define BRANCHRULE_DESC            "branching rule template"
+#define BRANCHRULE_NAME            "lookahead-abbreviated"
+#define BRANCHRULE_DESC            "branching rule template" /* TODO CS*/
 #define BRANCHRULE_PRIORITY        0
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
@@ -41,8 +43,20 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   int                   randomfield;
 };
 
+typedef struct
+{
+   SCIP_VAR*             var;
+   SCIP_Real             val;
+} Candidate;
+
+typedef struct
+{
+   Candidate**           candidates;
+   int                   ncandidates;
+} Candidates;
 
 /*
  * Local methods
@@ -50,146 +64,191 @@ struct SCIP_BranchruleData
 
 /* put your local methods here, and declare them static */
 
+/*static
+SCIP_RETCODE allocCandidates(
+   SCIP*                 scip,
+   Candidates**          candidates,
+   int                   ncandidates
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, candidates) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*candidates)->candidates, ncandidates) );
+
+   return SCIP_OKAY;
+}
+
+static
+void initCandidates(
+   Candidates*           candidates
+)
+{
+   candidates->ncandidates = 0;
+}
+
+static
+void addCandidate(
+   Candidate*            candidate,
+   Candidates*           candidates
+)
+{
+   candidates->candidates[candidates->ncandidates] = candidate;
+   candidates->ncandidates++;
+}
+
+static
+void freeCandidates(
+   SCIP*                 scip,
+   Candidates**          candidates
+)
+{
+   SCIPfreeBufferArray(scip, &(*candidates)->candidates);
+   SCIPfreeBuffer(scip, candidates);
+}*/
+
+/*
+ * Other callback methods
+ */
+
+static
+SCIP_DECL_SORTINDCOMP(branchCandFractionalityComparator)
+{  /*lint --e{715}*/
+   SCIP_Real* valuesptr = (SCIP_Real*)dataptr;
+   SCIP_Real value1;
+   SCIP_Real value2;
+
+   assert(valuesptr != NULL);
+
+   value1 = valuesptr[ind1];
+   value2 = valuesptr[ind2];
+
+   /* TODO: implement real fractionality comp */
+   return value2 - value1;/*SCIPvarCompare(valuesptr[ind1], valuesptr[ind2]);*/
+}
+
+
+/* put your local methods here, and declare them static */
+
+static
+SCIP_RETCODE getLookaheadBranchingCandidates(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   Candidates* allcandidates;
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   int* sortedindices;
+   int nlpcands;
+   int i;
+
+   /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortedindices, nlpcands) );
+
+   SCIPsort(sortedindices, branchCandFractionalityComparator, (void*)lpcandssol, nlpcands);
+
+   for( i = 0; i < nlpcands; i++ )
+   {
+      int sortedindex = sortedindices[i];
+      SCIP_VAR* sortedvar = lpcands[sortedindex];
+      SCIP_Real sortedval = lpcandssol[sortedindex];
+
+      SCIPdebugMessage("Index: <%i>, VarIndex: <%i>, Var: <%s>, Val: <%g>\n", i, sortedindex, SCIPvarGetName(sortedvar), sortedval);
+   }
+
+   SCIPfreeBufferArray(scip, &sortedindices);
+
+
+   /*SCIP_CALL( allocCandidates(scip, &allcandidates, nlpcands) );
+   initCandidates(allcandidates);
+
+   for( i = 0; i < nlpcands; i++ )
+   {
+      Candidate* candidate;
+
+      SCIP_CALL( SCIPallocBuffer(scip, &candidate) );
+      candidate->var = lpcands[i];
+      candidate->val = lpcandssol[i];
+
+      addCandidate(candidate, allcandidates);
+   }
+
+   for( i = 0; i < allcandidates->ncandidates; i++ )
+   {
+      Candidate* candidate = allcandidates->candidates[i];
+      SCIPdebugMessage("Added candidate <%s> with value <%g>\n", SCIPvarGetName(candidate->var), candidate->val);
+   }
+
+   for( i = allcandidates->ncandidates-1; i >= 0; i-- )
+   {
+      SCIPfreeBuffer(scip, &allcandidates->candidates[i]);
+   }
+
+   freeCandidates(scip, &allcandidates);*/
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of branching rule
  */
 
-/* TODO: Implement all necessary branching rule methods. The methods with an #if 0 ... #else #define ... are optional */
-
-
 /** copy method for branchrule plugins (called when SCIP copies plugins) */
-#if 0
 static
 SCIP_DECL_BRANCHCOPY(branchCopyLookaheadAbbreviated)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_CALL( SCIPincludeBranchruleLookaheadAbbreviated(scip) );
 
    return SCIP_OKAY;
 }
-#else
-#define branchCopyLookaheadAbbreviated NULL
-#endif
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_BRANCHFREE(branchFreeLookaheadAbbreviated)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   SCIPfreeMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define branchFreeLookaheadAbbreviated NULL
-#endif
-
 
 /** initialization method of branching rule (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_BRANCHINIT(branchInitLookaheadAbbreviated)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
    return SCIP_OKAY;
 }
-#else
-#define branchInitLookaheadAbbreviated NULL
-#endif
-
 
 /** deinitialization method of branching rule (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_BRANCHEXIT(branchExitLookaheadAbbreviated)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
    return SCIP_OKAY;
 }
-#else
-#define branchExitLookaheadAbbreviated NULL
-#endif
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_BRANCHINITSOL(branchInitsolLookaheadAbbreviated)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchInitsolLookaheadAbbreviated NULL
-#endif
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_BRANCHEXITSOL(branchExitsolLookaheadAbbreviated)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExitsolLookaheadAbbreviated NULL
-#endif
-
 
 /** branching execution method for fractional LP solutions */
-#if 0
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert( scip != NULL );
+   assert( branchrule != NULL );
+   assert( result != NULL );
+
+   SCIP_CALL( getLookaheadBranchingCandidates(scip) );
+
+   *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
 }
-#else
-#define branchExeclpLookaheadAbbreviated NULL
-#endif
-
-
-/** branching execution method for external candidates */
-#if 0
-static
-SCIP_DECL_BRANCHEXECEXT(branchExecextLookaheadAbbreviated)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExecextLookaheadAbbreviated NULL
-#endif
-
-
-/** branching execution method for not completely fixed pseudo solutions */
-#if 0
-static
-SCIP_DECL_BRANCHEXECPS(branchExecpsLookaheadAbbreviated)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of LookaheadAbbreviated branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define branchExecpsLookaheadAbbreviated NULL
-#endif
 
 
 /*
@@ -205,10 +264,8 @@ SCIP_RETCODE SCIPincludeBranchruleLookaheadAbbreviated(
    SCIP_BRANCHRULE* branchrule;
 
    /* create LookaheadAbbreviated branching rule data */
-   branchruledata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    /* TODO: (optional) create branching rule specific data here */
-
-   branchrule = NULL;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -221,11 +278,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookaheadAbbreviated(
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeLookaheadAbbreviated) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitLookaheadAbbreviated) );
    SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitLookaheadAbbreviated) );
-   SCIP_CALL( SCIPsetBranchruleInitsol(scip, branchrule, branchInitsolLookaheadAbbreviated) );
-   SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolLookaheadAbbreviated) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookaheadAbbreviated) );
-   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextLookaheadAbbreviated) );
-   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsLookaheadAbbreviated) );
 
    /* add LookaheadAbbreviated branching rule parameters */
    /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */
