@@ -14629,6 +14629,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
+         if( scip->set->reopt_enable && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) )
+         {
+            SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
+         }
+
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -14685,11 +14690,6 @@ SCIP_RETCODE SCIPsolve(
 
             SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
                   scip->transprob->nvars, &reoptrestart) );
-
-            if( scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol )
-            {
-               SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
-            }
          }
 
          /* try to compress the search tree if reoptimization is enabled */
