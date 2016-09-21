@@ -5568,7 +5568,7 @@ unsigned int SCIPcalcFibHash(
    );
 
 #ifdef NDEBUG
-#define SCIPcalcFibHash(v)   (((unsigned int)((v) * 2654435769)) % UINT_MAX)
+#define SCIPcalcFibHash(v)   (((unsigned long long)((v) * 2654435769)) % UINT_MAX)
 #endif
 
 /**@} */
