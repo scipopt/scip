@@ -9388,8 +9388,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
+   *result = SCIP_FEASIBLE;
+
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c)
    {
       SCIP_CONSDATA* consdata;
       int j;
@@ -9433,12 +9435,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
                }
-               return SCIP_OKAY;
             }
          }
       }
    }
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

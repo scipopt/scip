@@ -8005,7 +8005,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   violated = FALSE;
+   *result = SCIP_FEASIBLE;
 
    if( nconss > 0 )
    {
@@ -8013,7 +8013,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
       {
          SCIP_CONSDATA* consdata;
 
-         for( c = nconss - 1; c >= 0 && !violated; --c )
+         for( c = nconss - 1; c >= 0 && (*result == SCIP_FEASIBLE || completely); --c )
          {
             consdata = SCIPconsGetData(conss[c]);
             assert(consdata != NULL);
@@ -8027,19 +8027,18 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
             }
 
             SCIP_CALL( checkOrigPbCons(scip, conss[c], sol, &violated, printreason) );
+            if( violated )
+               *result = SCIP_INFEASIBLE;
          }
       }
       else
       {
          /* check all and-constraints */
          SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+         if( violated )
+            *result = SCIP_INFEASIBLE;
       }
    }
-
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

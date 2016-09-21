@@ -1759,8 +1759,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
+   *result = SCIP_FEASIBLE;
+
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c)
    {
       SCIP_CONSDATA* consdata;
       int firstNonzero;
@@ -1800,14 +1802,11 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                   }
 
                   SCIPdebugMessage("SOS2 constraint <%s> infeasible.\n", SCIPconsGetName(conss[c]));
-                  return SCIP_OKAY;
                }
             }
          }
       }
    }
-   SCIPdebugMessage("All SOS2 constraint are feasible.\n");
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

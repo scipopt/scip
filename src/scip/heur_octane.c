@@ -1122,7 +1122,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
          {
             assert(first_sols[i] != NULL);
-            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
          }
@@ -1133,7 +1133,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                break;
             generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
          }

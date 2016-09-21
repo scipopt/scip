@@ -239,14 +239,14 @@ SCIP_RETCODE performRandRounding(
           * neither integrality nor feasibility of LP rows has to be checked, because all fractional
           * variables were already moved in feasible direction to the next integer
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
       }
       else
       {
          /* if there are variables which are not present in the LP, e.g., for
           * column generation, we need to check their bounds
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
       }
 
       if( stored )

@@ -12374,16 +12374,14 @@ SCIP_DECL_CONSCHECK(consCheckKnapsack)
    SCIP_Bool violated;
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *result = SCIP_FEASIBLE;
+
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
-      {
          *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
-   } 
-   *result = SCIP_FEASIBLE;
+   }
 
    return SCIP_OKAY;
 }

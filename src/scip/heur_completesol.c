@@ -344,7 +344,7 @@ SCIP_RETCODE createNewSol(
    }
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    return SCIP_OKAY;
 }
@@ -1021,7 +1021,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
             SCIP_CALL( SCIPsetSolVal(scip, newsol, origvars[v], solval) );
          }
 
-         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
          if( stored )
             *result = SCIP_FOUNDSOL;
       }
