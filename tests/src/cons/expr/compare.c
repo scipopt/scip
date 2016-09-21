@@ -53,6 +53,7 @@ static
 void setup(void)
 {
    SCIP_CONSEXPR_EXPR* tmp;
+   SCIP_CONSEXPR_EXPR* tmp2;
    SCIP_Real aux;
 
    conshdlr = NULL;
@@ -109,18 +110,20 @@ void setup(void)
    SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_half_sqrx, 1, &expr_sqrx, &aux, 0.0) );
 
    /* create expression prod: x*y*(x+y) */
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_x, NULL, 1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_y, 1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sum, 1.0) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_x, 1.0) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_y) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sum) );
 
    /* create expression subprod_fracpower: x*(y*(x+y))^2.8 */
    aux = 2.8;
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_subprod_fracpow, 1, &expr_x, NULL, 1.0) );
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &tmp, 1, &expr_y, NULL, 1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, tmp, expr_sum, 1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_subprod_fracpow, tmp, aux) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_subprod_fracpow, 1, &expr_x, 1.0) );  /* x */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &tmp, 1, &expr_y, 1.0) );  /* y */
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, tmp, expr_sum) );  /* y -> y * (x+y) */
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &tmp2, tmp, aux) );  /* (y*(x+y))^aux */
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_subprod_fracpow, tmp2) );   /* x -> x * (y*(x+y))^aux  */
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &tmp) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &tmp2) );
 }
 
 static

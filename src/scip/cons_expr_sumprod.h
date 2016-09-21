@@ -84,14 +84,7 @@ SCIP_RETCODE SCIPcreateConsExprExprProduct(
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
    SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real*            exponents,          /**< array with exponents for all children (or NULL if all 1.0) */
    SCIP_Real             constant            /**< constant coefficient of product */
-   );
-
-/** gets the exponents of a product expression */
-EXTERN
-SCIP_Real* SCIPgetConsExprExprProductExponents(
-   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    );
 
 /** gets the constant coefficient of a product expression */
@@ -114,8 +107,7 @@ EXTERN
 SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
-   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
-   SCIP_Real             childcoef           /**< child's coefficient */
+   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    );
 
 /** multiplies given sum expr by a constant */
@@ -124,11 +116,6 @@ void SCIPmultiplyConsExprExprSumByConstant(
    SCIP_Real             constant            /**< constant that multiplies sum expression */
    );
 
-/** exponentiate given product expr by a constant */
-void SCIPexponentiateConsExprExprProductByConstant(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_Real             constant            /**< constant that exponentiates the product expression */
-   );
 #ifdef __cplusplus
 }
 #endif

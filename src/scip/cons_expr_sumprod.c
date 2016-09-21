@@ -189,7 +189,7 @@ SCIP_RETCODE createExprlistFromExprs(
    {
       EXPRNODE* newnode;
 
-      SCIP_CALL( createExprNode(scip, exprs[i], coef*coefs[i], &newnode) );
+      SCIP_CALL( createExprNode(scip, exprs[i], coef*(coefs ? coefs[i] : 1.0), &newnode) );
       insertFirstList(newnode, list);
    }
    assert(nexprs > 1 || (*list)->next == NULL);
@@ -430,28 +430,25 @@ SCIP_RETCODE createExprProductFromExprlist(
    int i;
    int nchildren;
    SCIP_CONSEXPR_EXPR** children;
-   SCIP_Real* exponents;
 
    /* asserts SP8 */
    assert(coef == 1.0);
    nchildren = listLength(exprlist);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &exponents, nchildren) );
    SCIP_CALL( SCIPallocBufferArray(scip, &children, nchildren) );
 
    for( i = 0; i < nchildren; ++i )
    {
       children[i] = exprlist->expr;
-      exponents[i] = exprlist->coef;
+      assert(exprlist->coef == 1.0);
       exprlist = exprlist->next;
    }
 
    assert(exprlist == NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, SCIPfindConshdlr(scip, "expr"), expr, nchildren, children, exponents, coef) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, SCIPfindConshdlr(scip, "expr"), expr, nchildren, children, coef) );
 
    SCIPfreeBufferArray(scip, &children);
-   SCIPfreeBufferArray(scip, &exponents);
 
    return SCIP_OKAY;
 }
@@ -573,10 +570,10 @@ SCIP_RETCODE simplifyFactor(
    if( strcmp(basetype, "prod") == 0 )
    {
       assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
-      debugSimplify("[simplifyPow] seing a product: include its children\n"); /*lint !e506 !e681*/
+      debugSimplify("[simplifyPow] seeing a product: include its children\n"); /*lint !e506 !e681*/
 
       SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(base),
-               SCIPgetConsExprExprProductExponents(base), 1.0, SCIPgetConsExprExprNChildren(base), simplifiedfactor) );
+               NULL, 1.0, SCIPgetConsExprExprNChildren(base), simplifiedfactor) );
 
       return SCIP_OKAY;
    }
@@ -821,9 +818,9 @@ int compareSumProduct(
       else
       {
          /* expressions are equal, compare coefficient/exponent */
-         if( coefs1[i] < coefs2[j] )
+         if( (coefs1 ? coefs1[i] : 1.0) < (coefs2 ? coefs2[j] : 1.0) )
             return -1;
-         if( coefs1[i] > coefs2[j] )
+         if( (coefs1 ? coefs1[i] : 1.0) > (coefs2 ? coefs2[j] : 1.0) )
             return 1;
 
          /* coefficients are equal, continue */
@@ -972,7 +969,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
     * children of a product expression they might be unsimplified) */
    unsimplifiedchildren = NULL;
    SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
-            SCIPgetConsExprExprProductExponents(expr), 1.0, SCIPgetConsExprExprNChildren(expr), &unsimplifiedchildren) );
+            NULL, 1.0, SCIPgetConsExprExprNChildren(expr), &unsimplifiedchildren) );
 
    /* while there are still children to process */
    finalchildren  = NULL;
@@ -1086,9 +1083,9 @@ static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
 {  /*lint --e{715}*/
    return compareSumProduct(
-         SCIPgetConsExprExprProductCoef(expr1), SCIPgetConsExprExprProductExponents(expr1),
+         SCIPgetConsExprExprProductCoef(expr1), NULL,
          SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
-         SCIPgetConsExprExprProductCoef(expr2), SCIPgetConsExprExprProductExponents(expr2),
+         SCIPgetConsExprExprProductCoef(expr2), NULL,
          SCIPgetConsExprExprChildren(expr2), SCIPgetConsExprExprNChildren(expr2));
 }
 
@@ -2175,32 +2172,16 @@ SCIP_RETCODE SCIPcreateConsExprExprProduct(
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
    SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real*            exponents,          /**< array with exponents for all children (or NULL if all 1.0) */
    SCIP_Real             constant            /**< constant coefficient of product */
    )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
-   SCIP_CALL( createData(scip, &exprdata, nchildren, exponents, constant) );
+   SCIP_CALL( createData(scip, &exprdata, nchildren, NULL, constant) );
 
    SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrProduct(consexprhdlr), exprdata, nchildren, children) );
 
    return SCIP_OKAY;
-}
-
-/** gets the exponents of a product expression */
-SCIP_Real* SCIPgetConsExprExprProductExponents(
-   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->coefficients;
 }
 
 /** gets the constant coefficient of a product expression */
@@ -2250,8 +2231,7 @@ SCIP_RETCODE SCIPappendConsExprExprSumExpr(
 SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
-   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
-   SCIP_Real             childexponent       /**< child's exponent */
+   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
@@ -2267,7 +2247,7 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    ENSUREBLOCKMEMORYARRAYSIZE(scip, exprdata->coefficients, exprdata->coefssize, nchildren + 1);
 
    assert(exprdata->coefssize > nchildren);
-   exprdata->coefficients[nchildren] = childexponent;
+   exprdata->coefficients[nchildren] = 1.0;
 
    SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
 
@@ -2295,26 +2275,3 @@ void SCIPmultiplyConsExprExprSumByConstant(
    exprdata->constant *= constant;
 }
 
-/** exponentiate given product expr by a constant
- * TODO: should this function create abs children when exponent is fractional and resulting exponent is odd?
- * FIXME: No! Somebody (who?) should have enforced (add a constraint?, change bound, etc) that the child
- * with fractional exponent is positive */
-void SCIPexponentiateConsExprExprProductByConstant(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_Real             exponent            /**< exponent */
-   )
-{
-   int i;
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
-   {
-      exprdata->coefficients[i] *= exponent;
-   }
-   exprdata->constant = pow(exprdata->constant, exponent);
-}

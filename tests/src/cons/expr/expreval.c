@@ -334,7 +334,6 @@ SCIP_RETCODE createExpr(
    )
 {
    SCIP_CONSEXPR_EXPR* exprs[] = {NULL, NULL, NULL};
-   SCIP_Real exponents[3] = {2.0, -1.0, -4.0};
    SCIP_Real coef = 2.0;
 
    /* create variable and constant expressions */
@@ -342,24 +341,33 @@ SCIP_RETCODE createExpr(
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, yexpr, y) );
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, const_expr, 5.0) );
 
-   /* create sum and product expression */
-   exprs[0] = *xexpr;
-   exprs[1] = *yexpr;
-   exprs[2] = *const_expr;
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, prodexpr, 3, exprs, exponents, 1.0) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, sumexpr, 1, exprs, &coef, 1.0) );
+   /* create sum expression */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, sumexpr, 1, xexpr, &coef, 1.0) );  /* 2*x+1 */
+
+   /* create product expression */
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &exprs[0], *xexpr,  2.0) );  /* x^2 */
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &exprs[1], *yexpr, -1.0) );  /* y^(-1) */
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &exprs[2], *const_expr, -4.0) );  /* 5^(-4) */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, prodexpr, 3, exprs, 1.0) );  /* x^2*y^(-1)*5^(-4) */
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[2]) );
 
    /* create main expression */
-   exprs[0] = *prodexpr;
-   exprs[1] = *sumexpr;
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, mainexpr, 2, exprs, exponents, 0.5) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &exprs[0], *prodexpr,  2.0) );  /* (x^2*y^(-1)*5^(-4))^2 */
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &exprs[1], *sumexpr, -1.0) );  /* (2*x + 1)^(-1) */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, mainexpr, 2, exprs, 0.5) );
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
 
    return SCIP_OKAY;
 }
 
 /* helper function to check evaluation of expression created with createExpr() */
- static
-SCIP_RETCODE checkExprEval(
+static
+void checkExprEval(
    SCIP_CONSEXPR_EXPR*  xexpr,               /**< variable expression */
    SCIP_CONSEXPR_EXPR*  yexpr,               /**< variable expression */
    SCIP_CONSEXPR_EXPR*  const_expr,          /**< constant expression */
@@ -378,24 +386,20 @@ SCIP_RETCODE checkExprEval(
    sumval = 2*xval + 1;
 
    /* check values */
-   if( !SCIPisEQ(scip, SCIPgetConsExprExprValue(mainexpr), 0.5 * pow(prodval,2) * pow(sumval,-1) )
-      || !SCIPisEQ(scip, SCIPgetConsExprExprValue(sumexpr), sumval)
-      || !SCIPisEQ(scip, SCIPgetConsExprExprValue(prodexpr), prodval)
-      || !SCIPisEQ(scip, SCIPgetConsExprExprValue(xexpr), xval)
-      || !SCIPisEQ(scip, SCIPgetConsExprExprValue(yexpr), yval)
-      || !SCIPisEQ(scip, SCIPgetConsExprExprValue(const_expr), 5.0) )
-      return SCIP_ERROR;
+   cr_expect_float_eq(SCIPgetConsExprExprValue(mainexpr), 0.5 * pow(prodval,2) * pow(sumval,-1), SCIPepsilon(scip));
+   cr_expect_float_eq(SCIPgetConsExprExprValue(sumexpr), sumval, SCIPepsilon(scip));
+   cr_expect_float_eq(SCIPgetConsExprExprValue(prodexpr), prodval, SCIPepsilon(scip));
+   cr_expect_float_eq(SCIPgetConsExprExprValue(xexpr), xval, SCIPepsilon(scip));
+   cr_expect_float_eq(SCIPgetConsExprExprValue(yexpr), yval, SCIPepsilon(scip));
+   cr_expect_float_eq(SCIPgetConsExprExprValue(const_expr), 5.0, SCIPepsilon(scip));
 
    /* check tags */
-   if( SCIPgetConsExprExprEvalTag(mainexpr) != tag
-      || SCIPgetConsExprExprEvalTag(sumexpr) != tag
-      || SCIPgetConsExprExprEvalTag(prodexpr) != tag
-      || SCIPgetConsExprExprEvalTag(xexpr) != tag
-      || SCIPgetConsExprExprEvalTag(yexpr) != tag
-      || SCIPgetConsExprExprEvalTag(const_expr) != tag )
-      return SCIP_ERROR;
-
-   return SCIP_OKAY;
+   cr_expect_eq(SCIPgetConsExprExprEvalTag(mainexpr), tag);
+   cr_expect_eq(SCIPgetConsExprExprEvalTag(sumexpr), tag);
+   cr_expect_eq(SCIPgetConsExprExprEvalTag(prodexpr), tag);
+   cr_expect_eq(SCIPgetConsExprExprEvalTag(xexpr), tag);
+   cr_expect_eq(SCIPgetConsExprExprEvalTag(yexpr), tag);
+   cr_expect_eq(SCIPgetConsExprExprEvalTag(const_expr), tag);
 }
 
 Test(evalexpr, complicated, .description = "Tests expression evaluation for a large complicated expression.")
@@ -422,19 +426,19 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
    SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EVALTAG) );
    SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, mainexpr) );
    SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
-   SCIP_CALL( checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
+   checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1);
 
    /* modify solution and evaluate expression with the same tag again; values should not change */
    printf("evaluate and check expressions with a modified solution but the same tag\n");
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -5.0) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
-   SCIP_CALL( checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
+   checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1);
 
    /* evaluate expression with a different tag; values should have changed */
    printf("evaluate expression with a new tag\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 2) );
-   SCIP_CALL( checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, -2.0, -5.0, 2) );
+   checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, -2.0, -5.0, 2);
 
    /* evaluate solution with zero tag */
    printf("evaluate expression with a zero tag\n");
@@ -443,7 +447,7 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, i*i) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, -5.0/i) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 0) );
-      SCIP_CALL( checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, -5.0 / i, 0) );
+      checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, -5.0 / i, 0);
    }
 
    /* mainexpr is not defined for x = -1 or y = 0; the result should be SCIP_INVALID */
@@ -452,16 +456,15 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.0) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 0) );
    cr_expect_eq(SCIPgetConsExprExprValue(mainexpr), SCIP_INVALID);
-   cr_expect_eq(SCIPgetConsExprExprValue(prodexpr), SCIP_INVALID);
 
    /* set values for variable expression explicitly */
    printf("evaluate expression after setting value for variable expressions\n");
-   for( i = 1; i < 100; ++i )
+   for( i = 1; i < 3; ++i )
    {
       SCIPsetConsExprExprEvalValue(xexpr, i*i, i);
       SCIPsetConsExprExprEvalValue(yexpr, 1.0 / i, i);
       SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, NULL, i) );
-      SCIP_CALL( checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i) );
+      checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i);
    }
 
    /* release all expressions */

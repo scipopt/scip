@@ -1065,8 +1065,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
          }
          else if( strcmp(type, "prod") == 0 )
          {
-            SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-            SCIPinfoMessage(scip, NULL, "[expo]: %g\n", SCIPgetConsExprExprProductExponents(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+            SCIPinfoMessage(scip, NULL, "%*s   \n", nspaces, "");
          }
          break;
       }
@@ -1534,10 +1533,6 @@ int SCIPcompareConsExprExprs(
 
       if( compareresult != 0 )
          return compareresult;
-
-      /* base of the largest expression of the product is equal to expr2, exponent might tell us that expr2 is larger */
-      if( SCIPgetConsExprExprProductExponents(expr1)[nchildren-1] < 1.0 )
-         return -1;
 
       /* largest expression of product is larger or equal than expr2 => expr1 > expr2 */
       return 1;
@@ -2790,7 +2785,7 @@ SCIP_RETCODE parseTerm(
    if( *expr == '*' || *expr == '/' )
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, NULL, 1.0) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, 1.0) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
 
       /* loop: parse Factor, find next symbol */
@@ -2814,7 +2809,7 @@ SCIP_RETCODE parseTerm(
          SCIP_CALL( retcode );
 
          /* append newly created factor */
-         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, 1.0) );
+         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
 
          /* find next symbol */
@@ -3022,7 +3017,7 @@ SCIP_RETCODE makeClassicExpr(
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
    {
       SCIP_EXPRDATA_MONOMIAL* monomial;
-      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, SCIPgetConsExprExprProductCoef(sourceexpr), nchildren, NULL, SCIPgetConsExprExprProductExponents(sourceexpr)) );
+      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, SCIPgetConsExprExprProductCoef(sourceexpr), nchildren, NULL, NULL) );
       SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), targetexpr, nchildren, children, 1, &monomial, 0.0, FALSE) );
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "abs") == 0 )
@@ -3740,10 +3735,10 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
    SCIP_CONSEXPR_EXPR* varexpr;
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_CONSEXPR_EXPR* prodexpr;
+   SCIP_CONSEXPR_EXPR* powexpr;
    SCIP_CONSEXPR_EXPR* twoexprs[2];
    SCIP_QUADVARTERM* quadvarterm;
    SCIP_BILINTERM* bilinterm;
-   SCIP_Real two = 2.0;
    int pos;
    int i;
 
@@ -3804,9 +3799,9 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
 
       if( quadvarterm->sqrcoef != 0.0 )
       {
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 1, &varexprs[i], &two, 1.0) );
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, prodexpr, quadvarterm->sqrcoef) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, varexprs[i], 2.0) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, powexpr, quadvarterm->sqrcoef) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
       }
    }
 
@@ -3827,7 +3822,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
       assert(SCIPgetQuadVarTermsQuadratic(scip, cons)[pos].var == bilinterm->var2);
       twoexprs[1] = varexprs[pos];
 
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, twoexprs, NULL, 1.0) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, twoexprs, 1.0) );
       SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, prodexpr, bilinterm->coef) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
    }
@@ -5438,37 +5433,35 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       {
          assert(nchildren == 2);
 
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, children, NULL, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, children, 1.0) );
 
          break;
       }
 
       case SCIP_EXPR_DIV:
       {
-         SCIP_Real coefs[2] = {1.0, -1.0};
+         SCIP_CONSEXPR_EXPR* factors[2];
 
          assert(nchildren == 2);
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, children, coefs, 1.0) );
+         factors[0] = children[0];
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &factors[1], children[1], -1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, factors, 1.0) );
 
          break;
       }
 
       case SCIP_EXPR_SQUARE:
       {
-         SCIP_Real two = 2.0;
-
          assert(nchildren == 1);
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &two, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, 2.0) );
 
          break;
       }
 
       case SCIP_EXPR_SQRT:
       {
-         SCIP_Real half = 0.5;
-
          assert(nchildren == 1);
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &half, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, 0.5) );
 
          break;
       }
@@ -5480,7 +5473,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          exponent = SCIPexprgraphGetNodeRealPowerExponent(node);
 
          assert(nchildren == 1);
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &exponent, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, exponent) );
 
          break;
       }
@@ -5492,7 +5485,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          exponent = (SCIP_Real)SCIPexprgraphGetNodeIntPowerExponent(node);
 
          assert(nchildren == 1);
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &exponent, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, exponent) );
 
          break;
       }
@@ -5506,7 +5499,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
       case SCIP_EXPR_PRODUCT:
       {
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nchildren, children, NULL, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nchildren, children, 1.0) );
 
          break;
       }
@@ -5546,9 +5539,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
             if( quadelem.idx1 == quadelem.idx2 )
             {
-               SCIP_Real two = 2.0;
                assert(children != NULL);
-               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 1, &children[quadelem.idx1], &two, 1.0) );
+               SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &prod, children[quadelem.idx1], 2.0) );
             }
             else
             {
@@ -5559,7 +5551,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
                prodchildren[0] = children[quadelem.idx1];
                prodchildren[1] = children[quadelem.idx2];
 
-               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 2, prodchildren, NULL, 1.0) );
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 2, prodchildren, 1.0) );
             }
 
             SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, prod, quadelem.coef) );
@@ -5598,12 +5590,23 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
                SCIP_CONSEXPR_EXPR* monomial;
                int f;
 
-               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &monomial, 0, NULL, NULL, 1.0) );
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &monomial, 0, NULL, 1.0) );
 
                for( f = 0; f < SCIPexprGetMonomialNFactors(monom); ++f )
                {
                   assert(children != NULL && children[SCIPexprGetMonomialChildIndices(monom)[f]] != NULL);
-                  SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, monomial, children[SCIPexprGetMonomialChildIndices(monom)[f]], exponents ? exponents[f] : 1.0) );
+                  if( exponents == NULL || exponents[f] == 1.0 )
+                  {
+                     SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, monomial, children[SCIPexprGetMonomialChildIndices(monom)[f]]) );
+                  }
+                  else
+                  {
+                     SCIP_CONSEXPR_EXPR* powexpr;
+
+                     SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, children[SCIPexprGetMonomialChildIndices(monom)[f]], exponents[f]) );
+                     SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, monomial, powexpr) );
+                     SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
+                  }
                }
 
                SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, monomial, SCIPexprGetMonomialCoef(monom)) );

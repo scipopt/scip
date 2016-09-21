@@ -89,9 +89,9 @@ Test(free, simple_5xy)
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, 5.0) );
 
    /* create expression for product of 5, x, and y */
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, NULL, 2.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y, 1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5, 1.0) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, 2.0) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5) );
 
    /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
@@ -202,15 +202,13 @@ Test(free, long_and_deep_expr)
 
    /* create deep product of ys and sums */
    xysum[0] = expr_x; xysum[1] = expr_y; xysum[2] = sumexpr;
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[0], 3, (SCIP_CONSEXPR_EXPR**)&xysum,
-            NULL, 1.0) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[0], 3, (SCIP_CONSEXPR_EXPR**)&xysum, 1.0) );
    for( i = 1; i < BIG; i++ )
    {
       if( BIG % 2 == 1 )
       {
          xysum[0] = sumexpr; xysum[1] = prodexprs[i-1]; xysum[2] = expr_y;
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[i], 3, (SCIP_CONSEXPR_EXPR**)&xysum,
-                  NULL, 1.0 * i) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[i], 3, (SCIP_CONSEXPR_EXPR**)&xysum, 1.0 * i) );
       }
       else
       {

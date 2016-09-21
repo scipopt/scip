@@ -144,9 +144,9 @@ void setup(void)
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, -5.0) );
 
    /* create expression for product of -5, x, and y, and constant factor -2 */
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, NULL, -2.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y, -1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5, 1.0) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, -2.0) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5) );
 
    /* create expression for sum of x and product (expr_xy5) */
    SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 1, &expr_x, NULL, 0) );

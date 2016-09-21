@@ -171,7 +171,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
          SCIP_CONSEXPR_EXPR* auxproduct;
 
          /* create empty product */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &auxproduct, 0, NULL, NULL, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &auxproduct, 0, NULL, 1.0) );
 
          for( i = 0; i < SCIPgetConsExprExprNChildren(base); ++i )
          {
@@ -182,7 +182,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
 
             /* append (pow n expr_i) to product */
-            SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, auxproduct, simplifiedaux, 1.0) );
+            SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, auxproduct, simplifiedaux) );
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
          }
 
@@ -261,7 +261,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
                prodchildren[1] = SCIPgetConsExprExprChildren(base)[j];
                coefs[i*(i+1)/2 + j] = 2 * SCIPgetConsExprExprSumCoefs(base)[i] * SCIPgetConsExprExprSumCoefs(base)[j];
 
-               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expansionchild, 2, prodchildren, NULL, 1.0) );
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expansionchild, 2, prodchildren, 1.0) );
                SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expansionchild, &expandedchildren[i*(i+1)/2 + j]) ); /* FIXME: call simplifyProduct */
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansionchild) );
             }
@@ -269,7 +269,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
             prodchildren[1] = SCIPgetConsExprExprChildren(base)[i];
             coefs[i*(i+1)/2 + i] = SCIPgetConsExprExprSumCoefs(base)[i] * SCIPgetConsExprExprSumCoefs(base)[i];
 
-            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expansionchild, 2, prodchildren, NULL, 1.0) );
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expansionchild, 2, prodchildren, 1.0) );
             SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expansionchild, &expandedchildren[i*(i+1)/2 + i]) ); /* FIXME: call simplifyProduct */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expansionchild) );
          }

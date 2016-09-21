@@ -30,9 +30,9 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_ROW* cut;
    int i;
 
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 0, NULL, NULL, 1.5) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, xexpr, 1.0) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, yexpr, 1.0) );
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 0, NULL, 1.5) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, xexpr) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, yexpr) );
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
