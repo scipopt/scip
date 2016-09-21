@@ -918,7 +918,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
        * done in the shifting heuristic itself; however, we better check feasibility of LP rows,
        * because of numerical problems with activity updating
        */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
 
       if( stored )
       {

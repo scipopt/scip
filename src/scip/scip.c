@@ -12734,7 +12734,13 @@ SCIP_RETCODE SCIPchgChildPrio(
  * solve methods
  */
 
-/** checks solution for feasibility in original problem without adding it to the solution store */
+/** checks solution for feasibility in original problem without adding it to the solution store; to improve the
+ *  performance we use the following order when checking for violations:
+ *
+ *  1. constraint hanlders which don't need constraints (e.g. integral constraint handler)
+ *  2. variable bounds
+ *  3. original constraints
+ */
 static
 SCIP_RETCODE checkSolOrig(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12761,10 +12767,31 @@ SCIP_RETCODE checkSolOrig(
 
    *feasible = TRUE;
 
+   if( !printreason )
+      completely = FALSE;
+
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
    /* check bounds */
    if( checkbounds )
    {
-      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < scip->origprob->nvars; ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -12809,23 +12836,8 @@ SCIP_RETCODE checkSolOrig(
          if( result != SCIP_FEASIBLE )
          {
             *feasible = FALSE;
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
 
-   /* call constraint handlers that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-   {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, &result) );
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-            if( !completely)
+            if( !completely )
                return SCIP_OKAY;
          }
       }
@@ -19119,7 +19131,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                /* check the solution for feasibility if rounding worked well (or was not tried) */
                if( rounded )
                {
-                  SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
+                  SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, foundsol) );
                }
                else
                {
@@ -37446,6 +37458,7 @@ SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -37460,6 +37473,9 @@ SCIP_RETCODE SCIPtrySol(
    SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
 
    /* we cannot check partial solutions */
    if( SCIPsolIsPartial(sol) )
@@ -37485,7 +37501,7 @@ SCIP_RETCODE SCIPtrySol(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
@@ -37505,7 +37521,7 @@ SCIP_RETCODE SCIPtrySol(
    {
       SCIP_CALL( SCIPprimalTrySol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
             scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, sol, printreason,
-            checkbounds, checkintegrality, checklprows, stored) );
+            completely, checkbounds, checkintegrality, checklprows, stored) );
 
       if( *stored )
       {
@@ -37536,6 +37552,7 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -37550,6 +37567,9 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
 
    /* we cannot check partial solutions */
    if( SCIPsolIsPartial(*sol) )
@@ -37576,7 +37596,7 @@ SCIP_RETCODE SCIPtrySolFree(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
 
       if( feasible )
       {
@@ -37598,8 +37618,9 @@ SCIP_RETCODE SCIPtrySolFree(
    }
    else
    {
-      SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-            scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
+      SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+            scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter,
+            sol, printreason, completely, checkbounds, checkintegrality, checklprows, stored) );
 
       if( *stored )
       {
@@ -37624,6 +37645,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
@@ -37635,9 +37657,12 @@ SCIP_RETCODE SCIPtryCurrentSol(
 
    bestsol = SCIPgetBestSol(scip);
 
+   if( !printreason )
+      completely = FALSE;
+
    SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
          scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, heur,
-         printreason, checkintegrality, checklprows, stored) );
+         printreason, completely, checkintegrality, checklprows, stored) );
 
    if( *stored )
    {
@@ -37713,6 +37738,7 @@ SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -37731,15 +37757,18 @@ SCIP_RETCODE SCIPcheckSol(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || scip->set->misc_exactsolve;
 
+   if( !printreason )
+      completely = FALSE;
+
    if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, FALSE) );
+      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
    }
    else
    {
-      SCIP_CALL( SCIPsolCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob, printreason,
-            checkbounds, checkintegrality, checklprows, feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob,
+            printreason, completely, checkbounds, checkintegrality, checklprows, feasible) );
    }
 
    return SCIP_OKAY;
@@ -37782,6 +37811,9 @@ SCIP_RETCODE SCIPcheckSolOrig(
       SCIPerrorMessage("Cannot check feasibility of partial solutions.");
       return SCIP_INVALIDDATA;
    }
+
+   if( !printreason )
+      completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
    SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );

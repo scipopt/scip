@@ -62,6 +62,7 @@ interface:
 - new function SCIPisDualSolAvailable() to query the dual solution availability
 - submakefile for CrayXC systems added
 - new method SCIPinitializeRandomSeed()
+- add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
 
 fixed bugs:
 

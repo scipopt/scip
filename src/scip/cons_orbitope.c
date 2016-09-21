@@ -1735,7 +1735,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    *result = SCIP_FEASIBLE;
 
    /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_CONSDATA* consdata;
       SCIP_VAR*** vars;
@@ -1792,7 +1792,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
                   if ( printreason )
                      SCIPinfoMessage(scip, NULL, "variable x[%d][%d] = %f on upper right nonzero.\n", i, j, vals[i][j]);
                   *result = SCIP_INFEASIBLE;
-                  return SCIP_OKAY;
                }
             }
          }
@@ -1866,8 +1865,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 
                   SCIPinfoMessage(scip, NULL, ")");
                }
-
-               return SCIP_OKAY;
             }
          }
       }

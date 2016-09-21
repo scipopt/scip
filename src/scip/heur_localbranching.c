@@ -207,7 +207,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 

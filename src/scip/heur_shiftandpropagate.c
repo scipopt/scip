@@ -2213,10 +2213,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       if( stored )
       {
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
          if( stored )
          {

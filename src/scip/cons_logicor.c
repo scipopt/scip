@@ -4256,7 +4256,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
    *result = SCIP_FEASIBLE;
 
    /* check all logic or constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -4286,8 +4286,6 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                SCIPinfoMessage(scip, NULL, ";\n");
                SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
             }
-
-            return SCIP_OKAY;
          }
       }
    }

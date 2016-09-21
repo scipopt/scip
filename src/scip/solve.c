@@ -2777,20 +2777,21 @@ SCIP_RETCODE solveNodeLP(
 #ifndef NDEBUG
          /* in the debug mode we want to explicitly check if the solution is feasible if it was stored */
          SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, sol, FALSE, TRUE, TRUE, checklprows, &stored) );
+               eventqueue, eventfilter, sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
 
          if( stored )
          {
             SCIP_Bool feasible;
 
-            SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, FALSE, TRUE, TRUE, checklprows, &feasible) );
+            SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, FALSE, FALSE, TRUE, TRUE,
+                  checklprows, &feasible) );
             assert(feasible);
          }
 
          SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
 #else
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, checklprows, &stored) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
 #endif
          if( stored )
          {
@@ -3953,7 +3954,7 @@ SCIP_RETCODE solveNode(
 
          SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          if( stored )
          {
@@ -4277,7 +4278,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
@@ -4310,7 +4311,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {

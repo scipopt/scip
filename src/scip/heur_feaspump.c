@@ -518,7 +518,7 @@ SCIP_RETCODE createNewSols(
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
       /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    SCIPfreeBufferArray(scip, &subvars);
@@ -1218,7 +1218,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIPdebugMessage("feasibility pump found solution (%d fractional variables)\n", nfracs);
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
    }
