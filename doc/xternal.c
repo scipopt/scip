@@ -5601,8 +5601,6 @@
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
  * can be found in the file \ref exprinterpret.h
  *
- * Note that the expression interpreter API has <b>BETA status</b> and thus may change in the next version.
- *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
  *    \n
