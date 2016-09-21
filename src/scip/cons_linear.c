@@ -14709,12 +14709,12 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
             SCIP_CONSDATA* consdata;
             SCIP_Real activity;
 
-            consdata = SCIPconsGetData(conss[c-1]);
+            consdata = SCIPconsGetData(conss[c]);
             assert( consdata != NULL);
 
             activity = consdataGetActivity(scip, consdata, sol);
 
-            SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
+            SCIP_CALL( SCIPprintCons(scip, conss[c], NULL ) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
             if( activity == SCIP_INVALID ) /*lint !e777*/
