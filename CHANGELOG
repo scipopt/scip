@@ -22,6 +22,7 @@ fixed bugs:
 - fixed bug in heur_octane with uninitialized ray direction
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
 - SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
+- ignore lower and upper bound tightenigs beyond +/-infinity
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed

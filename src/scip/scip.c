@@ -20584,6 +20584,16 @@ SCIP_RETCODE SCIPtightenVarLb(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity */
+   if( SCIPisInfinity(scip, newbound) )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPcomputeVarLbLocal(scip, var);
    ub = SCIPcomputeVarUbLocal(scip, var);
@@ -20689,6 +20699,16 @@ SCIP_RETCODE SCIPtightenVarUb(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity */
+   if( SCIPisInfinity(scip, -newbound) )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPcomputeVarLbLocal(scip, var);
@@ -20860,6 +20880,16 @@ SCIP_RETCODE SCIPinferVarLbCons(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity */
+   if( SCIPisInfinity(scip, newbound) )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -20962,6 +20992,16 @@ SCIP_RETCODE SCIPinferVarUbCons(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity */
+   if( SCIPisInfinity(scip, -newbound) )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
@@ -21539,6 +21579,16 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity */
+   if( SCIPisInfinity(scip, newbound) )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -21648,6 +21698,16 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity */
+   if( SCIPisInfinity(scip, -newbound) )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
