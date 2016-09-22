@@ -240,7 +240,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    assert(SCIPqueueNElems(conflictstore->slotqueue)+SCIPqueueNElems(conflictstore->orderqueue) == conflictstore->conflictsize);
 
    /* only clean up the storage if it is filled enough */
-   if( conflictstore->nconflicts-ndelconfs < conflictstore->conflictsize-10*set->conf_maxconss )
+   if( conflictstore->nconflicts <= 0.8 * conflictstore->conflictsize )
       goto TERMINATE;
 
    /* we have deleted enough conflicts */
@@ -469,6 +469,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    return SCIP_OKAY;
 }
 
+/** adds a constraint to the pool of dual rays */
 SCIP_RETCODE SCIPconflictstoreAddDualray(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_CONS*            dualray,            /**< dual ray to add */
@@ -549,7 +550,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    /* calculate the maximal size of the conflict storage */
    if( conflictstore->maxstoresize == -1 )
    {
-      SCIP_CALL( SCIPsetGetIntParam(set, "conflict/maxstoresize", &conflictstore->maxstoresize) );
+      SCIP_CALL( SCIPsetGetIntParam(set, "conflict/graph/maxstoresize", &conflictstore->maxstoresize) );
 
       /* the size should be dynamic wrt number of variables after presolving */
       if( conflictstore->maxstoresize == -1 )
@@ -580,7 +581,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
          SCIPdebugMessage("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
 #endif
       /* get the clean-up frequency */
-      SCIP_CALL( SCIPsetGetIntParam(set, "conflict/cleanupfreq", &(conflictstore->cleanupfreq)) );
+      SCIP_CALL( SCIPsetGetIntParam(set, "conflict/graph/cleanupfreq", &(conflictstore->cleanupfreq)) );
 
       if( set->conf_cleanboundexeedings )
       {

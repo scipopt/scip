@@ -39755,11 +39755,19 @@ void printConflictStatistics(
 
    if( scip->set->conf_maxstoresize == 0 )
    {
-      (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "-");
+      (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "inf");
    }
    else
    {
-      (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "%d", SCIPconflictstoreGetMaxPoolSize(scip->conflictstore));
+      int psize = SCIPconflictstoreGetMaxPoolSize(scip->conflictstore);
+
+      if( psize == -1 && scip->set->conf_maxstoresize == -1 )
+         (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "auto");
+      else
+      {
+         psize = MAX(psize, scip->set->conf_maxstoresize);
+         (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "%d", psize);
+      }
    }
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success    DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters   (maximal pool size: %s)\n", poolsize);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -\n",

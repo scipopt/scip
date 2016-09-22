@@ -219,10 +219,10 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;
    SCIP_Real             conf_weightrepropdepth;
    SCIP_Real             conf_weightvaliddepth;
-   SCIP_Bool             conf_analyzedualray;/**< enable dual ray analyzes */
-   SCIP_Bool             conf_onlydualray;   /**< perform only dualray analysis */
-   SCIP_Bool             conf_usemir;        /**< apply the MIR function on the dualray */
-   SCIP_Bool             conf_useboth;       /**< use the ray before and after applying the MIR function */
+   SCIP_Bool             conf_enabledualray;/**< enable dual ray analyzes */
+   SCIP_Bool             conf_enablegraph;   /**< perform only dualray analysis */
+   SCIP_Bool             conf_applymir;        /**< apply the MIR function on the dualray */
+   SCIP_Bool             conf_onlybest;       /**< use the ray before and after applying the MIR function */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

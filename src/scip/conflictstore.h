@@ -56,6 +56,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_EVENTFILTER*     eventfilter
    );
 
+/** adds a constraint to the pool of dual rays */
 extern
 SCIP_RETCODE SCIPconflictstoreAddDualray(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
