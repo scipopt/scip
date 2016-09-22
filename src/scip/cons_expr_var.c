@@ -24,7 +24,7 @@
 
 #include <string.h>
 #include "scip/cons_expr_var.h"
-#include "scip/cons_expr_sumprod.h"
+#include "scip/cons_expr_sum.h"
 
 #define VAR_HASHKEY     SCIPcalcFibHash(22153.0)
 

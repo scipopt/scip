@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_sumprod.h
- * @brief  sum and product expression handlers
+/**@file   cons_expr_sum.h
+ * @brief  sum expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_SUMPROD_H__
-#define __SCIP_CONS_EXPR_SUMPROD_H__
+#ifndef __SCIP_CONS_EXPR_SUM_H__
+#define __SCIP_CONS_EXPR_SUM_H__
 
 
 #include "scip/scip.h"
@@ -63,34 +63,11 @@ SCIP_Real SCIPgetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
+/** sets the constant of a summation expression */
 EXTERN
 void SCIPsetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_Real             constant            /**< constant */
-   );
-
-/** creates the handler for product expressions and includes it into the expression constraint handler */
-EXTERN
-SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
-   );
-
-/** creates a product expression */
-EXTERN
-SCIP_RETCODE SCIPcreateConsExprExprProduct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real             constant            /**< constant coefficient of product */
-   );
-
-/** gets the constant coefficient of a product expression */
-EXTERN
-SCIP_Real SCIPgetConsExprExprProductCoef(
-   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    );
 
 /** appends an expression to a sum expression */
@@ -102,15 +79,7 @@ SCIP_RETCODE SCIPappendConsExprExprSumExpr(
    SCIP_Real             childcoef           /**< child's coefficient */
    );
 
-/** appends an expression to a product expression */
-EXTERN
-SCIP_RETCODE SCIPappendConsExprExprProductExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
-   );
-
-/** multiplies given sum expr by a constant */
+/** multiplies given sum expression by a constant */
 void SCIPmultiplyConsExprExprSumByConstant(
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_Real             constant            /**< constant that multiplies sum expression */
@@ -120,4 +89,4 @@ void SCIPmultiplyConsExprExprSumByConstant(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_SUMPROD_H__ */
+#endif /* __SCIP_CONS_EXPR_SUM_H__ */

@@ -13,20 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_sumprod.c
- * @brief  sum and product expression handlers
+/**@file   cons_expr_product.c
+ * @brief  product expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  * @author Felipe Serrano
  *
- * Implementation of the sum expression, representing a summation of a constant
- * and the arguments, each multiplied by a coefficients, i.e., sum_i a_i*x_i + constant.
- * Implementation of the product expression, representing a signomial term,
- * i.e., coef * prod_i x_i^e_i.
- * As both expressions store similar data, we implement them in the same C file.
- * The data (a_i and constant, or e_i and coef) is currently stored as a SCIP_Real
- * array of length nchildren + 1, storing the constant/coef in the first position,
- * and the a_i/e_i afterwards.
+ * Implementation of the product expression, representing a product of expressions
+ * and a constant, i.e., coef * prod_i x_i.
  *
  * @todo initsepaProduct
  */
@@ -35,12 +29,11 @@
 
 #include <string.h>
 
-#include "scip/cons_expr_sumprod.h"
+#include "scip/cons_expr_product.h"
+#include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_pow.h"
 
-#define SUM_PRECEDENCE      40000
-#define SUM_HASHKEY         SCIPcalcFibHash(47161.0)
 #define PRODUCT_PRECEDENCE  50000
 #define PRODUCT_HASHKEY     SCIPcalcFibHash(54949.0)
 
@@ -793,65 +786,6 @@ SCIP_RETCODE createData(
    return SCIP_OKAY;
 }
 
-/* helper function to compare two sums or two products; see compareSum or compareProduct */
-static
-int compareSumProduct(
-   SCIP_Real                const1,          /**< expr1's constant/factor */
-   SCIP_Real*               coefs1,          /**< expr1's coefficients/exponents */
-   SCIP_CONSEXPR_EXPR**     children1,       /**< expr1's children */
-   int                      nchildren1,      /**< number of expr1's children */
-   SCIP_Real                const2,          /**< expr2's constant/factor */
-   SCIP_Real*               coefs2,          /**< expr2's coefficients/exponents */
-   SCIP_CONSEXPR_EXPR**     children2,       /**< expr2's children */
-   int                      nchildren2       /**< number of expr2's children */
-   )
-{
-   int compareresult;
-   int i;
-   int j;
-
-   for( i = nchildren1 - 1, j = nchildren2 - 1; i >= 0 && j >= 0; --i, --j )
-   {
-      compareresult = SCIPcompareConsExprExprs(children1[i], children2[j]);
-      if( compareresult != 0 )
-         return compareresult;
-      else
-      {
-         /* expressions are equal, compare coefficient/exponent */
-         if( (coefs1 ? coefs1[i] : 1.0) < (coefs2 ? coefs2[j] : 1.0) )
-            return -1;
-         if( (coefs1 ? coefs1[i] : 1.0) > (coefs2 ? coefs2[j] : 1.0) )
-            return 1;
-
-         /* coefficients are equal, continue */
-      }
-   }
-
-   /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
-   if( i < j )
-   {
-      assert(i == -1);
-      /* expr1 has less elements, hence expr1 < expr2 */
-      return -1;
-   }
-   if( i > j )
-   {
-      assert(j == -1);
-      /* expr1 has more elements, hence expr1 > expr2 */
-      return 1;
-   }
-
-   /* everything is equal, use constant/coefficient as tie-breaker */
-   assert(i == -1 && j == -1);
-   if( const1 < const2 )
-      return -1;
-   if( const1 > const2 )
-      return 1;
-
-   /* they are equal */
-   return 0;
-}
-
 /*
  * Callback methods of expression handler
  */
@@ -1058,44 +992,56 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    return SCIP_OKAY;
 }
 
-/** the order of two sum expressions is a lexicographical order on the terms.
- *  So, starting from the *last*, we find the first children where they differ.
- *  Suppose that is children is the i-th children, then u < v <=> u_i < v_i.
- *  If case there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
- *  Otherwise, they are the same
- *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
- *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
- */
-static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
-{  /*lint --e{715}*/
-   return compareSumProduct(
-         SCIPgetConsExprExprSumConstant(expr1), SCIPgetConsExprExprSumCoefs(expr1),
-         SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
-         SCIPgetConsExprExprSumConstant(expr2), SCIPgetConsExprExprSumCoefs(expr2),
-         SCIPgetConsExprExprChildren(expr2), SCIPgetConsExprExprNChildren(expr2));
-}
-
 /** the order of two product expressions is a lexicographical order on the terms. See compareSum
  *  Example: y * z < x * y * z, x^2 * y^3 < x^3 * y^3
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
 {  /*lint --e{715}*/
-   return compareSumProduct(
-         SCIPgetConsExprExprProductCoef(expr1), NULL,
-         SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
-         SCIPgetConsExprExprProductCoef(expr2), NULL,
-         SCIPgetConsExprExprChildren(expr2), SCIPgetConsExprExprNChildren(expr2));
-}
+   int compareresult;
+   int i;
+   int j;
+   int nchildren1;
+   int nchildren2;
+   SCIP_CONSEXPR_EXPR** children1;
+   SCIP_CONSEXPR_EXPR** children2;
 
-static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSum)
-{  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrSum(scip, consexprhdlr) );
-   *valid = TRUE;
+   nchildren1 = SCIPgetConsExprExprNChildren(expr1);
+   nchildren2 = SCIPgetConsExprExprNChildren(expr2);
+   children1 = SCIPgetConsExprExprChildren(expr1);
+   children2 = SCIPgetConsExprExprChildren(expr2);
 
-   return SCIP_OKAY;
+   for( i = nchildren1 - 1, j = nchildren2 - 1; i >= 0 && j >= 0; --i, --j )
+   {
+      compareresult = SCIPcompareConsExprExprs(children1[i], children2[j]);
+      if( compareresult != 0 )
+         return compareresult;
+      /* expressions are equal, continue */
+   }
+
+   /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
+   if( i < j )
+   {
+      assert(i == -1);
+      /* expr1 has less elements, hence expr1 < expr2 */
+      return -1;
+   }
+   if( i > j )
+   {
+      assert(j == -1);
+      /* expr1 has more elements, hence expr1 > expr2 */
+      return 1;
+   }
+
+   /* everything is equal, use coefficient as tie-breaker */
+   assert(i == -1 && j == -1);
+   if( SCIPgetConsExprExprProductCoef(expr1) < SCIPgetConsExprExprProductCoef(expr2) )
+      return -1;
+   if( SCIPgetConsExprExprProductCoef(expr1) > SCIPgetConsExprExprProductCoef(expr2) )
+      return 1;
+
+   /* they are equal */
+   return 0;
 }
 
 static
@@ -1108,7 +1054,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrProduct)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSumProduct)
+SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* sourceexprdata;
 
@@ -1125,7 +1071,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSumProduct)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSumProduct)
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
@@ -1141,83 +1087,6 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSumProduct)
 
    return SCIP_OKAY;
 }
-
-static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      {
-         /* print opening parenthesis, if necessary */
-         if( SUM_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
-         {
-            SCIPinfoMessage(scip, file, "(");
-         }
-
-         /* print constant, if nonzero */
-         if( exprdata->constant != 0.0 )
-         {
-            SCIPinfoMessage(scip, file, "%g", exprdata->constant);
-         }
-         break;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      {
-         int childidx;
-         SCIP_Real coef;
-
-         childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
-         coef = exprdata->coefficients[childidx];
-
-         /* print coefficient, if necessary */
-         if( coef == 1.0 )
-         {
-            /* if coefficient is 1.0, then print only "+" if not the first term */
-            if( exprdata->constant != 0.0 || childidx > 0 )
-            {
-               SCIPinfoMessage(scip, file, "+");
-            }
-         }
-         else if( coef == -1.0 )
-         {
-            /* if coefficient is -1.0, then print only "-" */
-            SCIPinfoMessage(scip, file, "-");
-         }
-         else
-         {
-            /* force "+" sign on positive coefficient if not the first term */
-            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || childidx > 0) ? "%+g*" : "%g*", coef);
-         }
-
-         break;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      {
-         /* print closing parenthesis, if necessary */
-         if( SUM_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
-         {
-            SCIPinfoMessage(scip, file, ")");
-         }
-         break;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      default: ;
-   }
-
-   return SCIP_OKAY;
-}
-
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
@@ -1311,346 +1180,9 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
    return SCIP_OKAY;
 }
 
-static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   int c;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   *val = exprdata->constant;
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID); /*lint !e777*/
-
-      *val += exprdata->coefficients[c] * SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression interval evaluation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_INTERVAL suminterval;
-   int c;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   SCIPintervalSet(interval, exprdata->constant);
-
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      SCIP_INTERVAL childinterval;
-
-      childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
-
-      /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
-      if( exprdata->coefficients[c] == 1.0 )
-      {
-         SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, childinterval);
-      }
-      else
-      {
-         SCIPintervalMulScalar(SCIPinfinity(scip), &suminterval, childinterval, exprdata->coefficients[c]);
-         SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, suminterval);
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** helper function to separate a given point; needed for proper unittest */
-static
-SCIP_RETCODE separatePointSum(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_ROW**            cut                 /**< pointer to store the row */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR** vars;
-   SCIP_Real* coefs;
-   SCIP_VAR* auxvar;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
-   assert(expr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0);
-   assert(cut != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
-   assert(auxvar != NULL);
-
-   *cut = NULL;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetConsExprExprNChildren(expr) + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, SCIPgetConsExprExprNChildren(expr) + 1) );
-
-   /* compute  w = sum_i alpha_i z_i + const */
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      child = SCIPgetConsExprExprChildren(expr)[c];
-
-      /* value expressions should have been removed during simplification */
-      assert(SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrValue(conshdlr));
-
-      vars[c] = SCIPgetConsExprExprLinearizationVar(child);
-      assert(vars[c] != NULL);
-      coefs[c] = exprdata->coefficients[c];
-   }
-
-   vars[SCIPgetConsExprExprNChildren(expr)] = auxvar;
-   coefs[SCIPgetConsExprExprNChildren(expr)] = -1.0;
-
-   /* create cut; it is globally valid because it is linear */
-   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "sum_cut", 0, NULL, NULL, -exprdata->constant, -exprdata->constant,
-         FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, *cut, SCIPgetConsExprExprNChildren(expr) + 1, vars, coefs) );
-
-   /* release memory */
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars);
-
-   return SCIP_OKAY;
-}
-
-/** separation initialization callback */
-static
-SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-   assert(exprdata->row == NULL);
-
-   *infeasible = FALSE;
-
-   /* compute initial cut */
-   SCIP_CALL( separatePointSum(scip, conshdlr, expr, &exprdata->row) );
-   assert(exprdata->row != NULL);
-
-   SCIP_CALL( SCIPaddCut(scip, NULL, exprdata->row, FALSE, infeasible) );
-
-   return SCIP_OKAY;
-}
-
-/** separation deinitialization callback */
-static
-SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   if( exprdata->row != NULL )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &exprdata->row) );
-   }
-   assert(exprdata->row == NULL);
-
-   return SCIP_OKAY;
-}
-
-/** expression separation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_Real violation;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-   assert(exprdata->row != NULL);
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* row should not be violated if it is still in the LP */
-   if( exprdata->row != NULL && SCIProwIsInLP(exprdata->row) )
-   {
-      /* We expect that the LP solution is feasible w.r.t. absolute tolerances,
-       * that is, that the row feasibility is >= -feastol.
-       * This is also checked by lp.c:SCIPlpGetSol (see also #1041).
-       */
-      assert(!SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, exprdata->row, sol)));
-
-      return SCIP_OKAY;
-   }
-
-   /* compute and store cut (might happen if the constraint is not 'initial') */
-   if( exprdata->row == NULL )
-   {
-      SCIP_CALL( separatePointSum(scip, conshdlr, expr, &exprdata->row) );
-   }
-   assert(exprdata->row != NULL);
-
-   /* compute violation */
-   violation = -SCIPgetRowSolFeasibility(scip, exprdata->row, sol);
-
-   if( SCIPisGE(scip, violation, minviolation) )
-   {
-      SCIP_Bool infeasible;
-
-      SCIP_CALL( SCIPaddCut(scip, sol, exprdata->row, FALSE, &infeasible) );
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("add cut with violation %e\n", violation);
-      SCIP_CALL( SCIPprintRow(scip, exprdata->row, NULL) );
-#endif
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression reverse propagation callback */
-static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_INTERVAL* bounds;
-   SCIP_ROUNDMODE prevroundmode;
-   SCIP_INTERVAL childbounds;
-   SCIP_Real minlinactivity;
-   SCIP_Real maxlinactivity;
-   int minlinactivityinf;
-   int maxlinactivityinf;
-   int c;
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) > 0);
-   assert(infeasible != NULL);
-   assert(nreductions != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   *infeasible = FALSE;
-   *nreductions = 0;
-
-   /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
-   if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
-      return SCIP_OKAY;
-
-   /* TODO handle cases nchildren = 1, 2 separately to be more efficient */
-
-   prevroundmode = SCIPintervalGetRoundingMode();
-   SCIPintervalSetRoundingModeDownwards();
-
-   minlinactivity = exprdata->constant;
-   maxlinactivity = -exprdata->constant; /* use -constant because of the rounding mode */
-   minlinactivityinf = 0;
-   maxlinactivityinf = 0;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, SCIPgetConsExprExprNChildren(expr)) );
-
-   /* shift coefficients into the intervals of the children; compute the min and max activities */
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      SCIPintervalMulScalar(SCIPinfinity(scip), &bounds[c], SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]),
-         exprdata->coefficients[c]);
-
-      if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
-         ++maxlinactivityinf;
-      else
-      {
-         assert(SCIPintervalGetSup(bounds[c]) > -SCIPinfinity(scip));
-         maxlinactivity -= SCIPintervalGetSup(bounds[c]);
-      }
-
-      if( SCIPisInfinity(scip, -SCIPintervalGetInf(bounds[c])) )
-         ++minlinactivityinf;
-      else
-      {
-         assert(SCIPintervalGetInf(bounds[c]) < SCIPinfinity(scip));
-         minlinactivity += SCIPintervalGetInf(bounds[c]);
-      }
-   }
-   maxlinactivity = -maxlinactivity; /* correct sign */
-
-   /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
-   if( (minlinactivityinf >= 2 || SCIPisInfinity(scip, SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))) &&
-      ( maxlinactivityinf >= 2 || SCIPisInfinity(scip, -SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr))))
-      )
-   {
-      goto TERMINATE;
-   }
-
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr) && !(*infeasible); ++c )
-   {
-      /* upper bounds of c_i is
-       *   node->bounds.sup - (minlinactivity - c_i.inf), if c_i.inf > -infinity and minlinactivityinf == 0
-       *   node->bounds.sup - minlinactivity, if c_i.inf == -infinity and minlinactivityinf == 1
-       */
-      SCIPintervalSetEntire(SCIPinfinity(scip), &childbounds);
-      if( !SCIPisInfinity(scip, SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
-      {
-         /* we are still in downward rounding mode, so negate and negate to get upward rounding */
-         if( bounds[c].inf <= -SCIPinfinity(scip) && minlinactivityinf <= 1 )
-         {
-            assert(minlinactivityinf == 1);
-            childbounds.sup = SCIPintervalNegateReal(minlinactivity - SCIPgetConsExprExprInterval(expr).sup);
-         }
-         else if( minlinactivityinf == 0 )
-         {
-            childbounds.sup = SCIPintervalNegateReal(minlinactivity - SCIPgetConsExprExprInterval(expr).sup - bounds[c].inf);
-         }
-      }
-
-      /* lower bounds of c_i is
-       *   node->bounds.inf - (maxlinactivity - c_i.sup), if c_i.sup < infinity and maxlinactivityinf == 0
-       *   node->bounds.inf - maxlinactivity, if c_i.sup == infinity and maxlinactivityinf == 1
-       */
-      if( SCIPgetConsExprExprInterval(expr).inf > -SCIPinfinity(scip) )
-      {
-         if( bounds[c].sup >= SCIPinfinity(scip) && maxlinactivityinf <= 1 )
-         {
-            assert(maxlinactivityinf == 1);
-            childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity;
-         }
-         else if( maxlinactivityinf == 0 )
-         {
-            childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity + bounds[c].sup;
-         }
-      }
-
-      /* divide by the child coefficient */
-      SCIPintervalDivScalar(SCIPinfinity(scip), &childbounds, childbounds, exprdata->coefficients[c]);
-
-      /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, infeasible, nreductions) );
-   }
-
-TERMINATE:
-   SCIPintervalSetRoundingMode(prevroundmode);
-   SCIPfreeBufferArray(scip, &bounds);
-
-   return SCIP_OKAY;
-}
-
 /** sum and products hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
+SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
@@ -1663,11 +1195,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") )
-      *hashkey = SUM_HASHKEY;
-   else
-      *hashkey = PRODUCT_HASHKEY;
-
+   *hashkey = PRODUCT_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(exprdata->constant);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -2045,100 +1573,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    return SCIP_OKAY;
 }
 
-/** creates the handler for sum expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
-   )
-{
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant",
-         SUM_PRECEDENCE, evalSum, NULL) );
-   assert(exprhdlr != NULL);
-
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
-
-   return SCIP_OKAY;
-}
-
-/** creates a sum expression */
-SCIP_RETCODE SCIPcreateConsExprExprSum(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real*            coefficients,       /**< array with coefficients for all children (or NULL if all 1.0) */
-   SCIP_Real             constant            /**< constant term of sum */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   SCIP_CALL( createData(scip, &exprdata, nchildren, coefficients, constant) );
-
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrSum(consexprhdlr), exprdata, nchildren, children) );
-
-   return SCIP_OKAY;
-}
-
-/** gets the coefficients of a summation expression */
-SCIP_Real* SCIPgetConsExprExprSumCoefs(
-   SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->coefficients;
-}
-
-/** gets the constant of a summation expression */
-SCIP_Real SCIPgetConsExprExprSumConstant(
-   SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->constant;
-}
-
-/** sets the constant of a summation expression */
-void SCIPsetConsExprExprSumConstant(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_Real             constant            /**< constant */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   exprdata->constant = constant;
-}
-
-
 
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
@@ -2153,14 +1587,14 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataProduct, freedataProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
 
    return SCIP_OKAY;
 }
@@ -2199,34 +1633,6 @@ SCIP_Real SCIPgetConsExprExprProductCoef(
    return exprdata->constant;
 }
 
-/** appends an expression to a sum expression */
-SCIP_RETCODE SCIPappendConsExprExprSumExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
-   SCIP_Real             childcoef           /**< child's coefficient */
-   )
-{
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   int nchildren;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   nchildren = SCIPgetConsExprExprNChildren(expr);
-
-   ENSUREBLOCKMEMORYARRAYSIZE(scip, exprdata->coefficients, exprdata->coefssize, nchildren + 1);
-
-   assert(exprdata->coefssize > nchildren);
-   exprdata->coefficients[nchildren] = childcoef;
-
-   SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
-
-   return SCIP_OKAY;
-}
-
 /** appends an expression to a product expression */
 SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2252,26 +1658,5 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
 
    return SCIP_OKAY;
-}
-
-/** multiplies given sum expr by a constant */
-void SCIPmultiplyConsExprExprSumByConstant(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_Real             constant            /**< constant that multiplies sum expression */
-   )
-{
-   int i;
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
-   {
-      exprdata->coefficients[i] *= constant;
-   }
-   exprdata->constant *= constant;
 }
 

@@ -19,7 +19,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_sumprod.c"
+#include "scip/cons_expr_product.c"
 #include "separation.h"
 
 Test(separation, bilinear, .init = setup, .fini = teardown,
