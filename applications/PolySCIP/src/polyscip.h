@@ -23,7 +23,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <ostream>
-#include <list>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -36,10 +36,35 @@
 
 namespace polyscip {
 
+    class TwoDProj {
+    public:
+        explicit TwoDProj(const Result& res, std::size_t first, std::size_t second);
+        ValueType getFirst() const {return proj_.first;}
+        ValueType getSecond() const {return proj_.second;}
+        bool operator<(TwoDProj other) const;
+        bool dominates(double epsilon, const TwoDProj& other) const;
+    private:
+        std::pair<ValueType, ValueType> proj_;
+    };
+
+    class NondomTwoDProjections {
+    public:
+        explicit NondomTwoDProjections(double epsilon,
+                                       const ResultContainer& supported,
+                                       const ResultContainer& unsupported,
+                                       std::size_t first,
+                                       std::size_t second);
+        bool finished() const;
+        bool update(const Result& res, std::size_t first, std::size_t second);
+        void add(const Result& res, std::size_t first, std::size_t second);
+
+    private:
+        std::map<TwoDProj, std::vector<OutcomeType>> nondom_projections_;
+        std::map<TwoDProj, std::vector<OutcomeType>>::iterator current_;
+    };
+
     class Polyscip {
     public:
-        using ValPair = std::pair<ValueType, ValueType>;
-
         explicit Polyscip(int argc, const char *const *argv);
 
         ~Polyscip();
@@ -63,10 +88,15 @@ namespace polyscip {
     private:
 
         enum class PolyscipStatus {
-            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, ErrorStatus
+            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, Error
         };
 
+        using ValPair = std::pair<ValueType, ValueType>;
+        using ValPairMap = std::map<ValPair, std::vector<OutcomeType>>;
+
         bool filenameIsOkay(const std::string &filename);
+
+        //bool ValPairCmp(Polyscip::ValPair p1, Polyscip::ValPair p2);
 
         /** Computes first non-dominated point and initializes
          * the weight space polyhedron or finds out that there is no non-dominated point
@@ -123,13 +153,13 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
-        std::list<ValPair> getProjectedNondomExtremePoints(std::size_t obj_1, std::size_t obj_2) const;
+        ValPairMap getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const;
 
         SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
                                               const std::pair<std::size_t, std::size_t>& considered_objs,
-                                              std::list<ValPair>&& nondom_projected_points);
+                                              ValPairMap nondom_projected_points);
 
 
         /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
@@ -153,25 +183,21 @@ namespace polyscip {
                                     const ValueType& lhs,
                                     const ValueType& rhs);
 
-        SCIP_RETCODE addNewUnsupportedNondomPoint(SCIP_VAR* new_var,
-                                                  SCIP_CONS* cons1,
-                                                  SCIP_CONS* cons2,
-                                                  const ValueType& new_lhs,
-                                                  const ValueType& new_rhs);
+        SCIP_RETCODE computeNewResult(SCIP_VAR *new_var,
+                                      SCIP_CONS *cons1,
+                                      SCIP_CONS *cons2,
+                                      const ValueType &new_lhs,
+                                      const ValueType &new_rhs,
+                                      ResultContainer& new_results);
 
         void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
 
         void printSol(const SolType& sol, std::ostream& os) const;
 
-        /** Prints given ray to given output stream */
-        //void printRay(const OutcomeType &ray, std::ostream &os = std::cout) const;
-
         /** Prints given point to given output stream */
         void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
 
-        bool lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const = delete;
-
-        bool lhsCoincidesWithRhs(ValueType lhs, ValueType rhs) const;
+        bool lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const;
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;

@@ -33,12 +33,12 @@ int main(int argc, char** argv) {
         SCIP_CALL( polyscip.readProblem() );
         SCIP_CALL( polyscip.computeNondomPoints() );
         polyscip.printStatus();
-        assert (polyscip.dominatedPointsFound() == false);
 
         if (polyscip.writeResults())
             polyscip.writeResultsToFile();
         else
             polyscip.printResults();
+        assert (polyscip.dominatedPointsFound() == false);
         //polyscip.writeFileForVertexEnumeration();
     }
     catch (TCLAP::ArgException& e) {

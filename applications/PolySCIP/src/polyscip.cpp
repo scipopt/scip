@@ -19,13 +19,14 @@
 #include <cmath> //std::abs
 #include <cstddef> //std::size_t
 #include <fstream>
-#include <functional> //std::plus, std::negate
+#include <functional> //std::plus, std::negate, std::function
 #include <iomanip> //std::set_precision
 #include <iostream>
 #include <iterator> //std::advance
 #include <limits>
 #include <list>
 #include <ostream>
+#include <map>
 #include <memory> //std::addressof
 #include <numeric> //std::inner_product
 #include <stdexcept>
@@ -59,6 +60,60 @@ using std::vector;
 namespace polyscip {
 
     using DDMethod = polytoperepresentation::DoubleDescriptionMethod;
+
+    TwoDProj::TwoDProj(const Result& res, std::size_t first, std::size_t second)
+            : proj_(res.second[first], res.second[second])
+    {}
+
+    bool TwoDProj::operator<(TwoDProj other) const {
+        return ((this->getFirst() < other.getFirst()) ||
+                (this->getFirst() == other.getFirst() && this->getSecond() < other.getSecond()));
+    }
+
+    bool TwoDProj::dominates(double eps, const TwoDProj& other) const {
+        assert (eps >= 0);
+        return (this->getFirst()-eps < other.getFirst() && this->getSecond()-eps < other.getSecond());
+    }
+
+    void NondomTwoDProjections::add(const Result &res, std::size_t first, std::size_t second) {
+        auto proj = TwoDProj(res, first, second);
+        if (nondom_projections_.count(proj)) {
+            nondom_projections_[proj].push_back(res.second);
+        }
+        else {
+            nondom_projections_.emplace(proj, vector<OutcomeType>{res.second});
+        }
+    }
+
+    NondomTwoDProjections::NondomTwoDProjections(double eps,
+                                                 const ResultContainer &supported,
+                                                 const ResultContainer &unsupported,
+                                                 std::size_t first,
+                                                 std::size_t second) {
+        assert (first != second);
+        assert (!supported.empty());
+        assert (first < supported.front().second.size() && second < supported.front().second.size());
+        for (const auto& res : supported) {
+            add(res, first, second);
+        }
+        for (const auto& res : unsupported) {
+            add(res, first, second);
+        }
+        for (auto it=begin(nondom_projections_); it!=std::prev(end(nondom_projections_)); ++it) {
+            auto next = std::next(it);
+            if (it->first.dominates(eps, next->first)) {
+                nondom_projections_.erase(next->first);
+            }
+        }
+    }
+
+    bool NondomTwoDProjections::update(const Result &res, std::size_t first, std::size_t second) {
+
+    }
+
+    bool NondomTwoDProjections::finished() const {
+        return current_ == std::prev(end(nondom_projections_));
+    }
 
     Polyscip::Polyscip(int argc, const char *const *argv)
             : cmd_line_args_(argc, argv),
@@ -97,8 +152,8 @@ namespace polyscip {
             case PolyscipStatus::CompUnsupportedPhase:
                 os << "PolySCIP Status: ComputeUnsupportedPhase\n";
                 break;
-            case PolyscipStatus::ErrorStatus:
-                os << "PolySCIP Status: ErrorStatus\n";
+            case PolyscipStatus::Error:
+                os << "PolySCIP Status: Error\n";
                 break;
             case PolyscipStatus::Finished:
                 os << "PolySCIP Status: Successfully finished\n";
@@ -166,7 +221,39 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    list<Polyscip::ValPair> Polyscip::getProjectedNondomExtremePoints(size_t obj_1, size_t obj_2) const {
+    /*bool Polyscip::ValPairCmp(Polyscip::ValPair p1, Polyscip::ValPair p2) {
+        return (SCIPisLT(scip_, p1.first, p2.first) ||
+                (SCIPisEQ(scip_, p1.first, p2.first) && SCIPisLT(scip_, p1.second, p2.second)));
+    }*/
+
+    Polyscip::ValPairMap Polyscip::getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const {
+        auto projected_points = ValPairMap{};
+        for (const auto& sup : supported_) {
+            auto proj = ValPair(sup.second[obj_1], sup.second[obj_2]);
+            if (projected_points.count(proj) == 0)
+                projected_points.emplace(proj, vector<OutcomeType>{});
+            projected_points[proj].push_back(sup.second);
+        }
+        for (const auto& unsup : unsupported_) {
+            auto proj = ValPair(unsup.second[obj_1], unsup.second[obj_2]);
+            if (projected_points.count(proj) == 0)
+                projected_points.emplace(proj, vector<OutcomeType>{});
+            projected_points[proj].push_back(unsup.second);
+        }
+
+        for (auto it=std::next(projected_points.begin()); it!=projected_points.end(); ++it) {
+            auto prev_it = std::prev(it);
+            if (SCIPisGE(scip_, it->first.second, prev_it->first.second)) {
+                assert (SCIPisLE(scip_, prev_it->first.first, it->first.first));
+                projected_points.erase(it);
+                it = prev_it;
+            }
+        }
+        return projected_points;
+    }
+
+
+    /*list<Polyscip::ValPair> Polyscip::getProjectedNondomPoints(size_t obj_1, size_t obj_2) const {
         auto projected_points = vector<ValPair>{};
         for (const auto& sup : supported_)
             projected_points.push_back({sup.second[obj_1], sup.second[obj_2]});
@@ -179,17 +266,15 @@ namespace polyscip {
                       return (SCIPisLT(scip_ptr, p1.first, p2.first) ||
                               (SCIPisEQ(scip_ptr, p1.first, p2.first) && SCIPisLT(scip_ptr, p1.second, p2.second)));});
         auto nondom_projected_points = list<ValPair>{};
-        double slope = 1.;
         nondom_projected_points.push_back(projected_points.front());
         for (auto point=std::next(projected_points.cbegin()); point!=projected_points.cend(); ++point) {
             if (SCIPisLT(scip_ptr, point->second, nondom_projected_points.back().second)) {
                 assert (SCIPisGT(scip_ptr, point->first, nondom_projected_points.back().first));
-
                 nondom_projected_points.push_back(*point);
             }
         }
         return nondom_projected_points;
-    }
+    }*/
 
 
     SCIP_RETCODE Polyscip::computeUnsupported() {
@@ -237,7 +322,7 @@ namespace polyscip {
                                              nonzero_obj_orig_vars,
                                              nonzero_obj_orig_vals,
                                              {obj1, obj2},
-                                             std::move(getProjectedNondomExtremePoints(obj1, obj2)));
+                                             std::move(getProjectedNondomPoints(obj1, obj2)));
                 }
             }
         }
@@ -311,11 +396,12 @@ namespace polyscip {
         return cons;
     }
 
-    SCIP_RETCODE Polyscip::addNewUnsupportedNondomPoint(SCIP_VAR* var_z,
-                                                        SCIP_CONS* cons1,
-                                                        SCIP_CONS* cons2,
-                                                        const ValueType& new_rhs_cons1,
-                                                        const ValueType& new_rhs_cons2) {
+    SCIP_RETCODE Polyscip::computeNewResult(SCIP_VAR *var_z,
+                                            SCIP_CONS *cons1,
+                                            SCIP_CONS *cons2,
+                                            const ValueType &new_rhs_cons1,
+                                            const ValueType &new_rhs_cons2,
+                                            ResultContainer& new_results) {
         // set new objective value constraints
         SCIP_CALL( SCIPchgRhsLinear(scip_, cons1, new_rhs_cons1) );
         SCIP_CALL( SCIPchgRhsLinear(scip_, cons2, new_rhs_cons2) );
@@ -327,17 +413,17 @@ namespace polyscip {
         SCIP_CALL( solve() );
         auto scip_status = SCIPgetStatus(scip_);
         if (scip_status == SCIP_STATUS_OPTIMAL) {
-            auto new_nondom_point = getOptimalResult();
-            deleteVarNameFromResult(var_z, new_nondom_point);
-            unsupported_.push_back(std::move(new_nondom_point));
+            auto nondom_result = getOptimalResult();
+            deleteVarNameFromResult(var_z, nondom_result);
+            new_results.push_back(std::move(nondom_result));
         }
         else if (scip_status == SCIP_STATUS_TIMELIMIT) {
             polyscip_status_ = PolyscipStatus::TimeLimitReached;
         }
         else {
-            std::cout << "unexpected SCIP status in solveWeightedTchebycheff: " +
+            std::cout << "unexpected SCIP status in computeNewResults: " +
                          std::to_string(SCIPgetStatus(scip_)) + "\n";
-            polyscip_status_ = PolyscipStatus::ErrorStatus;
+            polyscip_status_ = PolyscipStatus::Error;
         }
 
         // unset objective function
@@ -346,67 +432,60 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    /*bool Polyscip::lhsDominatesRhs(const ValPair &lhs, const ValPair &rhs) const {
-        if (SCIPisLT(scip_, lhs.first, rhs.first) && SCIPisLE(scip_, lhs.second, rhs.second))
-            return true;
-        else if (SCIPisLE(scip_, lhs.first, rhs.first) && SCIPisLT(scip_, lhs.second, rhs.second))
-            return true;
-        else
-            return false;
-    }*/
-
-    bool Polyscip::lhsCoincidesWithRhs(ValueType lhs,ValueType rhs) const {
-        if (std::fabs(lhs - rhs) < cmd_line_args_.getEpsilon())
+    bool Polyscip::lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const {
+        if (lhs.first - cmd_line_args_.getEpsilon() < rhs.first && lhs.second - cmd_line_args_.getEpsilon() < rhs.second)
             return true;
         else
             return false;
     }
 
-
     SCIP_RETCODE Polyscip::solveWeightedTchebycheff(SCIP_VAR* new_var,
                                                     const vector<vector<SCIP_VAR*>>& orig_vars,
                                                     const vector<vector<ValueType>>& orig_vals,
                                                     const pair<size_t, size_t>& objs,
-                                                    list<ValPair>&& nondom_proj_points) {
-        assert (!nondom_proj_points.empty());
+                                                    ValPairMap nondom_proj) {
+        assert (!nondom_proj.empty());
         assert (orig_vars.size() == orig_vals.size());
         assert (orig_vals.size() == no_objs_);
 
-        std::cout << "cons point: \n";
-        for (const auto& p : nondom_proj_points) {
-            std::cout << p.first << ", " << p.second << "\n";
-        }
+        if (nondom_proj.size() > 1) {
 
-        if (nondom_proj_points.size() > 1) {
+            auto new_results = ResultContainer{};
+            auto pred_it = nondom_proj.begin();
 
-            auto pred = nondom_proj_points.begin();
+            while (pred_it != std::prev(end(nondom_proj)) && polyscip_status_==PolyscipStatus::CompUnsupportedPhase) {
 
-            while (pred != std::prev(end(nondom_proj_points)) && polyscip_status_==PolyscipStatus::CompUnsupportedPhase) {
+                auto pred = pred_it->first;
+                auto succ_it = std::next(pred_it);
+                auto succ = succ_it->first;
+                auto last = std::prev(end(nondom_proj))->first;
 
-                auto succ = std::next(pred);
-                if (!(pred->first < succ->first)) {
-                    std::cout << pred->first << " - " << succ->first << "\n";
+                std::cout << "PRED = [" << pred.first << ", " << pred.second << "]\n";
+                std::cout << "SUCC = [" << succ.first << ", " << succ.second << "]\n";
+
+                assert (pred.first < succ.first);
+                if (pred.second <= last.second) {
+                    std::cout << pred.second << " - " << last.second << "\n";
+                    std::cout << last.first << " - " << last.second << "\n";
                 }
-
-                assert (pred->first < succ->first);
-                assert (pred->second > nondom_proj_points.back().second);
+                assert (pred.second > last.second);
 
                 auto cons = vector<SCIP_CONS *>{};
                 // create constraint pred.first <= c_{objs.first} \cdot x <= succ.first
                 cons.push_back(createObjValCons(orig_vars[objs.first],
                                                         orig_vals[objs.first],
-                                                        pred->first,
-                                                        succ->first));
+                                                        pred.first,
+                                                        succ.first));
                 // create constraint optimal_val_objs.second <= c_{objs.second} \cdot x <= pred.second
                 cons.push_back(createObjValCons(orig_vars[objs.second],
                                                         orig_vals[objs.second],
-                                                        nondom_proj_points.back().second,
-                                                        pred->second));
+                                                        last.second,
+                                                        pred.second));
 
-                auto ref_point = std::make_pair(pred->first - 1., nondom_proj_points.back().second - 1.);
+                auto ref_point = std::make_pair(pred.first - 1., last.second - 1.);
                 // set beta = (beta_1,beta_2) s.t. pred and succ are both on the norm rectangle defined by beta
                 auto beta_1 = 1.0;
-                auto beta_2 = (succ->first - ref_point.first) / (pred->second - ref_point.second);
+                auto beta_2 = (succ.first - ref_point.first) / (pred.second - ref_point.second);
                 // create constraint with respect to beta_1
                 cons.push_back(createNewVarTransformCons(new_var,
                                                          orig_vars[objs.first],
@@ -430,22 +509,39 @@ namespace polyscip {
                     auto res = getOptimalResult();
                     auto proj = std::make_pair(res.second[objs.first], res.second[objs.second]);
 
-                    if (lhsCoincidesWithRhs(proj.first, succ->first) || lhsCoincidesWithRhs(proj.second, pred->second)) {
-                        ++pred;
+
+                    if (lhsLessEqualrhs(pred, proj) || lhsLessEqualrhs(succ, proj)) {
+                        ++pred_it;
                     }
-                    else { // new point found
-                        std::cout << "NEW POINT: \n";
-                        std::cout << "pred = " << pred->first << ", " << pred->second << "\n";
-                        std::cout << "succ " << succ->first << ", " << succ->second << "\n";
-                        std::cout << "proj = " << proj.first << ", " << proj.second << "\n";
-                        addNewUnsupportedNondomPoint(new_var,
-                                                     cons.front(),
-                                                     *std::next(begin(cons)),
-                                                     proj.first,
-                                                     proj.second);
-                        auto new_projection = std::make_pair(unsupported_.back().second[objs.first],
-                                                             unsupported_.back().second[objs.second]);
-                        nondom_proj_points.insert(succ, new_projection);
+                    else {
+                        computeNewResult(new_var,
+                                         cons.front(),
+                                         *std::next(begin(cons)),
+                                         proj.first,
+                                         proj.second,
+                                         new_results);
+                        auto new_projection = std::make_pair(new_results.back().second[objs.first],
+                                                             new_results.back().second[objs.second]);
+
+                        auto new_elem_it = nondom_proj.insert({new_projection, vector<OutcomeType>{new_results.back().second}});
+                        assert (new_elem_it.second);
+                        assert (new_elem_it.first != begin(nondom_proj)); // begin(nondom_proj) should never be dominated
+                        // delete projections which are dominated by new_projection
+                        if (lhsLessEqualrhs(new_projection, pred)) {
+                            auto del_end_it = pred_it;
+                            while (lhsLessEqualrhs(new_projection, del_end_it->first))
+                                        ++del_end_it;
+                            assert (del_end_it != std::prev(end(nondom_proj))); // --end(nondom_proj) should never be dominated
+                            nondom_proj.erase(pred_it, del_end_it);
+                            pred_it = new_elem_it.first;
+                        }
+                        else if (lhsLessEqualrhs(new_projection, succ)) {
+                            auto del_end_it = succ_it;
+                            while (lhsLessEqualrhs(new_projection, del_end_it->first))
+                                ++del_end_it;
+                            assert (del_end_it != std::prev(end(nondom_proj))); // --end(nondom_proj) should never be dominated
+                            nondom_proj.erase(succ_it, del_end_it);
+                        }
                     }
                 }
                 else if (scip_status == SCIP_STATUS_TIMELIMIT) {
@@ -454,7 +550,7 @@ namespace polyscip {
                 else {
                     std::cout << "unexpected SCIP status in solveWeightedTchebycheff: " +
                                  std::to_string(SCIPgetStatus(scip_)) + "\n";
-                    polyscip_status_ = PolyscipStatus::ErrorStatus;
+                    polyscip_status_ = PolyscipStatus::Error;
                 }
 
                 // release and delete constraints
@@ -465,6 +561,8 @@ namespace polyscip {
                     SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
                 }
             }
+            for (const auto& res : new_results)
+                unsupported_.push_back(res);
         }
         return SCIP_OKAY;
     }
@@ -1013,8 +1111,9 @@ namespace polyscip {
             else if (std::equal(begin(curr->second),
                                 end(curr->second),
                                 begin(it->second),
-                                std::less_equal<ValueType>()))
+                                std::less_equal<ValueType>())) {
                 return true;
+            }
         }
         return false;
     }
