@@ -139,6 +139,7 @@ struct SCIP_ConshdlrData
    unsigned int             lastsepatag;     /**< last separation tag used to compute cuts */
    unsigned int             lastinitsepatag; /**< last separation initialization flag used */
 
+   unsigned int             lastdifftag;     /**< last tag used for computing gradients */
 
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 
@@ -158,6 +159,13 @@ typedef struct
    unsigned int          soltag;             /**< solution tag */
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
 } EXPREVAL_DATA;
+
+/** data passed on during backward automatic differentiation of an expression at a point */
+typedef struct
+{
+   unsigned int          difftag;            /**< differentiation tag */
+   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
+} EXPBWDIFF_DATA;
 
 /** data passed on during expression evaluation over a box */
 typedef struct
@@ -3717,6 +3725,70 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
    return SCIP_OKAY;
 }
 
+/** expression walk callback for computing derivatives with backward automatic differentiation, called before child is
+ *  visited
+ */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
+{  /*lint --e{715}*/
+   EXPBWDIFF_DATA* bwdiffdata;
+   SCIP_Real derivative;
+
+   assert(expr != NULL);
+   assert(expr->evalvalue != SCIP_INVALID);
+   assert(expr->children[expr->walkcurrentchild] != NULL);
+
+   bwdiffdata = (EXPBWDIFF_DATA*) data;
+   assert(bwdiffdata != NULL);
+
+   derivative = SCIP_INVALID;
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
+   if( expr->children[expr->walkcurrentchild]->difftag != bwdiffdata->difftag
+      && strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") == 0 )
+   {
+      expr->children[expr->walkcurrentchild]->derivative = 0.0;
+   }
+
+   /* update differentiation tag of the child */
+   expr->children[expr->walkcurrentchild]->difftag = bwdiffdata->difftag;
+
+   if( expr->exprhdlr->bwdiff == NULL )
+   {
+      bwdiffdata->aborted = TRUE;
+      *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      return SCIP_OKAY;
+   }
+
+   /* call backward differentiation callback */
+   if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "val") == 0 )
+      derivative = 0.0;
+   else
+   {
+      SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, expr->walkcurrentchild, &derivative) );
+   }
+
+   if( derivative == SCIP_INVALID )
+   {
+      bwdiffdata->aborted = TRUE;
+      *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      return SCIP_OKAY;
+   }
+
+   /* update partial derivative stored in the child expression; the value of a variable is used as a buffer to compute
+    * the full partial derivative of the root w.r.t. this variable
+    */
+   if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") != 0 )
+      expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
+   else
+      expr->children[expr->walkcurrentchild]->derivative += expr->derivative * derivative;
+
+   return SCIP_OKAY;
+}
+
+
+
 /** @} */
 
 /*
@@ -5072,6 +5144,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
    return SCIP_OKAY;
 }
 
+/** set the derivative evaluation callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
+            SCIP*                      scip,          /**< SCIP data structure */
+            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+            SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
+   )
+{  /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->bwdiff = bwdiff;
+
+   return SCIP_OKAY;
+}
+
 /** set the interval evaluation callback of an expression handler */
 SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP*                      scip,          /**< SCIP data structure */
@@ -5086,7 +5173,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
 
    return SCIP_OKAY;
 }
-
 
 /** set the separation initialization callback of an expression handler */
 SCIP_RETCODE SCIPsetConsExprExprHdlrInitSepa(
@@ -6015,6 +6101,66 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    return SCIP_OKAY;
 }
 
+/** computes the gradient for a given point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetConsExprExprPartialDiff().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPcomputeConsExprExprGradient(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
+
+   /* evaluate expression if necessary */
+   if( soltag == 0 || expr->evaltag != soltag )
+   {
+      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, soltag) );
+   }
+
+   /* check if expression could not be evaluated */
+   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID )
+   {
+      expr->derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+   {
+      expr->derivative = 0.0;
+   }
+   else
+   {
+      EXPBWDIFF_DATA bwdiffdata;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+      assert(conshdlrdata != NULL);
+
+      bwdiffdata.aborted = FALSE;
+      bwdiffdata.difftag = ++(conshdlrdata->lastdifftag);
+
+      expr->derivative = 1.0;
+      expr->difftag = bwdiffdata.difftag;
+
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, bwdiffExprVisitChild, NULL, NULL, (void*)&bwdiffdata) );
+
+      /* invalidate derivative if an error occurred */
+      if( bwdiffdata.aborted )
+         expr->derivative = SCIP_INVALID;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** evaluates an expression over a box
  *
  * Initiates an expression walk to also evaluate children, if necessary.
@@ -6164,6 +6310,45 @@ SCIP_Real SCIPgetConsExprExprValue(
    assert(expr != NULL);
 
    return expr->evalvalue;
+}
+
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetConsExprExprPartialDiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression which has been used in the last SCIPcomputeConsExprExprGradient() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   )
+{
+   SCIP_CONSEXPR_EXPR* varexpr;
+   SCIP_HASHMAP* var2expr;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
+   assert(expr != NULL);
+   assert(var != NULL);
+   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
+
+   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
+   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+      return 0.0;
+
+   /* return 0.0 for value expression */
+   if( expr->derivative == SCIP_INVALID )
+      return SCIP_INVALID;
+
+   /* use variable to expressions mapping which is stored as the expression handler data */
+   var2expr = (SCIP_HASHMAP*)SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
+   assert(var2expr != NULL);
+   assert(SCIPhashmapExists(var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
+   assert(varexpr != NULL);
+   assert(strcmp(varexpr->exprhdlr->name, "var") == 0);
+
+   /* use difftag to decide whether the variable belongs to the expression */
+   return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
 }
 
 /** returns the interval from the last interval evaluation of an expression (interval can be empty) */

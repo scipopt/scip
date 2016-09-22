@@ -53,7 +53,6 @@ SCIP_VAR* SCIPgetConsExprExprVarVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    );
 
-
 #ifdef __cplusplus
 }
 #endif

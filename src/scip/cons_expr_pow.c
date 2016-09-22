@@ -406,6 +406,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
 {  /*lint --e{715}*/
@@ -426,6 +427,34 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
     */
    if( !SCIPisFinite(*val) || *val == HUGE_VAL || *val == -HUGE_VAL )
       *val = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffPow)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real exponent;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+
+   child = SCIPgetConsExprExprChildren(expr)[idx];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   assert(exponent != 1.0 && exponent != 0.0);
+
+   /* x^exponent is not differentiable for x = 0 and exponent in ]0,1[ */
+   if( exponent > 0.0 && exponent < 1.0 && SCIPgetConsExprExprValue(child) == 0.0 )
+      *val = SCIP_INVALID;
+   else
+      *val = exponent * pow(SCIPgetConsExprExprValue(child), exponent - 1.0);
 
    return SCIP_OKAY;
 }
@@ -668,6 +697,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffPow) );
 
    return SCIP_OKAY;
 }

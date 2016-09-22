@@ -106,6 +106,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
             SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
 );
 
+/** set the derivative evaluation callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
+            SCIP*                      scip,          /**< SCIP data structure */
+            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+            SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
+);
+
 /** set the interval evaluation callback of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
@@ -408,6 +417,22 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
+/** computes the gradient for a given point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetConsExprExprPartialDiff().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+EXTERN
+SCIP_RETCODE SCIPcomputeConsExprExprGradient(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
 /** evaluates an expression over a box
  *
  * Initiates an expression walk to also evaluate children, if necessary.
@@ -451,6 +476,15 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 EXTERN
 SCIP_Real SCIPgetConsExprExprValue(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+EXTERN
+SCIP_Real SCIPgetConsExprExprPartialDiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
 /** returns the interval from the last interval evaluation of an expression (interval can be empty) */

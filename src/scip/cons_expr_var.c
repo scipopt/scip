@@ -222,6 +222,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
 {  /*lint --e{715}*/
@@ -231,6 +232,17 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
    *val = SCIPgetSolVal(scip, sol, (SCIP_VAR*)SCIPgetConsExprExprData(expr));
 
    return SCIP_OKAY;
+}
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffVar)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+
+   /* this should never happen because variable expressions do not have children */
+   return SCIP_INVALIDCALL;
 }
 
 /** expression interval evaluation callback */
@@ -320,6 +332,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffVar) );
 
    return SCIP_OKAY;
 }
