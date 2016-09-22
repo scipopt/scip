@@ -830,6 +830,25 @@ SCIP_RETCODE applyFixings(
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+
+         /* we can tighten the global lower bound of the integer variable */
+         if( consdata->rhs == 0 && consdata->intvar != NULL )
+         {
+            SCIP_Real glblb = SCIPvarGetLbGlobal(consdata->intvar);
+            SCIP_Bool tightend;
+
+            if( SCIPisLE(scip, glblb + 1.0, SCIPvarGetUbGlobal(consdata->intvar)) )
+            {
+               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->intvar, glblb+1.0, cons, (int)PROPRULE_INTLB, TRUE, cutoff, &tightend) );
+               assert(tightend);
+            }
+            else
+            {
+               (*cutoff) = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+
          consdata->rhs = !consdata->rhs;
          (*nchgcoefs)++;
       }
@@ -841,17 +860,17 @@ SCIP_RETCODE applyFixings(
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
-	 /* remove all negations by replacing them with the active variable
-	  * it holds that xor(x1, ~x2) = 0 <=> xor(x1, x2) = 1
+         /* remove all negations by replacing them with the active variable
+          * it holds that xor(x1, ~x2) = 0 <=> xor(x1, x2) = 1
           * @note this can only be done if the integer variable does not exist
-	  */
-	 if( negated && consdata->intvar == NULL )
-	 {
-	    assert(SCIPvarIsNegated(repvar));
+          */
+         if( negated && consdata->intvar == NULL )
+         {
+            assert(SCIPvarIsNegated(repvar));
 
-	    repvar = SCIPvarGetNegationVar(repvar);
-	    consdata->rhs = !consdata->rhs;
-	 }
+            repvar = SCIPvarGetNegationVar(repvar);
+            consdata->rhs = !consdata->rhs;
+         }
 
          /* check, if the variable should be replaced with the representative */
          if( repvar != var )
