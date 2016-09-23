@@ -245,3 +245,63 @@ Test(derivative, quadratic)
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
+
+Test(derivative, complex1)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "<x>[C] * <y>[C] * exp(<x>[C]^2 + <z>[C]^2 - 5)";
+   unsigned int seed = 0;
+   int i;
+
+   /* create expression */
+   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+
+   for( i = 0; i < 100; ++i )
+   {
+      SCIP_Real xval, yval, zval;
+
+      xval = SCIPgetRandomReal(-2.0, 2.0, &seed);
+      yval = SCIPgetRandomReal(-2.0, 2.0, &seed);
+      zval = SCIPgetRandomReal(-2.0, 2.0, &seed);
+
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, xval) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, y, yval) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
+
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), (yval + 2*pow(xval,2) * yval) * exp(pow(xval,2) + pow(zval,2) -5)));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, y), xval * exp(pow(xval,2) + pow(zval,2) - 5)));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, z), 2*xval*yval*zval*exp(pow(xval,2) + pow(zval,2) - 5)));
+   }
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+Test(derivative, complex2)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "-2*<x>[C] * (<x>[C]^2 - 9)^(-2)";
+   unsigned int seed = 0;
+   int i;
+
+   /* create expression */
+   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+
+   for( i = 0; i < 100; ++i )
+   {
+      SCIP_Real xval;
+
+      xval = SCIPgetRandomReal(-2.0, 2.0, &seed);
+
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, xval) );
+
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+
+      if( xval == 3.0 )
+         cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), SCIP_INVALID));
+      else
+         cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3)));
+   }
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
