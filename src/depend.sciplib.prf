@@ -895,7 +895,7 @@ $(LIBOBJDIR)/scip/cons_expr.o: src/scip/cons_expr.c src/scip/cons_expr.h src/sci
  src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/type_cons_expr.h src/scip/struct_cons_expr.h \
  src/scip/cons_expr_var.h src/scip/cons_expr_value.h \
- src/scip/cons_expr_sumprod.h src/scip/cons_expr_exp.h \
+ src/scip/cons_expr_sum.h src/scip/cons_expr_exp.h \
  src/scip/cons_expr_log.h src/scip/cons_expr_abs.h \
  src/scip/cons_nonlinear.h src/scip/cons_quadratic.h
 $(LIBOBJDIR)/scip/cons_expr_abs.o: src/scip/cons_expr_abs.c src/scip/cons_expr_abs.h \
@@ -1006,8 +1006,8 @@ $(LIBOBJDIR)/scip/cons_expr_log.o: src/scip/cons_expr_log.c src/scip/cons_expr_l
  src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
  src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons_expr.h src/scip/type_cons_expr.h
-$(LIBOBJDIR)/scip/cons_expr_sumprod.o: src/scip/cons_expr_sumprod.c \
- src/scip/cons_expr_sumprod.h src/scip/scip.h src/scip/def.h \
+$(LIBOBJDIR)/scip/cons_expr_sum.o: src/scip/cons_expr_sum.c \
+ src/scip/cons_expr_sum.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/blockmemshell/memory.h \
  src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \

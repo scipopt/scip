@@ -25,8 +25,9 @@
 #include <string.h>
 
 #include "scip/cons_expr_value.h"
-#include "scip/cons_expr_sumprod.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_product.h"
+#include "scip/cons_expr_sum.h"
 
 #define POW_PRECEDENCE  55000
 #define POW_HASHKEY     SCIPcalcFibHash(21163.0)
