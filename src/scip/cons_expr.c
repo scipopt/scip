@@ -166,7 +166,7 @@ typedef struct
 {
    unsigned int          difftag;            /**< differentiation tag */
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
-} EXPBWDIFF_DATA;
+} EXPRBWDIFF_DATA;
 
 /** data passed on during expression evaluation over a box */
 typedef struct
@@ -3732,14 +3732,14 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 {  /*lint --e{715}*/
-   EXPBWDIFF_DATA* bwdiffdata;
+   EXPRBWDIFF_DATA* bwdiffdata;
    SCIP_Real derivative;
 
    assert(expr != NULL);
    assert(expr->evalvalue != SCIP_INVALID);
    assert(expr->children[expr->walkcurrentchild] != NULL);
 
-   bwdiffdata = (EXPBWDIFF_DATA*) data;
+   bwdiffdata = (EXPRBWDIFF_DATA*) data;
    assert(bwdiffdata != NULL);
 
    derivative = SCIP_INVALID;
@@ -6140,7 +6140,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    }
    else
    {
-      EXPBWDIFF_DATA bwdiffdata;
+      EXPRBWDIFF_DATA bwdiffdata;
       SCIP_CONSHDLRDATA* conshdlrdata;
 
       conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
