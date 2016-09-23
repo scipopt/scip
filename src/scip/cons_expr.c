@@ -139,7 +139,7 @@ struct SCIP_ConshdlrData
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
    unsigned int             lastsepatag;     /**< last separation tag used to compute cuts */
    unsigned int             lastinitsepatag; /**< last separation initialization flag used */
-
+   unsigned int             lastbrscoretag;  /**< last branching score tag used */
 
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 
@@ -221,6 +221,13 @@ typedef struct
    int                     ncuts;            /**< buffer to store the total number of added cuts */
    unsigned int            sepatag;          /**< separation tag */
 } SEPA_DATA;
+
+/** data passed on during computing branching scores */
+typedef struct
+{
+   SCIP_SOL*               sol;              /**< solution (NULL for current the LP solution) */
+   unsigned int            brscoretag;       /**< branching score tag */
+} BRSCORE_DATA;
 
 struct SCIP_ConsExpr_PrintDotData
 {
@@ -3716,6 +3723,112 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
          ++(*ndelconss);
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback for computing branching scores */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
+{
+   BRSCORE_DATA* brscoredata;
+
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+   brscoredata = (BRSCORE_DATA*) data;
+   assert(brscoredata != NULL);
+   assert(expr->brscoretag == brscoredata->brscoretag);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* compute violation if we see an expression for the first time */
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->brscoretag != brscoredata->brscoretag )
+   {
+      SCIP_Real violation = 0.0;
+
+      /* compute branching score for the current expression */
+      if( expr->exprhdlr->brscore != NULL )
+      {
+         SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, &violation) );
+      }
+      else
+      {
+         /* mark all children as possible candidates if the callback has not been implemented; @todo maybe change this */
+         violation = 2*SCIPfeastol(scip);
+      }
+
+      assert(violation >= 0.0);
+      expr->violation += violation;
+   }
+
+   /* add violation of the expression to its children */
+   else if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+
+      assert(expr->walkcurrentchild < expr->nchildren);
+
+      child = expr->children[expr->walkcurrentchild];
+      assert(child != NULL);
+
+      /* reset branching score if the tag has changed */
+      if( child->brscoretag != brscoredata->brscoretag )
+      {
+         child->violation = expr->violation;
+         child->brscoretag = brscoredata->brscoretag;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** computes the branching scores for a given set of constraints; the scores are computed by computing the violation of
+ *  each expression by considering the values of the linearization variables of the expression and its children;
+ */
+static
+SCIP_RETCODE computeBranchingScores(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol                 /**< solution to separate, or NULL if LP solution should be used */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   BRSCORE_DATA brscoredata;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   brscoredata.sol = sol;
+   brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      /* initialize root expression (could be part of multiple constraints) */
+      if( consdata->expr->brscoretag != brscoredata.brscoretag )
+      {
+         consdata->expr->brscoretag = brscoredata.brscoretag;
+         consdata->expr->violation = 0.0;
+      }
+
+      /* call walker with the branching score callback */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, computeBranchScore, computeBranchScore, NULL, NULL, (void*)&brscoredata) );
    }
 
    return SCIP_OKAY;
