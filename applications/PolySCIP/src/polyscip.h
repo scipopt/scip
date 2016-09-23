@@ -38,29 +38,38 @@ namespace polyscip {
 
     class TwoDProj {
     public:
-        explicit TwoDProj(const Result& res, std::size_t first, std::size_t second);
+        explicit TwoDProj(const OutcomeType& outcome, std::size_t first, std::size_t second);
         ValueType getFirst() const {return proj_.first;}
         ValueType getSecond() const {return proj_.second;}
         bool operator<(TwoDProj other) const;
         bool dominates(double epsilon, const TwoDProj& other) const;
+        friend std::ostream &operator<<(std::ostream& os, const TwoDProj& proj);
     private:
         std::pair<ValueType, ValueType> proj_;
     };
 
-    class NondomTwoDProjections {
+    class NondomProjections {
     public:
-        explicit NondomTwoDProjections(double epsilon,
-                                       const ResultContainer& supported,
-                                       const ResultContainer& unsupported,
-                                       std::size_t first,
-                                       std::size_t second);
+        using ProjMap = std::map<TwoDProj, std::vector<OutcomeType>>;
+
+        explicit NondomProjections(double epsilon,
+                                   const ResultContainer& supported,
+                                   const ResultContainer& unsupported,
+                                   std::size_t first,
+                                   std::size_t second);
         bool finished() const;
-        bool update(const Result& res, std::size_t first, std::size_t second);
-        void add(const Result& res, std::size_t first, std::size_t second);
+        void update();
+        void update(TwoDProj proj, const OutcomeType& outcome);
+        TwoDProj getLeftProj() const {return current_->first;};
+        TwoDProj getRightProj() const {return std::next(current_)->first;};
+        TwoDProj getLastProj() const {return std::prev(end(nondom_projections_))->first;};
 
     private:
-        std::map<TwoDProj, std::vector<OutcomeType>> nondom_projections_;
-        std::map<TwoDProj, std::vector<OutcomeType>>::iterator current_;
+        ProjMap::iterator add(TwoDProj proj, const OutcomeType& outcome);
+
+        double epsilon_;
+        ProjMap nondom_projections_;
+        ProjMap::iterator current_;
     };
 
     class Polyscip {
@@ -91,12 +100,12 @@ namespace polyscip {
             Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, Error
         };
 
-        using ValPair = std::pair<ValueType, ValueType>;
-        using ValPairMap = std::map<ValPair, std::vector<OutcomeType>>;
+        /*using ValPair = std::pair<ValueType, ValueType>;
+        using ValPairMap = std::map<ValPair, std::vector<OutcomeType>>;*/
 
         bool filenameIsOkay(const std::string &filename);
 
-        //bool ValPairCmp(Polyscip::ValPair p1, Polyscip::ValPair p2);
+        /*bool ValPairCmp(Polyscip::ValPair p1, Polyscip::ValPair p2);*/
 
         /** Computes first non-dominated point and initializes
          * the weight space polyhedron or finds out that there is no non-dominated point
@@ -153,13 +162,19 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeUnsupported();
 
-        ValPairMap getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const;
+        /*ValPairMap getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const;*/
 
         SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
+                                              std::size_t obj_1,
+                                              std::size_t obj_2);
+
+        /*SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
+                                              const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                              const std::vector<std::vector<ValueType>>& orig_vals,
                                               const std::pair<std::size_t, std::size_t>& considered_objs,
-                                              ValPairMap nondom_projected_points);
+                                              ValPairMap nondom_projected_points);*/
 
 
         /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
@@ -197,7 +212,7 @@ namespace polyscip {
         /** Prints given point to given output stream */
         void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
 
-        bool lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const;
+        /*bool lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const;*/
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
