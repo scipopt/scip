@@ -17,6 +17,7 @@
 export LANG=C
 
 REMOVE=0
+UPLOAD=0
 APPEND=0
 AWKARGS=""
 FILES=""
@@ -28,6 +29,10 @@ do
       if test "$i" = "-r"
       then
           REMOVE=1
+      elif test "$i" = "-R"
+      then
+          REMOVE=1
+          UPLOAD=1
       else
           AWKARGS="$AWKARGS $i"
       fi
@@ -174,6 +179,12 @@ do
       # we should not check for SOLVER = scip here, because check.awk needs also to be called for examples with other names
       else
           awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+      fi
+
+      # upload results to rubberband.zib.de
+      if test "$UPLOAD" = "1"
+      then
+          rbcli up $OUTFILE $ERRFILE $SETFILE
       fi
   fi
 done
