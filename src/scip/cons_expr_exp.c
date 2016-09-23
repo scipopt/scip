@@ -170,6 +170,7 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
 {  /*lint --e{715}*/
@@ -179,6 +180,21 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
    *val = exp(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+
+   return SCIP_OKAY;
+}
+
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffExp)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[idx])), "val") != 0);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+
+   *val = SCIPgetConsExprExprValue(expr);
 
    return SCIP_OKAY;
 }
@@ -397,6 +413,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffExp) );
 
    return SCIP_OKAY;
 }

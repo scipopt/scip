@@ -216,6 +216,22 @@ extern "C" {
    SCIP_Real* val, \
    SCIP_SOL* sol)
 
+/** derivative evaluation callback
+ *
+ * The method computes the derivative of an expression using backward automatic differentiation.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be evaluated
+ *  - idx : index of the children
+ *  - val : buffer to store the partial derivative w.r.t. the i-th children
+ */
+#define SCIP_DECL_CONSEXPR_EXPRBWDIFF(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   int idx, \
+   SCIP_Real* val)
+
 /** expression callback for reverse propagation
  *
  * The method propagates each child of an expression by taking the intervals of all other children into account. The

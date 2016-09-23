@@ -1211,6 +1211,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {  /*lint --e{715}*/
@@ -1225,7 +1226,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    assert(exprdata != NULL);
 
    *val = exprdata->constant;
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr) && (*val != 0.0); ++c )
    {
       childval = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childval != SCIP_INVALID); /*lint !e777*/
@@ -1243,6 +1244,40 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
       }
 
       *val *= powval;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffProduct)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   child = SCIPgetConsExprExprChildren(expr)[idx];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+   assert(SCIPgetConsExprExprValue(child) != SCIP_INVALID);
+
+   if( !SCIPisZero(scip, SCIPgetConsExprExprValue(child)) )
+      *val = SCIPgetConsExprExprValue(expr) / SCIPgetConsExprExprValue(child);
+   else
+   {
+      int i;
+
+      *val = SCIPgetConsExprExprData(expr)->constant;
+      for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (*val != 0.0); ++i )
+      {
+         if( i == idx )
+            continue;
+
+         *val *= SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[i]);
+      }
    }
 
    return SCIP_OKAY;
@@ -1573,7 +1608,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    return SCIP_OKAY;
 }
 
-
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1595,6 +1629,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
 
    return SCIP_OKAY;
 }

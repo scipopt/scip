@@ -820,6 +820,21 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
    return SCIP_OKAY;
 }
 
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSum)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(SCIPgetConsExprExprChildren(expr)[idx] != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[idx])), "val") != 0);
+
+   *val = SCIPgetConsExprExprSumCoefs(expr)[idx];
+
+   return SCIP_OKAY;
+}
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
@@ -1189,6 +1204,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
 
    return SCIP_OKAY;
 }
