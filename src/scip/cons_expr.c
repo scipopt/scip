@@ -3596,6 +3596,9 @@ SCIP_RETCODE separatePoint(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* increase separation tag; use the same tag for all constraints in this separatePoint() call */
+   ++(conshdlrdata->lastsepatag);
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL && conss[c] != NULL);
@@ -3615,7 +3618,7 @@ SCIP_RETCODE separatePoint(
       sepadata.minviolation = minviolation;
       sepadata.result = SCIP_DIDNOTFIND;
       sepadata.ncuts = 0;
-      sepadata.sepatag = ++(conshdlrdata->lastsepatag);
+      sepadata.sepatag = conshdlrdata->lastsepatag;
 
       #ifdef SEPA_DEBUG
       {
