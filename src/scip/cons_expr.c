@@ -3764,7 +3764,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 
    /* call backward differentiation callback */
    if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "val") == 0 )
+   {
       derivative = 0.0;
+   }
    else
    {
       SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, expr->walkcurrentchild, &derivative) );
@@ -3777,8 +3779,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
       return SCIP_OKAY;
    }
 
-   /* update partial derivative stored in the child expression; the value of a variable is used as a buffer to compute
-    * the full partial derivative of the root w.r.t. this variable
+   /* update partial derivative stored in the child expression
+    * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
+    * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
     */
    if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "var") != 0 )
       expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
