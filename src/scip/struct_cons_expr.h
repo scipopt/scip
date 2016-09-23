@@ -55,6 +55,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa));          /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)); /**< branching score callback (can be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -74,6 +75,7 @@ struct SCIP_ConsExpr_Expr
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
    unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
+   SCIP_Real               violation;     /**< violation of the linearization variables of the expression and its children, i.e. |w_i = g(w_j)| */
 
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */

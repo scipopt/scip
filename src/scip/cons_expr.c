@@ -5167,6 +5167,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
    return SCIP_OKAY;
 }
 
+/** set the branching score callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< hash callback (can be NULL) */
+   )
+{  /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->brscore = brscore;
+
+   return SCIP_OKAY;
+}
+
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */

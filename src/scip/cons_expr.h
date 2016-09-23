@@ -160,6 +160,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash))      /**< hash callback (can be NULL) */
 );
 
+/** set the branching score callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< hash callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
