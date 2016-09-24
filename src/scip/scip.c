@@ -637,7 +637,7 @@ void SCIPprintBuildOptions(
    /* compiler */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Compiler: ");
 #if defined(__INTEL_COMPILER)
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Intel %d\n", __INTERL_COMPILER);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Intel %d\n", __INTEL_COMPILER);
 #elif defined(__clang__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "clang %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif defined(_MSC_VER)
