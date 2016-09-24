@@ -66,9 +66,7 @@
 
 struct SCIP_ConsExpr_ExprData
 {
-   SCIP_Real  constant;     /**< constant coefficient */
-   SCIP_Real* coefficients; /**< coefficients / exponents of children */
-   int        coefssize;    /**< size of the coefficients array */
+   SCIP_Real  coefficient;  /**< coefficient */
 
    SCIP_ROW*  row;          /**< row created during initLP() */
 };
@@ -502,32 +500,14 @@ static
 SCIP_RETCODE createData(
    SCIP*                    scip,            /**< SCIP data structure */
    SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store expression data */
-   int                      ncoefficients,   /**< number of coefficients (i.e., number of children) */
-   SCIP_Real*               coefficients,    /**< array with coefficients for all children (or NULL if all 1.0) */
-   SCIP_Real                constant         /**< constant term of sum */
+   SCIP_Real                coefficient      /**< coefficient of product */
    )
 {
-   SCIP_Real* edata;
-
    assert(exprdata != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, exprdata) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &edata, ncoefficients) );
 
-   if( coefficients != NULL )
-   {
-      memcpy(edata, coefficients, ncoefficients * sizeof(SCIP_Real));
-   }
-   else
-   {
-      int i;
-      for( i = 0; i < ncoefficients; ++i )
-         edata[i] = 1.0;
-   }
-
-   (*exprdata)->coefficients = edata;
-   (*exprdata)->coefssize    = ncoefficients;
-   (*exprdata)->constant     = constant;
+   (*exprdata)->coefficient  = coefficient;
    (*exprdata)->row          = NULL;
 
    return SCIP_OKAY;
@@ -726,8 +706,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataProduct)
    sourceexprdata = SCIPgetConsExprExprData(sourceexpr);
    assert(sourceexprdata != NULL);
 
-   SCIP_CALL( createData(targetscip, targetexprdata, SCIPgetConsExprExprNChildren(sourceexpr),
-            sourceexprdata->coefficients, sourceexprdata->constant) );
+   SCIP_CALL( createData(targetscip, targetexprdata, sourceexprdata->coefficient) );
 
    return SCIP_OKAY;
 }
@@ -742,7 +721,6 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &(exprdata->coefficients), exprdata->coefssize);
    SCIPfreeBlockMemory(scip, &exprdata);
 
    SCIPsetConsExprExprData(expr, NULL);
@@ -770,16 +748,16 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
             SCIPinfoMessage(scip, file, "(");
          }
 
-         /* print constant factor, if not one */
-         if( exprdata->constant != 1.0 )
+         /* print coefficient, if not one */
+         if( exprdata->coefficient != 1.0 )
          {
-            if( exprdata->constant < 0.0 && PRODUCT_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
+            if( exprdata->coefficient < 0.0 && PRODUCT_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
             {
-               SCIPinfoMessage(scip, file, "(%g)", exprdata->constant);
+               SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
             }
             else
             {
-               SCIPinfoMessage(scip, file, "%g", exprdata->constant);
+               SCIPinfoMessage(scip, file, "%g", exprdata->coefficient);
             }
          }
          break;
@@ -789,42 +767,16 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       {
          int childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
 
-         if( exprdata->coefficients[childidx] >= 0.0 )
+         /* print multiplication sign, if not first factor */
+         if( exprdata->coefficient != 1.0 || childidx > 0 )
          {
-            /* print multiplication sign, if not first factor */
-            if( exprdata->constant != 1.0 || childidx > 0 )
-            {
-               SCIPinfoMessage(scip, file, "*");
-            }
-         }
-         else
-         {
-            if( exprdata->constant != 1.0 || childidx > 0 )
-            {
-               /* print division sign, if not first factor */
-               SCIPinfoMessage(scip, file, "/");
-            }
-            else
-            {
-               /* print "1/", if first factor */
-               SCIPinfoMessage(scip, file, "1/");
-            }
+            SCIPinfoMessage(scip, file, "*");
          }
          break;
       }
 
       case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       {
-         SCIP_Real exponent;
-         exponent = exprdata->coefficients[SCIPgetConsExprExprWalkCurrentChild(expr)];
-
-         /* print absolute value of exponent, if not 1.0 (sign is taken care of in VISITINGCHILD) */
-         exponent = REALABS(exponent);
-         if( exponent != 1.0 )
-         {
-            SCIPinfoMessage(scip, file, "^%g", exponent);
-         }
-
          break;
       }
 
@@ -858,14 +810,14 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
    assert(exprdata != NULL);
 
    *hashkey = PRODUCT_HASHKEY;
-   *hashkey ^= SCIPcalcFibHash(exprdata->constant);
+   *hashkey ^= SCIPcalcFibHash(exprdata->coefficient);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       unsigned int childhash;
 
       assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[c]));
-      childhash = SCIPcalcFibHash(exprdata->coefficients[c]) ^ (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
+      childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
 
       *hashkey ^= childhash;
    }
@@ -879,7 +831,6 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real childval;
-   SCIP_Real powval;
    int c;
 
    assert(expr != NULL);
@@ -887,25 +838,13 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   *val = exprdata->constant;
+   *val = exprdata->coefficient;
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr) && (*val != 0.0); ++c )
    {
       childval = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childval != SCIP_INVALID); /*lint !e777*/
 
-      /* according to the man page of pow(), this should also work fine for cases like pow(<negative>, <integer>) */
-      powval = pow(childval, exprdata->coefficients[c]);
-
-      /* if there is a domain, pole, or range error, pow() should return some kind of NaN, infinity, or HUGE_VAL
-       * we could also work with floating point exceptions or errno, but I am not sure this would be thread-safe
-       */
-      if( !SCIPisFinite(powval) || powval == HUGE_VAL || powval == -HUGE_VAL )
-      {
-         *val = SCIP_INVALID;
-         return SCIP_OKAY;
-      }
-
-      *val *= powval;
+      *val *= childval;
    }
 
    return SCIP_OKAY;
@@ -932,7 +871,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffProduct)
    {
       int i;
 
-      *val = SCIPgetConsExprExprData(expr)->constant;
+      *val = SCIPgetConsExprExprData(expr)->coefficient;
       for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (*val != 0.0); ++i )
       {
          if( i == idx )
@@ -950,7 +889,6 @@ static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_INTERVAL powinterval;
    int c;
 
    assert(expr != NULL);
@@ -958,7 +896,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   SCIPintervalSet(interval, exprdata->constant);
+   SCIPintervalSet(interval, exprdata->coefficient);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
@@ -967,17 +905,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
       assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
-      /* compute interval resulting from childinterval^exprdata->coefficients[c] */
-      SCIPintervalPowerScalar(SCIPinfinity(scip), &powinterval, childinterval, exprdata->coefficients[c]);
-
-      if( SCIPintervalIsEmpty(SCIPinfinity(scip), powinterval) )
-      {
-         SCIPintervalSetEmpty(interval);
-         return SCIP_OKAY;
-      }
-
-      /* multiply powinterval with the so far computed interval */
-      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, powinterval);
+      /* multiply childinterval with the so far computed interval */
+      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
    }
 
    return SCIP_OKAY;
@@ -1017,7 +946,7 @@ SCIP_RETCODE separatePointProduct(
    *cut = NULL;
 
    /* compute violation of the expression by evaluating auxiliary variables */
-   violation = exprdata->constant;
+   violation = exprdata->coefficient;
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       child = SCIPgetConsExprExprChildren(expr)[c];
@@ -1028,7 +957,7 @@ SCIP_RETCODE separatePointProduct(
       var = SCIPgetConsExprExprLinearizationVar(child);
       assert(var != NULL);
 
-      violation *= pow(SCIPgetSolVal(scip, sol, var), exprdata->coefficients[c]);
+      violation *= SCIPgetSolVal(scip, sol, var);
    }
    violation -= SCIPgetSolVal(scip, sol, auxvar);
 
@@ -1039,63 +968,8 @@ SCIP_RETCODE separatePointProduct(
    overestimate = SCIPisLT(scip, violation, 0.0);
    success = FALSE;
 
-   /* square term */
-   if( SCIPgetConsExprExprNChildren(expr) == 1 && exprdata->coefficients[0] == 2.0 )
-   {
-      SCIP_VAR* x;
-      SCIP_Real lincoef;
-      SCIP_Real linconstant;
-      SCIP_Real refpoint;
-      SCIP_Bool islocal;
-
-      /* collect variable */
-      child = SCIPgetConsExprExprChildren(expr)[0];
-      x = SCIPgetConsExprExprLinearizationVar(child);
-      assert(x != NULL);
-
-      lincoef = 0.0;
-      linconstant = 0.0;
-      refpoint = SCIPgetSolVal(scip, sol, x);
-      success = TRUE;
-
-      /* adjust the reference points */
-      refpoint = SCIPisLT(scip, refpoint, SCIPvarGetLbLocal(x)) ? SCIPvarGetLbLocal(x) : refpoint;
-      refpoint = SCIPisGT(scip, refpoint, SCIPvarGetUbLocal(x)) ? SCIPvarGetUbLocal(x) : refpoint;
-      assert(SCIPisLE(scip, refpoint, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpoint, SCIPvarGetLbLocal(x)));
-
-      /* decide whether to use linearization or secant */
-      if( (exprdata->constant < 0 && overestimate) || (exprdata->constant > 0 && !overestimate) )
-      {
-         SCIPaddSquareLinearization(scip, exprdata->constant, refpoint, SCIPvarIsIntegral(x), &lincoef, &linconstant, &success);
-         islocal = FALSE; /* linearizations are globally valid */
-      }
-      else
-      {
-         SCIPaddSquareSecant(scip, exprdata->constant, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpoint, &lincoef, &linconstant, &success);
-         islocal = TRUE; /* secants are only valid locally */
-      }
-
-      /* @todo  allow lhs/rhs of +/- infinity? */
-      if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
-      {
-         SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, islocal ? "square_secant" : "square_linearization", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), islocal, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoef) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
-
-         if( overestimate )
-         {
-            SCIP_CALL( SCIPchgRowLhs(scip, *cut, -linconstant) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
-         }
-      }
-   }
    /* bilinear term */
-   else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprdata->coefficients[0] == 1.0 && exprdata->coefficients[1] == 1.0 )
+   if( SCIPgetConsExprExprNChildren(expr) == 2 )
    {
       SCIP_VAR* x;
       SCIP_VAR* y;
@@ -1130,7 +1004,7 @@ SCIP_RETCODE separatePointProduct(
       assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
       assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
 
-      SCIPaddBilinMcCormick(scip, exprdata->constant, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
+      SCIPaddBilinMcCormick(scip, exprdata->coefficient, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
          SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
          &success);
 
@@ -1210,7 +1084,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
-   SCIP_INTERVAL tmp;
    int i;
    int j;
 
@@ -1234,10 +1107,10 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   /* f = const * prod_i c_i ^ n_i => c_i = (f / (const * prod_{j:j!=i} c_j ^ n_j) )^ (1/n_i) */
+   /* f = const * prod_k c_k => c_i = f / (const * prod_{j:j!=i} c_j ) */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*infeasible); ++i )
    {
-      SCIPintervalSet(&childbounds, exprdata->constant);
+      SCIPintervalSet(&childbounds, exprdata->coefficient);
 
       /* compute prod_{j:j!=i} c_j */
       for( j = 0; j < SCIPgetConsExprExprNChildren(expr); ++j )
@@ -1245,22 +1118,19 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalPowerScalar(SCIPinfinity(scip), &tmp, SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]), exprdata->coefficients[j]);
-         SCIPintervalMul(SCIPinfinity(scip), &childbounds, childbounds, tmp);
+         SCIPintervalMul(SCIPinfinity(scip), &childbounds, childbounds,
+               SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
 
          /* if there is 0.0 in the product, then later division will hardly give useful bounds, so give up for this i */
          if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
             break;
       }
 
+      /* if the previous for finish, not because of the break */
       if( j == SCIPgetConsExprExprNChildren(expr) )
       {
-         /* f / (const * prod_{j:j!=i} c_j ^ n_j) */
+         /* f / (const * prod_{j:j!=i} c_j) */
          SCIPintervalDiv(SCIPinfinity(scip), &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
-
-         /* ^(1/n_i) */
-         SCIPintervalPowerScalarInverse(SCIPinfinity(scip), &childbounds,
-            SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]), exprdata->coefficients[i], childbounds);
 
          /* try to tighten the bounds of the expression */
          SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, infeasible, nreductions) );
@@ -1303,12 +1173,12 @@ SCIP_RETCODE SCIPcreateConsExprExprProduct(
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
    SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real             constant            /**< constant coefficient of product */
+   SCIP_Real             coefficient         /**< constant coefficient of product */
    )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
-   SCIP_CALL( createData(scip, &exprdata, nchildren, NULL, constant) );
+   SCIP_CALL( createData(scip, &exprdata, coefficient) );
 
    SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrProduct(consexprhdlr), exprdata, nchildren, children) );
 
@@ -1327,7 +1197,7 @@ SCIP_Real SCIPgetConsExprExprProductCoef(
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   return exprdata->constant;
+   return exprdata->coefficient;
 }
 
 /** appends an expression to a product expression */
@@ -1337,23 +1207,9 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    )
 {
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   int nchildren;
-
    assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   nchildren = SCIPgetConsExprExprNChildren(expr);
-
-   ENSUREBLOCKMEMORYARRAYSIZE(scip, exprdata->coefficients, exprdata->coefssize, nchildren + 1);
-
-   assert(exprdata->coefssize > nchildren);
-   exprdata->coefficients[nchildren] = 1.0;
 
    SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
 
    return SCIP_OKAY;
 }
-
