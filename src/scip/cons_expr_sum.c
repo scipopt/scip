@@ -63,7 +63,7 @@
 struct SCIP_ConsExpr_ExprData
 {
    SCIP_Real  constant;     /**< constant coefficient */
-   SCIP_Real* coefficients; /**< coefficients / exponents of children */
+   SCIP_Real* coefficients; /**< coefficients of children */
    int        coefssize;    /**< size of the coefficients array */
 
    SCIP_ROW*  row;          /**< row created during initLP() */
@@ -73,7 +73,7 @@ struct SCIP_ConsExpr_ExprData
 struct exprnode
 {
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression in node */
-   SCIP_Real             coef;               /**< coefficient or exponent of expr*/
+   SCIP_Real             coef;               /**< coefficient of expr*/
    struct exprnode*      next;               /**< next node */
 };
 
@@ -142,7 +142,7 @@ static
 SCIP_RETCODE createExprNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression stored at node */
-   SCIP_Real             coef,               /**< coefficient/exponent of expression */
+   SCIP_Real             coef,               /**< coefficient of expression */
    EXPRNODE**            newnode             /**< pointer to store node */
    )
 {
@@ -161,8 +161,8 @@ static
 SCIP_RETCODE createExprlistFromExprs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions stored in list */
-   SCIP_Real*            coefs,              /**< coefficients/exponents of expression */
-   SCIP_Real             coef,               /**< coefficient/exponent to multiply coefs (distributing) */
+   SCIP_Real*            coefs,              /**< coefficients of expression */
+   SCIP_Real             coef,               /**< coefficient to multiply coefs (distributing) */
    int                   nexprs,             /**< number of expressions */
    EXPRNODE**            list                /**< pointer to store list */
    )
@@ -516,65 +516,6 @@ SCIP_RETCODE createData(
    return SCIP_OKAY;
 }
 
-/* helper function to compare two sums; see compareSum */
-static
-int compareSumHelper(
-   SCIP_Real                const1,          /**< expr1's constant/factor */
-   SCIP_Real*               coefs1,          /**< expr1's coefficients/exponents */
-   SCIP_CONSEXPR_EXPR**     children1,       /**< expr1's children */
-   int                      nchildren1,      /**< number of expr1's children */
-   SCIP_Real                const2,          /**< expr2's constant/factor */
-   SCIP_Real*               coefs2,          /**< expr2's coefficients/exponents */
-   SCIP_CONSEXPR_EXPR**     children2,       /**< expr2's children */
-   int                      nchildren2       /**< number of expr2's children */
-   )
-{
-   int compareresult;
-   int i;
-   int j;
-
-   for( i = nchildren1 - 1, j = nchildren2 - 1; i >= 0 && j >= 0; --i, --j )
-   {
-      compareresult = SCIPcompareConsExprExprs(children1[i], children2[j]);
-      if( compareresult != 0 )
-         return compareresult;
-      else
-      {
-         /* expressions are equal, compare coefficient/exponent */
-         if( (coefs1 ? coefs1[i] : 1.0) < (coefs2 ? coefs2[j] : 1.0) )
-            return -1;
-         if( (coefs1 ? coefs1[i] : 1.0) > (coefs2 ? coefs2[j] : 1.0) )
-            return 1;
-
-         /* coefficients are equal, continue */
-      }
-   }
-
-   /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
-   if( i < j )
-   {
-      assert(i == -1);
-      /* expr1 has less elements, hence expr1 < expr2 */
-      return -1;
-   }
-   if( i > j )
-   {
-      assert(j == -1);
-      /* expr1 has more elements, hence expr1 > expr2 */
-      return 1;
-   }
-
-   /* everything is equal, use constant/coefficient as tie-breaker */
-   assert(i == -1 && j == -1);
-   if( const1 < const2 )
-      return -1;
-   if( const1 > const2 )
-      return 1;
-
-   /* they are equal */
-   return 0;
-}
-
 /*
  * Callback methods of expression handler
  */
@@ -661,21 +602,78 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 }
 
 /** the order of two sum expressions is a lexicographical order on the terms.
- *  So, starting from the *last*, we find the first children where they differ.
- *  Suppose that is children is the i-th children, then u < v <=> u_i < v_i.
- *  If case there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
+ *  Starting from the *last*, we find the first child where they differ, say, the i-th.
+ *  Then u < v <=> u_i < v_i.
+ *  If there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
+ *  If there is no such children and they have the same number of children, then u < v <=> const(u) < const(v)
  *  Otherwise, they are the same
  *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
  *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
-{  /*lint --e{715}*/
-   return compareSumHelper(
-         SCIPgetConsExprExprSumConstant(expr1), SCIPgetConsExprExprSumCoefs(expr1),
-         SCIPgetConsExprExprChildren(expr1), SCIPgetConsExprExprNChildren(expr1),
-         SCIPgetConsExprExprSumConstant(expr2), SCIPgetConsExprExprSumCoefs(expr2),
-         SCIPgetConsExprExprChildren(expr2), SCIPgetConsExprExprNChildren(expr2));
+{
+   SCIP_Real const1;
+   SCIP_Real* coefs1;
+   SCIP_CONSEXPR_EXPR** children1;
+   int nchildren1;
+   SCIP_Real const2;
+   SCIP_Real* coefs2;
+   SCIP_CONSEXPR_EXPR** children2;
+   int nchildren2;
+   int compareresult;
+   int i;
+   int j;
+
+   nchildren1 = SCIPgetConsExprExprNChildren(expr1);
+   nchildren2 = SCIPgetConsExprExprNChildren(expr2);
+   children1 = SCIPgetConsExprExprChildren(expr1);
+   children2 = SCIPgetConsExprExprChildren(expr2);
+   coefs1 = SCIPgetConsExprExprSumCoefs(expr1);
+   coefs2 = SCIPgetConsExprExprSumCoefs(expr2);
+   const1 = SCIPgetConsExprExprSumConstant(expr1);
+   const2 = SCIPgetConsExprExprSumConstant(expr2);
+
+   for( i = nchildren1 - 1, j = nchildren2 - 1; i >= 0 && j >= 0; --i, --j )
+   {
+      compareresult = SCIPcompareConsExprExprs(children1[i], children2[j]);
+      if( compareresult != 0 )
+         return compareresult;
+      else
+      {
+         /* expressions are equal, compare coefficient */
+         if( (coefs1 ? coefs1[i] : 1.0) < (coefs2 ? coefs2[j] : 1.0) )
+            return -1;
+         if( (coefs1 ? coefs1[i] : 1.0) > (coefs2 ? coefs2[j] : 1.0) )
+            return 1;
+
+         /* coefficients are equal, continue */
+      }
+   }
+
+   /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
+   if( i < j )
+   {
+      assert(i == -1);
+      /* expr1 has less elements, hence expr1 < expr2 */
+      return -1;
+   }
+   if( i > j )
+   {
+      assert(j == -1);
+      /* expr1 has more elements, hence expr1 > expr2 */
+      return 1;
+   }
+
+   /* everything is equal, use constant/coefficient as tie-breaker */
+   assert(i == -1 && j == -1);
+   if( const1 < const2 )
+      return -1;
+   if( const1 > const2 )
+      return 1;
+
+   /* they are equal */
+   return 0;
 }
 
 static
