@@ -79,7 +79,8 @@ struct SCIP_ConsExpr_Expr
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
    SCIP_Real               evalvalue;     /**< value of expression from last evaluation (corresponding to evaltag) */
-   SCIP_Real               derivative;    /**< partial derivative of a "root path" w.r.t. this expression (see description of @todo) */
+   SCIP_Real               derivative;    /**< partial derivative of a "root path" w.r.t. this expression
+                                            *  (see documentation of Differentiation methods in cons_expr.c) */
    unsigned int            difftag;       /**< when computing partial derivatives of an expression w.r.t. a variable,
                                             *  the tag allows us to decide whether the expression depends on the
                                             *  variable; the tag will be checked in SCIPgetConsExprExprPartialDiff() */
