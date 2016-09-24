@@ -634,6 +634,21 @@ void SCIPprintBuildOptions(
 {
    assert( scip != NULL );
 
+   /* compiler */
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Compiler: ");
+#if defined(__INTEL_COMPILER)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Intel %d\n", __INTERL_COMPILER);
+#elif defined(__clang__)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "clang %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#elif defined(_MSC_VER)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c++ %d\n", _MSC_FULL_VER);
+#elif defined(__GNUC__)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
+#endif
+
+   /* build options */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Build options:\n");
 
    /**@todo extend this list */
