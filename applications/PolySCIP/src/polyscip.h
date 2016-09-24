@@ -198,12 +198,12 @@ namespace polyscip {
                                     const ValueType& lhs,
                                     const ValueType& rhs);
 
-        SCIP_RETCODE computeNewResult(SCIP_VAR *new_var,
-                                      SCIP_CONS *cons1,
-                                      SCIP_CONS *cons2,
-                                      const ValueType &new_lhs,
-                                      const ValueType &new_rhs,
-                                      ResultContainer& new_results);
+        SCIP_RETCODE computeNondomResult(SCIP_VAR *new_var,
+                                         SCIP_CONS *cons1,
+                                         SCIP_CONS *cons2,
+                                         const ValueType &rhs_cons1,
+                                         const ValueType &rhs_cons2,
+                                         ResultContainer &results);
 
         void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
 
@@ -214,6 +214,12 @@ namespace polyscip {
 
         /*bool lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const;*/
 
+        explicit Polyscip(const CmdLineArgs& cmd_line_args,
+                          SCIP* scip,
+                          SCIP_Objsense obj_sense,
+                          std::pair<std::size_t, std::size_t> objs_to_be_ignored,
+                          SCIP_CLOCK* clock_total);
+
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
         SCIP* scip_;
@@ -221,9 +227,10 @@ namespace polyscip {
         SCIP_Objsense obj_sense_;
         /**< number of objectives */
         std::size_t no_objs_;
-        //std::vector<std::size_t> considered_objs_;
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;
+
+        bool is_subproblem_;
 
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
         ResultContainer supported_;

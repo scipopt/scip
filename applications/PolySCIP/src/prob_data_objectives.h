@@ -21,6 +21,7 @@
 #define POLYSCIP_SRC_PROB_DATA_OBJECTIVES_H_INCLUDED
 
 #include <cstdlib>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -40,7 +41,8 @@ public:
     /** Get number of objectives of given problem
      * @return number of objectives
      */
-    std::size_t getNoObjs() const {return name_to_no_.size();};
+    //std::size_t getNoObjs() const {return name_to_no_.size();};
+    std::size_t getNoObjs() const {return non_ignored_objs_.size();};
 
     /** Adds objective identifier */
     void addObjName(const char* name);
@@ -63,12 +65,16 @@ public:
         variable and objective number */
     polyscip::ValueType getObjVal(SCIP_VAR* var, std::size_t obj_no, polyscip::ValueType sol_val);
 
-    std::vector<SCIP_VAR*> getNonZeroCoeffVars(std::size_t obj_index) const;
+    std::vector<SCIP_VAR*> getNonZeroCoeffVars(std::size_t obj_no) const;
 
     /** Negates all objective coefficients of all variables */
     void negateAllCoeffs();
 
-    std::size_t getNumberNonzeroCoeffs(std::size_t obj_index) const;
+    std::size_t getNumberNonzeroCoeffs(std::size_t obj_no) const;
+
+    void ignoreObjectives(std::size_t obj_1, std::size_t obj_2);
+
+    void unignoreObjectives();
 
     /** SCIP function for releasing memory */
     virtual SCIP_RETCODE scip_delorig(SCIP* scip) {return SCIP_OKAY;};
@@ -84,6 +90,10 @@ private:
 
     /**< maps objective number to objective identifier */
     std::vector<std::string> no_to_name_;
+
+    std::vector<std::size_t> non_ignored_objs_;
+    /**< objective indices to be ignored */
+    std::stack<std::size_t> ignored_obj_;
 };
 
 #endif //POLYSCIP_SRC_PROB_DATA_OBJECTIVES_H_INCLUDED

@@ -39,7 +39,7 @@ using std::vector;
 using polyscip::WeightType;
 using uint = unsigned;
 using objMap = std::unordered_map<std::string, uint>;
-using varMap = std::unordered_map<SCIP_VAR*, std::vector<SCIP_Real> >;
+using varMap = std::unordered_map<SCIP_VAR*, std::vector<SCIP_Real>>;
 
 /** constructor */
 ProbDataObjectives::ProbDataObjectives() {
