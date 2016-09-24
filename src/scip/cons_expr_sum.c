@@ -238,7 +238,7 @@ SCIP_RETCODE freeExprlist(
  * because both SS4 and SS5 could be violated. So the purpose of this method is to enforce SS4 and SS5.
  * In the process of enforcing SS4, it could happen that SS8 is violated, but this is easy to fix.
  * note: if tomerge has more than one element, then they are the children of a simplified sum expression
- * so no values, nor sum expressions, but products, variable or function expressions
+ * so no values nor sum expressions, but products, variable or function expressions
  */
 static
 SCIP_RETCODE mergeSumExprlist(
@@ -1150,7 +1150,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** sum and products hash callback */
+/** sum hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
 {
