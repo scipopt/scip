@@ -75,7 +75,6 @@ struct SCIP_ConsExpr_ExprData
 struct exprnode
 {
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression in node */
-   SCIP_Real             coef;               /**< coefficient or exponent of expr*/
    struct exprnode*      next;               /**< next node */
 };
 
@@ -144,14 +143,12 @@ static
 SCIP_RETCODE createExprNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression stored at node */
-   SCIP_Real             coef,               /**< coefficient/exponent of expression */
    EXPRNODE**            newnode             /**< pointer to store node */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, newnode) );
 
    (*newnode)->expr = expr;
-   (*newnode)->coef = coef;
    (*newnode)->next = NULL;
    SCIPcaptureConsExprExpr(expr);
 
@@ -163,8 +160,6 @@ static
 SCIP_RETCODE createExprlistFromExprs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions stored in list */
-   SCIP_Real*            coefs,              /**< coefficients/exponents of expression */
-   SCIP_Real             coef,               /**< coefficient/exponent to multiply coefs (distributing) */
    int                   nexprs,             /**< number of expressions */
    EXPRNODE**            list                /**< pointer to store list */
    )
@@ -173,14 +168,13 @@ SCIP_RETCODE createExprlistFromExprs(
 
    assert(*list == NULL);
    assert(nexprs > 0);
-   assert(coef != 0);
 
    debugSimplify("building expr list from %d expressions\n", nexprs); /*lint !e506 !e681*/
    for( i = nexprs - 1; i >= 0; --i )
    {
       EXPRNODE* newnode;
 
-      SCIP_CALL( createExprNode(scip, exprs[i], coef*(coefs ? coefs[i] : 1.0), &newnode) );
+      SCIP_CALL( createExprNode(scip, exprs[i], &newnode) );
       insertFirstList(newnode, list);
    }
    assert(nexprs > 1 || (*list)->next == NULL);
@@ -254,7 +248,6 @@ SCIP_RETCODE createExprProductFromExprlist(
    for( i = 0; i < nchildren; ++i )
    {
       children[i] = exprlist->expr;
-      assert(exprlist->coef == 1.0);
       exprlist = exprlist->next;
    }
 
@@ -267,74 +260,66 @@ SCIP_RETCODE createExprProductFromExprlist(
    return SCIP_OKAY;
 }
 
-/* signatures are needed by simplifyFactor */
-static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct);
-/** simplifies a factor of a product expression: (base)^exponent, so that it is a valid children of a simplified product expr
+/** simplifies a factor of a product expression: base, so that it is a valid children of a simplified product expr
  * @note: in contrast to other simplify methods, this does *not* return a simplified expression.
  * Instead, the method is intended to be called only when simplifying a product expression,
- * Since in general, (base)^exponent is not a simplified child of a product expression, this method returns
- * a list of expressions (with exponents) L, such that (prod L) = (base)^exponent *and* each expression in L
+ * Since in general, base is not a simplified child of a product expression, this method returns
+ * a list of expressions L, such that (prod L) = baset *and* each expression in L
  * is a valid child of a simplified product expression.
- * TODO: handle more cases when exponent is non-integer and base >= 0 (of course one has to adapt the definition
- * of a simplified product)
  */
 static
 SCIP_RETCODE simplifyFactor(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   base,               /**< expression to be simplified */
-   SCIP_Real             exponent,           /**< exponent of expressions to be simplified */
+   SCIP_CONSEXPR_EXPR*   factor,             /**< expression to be simplified */
    SCIP_Real*            simplifiedcoef,     /**< coefficient of parent product expression */
    EXPRNODE**            simplifiedfactor    /**< pointer to store the resulting expression node/list of nodes */
    )
 {
-   const char* basetype;
+   const char* factortype;
 
    assert(simplifiedfactor != NULL);
    assert(*simplifiedfactor == NULL);
-   assert(base != NULL);
+   assert(factor != NULL);
 
-   basetype = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(base));
+   factortype = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(factor));
 
    /* enforces SP7 */
-   if( strcmp(basetype, "val") == 0 )
+   if( strcmp(factortype, "val") == 0 )
    {
-      /* TODO: if val < 0 and exponent non integer -> domain error/undefined etc */
-      debugSimplify("[simplifyFactor] seeing value %g, exponent %g -> include in coef\n", SCIPgetConsExprExprValueValue(base), exponent); /*lint !e506 !e681*/
-      *simplifiedcoef *= pow(SCIPgetConsExprExprValueValue(base), exponent);
+      *simplifiedcoef *= SCIPgetConsExprExprValueValue(factor);
       return SCIP_OKAY;
    }
 
    /* enforces SP2 */
-   if( strcmp(basetype, "prod") == 0 )
+   if( strcmp(factortype, "prod") == 0 )
    {
-      assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
-      debugSimplify("[simplifyPow] seeing a product: include its children\n"); /*lint !e506 !e681*/
+      /* assert SP8 */
+      assert(SCIPgetConsExprExprProductCoef(factor) == 1.0);
+      debugSimplify("[simplifyFactor] seeing a product: include its children\n"); /*lint !e506 !e681*/
 
-      SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(base),
-               NULL, 1.0, SCIPgetConsExprExprNChildren(base), simplifiedfactor) );
+      SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(factor),
+               SCIPgetConsExprExprNChildren(factor), simplifiedfactor) );
 
       return SCIP_OKAY;
    }
 
-   /* the given (simplified) expressions can be children of a simplified product */
-   assert(strcmp(basetype, "prod") != 0);
-   assert(strcmp(basetype, "val") != 0);
-   SCIP_CALL( createExprNode(scip, base, exponent, simplifiedfactor) );
+   /* the given (simplified) expression `factor`, can be a child of a simplified product */
+   assert(strcmp(factortype, "prod") != 0);
+   assert(strcmp(factortype, "val") != 0);
+   SCIP_CALL( createExprNode(scip, factor, simplifiedfactor) );
 
    return SCIP_OKAY;
 }
 
 /** merges tomerge into finalchildren
  * Both, tomerge and finalchildren contain expressions that could be the children of a simplified product
- * (except for SP8-SP10 which are enforced later).
+ * (except for SP8 and SP10 which are enforced later).
  * However, the concatenation of both lists will not in general yield a simplified product expression,
  * because both SP4 and SP5 could be violated. So the purpose of this method is to enforce SP4 and SP5.
- * In the process of enforcing SP4, it could happen that SP2 and SP3 get violated. Since enforcing those
- * could in principle generate further violations, we remove the affected children from finalchildren
+ * In the process of enforcing SP4, it could happen that SP2. Since enforcing SP2
+ * could generate further violations, we remove the affected children from finalchildren
  * and include them in unsimplifiedchildren for further processing.
- * note: if tomerge has more than one element, then they are the children of a simplified product expression;
- * it can contain products, but only because they are acting as non-integer powers!
+ * @note: if tomerge has more than one element, then they are the children of a simplified product expression
  */
 static
 SCIP_RETCODE mergeProductExprlist(
@@ -544,8 +529,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    /* set up list of current children (when looking at each of them individually, they are simplified, but as
     * children of a product expression they might be unsimplified) */
    unsimplifiedchildren = NULL;
-   SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
-            NULL, 1.0, SCIPgetConsExprExprNChildren(expr), &unsimplifiedchildren) );
+   SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr), SCIPgetConsExprExprNChildren(expr),
+            &unsimplifiedchildren) );
 
    /* while there are still children to process */
    finalchildren  = NULL;
@@ -555,9 +540,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       EXPRNODE* tomerge;
       EXPRNODE* first;
 
-      /* if the simplified coefficient is 0, we can return value 0
-       * TODO: there might be some domain error in the unprocessed expressions. should we take care of this?
-       */
+      /* if the simplified coefficient is 0, we can return value 0 */
       if( simplifiedcoef == 0.0 )
       {
          SCIP_CALL( freeExprlist(scip, &finalchildren) );
@@ -571,8 +554,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
 
       /* enforces SP2 and SP7 */
       tomerge = NULL;
-      assert(first->coef == 1.0);
-      SCIP_CALL( simplifyFactor(scip, first->expr, first->coef, &simplifiedcoef, &tomerge) );
+      SCIP_CALL( simplifyFactor(scip, first->expr, &simplifiedcoef, &tomerge) );
 
       /* enforces SP4 and SP5
        * note: merge frees (or uses) the nodes of the tomerge list */
@@ -583,7 +565,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    }
 
    /* build product expression from finalchildren and post-simplify */
-   debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren)); /*lint !e506 !e681*/
+   debugSimplify("[simplifyProduct] finalchildren has length %d\n", listLength(finalchildren));
 
    /* enforces SP10: if list is empty, return value */
    if( finalchildren == NULL )
@@ -596,7 +578,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       *simplifiedexpr = finalchildren->expr;
       SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
-   /* enforces SP8 and SP10: if finalchildren has only one expr and coef != 1.0, return (sum 0 coef expr) */
+   /* enforces SP10: if finalchildren has only one expr and coef != 1.0, return (sum 0 coef expr) */
    else if( finalchildren->next == NULL )
    {
       SCIP_CONSEXPR_EXPR* aux;
@@ -634,8 +616,14 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    return SCIP_OKAY;
 }
 
-/** the order of two product expressions is a lexicographical order on the terms. See compareSum in cons_expr_sum.c
- *  Example: y * z < x * y * z, x^2 * y^3 < x^3 * y^3
+/** the order of two product expressions, u and v, is a lexicographical order on the factors.
+ *  Starting from the *last*, we find the first child where they differ, say, the i-th.
+ *  Then u < v <=> u_i < v_i.
+ *  If there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
+ *  If all children are the same and they have the same number of childre, u < v <=> coeff(u) < coeff(v)
+ *  Otherwise, they are the same.
+ *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
+ *  Example: y * z < x * y * z
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
