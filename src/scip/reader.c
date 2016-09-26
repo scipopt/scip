@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include <math.h>
 
 #include "scip/def.h"

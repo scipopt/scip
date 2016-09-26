@@ -35,6 +35,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 
 #include "scip/reader_bnd.h"
 #include "scip/pub_misc.h"

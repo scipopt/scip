@@ -39,6 +39,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 
 #ifdef WITH_ZLIB
 #include <zlib.h>
