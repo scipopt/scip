@@ -1826,7 +1826,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
 
 /* if we have a C99 compiler */
-#if ( __STDC_VERSION__ >= 199901L )
+#ifdef SCIP_HAVE_VARIADIC_MACROS
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
