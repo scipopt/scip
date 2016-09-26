@@ -111,19 +111,20 @@ INIT="true"
 # counter to define file names for a test set uniquely
 COUNT=0
 # loop over permutations
-# loop over testset
-for INSTANCE in $INSTANCELIST DONE
+for ((p = 0; $p <= $PERMUTE; p++))
 do
-    if test "$INSTANCE" = "DONE"
-    then
-        break
-    fi
 
-    # increase the index for the instance tried to solve, even if the filename does not exist
-    COUNT=`expr $COUNT + 1`
-
-    for ((p = 0; $p <= $PERMUTE; p++))
+    # loop over testset
+    for INSTANCE in $INSTANCELIST DONE
     do
+        if test "$INSTANCE" = "DONE"
+        then
+            break
+        fi
+
+        # increase the index for the instance tried to solve, even if the filename does not exist
+        COUNT=`expr $COUNT + 1`
+
         # the cluster queue has an upper bound of 2000 jobs; if this limit is
         # reached the submitted jobs are dumped; to avoid that we check the total
         # load of the cluster and wait until it is save (total load not more than
@@ -185,7 +186,7 @@ do
 		    -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME
-    done # end for PERMUTE
-    # after the first termination of the set loop, no file needs to be initialized anymore
-    INIT="false"
-done # end for TSTNAME
+        # after the first termination of the set loop, no file needs to be initialized anymore
+        INIT="false"
+    done # end for TSTNAME
+done # end for PERMUTE
