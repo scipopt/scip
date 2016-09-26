@@ -75,6 +75,7 @@
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS     FALSE /**< choose side types of row (lhs/rhs) based on basis information? */
+#define DEFAULT_RANDSEED             53 /**< initial random seed */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
@@ -97,6 +98,7 @@ struct SCIP_SepaData
    int                   maxrank;            /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
    int                   maxrankintegral;    /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
    int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
+   unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             makeintegral;       /**< try to scale all cuts to integral coefficients */
    SCIP_Bool             forcecuts;          /**< if conversion to integral coefficients failed still consider the cut */
@@ -321,6 +323,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
+
+   /* permute basis indices to reduce performance variability */
+   SCIPpermuteIntArray(basisind, 0, nrows, &sepadata->randseed);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -603,6 +608,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
+   sepadata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,

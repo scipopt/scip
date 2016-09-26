@@ -23,7 +23,7 @@
 withzimpl = 1;
 
 fprintf('Starting installer for SCIP-Matlab interface.\n');
-fprintf('Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
+fprintf('Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
 
 % determine whether we are using OCTAVE
 isoctave = (exist ('OCTAVE_VERSION', 'builtin') > 0);

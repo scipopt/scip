@@ -156,7 +156,7 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
    assert(branchruledata->initseed >= 0);
 
    /* set the seed value to the initial random seed value */
-   branchruledata->seed = SCIPinitializeRandomSeed(scip, (unsigned int)branchruledata->initseed);
+   branchruledata->seed = SCIPinitializeRandomSeed(scip, branchruledata->initseed);
 
    return SCIP_OKAY;
 }

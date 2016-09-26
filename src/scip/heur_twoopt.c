@@ -1600,9 +1600,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
        * try if new working solution is feasible in original problem */
       SCIP_Bool success;
 #ifndef NDEBUG
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
       if( success )
@@ -1700,9 +1700,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
          /* check solution for feasibility */
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
          if( success )

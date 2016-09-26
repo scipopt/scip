@@ -134,7 +134,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
                SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
                   SCIPvarGetName(vars[v]), solval);
             }
-            break;
+            if( !completely )
+               break;
          }
       }
    }
@@ -162,7 +163,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
                SCIPvarGetName(vars[v]), solval);
          }
-         break;
+         if( !completely )
+            break;
       }
    }
 

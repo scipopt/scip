@@ -1072,7 +1072,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
           * neither integrality nor feasibility of LP rows has to be checked, because this is already
           * done in the intshifting heuristic itself and due to the LP resolve
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
          if( stored )
          {

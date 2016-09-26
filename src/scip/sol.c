@@ -1572,7 +1572,12 @@ SCIP_RETCODE SCIPsolMarkPartial(
    return SCIP_OKAY;
 }
 
-/** checks primal CIP solution for feasibility */
+/** checks primal CIP solution for feasibility
+ *
+ *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
+ *        differently. There might be some variables which do not have an original counter part (e.g. in
+ *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
+ */
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1581,6 +1586,7 @@ SCIP_RETCODE SCIPsolCheck(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -1601,12 +1607,31 @@ SCIP_RETCODE SCIPsolCheck(
 
    *feasible = TRUE;
 
+   if( !printreason )
+      completely = FALSE;
+
+   /* check whether the solution fulfills all constraints */
+   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
+   {
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+            checkintegrality, checklprows, printreason, completely, &result) );
+      *feasible = *feasible && (result == SCIP_FEASIBLE);
+
+#ifdef SCIP_DEBUG
+      if( !(*feasible) )
+      {
+         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
+            SCIPconshdlrGetName(set->conshdlrs[h]));
+      }
+#endif
+   }
+
    /* check whether the solution respects the global bounds of the variables */
-   if( checkbounds )
+   if( checkbounds || sol->hasinfval )
    {
       int v;
 
-      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -1622,82 +1647,58 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
 
-            /* check finite lower bound */
-            if( !SCIPsetIsInfinity(set, -lb) )
-               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
-
-            /* check finite upper bound */
-            if( !SCIPsetIsInfinity(set, ub) )
-               *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
-
-            if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
+            if( checkbounds )
             {
-               SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
-                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+               /* check finite lower bound */
+               if( !SCIPsetIsInfinity(set, -lb) )
+                  *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+
+               /* check finite upper bound */
+               if( !SCIPsetIsInfinity(set, ub) )
+                  *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
+
+               /* if one of current bounds is violated */
+               if( SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub) )
+               {
+                  if( printreason )
+                  {
+                     SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+                  }
+#ifdef SCIP_DEBUG
+                  else
+                  {
+                     SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+                  }
+#endif
+               }
+            }
+
+            /* check whether there are infinite variable values that lead to an objective value of +infinity */
+            if( *feasible && sol->hasinfval )
+            {
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
+
+               if( ((SCIPsetIsInfinity(set, solval) && SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) || (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
+               {
+                  if( printreason )
+                  {
+                     SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+                  }
+#ifdef SCIP_DEBUG
+                  else
+                  {
+                     SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+                  }
+#endif
+               }
             }
          }
-
-#ifdef SCIP_DEBUG
-         if( !(*feasible) && !printreason )
-         {
-            SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-               SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         }
-#endif
       }
-   }
-
-   /* check whether there are infinite variable values that lead to an objective value of +infinity */
-   if( *feasible && sol->hasinfval )
-   {
-      int v;
-
-      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-
-         var = prob->vars[v];
-         solval = SCIPsolGetVal(sol, set, stat, var);
-         assert(solval != SCIP_INVALID); /*lint !e777*/
-
-         if( solval != SCIP_UNKNOWN ) /*lint !e777*/
-         {
-            *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
-            *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
-
-            if( printreason && ((SCIPsetIsInfinity(set, solval) &&  SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) ||
-                  (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
-            {
-               SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                  solval, SCIPvarGetName(var), SCIPvarGetObj(var));
-            }
-         }
-
-#ifdef SCIP_DEBUG
-         if( !(*feasible) && !printreason )
-         {
-            SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-               solval, SCIPvarGetName(var), SCIPvarGetObj(var));
-         }
-#endif
-      }
-   }
-
-   /* check whether the solution fulfills all constraints */
-   for( h = 0; h < set->nconshdlrs && (*feasible || printreason); ++h )
-   {
-      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
-            checkintegrality, checklprows, printreason, &result) );
-      *feasible = *feasible && (result == SCIP_FEASIBLE);
-
-#ifdef SCIP_DEBUG
-      if( !(*feasible) )
-      {
-         SCIPsetDebugMsgPrint(set, "  -> infeasibility detected in constraint handler <%s>\n",
-            SCIPconshdlrGetName(set->conshdlrs[h]));
-      }
-#endif
    }
 
    return SCIP_OKAY;

@@ -1459,11 +1459,15 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       /* @note this call can have the side effect that variables are created */
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
@@ -2209,10 +2213,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       if( stored )
       {
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
          if( stored )
          {

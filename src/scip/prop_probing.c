@@ -63,6 +63,7 @@
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
 #define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
+#define DEFAULT_RANDSEED            57  /**< random initial seed */
 
 /*
  * Data structures
@@ -97,6 +98,7 @@ struct SCIP_PropData
    int                   nsumuseless;        /**< current number of useless probings */
    int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
+   unsigned int          randseed;           /**< random seed for variable selection */
 };
 
 
@@ -106,6 +108,7 @@ struct SCIP_PropData
 /** initializes the propagator data */
 static
 void initPropdata(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -126,6 +129,7 @@ void initPropdata(
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
    propdata->lastnode = -2;
+   propdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 }
 
 /** frees the sorted vars array */
@@ -170,7 +174,6 @@ SCIP_RETCODE sortVariables(
    SCIP_VAR** sortedvars;
    int nsortedvars;
    SCIP_Real* scores;
-   SCIP_Real denom;
    int i;
    int minnprobings;
    SCIP_Real maxscore;
@@ -202,8 +205,6 @@ SCIP_RETCODE sortVariables(
    maxscore = -1.0;
    minnprobings = INT_MAX;
 
-   denom = (SCIP_Real) (4*SCIPgetNOrigVars(scip)+1); /*lint !e790*/
-
    /* determine maximal possible score and minimal number of probings over all variables */
    for( i = 0; i < nvars; ++i )
    {
@@ -228,14 +229,12 @@ SCIP_RETCODE sortVariables(
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
 	    + 10*MIN(nimplzero, nimplone)
-	    + 100*MIN(nclqzero, nclqone)
-	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
+	    + 100*MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
 	    + MIN(nlocksdown, nlocksup)
 	    + 500 * nimplzero + 50 * nimplone
-	    + 50000 * nclqzero + 5000 * nclqone
-	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
+	    + 50000 * nclqzero + 5000 * nclqone;
 #endif
 
          if( tmp > maxscore )
@@ -269,6 +268,7 @@ SCIP_RETCODE sortVariables(
       /* prefer variables that we did not already probe on */
       if( SCIPvarIsActive(var) )
       {
+         SCIP_Real randomoffset;
          nlocksdown = SCIPvarGetNLocksDown(var);
          nlocksup = SCIPvarGetNLocksUp(var);
          nimplzero = SCIPvarGetNImpls(var, FALSE);
@@ -279,39 +279,23 @@ SCIP_RETCODE sortVariables(
          assert(propdata->noldtotalvars > SCIPvarGetIndex(var));
          assert(propdata->nprobed[SCIPvarGetIndex(var)] >= 0);
 
-         if( propdata->nprobed[SCIPvarGetIndex(var)] == 0 )
-	 {
-#ifndef VARIANT_B
-	    scores[i] = -MAX(nlocksdown, nlocksup)
-	       + 10*MIN(nimplzero, nimplone)
-	       + 100*MIN(nclqzero, nclqone)
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
-#else
-	    scores[i] = - ABS(nlocksdown - nlocksup)
-	       + MIN(nlocksdown, nlocksup)
-	       + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-	       + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
-#endif
+         /* use a random offset to break possible ties arbitrarily */
+         randomoffset = SCIPgetRandomReal(0.0, 0.5, &propdata->randseed);
 
-	 }
-         else
-	 {
 #ifndef VARIANT_B
-	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
-	       - MAX(nlocksdown, nlocksup)
-	       + 10*MIN(nimplzero, nimplone)
-	       + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
+         scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
+            - MAX(nlocksdown, nlocksup)
+            + 10*MIN(nimplzero, nimplone)
+            + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
+            - randomoffset; /* to break ties randomly */
 #else
-	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
-	       - ABS(nlocksdown - nlocksup)
-	       + MIN(nlocksdown, nlocksup)
-	       + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-	       + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
+         scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
+         - ABS(nlocksdown - nlocksup)
+         + MIN(nlocksdown, nlocksup)
+         + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
+         + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
+         - randomoffset; /* to break ties randomly */
 #endif
-	 }
       }
       else
          scores[i] = -SCIPinfinity(scip);
@@ -755,7 +739,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   initPropdata(propdata);
+   initPropdata(scip, propdata);
 
    return SCIP_OKAY;
 }
@@ -945,7 +929,8 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    oldnimplications = propdata->nimplications;
 
    /* start probing on variables */
-   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars, &(propdata->startidx), nfixedvars, naggrvars, nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
+   SCIP_CALL( applyProbing(scip, propdata, propdata->sortedvars, propdata->nsortedvars, propdata->nsortedbinvars,
+         &(propdata->startidx), nfixedvars, naggrvars, nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
 
    /* adjust result code */
    if( cutoff )
@@ -1117,7 +1102,7 @@ SCIP_RETCODE SCIPincludePropProbing(
 
    /* create probing propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-   initPropdata(propdata);
+   initPropdata(scip, propdata);
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

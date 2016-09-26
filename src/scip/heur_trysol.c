@@ -162,7 +162,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
       obj = SCIPgetSolOrigObj(scip, heurdata->trysol);
 #endif
 
-      SCIP_CALL( SCIPtrySolFree(scip, &heurdata->trysol, FALSE, TRUE, TRUE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySolFree(scip, &heurdata->trysol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
       if( stored )
       {

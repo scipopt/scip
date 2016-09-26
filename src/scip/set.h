@@ -1081,6 +1081,13 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
    );
 
+/** modifies an initial seed value with the global shift of random seeds */
+extern
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
+   );
+
 /** returns value treated as infinity */
 extern
 SCIP_Real SCIPsetInfinity(
@@ -1796,6 +1803,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
+#define SCIPsetInitializeRandomSeed(set, val) ( (val + (set)->random_randomseedshift) )
 
 #endif
 

@@ -267,7 +267,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
       success = FALSE;
 
       /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, FALSE, FALSE, TRUE, &success) );
 
       if( success )
       {

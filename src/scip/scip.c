@@ -28,6 +28,9 @@
  *
  * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
+ * @todo When making an interface change to SCIPcreateProb(), add an indication whether it is known that the objective
+ *       function is integral or whether this is not known. This avoids a manual call of SCIPsetObjIntegral(). Moreover,
+ *       then the detection could be performed incrementally, whenever a variable is added.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -10578,6 +10581,12 @@ SCIP_Real SCIPgetObjlimit(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This function should be used to inform SCIP that the objective function is integral, helping to improve the
+ *        performance. This is useful when using column generation. If no column generation (pricing) is used, SCIP
+ *        automatically detects whether the objective function is integral or can be scaled to be integral. However, in
+ *        any case, the user has to make sure that no variable is added during the solving process that destroys this
+ *        property.
  */
 SCIP_RETCODE SCIPsetObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
@@ -10616,17 +10625,60 @@ SCIP_RETCODE SCIPsetObjIntegral(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note If no pricing is performed, SCIP automatically detects whether the objective function is integral or can be
+ *        scaled to be integral, helping to improve performance. This function returns the result. Otherwise
+ *        SCIPsetObjIntegral() can be used to inform SCIP. However, in any case, the user has to make sure that no
+ *        variable is added during the solving process that destroys this property.
  */
 SCIP_Bool SCIPisObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   int v;
+
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjIntegral", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return SCIPprobIsObjIntegral(scip->origprob);
+      /* if the user explicitly added the information that there is an integral objective, return TRUE */
+      if( SCIPprobIsObjIntegral(scip->origprob) )
+         return TRUE;
+
+      /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+      if ( scip->set->nactivepricers != 0 )
+         return FALSE;
+
+      /* if the objective value offset is fractional, the value itself is possibly fractional */
+      if ( ! SCIPisIntegral(scip, scip->origprob->objoffset) )
+         return FALSE;
+
+      /* scan through the variables */
+      for (v = 0; v < scip->origprob->nvars; ++v)
+      {
+         SCIP_Real obj;
+
+         /* get objective value of variable */
+         obj = SCIPvarGetObj(scip->origprob->vars[v]);
+
+         /* check, if objective value is non-zero */
+         if ( ! SCIPisZero(scip, obj) )
+         {
+            /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+            if ( ! SCIPisIntegral(scip, obj) )
+               break;
+
+            /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+            if ( SCIPvarGetType(scip->origprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               break;
+         }
+      }
+
+      /* we do not store the result, since we assume that the original problem might be changed */
+      if ( v == scip->origprob->nvars )
+         return TRUE;
+      return FALSE;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITPRESOLVE:
@@ -12725,7 +12777,13 @@ SCIP_RETCODE SCIPchgChildPrio(
  * solve methods
  */
 
-/** checks solution for feasibility in original problem without adding it to the solution store */
+/** checks solution for feasibility in original problem without adding it to the solution store; to improve the
+ *  performance we use the following order when checking for violations:
+ *
+ *  1. constraint hanlders which don't need constraints (e.g. integral constraint handler)
+ *  2. variable bounds
+ *  3. original constraints
+ */
 static
 SCIP_RETCODE checkSolOrig(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12752,10 +12810,31 @@ SCIP_RETCODE checkSolOrig(
 
    *feasible = TRUE;
 
+   if( !printreason )
+      completely = FALSE;
+
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
    /* check bounds */
    if( checkbounds )
    {
-      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < scip->origprob->nvars; ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -12800,23 +12879,8 @@ SCIP_RETCODE checkSolOrig(
          if( result != SCIP_FEASIBLE )
          {
             *feasible = FALSE;
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
 
-   /* call constraint handlers that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-   {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, &result) );
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-            if( !completely)
+            if( !completely )
                return SCIP_OKAY;
          }
       }
@@ -14888,6 +14952,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
+         if( scip->set->reopt_enable && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) )
+         {
+            SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
+         }
+
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -14944,11 +15013,6 @@ SCIP_RETCODE SCIPsolve(
 
             SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
                   scip->transprob->nvars, &reoptrestart) );
-
-            if( scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol )
-            {
-               SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
-            }
          }
 
          /* try to compress the search tree if reoptimization is enabled */
@@ -19110,7 +19174,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                /* check the solution for feasibility if rounding worked well (or was not tried) */
                if( rounded )
                {
-                  SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, foundsol) );
+                  SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, foundsol) );
                }
                else
                {
@@ -23769,12 +23833,12 @@ SCIP_Bool SCIPallowObjProp(
 /** modifies an initial seed value with the global shift of random seeds */
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int          initialseedvalue    /**< initial seed value to be modified */
+   int                   initialseedvalue    /**< initial seed value to be modified */
    )
 {
    assert(scip != NULL);
 
-   return (unsigned int)(initialseedvalue + scip->set->random_randomseedshift);
+   return (unsigned int)SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
 }
 
 /** marks the variable that it must not be multi-aggregated
@@ -28529,6 +28593,8 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variable will not added.
+ *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -28560,6 +28626,8 @@ SCIP_RETCODE SCIPaddVarToRow(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @attention If a coefficients absolute value is below the SCIP epsilon tolerance, the variable with its value is not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -28604,6 +28672,8 @@ SCIP_RETCODE SCIPaddVarsToRow(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variables will not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -37431,6 +37501,7 @@ SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -37445,6 +37516,9 @@ SCIP_RETCODE SCIPtrySol(
    SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
 
    /* we cannot check partial solutions */
    if( SCIPsolIsPartial(sol) )
@@ -37470,7 +37544,7 @@ SCIP_RETCODE SCIPtrySol(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
@@ -37490,7 +37564,7 @@ SCIP_RETCODE SCIPtrySol(
    {
       SCIP_CALL( SCIPprimalTrySol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
             scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, sol, printreason,
-            checkbounds, checkintegrality, checklprows, stored) );
+            completely, checkbounds, checkintegrality, checklprows, stored) );
 
       if( *stored )
       {
@@ -37521,6 +37595,7 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -37535,6 +37610,9 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
 
    /* we cannot check partial solutions */
    if( SCIPsolIsPartial(*sol) )
@@ -37561,7 +37639,7 @@ SCIP_RETCODE SCIPtrySolFree(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
 
       if( feasible )
       {
@@ -37583,8 +37661,9 @@ SCIP_RETCODE SCIPtrySolFree(
    }
    else
    {
-      SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-            scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
+      SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+            scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter,
+            sol, printreason, completely, checkbounds, checkintegrality, checklprows, stored) );
 
       if( *stored )
       {
@@ -37609,6 +37688,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
@@ -37620,9 +37700,12 @@ SCIP_RETCODE SCIPtryCurrentSol(
 
    bestsol = SCIPgetBestSol(scip);
 
+   if( !printreason )
+      completely = FALSE;
+
    SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
          scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, heur,
-         printreason, checkintegrality, checklprows, stored) );
+         printreason, completely, checkintegrality, checklprows, stored) );
 
    if( *stored )
    {
@@ -37698,6 +37781,7 @@ SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -37716,15 +37800,18 @@ SCIP_RETCODE SCIPcheckSol(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || scip->set->misc_exactsolve;
 
+   if( !printreason )
+      completely = FALSE;
+
    if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, FALSE) );
+      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
    }
    else
    {
-      SCIP_CALL( SCIPsolCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob, printreason,
-            checkbounds, checkintegrality, checklprows, feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->transprob,
+            printreason, completely, checkbounds, checkintegrality, checklprows, feasible) );
    }
 
    return SCIP_OKAY;
@@ -37767,6 +37854,9 @@ SCIP_RETCODE SCIPcheckSolOrig(
       SCIPerrorMessage("Cannot check feasibility of partial solutions.");
       return SCIP_INVALIDDATA;
    }
+
+   if( !printreason )
+      completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
    SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );

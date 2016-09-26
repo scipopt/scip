@@ -2205,7 +2205,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
    *result = SCIP_FEASIBLE;
 
    /* check all linking constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -2266,8 +2266,6 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                      SCIPvarGetName(consdata->binvars[pos]) );
                }
             }
-
-            break;
          }
       }
    }

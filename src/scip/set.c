@@ -1348,7 +1348,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "display/allviols",
-         "display all violations of the best solution after the solving process finished?",
+         "display all violations for a given start solution / the best solution after the solving process?",
          &(*set)->disp_allviols, FALSE, SCIP_DEFAULT_DISP_ALLVIOLS,
          NULL, NULL) );
 
@@ -1761,7 +1761,7 @@ SCIP_RETCODE SCIPsetCreate(
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/randomseedshift",
-         "global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seed.",
+         "global shift of all random seeds in the plugins and the LP random seed",
          &(*set)->random_randomseedshift, FALSE, SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT, 0, INT_MAX,
          NULL, NULL) );
 
@@ -5024,6 +5024,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetIsSumRelGT
 #undef SCIPsetIsSumRelGE
 #undef SCIPsetIsUpdateUnreliable
+#undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
@@ -6343,4 +6344,15 @@ void SCIPsetDebugMessagePrint(
    va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(set->scip->messagehdlr, NULL, formatstr, ap);
    va_end(ap);
+}
+
+/** modifies an initial seed value with the global shift of random seeds */
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
+   )
+{
+   assert(set != NULL);
+
+   return (initialseedvalue + set->random_randomseedshift);
 }

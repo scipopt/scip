@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   boundchg.c
  * @brief  unit test for checking bound changes
  * @author Marc Pfetsch
  *

@@ -4613,7 +4613,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       /* if solution polishing is off and there is no NLP heuristic or we just check the LP solution,
        * then there is no need to check remaining constraints (NLP heuristic will pick up LP solution anyway) */
-      if( !dolinfeasshift && (conshdlrdata->subnlpheur == NULL || sol == NULL))
+      if( !dolinfeasshift && (conshdlrdata->subnlpheur == NULL || sol == NULL) && !completely )
          break;
    }
 

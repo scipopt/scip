@@ -87,6 +87,7 @@ then
     done
 fi
 
+
 # filter all parseable file format extensions
 SHORTPROBNAME=`basename $INSTANCE .gz`
 for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflist
@@ -114,5 +115,5 @@ fi
 BASENAME=$SCIPPATH/results/$FILENAME
 TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
-
+# even if we decide skip this instance, we write the basename to the eval file
 echo $BASENAME >> $EVALFILE

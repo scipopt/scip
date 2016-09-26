@@ -1134,7 +1134,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subvars);
    SCIPfreeBufferArray(scip, &subsolvals);
@@ -1722,9 +1722,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
       /* check, if solution was feasible and good enough */
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
       if( success )
       {
@@ -2016,9 +2016,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
             /* try to add solution to SCIP */
 #ifdef SCIP_DEBUG
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
             /* check, if solution was feasible and good enough */
@@ -2483,9 +2483,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
       /* try to add solution to SCIP */
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
       /* check, if solution was feasible and good enough */

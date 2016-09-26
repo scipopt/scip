@@ -34,6 +34,7 @@ parameters:
 - new parameter randomization/lpseed to set the initial seed of the LP solver
 
 performance improvements:
+- improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
   and only create and populate a sub-SCIP if enough variables will be fixed.
 - SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
@@ -65,6 +66,7 @@ interface:
 - new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
   subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
 - new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
+- add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
 
 fixed bugs:
 
@@ -75,6 +77,10 @@ misc:
 
 SCIP version 3.2.2
 ==================
+
+features:
+- for users of the ampl interface, the display/logfile option has been added to set the name of a
+  file to write the SCIP log to (additionally to stdout)
 
 fixed bugs:
 - fixed bug in XML reader concerning comments
@@ -92,6 +98,7 @@ fixed bugs:
 - writing of solutions or parameters to a file now works also with the message handler set to quiet
 - fixed bug in heur_octane with uninitialized ray direction
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
+- SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed

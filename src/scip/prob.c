@@ -953,6 +953,11 @@ SCIP_RETCODE SCIPprobAddVar(
 
       /* update the number of variables with non-zero objective coefficient */
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
+
+      /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
+       * new variables beyond that stage has to be compatible. */
+      assert( SCIPsetGetStage(set) == SCIP_STAGE_TRANSFORMING || ! prob->objisintegral || SCIPsetIsZero(set, SCIPvarGetObj(var)) ||
+         ( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, SCIPvarGetObj(var)) ) );
    }
 
    return SCIP_OKAY;

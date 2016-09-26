@@ -2655,7 +2655,7 @@ SCIP_RETCODE checkSystemGF2(
                SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
                /* check feasibility of new solution and pass it to trysol heuristic */
-               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &success) );
+               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
                if ( success )
                {
                   SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
@@ -4693,8 +4693,10 @@ SCIP_DECL_CONSCHECK(consCheckXor)
    SCIP_Bool violated;
    int i;
 
+   *result = SCIP_FEASIBLE;
+
    /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
       if( violated )
@@ -4727,11 +4729,8 @@ SCIP_DECL_CONSCHECK(consCheckXor)
                SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE\n", sum );
             }
          }
-
-         return SCIP_OKAY;
       }
    }
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

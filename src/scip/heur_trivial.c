@@ -165,7 +165,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    /* try lower bound solution */
    SCIPdebugMsg(scip, "try lower bound solution\n");
-   SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -177,7 +177,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    /* try upper bound solution */
    SCIPdebugMsg(scip, "try upper bound solution\n");
-   SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -191,7 +191,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    if( zerovalid )
    {
       SCIPdebugMsg(scip, "try zero solution\n");
-      SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
       if( success )
       {
@@ -204,7 +204,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    /* try lock solution */
    SCIPdebugMsg(scip, "try lock solution\n");
-   SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, FALSE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {

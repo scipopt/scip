@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   unittest-lpibases
+/**@file   bases.c
  * @brief  unit test for checking the settings of slack variables in a basis of the lpi
  * @author Marc Pfetsch
  *
