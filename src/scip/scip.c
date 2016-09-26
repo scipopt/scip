@@ -11973,7 +11973,8 @@ SCIP_RETCODE SCIPaddConflict(
    return SCIP_OKAY;
 }
 
-/**
+/** remove all conflicts depending on a cutoff bound if the improvement compared to the new incumbant is large enough
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -11981,9 +11982,9 @@ SCIP_RETCODE SCIPaddConflict(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPcleanConflictStoreBoundexceeding(
-   SCIP*                 scip,
-   SCIP_EVENT*           event
+SCIP_RETCODE SCIPcleanConflictStoreNewIncumbant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENT*           event               /**< event data */
    )
 {
    assert(scip != NULL);
@@ -11993,7 +11994,7 @@ SCIP_RETCODE SCIPcleanConflictStoreBoundexceeding(
 
    SCIP_CALL( checkStage(scip, "SCIPcleanConflictStoreBoundexceeding", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictstoreCleanBoundexceeding(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
+   SCIP_CALL( SCIPconflictstoreCleanNewIncumbant(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
          scip->transprob, scip->primal->cutoffbound) );
 
    return SCIP_OKAY;

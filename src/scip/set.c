@@ -1365,7 +1365,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dualray/enable",
          "enable dual ray analysis",
-         &(*set)->conf_enabledualray, TRUE, SCIP_DEFAULT_CONF_ENABLEDUALRAY,
+         &(*set)->conf_enabledualray, FALSE, SCIP_DEFAULT_CONF_ENABLEDUALRAY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/graph/enable",
@@ -1375,12 +1375,12 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dualray/useMIR",
          "apply MIR function to dual rays",
-         &(*set)->conf_applymir, TRUE, SCIP_DEFAULT_CONF_APPLYMIR,
+         &(*set)->conf_applymir, FALSE, SCIP_DEFAULT_CONF_APPLYMIR,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/dualray/useboth",
+         "conflict/dualray/onlybest",
          "use either initial dual ray or after applying MIR function",
-         &(*set)->conf_onlybest, TRUE, SCIP_DEFAULT_CONF_ONLYBEST,
+         &(*set)->conf_onlybest, FALSE, SCIP_DEFAULT_CONF_ONLYBEST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/graph/weightsize",

@@ -56,7 +56,7 @@ SCIP_DECL_EVENTEXEC(eventExecConflictstore)
 
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      SCIP_CALL( SCIPcleanConflictStoreBoundexceeding(scip, event) );
+      SCIP_CALL( SCIPcleanConflictStoreNewIncumbant(scip, event) );
    }
 
    return SCIP_OKAY;
@@ -770,7 +770,7 @@ SCIP_RETCODE SCIPconflictstoreCleanSwitching(
 }
 
 /** delete all conflicts depending a cutoff bound larger than the given bound */
-SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
+SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
@@ -780,6 +780,7 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    )
 {
    SCIP_CONS* conflict;
+   SCIP_Real improvement;
    int nseenconfs;
    int ndelconfs;
    int ndelconfs_del;
@@ -800,8 +801,14 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
       return SCIP_OKAY;
 
    /* return if we do not want to remove conflicts related to an older cutoff bound */
-   if( !set->conf_useboundlp || !set->conf_cleanboundexeedings )
+   if( !set->conf_cleanboundexeedings )
       return SCIP_OKAY;
+
+   /* TODO we may want to introduce a paramter */
+   if( SCIPsetIsPositive(set, cutoffbound) )
+      improvement = (1 - 0.95);
+   else
+      improvement = (1 + 0.95);
 
    /* remove al conflicts depending on the cutoffbound */
    while( nseenconfs < conflictstore->nconflicts )
@@ -824,7 +831,7 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
       ++nseenconfs;
 
       /* check if the conflict epends on the cutofbound */
-      if( SCIPsetIsGT(set, conflictstore->primalbounds[idx], cutoffbound) )
+      if( SCIPsetIsGT(set, improvement * conflictstore->primalbounds[idx], cutoffbound) )
       {
          SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
          SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );

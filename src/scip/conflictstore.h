@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPconflictstoreCleanSwitching(
 
 /** delete all conflicts depending a cutoff bound larger than the given bound */
 extern
-SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
+SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
