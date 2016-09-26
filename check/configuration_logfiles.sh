@@ -87,6 +87,7 @@ then
     done
 fi
 
+
 # filter all parseable file format extensions
 SHORTPROBNAME=`basename $INSTANCE .gz`
 for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflist
@@ -108,12 +109,11 @@ if test "$CONTINUE" = "true" && test -e results/$FILENAME.out
 then
     echo skipping file $INSTANCE due to existing output file results/$FILENAME.out
     SKIPINSTANCE="true"
-    return
 fi
 
 # configure global names TMPFILE (batch file) and SETFILE to save settings to
 BASENAME=$SCIPPATH/results/$FILENAME
 TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
-
+# even if we decide skip this instance, we write the basename to the eval file
 echo $BASENAME >> $EVALFILE
