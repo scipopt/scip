@@ -34,7 +34,7 @@
  * #define SORTTPL_INDCOMP                 indcomp method should be used for comparisons (optional)
  * #define SORTTPL_BACKWARDS               should the array be sorted other way around
  */
-
+#include "scip/def.h"
 #define SORTTPL_SHELLSORTMAX 25
 
 #ifndef SORTTPL_NAMEEXT
@@ -629,6 +629,210 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 }
 
 #endif
+
+#define MINREMAININGKEYSSIZE 25
+#define NELEMSMEDIANSEL 3
+/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
+ *  that are larger, equal, and smaller than the weighted median
+ *
+ *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
+ *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
+ *
+ *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
+ *
+ *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
+ *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., len
+ *  contains only elements that are smaller than the median.
+ *
+ *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
+ *  largest element by using a capacity k.
+ *
+ *  If no weights-array is passed, the algorithm assumes weights equal to 1.
+ */
+void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real             capacity,           /**< the maximum capacity that should not be exceeded */
+   int                   len,                /**< length of arrays */
+   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   )
+{
+   int start;
+   int end;
+   int j;
+   int recursiondepth;
+   SCIP_Real residualcapacity;
+
+   start = 0;
+   end = len - 1;
+   residualcapacity = capacity;
+   recursiondepth = 0;
+
+   while( end - start + 1 > MINREMAININGKEYSSIZE )
+   {
+      int i;
+      int smalleridx;
+      int largeridx;
+      int pivotindex;
+      int npivots;
+      int mid;
+      SCIP_Real largeweightsum;
+      SCIP_Real equalweightsum;
+
+      SORTTPL_KEYTYPE pivot;
+
+
+      ++recursiondepth;
+
+      /* select the median of the first, last, and middle element as pivot element */
+      mid = start + end / 2;
+      if( SORTTPL_ISBETTER( key[start], key[mid]) )
+      {
+         if( SORTTPL_ISBETTER( key[mid], key[end]) )
+            pivotindex = mid;
+         else
+         {
+            if( SORTTPL_ISBETTER( key[start], key[end]) )
+               pivotindex = end;
+            else
+               pivotindex = start;
+         }
+      }
+
+      largeridx = start;
+      smalleridx = end - 1;
+
+      /* swap pivot to the rightmost position */
+      SCIPswapInts(&indices[end], &indices[pivotindex]);
+
+      /* loop over elements and swap if one is too small and one is too large */
+      while( largeridx <= smalleridx )
+      {
+         if( keys[indices[largeridx]] <= pivot && keys[indices[smalleridx]] > pivot )
+         {
+            SCIPswapInts(&indices[smalleridx], &indices[largeridx]);
+            ++largeridx;
+            --smalleridx;
+         }
+         /* loop until an element is detected that is larger than the key indexed by smalleridx */
+         while( smalleridx >= start && keys[indices[smalleridx]] <= pivot )
+            --smalleridx;
+
+
+         while( largeridx < end - 1 && keys[indices[largeridx]] > pivot )
+            ++largeridx;
+      }
+      assert(smalleridx == largeridx - 1);
+      npivots = 0;
+
+      /* place pivot element(s) back to where they belong */
+      for( i = largeridx; i <= end; ++i )
+      {
+         if( keys[indices[i]] == pivot )
+         {
+            SCIPswapInts(&indices[largeridx + npivots], &indices[i]);
+            ++npivots;
+         }
+      }
+
+      assert(npivots > 0);
+
+      if( weights != NULL )
+      {
+         largeweightsum = 0.0;
+         /* collect weights of elements larger than the pivot  */
+         for( i = start; i < largeridx; ++i )
+         {
+            assert(keys[indices[i]] > pivot);
+            largeweightsum += weights[indices[i]];
+         }
+
+         equalweightsum = 0.0;
+
+         /* collect weights of elements that are equal to the pivot */
+         for( ; i < largeridx + npivots; ++i )
+         {
+            assert(keys[indices[i]] == pivot);
+            equalweightsum += weights[indices[i]];
+         }
+      }
+      else
+      {
+         /* if all weights are equal to one, we directly know the larger and the equal weight sum */
+         largeweightsum = largeridx;
+         equalweightsum = npivots;
+      }
+      if( largeweightsum < residualcapacity && largeweightsum + equalweightsum >= residualcapacity)
+      {
+         *median = pivot;
+         *leftmedianidx = largeridx;
+         *rightmedianidx = largeridx + npivots - 1;
+
+         return;
+      }
+
+      /* pivot is too large; continue search in the left half of the array */
+      else if( largeweightsum >= residualcapacity )
+      {
+         end = largeridx - 1;
+      }
+      else
+      {
+         assert(largeweightsum + equalweightsum < residualcapacity);
+         start = largeridx + npivots;
+         residualcapacity -= largeweightsum + equalweightsum;
+      }
+   }
+
+   assert(start <= end);
+   assert(end - start + 1 <= MINREMAININGKEYSSIZE);
+
+   /* collect data for explicit sorting */
+   for( j = 0; j <= end - start; ++j )
+   {
+      int index = indices[start + j];
+      keysbuffer[j] = keys[index];
+      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
+      indicesbuffer[j] = index;
+   }
+
+   SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, end - start + 1);
+
+   /* insert the elements sorted back into the indices array */
+   for( j = 0; j < end - start + 1; ++j )
+   {
+      SCIP_Real weight = weightsbuffer[j];
+      /* we finally found the median element */
+      if( weight > residualcapacity )
+      {
+         *median = keysbuffer[j];
+         *leftmedianidx = start + j;
+         *rightmedianidx = start + j;
+         break;
+      }
+      else
+      {
+         residualcapacity -= weight;
+      }
+   }
+
+   if( j == end - start + 1 )
+   {
+      *median = SCIP_INVALID;
+      *leftmedianidx = len;
+      *rightmedianidx = len;
+   }
+}
 
 
 /* undefine template parameters and local defines */

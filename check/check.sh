@@ -92,38 +92,39 @@ fi
 
 INIT="true"
 COUNT=0
-for ((p = 0; $p <= $PERMUTE; p++))
+for INSTANCE in $INSTANCELIST DONE
 do
-    for INSTANCE in $INSTANCELIST DONE
+    COUNT=`expr $COUNT + 1`
+    for ((p = 0; $p <= $PERMUTE; p++))
     do
-        COUNT=`expr $COUNT + 1`
 
         # loop over settings
         for SETNAME in ${SETTINGSLIST[@]}
         do
-        # waiting while the number of jobs has reached the maximum
-        if [ $MAXJOBS -ne 1 ]
-        then
-                while [ `jobs -r|wc -l` -ge $MAXJOBS ]
-                do
-                    sleep 10
-                    echo "Waiting for jobs to finish."
-                done
-        fi
+            # waiting while the number of jobs has reached the maximum
+            if [ $MAXJOBS -ne 1 ]
+            then
+                    while [ `jobs -r|wc -l` -ge $MAXJOBS ]
+                    do
+                        sleep 10
+                        echo "Waiting for jobs to finish."
+                    done
+            fi
 
         # infer the names of all involved files from the arguments
             QUEUE=`hostname`
+
+
+            # infer the names of all involved files from the arguments
+            . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
             if test "$INSTANCE" = "DONE"
             then
                 wait
                 #echo $EVALFILE
-                ./evalcheck_cluster.sh -r $EVALFILE
+                ./evalcheck_cluster.sh $EVALFILE
                 continue
             fi
-
-            # infer the names of all involved files from the arguments
-            . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
             if test "$SKIPINSTANCE" = "true"
             then
@@ -163,6 +164,6 @@ do
             fi
             #./run.sh
         done
-        INIT="false"
     done
+    INIT="false"
 done
