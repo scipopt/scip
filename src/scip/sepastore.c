@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
 {
    assert(sepastore != NULL);
    assert(cut != NULL);
-   assert(!SCIProwIsInLP(cut));
+   assert(sol != NULL || !SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* debug: check cut for feasibility */
