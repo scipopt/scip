@@ -22,6 +22,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <iterator>
 #include <ostream>
 #include <map>
 #include <memory>
@@ -50,22 +51,27 @@ namespace polyscip {
 
     class NondomProjections {
     public:
-        using ProjMap = std::map<TwoDProj, std::vector<OutcomeType>>;
+        using ProjMap = std::map<TwoDProj, ResultContainer>;
+        using const_iterator = ProjMap::const_iterator;
 
         explicit NondomProjections(double epsilon,
                                    const ResultContainer& supported,
                                    const ResultContainer& unsupported,
                                    std::size_t first,
                                    std::size_t second);
+
+        const_iterator cbegin() {return nondom_projections_.cbegin();};
+        const_iterator cend() {return nondom_projections_.cend();};
+
         bool finished() const;
         void update();
-        void update(TwoDProj proj, const OutcomeType& outcome);
+        void update(TwoDProj proj, Result res);
         TwoDProj getLeftProj() const {return current_->first;};
         TwoDProj getRightProj() const {return std::next(current_)->first;};
         TwoDProj getLastProj() const {return std::prev(end(nondom_projections_))->first;};
 
     private:
-        ProjMap::iterator add(TwoDProj proj, const OutcomeType& outcome);
+        ProjMap::iterator add(TwoDProj proj, Result res);
 
         double epsilon_;
         ProjMap nondom_projections_;
@@ -74,6 +80,10 @@ namespace polyscip {
 
     class Polyscip {
     public:
+        enum class PolyscipStatus {
+            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, Error
+        };
+
         explicit Polyscip(int argc, const char *const *argv);
 
         ~Polyscip();
@@ -92,13 +102,20 @@ namespace polyscip {
 
         void printStatus(std::ostream& os = std::cout) const;
 
+        PolyscipStatus getStatus() const;
+
+        std::size_t numberOfBoundedResults() const;
+
         bool dominatedPointsFound() const;
 
-    private:
+        ResultContainer::const_iterator supportedCBegin() {return supported_.cbegin();};
+        ResultContainer::const_iterator supportedCEnd() {return supported_.cend();};
+        ResultContainer::const_iterator unsupportedCBegin() {return unsupported_.cbegin();};
+        ResultContainer::const_iterator unsupportedCEnd() {return unsupported_.cend();};
+        ResultContainer::const_iterator unboundedCBegin() {return unbounded_.cbegin();};
+        ResultContainer::const_iterator unboundedCEnd() {return unbounded_.cend();};
 
-        enum class PolyscipStatus {
-            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, Error
-        };
+    private:
 
         /*using ValPair = std::pair<ValueType, ValueType>;
         using ValPairMap = std::map<ValPair, std::vector<OutcomeType>>;*/
@@ -140,7 +157,13 @@ namespace polyscip {
 
         SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=false);
 
+        static bool outcomesCoincide(const OutcomeType& a, const OutcomeType& b, double epsilon);
+
         bool outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const;
+
+        bool outcomeIsNew(const OutcomeType& outcome,
+                          ResultContainer::const_iterator beg,
+                          ResultContainer::const_iterator end) const;
 
         Result getResult(bool outcome_is_bounded = false, SCIP_SOL *primal_sol = nullptr);
 
@@ -164,11 +187,24 @@ namespace polyscip {
 
         /*ValPairMap getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const;*/
 
-        SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
+        /*SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
                                               std::size_t obj_1,
+                                              std::size_t obj_2);*/
+
+        SCIP_RETCODE solveWeightedTchebycheff(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                              const std::vector<std::vector<ValueType>>& orig_vals,
+                                              std::size_t obj_1,
                                               std::size_t obj_2);
+
+        SCIP_RETCODE addSubproblemNondomPoints(std::size_t obj_1,
+                                               std::size_t obj_2,
+                                               const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                                               const std::vector<std::vector<ValueType>> &orig_vals,
+                                               const TwoDProj &proj,
+                                               const ResultContainer &known_results,
+                                               ResultContainer &new_results_to_be_added);
 
         /*SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
@@ -207,7 +243,15 @@ namespace polyscip {
 
         void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
 
+        bool unboundedResultsExist() const {return !unbounded_.empty();};
+
         void printSol(const SolType& sol, std::ostream& os) const;
+
+        OutcomeType extendOutcome(OutcomeType subproblem_outcome,
+                                  std::size_t obj_1,
+                                  std::size_t obj_2,
+                                  ValueType obj_1_outcome,
+                                  ValueType obj_2_outcome) const;
 
         /** Prints given point to given output stream */
         void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
