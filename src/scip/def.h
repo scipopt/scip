@@ -48,7 +48,7 @@
 /*
  * define whether compiler allows variadic macros
  */
-#if ( __STDC_VERSION__ >= 199901L )
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
 #define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
 
