@@ -39,7 +39,10 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
 #include <strings.h>
+#endif
 
 #ifdef WITH_ZLIB
 #include <zlib.h>
