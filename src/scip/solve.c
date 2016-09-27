@@ -2903,6 +2903,7 @@ SCIP_RETCODE solveNodeLP(
    return SCIP_OKAY;
 }
 
+/** @ENFORELAX store relaxation best relaxation solution; store value of this solution since solveNodeRelax is called twice (for relaxator with positive and negative priorities) */
 /** calls relaxators */
 static
 SCIP_RETCODE solveNodeRelax(
@@ -3014,6 +3015,7 @@ void markRelaxsUnsolved(
       SCIPrelaxMarkUnsolved(set->relaxs[r]);
 }
 
+/* @ENFORELAX pass solution and value pointer to propAndSolve() */
 /** enforces constraints by branching, separation, or domain reduction */
 static
 SCIP_RETCODE enforceConstraints(
@@ -3087,6 +3089,8 @@ SCIP_RETCODE enforceConstraints(
    for( h = 0; h < set->nconshdlrs && !resolved; ++h )
    {
       assert(SCIPsepastoreGetNCuts(sepastore) == 0); /* otherwise, the LP should have been resolved first */
+
+      /* @ENFORELAX either we enforce the LP, pseudo, or relaxation solution (depending on the values) */
 
       if( SCIPtreeHasFocusNodeLP(tree) )
       {
@@ -3327,7 +3331,7 @@ void updateLoopStatus(
    }
 }
 
-
+/* @ENFORELAX pass best relaxation solution and its value; these two needs to be passed to solveNodeRelax() */
 /** propagate domains and solve relaxation and lp */
 static
 SCIP_RETCODE propAndSolve(
@@ -3773,6 +3777,8 @@ SCIP_RETCODE solveNode(
    forcedlpsolve = FALSE;
    nloops = 0;
 
+   /* @ENFORELAX allocate memory to store the best relaxation solution; maybe this can be done in a global data structure? */
+
    while( !(*cutoff) && (solverelaxagain || solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
       SCIP_Bool lperror;
@@ -3797,9 +3803,12 @@ SCIP_RETCODE solveNode(
       propagateagain = FALSE;
       forcedenforcement = FALSE;
 
+      /* @ENFORELAX initialize value for the best relaxation solution; probably with SCIP_INVALID to detect the case where no relaxation solution has been found */
+
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, cutoff) );
 
+      /* @ENFORELAX pass solution and value pointer to propAndSolve() */
       /* propagate domains before lp solving and solve relaxation and lp */
       SCIPdebugMessage(" -> node solving loop: call propagators that are applicable before LP is solved\n");
       SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
@@ -3818,6 +3827,8 @@ SCIP_RETCODE solveNode(
 
          /* propagate domains after lp solving and resolve relaxation and lp */
          SCIPdebugMessage(" -> node solving loop: call propagators that are applicable after LP has been solved\n");
+
+         /* @ENFORELAX pass solution and value pointer to propAndSolve() */
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
                branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
                propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
@@ -3917,6 +3928,7 @@ SCIP_RETCODE solveNode(
             *infeasible = FALSE;
          }
 
+         /* @ENFORELAX pass solution and value pointer to enforceConstraints() */
          /* call constraint enforcement */
          SCIP_CALL( enforceConstraints(blkmem, set, stat, transprob, tree, lp, relaxation, sepastore, branchcand,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement) );

@@ -3063,6 +3063,27 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
    return SCIP_OKAY;
 }
 
+/** calls enforcing method of constraint handler for a relaxation solution for all constraints added after last
+ *  conshdlrResetEnfo() call
+ */
+SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             relaxsol,           /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   /* @ENFORELAX How to implement this? More similar to SCIPconshdlrEnforceLPSol() or SCIPconshdlrEnforcePseudoSol()? */
+
+   return SCIP_OKAY;
+}
+
+
 /** calls enforcing method of constraint handler for LP solution for all constraints added after last
  *  conshdlrResetEnfo() call
  */
