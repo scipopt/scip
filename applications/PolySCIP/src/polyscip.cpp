@@ -62,7 +62,7 @@ namespace polyscip {
     using DDMethod = polytoperepresentation::DoubleDescriptionMethod;
 
     TwoDProj::TwoDProj(const OutcomeType& outcome, std::size_t first, std::size_t second)
-            : proj_(outcome[first], outcome[second])
+            : proj_(outcome.at(first), outcome.at(second))
     {}
 
     bool TwoDProj::operator<(TwoDProj other) const {
@@ -81,11 +81,15 @@ namespace polyscip {
     }
 
     NondomProjections::ProjMap::iterator NondomProjections::add(TwoDProj proj, Result res) {
-        auto ret = nondom_projections_.emplace(std::move(proj), ResultContainer{std::move(res)});
-        if (!ret.second) {
-            ret.first->second.push_back(std::move(res));
+        auto ret_find = nondom_projections_.find(proj);
+        if (ret_find == end(nondom_projections_)) { // key not found
+            auto ret = nondom_projections_.emplace(std::move(proj), ResultContainer{std::move(res)});
+            return ret.first;
         }
-        return ret.first;
+        else { // key found
+            nondom_projections_[proj].push_back(std::move(res));
+            return ret_find;
+        }
     }
 
 
@@ -96,9 +100,8 @@ namespace polyscip {
                                          std::size_t second)
             : epsilon_(eps)
     {
-        assert (first != second);
+        assert (first < second);
         assert (!supported.empty());
-        assert (first < supported.front().second.size() && second < supported.front().second.size());
         for (const auto& res : supported) {
             add(TwoDProj(res.second, first, second), res);
         }
@@ -241,6 +244,7 @@ namespace polyscip {
         SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
         SCIP_CALL( computeSupported() );
         deleteWeaklyNondomSupportedResults();
+        assert (!dominatedPointsFound());
         if (polyscip_status_ == PolyscipStatus::CompUnsupportedPhase) {
             SCIP_CALL( computeUnsupported() );
         }
@@ -605,7 +609,6 @@ namespace polyscip {
         SCIP_CALL( SCIPdelVar(scip_, z, addressof(var_deleted)) );
         assert (var_deleted);
         SCIP_CALL( SCIPreleaseVar(scip_, addressof(z)) );
-
         if (no_objs_ > 3) {
             for (auto it = nondom_projs.cbegin(); it!=nondom_projs.cend(); ++it) {
                 SCIP_CALL (addSubproblemNondomPoints(obj_1,
@@ -630,6 +633,7 @@ namespace polyscip {
                                                      const TwoDProj &proj,
                                                      const ResultContainer &known_results,
                                                      ResultContainer &new_results_to_be_added) {
+        assert (!known_results.empty());
         auto new_results = ResultContainer{};
         // create constraint pred.first <= c_{objs.first} \cdot x <= succ.first
         auto proj_cons1 = createObjValCons(orig_vars[obj_1],
@@ -672,36 +676,54 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Error;
             }
             else if (no_bounded_results > known_results.size()) {
+                std::cout << "CASE else if\n";
                 for (auto it=subpoly->supportedCBegin(); it!=subpoly->supportedCEnd(); ++it) {
+                    assert (!it->first.empty());
+                    assert (!it->second.empty());
                     auto ext_outcome = extendOutcome(std::move(it->second),
                                                      obj_1, obj_2,
                                                      proj.getFirst(), proj.getSecond());
-                    if (outcomeIsNew(ext_outcome, begin(known_results), end(known_results))) {
+                    assert (!ext_outcome.empty());
+                    if (outcomeIsNew(ext_outcome, known_results.cbegin(), known_results.cend())) {
                         new_results_to_be_added.push_back({std::move(it->first), std::move(ext_outcome)});
+                        assert (!isDominatedOrEqual(std::prev(new_results_to_be_added.end()),
+                                                    begin(new_results_to_be_added),
+                                                    std::prev(std::prev(end(new_results_to_be_added)))));
                     }
                 }
                 for (auto it= subpoly->unsupportedCBegin(); it!= subpoly->unsupportedCEnd(); ++it) {
+                    assert (!it->first.empty());
+                    assert (!it->second.empty());
                     auto ext_outcome = extendOutcome(std::move(it->second),
                                                      obj_1, obj_2,
                                                      proj.getFirst(), proj.getSecond());
-                    if (outcomeIsNew(ext_outcome, begin(known_results), end(known_results))) {
+                    assert (!ext_outcome.empty());
+                    if (outcomeIsNew(ext_outcome, known_results.cbegin(), known_results.cend())) {
                         new_results_to_be_added.push_back({std::move(it->first), std::move(ext_outcome)});
+                        assert (!isDominatedOrEqual(std::prev(new_results_to_be_added.end()),
+                                                    begin(new_results_to_be_added),
+                                                    std::prev(std::prev(end(new_results_to_be_added)))));
                     }
                 }
-                assert (known_results.size() + new_results.size() == no_bounded_results);
             }
             else {
                 for (auto it=subpoly->supportedCBegin(); it!=subpoly->supportedCEnd(); ++it) {
+                    assert (!it->first.empty());
+                    assert (!it->second.empty());
                     auto ext_outcome = extendOutcome(std::move(it->second),
                                                      obj_1, obj_2,
                                                      proj.getFirst(), proj.getSecond());
-                    assert (!outcomeIsNew(ext_outcome, begin(known_results), end(known_results)));
+                    assert (!ext_outcome.empty());
+                    assert (!outcomeIsNew(ext_outcome, known_results.cbegin(), known_results.cend()));
                 }
                 for (auto it=subpoly->unsupportedCBegin(); it!=subpoly->unsupportedCEnd(); ++it) {
+                    assert (!it->first.empty());
+                    assert (!it->second.empty());
                     auto ext_outcome = extendOutcome(std::move(it->second),
                                                      obj_1, obj_2,
                                                      proj.getFirst(), proj.getSecond());
-                    assert (!outcomeIsNew(ext_outcome, begin(known_results), end(known_results)));
+                    assert (!ext_outcome.empty());
+                    assert (!outcomeIsNew(ext_outcome, known_results.cbegin(), known_results.cend()));
                 }
             }
         }
@@ -1097,8 +1119,10 @@ namespace polyscip {
             supported_.push_back(std::move(result));
         }
         else {
-            global::print(result.second, "Outcome: [", "]");
-            cout << "not added to results.\n";
+            if (cmd_line_args_.beVerbose()) {
+                global::print(result.second, "Outcome: [", "]");
+                cout << "not added to results.\n";
+            }
         }
 
         SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
@@ -1166,8 +1190,11 @@ namespace polyscip {
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator last) const {
         auto eps = cmd_line_args_.getEpsilon();
-        return std::none_of(beg, last, [eps, &outcome](const Result& res){
-            return outcomesCoincide(outcome, res.second, eps);});
+        assert (beg != last);
+        return std::none_of(beg, last, [eps, &outcome](const Result& res)
+        {
+            return outcomesCoincide(outcome, res.second, eps);
+        });
     }
 
     bool Polyscip::outcomesCoincide(const OutcomeType& a, const OutcomeType& b, double epsilon) {
@@ -1514,7 +1541,9 @@ namespace polyscip {
             cout << "ERROR writing solution file\n.";
     }
 
-    bool Polyscip::isDominatedOrEqual(ResultContainer::const_iterator it, ResultContainer::const_iterator beg_it, ResultContainer::const_iterator end_it) const {
+    bool Polyscip::isDominatedOrEqual(ResultContainer::const_iterator it,
+                                      ResultContainer::const_iterator beg_it,
+                                      ResultContainer::const_iterator end_it) const {
         for (auto curr = beg_it; curr != end_it; ++curr) {
             if (it == curr)
                 continue;
@@ -1522,6 +1551,8 @@ namespace polyscip {
                                 end(curr->second),
                                 begin(it->second),
                                 std::less_equal<ValueType>())) {
+                outputOutcome(curr->second, std::cout, "NON-DOM: ");
+                outputOutcome(it->second, std::cout, "DOM: ");
                 return true;
             }
         }
