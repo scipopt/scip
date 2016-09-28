@@ -162,6 +162,7 @@ static
 void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SCIP_Real*            weights,            /**< real, nonnegative weights that should be permuted like key, or NULL */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
@@ -191,6 +192,8 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          int j;
          SORTTPL_KEYTYPE tempkey = key[i];
 
+         SCIP_Real tmpweight = weights != NULL ? weights[i] : 1;
+
          SORTTPL_HASFIELD1( SORTTPL_FIELD1TYPE tempfield1 = field1[i]; )
          SORTTPL_HASFIELD2( SORTTPL_FIELD2TYPE tempfield2 = field2[i]; )
          SORTTPL_HASFIELD3( SORTTPL_FIELD3TYPE tempfield3 = field3[i]; )
@@ -202,6 +205,10 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          while( j >= first && SORTTPL_ISBETTER(tempkey, key[j-h]) )
          {
             key[j] = key[j-h];
+
+            if( weights != NULL )
+               weights[j] = weights[j - h];
+
             SORTTPL_HASFIELD1( field1[j] = field1[j-h]; )
             SORTTPL_HASFIELD2( field2[j] = field2[j-h]; )
             SORTTPL_HASFIELD3( field3[j] = field3[j-h]; )
@@ -212,6 +219,10 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          }
 
          key[j] = tempkey;
+
+         if( weights != NULL )
+            weights[j] = tmpweight;
+
          SORTTPL_HASFIELD1( field1[j] = tempfield1; )
          SORTTPL_HASFIELD2( field2[j] = tempfield2; )
          SORTTPL_HASFIELD3( field3[j] = tempfield3; )
@@ -388,7 +399,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
    if( end - start >= 1 )
    {
       SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
-         (key,
+         (key, NULL,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
             SORTTPL_HASFIELD3PAR(field3)
@@ -447,7 +458,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
    if( len <= SORTTPL_SHELLSORTMAX )
    {
       SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
-         (key,
+         (key, NULL,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
             SORTTPL_HASFIELD3PAR(field3)
@@ -630,8 +641,60 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 
 #endif
 
-#define MINREMAININGKEYSSIZE 25
-#define NELEMSMEDIANSEL 3
+/* guess a median for the key array [start, ..., end] by using median of the first, last, and middle element */
+static
+int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   int                   start,              /**< first index of the key array to consider */
+   int                   end                 /**< last index of the key array to consider */
+   )
+{
+   int mid;
+   int pivotindex;
+   /* select the median of the first, last, and middle element as pivot element */
+   mid = start + end / 2;
+
+   /* let the elements in the unsorted order be a,b,c at positions start, mid, and end */
+   if( SORTTPL_ISBETTER( key[start], key[mid]) ) /* a <= b */
+   {
+      if( SORTTPL_ISBETTER( key[mid], key[end]) ) /* b <= c */
+         /* resulting permutation: a b c */
+         pivotindex = mid;
+      else /* b > c */
+      {
+         if( SORTTPL_ISBETTER( key[start], key[end]) ) /* a <= c */
+            /* resulting permutation: a c b */
+            pivotindex = end;
+         else
+            /* resulting permutation: c a b */
+            pivotindex = start;
+      }
+   }
+   else /* a > b */
+   {
+      if( SORTTPL_ISBETTER( key[mid], key[end] ) )
+      {
+         if( SORTTPL_ISBETTER( key[start], key[end]) )
+            /* resulting permutation: b a c */
+            pivotindex = start;
+         else
+            /* resulting permutation: b c a */
+            pivotindex = end;
+      }
+      else
+      {
+         /* resulting permutation: c b a */
+         pivotindex = mid;
+      }
+   }
+
+   return pivotindex;
+}
+
 /** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
  *  that are larger, equal, and smaller than the weighted median
  *
@@ -678,7 +741,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    residualcapacity = capacity;
    recursiondepth = 0;
 
-   while( end - start + 1 > MINREMAININGKEYSSIZE )
+   while( end - start + 1 > SORTTPL_SHELLSORTMAX )
    {
       int i;
       int hi;
@@ -686,7 +749,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       int pivotindex;
       int npivots;
       int mid;
-      SCIP_Real largeweightsum;
+      SCIP_Real betterweightsum;
       SCIP_Real equalweightsum;
 
       SORTTPL_KEYTYPE pivot;
@@ -694,65 +757,60 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
 
       ++recursiondepth;
 
-      /* select the median of the first, last, and middle element as pivot element */
-      mid = start + end / 2;
+      /* guess a median as pivot */
+      pivotindex = SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
+            (key,
+                  SORTTPL_HASPTRCOMPPAR(ptrcomp)
+                  SORTTPL_HASINDCOMPPAR(indcomp)
+                  SORTTPL_HASINDCOMPPAR(dataptr)
+                  start, end);
 
-      /* let the elements in the unsorted order be a,b,c at positions start, mid, and end */
-      if( SORTTPL_ISBETTER( key[start], key[mid]) ) /* a <= b */
-      {
-         if( SORTTPL_ISBETTER( key[mid], key[end]) ) /* b <= c */
-            /* resulting permutation: a b c */
-            pivotindex = mid;
-         else /* b > c */
-         {
-            if( SORTTPL_ISBETTER( key[start], key[end]) ) /* a <= c */
-               /* resulting permutation: a c b */
-               pivotindex = end;
-            else
-               /* resulting permutation: c a b */
-               pivotindex = start;
-         }
-      }
-      else /* a > b */
-      {
-         if( SORTTPL_ISBETTER( key[mid], key[end] ) )
-         {
-            if( SORTTPL_ISBETTER( key[start], key[end]) )
-               /* resulting permutation: b a c */
-               pivotindex = start;
-            else
-               /* resulting permutation: b c a */
-               pivotindex = end;
-         }
-         else
-         {
-            /* resulting permutation: c b a */
-            pivotindex = mid;
-         }
-      }
+      pivot = key[pivotindex];
 
-      pivotkey = key[pivotindex];
+      /* swap pivot element to the end of the array */
+      if( pivotindex != end )
+      {
+         SORTTPL_SWAP(SORTTPL_KEYTYPE, key[end], key[pivotindex]);
+
+         if( weights != NULL )
+            SORTTPL_SWAP(SCIP_Real, weights[end], weights[pivotindex]);
+
+         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[end], field1[pivotindex]); )
+         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[end], field2[pivotindex]); )
+         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[end], field3[pivotindex]); )
+         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[end], field4[pivotindex]); )
+         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[end], field5[pivotindex]); )
+         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[end], field6[pivotindex]); )
+      }
       lo = start;
       hi = end - 1;
-
-      /* swap pivot to the rightmost position */
-      SCIPswapInts(&indices[end], &indices[pivotindex]);
 
       /* loop over elements and swap if one is too small and one is too large */
       while( lo <= hi )
       {
-         if( keys[indices[lo]] <= pivot && keys[indices[hi]] > pivot )
+         if( !SORTTPL_ISBETTER(key[lo], pivot ) && SORTTPL_ISBETTER( key[hi], pivot) )
          {
-            SCIPswapInts(&indices[hi], &indices[lo]);
-            ++largeridx;
+            SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[hi]);
+
+            if( weights != NULL )
+               SORTTPL_SWAP(SCIP_Real, weights[lo], weights[hi]);
+
+            SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[hi]); )
+            SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]); )
+            SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]); )
+            SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]); )
+            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo], field5[hi]); )
+            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo], field6[hi]); )
+
+            ++lo;
             --hi;
          }
-         /* loop until an element is detected that is larger than the key indexed by hi */
-         while( hi >= start && keys[indices[hi]] <= pivot )
+         /* loop until hi indexes an element is detected that is better than the pivot */
+         while( hi >= start && !SORTTPL_ISBETTER(key[hi], pivot) )
             --hi;
 
 
-         while( largeridx < end - 1 && keys[indices[largeridx]] > pivot )
+         while( lo < end && SORTTPL_ISBETTER(key[lo], pivot) )
             ++lo;
       }
       assert(hi == lo - 1);
@@ -761,9 +819,22 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       /* place pivot element(s) back to where they belong */
       for( i = lo; i <= end; ++i )
       {
-         if( keys[indices[i]] == pivot )
+         if( !SORTTPL_ISWORSE(key[i], pivot) )
          {
-            SCIPswapInts(&indices[lo + npivots], &indices[i]);
+            /* because lo skipped all elements that are better, there should be no element left that is better to the right of lo */
+            assert(!SORTTPL_ISBETTER(key[i], pivot));
+            SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo + npivots], key[i]);
+
+            if( weights != NULL )
+               SORTTPL_SWAP(SCIP_Real, weights[lo + npivots], weights[i]);
+
+            SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo + npivots], field1[i]); )
+            SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo + npivots], field2[i]); )
+            SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo + npivots], field3[i]); )
+            SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo + npivots], field4[i]); )
+            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo + npivots], field5[i]); )
+            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo + npivots], field6[i]); )
+
             ++npivots;
          }
       }
@@ -772,12 +843,12 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
 
       if( weights != NULL )
       {
-         largeweightsum = 0.0;
+         betterweightsum = 0.0;
          /* collect weights of elements larger than the pivot  */
          for( i = start; i < lo; ++i )
          {
-            assert(keys[indices[i]] > pivot);
-            largeweightsum += weights[indices[i]];
+            assert(SORTTPL_ISBETTER(key[i], pivot));
+            betterweightsum += weights[i];
          }
 
          equalweightsum = 0.0;
@@ -785,77 +856,118 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          /* collect weights of elements that are equal to the pivot */
          for( ; i < lo + npivots; ++i )
          {
-            assert(keys[indices[i]] == pivot);
-            equalweightsum += weights[indices[i]];
+            assert(!SORTTPL_ISBETTER(key[i], pivot) && !SORTTPL_ISWORSE(key[i], pivot));
+            equalweightsum += weights[i];
          }
       }
       else
       {
          /* if all weights are equal to one, we directly know the larger and the equal weight sum */
-         largeweightsum = lo;
+         betterweightsum = lo - start;
          equalweightsum = npivots;
       }
-      if( largeweightsum < residualcapacity && largeweightsum + equalweightsum >= residualcapacity)
-      {
-         *median = pivot;
-         *leftmedianidx = lo;
-         *rightmedianidx = lo + npivots - 1;
 
+      /* we selected the right median. */
+      if( betterweightsum < residualcapacity && betterweightsum + equalweightsum >= residualcapacity)
+      {
+         *medianpos = lo;
          return;
       }
 
       /* pivot is too large; continue search in the left half of the array */
-      else if( largeweightsum >= residualcapacity )
+      else if( betterweightsum >= residualcapacity )
       {
          end = lo - 1;
       }
       else
       {
-         assert(largeweightsum + equalweightsum < residualcapacity);
+         assert(betterweightsum + equalweightsum < residualcapacity);
          start = lo + npivots;
-         residualcapacity -= largeweightsum + equalweightsum;
+         residualcapacity -= betterweightsum + equalweightsum;
       }
    }
 
    assert(start <= end);
-   assert(end - start + 1 <= MINREMAININGKEYSSIZE);
+   assert(end - start + 1 <= SORTTPL_SHELLSORTMAX);
 
-   /* collect data for explicit sorting */
-   for( j = 0; j <= end - start; ++j )
-   {
-      int index = indices[start + j];
-      keysbuffer[j] = keys[index];
-      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
-      indicesbuffer[j] = index;
-   }
-
-   SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, end - start + 1);
+   /* use shell sort to solve the remaining elements completely */
+   SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
+      (key, weights,
+         SORTTPL_HASFIELD1PAR(field1)
+         SORTTPL_HASFIELD2PAR(field2)
+         SORTTPL_HASFIELD3PAR(field3)
+         SORTTPL_HASFIELD4PAR(field4)
+         SORTTPL_HASFIELD5PAR(field5)
+         SORTTPL_HASFIELD6PAR(field6)
+         SORTTPL_HASPTRCOMPPAR(ptrcomp)
+         SORTTPL_HASINDCOMPPAR(indcomp)
+         SORTTPL_HASINDCOMPPAR(dataptr)
+         start, end);
 
    /* insert the elements sorted back into the indices array */
-   for( j = 0; j < end - start + 1; ++j )
+   for( j = start; j < end; ++j )
    {
-      SCIP_Real weight = weightsbuffer[j];
+      SCIP_Real weight = (weights != NULL ? weights[j] : 1);
       /* we finally found the median element */
       if( weight > residualcapacity )
       {
-         *median = keysbuffer[j];
-         *leftmedianidx = start + j;
-         *rightmedianidx = start + j;
+         *medianpos = j;
          break;
       }
       else
-      {
          residualcapacity -= weight;
-      }
    }
 
-   if( j == end - start + 1 )
-   {
-      *median = SCIP_INVALID;
-      *leftmedianidx = len;
-      *rightmedianidx = len;
-   }
+   if( j == end )
+      *medianpos = end;
 }
+
+/** partially sorts a given keys array to determine the element at the k'th position respecting the sorting order */
+void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
+   int                   len                 /**< length of arrays */
+   )
+{
+   SCIP_Real capacity;
+   int pos;
+
+   /* return directly in cases that make no sense at all */
+   if( k < 0 || k >= len )
+      return;
+
+   /* The summand 0.5 is necessary because the elements are zero-index. */
+   capacity = k + 0.5;
+
+   pos = -1;
+   /* call the general algorithm for the weighted median with weights equal to -1 (by passing NULL) */
+   SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
+   (key,
+      SORTTPL_HASFIELD1PAR(field1)
+      SORTTPL_HASFIELD2PAR(field2)
+      SORTTPL_HASFIELD3PAR(field3)
+      SORTTPL_HASFIELD4PAR(field4)
+      SORTTPL_HASFIELD5PAR(field5)
+      SORTTPL_HASFIELD6PAR(field6)
+      SORTTPL_HASPTRCOMPPAR(ptrcomp)
+      SORTTPL_HASINDCOMPPAR(indcomp)
+      SORTTPL_HASINDCOMPPAR(dataptr)
+      NULL, capacity, len, &pos);
+
+   /* the weighted median position should be exactly at position k */
+   assert(pos == k);
+}
+
 
 
 /* undefine template parameters and local defines */
