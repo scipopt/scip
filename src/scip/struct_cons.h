@@ -118,6 +118,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          nsepacalls;         /**< number of times, the separator was called */
    SCIP_Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
    SCIP_Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
+   SCIP_Longint          nenforelaxcalls;    /**< number of times, the relaxation enforcer was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
    SCIP_Longint          ncheckcalls;        /**< number of times, the feasibility check was called */
    SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
@@ -131,10 +132,13 @@ struct SCIP_Conshdlr
    SCIP_Longint          storedpropdomchgcount;/**< bound change number, where the domain propagation was called last before starting probing */
    SCIP_Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
+   SCIP_Longint          lastenforelaxdomchgcount;/**< last bound change number, where the relaxation enforcement was called */
    SCIP_Longint          lastenfolpnode;     /**< last node at which the LP enforcement was called */
    SCIP_Longint          lastenfopsnode;     /**< last node at which the pseudo enforcement was called */
+   SCIP_Longint          lastenforelaxnode;  /**< last node at which the relaxation enforcement was called */
    SCIP_RESULT           lastenfolpresult;   /**< result of last LP enforcement call */
    SCIP_RESULT           lastenfopsresult;   /**< result of last pseudo enforcement call */
+   SCIP_RESULT           lastenforelaxresult;/**< result of last relaxation enforcement call */
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */
@@ -189,6 +193,7 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
    SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
+   SCIP_CLOCK*           enforelaxtime;      /**< time used for relaxation enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
    SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this constraint handler during strong branching */
    SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */

@@ -193,6 +193,12 @@ SCIP_Real SCIPconshdlrGetEnfoPSTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for relaxation enforcement in this constraint handler */
+EXTERN
+SCIP_Real SCIPconshdlrGetEnfoRelaxTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets time in seconds used for propagation in this constraint handler */
 EXTERN
 SCIP_Real SCIPconshdlrGetPropTime(
@@ -232,6 +238,12 @@ SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 EXTERN
 SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's relaxation enforcing method */
+EXTERN
+SCIP_Longint SCIPconshdlrGetNEnfoRelaxCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

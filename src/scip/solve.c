@@ -3151,8 +3151,9 @@ SCIP_RETCODE enforceConstraints(
    enforcerelaxsol = bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree) || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, prob)));
 
    /* check if all constraint handler implement the enforelax callback, otherwise enforce the LP solution */
+   /* @todo move  this somewhere else since the included constraint handler should not change during solving */
    for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
-      if( set->conshdlrs[h]->consenforelax == NULL )
+      if( set->conshdlrs_enfo[h]->consenforelax == NULL )
          enforcerelaxsol = FALSE;
 
    for( h = 0; h < set->nconshdlrs && !resolved; ++h )
@@ -3167,10 +3168,14 @@ SCIP_RETCODE enforceConstraints(
 
          SCIPdebugMessage("enforce relaxation solution with value %g\n", bestrelaxval);
 
-         /* @ENFORELAX call enforce callback for relaxation solutions */
+         SCIP_CALL( SCIPconshdlrEnforceRelaxSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, sepastore,
+               bestrelaxsol, *infeasible, &result) );
       }
       else if( SCIPtreeHasFocusNodeLP(tree) )
       {
+
+         SCIPdebugMessage("enforce LP solution with value %g\n", SCIPlpGetObjval(lp, set, prob));
+
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
