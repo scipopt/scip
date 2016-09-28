@@ -515,6 +515,16 @@ void SCIPrelaxEnableOrDisableClocks(
    SCIPclockEnableOrDisable(relax->relaxclock, enable);
 }
 
+/** returns whether the relaxation handler contains all LP rows */
+SCIP_Bool SCIPrelaxHasFullLpInfo(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->fulllpinfo;
+}
+
 /** gets time in seconds used in this relaxation handler */
 SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */

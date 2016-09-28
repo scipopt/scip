@@ -180,6 +180,13 @@ void SCIPrelaxEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the relaxation handler be enabled? */
    );
 
+
+/** returns whether the relaxation handler contains all LP rows */
+extern
+SCIP_Bool SCIPrelaxHasFullLpInfo(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
 /** creates global relaxation data */
 extern
 SCIP_RETCODE SCIPrelaxationCreate(

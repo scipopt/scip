@@ -200,6 +200,9 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 
          SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
       }
+
+      /* mark relaxation solution to be valid */
+      SCIP_CALL( SCIPmarkRelaxSolValid(scip) );
    }
 
    /* free memory */
