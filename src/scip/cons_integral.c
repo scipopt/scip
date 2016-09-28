@@ -94,6 +94,50 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(conss == NULL);
+   assert(nconss == 0);
+   assert(result != NULL);
+
+   SCIPdebugMessage("Enforelax method of integrality constraint\n");
+
+   *result = SCIP_FEASIBLE;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+
+   for( i = 0; i < nbinvars + nintvars; ++i )
+   {
+      assert(vars[i] != NULL);
+      assert(SCIPvarIsIntegral(vars[i]));
+
+      if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i])) )
+      {
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, vars[i], 0.2, SCIPgetSolVal(scip, sol, vars[i])) );
+            *result = SCIP_INFEASIBLE;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** feasibility check method of constraint handler for integral solutions */
 static
@@ -273,6 +317,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
    SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIntegral) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxIntegral) );
 
    return SCIP_OKAY;
 }
