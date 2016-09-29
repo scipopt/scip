@@ -33653,9 +33653,6 @@ SCIP_RETCODE SCIPsolveProbingRelax(
 
       SCIP_CALL( SCIPrelaxExec(relax, set, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
 
-      /* ?????????????? todo: check lowerbound for cutoff */
-
-
       switch( result )
       {
       case SCIP_CUTOFF:
