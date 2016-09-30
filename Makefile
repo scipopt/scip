@@ -80,7 +80,7 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/static/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
-LPIINSTMSG	+=	" -\> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
+LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
 endif
 
 LPSOPTIONS	+=	xprs
@@ -212,33 +212,33 @@ endif
 # NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	= nlpi/nlpi.o \
-		  nlpi/nlpioracle.o \
-		  nlpi/expr.o
+NLPILIBCOBJ	= 	nlpi/nlpi.o \
+			nlpi/nlpioracle.o \
+			nlpi/expr.o
 
-NLPILIBCXXOBJ	= nlpi/intervalarithext.o
+NLPILIBCXXOBJ	= 	nlpi/intervalarithext.o
 
-NLPILIBSCIPOBJ	= blockmemshell/memory.o \
-		  scip/misc.o \
-		  scip/intervalarith.o \
-		  scip/interrupt.o \
-		  scip/message.o
+NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
+			scip/misc.o \
+			scip/intervalarith.o \
+			scip/interrupt.o \
+			scip/message.o
 
 ifeq ($(EXPRINT),none)
-NLPILIBCOBJ += 	nlpi/exprinterpret_none.o
+NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
-NLPILIBCXXOBJ += nlpi/exprinterpret_cppad.o
+NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
 endif
 
 ifeq ($(IPOPT),true)
 NLPILIBSHORTNAME = $(NLPILIBSHORTNAME).ipopt
-NLPILIBCXXOBJ	+= nlpi/nlpi_ipopt.o
+NLPILIBCXXOBJ	+= 	nlpi/nlpi_ipopt.o
 else
-NLPILIBCOBJ	+= nlpi/nlpi_ipopt_dummy.o
+NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
 endif
 
-NLPILIBSHORTNAME = nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
+NLPILIBSHORTNAME= 	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
@@ -247,7 +247,7 @@ NLPILIBSCIPOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBSCIPOBJ))
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
 NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
-NLPILIBSHORTLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
+NLPILIBSHORTLINK=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(NLPILIBSRC)
 
 ifeq ($(SHARED),true)
@@ -280,7 +280,7 @@ PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
-$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
+$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
 endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
 DIRECTORIES	+=	$(LIBDIR)/zimplinc
@@ -549,7 +549,7 @@ SCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 ifeq ($(GAMS),true)
-SCIPLIBOBJFILES += $(addprefix $(LIBOBJDIR)/scip/,gmomcc.o gevmcc.o reader_gmo.o)
+SCIPLIBOBJFILES += 	$(addprefix $(LIBOBJDIR)/scip/,gmomcc.o gevmcc.o reader_gmo.o)
 endif
 
 ALLSRC		+=	$(SCIPLIBSRC)
@@ -658,16 +658,16 @@ lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 ifeq ($(FILES),)
 		$(SHELL) -ec 'for i in $^; \
 			do \
-			echo $$i; \
-			$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				echo $$i; \
+				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
+				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 else
 		$(SHELL) -ec  'for i in $(FILES); \
 			do \
-			echo $$i; \
-			$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				echo $$i; \
+				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
+				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 endif
 
@@ -705,7 +705,8 @@ test:
 .PHONY: testcount
 testcount:
 		cd check; \
-		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) \
+		$(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: testcplex
 testcplex:
@@ -715,7 +716,8 @@ testcplex:
 .PHONY: testxpress
 testxpress:
 		cd check; \
-		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
+		$(DISPFREQ) $(CONTINUE);
 
 .PHONY: testmosek
 testmosek:
@@ -745,7 +747,8 @@ testglpk:
 .PHONY: testsymphony
 testsymphony:
 		cd check; \
-		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
+		$(DISPFREQ) $(CONTINUE);
 
 .PHONY: testblis
 testblis:
@@ -783,7 +786,8 @@ endif
 .PHONY: testgams
 testgams:
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true $(SETCUTOFF);
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" \
+		$(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true $(SETCUTOFF);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
