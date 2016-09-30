@@ -172,9 +172,14 @@ GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
 			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
 
+ifeq ($(SHARED),true)
+LIBTYPE		=	shared
+else
+LIBTYPE		=	static
+endif
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-OBJDIR		=	obj/O.$(BASE)
+OBJDIR		=	obj/$(LIBTYPE)/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
 LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
@@ -252,40 +257,40 @@ endif
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
-LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/static $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
                         $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
                         $(LINKCC_l)dl$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),grb)
-LPSLDFLAGS	+=	$(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/shared $(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),xprs)
-LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 ifneq ($(LINKRPATH),)
 LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
 endif
 endif
 
 ifeq ($(LPS),msk)
-LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),spx1)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/static $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 endif
 
 ifeq ($(LPS),spx2)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LIBBUILD_L)$(LIBDIR)/static $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 endif
 
@@ -307,7 +312,7 @@ endif
 endif
 
 ifeq ($(LPS),qso)
-LPSLDFLAGS    	+=      $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS    	+=      $(LIBBUILD_L)$(LIBDIR)/static $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),none)
@@ -417,7 +422,7 @@ RANLIB		=
 endif
 
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE)
 endif
 
 
