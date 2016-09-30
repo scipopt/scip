@@ -36,11 +36,11 @@ INSTALLDIR	=
 # do not use other open source projects; needs to be set before including make.project
 ifeq ($(OPENSOURCE),false)
 	override EXPRINT	=	none
-	override GMP	=	false
+	override GMP		=	false
 	override READLINE	=	false
-	override ZLIB	=	false
-	override ZIMPL	=	false
-	override IPOPT	=	false
+	override ZLIB		=	false
+	override ZIMPL		=	false
+	override IPOPT		=	false
 endif
 
 #-----------------------------------------------------------------------------
