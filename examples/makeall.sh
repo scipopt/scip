@@ -44,10 +44,11 @@ do
 #        fi
 	for LPS in ${LPSOLVERS[@]}
 	do
-	    LPILIB=../../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
+	    # try static version
+	    LPILIB=../../lib/static/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
 	    if test -e $LPILIB
             then
-		SCIPLIB=../../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
+		SCIPLIB=../../lib/static/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
 		if test -e $SCIPLIB
 		then
 		    echo make OPT=$OPT LPS=$LPS clean
