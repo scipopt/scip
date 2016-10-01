@@ -219,6 +219,23 @@ ALLSRC		=
 
 
 #-----------------------------------------------------------------------------
+# define path to find SCIP upon execution
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),true)
+# If this makefile is used to build an external project, we use SCIPDIR.
+LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)/shared
+else
+# If this makefile is used to build SCIP, we use the variable ORIGIN,
+# which is replaced by the path of the binary at execution time.
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/shared
+endif
+endif
+endif
+
+#-----------------------------------------------------------------------------
 # add user flags
 #-----------------------------------------------------------------------------
 FLAGS		+=	$(USRFLAGS)
@@ -286,9 +303,6 @@ endif
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBTYPE) $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
-ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
-endif
 endif
 
 #-------------------------------------------------------
@@ -415,7 +429,11 @@ FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $
 IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
 LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),)
 LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+else
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+endif
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -456,9 +474,6 @@ ARFLAGS		=
 RANLIB		=
 endif
 
-ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE)
-endif
 
 
 #-----------------------------------------------------------------------------
