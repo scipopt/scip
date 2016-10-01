@@ -3,9 +3,10 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring Scheduler STP)
-LPSOLVERS=(clp cpx none spx spx2)
+APPLICATIONS=(Coloring MinIISC Scheduler STP)
+LPSOLVERS=(spx2 cpx none)
 OPTS=(opt dbg)
+LIBTYPE=(static shared)
 
 # determine architecture
 ARCH=`uname -m | \
@@ -44,30 +45,42 @@ do
 #        fi
 	for LPS in ${LPSOLVERS[@]}
 	do
-	    LPILIB=../../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
-	    if test -e $LPILIB
-            then
-		SCIPLIB=../../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
-		if test -e $SCIPLIB
+	    for TYPE in ${LIBTYPE[@]}
+	    do
+		if test "$TYPE" = "shared"
 		then
-		    echo make OPT=$OPT LPS=$LPS clean
-		    if (! make OPT=$OPT LPS=$LPS clean )
+		    SHAREDVAL="true"
+		    LIBEXT="so"
+		else
+		    SHAREDVAL="false"
+		    LIBEXT="a"
+		fi
+
+		LPILIB=../../lib/$TYPE/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
+		if test -e $LPILIB
+		then
+		    SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
+		    if test -e $SCIPLIB
 		    then
-			exit $STATUS
-		    fi
-		    echo
-		    echo make OPT=$OPT LPS=$LPS
-		    if (! make OPT=$OPT LPS=$LPS )
-	            then
-			exit $STATUS
+			echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
+			if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
+			then
+			    exit $STATUS
+			fi
+			echo
+			echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
+			if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL )
+			then
+			    exit $STATUS
+			fi
+		    else
+			echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
 		    fi
 		else
-		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS")"
+		    echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
 		fi
-            else
-		echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS")"
-            fi
-	    echo
+		echo
+	    done
 	done
     done
     cd -
