@@ -226,7 +226,7 @@ ifeq ($(SHARED),true)
 ifneq ($(LINKRPATH),)
 ifneq ($(SCIPINTERNAL),true)
 # If this makefile is used to build an external project, we use SCIPDIR.
-LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)/shared
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
 else
 # If this makefile is used to build SCIP, we use the variable ORIGIN,
 # which is replaced by the path of the binary at execution time.
