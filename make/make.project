@@ -19,6 +19,16 @@
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
 #@author  Timo Berthold
+#
+# This file contains the core methods to compile SCIP. When using this
+# makefile for external projects, you need to define the makefile
+# variables SCIPDIR prior to inclusion.
+#
+# The necessary SCIP libraries can be linked by adding
+# $(LINKCXXSCIPALL) or $(LINKCCSCIPALL) to your local linking command,
+# e.g.  $(LINKCXX) ... $(LINKCXXSCIPALL) $(LDFLAGS).
+
+
 
 #-----------------------------------------------------------------------------
 # detect host architecture
