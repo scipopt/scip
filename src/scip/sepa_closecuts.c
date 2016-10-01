@@ -189,7 +189,7 @@ SCIP_DECL_SEPAFREE(sepaFreeClosecuts)
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -398,7 +398,7 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP_SEPA* sepa;
 
    /* create closecuts separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->sepasol = NULL;
    sepadata->discardnode = -1;
    sepadata->nunsuccessful = 0;

@@ -379,7 +379,7 @@ SCIP_DECL_SEPAFREE(sepaFreeImpliedbounds)
    /* get separation data and free it */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    /* reset data pointer to NULL */
    SCIPsepaSetData(sepa, NULL);
@@ -522,7 +522,7 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    SCIP_SEPA* sepa;
 
    /* create impliedbounds separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    assert(sepadata != NULL);
 
    /* include separator */
