@@ -43,6 +43,9 @@ ifeq ($(OPENSOURCE),false)
 	override IPOPT		=	false
 endif
 
+# this is a SCIP internal makefile
+SCIPINTERNAL	=	true
+
 #-----------------------------------------------------------------------------
 # load default settings and detect host architecture
 #-----------------------------------------------------------------------------
