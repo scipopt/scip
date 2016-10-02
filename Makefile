@@ -515,6 +515,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/primal.o \
 			scip/prob.o \
 			scip/prop.o \
+			scip/random.o \
 			scip/reader.o \
 			scip/relax.o \
 			scip/reopt.o \
