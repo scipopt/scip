@@ -6034,6 +6034,7 @@
  *    that turn off the usage of block memory, buffer memory, as well as block and buffer memory, respectively. Since,
  *    the internal block and buffer memory is freed at the end (leaving no memory leaks), turning them off allows tools
  *    like valgrind to find memory leaks.
+ *  - Moreover, additional checks can be turned on by defining @p CHECKMEM in memory.c.
  *
  *  @n
  *  @subsection DOS Things to do ...
