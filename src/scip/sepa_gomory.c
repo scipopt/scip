@@ -183,7 +183,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -606,7 +606,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
    sepadata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 

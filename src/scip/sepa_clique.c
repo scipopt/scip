@@ -961,7 +961,7 @@ SCIP_DECL_SEPAFREE(sepaFreeClique)
    assert(sepadata != NULL);
    assert(sepadata->tcliquegraph == NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
    SCIPsepaSetData(sepa, NULL);
 
    return SCIP_OKAY;
@@ -1044,7 +1044,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
    SCIP_SEPA* sepa;
 
    /* create clique separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->tcliquegraph = NULL;
    sepadata->scip = scip;
    sepadata->sol = NULL;

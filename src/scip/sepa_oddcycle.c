@@ -3474,7 +3474,7 @@ SCIP_DECL_SEPAFREE(sepaFreeOddcycle)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
    SCIPsepaSetData(sepa, NULL);
 
    return SCIP_OKAY;
@@ -3633,7 +3633,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_SEPA* sepa;
 
    /* create oddcycle separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->nunsucessfull = 0;
    sepadata->lastnode = -1;
 

@@ -624,7 +624,7 @@ SCIP_RETCODE sepadataCreate(
    assert(scip != NULL);
    assert(sepadata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, sepadata) );
 
    (*sepadata)->nlrowaggrs = NULL;
    (*sepadata)->nnlrowaggrs = 0;
@@ -693,7 +693,7 @@ SCIP_RETCODE sepadataFree(
       (*sepadata)->lpisize = 0;
    }
 
-   SCIPfreeMemory(scip, sepadata);
+   SCIPfreeBlockMemory(scip, sepadata);
 
    return SCIP_OKAY;
 }

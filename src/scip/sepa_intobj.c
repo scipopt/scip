@@ -64,7 +64,7 @@ SCIP_RETCODE sepadataCreate(
 {
    assert(sepadata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, sepadata) );
    (*sepadata)->objrow = NULL;
    (*sepadata)->objvar = NULL;
    (*sepadata)->setoff = 0.0;
@@ -84,7 +84,7 @@ SCIP_RETCODE sepadataFree(
    assert((*sepadata)->objrow == NULL);
    assert((*sepadata)->objvar == NULL);
 
-   SCIPfreeMemory(scip, sepadata);
+   SCIPfreeBlockMemory(scip, sepadata);
 
    return SCIP_OKAY;
 }
