@@ -3389,7 +3389,7 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 
    /* free propagator data */
    propdata = SCIPpropGetData(prop);
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -3669,7 +3669,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
 
    /* create pseudoobj propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* reset propagator data structure */
    propdataReset(scip, propdata);

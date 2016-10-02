@@ -723,7 +723,7 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -1101,7 +1101,7 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_PROP* prop;
 
    /* create probing propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    initPropdata(scip, propdata);
 
    /* include propagator */
