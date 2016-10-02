@@ -13,28 +13,22 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**
- * @file   sepa_zerohalf.c
+/**@file   sepa_zerohalf.c
  * @brief  {0,1/2}-cuts separator
  * @author Manuel Kutschka
  * @author Kati Wolter
  *
- * {0,1/2}-Chv'atal-Gomory cuts separator. It solves the following separation problem:
- *
- *
- * Given an integer program 
- *
- * - min { c^T x : Ax <= b, x >= 0, x integer }
- *
- * and a fractional solution x* of its LP relaxation.
- *
- * Find a weightvector u whose entries u_i are either 0 or 1/2 such that the following inequality is valid for all integral solutions and violated by x*
- *
- * - floor(u^T A) x <= floor(u^T b)
- *
- * or (if exact methods are used) give a proof that no such inequality exists
- *
- *
+ * {0,1/2}-Chvátal-Gomory cuts separator. It solves the following separation problem:
+ * Consider an integer program
+ * \f[
+ * \min \{ c^T x : Ax \leq b, x \geq 0, x \mbox{ integer} \}
+ * \f]
+ * and a fractional solution \f$x^*\f$ of its LP relaxation.  Find a weightvector \f$u\f$ whose entries \f$u_i\f$ are either 0 or
+ * \f$\frac{1}{2}\f$ such that the following inequality is valid for all integral solutions and violated by \f$x^*\f$:
+ * \f[
+ * \lfloor(u^T A) x \rfloor \leq \lfloor u^T b\rfloor
+ * \f]
+ * or (if exact methods are used) give a proof that no such inequality exists.
  *
  * References:
  * - Alberto Caprara, Matteo Fischetti. {0,1/2}-Chvatal-Gomory cuts. Math. Programming, Volume 74, p221--235, 1996.
