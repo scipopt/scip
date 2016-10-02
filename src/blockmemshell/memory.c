@@ -3053,7 +3053,7 @@ long long BMSgetBufferMemoryUsed(
 {
 #ifdef CHECKMEM
    size_t totalmem = 0UL;
-   int i;
+   size_t i;
 
    assert( buffer != NULL );
    for (i = 0; i < buffer->ndata; ++i)
