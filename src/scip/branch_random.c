@@ -138,7 +138,7 @@ SCIP_DECL_BRANCHFREE(branchFreeRandom)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP_BRANCHRULE* branchrule;
 
    /* create random branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->seed = 0;
 
    /* include allfullstrong branching rule */

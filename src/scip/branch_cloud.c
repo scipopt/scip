@@ -106,7 +106,7 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
 
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -654,7 +654,7 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP_BRANCHRULE* branchrule;
 
    /* create cloud branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;

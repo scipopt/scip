@@ -1472,7 +1472,7 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -1566,7 +1566,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_BRANCHRULE* branchrule;
 
    /* create relpscost branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,

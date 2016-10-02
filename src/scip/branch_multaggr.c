@@ -569,7 +569,7 @@ SCIP_DECL_BRANCHFREE(branchFreeMultAggr)
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
 
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -1047,7 +1047,7 @@ SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    SCIP_BRANCHRULE* branchrule;
 
    /* create multaggr branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;

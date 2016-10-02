@@ -198,7 +198,7 @@ SCIP_DECL_BRANCHFREE(branchFreeAllfullstrong)
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
    SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
 
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -576,7 +576,7 @@ SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP_BRANCHRULE* branchrule;
 
    /* create allfullstrong branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
