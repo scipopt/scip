@@ -40,7 +40,12 @@
 
 #include "blockmemshell/memory.h"
 
+/* uncomment the following for debugging:
+ * - CHECKMEM:      run a thorough test on every memory function call, very slow
+ * - CHECKCHKFREE:  check for the presence of a pointer in a chunk block
+ */
 /*#define CHECKMEM*/
+/*#define CHECKCHKFREE*/
 
 
 /* if we are included in SCIP, use SCIP's message output methods */
@@ -1433,12 +1438,10 @@ void freeChkmemElement(
    assert(chkmem != NULL);
    assert(ptr != NULL);
 
-#ifdef BMS_CHKMEM
+#if ( defined(CHECKMEM) || defined(CHECKCHKFREE) )
    /* check, if ptr belongs to the chunk block */
    if( !isPtrInChkmem(chkmem, ptr) )
    {
-      BMS_CHKMEM* correctchkmem;
-
       printErrorHeader(filename, line);
       printError("Pointer %p does not belong to chunk block %p (size: %d).\n", ptr, chkmem, chkmem->elemsize);
    }
