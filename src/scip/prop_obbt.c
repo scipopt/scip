@@ -2245,8 +2245,8 @@ SCIP_RETCODE initBounds(
    /* free memory for buffering nonlinearities */
    assert(nlcount != NULL);
    assert(nccount != NULL);
-   SCIPfreeBufferArray(scip, &nlcount);
    SCIPfreeBufferArray(scip, &nccount);
+   SCIPfreeBufferArray(scip, &nlcount);
 
    /* set number of interesting bounds */
    propdata->nbounds = bdidx;

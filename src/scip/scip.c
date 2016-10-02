@@ -13830,8 +13830,8 @@ SCIP_RETCODE transformSols(
       scip->stat->nexternalsolsfound += scip->primal->nsolsfound - oldnsolsfound;
    }
 
-   SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &solvalset);
+   SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &sols);
 
    return SCIP_OKAY;
@@ -18460,9 +18460,9 @@ SCIP_RETCODE SCIPendStrongbranch(
          }
       }
 
-      SCIPfreeBufferArray(scip, &boundchgvars);
-      SCIPfreeBufferArray(scip, &bounds);
       SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &bounds);
+      SCIPfreeBufferArray(scip, &boundchgvars);
    }
    else
    {

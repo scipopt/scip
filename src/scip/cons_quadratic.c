@@ -1681,8 +1681,8 @@ SCIP_RETCODE consdataSortBilinTerms(
    assert(consdataCheckBilinTermsSort(consdata));
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &invperm);
+   SCIPfreeBufferArray(scip, &perm);
 
    return SCIP_OKAY;
 }
@@ -3203,10 +3203,10 @@ SCIP_RETCODE createNlRow(
 
    SCIP_CALL( SCIPaddLinearCoefsToNlRow(scip, consdata->nlrow, nquadlinterms, quadlinvars, quadlincoefs) );
 
-   SCIPfreeBufferArray(scip, &quadvars);
-   SCIPfreeBufferArray(scip, &quadelems);
-   SCIPfreeBufferArray(scip, &quadlinvars);
    SCIPfreeBufferArray(scip, &quadlincoefs);
+   SCIPfreeBufferArray(scip, &quadlinvars);
+   SCIPfreeBufferArray(scip, &quadelems);
+   SCIPfreeBufferArray(scip, &quadvars);
 
    return SCIP_OKAY;
 }

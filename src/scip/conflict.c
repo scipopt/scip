@@ -6903,10 +6903,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &pseudocoefs);
-   SCIPsetFreeBufferArray(set, &curvarubs);
-   SCIPsetFreeBufferArray(set, &curvarlbs);
    SCIPsetFreeBufferArray(set, &ubchginfoposs);
    SCIPsetFreeBufferArray(set, &lbchginfoposs);
+   SCIPsetFreeBufferArray(set, &curvarubs);
+   SCIPsetFreeBufferArray(set, &curvarlbs);
 
    /* flush conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );

@@ -12115,8 +12115,8 @@ void freeTcliqueGraph(
    }
 
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->durations);
-   SCIPfreeBufferArray(scip, &(*tcliquegraph)->ninarcs);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->noutarcs);
+   SCIPfreeBufferArray(scip, &(*tcliquegraph)->ninarcs);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->weights);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->demandmatrix);
    SCIPfreeBufferArray(scip, &(*tcliquegraph)->precedencematrix);

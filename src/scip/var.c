@@ -4117,12 +4117,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set))); /*lint !e777*/
    assert(SCIPsetIsInfinity(set, -(*constant)) == ((*constant) == -SCIPsetInfinity(set))); /*lint !e777*/
 
-   SCIPsetFreeBufferArray(set, &tmpvars2);
-   SCIPsetFreeBufferArray(set, &tmpscalars2);
-   SCIPsetFreeBufferArray(set, &tmpvars);
    SCIPsetFreeBufferArray(set, &tmpscalars);
-   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &tmpvars);
    SCIPsetFreeBufferArray(set, &activescalars);
+   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &tmpscalars2);
+   SCIPsetFreeBufferArray(set, &tmpvars2);
 
    return SCIP_OKAY;
 }

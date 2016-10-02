@@ -548,16 +548,6 @@ SCIP_RETCODE heurdataFreeArrays(
    assert(heurdata->memsize == 0 || heurdata->rowmeans != NULL);
    assert(heurdata->memsize >= 0);
 
-   if( heurdata->memsize > 0 )
-   {
-      SCIPfreeBufferArray(scip, &heurdata->rowmeans);
-      SCIPfreeBufferArray(scip, &heurdata->rowvariances);
-      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesup);
-      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesdown);
-
-      heurdata->memsize = 0;
-   }
-
    if( heurdata->varpossmemsize > 0 )
    {
       SCIP_VAR** vars;
@@ -582,7 +572,16 @@ SCIP_RETCODE heurdataFreeArrays(
       SCIPfreeBufferArray(scip, &heurdata->varposs);
       SCIPfreeBufferArray(scip, &heurdata->varfilterposs);
    }
-   /* allocate variable update event processing array storage */
+
+   if( heurdata->memsize > 0 )
+   {
+      SCIPfreeBufferArray(scip, &heurdata->rowvariances);
+      SCIPfreeBufferArray(scip, &heurdata->rowmeans);
+      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesup);
+      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesdown);
+
+      heurdata->memsize = 0;
+   }
 
    heurdata->varpossmemsize = 0;
    heurdata->nupdatedvars = 0;
