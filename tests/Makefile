@@ -37,7 +37,6 @@ TESTDIRS 	= $(sort $(dir $(patsubst src/%,%,$(UNITTESTSSRC))))
 # OPTIONS
 #-----------------------------------------------------------------------------
 
-override IPOPT	=	true
 override OPT	=	dbg
 override SHARED	=	true
 
@@ -97,12 +96,16 @@ UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
 CFLAGS 		:=	$(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
 CFLAGS 		+=	-std=c99
+# DFLAGS (flags for make depend) uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
+DFLAGS 		+= 	-MT
+# to find include/scip_test.h
+FLAGS 		+= 	-I.
 
 #-----------------------------------------------------------------------------
 # Criterion Framework
 #-----------------------------------------------------------------------------
-CR_INC		=	Criterion/include
-CR_LIBDIR	=	Criterion/build/
+CR_INC		=	$(wildcard Criterion/include)
+CR_LIBDIR	=	$(wildcard Criterion/build)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
@@ -169,13 +172,12 @@ clean:
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
-# DFLAGS uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
 .PHONY: depend
 depend:		$(SCIPDIR)
 		@- rm -f $(UNITTESTSDEP)
 		$(foreach src, $(UNITTESTSSRC), \
-			$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(src) \
-			-MT $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
+			$(SHELL) -ec '$(DCC) $(FLAGS) $(src) \
+			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
 
 
 
@@ -186,22 +188,31 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX) $< \
 		$(LINKCXX_L)$(SCIPDIR)/lib \
 		$(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
-		$(LINKCXX_L)$(CR_LIBDIR) \
+		$(addprefix $(LINKCXX_L),$(CR_LIBDIR)) \
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib) \
-		$(LINKRPATH)$(realpath $(CR_LIBDIR)) \
+		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
+		$(SANITZERFLAGS) \
 		$(LINKCXX_o)$@
+
+$(LPILIBFILE):
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+$(SCIPLIBFILE):
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+$(NLPILIBFILE):
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) -I$(CR_INC) -I. $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
 Criterion:
-	@echo "Criterion not found, building it"
+	@echo -n "Criterion not found, downloading and building it in"
+	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
 	git clone -b v2.2.2 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \

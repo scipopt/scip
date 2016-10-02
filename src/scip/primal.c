@@ -1366,6 +1366,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -1392,7 +1393,8 @@ SCIP_RETCODE SCIPprimalTrySol(
    if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
    {
       /* check solution for feasibility */
-      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, printreason, checkbounds, checkintegrality, checklprows, &feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
+            checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -1434,6 +1436,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all the reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -1462,7 +1465,8 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    if( solOfInterest(primal, set, stat, origprob, transprob, *sol, &insertpos, &replace) )
    {
       /* check solution for feasibility */
-      SCIP_CALL( SCIPsolCheck(*sol, set, messagehdlr, blkmem, stat, transprob, printreason, checkbounds, checkintegrality, checklprows, &feasible) );
+      SCIP_CALL( SCIPsolCheck(*sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
+            checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -1506,6 +1510,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
@@ -1519,7 +1524,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    /* add solution to solution storage */
    SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
          tree, reopt, lp, eventqueue, eventfilter, primal->currentsol,
-         printreason, FALSE, checkintegrality, checklprows, stored) );
+         printreason, completely, FALSE, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -1777,7 +1782,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
       }
 
       SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, reopt, lp, eventqueue, eventfilter, &transsol, FALSE, TRUE, TRUE, TRUE, added) );
+            tree, reopt, lp, eventqueue, eventfilter, &transsol, FALSE, FALSE, TRUE, TRUE, TRUE, added) );
 
       SCIPdebugMessage("solution transferred, %d/%d active variables set (stored=%u)\n", nvarsset, ntransvars, *added);
    }

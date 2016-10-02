@@ -634,6 +634,7 @@ SCIP_RETCODE getLinearConsVarsData(
    case SCIP_LINEARCONSTYPE_LOGICOR:
       *nvars = SCIPgetNVarsLogicor(scip, cons);
       linvars = SCIPgetVarsLogicor(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -656,6 +657,7 @@ SCIP_RETCODE getLinearConsVarsData(
 
       *nvars = SCIPgetNVarsKnapsack(scip, cons);
       linvars = SCIPgetVarsKnapsack(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -678,6 +680,7 @@ SCIP_RETCODE getLinearConsVarsData(
    case SCIP_LINEARCONSTYPE_SETPPC:
       *nvars = SCIPgetNVarsSetppc(scip, cons);
       linvars = SCIPgetVarsSetppc(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -701,6 +704,7 @@ SCIP_RETCODE getLinearConsVarsData(
 
       *nvars = SCIPgetNVarsEQKnapsack(scip, cons);
       linvars = SCIPgetVarsEQKnapsack(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -8001,7 +8005,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   violated = FALSE;
+   *result = SCIP_FEASIBLE;
 
    if( nconss > 0 )
    {
@@ -8009,7 +8013,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
       {
          SCIP_CONSDATA* consdata;
 
-         for( c = nconss - 1; c >= 0 && !violated; --c )
+         for( c = nconss - 1; c >= 0 && (*result == SCIP_FEASIBLE || completely); --c )
          {
             consdata = SCIPconsGetData(conss[c]);
             assert(consdata != NULL);
@@ -8023,19 +8027,18 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
             }
 
             SCIP_CALL( checkOrigPbCons(scip, conss[c], sol, &violated, printreason) );
+            if( violated )
+               *result = SCIP_INFEASIBLE;
          }
       }
       else
       {
          /* check all and-constraints */
          SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+         if( violated )
+            *result = SCIP_INFEASIBLE;
       }
    }
-
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -8278,11 +8281,11 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
       CONSANDDATA* consanddata;
 
       consanddata = consdata->consanddatas[c];
+      assert( consanddata != NULL );
 
       if( !consanddata->istransformed )
          continue;
 
-      assert(consanddata != NULL);
       andcons = consanddata->cons;
 
       if( andcons == NULL )

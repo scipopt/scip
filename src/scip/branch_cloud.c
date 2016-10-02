@@ -351,7 +351,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIPdebugMessage("cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
 
          /* try to add solution to SCIP */
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &success) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
          /* check, if solution was feasible and good enough */
          if( success )

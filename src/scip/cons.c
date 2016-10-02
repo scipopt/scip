@@ -32,6 +32,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/tree.h"
+#include "scip/scip.h"
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
@@ -3473,6 +3474,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3500,8 +3502,8 @@ SCIP_RETCODE SCIPconshdlrCheck(
       SCIPclockStart(conshdlr->checktime, set);
 
       /* call external method */
-      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
-            sol, checkintegrality, checklprows, printreason, result) );
+      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss,
+            sol, checkintegrality, checklprows, printreason, completely, result) );
       SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
       /* stop timing */
@@ -6918,9 +6920,9 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
-         && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
    assert(set != NULL);
    assert(cons->scip == set->scip);
@@ -7030,7 +7032,8 @@ SCIP_RETCODE SCIPconsCheck(
    /* call external method */
    assert(conshdlr->conscheck != NULL);
 
-   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
+   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason,
+         FALSE, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
    if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )

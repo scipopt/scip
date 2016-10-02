@@ -703,19 +703,6 @@ SCIP_RETCODE evalLhs(
          return SCIP_OKAY;
       }
 
-      if( sol == NULL )
-      {
-         SCIP_Real lb = SCIPvarGetLbLocal(var);
-         SCIP_Real ub = SCIPvarGetUbLocal(var);
-         SCIP_Real minval = MIN(ub, val);
-
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-         assert(SCIPisFeasGE(scip, val, lb));
-         assert(SCIPisFeasLE(scip, val, ub));
-#endif
-         val = MAX(lb, minval);
-      }
-
       val = consdata->coefs[i] * (val + consdata->offsets[i]);
       consdata->lhsval += val * val;      
    }
@@ -805,18 +792,6 @@ SCIP_RETCODE computeViolation(
    {
       consdata->violation = consdata->rhscoeff < 0.0 ? 0.0 : SCIPinfinity(scip);
       return SCIP_OKAY;
-   }
-   if( sol == NULL )
-   {
-      SCIP_Real lb = SCIPvarGetLbLocal(consdata->rhsvar);
-      SCIP_Real ub = SCIPvarGetUbLocal(consdata->rhsvar);
-      SCIP_Real minval = MIN(ub, rhsval);
-
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-      assert(SCIPisFeasGE(scip, rhsval, lb));
-      assert(SCIPisFeasLE(scip, rhsval, ub));
-#endif
-      rhsval = MAX(lb, minval);
    }
 
    consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
@@ -3739,8 +3714,6 @@ GENERALUPG:
       if( SCIPisZero(scip, eigvals[i]) )
          continue;
 
-      term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
-
       if( eigvals[i] > 0.0 )
       {
          lhscoefs[lhscount] = sqrt(eigvals[i]) * UPGSCALE;
@@ -4641,7 +4614,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       /* if solution polishing is off and there is no NLP heuristic or we just check the LP solution,
        * then there is no need to check remaining constraints (NLP heuristic will pick up LP solution anyway) */
-      if( !dolinfeasshift && (conshdlrdata->subnlpheur == NULL || sol == NULL))
+      if( !dolinfeasshift && (conshdlrdata->subnlpheur == NULL || sol == NULL) && !completely )
          break;
    }
 

@@ -78,7 +78,7 @@ fi
 # if permutation counter is positive add permutation seed (0 = default)
 if test $p -gt 0
 then
-    echo set misc permutationseed $p   >> $TMPFILE
+    echo set randomization permutationseed $p   >> $TMPFILE
 fi
 
 # avoid solving LPs in case of LPS=none

@@ -38,25 +38,28 @@ Smart test discovery is already built into the `Makefile`, so anything in `src` 
 The easiest way to compile and run the tests is:
 
 ```
-make
+make IPOPT=<true|false>
 ```
 
-**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg IPOPT=true SHARED=true`. You can specifiy a the LP solver used. If `SoPlex` is used as LP solver, it must be compiled with `SHARED=true`.
+**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg SHARED=true`.
 
-This command will check for [Criterion](http://criterion.readthedocs.io/en/master/), download and install it if not found, and compile and run all tests in `src/`.
+This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
+If you already have installed Criterion on you system, execute `touch Criterion` or `mkdir Criterion` before calling make.
+
+**NOTE** Some tests might need to include c files from SCIP. For tests to be recompilied the included c file gets recompiled, run `make depend`.
 
 ## Run
 
 See above for the easiest way to compile and run tests. For simply running tests:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true test
+make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=<true|false> test
 ```
 
 This creates `CTestTestfile.cmake` with a list of the test to run and then calls `ctest --output-on-failure`. By default, tests in `src/bugs/` are not compiled or run since they take a long time. To compile and run them:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=true test BUGS=true
+make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=<true|false> test BUGS=true
 ```
 
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
@@ -80,4 +83,3 @@ The test suite is `separation` and the test name is `gauge`. To debug:
 ```
 
 Criterion by default prints all of the critical debugging information (test_suite::test_name, file and line number were to break). When a test crashes, there is no need to `break` in `gdb`. TODO: simplify debugging.
-
