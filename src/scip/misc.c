@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 
 #include "scip/def.h"
@@ -7874,13 +7875,41 @@ int getRand(
 
 #define SCIP_RAND_MAX RAND_MAX
 
-/** returns a random number between 0 and SCIP_RAND_MAX */
+static uint32_t XOR = 362436000;
+static uint32_t MWC = 521288629;
+static uint32_t CST = 7654321;
+
+/** returns a random number between 0 and SCIP_RAND_MAX
+ *
+ *  implementation of KISS random number generator developed by George Marsaglia.
+ *  KISS is combination of three different random number generators:
+ *   - linear congruential generator
+ *   - Xorshift
+ *   - Lag-1 Multiply-with-carry
+ *
+ *  KISS has a period of 2^123.
+ */
 static
 int getRand(
    unsigned int*         seedp               /**< pointer to seed value */
    )
 {
-   return rand_r(seedp);
+   uint64_t t;
+
+   /* linear congruential */
+   (*seedp) = (*seedp) * (SCIP_Longint)1103515245 + 12345;
+
+   /* Xorshift */
+   XOR ^= XOR << 13;
+   XOR ^= XOR >> 17;
+   XOR ^= XOR << 5;
+
+   /* MWC */
+   t = 698769069ULL * MWC + CST;
+   CST = t >> 32;
+   MWC = (uint32_t) t;
+
+   return (int)(((*seedp) + XOR + MWC) % SCIP_RAND_MAX);
 }
 
 #endif
