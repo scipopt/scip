@@ -1358,15 +1358,15 @@ SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
    eventhdlr = heurdata->eventhdlr;
    assert(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemoryNull(scip, &eventhdlrdata);
 
    /* free heuristic data */
-   if( heurdata != NULL )
-      SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    SCIPheurSetData(heur, NULL);
 
@@ -2339,8 +2339,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_EVENTHDLRDATA* eventhandlerdata;
    SCIP_EVENTHDLR* eventhdlr;
 
-
-   SCIP_CALL( SCIPallocMemory(scip, &eventhandlerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhandlerdata) );
    eventhandlerdata->matrix = NULL;
 
    eventhdlr = NULL;
@@ -2349,7 +2348,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    assert(eventhdlr != NULL);
 
    /* create Shiftandpropagate primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdata->rowweights = NULL;
    heurdata->nlpcols = 0;
    heurdata->eventhdlr = eventhdlr;

@@ -90,7 +90,7 @@ SCIP_DECL_HEURFREE(heurFreeTrySol)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
    SCIP_HEUR* heur;
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdata->trysol = NULL;
    heurdata->addsol = NULL;
    heurdata->rec = FALSE;
