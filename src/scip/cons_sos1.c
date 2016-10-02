@@ -8806,7 +8806,7 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
    /* free stack of variables fixed to nonzero (usually already freed in consExitsolSOS1 unless instance was solved during presolving) */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -10062,7 +10062,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
    conshdlrdata->switchsos1branch = FALSE;
    conshdlrdata->switchcutsfromsos1 = FALSE;

@@ -11918,7 +11918,7 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -13042,7 +13042,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CONSHDLR* conshdlr;
 
    /* create knapsack constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
@@ -13460,4 +13460,3 @@ SCIP_ROW* SCIPgetRowKnapsack(
 
    return consdata->row;
 }
-

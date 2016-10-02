@@ -1313,7 +1313,7 @@ SCIP_DECL_CONSFREE(consFreeSOS2)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -2218,7 +2218,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    conshdlrdata->eventhdlr = NULL;
    /* create event handler for bound change events */
