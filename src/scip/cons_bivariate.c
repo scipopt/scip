@@ -6346,7 +6346,7 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPduplicateMemory(scip, &targetdata, sourcedata) );
+   SCIP_CALL( SCIPduplicateBlockMemory(scip, &targetdata, sourcedata) );
    assert(targetdata->eventfilterpos == -1);
 
    assert(sourcedata->f != NULL);

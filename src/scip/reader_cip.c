@@ -683,7 +683,7 @@ SCIP_RETCODE getConstraint(
    }
 
    /* copy buffer for working purpose */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &copybuf, buf, len) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &copybuf, buf, len) );
    copybuf[len - 1] = '\0';
 
    /* parse the constraint */
@@ -691,7 +691,7 @@ SCIP_RETCODE getConstraint(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success);
 
    /* free temporary buffer */
-   SCIPfreeMemoryArray(scip, &copybuf);
+   SCIPfreeBufferArray(scip, &copybuf);
 
    SCIP_CALL( retcode );
 

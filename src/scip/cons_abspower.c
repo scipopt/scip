@@ -5463,7 +5463,7 @@ SCIP_DECL_CONSTRANS(consTransAbspower)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPduplicateMemory(scip, &targetdata, sourcedata) );
+   SCIP_CALL( SCIPduplicateBlockMemory(scip, &targetdata, sourcedata) );
    assert(targetdata->xeventfilterpos == -1);
    assert(targetdata->zeventfilterpos == -1);
 
@@ -7116,7 +7116,7 @@ SCIP_RETCODE SCIPcreateConsAbspower(
    }
 
    /* create constraint data */
-   SCIP_CALL( SCIPallocBlockMemory( scip, &consdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    BMSclearMemory(consdata);
    consdata->xeventfilterpos = -1;
    consdata->zeventfilterpos = -1;

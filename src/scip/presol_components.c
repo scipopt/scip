@@ -96,7 +96,7 @@ SCIP_RETCODE initStatistics(
    assert(scip != NULL);
    assert(presoldata != NULL);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &presoldata->compspercat, NCATEGORIES) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->compspercat, NCATEGORIES) );
    BMSclearMemoryArray(presoldata->compspercat, NCATEGORIES);
 
    presoldata->nsinglevars = 0;
@@ -115,7 +115,7 @@ void freeStatistics(
    assert(scip != NULL);
    assert(presoldata != NULL);
 
-   SCIPfreeMemoryArray(scip, &presoldata->compspercat);
+   SCIPfreeBlockMemoryArray(scip, &presoldata->compspercat, NCATEGORIES);
 }
 
 /** reset data for statistics */
@@ -1380,7 +1380,7 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -1448,7 +1448,7 @@ SCIP_RETCODE SCIPincludePresolComponents(
    SCIP_PRESOL* presol;
 
    /* create components presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,

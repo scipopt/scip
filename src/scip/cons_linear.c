@@ -429,7 +429,7 @@ SCIP_RETCODE conshdlrdataEnsureLinconsupgradesSize(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->linconsupgrades, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->linconsupgrades, conshdlrdata->linconsupgradessize, newsize) );
       conshdlrdata->linconsupgradessize = newsize;
    }
    assert(num <= conshdlrdata->linconsupgradessize);
@@ -485,7 +485,7 @@ SCIP_RETCODE linconsupgradeCreate(
    assert(linconsupgrade != NULL);
    assert(linconsupgd != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, linconsupgrade) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, linconsupgrade) );
    (*linconsupgrade)->linconsupgd = linconsupgd;
    (*linconsupgrade)->priority = priority;
    (*linconsupgrade)->active = TRUE;
@@ -504,7 +504,7 @@ void linconsupgradeFree(
    assert(linconsupgrade != NULL);
    assert(*linconsupgrade != NULL);
 
-   SCIPfreeMemory(scip, linconsupgrade);
+   SCIPfreeBlockMemory(scip, linconsupgrade);
 }
 
 /** creates constraint handler data for linear constraint handler */
@@ -519,7 +519,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
    (*conshdlrdata)->linconsupgrades = NULL;
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
@@ -548,9 +548,9 @@ void conshdlrdataFree(
    {
       linconsupgradeFree(scip, &(*conshdlrdata)->linconsupgrades[i]);
    }
-   SCIPfreeMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
 /** creates a linear constraint upgrade data object */

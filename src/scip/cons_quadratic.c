@@ -1389,8 +1389,8 @@ SCIP_RETCODE consdataFree(
    }
 
    /* free interior point information, may exists if constraint is deleted in solving stage */
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->interiorpoint);
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->gaugecoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->interiorpoint, (*consdata)->nquadvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->gaugecoefs, (*consdata)->nquadvars);
 
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
@@ -7029,7 +7029,7 @@ SCIP_RETCODE computeInteriorPoint(
    if( method == 'a' && ((consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
             || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0))) )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
       *success = TRUE;
       goto TERMINATE;
@@ -7187,7 +7187,7 @@ SCIP_RETCODE computeInteriorPoint(
     */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
    for( i = 0; i < nquadvars; i++ )
    {
@@ -7325,7 +7325,7 @@ SCIP_RETCODE computeGauge(
     * fortunately, sepabilinvar2pos in consdata gives us all the information that we need
     */
 
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
 
    /* compute value of quadratic part at interior point, build map and compute gaugeconst (c_gauge) */
    consdata->interiorpointval = 0;
@@ -10495,7 +10495,7 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    }
    SCIPfreeMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -10763,8 +10763,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorleft,  consdata->nquadvars + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorright, consdata->nquadvars + 1);
 
-      SCIPfreeMemoryArrayNull(scip, &consdata->interiorpoint);
-      SCIPfreeMemoryArrayNull(scip, &consdata->gaugecoefs);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->interiorpoint, consdata->nquadvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->gaugecoefs, consdata->nquadvars);
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_EXITSOLVE )
@@ -12616,7 +12616,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CONSHDLR* conshdlr;
 
    /* create quadratic constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */

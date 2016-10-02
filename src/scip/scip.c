@@ -9579,7 +9579,7 @@ SCIP_RETCODE SCIPreadProb(
             int c;
             int h;
 
-            SCIP_CALL( SCIPallocClearMemoryArray(scip, &nconss, scip->set->nconshdlrs) );
+            SCIP_CALL( SCIPallocClearBufferArray(scip, &nconss, scip->set->nconshdlrs) );
 
             /* loop over all constraints and constraint-handlers to count for each type the amount of original
              * constraints
@@ -9608,7 +9608,7 @@ SCIP_RETCODE SCIPreadProb(
                }
             }
 
-            SCIPfreeMemoryArray(scip, &nconss);
+            SCIPfreeBufferArray(scip, &nconss);
          }
 
          /* in case the permutation seed is different to -1, permute the original problem */

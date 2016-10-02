@@ -1219,7 +1219,7 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
 
    SCIPregressionFree(&eventhdlrdata->regression);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -1474,7 +1474,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
 
    /* create solving phase event handler data */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->feassetname = NULL;
