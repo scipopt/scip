@@ -126,15 +126,11 @@ SCIP_RETCODE SCIPincludeNodeselBreadthfirst(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NODESELDATA* nodeseldata;
    SCIP_NODESEL* nodesel;
-
-   /* create breadthfirst node selector data */
-   nodeseldata = NULL;
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselSelectBreadthfirst, nodeselCompBreadthfirst, nodeseldata) );
+         nodeselSelectBreadthfirst, nodeselCompBreadthfirst, NULL) );
 
    assert(nodesel != NULL);
 
