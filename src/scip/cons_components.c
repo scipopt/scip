@@ -42,7 +42,13 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP)
 
-#define DEFAULT_MAXDEPTH 10
+#define DEFAULT_MAXDEPTH             10      /**< maximum depth of a node to run components detection */
+#define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
+#define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems during presolving */
+#define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
+#define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
+                                              *   to allow running again during presolving (1.0: do not run again) */
+#define DEFAULT_FEASTOLFACTOR       1.0      /**< default value for parameter to increase the feasibility tolerance in all sub-SCIPs */
 
 #define INTFACTOR 10
 
@@ -97,9 +103,20 @@ struct Problem
 /** control parameters */
 struct SCIP_ConshdlrData
 {
-   SCIP_Real minrelsize;
-   int maxdepth;
-   int minsize;
+   SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
+   SCIP_Real             intfactor;          /** the weight of an integer variable compared to binary variables */
+   SCIP_Real             reldecrease;        /** percentage by which the number of variables has to be decreased after the last component solving
+                                              *  to allow running again (1.0: do not run again) */
+   SCIP_Real             feastolfactor;      /** parameter to increase the feasibility tolerance in all sub-SCIPs */
+   SCIP_Bool             didsearch;          /** did the presolver already search for components? */
+   SCIP_Bool             pluginscopied;      /** was the copying of the plugins successful? */
+   SCIP_Bool             writeproblems;      /** should the single components be written as an .cip-file? */
+   int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
+   int                   presollastnvars;    /** number of variables after last run of the presolver */
+   int                   maxdepth;           /**< maximum depth of a node to run components detection */
+   SCIP_Real             minrelsize;
+   int                   minsize;
+
 };
 
 
@@ -232,8 +249,7 @@ SCIP_RETCODE freeComponent(
    return SCIP_OKAY;
 }
 
-/** create the sub-SCIP for a given component
- */
+/** create the sub-SCIP for a given component */
 static
 SCIP_RETCODE componentCreateSubscip(
    COMPONENT*            component,          /**< pointer to component structure */
@@ -886,6 +902,7 @@ static
 SCIP_RETCODE splitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_Bool             inpresolve,         /**< are we currently in presolving and only want to solve small components? */
    SCIP_DIGRAPH*         digraph,
    SCIP_CONS**           conss,              /**< constraints */
    SCIP_VAR**            vars,               /**< variables */
@@ -910,6 +927,7 @@ SCIP_RETCODE splitProblem(
    int ncompconss;
    int nbinvars;
    int nintvars;
+   int ndiscvars;
    int ncontvars;
    int comp;
    int compvarsstart;
@@ -964,14 +982,23 @@ SCIP_RETCODE splitProblem(
             nintvars++;
       }
       ncontvars = ncvars - nintvars - nbinvars;
-      compsize[c] = ((1000 * (nbinvars + INTFACTOR * nintvars) + (950.0 * ncontvars)/nvars));
+      ndiscvars = nbinvars + INTFACTOR * nintvars;
+      compsize[c] = ((1000 * ndiscvars + (950.0 * ncontvars)/nvars));
 
       /* decide if this component should be created ?????????? */
-      if( ncvars > 0 )
+      if( ncvars > 0 && (!inpresolve || ndiscvars <= conshdlrdata->maxintvars) )
          ++nrealcomponents;
 
       if( ncvars > 1 )
          ++nnontrivialcomps;
+   }
+
+   if( nrealcomponents <= 1 )
+   {
+      SCIPfreeBufferArray(scip, &permu);
+      SCIPfreeBufferArray(scip, &compsize);
+
+      goto TERMINATE;
    }
 
    /* get permutation of component numbers such that the size of the components is increasing */
@@ -992,8 +1019,6 @@ SCIP_RETCODE splitProblem(
    SCIPfreeBufferArray(scip, &permu);
    SCIPfreeBufferArray(scip, &compsize);
 
-   if( nrealcomponents <= 1 )
-      goto TERMINATE;
 
    /* do the mapping from calculated components per variable to corresponding
     * constraints and sort the component-arrays for faster finding the
@@ -1111,17 +1136,6 @@ SCIP_RETCODE splitProblem(
    SCIPhashmapFree(&consmap);
  TERMINATE:
    SCIPfreeBufferArray(scip, &conscomponent);
-
-   if( nrealcomponents > 0 )
-   {
-      SCIP_CONS* cons;
-
-      assert((*problem) != NULL);
-
-      SCIP_CALL( createConsComponents(scip, &cons, (*problem)->name, (*problem)) );
-      SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), cons, NULL) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1317,6 +1331,7 @@ static
 SCIP_RETCODE findComponents(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< the components constraint handler data */
+   SCIP_Bool             inpresolve,         /**< are we currently in presolving and only want to find small components? */
    PROBLEM**             problem             /**< created sub-problem, if problem can be split, NULL otherwise */
    )
 {
@@ -1335,7 +1350,7 @@ SCIP_RETCODE findComponents(
    ncomponents = 0;
    nvars = SCIPgetNVars(scip);
 
-   /* collect checked constraints for component propagator */
+   /* collect checked constraints for component detection */
    ntmpconss = SCIPgetNConss(scip);
    tmpconss = SCIPgetConss(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, ntmpconss) );
@@ -1415,7 +1430,7 @@ SCIP_RETCODE findComponents(
             if( ncomponents > 1 )
             {
                /* create subproblems from independent components */
-               SCIP_CALL( splitProblem(scip, conshdlrdata, digraph, conss, vars, varcomponent, nconss, nunfixedvars,
+               SCIP_CALL( splitProblem(scip, conshdlrdata, inpresolve, digraph, conss, vars, varcomponent, nconss, nunfixedvars,
                      firstvaridxpercons, fixedvarsobjsum, problem) );
             }
 
@@ -1538,7 +1553,16 @@ SCIP_DECL_CONSPROP(consPropComponents)
    {
       assert(SCIPconshdlrGetNActiveConss(conshdlr) == 0);
 
-      SCIP_CALL( findComponents(scip, conshdlrdata, &problem) );
+      SCIP_CALL( findComponents(scip, conshdlrdata, FALSE, &problem) );
+
+      if( problem != NULL )
+      {
+         SCIP_CONS* cons;
+
+         SCIP_CALL( createConsComponents(scip, &cons, problem->name, problem) );
+         SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), cons, NULL) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
    }
 
    do
@@ -1548,6 +1572,64 @@ SCIP_DECL_CONSPROP(consPropComponents)
          SCIP_CALL( solveProblem(problem, result) );
       }
    } while( *result == SCIP_DELAYNODE && SCIPgetDepth(scip) == 0 && !SCIPisStopped(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** presolving method of constraint handler */
+static
+SCIP_DECL_CONSPRESOL(consPresolComponents)
+{  /*lint --e{715}*/
+   PROBLEM* problem;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int nvars;
+   
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) >= 0);
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) <= 1);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   /* do not run, if not all variables are explicitly known */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   nvars = SCIPgetNVars(scip);
+
+   /* we do not want to run, if there are no variables left */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   /* the presolver should be executed only if it didn't run so far or the number of variables was significantly reduced
+    * since tha last run
+    */
+   if( conshdlrdata->presollastnvars == -1 || (nvars > (1 - conshdlrdata->reldecrease) * conshdlrdata->presollastnvars) )
+      return SCIP_OKAY;
+
+   /* only call the components presolving, if presolving would be stopped otherwise */
+   if( !SCIPisPresolveFinished(scip) )
+      return SCIP_OKAY;
+
+   /* check for a reached timelimit */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   problem = NULL;
+   *result = SCIP_DIDNOTFIND;
+
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) == 0);
+
+   SCIP_CALL( findComponents(scip, conshdlrdata, TRUE, &problem) );
+
+
 
    return SCIP_OKAY;
 }
@@ -1579,6 +1661,23 @@ SCIP_DECL_CONSLOCK(consLockComponents)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+static
+SCIP_DECL_CONSINITPRE(consInitpreComponents)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->presollastnvars = -1;
+
+   return SCIP_OKAY;
+}
+
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
@@ -1635,8 +1734,11 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropComponents,
          CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING));
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolComponents,
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING));
 
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, conshdlrFreeComponents) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreComponents) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolComponents) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolComponents) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyComponents, NULL) );
@@ -1644,8 +1746,28 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxdepth",
-         "maximal depth",
+         "maximum depth of a node to run components detection",
          &conshdlrdata->maxdepth, FALSE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxintvars",
+         "maximum number of integer (or binary) variables to solve a subproblem during presolving (-1: unlimited)",
+         &conshdlrdata->maxintvars, FALSE, DEFAULT_MAXINTVARS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "constraints/" CONSHDLR_NAME "/nodelimit",
+         "maximum number of nodes to be solved in subproblems during presolving",
+         &conshdlrdata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/intfactor",
+         "the weight of an integer variable compared to binary variables",
+         &conshdlrdata->intfactor, FALSE, DEFAULT_INTFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/reldecrease",
+         "percentage by which the number of variables has to be decreased after the last component solving to allow running again during presolving (1.0: do not run again)",
+         &conshdlrdata->reldecrease, FALSE, DEFAULT_RELDECREASE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/feastolfactor",
+         "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
+         &conshdlrdata->feastolfactor, TRUE, DEFAULT_FEASTOLFACTOR, 0.0, 1000000.0, NULL, NULL) );
 
 
    return SCIP_OKAY;
