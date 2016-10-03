@@ -9926,6 +9926,8 @@ SCIP_RETCODE SCIPfreeProb(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
+ *
+ *  @todo This need to be changed to use the new random number generator implemented in random.c
  */
 SCIP_RETCODE SCIPpermuteProb(
    SCIP*                 scip,               /**< SCIP data structure */
