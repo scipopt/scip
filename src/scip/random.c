@@ -25,10 +25,10 @@
 #define DEFAULT_MWC  521288629;
 #define DEFAULT_CST  7654321;
 
-
-SCIP_RETCODE SCIPrandomInit(
+/** initialize the random number generator with a given start seed */
+void SCIPrandomInit(
    SCIP_RANDGEN*         randgen,
-   int                   initseed
+   unsigned int          initseed
    )
 {
    assert(randgen != NULL);
@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPrandomInit(
    randgen->mwc = DEFAULT_MWC;
    randgen->cst = DEFAULT_CST;
 
-   return SCIP_OKAY;
+   return;
 }
 
 /** returns a random number between 0 and INT_MAX

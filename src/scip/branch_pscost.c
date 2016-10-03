@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/branch_pscost.h"
+#include "scip/random.h"
 
 #define BRANCHRULE_NAME          "pscost"
 #define BRANCHRULE_DESC          "branching on pseudo cost values"
@@ -50,6 +51,8 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+
    char                  strategy;           /**< strategy for computing score of external candidates */
    SCIP_Real             scoreminweight;     /**< weight for minimum of scores of a branching candidate */
    SCIP_Real             scoremaxweight;     /**< weight for maximum of scores of a branching candidate */
@@ -61,7 +64,6 @@ struct SCIP_BranchruleData
    int                   narymaxdepth;       /**< maximal depth where to do n-ary branching, -1 to turn off */
    SCIP_Real             naryminwidth;       /**< minimal domain width in children when doing n-ary branching, relative to global bounds */
    SCIP_Real             narywidthfactor;    /**< factor of domain width in n-ary branching */
-   unsigned int          randseed;           /**< seed value for random number generator                              */
 };
 
 /*
@@ -331,7 +333,7 @@ SCIP_RETCODE updateBestCandidate(
    {
       /* best candidate is unbounded -> we prefer to branch on it */
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(cand)) &&
-          SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed) <= 0.5
+          SCIPrandomGetReal(branchruledata->randnumgen, 0.0, 1.0) <= 0.5
         )
       {
          /* but if the new candidate is also unbounded (thus as good as best candidate),
@@ -508,7 +510,7 @@ SCIP_RETCODE selectBranchVar(
 
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, &bestrndscore, cand,
-            scoremin, scoremax, scoresum, SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed), candsol) );
+            scoremin, scoremax, scoresum, SCIPrandomGetReal(branchruledata->randnumgen, 0.0, 1.0), candsol) );
    }
 
    /* there were candidates, but no variable was selected; this can only happen if the branching points are huge values
@@ -553,8 +555,14 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* free branching rule data */
+   /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* free random number generator */
+   SCIPfreeBlockMemory(scip, &branchruledata->randnumgen);
+
+   /* free branching rule data */
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -571,7 +579,8 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   branchruledata->randseed = SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT);
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->randnumgen) );
+   SCIPrandomInit(branchruledata->randnumgen, SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT));
 
    return SCIP_OKAY;
 }

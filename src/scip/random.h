@@ -26,11 +26,11 @@
 #include "scip/def.h"
 #include "scip/struct_random.h"
 
-/** creates a random number generator */
+/** initialize the random number generator with a given start seed */
 extern
-SCIP_RETCODE SCIPrandomInit(
+void SCIPrandomInit(
    SCIP_RANDGEN*         randgen,
-   int                   initseed
+   unsigned int          initseed
    );
 
 /** returns a random integer between minrandval and maxrandval */

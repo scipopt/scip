@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "scip/branch_random.h"
+#include "scip/random.h"
 
 
 #define BRANCHRULE_NAME          "random"
@@ -39,8 +40,8 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    int                   initseed;           /**< initial random seed value */
-   unsigned int          seed;               /**< seed value for random number generator */
 };
 
 /*
@@ -51,12 +52,12 @@ struct SCIP_BranchruleData
 static
 void getRandomVariable(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< branchrule data */
    SCIP_VAR**            cands,              /**< array of branching candidates */
    SCIP_Real*            candssol,           /**< relaxation solution values of branching candidates, or NULL */
    int                   ncands,             /**< number of branching candidates */
    SCIP_VAR**            bestcand,           /**< buffer to store pointer to best candidate */
-   SCIP_Real*            bestcandsol,        /**< buffer to store solution value of best candidate */
-   unsigned int*         seed                /**< seed for random number generator */
+   SCIP_Real*            bestcandsol         /**< buffer to store solution value of best candidate */
    )
 {
    int idx;
@@ -67,9 +68,8 @@ void getRandomVariable(
    assert(ncands > 0);
    assert(bestcand != NULL);
    assert(bestcandsol != NULL);
-   assert(seed != NULL);
 
-   idx = SCIPgetRandomInt(0, ncands-1, seed);
+   idx = SCIPrandomGetInt(branchruledata->randnumgen, 0, ncands-1);
    assert(idx >= 0);
 
    /* handle case where cands[idx] is fixed by selecting next idx with unfixed var
@@ -99,7 +99,8 @@ void getRandomVariable(
 
       cand = SCIPvarGetProbvar(cands[idx]);
 
-      getRandomVariable(scip, SCIPvarGetMultaggrVars(cand), NULL, SCIPvarGetMultaggrNVars(cand), bestcand, bestcandsol, seed);
+      getRandomVariable(scip, branchruledata, SCIPvarGetMultaggrVars(cand), NULL, SCIPvarGetMultaggrNVars(cand),
+            bestcand, bestcandsol);
       return;
    }
 
@@ -136,8 +137,14 @@ SCIP_DECL_BRANCHFREE(branchFreeRandom)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* free branching rule data */
+   /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* free random number generator */
+   SCIPfreeBlockMemory(scip, &branchruledata->randnumgen);
+
+   /* free branching rule data */
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -155,8 +162,9 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
    assert(branchruledata != NULL);
    assert(branchruledata->initseed >= 0);
 
-   /* set the seed value to the initial random seed value */
-   branchruledata->seed = SCIPinitializeRandomSeed(scip, branchruledata->initseed);
+   /* create a random number generator */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->randnumgen) );
+   SCIPrandomInit(branchruledata->randnumgen, SCIPinitializeRandomSeed(scip, branchruledata->initseed) );
 
    return SCIP_OKAY;
 }
@@ -186,7 +194,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    assert(nlpcands > 0);
 
    /* get random branching candidate */
-   bestcand = SCIPgetRandomInt(0, nlpcands-1, &branchruledata->seed);
+   bestcand = SCIPrandomGetInt(branchruledata->randnumgen, 0, nlpcands-1);
    assert(bestcand >= 0);
 
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>\n",
@@ -237,7 +245,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
     * since variables can occur several times in the list of candidates, variables that have been added more often have
     * a higher probability to be chosen for branching
     */
-   getRandomVariable(scip, externcands, externcandssol, nprioexterncands, &bestcand, &bestcandsol, &branchruledata->seed);
+   getRandomVariable(scip, branchruledata, externcands, externcandssol, nprioexterncands, &bestcand, &bestcandsol);
 
    if( bestcand == NULL )
    {
@@ -291,7 +299,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
    assert(npseudocands > 0);
 
    /* get random branching candidate */
-   bestcand = SCIPgetRandomInt(0, npseudocands-1, &branchruledata->seed);
+   bestcand = SCIPrandomGetInt(branchruledata->randnumgen, 0, npseudocands-1);
    assert(bestcand >= 0);
 
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>\n",
@@ -319,7 +327,6 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
 
    /* create random branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   branchruledata->seed = 0;
 
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
