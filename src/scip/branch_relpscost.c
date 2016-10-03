@@ -1473,12 +1473,6 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   /* free random number generator */
-   SCIPfreeBlockMemory(scip, &branchruledata->randnumgen);
-
-   /* free branching rule data */
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -1516,6 +1510,9 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    /* free memory in branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
+
+   /* free random number generator */
+   SCIPfreeBlockMemory(scip, &branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }
