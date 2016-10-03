@@ -49,6 +49,53 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_Real             maxrandval          /**< maximal value to return */
    );
 
+
+/*
+ * Permutations / Shuffling
+ */
+
+/**@defgroup PermutationsShuffling Permutations Shuffling
+ *
+ *@{
+ */
+
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+extern
+void SCIPrandomPermuteIntArray(
+   SCIP_RANDGEN*         randgen,            /**< random number generator data */
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole
+                                               *   array)
+                                               */
+   );
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+extern
+void SCIPrandomPermuteArray(
+   SCIP_RANDGEN*         randgen,            /**< random number generator data */
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole
+                                              *   array)
+                                              */
+   );
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+extern
+SCIP_RETCODE SCIPrandomGetSubset(
+   SCIP_RANDGEN*         randgen,            /**< random number generator data */
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems           /**< number of elements that should be drawn and stored */
+   );
+
+/**@} */
+
+
 #ifdef __cplusplus
 }
 #endif

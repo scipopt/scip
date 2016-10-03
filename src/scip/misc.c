@@ -7885,7 +7885,10 @@ int getRand(
 
 #endif
 
-/** returns a random integer between minrandval and maxrandval */
+/** returns a random integer between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
+ */
 int SCIPgetRandomInt(
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval,         /**< maximal value to return */
@@ -7904,7 +7907,10 @@ int SCIPgetRandomInt(
    return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
 }
 
-/** returns a random real between minrandval and maxrandval */
+/** returns a random real between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetReal() to request a random real.
+ */
 SCIP_Real SCIPgetRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval,         /**< maximal value to return */
@@ -8040,13 +8046,16 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteIntArray()
+ */
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                               *   array)
+                                               */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8069,13 +8078,16 @@ void SCIPpermuteIntArray(
 }
 
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteArray()
+ */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                              *   array)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8099,6 +8111,8 @@ void SCIPpermuteArray(
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ *
+ *  @deprecated Please use SCIPrandomGetSubset()
  */
 SCIP_RETCODE SCIPgetRandomSubset(
    void**                set,                /**< original set, from which elements should be drawn */
