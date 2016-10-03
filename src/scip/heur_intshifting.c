@@ -613,6 +613,10 @@ SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIPfreeBlockMemory(scip, &heurdata->randnumgen);
+
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
