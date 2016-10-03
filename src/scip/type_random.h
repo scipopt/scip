@@ -13,32 +13,21 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_random.h
- * @brief  data structures for random number generator
+/**@file   type_random.h
+ * @brief  type definitions for random number generator
  * @author Jakob Witzig
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_RANDOM_H__
-#define __SCIP_STRUCT_RANDOM_H__
-
-#include <stdint.h>
-#include "scip/def.h"
-#include "scip/type_random.h"
+#ifndef __SCIP_TYPE_RANDOM_H__
+#define __SCIP_TYPE_RANDOM_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** random number generator data */
-struct SCIP_RandGen
-{
-   uint32_t              seed;               /**< start seed */
-   uint32_t              xor;                /**< Xorshift seed */
-   uint32_t              mwc;                /**< Multiply-with-carry seed */
-   uint32_t              cst;                /**< constant seed */
-};
+typedef struct SCIP_RandGen SCIP_RANDGEN;    /**< random number generator data */
 
 #ifdef __cplusplus
 }

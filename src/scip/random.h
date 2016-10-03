@@ -26,8 +26,6 @@
 #include "scip/def.h"
 #include "scip/struct_random.h"
 
-typedef struct SCIP_RandGen SCIP_RANDGEN;    /**< random number generator data */
-
 /** creates a random number generator */
 extern
 SCIP_RETCODE SCIPrandomInit(

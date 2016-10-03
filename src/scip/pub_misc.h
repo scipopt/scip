@@ -5523,16 +5523,24 @@ SCIP_Real SCIPrelDiff(
  *@{
  */
 
-/** returns a random integer between minrandval and maxrandval */
+/** returns a random integer between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
+ */
 EXTERN
+SCIP_DEPRECATED
 int SCIPgetRandomInt(
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/** returns a random real between minrandval and maxrandval */
+/** returns a random real between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetReal() to request a random real.
+ */
 EXTERN
+SCIP_DEPRECATED
 SCIP_Real SCIPgetRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval,         /**< maximal value to return */
