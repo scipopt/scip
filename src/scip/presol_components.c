@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,10 +44,10 @@
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .cip-file? */
-#define DEFAULT_MAXINTVARS            0      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
+#define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
-#define DEFAULT_RELDECREASE         0.3      /**< percentage by which the number of variables has to be decreased after the last component solving
+#define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
                                               *   to allow running again (1.0: do not run again) */
 #define DEFAULT_FEASTOLFACTOR       1.0      /**< default value for parameter to increase the feasibility tolerance in all sub-SCIPs */
 
@@ -264,7 +264,7 @@ SCIP_RETCODE copyAndSolveComponent(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
       compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
 #else
-   SCIPinfoMessage(scip, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+   SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
       compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
 #endif
 
@@ -275,7 +275,7 @@ SCIP_RETCODE copyAndSolveComponent(
 #ifndef SCIP_DEBUG
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "--> not created (too many integer variables)\n");
 #else
-      SCIPinfoMessage(scip, NULL, "--> not created (too many integer variables)\n");
+      SCIPdebugMessage("--> not created (too many integer variables)\n");
 #endif
 
       return SCIP_OKAY;
@@ -298,7 +298,7 @@ SCIP_RETCODE copyAndSolveComponent(
    if( timelimit <= 0.0 || memorylimit <= (1.0 * nvars / SCIPgetNVars(scip)) * (1.0 * nconss / SCIPgetNConss(scip)) *
       ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) )
    {
-      SCIPinfoMessage(scip, NULL, "--> not created (not enough memory or time left)\n");
+      SCIPdebugMessage("--> not created (not enough memory or time left)\n");
       return SCIP_OKAY;
    }
 
@@ -373,7 +373,6 @@ SCIP_RETCODE copyAndSolveComponent(
 
    /* set time and memory limit for the subproblem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/softtime", -1) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* disable statistic timing inside sub SCIP */
@@ -418,11 +417,11 @@ SCIP_RETCODE copyAndSolveComponent(
    if( presoldata->writeproblems )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.cip", SCIPgetProbName(scip), compnr);
-      SCIPinfoMessage(scip, NULL, "write problem to file %s\n", name);
+      SCIPdebugMessage("write problem to file %s\n", name);
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.set", SCIPgetProbName(scip), compnr);
-      SCIPinfoMessage(scip, NULL, "write settings to file %s\n", name);
+      SCIPdebugMessage("write settings to file %s\n", name);
       SCIP_CALL( SCIPwriteParams(subscip, name, TRUE, TRUE) );
    }
 
@@ -452,7 +451,42 @@ SCIP_RETCODE copyAndSolveComponent(
 
    if( presoldata->maxintvars == -1 || (SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars) )
    {
+      SCIP_SOL** partialsols;
       SCIP_RETCODE retcode;
+      int npartialsols;
+      int s;
+
+      /* copy stored partial solutions into the components */
+      npartialsols = SCIPgetNPartialSols(scip);
+      partialsols = SCIPgetPartialSols(scip);
+
+      for( s = 0; s < npartialsols; s++ )
+      {
+         SCIP_VAR* subvar;
+         SCIP_SOL* sol;
+         SCIP_Real solval;
+         SCIP_Bool stored;
+         int v;
+
+         SCIP_CALL( SCIPcreatePartialSol(subscip, &sol, NULL) );
+         assert(sol != NULL);
+
+         for( v = 0; v < nvars; v++ )
+         {
+            solval = SCIPgetSolVal(scip, partialsols[s], vars[v]);
+
+            /* skip unknown variables */
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+               continue;
+
+            subvar = SCIPhashmapGetImage(varmap, vars[v]);
+            assert(subvar != NULL);
+
+            SCIP_CALL( SCIPsetSolVal(subscip, sol, subvar, solval) );
+         }
+
+         SCIP_CALL( SCIPaddSolFree(subscip, &sol, &stored) );
+      }
 
       /* solve the subproblem */
       retcode = SCIPsolve(subscip);
@@ -493,7 +527,7 @@ SCIP_RETCODE copyAndSolveComponent(
             SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE) );
 #endif
 
-            SCIPinfoMessage(scip, NULL, "--> solved to optimality: time=%.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
+            SCIPdebugMessage("--> solved to optimality: time=%.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
 
             if( feasible )
             {
@@ -524,14 +558,14 @@ SCIP_RETCODE copyAndSolveComponent(
                       */
                      if( SCIPisGT(scip, fixvals[i], gub) )
                      {
-                        SCIPinfoMessage(scip, NULL, "variable <%s> fixval: %f violates global upperbound: %f\n",
+                        SCIPdebugMessage("variable <%s> fixval: %f violates global upperbound: %f\n",
                            SCIPvarGetName(vars[i]), fixvals[i], gub);
                         fixvals[i] = gub;
                         feasible = FALSE;
                      }
                      else if( SCIPisLT(scip, fixvals[i], glb) )
                      {
-                        SCIPinfoMessage(scip, NULL, "variable <%s> fixval: %f violates global lowerbound: %f\n",
+                        SCIPdebugMessage("variable <%s> fixval: %f violates global lowerbound: %f\n",
                            SCIPvarGetName(vars[i]), fixvals[i], glb);
                         fixvals[i] = glb;
                         feasible = FALSE;
@@ -565,7 +599,7 @@ SCIP_RETCODE copyAndSolveComponent(
                {
                   SCIP_Real origobj;
 
-                  SCIPinfoMessage(scip, NULL, "solution violates bounds by more than epsilon, check the corrected solution...\n");
+                  SCIPdebugMessage("solution violates bounds by more than epsilon, check the corrected solution...\n");
 
                   origobj = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
 
@@ -593,11 +627,11 @@ SCIP_RETCODE copyAndSolveComponent(
                   }
 #endif
 
-                  SCIPinfoMessage(scip, NULL, "--> corrected solution is%s feasible\n", feasible ? "" : " not");
+                  SCIPdebugMessage("--> corrected solution is%s feasible\n", feasible ? "" : " not");
 
                   if( !SCIPisFeasEQ(subscip, SCIPsolGetOrigObj(sol), origobj) )
                   {
-                     SCIPinfoMessage(scip, NULL, "--> corrected solution has a different objective value (old=%16.9g, corrected=%16.9g)\n",
+                     SCIPdebugMessage("--> corrected solution has a different objective value (old=%16.9g, corrected=%16.9g)\n",
                         origobj, SCIPsolGetOrigObj(sol));
 
                      feasible = FALSE;
@@ -643,7 +677,7 @@ SCIP_RETCODE copyAndSolveComponent(
          }
          else
          {
-            SCIPinfoMessage(scip, NULL, "--> solving interrupted (status=%d, time=%.2f)\n",
+            SCIPdebugMessage("--> solving interrupted (status=%d, time=%.2f)\n",
                SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
 
             /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the
@@ -675,14 +709,14 @@ SCIP_RETCODE copyAndSolveComponent(
                   if( tightened )
                      ntightened++;
                }
-               SCIPinfoMessage(scip, NULL, "--> tightened %d bounds of variables due to global bounds in the sub-SCIP\n", ntightened);
+               SCIPdebugMessage("--> tightened %d bounds of variables due to global bounds in the sub-SCIP\n", ntightened);
             }
          }
       }
    }
    else
    {
-      SCIPinfoMessage(scip, NULL, "--> not solved (too many integer variables)\n");
+      SCIPdebugMessage("--> not solved (too many integer variables)\n");
    }
 
  TERMINATE:
@@ -1233,7 +1267,7 @@ SCIP_RETCODE presolComponents(
          /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
 
-         SCIPinfoMessage(scip, NULL, "presol components found %d undirected components\n", ncomponents);
+         SCIPdebugMessage("presol components found %d undirected components\n", ncomponents);
 
          /* We want to sort the components in increasing size (number of variables).
           * Therefore, we now get the number of variables for each component, and rename the components
@@ -1319,7 +1353,7 @@ SCIP_RETCODE presolComponents(
    /* print statistics */
    SCIPstatistic( printStatistics(presoldata) );
 
-   SCIPinfoMessage(scip, NULL, "%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
+   SCIPdebugMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
       ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars, *result);
 #ifdef NDEBUG
    SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables, result = %d\n",
