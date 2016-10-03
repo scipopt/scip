@@ -453,7 +453,9 @@ endif
 
 # (re)define some variables
 ifeq ($(SHARED),true)
+ifneq ($(COMP),msvc)
 FLAGS		+=	-fPIC
+endif
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
