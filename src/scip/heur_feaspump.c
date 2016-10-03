@@ -26,6 +26,7 @@
 
 #include "scip/heur_feaspump.h"
 #include "scip/cons_linear.h"
+#include "scip/random.h"
 #include "scip/scipdefplugins.h"
 
 #define HEUR_NAME             "feaspump"
@@ -87,7 +88,7 @@ struct SCIP_HeurData
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    int                   neighborhoodsize;   /**< radius of the neighborhood to be searched in stage 3 */
 
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    SCIP_Bool             beforecuts;         /**< should the feasibility pump be called at root node before cut separation? */
    SCIP_Bool             usefp20;            /**< should an iterative round-and-propagate scheme be used to find the integral points? */
    SCIP_Bool             pertsolfound;       /**< should a random perturbation be performed if a feasible solution was found? */
@@ -376,7 +377,7 @@ SCIP_RETCODE handleCycle(
       solval = SCIPvarGetLPSol(var);
       orgobjcoeff = SCIPvarGetObj(var);
       frac = SCIPfeasFrac(scip, solval);
-      flipprob = -0.3 + SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed);
+      flipprob = -0.3 + SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
 
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
       if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
@@ -581,7 +582,10 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->randnumgen) );
+   SCIPrandomInit(heurdata->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
 
    return SCIP_OKAY;
 }
@@ -602,6 +606,9 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->roundedsol) );
+
+   /* free random number generator */
+   SCIPfreeBlockMemory(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -939,7 +946,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
       /* randomly choose maximum number of variables to flip in current pumping round in case of a 1-cycle */
-      maxnflipcands = SCIPgetRandomInt(MIN(nfracs/2+1, heurdata->minflips), MIN(nfracs, maxflips), &heurdata->randseed);
+      maxnflipcands = SCIPrandomGetInt(heurdata->randnumgen, MIN(nfracs/2+1, heurdata->minflips), MIN(nfracs, maxflips));
       nflipcands = 0;
 
       /* get all unfixed integer variables */
