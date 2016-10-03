@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "scip/heur_intshifting.h"
-
+#include "scip/random.h"
 
 #define HEUR_NAME             "intshifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
@@ -46,7 +46,7 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
 };
 
 
@@ -592,8 +592,11 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    SCIPheurSetData(heur, heurdata);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->randnumgen) );
+   SCIPrandomInit(heurdata->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
 
    return SCIP_OKAY;
 }
@@ -894,7 +897,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          if( nviolfracrows > 0 )
             rowidx = nviolfracrows - 1;
          else
-            rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
+            rowidx = SCIPrandomGetInt(heurdata->randnumgen, 0, nviolrows-1);
 
          assert(0 <= rowidx && rowidx < nviolrows);
          row = violrows[rowidx];
