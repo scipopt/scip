@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -149,5 +149,13 @@ SCIP_Bool SCIPinterrupted(
    )
 {
    return (ninterrupts > 0);
+}
+
+/** resets the number of interrupts to 0 */
+void SCIPresetInterrupted(
+   void
+   )
+{
+   ninterrupts = 0;
 }
 

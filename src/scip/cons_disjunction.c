@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -452,6 +452,8 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
    SCIP_CONSDATA* consdata;
    int c;
 
+   *infeasible = FALSE;
+
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -536,11 +538,16 @@ SCIP_DECL_CONSCHECK(consCheckDisjunction)
 
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_RESULT tmpres;
+
       /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], sol, checkintegrality, checklprows, printreason, result) );
-      assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
+      SCIP_CALL( checkCons(scip, conss[c], sol, checkintegrality, checklprows, printreason, &tmpres) );
+      assert(tmpres == SCIP_FEASIBLE || tmpres == SCIP_INFEASIBLE);
+
+      if( tmpres == SCIP_INFEASIBLE )
+         *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;

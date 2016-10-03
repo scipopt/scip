@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,7 @@
 #include "scip/prob.h"
 #include "scip/cons.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_linear.h"
 #include "scip/clock.h"
 #include "scip/heur_reoptsols.h"
 #include "blockmemshell/memory.h"
@@ -2075,25 +2076,26 @@ SCIP_RETCODE addNode(
 
 #ifdef SCIP_DEBUG
       {
-         int varnr;
-
          SCIPdebugMessage(" -> nvars: %d, ncons: %d, parentID: %d, reopttype: %d\n",
             reopt->reopttree->reoptnodes[id]->nvars,
             reopt->reopttree->reoptnodes[id]->nconss,
             reopt->reopttree->reoptnodes[id]->parentID, reopttype);
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMessage(" -> saved variables:\n");
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
          {
-            SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-               reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-         }
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
-         {
-            SCIPdebugMessage("  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-               reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            int varnr;
+            SCIPdebugMessage(" -> saved variables:\n");
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+            }
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            }
          }
 #endif
       }
@@ -2394,25 +2396,27 @@ SCIP_RETCODE addNode(
 
 #ifdef SCIP_DEBUG
       {
-         int varnr;
          SCIPdebugMessage("save node #%lld successful\n", SCIPnodeGetNumber(node));
          SCIPdebugMessage(" -> ID %d, nvars %d, ncons %d, reopttype %d\n",
             id, reopt->reopttree->reoptnodes[id]->nvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
             reopt->reopttree->reoptnodes[id]->nconss,
             reopttype);
 #ifdef SCIP_MORE_DEBUG
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
          {
-            SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-               reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-         }
-         for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
-         {
-            SCIPdebugMessage("  <%s> %s %g (after dual red.)\n",
-               SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-               reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            int varnr;
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+            }
+            for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
+            {
+               SCIPdebugMessage("  <%s> %s %g (after dual red.)\n",
+                  SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
+            }
          }
 #endif
       }
@@ -3026,8 +3030,8 @@ SCIP_RETCODE fixBounds(
    assert(blkmem != NULL);
 
    reopttree = reopt->reopttree;
-   assert(0 < id && id < reopttree->reoptnodessize);
    assert(reopttree != NULL);
+   assert(0 < id && id < reopttree->reoptnodessize);
 
    reoptnode = reopttree->reoptnodes[id];
    assert(reoptnode != NULL);
@@ -4067,6 +4071,14 @@ SCIP_RETCODE SCIPreoptFree(
          {
             BMSfreeBlockMemoryArray(blkmem, &(*reopt)->soltree->sols[p], (*reopt)->soltree->solssize[p]); /*lint !e866*/
             (*reopt)->soltree->sols[p] = NULL;
+         }
+
+         /* we have to free all optimal solution separatly, because those solutions are not stored in the
+          * solution reopt_sepabestsol = TRUE
+          */
+         if( set->reopt_sepabestsol && (*reopt)->prevbestsols[p] != NULL )
+         {
+            SCIP_CALL( SCIPsolFree(&(*reopt)->prevbestsols[p], blkmem, origprimal) );
          }
 
          if( (*reopt)->objs[p] != NULL )
@@ -6189,7 +6201,9 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    assert(stat != NULL);
    assert(blkmem != NULL);
 
-   if( reopt->glbconss == NULL || reopt->nglbconss == 0 )
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM);
+
+   if( (reopt->glbconss == NULL || reopt->nglbconss == 0) && !set->reopt_sepabestsol )
       return SCIP_OKAY;
 
    SCIPdebugMessage("try to add %d glb constraints\n", reopt->nglbconss);
@@ -6198,29 +6212,37 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
+      SCIP_Real* consvals;
+      SCIP_Real conslhs;
       int v;
 
       assert(reopt->glbconss[c]->nvars > 0);
 
       /* allocate buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, reopt->glbconss[c]->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, reopt->glbconss[c]->nvars) );
+      conslhs = 1.0;
 
       SCIPdebugMessage("-> add constraints with %d vars\n", reopt->glbconss[c]->nvars);
 
       for(v = 0; v < reopt->glbconss[c]->nvars; v++)
       {
-         consvars[v] = SCIPvarGetTransVar(reopt->glbconss[c]->vars[v]);
+         consvars[v] = reopt->glbconss[c]->vars[v];
+         assert(SCIPvarIsOriginal(consvars[v]));
 
          /* negate the variable if it was fixed to 1 */
          if( SCIPsetIsFeasEQ(set, reopt->glbconss[c]->vals[v], 1.0) )
          {
-            SCIP_CALL( SCIPvarNegate(consvars[v], blkmem, set, stat, &consvars[v]) );
+            consvals[v] = -1.0;
+            conslhs -= 1.0;
          }
+         else
+            consvals[v] = 1.0;
       }
 
       /* create the logic-or constraint and add them to the problem */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, "glblogicor", reopt->glbconss[c]->nvars,
-            consvars, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "glb_reopt", reopt->glbconss[c]->nvars, consvars, consvals, conslhs, SCIPinfinity(scip),
+            FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
       SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -6233,6 +6255,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       SCIPfreeBlockMemoryNull(scip, &reopt->glbconss[c]); /*lint !e866*/
 
       /* free buffer */
+      SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }
 
@@ -6246,6 +6269,62 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    }
 #endif
    reopt->nglbconss = 0;
+
+   if( reopt->run == 0 )
+      return SCIP_OKAY;
+
+   /* separate the previous optimal solution */
+   if( set->reopt_sepabestsol )
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_VAR** consvars;
+      SCIP_Real* consvals;
+      SCIP_Real conslhs;
+      int nvars;
+      int v;
+
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+
+      assert(vars != NULL);
+      assert(nvars > 0);
+
+      /* allocate buffer */
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nvars) );
+      conslhs = 1.0;
+
+      for( v = 0; v < nvars; v++ )
+      {
+         consvars[v] = vars[v];
+         assert(SCIPvarIsOriginal(consvars[v]));
+
+         /* negate the variable if it was fixed to 1 */
+         if( SCIPsetIsFeasEQ(set, SCIPgetSolVal(scip, reopt->prevbestsols[reopt->run-1], vars[v]), 1.0) )
+         {
+            consvals[v] = -1.0;
+            conslhs -= 1.0;
+         }
+         else
+            consvals[v] = 1.0;
+      }
+
+      /* create the logic-or constraint and add them to the problem */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "glb_reopt", nvars, consvars, consvals, conslhs, SCIPinfinity(scip),
+            FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+      SCIPdebugPrintCons(scip, cons, NULL);
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      SCIPdebugMessage("-> add constraint separating optimal solution of run %d\n", reopt->run-1);
+
+      /* free buffer */
+      SCIPfreeBufferArray(scip, &consvals);
+      SCIPfreeBufferArray(scip, &consvars);
+   }
 
    return SCIP_OKAY;
 }

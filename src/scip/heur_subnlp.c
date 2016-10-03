@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -196,7 +196,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, TRUE) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
    SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
@@ -1002,7 +1002,6 @@ SCIP_RETCODE solveSubNLP(
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
-   retcode = SCIP_OKAY;
    if( SCIPgetNVars(heurdata->subscip) > 0 )
    {
       /* do initial solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
@@ -1049,7 +1048,7 @@ SCIP_RETCODE solveSubNLP(
          sol = NULL;
          SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, SCIPgetSols(heurdata->subscip)[i]) );
 
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
          {
             if( heurdata->nlpverblevel >= 1 )
@@ -1075,7 +1074,7 @@ SCIP_RETCODE solveSubNLP(
       {
          SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i]) );
 
-         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, TRUE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
          {
             if( heurdata->nlpverblevel >= 1 )
@@ -1285,18 +1284,18 @@ SCIP_RETCODE solveSubNLP(
          {
 #ifdef SCIP_DEBUG
             /* print the infeasibilities to stdout */
-            SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, FALSE, TRUE, &stored) );
+            SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, FALSE, TRUE, &stored) );
 #else
-            SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+            SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
 #endif
          }
          else
          {
 #ifdef SCIP_DEBUG
             /* print the infeasibilities to stdout */
-            SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, FALSE, TRUE, &stored) );
+            SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, FALSE, TRUE, &stored) );
 #else
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
 #endif
          }
 
@@ -1351,9 +1350,9 @@ SCIP_RETCODE solveSubNLP(
 
 #ifdef SCIP_DEBUG
          /* print the infeasibilities to stdout */
-         SCIP_CALL( SCIPcheckSol(scip, resultsol, TRUE, TRUE, FALSE, TRUE, &feasible) );
+         SCIP_CALL( SCIPcheckSol(scip, resultsol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
 #else
-         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, TRUE, FALSE, TRUE, &feasible) );
+         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &feasible) );
 #endif
          if( feasible )
          {
@@ -1411,7 +1410,7 @@ SCIP_RETCODE solveSubNLP(
          SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasbile\n");
 
          /* print the infeasibilities to stdout */
-         SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, FALSE, TRUE, &feasible) );
+         SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
 
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }
@@ -1723,7 +1722,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    {
       SCIP_Real upperbound;
 
-      cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

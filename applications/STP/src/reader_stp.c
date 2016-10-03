@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_stp.c
- * @brief  Steiner Tree problem reader file reader
+ * @brief  Steiner tree problem file reader
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
@@ -45,8 +45,10 @@
 #define   DEFAULT_COMPCENTRAL  1             /**< selection type for the root (for undirected STPs) */
 #define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
 #define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
-#define   DEFAULT_REDUCTION    1             /**< reduction mode to apply */
-#define   DEFAULT_MINELIMS     5             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
+#define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
+#define   DEFAULT_SYMCONS      2             /**< symmetry constraints */
+#define   DEFAULT_CYCLECONS    2             /**< cycle constraints */
+#define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
 #define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
 #define STP_MODES "cfp" /**< valid values for user parameter 'stp/mode' */
@@ -164,8 +166,18 @@ SCIP_RETCODE SCIPincludeReaderStp(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/reduction",
-         "Reduction: 0 disable, 1 default, 2 maximum",
+         "Reduction: 0 disable, 1 diminish, 2 default",
          NULL, FALSE, DEFAULT_REDUCTION, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usesymcons",
+         "Use symmetry constraints (PC, MW): 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_SYMCONS, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usecyclecons",
+         "Use 2-cycle constraints (PC): 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_CYCLECONS, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/minelims",

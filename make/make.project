@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -46,6 +46,8 @@ NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
 PERMUTE         =       0
+SEEDS           =       0
+GLBSEEDSHIFT    =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -142,13 +144,20 @@ BLIS            =       blis
 SHELL		= 	bash
 READ		=	read -e
 LN_s		= 	ln -s
+LN_sf		=	ln -sf
 
 #initial compiler and linker flags
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
+
+ifeq ($(COMP),msvc)
+LDFLAGS		=
+else
 LDFLAGS		=	$(LINKCC_l)m$(LINKLIBSUFFIX)
+endif
+
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -246,7 +255,8 @@ LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)dl$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),grb)
@@ -256,7 +266,7 @@ endif
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 ifneq ($(LINKRPATH),)
-LDFLAGS                +=      $(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/xprsinc/../lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
 endif
 endif
 
@@ -341,7 +351,8 @@ ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
 endif
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+ZIMPLLIB	=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX)
+LDFLAGS		+=	$(ZIMPLLIB) $(ZIMPL_LDFLAGS)
 endif
 
 ifeq ($(GMP),true)
@@ -364,9 +375,10 @@ LINKER		=	CPP
 # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # - shared libraries are installed into the lib directory, so add this to the rpath
 FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
-LDFLAGS		+=	$(shell cat $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -389,8 +401,10 @@ FLAGS		+=	-fPIC
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
+LIBBUILD_L	=	$(LINKCXX_L)
 else
 LIBBUILD	=	$(LINKCC)
+LIBBUILD_L	=	$(LINKCC_L)
 endif
 
 ifeq ($(COMP),msvc)
@@ -405,7 +419,7 @@ RANLIB		=
 endif
 
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)
 endif
 
 

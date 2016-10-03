@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,6 +78,7 @@ struct SCIP_Prob
    SCIP_Bool             transformed;        /**< TRUE iff problem is the transformed problem */
    SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
    SCIP_Bool             permuted;           /**< TRUE iff the problem is already permuted */
+   SCIP_Bool             conscompression;     /**< TRUE for problems for which constraint compression on a set of fixed variables is desired */
 };
 
 #ifdef __cplusplus

@@ -1,9 +1,10 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +34,7 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_INITSEED                0 /**< initial random seed */
+#define DEFAULT_INITSEED                41   /**< initial random seed */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -152,9 +153,10 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+   assert(branchruledata->initseed >= 0);
 
    /* set the seed value to the initial random seed value */
-   branchruledata->seed = (unsigned int) branchruledata->initseed;
+   branchruledata->seed = SCIPinitializeRandomSeed(scip, branchruledata->initseed);
 
    return SCIP_OKAY;
 }

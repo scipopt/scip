@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -91,6 +91,7 @@ SCIP_RETCODE readBounds(
       char varname[SCIP_MAXSTRLEN];
       char lbstring[SCIP_MAXSTRLEN];
       char ubstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -102,7 +103,8 @@ SCIP_RETCODE readBounds(
       lineno++;
 
       /* parse the line */
-      nread = sscanf(buffer, "%s %s %s\n", varname, lbstring, ubstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, lbstring, ubstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,6 +51,7 @@
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
+#include "IpLapack.hpp"
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
@@ -1092,12 +1093,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* ReOptimizeNLP with Ipopt <= 3.10.3 could return a solution not within bounds if all variables are fixed (see Ipopt ticket #179) */
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 10) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 10 && IPOPT_VERSION_RELEASE > 3)
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
-#else
-         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
-#endif
       }
 
       // catch the very bad status codes
@@ -1127,7 +1123,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lasttime  = stats->TotalCPUTime();
       }
    }
-   catch( IpoptException except )
+   catch( IpoptException& except )
    {
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
@@ -2782,14 +2778,6 @@ void ScipNLP::finalize_solution(
    }
 }
 
-/* Ipopt >= 3.10 do not reveal defines like F77_FUNC.
- * However, they install IpLapack.hpp, so Ipopt's Lapack interface is available.
- * Thus, we use IpLapack if F77_FUNC is not defined and access Lapack's Dsyev directly if F77_FUNC is defined.
- */
-#ifndef F77_FUNC
-
-#include "IpLapack.hpp"
-
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
  *  It's here, because we use Ipopt's interface to Lapack.
@@ -2921,72 +2909,3 @@ SCIP_RETCODE SCIPsolveLinearProb(
 
    return SCIP_OKAY;
 }
-
-#else
-
-extern "C" {
-   /** LAPACK Fortran subroutine DSYEV */
-   void F77_FUNC(dsyev,DSYEV)(
-      char*                 jobz,               /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
-      char*                 uplo,               /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
-      int*                  n,                  /**< dimension */
-      double*               A,                  /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
-      int*                  ldA,                /**< leading dimension, probably equal to n */
-      double*               W,                  /**< buffer for the eigenvalues in ascending order */
-      double*               WORK,               /**< workspace array */
-      int*                  LWORK,              /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
-      int*                  info                /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
-      );
-}
-
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- *
- *  It's here, because Ipopt is linked against Lapack.
- */
-SCIP_RETCODE LapackDsyev(
-   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
-   int                   N,                  /**< dimension */
-   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
-   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
-   )
-{
-   int     INFO;
-   char    JOBZ = computeeigenvectors ? 'V' : 'N';
-   char    UPLO = 'L';
-   int     LDA  = N;
-   double* WORK = NULL;
-   int     LWORK;
-   double  WORK_PROBE;
-   int     i;
-
-   /* First we find out how large LWORK should be */
-   LWORK = -1;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   LWORK = (int) WORK_PROBE;
-   assert(LWORK > 0);
-
-   SCIP_ALLOC( BMSallocMemoryArray(&WORK, LWORK) );
-
-   for( i = 0; i < LWORK; ++i )
-      WORK[i] = i;
-
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
-
-   BMSfreeMemoryArray(&WORK);
-
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
-#endif

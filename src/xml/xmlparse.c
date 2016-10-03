@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -700,7 +700,7 @@ void handleDecl(
       switch(key[beg].what)
       {
       case IS_COMMENT :
-         if ( doComment(ppos) )
+         if ( ! doComment(ppos) )
             ppos->state = XML_STATE_ERROR;
          break;
       case IS_CDATA :

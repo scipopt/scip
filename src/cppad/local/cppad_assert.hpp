@@ -1,12 +1,12 @@
-/* $Id: cppad_assert.hpp 2625 2012-12-23 14:34:12Z bradbell $ */
-# ifndef CPPAD_CPPAD_ASSERT_INCLUDED
-# define CPPAD_CPPAD_ASSERT_INCLUDED
+// $Id$
+# ifndef CPPAD_CPPAD_ASSERT_HPP
+# define CPPAD_CPPAD_ASSERT_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -14,8 +14,6 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
 /*!
-\defgroup cppad_assert_hpp cppad_assert.hpp
-\{
 \file cppad_assert.hpp
 Define the CppAD error checking macros (all of which begin with CPPAD_ASSERT_)
 */
@@ -30,11 +28,9 @@ $spell
 	bool
 $$
 
-$index assert, error macro $$
-$index error, assert macro$$
-$index macro, error assert$$
 
 $section CppAD Assertions During Execution$$
+$mindex assert macro CPPAD_ASSERT_KNOWN CPPAD_ASSERT_UNKNOWN$$
 
 $head Syntax$$
 $codei%CPPAD_ASSERT_KNOWN(%exp%, %msg%)
@@ -48,8 +44,7 @@ They are documented here because they correspond to the C++
 source code that the error is reported at.
 
 $head NDEBUG$$
-$index NDEBUG$$
-If the preprocessor symbol 
+If the preprocessor symbol
 $cref/NDEBUG/Faq/Speed/NDEBUG/$$ is defined,
 these macros do nothing; i.e., they are optimized out.
 
@@ -58,18 +53,16 @@ The CppAD user should not uses these macros.
 You can however write your own macros that do not begin with $code CPPAD$$
 and that call the $cref/CppAD error handler/ErrorHandler/$$.
 
-$subhead Known$$
-$index CPPAD_ASSERT_KNOWN$$
+$head Known$$
 The $code CPPAD_ASSERT_KNOWN$$ macro is used to check for an error
 with a known cause.
 For example, many CppAD routines uses these macros
 to make sure their arguments conform to their specifications.
 
-$subhead Unknown$$
-$index CPPAD_ASSERT_UNKNOWN$$
-The $code CPPAD_ASSERT_UNKNOWN$$ macro is used to check that the 
+$head Unknown$$
+The $code CPPAD_ASSERT_UNKNOWN$$ macro is used to check that the
 CppAD internal data structures conform as expected.
-If this is not the case, CppAD does not know why the error has 
+If this is not the case, CppAD does not know why the error has
 occurred; for example, the user may have written past the end
 of an allocated array.
 
@@ -77,7 +70,7 @@ $head Exp$$
 The argument $icode exp$$ is a C++ source code expression
 that results in a $code bool$$ value that should be true.
 If it is false, an error has occurred.
-This expression may be execute any number of times 
+This expression may be execute any number of times
 (including zero times) so it must have not side effects.
 
 $head Msg$$
@@ -86,11 +79,11 @@ $codei%
 	const char *%msg%
 %$$
 and contains a $code '\0'$$ terminated character string.
-This string is a description of the error 
+This string is a description of the error
 corresponding to $icode exp$$ being false.
 
 $head Error Handler$$
-These macros use the 
+These macros use the
 $cref/CppAD error handler/ErrorHandler/$$ to report errors.
 This error handler can be replaced by the user.
 
@@ -100,12 +93,7 @@ $end
 
 # include <cassert>
 # include <iostream>
-# include <cppad/error_handler.hpp>
-
-# ifdef _OPENMP
-# include <omp.h>
-# endif
-
+# include <cppad/utility/error_handler.hpp>
 
 /*!
 \def CPPAD_ASSERT_KNOWN(exp, msg)
@@ -128,7 +116,7 @@ In addition, it will print the specified error message \a msg.
 	CppAD::ErrorHandler::Call(              \
 		true       ,                    \
 		__LINE__   ,                    \
- 		__FILE__   ,                    \
+		__FILE__   ,                    \
 		#exp       ,                    \
 		msg        );                   \
 }
@@ -154,7 +142,7 @@ which this expected result occurred.
 	CppAD::ErrorHandler::Call(              \
 		false      ,                    \
 		__LINE__   ,                    \
- 		__FILE__   ,                    \
+		__FILE__   ,                    \
 		#exp       ,                    \
 		""         );                   \
 }
@@ -164,21 +152,21 @@ which this expected result occurred.
 \def CPPAD_ASSERT_NARG_NRES(op, n_arg, n_res)
 Check that operator \a op has the specified number of of arguments and results.
 
-If \a NDEBUG is not defined and either the number of arguments 
+If \a NDEBUG is not defined and either the number of arguments
 or the number of results are not as expected,
 execution is terminated and the source code line number is reported.
 */
 # define CPPAD_ASSERT_NARG_NRES(op, n_arg, n_res)   \
 	CPPAD_ASSERT_UNKNOWN( NumArg(op) == n_arg ) \
-	CPPAD_ASSERT_UNKNOWN( NumRes(op) == n_res ) 
+	CPPAD_ASSERT_UNKNOWN( NumRes(op) == n_res )
 
 /*!
 \def CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
-Check that the first call to a routine is not during parallel execution mode. 
+Check that the first call to a routine is not during parallel execution mode.
 
 If \c NDEBUG is defined, this macro has no effect
 (not even the definition of (\c assert_first_call).
-Otherwise, the variable 
+Otherwise, the variable
 \code
 	static bool assert_first_call
 \endcode
@@ -199,5 +187,19 @@ execution is terminated and the source code line number is reported.
 	}
 # endif
 
-/*! \} */
+/*!
+\def CPPAD_ASSERT_ARG_BEFORE_RESULT
+Check that operator arguments come before result.
+
+If \c NDEBUG is defined, this macro has no effect,
+otherwise it calls the function assert_arg_before_result.
+*/
+# ifdef NDEBUG
+# define CPPAD_ASSERT_ARG_BEFORE_RESULT(op, arg, result)
+# else
+# define CPPAD_ASSERT_ARG_BEFORE_RESULT(op, arg, result) \
+	assert_arg_before_result(op, arg, result)
+
+# endif
+
 # endif

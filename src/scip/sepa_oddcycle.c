@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -352,7 +352,7 @@ SCIP_Bool isNeighbor(
                i = (unsigned int) sepadata->levelgraph->beginAdj[a];
                assert(i >= sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[a]]);
 
-               while( sepadata->levelgraph->sourceAdj[i] == a && i < sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[a]+1] )
+               while( i < sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[a]+1] && sepadata->levelgraph->sourceAdj[i] == a )
                {
                   if( sepadata->levelgraph->targetAdj[i] == b )
                      return TRUE;
@@ -370,7 +370,7 @@ SCIP_Bool isNeighbor(
                i = (unsigned int) sepadata->levelgraph->beginAdj[b];
                assert(i >= sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[b]]);
 
-               while( sepadata->levelgraph->sourceAdj[i] == b && i < sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[b]+1])
+               while( i < sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[b]+1] && sepadata->levelgraph->sourceAdj[i] == b )
                {
                   if( sepadata->levelgraph->targetAdj[i] == a )
                      return TRUE;
@@ -623,11 +623,11 @@ unsigned int getCoef(
    while( j < (int)end )
    {
       /* skip all nodes that are not inner node */
-      while( !myi[j] && j<(int)end )
+      while( j<(int)end && ! myi[j] )
          ++j;
 
       /* collect all inner nodes (chain is extended) */
-      while( myi[j] && j<(int)end )
+      while( j<(int)end && myi[j] )
       {
          ++k;
          ++j;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/tree.h"
+#include "scip/scip.h"
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
@@ -2043,7 +2044,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", name);
@@ -2676,15 +2677,19 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+   SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    assert(conshdlr != NULL);
+   assert(cutoff != NULL);
 #ifdef MORE_DEBUG
    assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0 || SCIPtreeProbing(tree));
 #endif
+
+   *cutoff = FALSE;
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -2728,7 +2733,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 
       /* call external method */
       SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &conshdlr->initconss[conshdlr->ninitconsskept],
-            conshdlr->ninitconss - conshdlr->ninitconsskept) );
+            conshdlr->ninitconss - conshdlr->ninitconsskept, cutoff) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->sepatime, set);
@@ -3469,6 +3474,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3496,8 +3502,8 @@ SCIP_RETCODE SCIPconshdlrCheck(
       SCIPclockStart(conshdlr->checktime, set);
 
       /* call external method */
-      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
-            sol, checkintegrality, checklprows, printreason, result) );
+      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss,
+            sol, checkintegrality, checklprows, printreason, completely, result) );
       SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
       /* stop timing */
@@ -5188,6 +5194,20 @@ SCIP_RETCODE conssetchgDelDisabledCons(
    conssetchg->ndisabledconss--;
 
    return SCIP_OKAY;
+}
+
+/** gets added constraints data for a constraint set change */
+void SCIPconssetchgGetAddedConsData(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
+   SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
+   int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   )
+{
+   assert(conssetchg != NULL);
+   if( conss != NULL )
+      *conss = conssetchg->addedconss;
+   if( nconss != NULL )
+      *nconss = conssetchg->naddedconss;
 }
 
 /** applies constraint set change */
@@ -6901,9 +6921,9 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
-         && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
    assert(set != NULL);
    assert(cons->scip == set->scip);
@@ -7013,7 +7033,8 @@ SCIP_RETCODE SCIPconsCheck(
    /* call external method */
    assert(conshdlr->conscheck != NULL);
 
-   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
+   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason,
+         FALSE, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
    if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )
@@ -7116,13 +7137,15 @@ SCIP_RETCODE SCIPconsEnfolp(
 /** calls LP initialization method for single constraint */
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    SCIP_CONSHDLR* conshdlr;
 
    assert(cons != NULL);
    assert(set != NULL);
+   assert(infeasible != NULL);
    assert(cons->scip == set->scip);
 
    conshdlr = cons->conshdlr;
@@ -7131,7 +7154,7 @@ SCIP_RETCODE SCIPconsInitlp(
    /* call external method */
    if( conshdlr->consinitlp != NULL )
    {
-      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1, infeasible) );
    }
 
    return SCIP_OKAY;

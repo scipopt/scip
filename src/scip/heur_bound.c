@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -226,9 +226,9 @@ SCIP_RETCODE applyBoundHeur(
              * are guaranteed by the heuristic at this stage.
              */
 #ifdef SCIP_DEBUG
-            SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, &stored) );
+            SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
-            SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
+            SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
 
             if( stored )
@@ -318,12 +318,15 @@ SCIP_DECL_HEUREXEC(heurExecBound)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_Bool nodecutoff;
+      SCIP_Bool cutoff;
 
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
-      if( nodecutoff )
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    if( heurdata->bound == 'l' || heurdata->bound == 'b' )

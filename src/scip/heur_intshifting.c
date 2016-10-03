@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@
 
 #define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
-
+#define DEFAULT_RANDSEED      17
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -592,7 +592,7 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
@@ -887,9 +887,6 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          int rowpos;
          int direction;
 
-         rowpos = -1;
-         row = NULL;
-
          assert(nviolfracrows == 0 || nfrac > 0);
          /* violated rows containing fractional variables are preferred; if such a row exists, choose the last one from the list
           * (at position nviolfracrows - 1) because removing this row will cause one swapping operation less than other rows
@@ -1075,7 +1072,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
           * neither integrality nor feasibility of LP rows has to be checked, because this is already
           * done in the intshifting heuristic itself and due to the LP resolve
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
          if( stored )
          {

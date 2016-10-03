@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -96,7 +96,7 @@ struct SCIP_Heur
    int                   maxdepth;           /**< maximal depth level to call heuristic at (-1: no limit) */
    int                   delaypos;           /**< position in the delayed heuristics queue, or -1 if not delayed */
    int                   ndivesets;          /**< number of diving controllers of this heuristic */
-   unsigned int          timingmask;         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_HEURTIMING       timingmask;         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */

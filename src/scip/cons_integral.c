@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -134,7 +134,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
                SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
                   SCIPvarGetName(vars[v]), solval);
             }
-            break;
+            if( !completely )
+               break;
          }
       }
    }
@@ -162,7 +163,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
                SCIPvarGetName(vars[v]), solval);
          }
-         break;
+         if( !completely )
+            break;
       }
    }
 

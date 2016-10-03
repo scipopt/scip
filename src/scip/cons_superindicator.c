@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -770,10 +770,13 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    SCIPdebugMessage("executing initlp callback\n");
 
-   for( c = nconss-1; c >= 0; c-- )
+   for( c = nconss-1; c >= 0 && !(*infeasible); c-- )
    {
       SCIP_CONSDATA* consdata;
 
@@ -789,7 +792,7 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
          SCIPdebugMessage("binvar <%s> == 1 --> SCIPinitlpCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
-         SCIP_CALL( SCIPinitlpCons(scip, consdata->slackcons) );
+         SCIP_CALL( SCIPinitlpCons(scip, consdata->slackcons, infeasible) );
       }
    }
 
@@ -1272,7 +1275,7 @@ SCIP_DECL_CONSCHECK(consCheckSuperindicator)
 
    *result = SCIP_FEASIBLE;
 
-   for( i = nconss-1; i >= 0 && *result == SCIP_FEASIBLE; i-- )
+   for( i = nconss-1; i >= 0 && (*result == SCIP_FEASIBLE || completely); i-- )
    {
       SCIP_CONSDATA* consdata;
 
@@ -1513,7 +1516,7 @@ SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
    *result = SCIP_DIDNOTFIND;
 
    /* check that we only propagated if the binvar is fixed to one */
-   assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(consdata->binvar, bdchgidx, TRUE), 1.0));
+   assert(SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, consdata->binvar, bdchgidx, TRUE), 1.0));
 
    /* add tightened lower bound on binvar to conflict set */
    SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );

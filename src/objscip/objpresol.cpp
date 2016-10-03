@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -215,8 +215,7 @@ SCIP_RETCODE SCIPincludeObjPresol(
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_,
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_timing_,
-         presolCopyObj,
-         presolFreeObj, presolInitObj, presolExitObj,
+         presolCopyObj, presolFreeObj, presolInitObj, presolExitObj,
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) ); /*lint !e429*/
 

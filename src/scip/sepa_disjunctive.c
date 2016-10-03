@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -384,33 +384,19 @@ SCIP_RETCODE generateDisjCutSOS1(
     */
    if ( scale )
    {
-      int maxdepth;
-      int depth;
       SCIP_Longint maxdnom;
       SCIP_Real maxscale;
 
-      depth = SCIPgetDepth(scip);
-      assert( depth >= 0 );
-      maxdepth = SCIPgetMaxDepth(scip);
-      if ( depth == 0 )
+      assert( SCIPgetDepth(scip) >= 0 );
+      if( SCIPgetDepth(scip) == 0 )
       {
-         maxdnom = 1000;
-         maxscale = 1000.0;
-      }
-      else if ( depth <= maxdepth/4 )
-      {
-         maxdnom = 1000;
-         maxscale = 1000.0;
-      }
-      else if ( depth <= maxdepth/2 )
-      {
-         maxdnom = 100;
-         maxscale = 100.0;
+	 maxdnom = 100;
+	 maxscale = 100.0;
       }
       else
       {
-         maxdnom = 10;
-         maxscale = 10.0;
+	 maxdnom = 10;
+	 maxscale = 10.0;
       }
 
       SCIP_CALL( SCIPmakeRowIntegral(scip, *row, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom, maxscale, TRUE, madeintegral) );
@@ -882,7 +868,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolDisjunctive) );
 
    /* add separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/strengthen",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/strengthen",
          "strengthen cut if integer variables are present.",
          &sepadata->strengthen, TRUE, DEFAULT_STRENGTHEN, NULL, NULL) );
 

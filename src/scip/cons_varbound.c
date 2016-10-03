@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -371,7 +371,8 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< variable bound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -406,12 +407,9 @@ SCIP_RETCODE addRelaxation(
 
    if( !SCIProwIsInLP(consdata->row) )
    {
-      SCIP_Bool infeasible;
-
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
-      assert( ! infeasible );   /* this function is only called from initlp -> row should be feasible */
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -3249,6 +3247,9 @@ SCIP_RETCODE tightenCoefs(
       {
          SCIP_Real newcoef;
          SCIP_Real newrhs;
+         SCIP_Real oldrhs;
+
+         oldrhs = consdata->rhs;
 
          /* constraint has positive slack for both non-restricting cases y = 0, or y = 1, respectively
           * -> modify coefficients such that constraint is tight in at least one of the non-restricting cases
@@ -3268,11 +3269,25 @@ SCIP_RETCODE tightenCoefs(
          consdata->rhs = newrhs;
          (*nchgcoefs)++;
          (*nchgsides)++;
+
+         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+          */
+         if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs) )
+         {
+            consdata->tightened = FALSE;
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            assert(consdata->tightened);
+         }
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
       {
          SCIP_Real newcoef;
          SCIP_Real newlhs;
+         SCIP_Real oldlhs;
+
+         oldlhs = consdata->lhs;
 
          /* constraint has positive slack for both non-restricting cases y = 0, or y = 1, respectively
           * -> modify coefficients such that constraint is tight in at least one of the non-restricting cases
@@ -3292,6 +3307,17 @@ SCIP_RETCODE tightenCoefs(
          consdata->lhs = newlhs;
          (*nchgcoefs)++;
          (*nchgsides)++;
+
+         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+          */
+         if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs) )
+         {
+            consdata->tightened = FALSE;
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            assert(consdata->tightened);
+         }
       }
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
@@ -3784,10 +3810,12 @@ SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -3927,7 +3955,9 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *result = SCIP_FEASIBLE;
+
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
    {
       if( !checkCons(scip, conss[i], sol, checklprows) )
       {
@@ -3955,10 +3985,8 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", sum - consdata->rhs);
             }
          }
-         return SCIP_OKAY;
       }
    }
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

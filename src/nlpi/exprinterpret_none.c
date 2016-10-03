@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,11 +23,6 @@
 
 #include "scip/pub_message.h"
 #include "nlpi/exprinterpret.h"
-
-struct SCIP_ExprInt
-{
-   char dummy;  /*lint !e830*/
-};
 
 /** gets name and version of expression interpreter */
 const char* SCIPexprintGetName(
@@ -62,7 +57,7 @@ SCIP_RETCODE SCIPexprintCreate(
    SCIPdebugMessage("SCIPexprintCreate()\n");
    SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
 
-   SCIP_ALLOC( BMSallocMemory(exprint) );
+   *exprint = (void*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -72,7 +67,7 @@ SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    )
 {
-   BMSfreeMemory(exprint);
+   *exprint = NULL;
 
    return SCIP_OKAY;
 }  /*lint !e715*/

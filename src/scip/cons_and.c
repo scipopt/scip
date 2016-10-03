@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -932,12 +932,11 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infeasible;
-
 
    /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
@@ -950,12 +949,6 @@ SCIP_RETCODE addRelaxation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   if( consdata->rows == NULL )
-   {
-      /* create the n+1 row relaxation */
-      SCIP_CALL( createRelaxation(scip, cons) );
-   }
 
    /* create the aggregated row */
    if( consdata->aggrrow == NULL )
@@ -972,15 +965,22 @@ SCIP_RETCODE addRelaxation(
    /* insert aggregated LP row as cut */
    if( !SCIProwIsInLP(consdata->aggrrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, &infeasible) );
-      assert(!infeasible);  /* this function is only called by initlp() -> the cuts should be feasible */
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, infeasible) );
    }
 
-   /* add additional row */
-   if( !SCIProwIsInLP(consdata->rows[0]) )
+   if( !(*infeasible) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, &infeasible) );
-      assert( ! infeasible );  /* this function is only called by initlp() -> the cuts should be feasible */
+      if( consdata->rows == NULL )
+      {
+         /* create the n+1 row relaxation */
+         SCIP_CALL( createRelaxation(scip, cons) );
+      }
+
+      /* add additional row */
+      if( !SCIProwIsInLP(consdata->rows[0]) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, infeasible) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1042,15 +1042,15 @@ SCIP_RETCODE checkCons(
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-	 /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
-	  *       anymore, therefor we need to stop the check and return with the status not violated, because the
-	  *       integrality condition of this violated operand needs to be enforced by another constraint.
-	  *
-	  *       The above should be asserted by marking the constraint handler, for which the result needs to be
-	  *       SCIP_SEPARATED if the origin was the CONSENFOPS or the CONSENFOLP callback or SCIP_INFEASIBLE if the
-	  *       origin was CONSCHECK callback.
-	  *
-	  */
+        /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
+         *       anymore, therefor we need to stop the check and return with the status not violated, because the
+         *       integrality condition of this violated operand needs to be enforced by another constraint.
+         *
+         *       The above should be asserted by marking the constraint handler, for which the result needs to be
+         *       SCIP_SEPARATED if the origin was the CONSENFOPS or the CONSENFOLP callback or SCIP_INFEASIBLE if the
+         *       origin was CONSCHECK callback.
+         *
+         */
          assert(SCIPisFeasIntegral(scip, solval));
          if( solval < 0.5 )
             break;
@@ -1868,11 +1868,11 @@ SCIP_RETCODE resolvePropagation(
    {
    case PROPRULE_1:
       /* the resultant was infered to FALSE, because one operand variable was FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         if( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         if( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
@@ -1884,19 +1884,19 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_2:
       /* the operand variable was infered to TRUE, because the resultant was TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
-      assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_3:
       /* the resultant was infered to TRUE, because all operand variables were TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         assert(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5);
+         assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
@@ -1904,14 +1904,14 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_4:
       /* the operand variable was infered to FALSE, because the resultant was FALSE and all other operands were TRUE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5);
+            assert(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -3285,7 +3285,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx; /*lint !e701*/
 
    return hashval;
 }
@@ -3345,7 +3345,6 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CONSDATA* consdata1;
          SCIP_Bool redundant;
 
-
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
 
@@ -3357,8 +3356,6 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
          redundant = FALSE;
 
          if( consdata0->resvar != consdata1->resvar )
@@ -3383,6 +3380,9 @@ SCIP_RETCODE detectRedundantConstraints(
          /* delete consdel */
          if( redundant )
          {
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
 	    /* also take the check when upgrade flag over if necessary */
 	    consdata1->checkwhenupgr = consdata1->checkwhenupgr || consdata0->checkwhenupgr;
 	    consdata1->notremovablewhenupgr = consdata1->notremovablewhenupgr || consdata0->notremovablewhenupgr;
@@ -4129,10 +4129,12 @@ SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -4216,7 +4218,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
       {
          if( conshdlrdata->enforcecuts )
          {
-	    SCIP_Bool consseparated;
+            SCIP_Bool consseparated;
 
             SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated, &cutoff) );
             if ( cutoff )
@@ -4224,18 +4226,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
-	    separated = separated || consseparated;
+            separated = separated || consseparated;
 
-	    /* following assert is wrong in the case some variables were not in LP (dynamic columns),
-	     *
-	     * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
-	     * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
-	     * thereby creating the column, changes the solution value (variable than has status column, and the
-	     * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
-	     * rows, which then are not seperated into the lp
-	     */
+            /* following assert is wrong in the case some variables were not in LP (dynamic columns),
+            *
+            * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
+            * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
+            * thereby creating the column, changes the solution value (variable than has status column, and the
+            * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
+            * rows, which then are not seperated into the lp
+            */
 #if 0
-	    assert(consseparated); /* because the solution is integral, the separation always finds a cut */
+            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
 #endif
          }
          else
@@ -4285,17 +4287,15 @@ SCIP_DECL_CONSCHECK(consCheckAnd)
    SCIP_Bool violated;
    int i;
 
+   *result = SCIP_FEASIBLE;
+
    /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
-      {
          *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
-   } 
-   *result = SCIP_FEASIBLE;
+   }
 
    return SCIP_OKAY;
 }

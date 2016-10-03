@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -947,7 +947,7 @@ void collectBinaryCliqueData(
  *
  *  Because of the last implication x4 is redundant, because x1 >= 1 would also be fulfilled in the variable set, so we
  *  can reduce the set by x4.
- *  Also, the both other implications and x3 >= 1 (in the given variable set) all implie exactly x3 >= 1, so we tighten
+ *  Also, the both other implications and x3 >= 1 (in the given variable set) all imply exactly x3 >= 1, so we tighten
  *  the global lower bound of x3 to 1 and the set of variables gets redundant.
  */
 SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
@@ -964,6 +964,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                                               *   through this set of variables */
    SCIP_Bool*            setredundant,       /**< pointer to store if we found a global reduction on a variable which was part
                                               *   of the given set of variables, this makes this disjunction redundant */
+   SCIP_Bool*            glbinfeas,          /**< pointer to store if global infeasibility was detected */
    SCIP_Bool             fullshortening      /**< do we want to try the shortening procedure over the whole set (which might be expensive) */
    )
 {
@@ -1020,6 +1021,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    assert(nredvars != NULL);
    assert(nglobalred != NULL);
    assert(setredundant != NULL);
+   assert(glbinfeas != NULL);
    assert(scip->transprob != NULL);
    nprobvars = SCIPprobGetNVars(scip->transprob);
 
@@ -1032,6 +1034,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    SCIP_CALL( SCIPallocBufferArray(scip, &countnonzeros, 2*nprobvars) );
 
    *nredvars = 0;
+   *glbinfeas = FALSE;
    ncountnonzeros = 0;
 
    maxcountnonzeros = (int)(2*nprobvars*CLEARRATIO); /*lint !e790*/
@@ -1274,6 +1277,16 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                SCIPdebugMessage("can tighten lower bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
                   SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[v]);
 
+               /* the new lower bound is greater than the global upper bound => the problem is global infeasible */
+               if( SCIPisLT(scip, SCIPvarGetUbGlobal(probvar), newbounds[v]) )
+               {
+                  SCIPdebugMessage("-> global infeasibility proven.\n");
+
+                  SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+                  *glbinfeas = TRUE;
+                  break;
+               }
+
                if( SCIPisLT(scip, SCIPvarGetLbGlobal(probvar), newbounds[v]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
@@ -1314,6 +1327,16 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
 
                SCIPdebugMessage("can tighten upper bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
                   SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[idx]);
+
+               /* the new upper bound is small than the global upper bound => the problem is global infeasible */
+               if( SCIPisGT(scip, SCIPvarGetLbGlobal(probvar), newbounds[idx]) )
+               {
+                  SCIPdebugMessage("-> global infeasibility proven.\n");
+
+                  SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+                  *glbinfeas = TRUE;
+                  break;
+               }
 
                if( SCIPisGT(scip, SCIPvarGetUbGlobal(probvar), newbounds[idx]) )
                {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -351,7 +351,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIPdebugMessage("cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
 
          /* try to add solution to SCIP */
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &success) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
          /* check, if solution was feasible and good enough */
          if( success )
@@ -590,6 +590,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIPdebugMessage(" -> selected from %d new candidates,  candidate %d: variable <%s> (down=%g, up=%g, score=%g)\n",
             counter, bestcand, SCIPvarGetName(var), bestdown, bestup, bestscore);
       }
+
+      assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(lpcands[bestcand], TRUE)));
 
       SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
       assert(downchild != NULL);

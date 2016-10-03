@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1415,21 +1415,18 @@ SCIP_RETCODE readBounds(
          /* remember variable type */
          oldvartype = SCIPvarGetType(var);
 
-         /* if a bound of a binary variable is given, the variable is converted into an integer variable
-          * with default bounds 0 <= x <= infinity
+         /* If a bound of a binary variable is given, the variable is converted into an integer variable
+          * with default bounds 0 <= x <= infinity before applying the bound. Note that integer variables
+          * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
+          * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY )
+         if( oldvartype == SCIP_VARTYPE_BINARY && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0)) )
          {
-            if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
-               || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
-                  && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
-            {
-               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-               assert(!infeasible);
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+            assert(!infeasible);
 
-               oldvartype =  SCIP_VARTYPE_INTEGER;
-               SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
-            }
+            oldvartype =  SCIP_VARTYPE_INTEGER;
+            SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
          }
 
          /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
@@ -4274,7 +4271,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             /* and constraint printing not enabled; mark this with SCIPinfinity(scip) */
             rhss[c] = SCIPinfinity(scip);
 
-            SCIPwarningMessage(scip, "change parameter \"reading/"READER_NAME"/linearize-and-constraints\" to TRUE to print and-constraints\n");
+            SCIPwarningMessage(scip, "change parameter \"reading/" READER_NAME "/linearize-and-constraints\" to TRUE to print and-constraints\n");
          }
       }
       else
@@ -4743,11 +4740,11 @@ SCIP_RETCODE SCIPincludeReaderMps(
 
    /* add lp-reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/linearize-and-constraints",
+         "reading/" READER_NAME "/linearize-and-constraints",
          "should possible \"and\" constraint be linearized when writing the mps file?",
          &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/aggrlinearization-ands",
+         "reading/" READER_NAME "/aggrlinearization-ands",
          "should an aggregated linearization for and constraints be used?",
          &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -715,7 +715,8 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -733,13 +734,11 @@ SCIP_RETCODE addRelaxation(
 
    nrows = consdataGetNRows(consdata);
 
-   for( r = 0; r < nrows; ++r )
+   for( r = 0; r < nrows && !(*infeasible); ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_Bool infeasible;
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, &infeasible) );
-         assert( ! infeasible );  /* this function is only called from initlp -> the cut should be feasible */
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, infeasible) );
       }
    }
 
@@ -1232,11 +1231,11 @@ SCIP_RETCODE resolvePropagation(
    {
    case PROPRULE_1:
       /* the resultant was infered to TRUE, because one operand variable was TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         if( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
@@ -1248,19 +1247,19 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_2:
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_3:
       /* the resultant was infered to FALSE, because all operand variables were FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
@@ -1268,14 +1267,14 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_4:
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
-      assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+            assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -1451,10 +1450,12 @@ SCIP_DECL_CONSINITLP(consInitlpOr)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -1563,20 +1564,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
 static
 SCIP_DECL_CONSCHECK(consCheckOr)
 {  /*lint --e{715}*/
-   SCIP_Bool violated;
    int i;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
-      if( violated )
-      {
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
-   } 
    *result = SCIP_FEASIBLE;
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   {
+      SCIP_Bool violated = FALSE;
+
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
+
+      if( violated )
+         *result = SCIP_INFEASIBLE;
+   }
 
    return SCIP_OKAY;
 }

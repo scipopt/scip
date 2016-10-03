@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1907,8 +1907,7 @@ SCIP_RETCODE sortAndMergeClique(
    var = NULL;
    noldbdchgs = *nbdchgs;
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
-    * new clique
-    */
+    * new clique */
    startidx = *nclqvars - 1;
    while( startidx >= 0 )
    {
@@ -1918,8 +1917,7 @@ SCIP_RETCODE sortAndMergeClique(
 
       var = clqvars[startidx];
        /* only column and loose variables can exist now */
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
       assert(SCIPvarIsBinary(var));
 
       /* the counters denote the occurrences of the variable var with value TRUE and FALSE as clqvalues, respectively */
@@ -1946,12 +1944,12 @@ SCIP_RETCODE sortAndMergeClique(
                nzeros++;
          }
          else
-            /* var is different from variable pointed at by z */
+            /* var is different from variable at index curr */
             break;
 
          --curr;
       }
-
+      assert(nzeros + nones <= *nclqvars);
 
       /* single occurrence of the variable */
       if( nones + nzeros == 1 )
@@ -1987,7 +1985,7 @@ SCIP_RETCODE sortAndMergeClique(
             }
          }
 
-         /* we fix the variable into the direction of less occurrences */
+         /* we fix the variable into the direction of fewer occurrences */
          fixvalue = nones >= 2 ? FALSE : TRUE;
 
          /* a variable multiple times in one clique forces this variable to be zero */
@@ -2006,10 +2004,12 @@ SCIP_RETCODE sortAndMergeClique(
       {
          SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
 
-         /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
+         /* a pair of negated variables in one clique forces all other variables in the clique to be zero */
          if( nzeros + nones < *nclqvars )
          {
-            int w = *nclqvars - 1;
+            int w;
+
+            w = *nclqvars - 1;
             while( w >= 0 )
             {
                /* skip all occurrences of variable var itself, these are between curr and startidx */
@@ -2062,6 +2062,9 @@ SCIP_RETCODE sortAndMergeClique(
          }
          *nclqvars = 0;
          *isequation = FALSE;
+
+         /* break main loop */
+         break;
       }
 
       /* otherwise, we would have an endless loop */
@@ -2537,6 +2540,9 @@ SCIP_RETCODE cliqueCleanup(
       int w;
 
       w = clique->startcleanup;
+
+      SCIPdebugMessage("Starting clean up of clique %u (size %d) from position %d\n", clique->id, clique->nvars, w);
+
       /* exchange inactive by active variables */
       for( v = w; v < clique->nvars; ++v )
       {

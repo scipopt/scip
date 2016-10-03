@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,6 +86,7 @@
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
+#define DEFAULT_RANDSEED        43           /* initial random seed */
 
 /* local defines */
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
@@ -127,6 +128,7 @@ struct SCIP_HeurData
    int                   nnlpfails;          /**< number of fails when solving the NLP relaxation after last success */
    int                   npostnlpfails;      /**< number of fails of the NLP local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
+   unsigned int          randseed;           /**< seed value for random number generator */
    char                  coveringobj;        /**< objective function of the covering problem */
    char                  fixingorder;        /**< order in which variables should be fixed */
    SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation? */
@@ -1720,8 +1722,12 @@ SCIP_RETCODE computeFixingOrder(
       var = vars[cover[i]];
 
       if( heurdata->fixingorder == 'C' || heurdata->fixingorder == 'c' )
+      {
+         /* add a small pertubation value to the score to reduce performance variability */
          scores[i] = heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
-            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight);
+            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight)
+            + SCIPgetRandomReal(0.0, SCIPepsilon(scip), &heurdata->randseed);
+      }
       else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
          scores[i] = cover[i];
       else
@@ -2097,7 +2103,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    int                   coversize,          /**< size of the cover */
    int*                  cover,              /**< problem indices of the variables in the cover */
-   SCIP_Real*            fixingvals,         /**< fixing values for the variables in the cover */
+   SCIP_Real*            fixedvals,         /**< fixing values for the variables in the cover */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Longint          nodelimit,          /**< node limit */
@@ -2112,6 +2118,8 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** subvars;
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
+   SCIP_VAR** fixedvars;
+   int nfixedvars;
 
    SCIP_RETCODE retcode;
 
@@ -2121,7 +2129,7 @@ SCIP_RETCODE solveSubproblem(
    assert(scip != NULL);
    assert(heur != NULL);
    assert(cover != NULL);
-   assert(fixingvals != NULL);
+   assert(fixedvals != NULL);
    assert(coversize >= 1);
    assert(timelimit > 0.0);
    assert(memorylimit > 0.0);
@@ -2142,6 +2150,18 @@ SCIP_RETCODE solveSubproblem(
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, coversize) );
+   nfixedvars = coversize;
+   /* fix subproblem variables in the cover */
+   SCIPdebugMessage("fixing variables\n");
+   for( i = coversize-1; i >= 0; i-- )
+   {
+      assert(cover[i] >= 0);
+      assert(cover[i] < nvars);
+
+      fixedvars[i] = vars[cover[i]];
+   }
+
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -2150,7 +2170,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, TRUE, validsolved) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
@@ -2167,16 +2187,8 @@ SCIP_RETCODE solveSubproblem(
       assert(subvars[i] != NULL);
    }
 
-   /* fix subproblem variables in the cover */
-   SCIPdebugMessage("fixing variables\n");
-   for( i = coversize-1; i >= 0; i-- )
-   {
-      assert(cover[i] >= 0);
-      assert(cover[i] < nvars);
-
-      SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[cover[i]], fixingvals[i]) );
-      SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[cover[i]], fixingvals[i]) );
-   }
+   /* free variable mapping hash map */
+   SCIPhashmapFree(&varmap);
 
    /* set the parameters such that good solutions are found fast */
    SCIPdebugMessage("setting subproblem parameters\n");
@@ -2257,6 +2269,10 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( retcode );
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      /* free array of subproblem variables, and subproblem */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIPfreeBufferArray(scip, &fixedvars);
+      SCIP_CALL( SCIPfree(&subscip) );
       return SCIP_OKAY;
    }
 
@@ -2292,7 +2308,7 @@ SCIP_RETCODE solveSubproblem(
          SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], sol) );
 
          /* try to add new solution to scip */
-         SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       }
 
       if( success )
@@ -2316,9 +2332,9 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
    }
 
-   /* free variable mapping hash map, array of subproblem variables, and subproblem */
-   SCIPhashmapFree(&varmap);
+   /* free array of subproblem variables, and subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+   SCIPfreeBufferArray(scip, &fixedvars);
    SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
@@ -3102,6 +3118,24 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    return SCIP_OKAY;
 }
 
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitUndercover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   return SCIP_OKAY;
+}
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
@@ -3358,6 +3392,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 

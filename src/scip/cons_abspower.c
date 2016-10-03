@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1968,7 +1968,8 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Real*            viol                /**< pointer to store absolute (unscaled) constraint violation */
+   SCIP_Real*            viol,               /**< pointer to store absolute (unscaled) constraint violation */
+   SCIP_Bool*            solviolbounds       /**< buffer to store whether the solution violates bounds on x by more than feastol */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1981,6 +1982,7 @@ SCIP_RETCODE computeViolation(
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(viol != NULL);
+   assert(solviolbounds != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1988,6 +1990,7 @@ SCIP_RETCODE computeViolation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   *solviolbounds = FALSE;
    xval = SCIPgetSolVal(scip, sol, consdata->x);
    zval = SCIPgetSolVal(scip, sol, consdata->z);
 
@@ -1998,32 +2001,20 @@ SCIP_RETCODE computeViolation(
 
       return SCIP_OKAY;
    }
-   /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+
    if( sol == NULL )
    {
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Real minval;
 
       lb = SCIPvarGetLbLocal(consdata->x);
       ub = SCIPvarGetUbLocal(consdata->x);
-      minval = MIN(ub, xval);
 
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-      assert(SCIPisFeasGE(scip, xval, lb));
-      assert(SCIPisFeasLE(scip, xval, ub));
-#endif
-      xval = MAX(lb, minval);
-
-      lb = SCIPvarGetLbLocal(consdata->z);
-      ub = SCIPvarGetUbLocal(consdata->z);
-      minval = MIN(ub, zval);
-
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-      assert(SCIPisFeasGE(scip, zval, lb));
-      assert(SCIPisFeasLE(scip, zval, ub));
-#endif
-      zval = MAX(lb, minval);
+      /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might be outside bounds */
+      if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
+         *solviolbounds = TRUE;
+      else
+         xval = MAX(lb, MIN(ub, xval));  /* project x onto local box if just slightly outside (or even not outside) */
    }
 
    xval += consdata->xoffset;
@@ -2098,18 +2089,22 @@ SCIP_RETCODE computeViolations(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   SCIP_Bool*            solviolbounds,      /**< buffer to store whether the solution violates bounds on x by more than feastol */
    SCIP_CONS**           maxviolcon          /**< buffer to store constraint with largest violation, or NULL if solution is feasible */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real      viol;
    SCIP_Real      maxviol;
+   SCIP_Bool      solviolbounds1;
    int            c;
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
+   assert(solviolbounds != NULL);
    assert(maxviolcon != NULL);
 
+   *solviolbounds = FALSE;
    *maxviolcon = NULL;
 
    maxviol = 0.0;
@@ -2119,7 +2114,8 @@ SCIP_RETCODE computeViolations(
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &viol) );
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &viol, &solviolbounds1) );
+      *solviolbounds |= solviolbounds1;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -2305,8 +2301,9 @@ SCIP_RETCODE registerBranchingCandidates(
          onlynonfixedsign = FALSE;
          continue;
       }
+      break;
    }
-   while( FALSE );
+   while( TRUE );
 
    return SCIP_OKAY;
 }
@@ -4152,6 +4149,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real xtermval;
    SCIP_Real zval;
    SCIP_Real viol;
+   SCIP_Bool solviolbounds;
    int c;
 
    assert(scip  != NULL);
@@ -4180,7 +4178,8 @@ SCIP_RETCODE proposeFeasibleSolution(
       assert(consdata->zcoef != 0.0);
 
       /* recompute violation w.r.t. current solution */
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &viol) );  /*lint !e613*/
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &viol, &solviolbounds) );  /*lint !e613*/
+      assert(!solviolbounds);
 
       /* do nothing if constraint is satisfied */
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
@@ -5498,8 +5497,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool infeasible;
-   SCIP_ROW*          row;
+   SCIP_ROW*          row = NULL;
    int                c;
    SCIP_Real          xlb;
    SCIP_Real          xub;
@@ -5511,7 +5509,9 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
@@ -5537,8 +5537,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                     assert( ! infeasible );
+                     assert(!(*infeasible));
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5556,8 +5556,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5568,7 +5568,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             }
          }
 
-         if( !SCIPisInfinity(scip, xub) )
+         if( !(*infeasible) && !SCIPisInfinity(scip, xub) )
          {
             /* generate tangent in upper bound */
             if( -consdata->root * (xlb+consdata->xoffset) - consdata->xoffset < xub && xub <= INITLPMAXVARVAL )
@@ -5578,8 +5578,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5591,7 +5591,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
          }
       }
 
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      if( !(*infeasible) && !SCIPisInfinity(scip, -consdata->lhs) )
       {
          if( !SCIPisInfinity(scip, xub) )
          {
@@ -5604,8 +5604,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                     assert( ! infeasible );
+                     assert(!(*infeasible));
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5623,8 +5623,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5635,7 +5635,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             }
          }
 
-         if( !SCIPisInfinity(scip, -xlb) )
+         if( !(*infeasible) && !SCIPisInfinity(scip, -xlb) )
          {
             /* generate tangent in lower bound */
             if( -consdata->root * (xub+consdata->xoffset) - consdata->xoffset > xlb && xlb >= -INITLPMAXVARVAL )
@@ -5645,8 +5645,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5670,6 +5670,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
+   SCIP_Bool          solviolbounds;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -5681,7 +5682,13 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
+
+   /* if LP solution is (temporarily) outside bounds, then don't try to separate it */
+   if( solviolbounds )
+      return SCIP_OKAY;
+
+   /* if no violation, then nothing to separate */
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
@@ -5818,6 +5825,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
+   SCIP_Bool          solviolbounds;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -5830,7 +5838,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &solviolbounds, &maxviolcon) );
+
+   /* if solution is not even within bounds, then don't bother trying to separate it */
+   if( solviolbounds )
+      return SCIP_OKAY;
+
+   /* if nothing violated, then nothing to separate */
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
@@ -5852,6 +5866,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
+   SCIP_Bool          solviolbounds;
    SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
    SCIP_Real          leastpossibleefficacy;
@@ -5867,7 +5882,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcons) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcons) );
 
    if( maxviolcons == NULL )
    {
@@ -5876,6 +5891,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    }
 
    *result = SCIP_INFEASIBLE;
+
+   if( solviolbounds )
+   {
+      /* if LP solution violates variable bounds, then this should be because a row was added that
+       * introduced this variable newly to the LP, in which case it gets value 0.0; the row should
+       * have been added to resolve an infeasibility, so solinfeasible should be TRUE
+       * see also issue #627
+       */
+      assert(solinfeasible);
+      return SCIP_OKAY;
+   }
 
    /* if we are above the 100'th enforcement round for this node, something is strange
     * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
@@ -6021,6 +6047,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
    SCIP_CONSDATA*     consdata;
    int                c;
    int                nnotify;
+   SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6029,7 +6056,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
+
+   assert(!solviolbounds); /* the pseudo-solution should be within bounds by definition */
+
    if( maxviolcon == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -6609,6 +6639,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          dolinfeasshift;
+   SCIP_Bool          solviolbounds;
    SCIP_Real          maxviol;
    SCIP_Real          viol;
    int                c;
@@ -6629,7 +6660,9 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &viol) );
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &viol, &solviolbounds) );
+
+      assert(!solviolbounds); /* see also issue #627 */
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -6646,7 +6679,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
             SCIPinfoMessage(scip, NULL, ";\n");
          }
 
-         if( conshdlrdata->subnlpheur == NULL && !dolinfeasshift )
+         if( conshdlrdata->subnlpheur == NULL && !dolinfeasshift && !completely )
             return SCIP_OKAY;
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = MAX(consdata->lhsviol, consdata->rhsviol);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,13 +48,13 @@
 #define EVENTHDLR_NAME         "pseudoobj"
 #define EVENTHDLR_DESC         "bound change event handler for pseudo objective function propagator"
 
-#define DEFAULT_MINUSELESS          100 /**< minimal number of successive nonbinary variable propagator whithout a
+#define DEFAULT_MINUSELESS          100 /**< minimal number of successive non-binary variable propagator whithout a
                                          *   bound reduction before aborted */
-#define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of nonbinary variables with non-zero objective
+#define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of non-binary variables with non-zero objective
                                          *   without a bound reduction before aborted */
 #define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate all non-binary variables if we are propagating the root node? */
 #define DEFAULT_PROPCUTOFFBOUND    TRUE /**< propagate new cutoff bound directly globally */
-#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even active pricer are present? Note that
+#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
                                          *   can be done if it is known that the pseudo objective activity is given by
                                          *   the zero bound for all variables which are currently not present in the
                                          *   problem */
@@ -90,21 +90,22 @@ struct SCIP_PropData
    SCIP_VAR**            maxactvars;         /**< binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
    SCIP_Real*            maxactchgs;         /**< the maximal potential change of the objective if the binary variable
                                               *   is fixed to its best bound w.r.t. maximum activity of the objective function */
-   SCIP_VAR**            objintvars;         /**< nonbinary variable with non-zero objective coefficient */
+
+   SCIP_VAR**            objintvars;         /**< non-binary variable with non-zero objective coefficient */
    SCIP_HASHTABLE*       addedvars;          /**< hash table used during resolving of a bound change (conflict analysis) */
    SCIP_Real             lastlowerbound;     /**< last lower bound which was propagated */
    SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
    SCIP_Real             glbpseudoobjval;    /**< last global pseudo objective used in presolving */
-   SCIP_Real             maxvarsfrac;        /**< maximal fraction of nonbinary variables with non-zero objective
+   SCIP_Real             maxvarsfrac;        /**< maximal fraction of non-binary variables with non-zero objective
                                               *   without a bound reduction before aborted */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nminactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. minimum activity of the objective function */
    int                   nmaxactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
-   int                   nobjintvars;        /**< number of nonbinary variables with non-zero objective */
-   int                   minuseless;         /**< minimal number of successive nonbinary variable propagator whithout
+   int                   nobjintvars;        /**< number of non-binary variables with non-zero objective */
+   int                   minuseless;         /**< minimal number of successive non-binary variable propagator whithout
                                               *   a bound reduction before aborted */
-   int                   lastvarnum;         /**< last nonbinary variable number that was looked at */
+   int                   lastvarnum;         /**< last non-binary variable number that was looked at */
    int                   glbfirstnonfixed;   /**< index of first globally non-fixed binary variable in minactvars array */
    int                   maxactfirstnonfixed;/**< index of first globally non-fixed binary variable in maxctvars array */
    int                   firstnonfixed;      /**< index of first locally non-fixed binary variable in minactvars array */
@@ -953,8 +954,8 @@ SCIP_RETCODE getMinactImplicObjchg(
    int v;
 
    assert(SCIPvarIsBinary(var));
-   assert(!local || SCIPvarGetLbAtIndex(var, bdchgidx, FALSE) < 0.5);
-   assert(!local || SCIPvarGetUbAtIndex(var, bdchgidx, FALSE) > 0.5);
+   assert(!local || SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE) < 0.5);
+   assert(!local || SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE) > 0.5);
    assert(SCIPvarGetLbGlobal(var) < 0.5);
    assert(SCIPvarGetUbGlobal(var) > 0.5);
    assert(bound == SCIP_BOUNDTYPE_LOWER || bound == SCIP_BOUNDTYPE_UPPER);
@@ -980,8 +981,8 @@ SCIP_RETCODE getMinactImplicObjchg(
 
       if( local )
       {
-         lb = SCIPvarGetLbAtIndex(implvar, bdchgidx, FALSE) > 0.5;
-         ub = SCIPvarGetUbAtIndex(implvar, bdchgidx, FALSE) > 0.5;
+         lb = SCIPgetVarLbAtIndex(scip, implvar, bdchgidx, FALSE) > 0.5;
+         ub = SCIPgetVarUbAtIndex(scip, implvar, bdchgidx, FALSE) > 0.5;
 
          /* check if variable is fixed */
          if( lb == TRUE || ub == FALSE )
@@ -1669,7 +1670,7 @@ SCIP_RETCODE propdataInit(
          }
          else
          {
-            /* only consider nonbinary variables with a non-zero objective */
+            /* only consider non-binary variables with a non-zero objective */
             if( SCIPisZero(scip, objval) )
                continue;
 
@@ -1790,7 +1791,7 @@ SCIP_RETCODE propdataInit(
    return SCIP_OKAY;
 }
 
-/** adds for the given nonbinary variable a conflict bound depending on its objective contribution */
+/** adds for the given non-binary variable a conflict bound depending on its objective contribution */
 static
 SCIP_RETCODE addConflictBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1810,7 +1811,7 @@ SCIP_RETCODE addConflictBounds(
       SCIP_Real glblb;
 
       glblb = SCIPvarGetLbGlobal(var);
-      loclb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
+      loclb = SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE);
       assert(SCIPisFeasGE(scip, loclb, glblb));
 
       /* check if the local lower bound (at time stamp bdchgidx) is larger than the global lower bound */
@@ -1819,7 +1820,9 @@ SCIP_RETCODE addConflictBounds(
          SCIPdebugMessage("  add bound change <%s>[%g] >= <%g>\n", SCIPvarGetName(var), objval, loclb);
          SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
 
-         assert(SCIPisPositive(scip, (loclb - glblb) * objval));
+         /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
+         assert((loclb - glblb) * objval > 0.0);
+
          (*reqpseudoobjval) -= (loclb - glblb) * objval;
       }
    }
@@ -1829,7 +1832,7 @@ SCIP_RETCODE addConflictBounds(
       SCIP_Real glbub;
 
       glbub = SCIPvarGetUbGlobal(var);
-      locub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+      locub = SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE);
       assert(SCIPisFeasLE(scip, locub, glbub));
 
       /* check if the local upper bound (at time stamp bdchgidx) is smaller than the global upper bound */
@@ -1838,7 +1841,9 @@ SCIP_RETCODE addConflictBounds(
          SCIPdebugMessage("  add bound change <%s>[%g] <= <%g>\n", SCIPvarGetName(var), objval, locub);
          SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
 
-         assert(SCIPisPositive(scip, (locub - glbub) * objval));
+         /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
+         assert((locub - glbub) * objval > 0.0);
+
          (*reqpseudoobjval) -= (locub - glbub) * objval;
       }
    }
@@ -1846,7 +1851,7 @@ SCIP_RETCODE addConflictBounds(
    return SCIP_OKAY;
 }
 
-/** check for the given implication variables of they also contribute to the required minimum activity */
+/** check for the given implication variables if they also contribute to the required minimum activity */
 static
 SCIP_RETCODE getConflictImplics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1854,7 +1859,7 @@ SCIP_RETCODE getConflictImplics(
    int                   start,              /**< start index */
    int                   end,                /**< end index */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_HASHTABLE*       addedvars,          /**< hash table containing variables which are already add directly or implicitly due to implications */
+   SCIP_HASHTABLE*       addedvars,          /**< hash table containing variables which are already added directly or implicitly due to implications */
    SCIP_Real*            reqpseudoobjval,    /**< pointer to store the remaining minimum activity which has to be proven */
    SCIP_Bool*            foundimplics        /**< pointer to store if an implication is found */
    )
@@ -1873,8 +1878,11 @@ SCIP_RETCODE getConflictImplics(
       assert(var != NULL);
       assert(SCIPvarIsBinary(var));
 
-      lb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
-      ub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+      /* we need to take the bounds after the bdchgidx here, since the variable of the bound change may be the implied one;
+       * we already counted its contribution before, so we want to see it as fixed here, which it is after the bound change.
+       */
+      lb = SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE);
+      ub = SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE);
 
       if( lb < 0.5 && ub > 0.5 && !SCIPhashtableExists(addedvars, (void*)var) )
       {
@@ -1912,8 +1920,8 @@ SCIP_RETCODE addConflictBinvar(
    if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
       return SCIP_OKAY;
 
-   lb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
-   ub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+   lb = SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE);
+   ub = SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE);
 
    objval = SCIPvarGetObj(var);
    foundimplics = FALSE;
@@ -1999,7 +2007,7 @@ SCIP_RETCODE adjustCutoffbound(
       assert(var != NULL);
       assert(SCIPvarIsBinary(var));
       assert(bdchgidx != NULL);
-      assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
+      assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)));
       assert(inferinfo >= 0);
       assert(inferinfo < propdata->nminactvars);
       assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
@@ -2008,7 +2016,7 @@ SCIP_RETCODE adjustCutoffbound(
       objimplics = propdata->minactimpls[inferinfo];
       assert(objimplics != NULL);
 
-      /* get the objective contribution if we would fix the binray inference variable to its other bound */
+      /* get the objective contribution if we would fix the binary inference variable to its other bound */
       (*cutoffbound) -= getVarObjchg(var, SCIPvarGetBestBoundType(var), boundtype);
       foundimplics = FALSE;
 
@@ -2037,12 +2045,12 @@ SCIP_RETCODE adjustCutoffbound(
 
       if( objval > 0.0 )
       {
-         newbound = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
+         newbound = SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE);
          glbbound = SCIPvarGetLbGlobal(var);
       }
       else
       {
-         newbound = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
+         newbound = SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE);
          glbbound = SCIPvarGetUbGlobal(var);
       }
 
@@ -2137,10 +2145,10 @@ SCIP_RETCODE resolvePropagation(
     *  - obj < 0 and local ub < global ub
     *
     * collect all variables which contribute positively to the pseudo objective value (minimum activity) until we
-    * reached the (adjusted) required minimum activity for the inference bound chnage
+    * reached the (adjusted) required minimum activity for the inference bound change
     */
 
-   /* first consider the binary variables */
+   /* first, consider the binary variables */
    if( nvars > 0 )
    {
       SCIP_OBJIMPLICS** minactimpls;
@@ -2158,7 +2166,7 @@ SCIP_RETCODE resolvePropagation(
       if( infinity )
       {
          /* if the required minimum activity is minus infinity, we have to add all variables which contribute the local
-          * prseudo objective activity
+          * pseudo objective activity
           */
 
          for( v = propdata->glbfirstnonfixed; v < nvars; ++v )
@@ -2200,7 +2208,7 @@ SCIP_RETCODE resolvePropagation(
    nvars = propdata->nobjintvars;
    assert(nvars == 0 || vars != NULL);
 
-   /* second consider the nonbinary variables */
+   /* second, consider the non-binary variables */
    for( v = 0; v < nvars && (infinity || SCIPisPositive(scip, reqpseudoobjval)); ++v )
    {
       var = vars[v];
@@ -2539,7 +2547,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
 #endif
 #endif
 
-   /* propagate the nonbinary variables completely */
+   /* propagate the non-binary variables completely */
    for( v = 0; v < nobjintvars; ++v )
    {
       var = objintvars[v];
@@ -2722,7 +2730,7 @@ SCIP_RETCODE propagateCutoffbound(
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
 
-   /* @note A new global pseudo objective value could be used to retrive global fixings. There is, however, no need to
+   /* @note A new global pseudo objective value could be used to retrieve global fixings. There is, however, no need to
     *       check if a new global pseudo objective value is available. This is the case since a new (better) global
     *       pseudo activity implicis that a global bound change was performed. That causes that the root node of the
     *       search tree get marked for repropagation. That will result in propagation call of the pseudo objective
@@ -2804,7 +2812,7 @@ SCIP_RETCODE propagateCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* tighten domains of nonbinary variables, if they would increase the pseudo objective value above the cutoff
+   /* tighten domains of non-binary variables, if they would increase the pseudo objective value above the cutoff
     * bound
     */
    if( propdata->propfullinroot && SCIPgetDepth(scip) == 0 )
@@ -2819,7 +2827,7 @@ SCIP_RETCODE propagateCutoffbound(
       nobjintvars = propdata->nobjintvars;
       assert(nobjintvars == 0 || objintvars != NULL);
 
-      /* propagate all nonbinary variables */
+      /* propagate all non-binary variables */
       for( v = 0; v < nobjintvars; ++v )
       {
          var = objintvars[v];
@@ -3544,7 +3552,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    if( !SCIPallowObjProp(scip) )
       return SCIP_OKAY;
 
-   /* check if enough new variable are added (due to column generatition to reinitialized the propgator data) */
+   /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */
    if( !propdata->initialized || propdata->nnewvars > propdata->maxnewvars )
    {
       /* free current propdata data */
@@ -3592,8 +3600,8 @@ SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
    assert(infervar != NULL);
 
    SCIPdebugMessage("resolve bound change <%s> %s <%g>(%g), cutoff bound <%g>\n", SCIPvarGetName(infervar),
-      boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE),
-      SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE), cutoffbound);
+      boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE),
+      SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE), cutoffbound);
 
    /* resolve the propagation of the inference variable w.r.t. required minactivity */
    SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, infervar, inferinfo, boundtype, bdchgidx) );
@@ -3694,17 +3702,17 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-         "minimal number of successive nonbinary variable propagator whithout a bound reduction before aborted",
+         "minimal number of successive non-binary variable propagator whithout a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "propagating/" PROP_NAME "/maxvarsfrac",
-         "maximal fraction of nonbinary variables with non-zero objective without a bound reduction before aborted",
+         "maximal fraction of non-binary variables with non-zero objective without a bound reduction before aborted",
          &propdata->maxvarsfrac, TRUE, DEFAULT_MAXVARSFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-         "do we want to propagate all nonbinary variables if we are propagating the root node",
+         "do we want to propagate all non-binary variables if we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3714,7 +3722,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/force",
-         "should the propagator be forced even active pricer are present?",
+         "should the propagator be forced even if active pricer are present?",
          &propdata->force, TRUE, DEFAULT_FORCE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,

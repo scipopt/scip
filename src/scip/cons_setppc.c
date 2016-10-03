@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,6 +66,8 @@
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+
+#define DEFAULT_RANDSEED              3
 
 /*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
 /*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
@@ -545,14 +547,55 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->signature = 0;
    (*consdata)->row = NULL;
    (*consdata)->existmultaggr = FALSE;
+   (*consdata)->nfixedzeros = 0;
+   (*consdata)->nfixedones = 0;
 
    if( nvars > 0 )
    {
       int v;
 
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      (*consdata)->varssize = nvars;
-      (*consdata)->nvars = nvars;
+      if( SCIPisConsCompressionEnabled(scip) )
+      {
+         SCIP_VAR** varsbuffer;
+         int k;
+
+         /* allocate temporary buffer storage for active variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
+
+         k = 0;
+         /* collect fixed variables to compress the required memory */
+         for( v = 0; v < nvars; ++v )
+         {
+            assert(SCIPvarIsBinary(vars[v]));
+
+            /* already fixed variables account as fixed ones or zero, only unfixed are appended */
+            if( SCIPvarGetLbGlobal(vars[v]) > 0.5 )
+               (*consdata)->nfixedones++;
+            else if( SCIPvarGetUbGlobal(vars[v]) < 0.5 )
+               (*consdata)->nfixedzeros++;
+            else
+               varsbuffer[k++] = vars[v];
+         }
+
+         (*consdata)->varssize = k;
+         (*consdata)->nvars = k;
+         /* copy unfixed variables into constraint data */
+         if( k > 0 )
+         {
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
+         }
+
+         /* free temporary storage */
+         SCIPfreeBufferArray(scip, &varsbuffer);
+      }
+      else
+      {
+         /* for uncompressed copies, simply duplicate the whole array */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+         (*consdata)->varssize = nvars;
+         (*consdata)->nvars = nvars;
+      }
+
 
       if( SCIPisTransformed(scip) )
       {
@@ -585,8 +628,6 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->varssize = 0;
       (*consdata)->nvars = 0;
    }
-   (*consdata)->nfixedzeros = 0;
-   (*consdata)->nfixedones = 0;
    (*consdata)->setppctype = setppctype; /*lint !e641*/
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->cliqueadded = FALSE;
@@ -698,7 +739,7 @@ SCIP_Longint getVarSignature(
    int sigidx;
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((SCIP_Longint)1) << sigidx; /*lint !e703*/
+   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** returns the bit signature of the given constraint data */
@@ -2011,7 +2052,7 @@ SCIP_RETCODE processFixings(
 {
    SCIP_CONSDATA* consdata;
 #ifndef NDEBUG
-   int oldnfixedvars = *nfixedvars;
+   int oldnfixedvars;
 #endif
 
    assert(cons != NULL);
@@ -2021,6 +2062,10 @@ SCIP_RETCODE processFixings(
    assert(nfixedvars != NULL);
    assert(addcut != NULL);
    assert(mustcheck != NULL);
+
+#ifndef NDEBUG
+   oldnfixedvars = *nfixedvars;
+#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2576,7 +2621,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
 
    return hashval;
 }
@@ -2855,7 +2900,7 @@ SCIP_RETCODE collectCliqueData(
          assert(var != NULL);
 
          /* don't remember fixed vars */
-         if( SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetUbLocal(var) < 0.5 )
+         if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
             continue;
 
 	 /* only collect active or negated active varibels */
@@ -7105,7 +7150,7 @@ SCIP_DECL_CONSINIT(consInitSetppc)
    conshdlrdata->nclqpresolve = 0;
    conshdlrdata->updatedsetppctype = FALSE;
    conshdlrdata->enablecliquelifting = TRUE;
-   conshdlrdata->randseed = 1010010007; /*@todo try to take a better/another value */
+   conshdlrdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
@@ -7244,14 +7289,14 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
 static
 SCIP_DECL_CONSINITLP(consInitlpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
-      /* ignore cutoff, cannot return value */
+      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -7483,7 +7528,7 @@ SCIP_RETCODE branchLP(
             char name[SCIP_MAXSTRLEN];
 
             /* add set covering constraint x(S) >= 1 */
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%" SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
 
             SCIP_CALL( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                   FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
@@ -7789,7 +7834,7 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
    *result = SCIP_FEASIBLE;
 
    /* check all set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -7817,7 +7862,6 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
                SCIPinfoMessage(scip, NULL, ";\n");
                SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
             }
-            return SCIP_OKAY;
          }
       }
    }
@@ -8189,7 +8233,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
 
    if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING
       || ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5) )
+         && SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5) )
    {
 #ifndef NDEBUG
       SCIP_Bool confvarfound;
@@ -8206,7 +8250,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
          if( consdata->vars[v] != infervar )
          {
             /* the reason variable must be assigned to zero */
-            assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
+            assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
          }
 #ifndef NDEBUG
@@ -8224,18 +8268,18 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
       /* the inference constraint is a set partitioning or packing constraint with the inference variable infered to 0.0:
        * the reason for the deduction is the assignment of 1.0 to a single variable
        */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
 
       if( inferinfo >= 0 )
       {
-         assert(SCIPvarGetLbAtIndex(consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
+         assert(SCIPgetVarLbAtIndex(scip, consdata->vars[inferinfo], bdchgidx, FALSE) > 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[inferinfo]) );
       }
       else
       {
          for( v = 0; v < consdata->nvars; ++v )
          {
-            if( SCIPvarGetLbAtIndex(consdata->vars[v], bdchgidx, FALSE) > 0.5 )
+            if( SCIPgetVarLbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) > 0.5 )
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
                break;
@@ -8702,7 +8746,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, consname, 2, twovars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
@@ -8754,7 +8798,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

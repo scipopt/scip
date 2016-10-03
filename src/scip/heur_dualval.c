@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -866,12 +866,12 @@ SCIP_RETCODE createSubSCIP(
    SCIP_Bool    feasible;
    SCIP_Bool    success;
 
+   assert( heurdata != NULL );
+   assert( heurdata->subscip == NULL );
+
    heurdata->usedcalls = 0;
    heurdata->solfound = FALSE;
    heurdata->nonimprovingRounds = 0;
-
-   assert( heurdata != NULL );
-   assert( heurdata->subscip == NULL );
 
    /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
@@ -953,7 +953,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPincludeEventHdlrLPsol(heurdata->subscip, heurdata) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, TRUE) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
    SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
@@ -1933,9 +1933,14 @@ SCIP_RETCODE storeSolution(
    {
       primalobj = SCIPsolGetOrigObj(sol);
 
-      /* why do we have to check first? */
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &stored, heurdata->heurverblevel > 0 ? TRUE : FALSE, TRUE) );
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, FALSE, TRUE, &stored) );
+      if( heurdata->heurverblevel > 0 )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, FALSE, TRUE, &stored) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
+      }
    }
    else
       stored = FALSE;
@@ -2657,7 +2662,6 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
    heurdata->solfound = FALSE;
    heurdata->prevInfeasible = FALSE;
 
-   assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
    assert(heurdata->varsubsciptoscip == NULL);
    assert(heurdata->varsciptosubscip == NULL);

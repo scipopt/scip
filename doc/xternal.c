@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2015 Konrad-Zuse-Zentrum                            */
+/*                  2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,6 +83,9 @@
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
+ *
+ *    Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
+ *
  *   - \ref CONS    "Constraint handlers"
  *   - \ref PRICER  "Variable pricers"
  *   - \ref PRESOL  "Presolvers"
@@ -99,8 +102,14 @@
  *   - \ref EVENT   "Event handler"
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
- *   - \ref CONF    "Conflict analysis"
  *   - \ref PARAM   "additional user parameters"
+ *
+ * @subsection HOWTOUSESECTION How to use ...
+ *
+ *   - \ref CONF    "Conflict analysis"
+ *   - \ref REOPT   "Reoptimization"
+ *   - \ref TEST    "How to run automated tests with SCIP"
+ *   - \ref COUNTER "How to use SCIP to count feasible solutions"
  *
  *
  * @section FURTHERINFO Further information
@@ -120,7 +129,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.2.0.2
+ * @version  3.2.1.2
  *
  * \image html scippy.png
  *
@@ -261,7 +270,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MultiObjective"><b>Multi-objective Optimization</b></a>
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
@@ -605,7 +614,7 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT >= 3.11)
  *
  * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
  *
@@ -878,7 +887,7 @@
  *   We suggest the use one of the following examples:
  *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example 
+ *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
  *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
@@ -940,7 +949,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -6053,7 +6062,7 @@
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -7289,10 +7298,6 @@
   *   - Removed method SCIPreallocBufferSize()
   *   - Removed method SCIPfreeBufferSize()
   *   - Removed method callback SCIPdialogExecConflictgraph()
-  *
-  * <br>
-  * @section MISCELLANEOUS7 Miscellaneous
-  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
@@ -7414,16 +7419,13 @@
  * \htmlinclude faq.inc
  */
 
-
-/**@page AUTHORS SCIP Authors
- * \htmlinclude authors.inc
- */
-
 /**@page INSTALL Installation information
  * \verbinclude INSTALL
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.2.1
  *
  * \verbinclude SCIP-release-notes-3.2
  *
@@ -7672,3 +7674,55 @@
  *
  * \verbinclude interfaces/jni/README
  */
+
+/**@page INTERFACES Interfaces
+  *
+  * There are several ways of accessing the \SCIP Optimization Suite from other software packages or programming
+  * platforms.
+  *
+  *
+  * @section FILEFORMATS File formats
+  *
+  *  The easiest way to load a problem into \SCIP is via an input file, given in a format that \SCIP can parse directly,
+  *  see SHELL.  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
+  *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
+  *  \SCIP Optimization Suite. See \ref AVAILABLEFORMATS "List of readable file formats".
+  *
+  *
+  * @section CPLUSPLUS C++ wrapper
+  *
+  * Since SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
+  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
+  * directory of the \SCIP standard distribution. See also <a href=annotated.php>Wrapper Classes</a>.
+  *
+  *
+  * @section MODELLING Modeling languages and Matlab interface
+  *
+  * A natural way of formulating an optimization problem is to use a modeling language. Besides ZIMPL there are several
+  * other modeling tools with a direct interface to \SCIP. These include <a href="http://dynadec.com/">Comet</a>, a
+  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
+  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
+  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * The AMPL, GAMS, and ZIMPL interfaces are included in the SCIP distribution, the GAMS interface originated <a
+  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
+  *
+  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
+  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
+  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
+  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  * free modeling language.
+  *
+  * @section OTHER Python and Java interfaces
+  *
+  * With \SCIP 3.1, beta versions of a \ref JNI_INTERFACE "Java native interface" and a \ref PYTHON_INTERFACE "Python interface" have been released.
+  *
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
+  * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
+  * href="http://code.google.com/p/python-zibopt/">python-zibopt</a>. <a href="http://numberjack.ucc.ie/">NUMBERJACK</a>
+  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
+  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
+  * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
+  *
+  *
+  */

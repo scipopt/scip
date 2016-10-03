@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4856,6 +4856,14 @@ SCIP_RETCODE nlpCalcFracVars(
 
          /* check, if the LP solution value is fractional */
          frac = SCIPsetFeasFrac(set, primsol);
+
+         /* The fractionality should not be smaller than -feastol, however, if the primsol is large enough
+          * and close to an integer, fixed precision floating point arithmetic might give us values slightly
+          * smaller than -feastol. Originally, the "frac >= -feastol"-check was within SCIPsetIsFeasFracIntegral(),
+          * however, we relaxed it to "frac >= -2*feastol" and have the stricter check here for small-enough primsols.
+          */
+         assert(SCIPsetIsGE(set, frac, -SCIPsetFeastol(set)) || (primsol > 1e14 * SCIPsetFeastol(set)));
+
          if( SCIPsetIsFeasFracIntegral(set, frac) )
             continue;
 

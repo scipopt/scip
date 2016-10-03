@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2068,7 +2068,7 @@ void SCIPintervalPowerScalar(
          else
             resultant->sup = SCIPintervalPowerScalarIntegerSup(MAX(-operand1.inf, operand1.sup), (int)operand2);
       }
-      else if( operand2 <= 0.0 && ceil(operand2/2) != operand2/2 )
+      else if( operand2 <= 0.0 && ceil(operand2/2) == operand2/2 )
       {
          /* n even negative integer */
          resultant->sup = infinity;  /* since 0^n = infinity */
@@ -3408,7 +3408,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       if( rhs.sup >= infinity )
       {
          /* we can't do much if rhs.sup is infinite
-          * but we may to a bit of xbnds isn't too huge and rhs.inf > -infinity  */
+          * but we may do a bit of xbnds isn't too huge and rhs.inf > -infinity
+          */
          minvalleft  = -infinity;
          maxvalright =  infinity;
       }
@@ -3733,7 +3734,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       }
 
       /* evaluate the case r(rhs,y) = 0, which is to min/max -b(y) w.r.t. r(rhs,y) = 0, y in ybnds
-       * with the above assigments
+       * with the above assignments
        *   rcoef_y     = axy * bx  / (2.0*ax) - by;
        *   rcoef_yy    = axy * axy / (4.0*ax) - ay;
        *   rcoef_const = bx  * bx  / (4.0*ax);
@@ -3753,9 +3754,10 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          SCIPintervalSet(&rcoef_y_int, (SCIP_Real)rcoef_y);
          SCIPintervalSetBounds(&rhs2, (SCIP_Real)(-rhs.sup - rcoef_const), (SCIP_Real)(-rhs.inf - rcoef_const));
 
-         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup > 0.0
-          * and evaluate -b(y) w.r.t. these values */
-         if( ybnds.sup > 0.0 )
+         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup >= 0.0
+          * and evaluate -b(y) w.r.t. these values
+          */
+         if( ybnds.sup >= 0.0 )
          {
             SCIP_INTERVAL ypos;
 
@@ -3796,7 +3798,9 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          }
 
          /* next find all y <= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.inf < 0.0
-          * and evaluate -b(y) w.r.t. these values */
+          * and evaluate -b(y) w.r.t. these values
+          * (the case y fixed to 0 has been handled in the ybnds.sup >= 0 case above)
+          */
          if( ybnds.inf < 0.0 )
          {
             SCIP_INTERVAL yneg;
@@ -3850,13 +3854,19 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for maxvalleft is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSGE(minvalright, minvalleft, 1e-9)); /* right interval should not be above lower bound of left interval */
          if( minvalright > -infinity )
+         {
+            assert(minvalright < infinity);
             resultant->inf = (SCIP_Real)(minvalright / sqrtax);
+         }
       }
       else
       {
          /* otherwise, tighten lower bound of sqrt(ax)*x to lower bound of -sqrt(r(rhs,y))-b(y) */
          if( minvalleft > -infinity )
+         {
+            assert(minvalleft < infinity);
             resultant->inf = (SCIP_Real)(minvalleft / sqrtax);
+         }
       }
 
       if( rhs.inf > -infinity && xbnds.sup < infinity && EPSLT(xbnds.sup, minvalright / sqrtax, 1e-9) )
@@ -3865,13 +3875,19 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for minvalright is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSLE(maxvalleft, maxvalright, 1e-9)); /* left interval should not be above upper bound of right interval */
          if( maxvalleft < infinity )
+         {
+            assert(maxvalleft > -infinity);
             resultant->sup = (SCIP_Real)(maxvalleft / sqrtax);
+         }
       }
       else
       {
          /* otherwise, tighten upper bound of sqrt(ax)*x to upper bound of sqrt(r(rhs,y))-b(y) */
          if( maxvalright < infinity )
+         {
+            assert(maxvalright > -infinity);
             resultant->sup = (SCIP_Real)(maxvalright / sqrtax);
+         }
       }
 
       resultant->inf -= 1e-10 * REALABS(resultant->inf);
@@ -4001,14 +4017,24 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                ymin = -ay * bx + sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
 
                ymin = -ay * bx - sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if(ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
             }
          }
       }

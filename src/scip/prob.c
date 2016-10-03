@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -320,6 +320,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
+   (*prob)->conscompression = FALSE;
 
    return SCIP_OKAY;
 }
@@ -952,6 +953,11 @@ SCIP_RETCODE SCIPprobAddVar(
 
       /* update the number of variables with non-zero objective coefficient */
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
+
+      /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
+       * new variables beyond that stage has to be compatible. */
+      assert( SCIPsetGetStage(set) == SCIP_STAGE_TRANSFORMING || ! prob->objisintegral || SCIPsetIsZero(set, SCIPvarGetObj(var)) ||
+         ( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, SCIPvarGetObj(var)) ) );
    }
 
    return SCIP_OKAY;
@@ -1661,6 +1667,7 @@ SCIP_RETCODE SCIPprobScaleObj(
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
@@ -1677,6 +1684,9 @@ void SCIPprobStoreRootSol(
 
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set, prob);
+
+      /* compute root LP best-estimate */
+      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nbinvars + prob->nintvars + prob->nimplvars);
    }
 }
 
@@ -2093,6 +2103,8 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+#undef SCIPisConsCompressedEnabled
+#undef SCIPprobEnableConsCompression
 
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
@@ -2249,6 +2261,26 @@ SCIP_Real SCIPprobGetObjscale(
 {
    assert(prob != NULL);
    return prob->objscale;
+}
+
+/** is constraint compression enabled for this problem? */
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->conscompression;
+}
+
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
+void SCIPprobEnableConsCompression(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->conscompression = TRUE;
 }
 
 #endif

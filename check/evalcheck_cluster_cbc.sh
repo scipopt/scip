@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -51,16 +51,17 @@ done
 
 TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
-if test -f testset/$TSTNAME.solu
-    then
-    SOLUFILE=testset/$TSTNAME.solu
-else if test -f testset/all.solu
-    then
-    SOLUFILE=testset/all.solu
-else
-    SOLUFILE=""
-fi
-fi
+# look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
+SOLUFILE=""
+for f in $TSTNAME ${TSTNAME%%_*} all
+do
+  if test -f testset/${f}.solu
+  then
+      SOLUFILE=testset/${f}.solu
+      break
+  fi
+done
+
 awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
 
 

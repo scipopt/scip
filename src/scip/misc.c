@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,6 +20,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,7 +42,12 @@
 #include "scip/struct_misc.h"
 #endif
 
+/*
+ * methods for statistical tests
+ */
+
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
+#define SQUARED(x) ((x) * (x))
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -227,6 +233,193 @@ SCIP_Real SCIPnormalCDF(
 
       return 0.5 - erfresult / 2.0;
    }
+}
+
+/*
+ * SCIP regression methods
+ */
+
+/** returns the number of observations of this regression */
+int SCIPregressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->nobservations;
+}
+
+/** return the current slope of the regression */
+SCIP_Real SCIPregressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->slope;
+}
+
+/** get the current y-intercept of the regression */
+SCIP_Real SCIPregressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->intercept;
+}
+
+/** recomputes regression coefficients from available observation data */
+static
+void regressionRecompute(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   /* regression coefficients require two or more observations and variance in x */
+   if( regression->nobservations <= 1 || EPSZ(regression->variancesumx, 1e-9) )
+   {
+      regression->slope = SCIP_INVALID;
+      regression->intercept = SCIP_INVALID;
+      regression->corrcoef = SCIP_INVALID;
+   }
+   else if( EPSZ(regression->variancesumy, 1e-9) )
+   {
+      /* if there is no variance in the y's (but in the x's), the regression line is horizontal with y-intercept through the mean y */
+      regression->slope = 0.0;
+      regression->corrcoef = 0.0;
+      regression->intercept = regression->meany;
+   }
+   else
+   {
+      /* we ruled this case out already, but to please some compilers... */
+      assert(regression->variancesumx > 0.0);
+      assert(regression->variancesumy > 0.0);
+
+      /* compute slope */
+      regression->slope = (regression->sumxy  - regression->nobservations * regression->meanx * regression->meany) / regression->variancesumx;
+
+      /* compute y-intercept */
+      regression->intercept = regression->meany - regression->slope * regression->meanx;
+
+      /* compute empirical correlation coefficient */
+      regression->corrcoef = (regression->sumxy - regression->nobservations * regression->meanx * regression->meany) /
+         sqrt(regression->variancesumx * regression->variancesumy);
+   }
+}
+
+/* incremental update of statistics describing mean and variance */
+static
+void incrementalStatsUpdate(
+   SCIP_Real             value,              /**< current value to be added to incremental statistics */
+   SCIP_Real*            meanptr,            /**< pointer to value of current mean */
+   SCIP_Real*            sumvarptr,          /**< pointer to the value of the current variance sum term */
+   int                   nobservations,      /**< total number of observations */
+   SCIP_Bool             add                 /**< TRUE if the value should be added, FALSE for removing it */
+   )
+{
+   SCIP_Real oldmean;
+   SCIP_Real addfactor;
+   assert(meanptr != NULL);
+   assert(sumvarptr != NULL);
+   assert(nobservations > 0 || add);
+   assert(*sumvarptr >= 0.0);
+
+   addfactor = add ? 1.0 : -1.0;
+
+   oldmean = *meanptr;
+   *meanptr = oldmean + addfactor * (value - oldmean)/(SCIP_Real)nobservations;
+   *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
+}
+
+/** removes an observation (x,y) from the regression */
+void SCIPregressionRemoveObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   )
+{
+   assert(regression != NULL);
+   assert(regression->nobservations > 0);
+
+   /* simply call the reset function in the case of a single remaining observation to avoid numerical troubles */
+   if( regression->nobservations == 1 )
+   {
+      SCIPregressionReset(regression);
+   }
+   else
+   {
+      SCIP_Bool add = FALSE;
+      --regression->nobservations;
+
+      /* decrement individual means and variances */
+      incrementalStatsUpdate(x, &regression->meanx, &regression->variancesumx, regression->nobservations, add);
+      incrementalStatsUpdate(y, &regression->meany, &regression->variancesumy, regression->nobservations, add);
+
+      /* decrement product sum */
+      regression->sumxy -= (x * y);
+   }
+
+   /* recompute regression parameters */
+   regressionRecompute(regression);
+}
+
+/** update regression by a new observation (x,y) */
+void SCIPregressionAddObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   )
+{
+   SCIP_Bool add = TRUE;
+   assert(regression != NULL);
+
+   ++(regression->nobservations);
+   incrementalStatsUpdate(x, &regression->meanx, &regression->variancesumx, regression->nobservations, add);
+   incrementalStatsUpdate(y, &regression->meany, &regression->variancesumy, regression->nobservations, add);
+
+   regression->sumxy += x * y;
+
+   regressionRecompute(regression);
+}
+
+/** reset regression data structure */
+void SCIPregressionReset(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   regression->intercept = SCIP_INVALID;
+   regression->slope = SCIP_INVALID;
+   regression->corrcoef = SCIP_INVALID;
+   regression->meanx = 0;
+   regression->variancesumx = 0;
+   regression->sumxy = 0;
+   regression->meany = 0;
+   regression->variancesumy = 0;
+   regression->nobservations = 0;
+}
+
+/** creates and resets a regression */
+SCIP_RETCODE SCIPregressionCreate(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   /* allocate necessary memory */
+   SCIP_ALLOC (BMSallocMemory(regression) );
+
+   /* reset the regression */
+   SCIPregressionReset(*regression);
+
+   return SCIP_OKAY;
+}
+
+/** creates and resets a regression */
+void SCIPregressionFree(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   )
+{
+   BMSfreeMemory(regression);
 }
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
@@ -6462,6 +6655,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    assert(nstorednodes == digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx]);
 
    /* to simplify the iteration over all strongly connected components */
+   assert(*nstrongcomponents < digraph->nnodes + 1);
    strongcompstartidx[*nstrongcomponents] = nstorednodes;
 
    assert(retcode == SCIP_OKAY);

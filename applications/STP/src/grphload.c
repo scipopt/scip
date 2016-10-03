@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reduce.c
- * @brief  methods for loading Steiner problems in .stp format
+ * @brief  Methods for loading Steiner problems in .stp format
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
@@ -302,9 +302,9 @@ char* strlower(
 /*--- Returns  : Nothing                                                  ---*/
 /*---------------------------------------------------------------------------*/
 static void message(
-   unsigned int type,
-   const CURF*  curf,
-   const char*  msg,
+   unsigned int          type,
+   const CURF*           curf,
+   const char*           msg,
    ...)
 {
    va_list params;
@@ -338,8 +338,8 @@ static void message(
 /*--- Returns  : <0 : key<elem, =0 : key=elem, >0 : key>elem              ---*/
 /*---------------------------------------------------------------------------*/
 static int key_cmp(
-   const void* key,
-   const void* elem)
+   const void*           key,
+   const void*           elem)
 {
    assert(key                                != NULL);
    assert(elem                               != NULL);
@@ -358,8 +358,8 @@ static int key_cmp(
 /*--- Returns  : <0 : key<sec, =0 : key=sec, >0 : key>sec                 ---*/
 /*---------------------------------------------------------------------------*/
 static int sec_cmp(
-   const void* key,
-   const void* section)
+   const void*          key,
+   const void*          section)
 {
    assert(key                                    != NULL);
    assert(section                                != NULL);
@@ -376,10 +376,10 @@ static int sec_cmp(
 /*--- Returns  : 0 for success and < 0 for failure.                       ---*/
 /*---------------------------------------------------------------------------*/
 static int get_arguments(
-   const CURF* curf,
-   const char* format,
-   const char* s,
-   PARA*       para)
+   const CURF*           curf,
+   const char*           format,
+   const char*           s,
+   PARA*                 para)
 {
    const char* err_missmatch_v = "Wrong Syntax";
    const char* msg_hello_ss    = "get_arguments(\"%s\", \"%s\")";
@@ -792,7 +792,7 @@ SCIP_RETCODE graph_load(
    const char*  err_badedge_ddd = "Bad edge %d-%d (%d nodes)";
    const char*  err_badroot_dd  = "Bad root %d (%d nodes)";
    const char*  err_baddeg_dd   = "More degree constraints (%d) than nodes (%d)";
-   const char*  msg_finish_dddd = "Knots: %d  Edges: %d  Terminals: %d  Source=%d\n";
+   const char*  msg_finish_dddd = "Nodes: %d  Edges: %d  Terminals: %d  Source=%d\n";
 
    const char*  endofline = "#;\n\r";
    const char*  separator = " \t:=";
@@ -1212,7 +1212,11 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                           SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+#if 1
+                          SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+#else
+			  SCIP_CALL( graph_MwcsToSap(scip, g, g->prize) );
+#endif
                         }
                         else
                         {
@@ -1224,7 +1228,11 @@ SCIP_RETCODE graph_load(
                      }
                      else if( stp_type == STP_PRIZE_COLLECTING )
                      {
-                        SCIP_CALL( graph_prize_transform(scip, g) );
+#if 1
+                       SCIP_CALL( graph_prize_transform(scip, g) );
+#else
+		       SCIP_CALL( graph_PcToSap(scip, g) );
+#endif
                      }
                      else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
                      {
@@ -1277,7 +1285,7 @@ SCIP_RETCODE graph_load(
                   stp_type = STP_ROOTED_PRIZE_COLLECTING;
                   if( g->prize == NULL )
                      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
-                  g->prize[(int)para[0].n - 1] = 0;
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
                case KEY_TERMINALS_T :
                   if( stp_type == STP_MAX_NODE_WEIGHT )

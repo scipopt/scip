@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_matrix.h
- * @brief  data structure for MILP matrix
+ * @brief  data structure for MIP matrix
  * @author Dieter Weninger
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,20 +33,8 @@
 extern "C" {
 #endif
 
-/** enumeration type of supported constraint types */
-enum MilpMatrixConsType
-{
-   CONSTYPE_UNKNOWN = -1,
-   CONSTYPE_LINEAR   = 0,
-   CONSTYPE_SETPPC   = 1,
-   CONSTYPE_LOGICOR  = 2,
-   CONSTYPE_KNAPSACK = 3,
-   CONSTYPE_VARBOUND = 4
-};
-typedef enum MilpMatrixConsType MILPMATRIXCONSTYPE;
-
 /** constraint matrix data structure in column and row major format */
-struct SCIPmilpMatrix
+struct SCIP_Matrix
 {
    SCIP_Real*            colmatval;          /**< coefficients in column major format */
    int*                  colmatind;          /**< row indexes in column major format */
@@ -69,7 +58,6 @@ struct SCIPmilpMatrix
    SCIP_Real*            rhs;                /**< right hand side per row */
 
    SCIP_CONS**           cons;               /**< constraints pointer */
-   MILPMATRIXCONSTYPE*   constype;           /**< constraint enumeration type */
 
    SCIP_Bool*            isrhsinfinite;      /**< is right hand side infinity */
    int                   nnonzs;             /**< sparsity counter */

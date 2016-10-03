@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -277,6 +277,14 @@ SCIP_RETCODE branchcandCalcLPCands(
 
          /* check, if the LP solution value is fractional */
          frac = SCIPsetFeasFrac(set, primsol);
+
+         /* The fractionality should not be smaller than -feastol, however, if the primsol is large enough
+          * and close to an integer, fixed precision floating point arithmetic might give us values slightly
+          * smaller than -feastol. Originally, the "frac >= -feastol"-check was within SCIPsetIsFeasFracIntegral(),
+          * however, we relaxed it to "frac >= -2*feastol" and have the stricter check here for small-enough primsols.
+          */
+         assert(SCIPsetIsGE(set, frac, -SCIPsetFeastol(set)) || (primsol > 1e14 * SCIPsetFeastol(set)));
+
          if( SCIPsetIsFeasFracIntegral(set, frac) )
             continue;
 
@@ -2273,19 +2281,21 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    {
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {
+         /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
+         if( SCIPsetIsInfinity(set, ub) )
+         {
+            ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb)); /*lint !e666*/
+         }
+         else if( SCIPsetIsInfinity(set, -lb) )
+         {
+            lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub)); /*lint !e666*/
+         }
+
          /* if branching point is too close to the bounds, move more into the middle of the interval */
          if( SCIPrelDiff(ub, lb) <= 2.02 * SCIPsetEpsilon(set) )
          {
-            /* for very tiny intervals we set it exactly into the middle
-             *   very tiny means here an interval where we could not create two branches with reldiff > eps
-             * however, if variable is almost fixed at -/+ infinity, suggest the non-finite value as branching point and let SCIPtreeBranchVar fix the variable there
-             */
-            if( SCIPsetIsInfinity(set, -lb) )
-               branchpoint = ub;
-            else if( SCIPsetIsInfinity(set, ub) )
-               branchpoint = lb;
-            else
-               branchpoint = (lb+ub)/2.0;
+            /* for very tiny intervals we set it exactly into the middle */
+            branchpoint = (lb+ub)/2.0;
          }
          else
          {
@@ -2295,16 +2305,6 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             SCIP_Real scale;
             SCIP_Real lbabs;
             SCIP_Real ubabs;
-
-            /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
-            if( SCIPsetIsInfinity(set, ub) )
-            {
-               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb)); /*lint !e666*/
-            }
-            else if( SCIPsetIsInfinity(set, -lb) )
-            {
-               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub)); /*lint !e666*/
-            }
 
             lbabs = REALABS(lb);
             ubabs = REALABS(ub);

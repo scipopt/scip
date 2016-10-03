@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1779,51 +1779,78 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
       return SCIP_OKAY;
    }
 
+   asl = probdata->asl;
+
+   /* AMPL solve status codes are at http://www.ampl.com/NEW/statuses.html
+    *     number   string       interpretation
+    *    0 -  99   solved       optimal solution found
+    *  100 - 199   solved?      optimal solution indicated, but error likely
+    *  200 - 299   infeasible   constraints cannot be satisfied
+    *  300 - 399   unbounded    objective can be improved without limit
+    *  400 - 499   limit        stopped by a limit that you set (such as on iterations)
+    *  500 - 599   failure      stopped by an error condition in the solver routines
+    */
+
    switch( SCIPgetStatus(scip) )
    {
       case SCIP_STATUS_UNKNOWN:
          msg = "unknown";
+         solve_result_num = 500;
          break;
       case SCIP_STATUS_USERINTERRUPT:
          msg = "user interrupt";
+         solve_result_num = 450;
          break;
       case SCIP_STATUS_NODELIMIT:
          msg = "node limit reached";
+         solve_result_num = 400;
          break;
       case SCIP_STATUS_TOTALNODELIMIT:
          msg = "total node limit reached";
+         solve_result_num = 401;
          break;
       case SCIP_STATUS_STALLNODELIMIT:
          msg = "stall node limit reached";
+         solve_result_num = 402;
          break;
       case SCIP_STATUS_TIMELIMIT:
          msg = "time limit reached";
+         solve_result_num = 403;
          break;
       case SCIP_STATUS_MEMLIMIT:
          msg = "memory limit reached";
+         solve_result_num = 404;
          break;
       case SCIP_STATUS_GAPLIMIT:
          msg = "gap limit reached";
+         solve_result_num = 405;
          break;
       case SCIP_STATUS_SOLLIMIT:
          msg = "solution limit reached";
+         solve_result_num = 406;
          break;
       case SCIP_STATUS_BESTSOLLIMIT:
          msg = "solution improvement limit reached";
+         solve_result_num = 407;
          break;
       case SCIP_STATUS_OPTIMAL:
          msg = "optimal solution found";
+         solve_result_num = 0;
          break;
       case SCIP_STATUS_INFEASIBLE:
          msg = "infeasible";
+         solve_result_num = 200;
          break;
       case SCIP_STATUS_UNBOUNDED:
          msg = "unbounded";
+         solve_result_num = 300;
          break;
       case SCIP_STATUS_INFORUNBD:
          msg = "infeasible or unbounded";
+         solve_result_num = 299;
          break;
       default:
+         solve_result_num = 500;
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
          return SCIP_INVALIDDATA;
    }
@@ -1875,7 +1902,6 @@ SCIP_RETCODE SCIPwriteAmplSolReaderNl(
       }
    }
 
-   asl = probdata->asl;
    write_sol((char*)msg, x, y, NULL);
 
    SCIPfreeBufferArrayNull(scip, &x);

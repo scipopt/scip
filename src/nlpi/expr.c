@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -893,8 +893,8 @@ void polynomialdataMergeMonomials(
    }
 
 #ifndef NDEBUG
-   while( i < polynomialdata->nmonomials )
-      assert(polynomialdata->monomials[i++] == NULL);
+   for( ; i < polynomialdata->nmonomials; ++i )
+      assert(polynomialdata->monomials[i] == NULL);
 #endif
 
    polynomialdata->nmonomials -= offset;
@@ -1631,6 +1631,9 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
 
 /** point evaluation for EXPR_DIV */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalDiv )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -2550,7 +2553,7 @@ SCIP_DECL_EXPREVAL( exprevalQuadratic )
    quadelems  = quaddata->quadelems;
 
    assert(quadelems != NULL || nquadelems == 0);
-   assert(argvals != NULL   || nargs == 0);
+   assert(argvals != NULL || nquadelems == 0);
 
    *result = quaddata->constant;
 
@@ -3983,11 +3986,13 @@ SCIP_RETCODE exprUnconvertPolynomial(
    {
       /* polynomial is product of children */
       monomial = polynomialdata->monomials[0];
+      assert(monomial->nfactors == nchildren);
 
       if( monomial->nfactors == 1 )
       {
          /* polynomial is x^k for some k */
          assert(monomial->exponents[0] != 1.0); /* should have been handled before */
+         assert(monomial->childidxs[0] == 0);
 
          if( monomial->exponents[0] == 2.0 )
          {
@@ -4072,6 +4077,8 @@ SCIP_RETCODE exprUnconvertPolynomial(
       if( monomial->nfactors == 2 && monomial->exponents[0] == 1.0 && monomial->exponents[1] == -1.0 )
       {
          /* polynomial is x/y, so turn into SCIP_EXPR_DIV */
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -4085,6 +4092,9 @@ SCIP_RETCODE exprUnconvertPolynomial(
       {
          /* polynomial is y/x, so turn into SCIP_EXPR_DIV */
          void* tmp;
+
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -5169,7 +5179,7 @@ SCIP_RETCODE exprParse(
       while( isspace((unsigned char)*str) && str != lastchar )
          ++str;
 
-      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '/' && str[0] != '^' )
+      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '^' )
       {
          if( str < lastchar )
          {
@@ -6885,8 +6895,8 @@ void SCIPexprMergeMonomialFactors(
    }
 
 #ifndef NDEBUG
-   while( i < monomial->nfactors )
-      assert(monomial->childidxs[i++] == -1);
+   for( ; i < monomial->nfactors; ++i )
+      assert(monomial->childidxs[i] == -1);
 #endif
 
    monomial->nfactors -= offset;
@@ -7578,11 +7588,17 @@ SCIP_Bool SCIPexprAreEqual(
       if( data1->lincoefs != NULL || data2->lincoefs != NULL )
          for( i = 0; i < expr1->nchildren; ++i )
          {
-            if( data1->lincoefs == NULL && !EPSZ(data2->lincoefs[i], eps) )
-               return FALSE;
-            if( data2->lincoefs == NULL && !EPSZ(data1->lincoefs[i], eps) )
-               return FALSE;
-            if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
+            if( data1->lincoefs == NULL )
+            {
+               if( !EPSZ(data2->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( data2->lincoefs == NULL )
+            {
+               if( !EPSZ(data1->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
                return FALSE;
          }
 
@@ -8115,9 +8131,9 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_CONST:
       if (expr->data.dbl < 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "(%lf)", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "(%g)", expr->data.dbl );
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%lf", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", expr->data.dbl );
       break;
 
    case SCIP_EXPR_PLUS:
@@ -10283,9 +10299,24 @@ void exprgraphNodePropagateBounds(
    case SCIP_EXPR_ABS:
    {
       assert(node->nchildren == 1);
-      /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
 
-      SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
+      /* use identity if child bounds are non-negative */
+      if( node->children[0]->bounds.inf >= 0 )
+      {
+         SCIPintervalSetBounds(&childbounds, node->bounds.inf, node->bounds.sup);
+      }
+      /* use -identity if child bounds are non-positive */
+      else if( node->children[0]->bounds.sup <= 0 )
+      {
+         assert(node->bounds.inf <= node->bounds.sup);
+         SCIPintervalSetBounds(&childbounds, -node->bounds.sup, -node->bounds.inf);
+      }
+      /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
+      else
+      {
+         SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
+      }
+
       SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
@@ -10449,7 +10480,7 @@ void exprgraphNodePropagateBounds(
                assert(maxlinactivityinf == 1);
                childbounds.inf = node->bounds.inf - maxlinactivity;
             }
-            else
+            else if( maxlinactivityinf == 0 )
             {
                childbounds.inf = node->bounds.inf - maxlinactivity + node->children[i]->bounds.sup;
             }
@@ -10484,7 +10515,7 @@ void exprgraphNodePropagateBounds(
          {
             if( i == j )
                continue;
-            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[i]->bounds);
+            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[j]->bounds);
 
             /* if there is 0.0 in the product, then later division will hardly give useful bounds, so giveup for this i */
             if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
@@ -14837,9 +14868,9 @@ SCIP_RETCODE SCIPexprgraphCreate(
    SCIP_EXPRGRAPH**      exprgraph,          /**< buffer to store pointer to expression graph */
    int                   varssizeinit,       /**< minimal initial size for variables array, or -1 to choose automatically */
    int                   depthinit,          /**< minimal initial depth of expression graph, or -1 to choose automatically */
-   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /** callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /** callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /** callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /**< callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /**< callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /**< callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
    void*                 userdata            /**< user data to pass to callback functions */
    )
 {
@@ -15502,10 +15533,10 @@ SCIP_Bool SCIPexprgraphFindConstNode(
          break;
       }
    }
-   assert(left == right+1 || *constnode != NULL);
    if( left == right+1 )
       return FALSE;
 
+   assert(*constnode != NULL);
    assert((*constnode)->op == SCIP_EXPR_CONST);
    assert((*constnode)->data.dbl == constant);  /*lint !e777*/
 

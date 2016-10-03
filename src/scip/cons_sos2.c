@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1564,8 +1564,10 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+   *infeasible = FALSE;
+
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && !(*infeasible); ++c)
    {
       SCIP_CONSDATA* consdata;
 
@@ -1585,12 +1587,9 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       /* put corresponding rows into LP */
       if ( consdata->row != NULL && ! SCIProwIsInLP(consdata->row) )
       {
-         SCIP_Bool infeasible;
-
          assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
-         assert( ! infeasible );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, infeasible) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       }
    }
@@ -1760,8 +1759,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
+   *result = SCIP_FEASIBLE;
+
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c)
    {
       SCIP_CONSDATA* consdata;
       int firstNonzero;
@@ -1801,14 +1802,11 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                   }
 
                   SCIPdebugMessage("SOS2 constraint <%s> infeasible.\n", SCIPconsGetName(conss[c]));
-                  return SCIP_OKAY;
                }
             }
          }
       }
    }
-   SCIPdebugMessage("All SOS2 constraint are feasible.\n");
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -1887,14 +1885,14 @@ SCIP_DECL_CONSRESPROP(consRespropSOS2)
    assert( var != infervar );
 
    /* check if lower bound of var was the reason */
-   if ( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) )
+   if ( SCIPisFeasPositive(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE)) )
    {
       SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;
    }
 
    /* check if upper bound of var was the reason */
-   if ( SCIPisFeasNegative(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) )
+   if ( SCIPisFeasNegative(scip, SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE)) )
    {
       SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;

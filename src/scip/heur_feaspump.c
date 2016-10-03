@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -62,6 +62,7 @@
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
+#define DEFAULT_RANDSEED          13    /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -121,7 +122,7 @@ SCIP_RETCODE setupProbingSCIP(
    *success = FALSE;
 
    /* copy SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, TRUE, success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE, TRUE, success) );
 
    if( copycuts )
    {
@@ -517,7 +518,7 @@ SCIP_RETCODE createNewSols(
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
       /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    SCIPfreeBufferArray(scip, &subvars);
@@ -580,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
@@ -1185,6 +1186,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* swap the last solutions */
+      SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
       for( j = heurdata->cyclelength-1; j > 0; j-- )
       {
@@ -1216,7 +1218,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIPdebugMessage("feasibility pump found solution (%d fractional variables)\n", nfracs);
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
    }
@@ -1355,6 +1357,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
 #endif /* SCIP_STATISTIC */
+
    return SCIP_OKAY;
 }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,17 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_stp.c
- * @brief  miscellaneous methods used for solving Steiner problems
+ * @brief  Miscellaneous methods used for solving Steiner problems
  * @author Daniel Rehfeldt
  *
  * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref MISCSTP page.
  *
- * @page MISCSTP Miscellaneous methods used for STPs
+ * @page MISCSTP Miscellaneous methods used for Steiner tree problems
  *
- * -Integer data linked list
- * -Linear link-cut tree
- * -Union-find data structure
- * -Paring heap
+ * This file implements an integer data linked list, a linear link-cut tree, a union-find data structure
+ * and a pairing heap.
  *
  * A list of all interface methods can be found in misc_stp.h.
  */
@@ -38,7 +36,7 @@
 #include "portab.h"
 #include "scip/misc.h"
 
-/* compares distances of two GNODE structures */
+/** compares distances of two GNODE structures */
 SCIP_DECL_SORTPTRCOMP(GNODECmpByDist)
 {
    SCIP_Real first = ((GNODE*)elem1)->dist;
@@ -191,7 +189,44 @@ void SCIPlinkcuttreeCut(
    v->parent = NULL;
 }
 
-/** finds the max value between node 'v' and the root of the tree **/
+/** finds minimal non-key-node value between node 'v' and the root of the tree **/
+NODE* SCIPlinkcuttreeFindMinMW(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            nodeweight,         /**< node weight array */
+   int*                  tail,               /**< tail of an arc */
+   int*                  stdeg,              /**< degree in Steiner tree */
+   NODE*                 v                   /**< the node */
+   )
+{
+   NODE* p = v;
+   NODE* q = v;
+   int node;
+   SCIP_Real min = 0.0;
+
+   assert(scip != NULL);
+   assert(tail != NULL);
+   assert(nodeweight != NULL);
+   assert(stdeg != NULL);
+   assert(v != NULL);
+
+   while( p->parent != NULL )
+   {
+      assert(p->edge >= 0);
+      node = tail[p->edge];
+
+      if( SCIPisLT(scip, nodeweight[node], min) && stdeg[node] == 2 )
+      {
+         min = nodeweight[node];
+         q = p;
+      }
+      p = p->parent;
+   }
+   return q;
+}
+
+
+
+/** finds the max edge value between node 'v' and the root of the tree **/
 NODE* SCIPlinkcuttreeFindMax(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      cost,               /**< edge cost array */

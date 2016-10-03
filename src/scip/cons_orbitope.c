@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1156,12 +1156,12 @@ SCIP_RETCODE resolvePropagation(
       for (j = 0; j <= lastcolumn; ++j)
       {
          /* if the variable was fixed to zero at conflict time */
-         if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 )
             vals[i][j] = 0.0;
          else
          {
             /* if the variable was fixed to one at conflict time */
-            if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 )
+            if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 )
                vals[i][j] = 2.0;
             else
                vals[i][j] = 1.0;
@@ -1217,7 +1217,7 @@ SCIP_RETCODE resolvePropagation(
          {
             /* case 2 or 3: */
             assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-            assert( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
             *result = SCIP_SUCCESS;
 
@@ -1288,7 +1288,7 @@ SCIP_RETCODE resolvePropagation(
             {
                /* case 2 or 3: reason are formed by variables in SC fixed to 0 */
                assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-               if ( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 )
+               if ( SCIPgetVarUbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 )
                {
                   SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
                   *result = SCIP_SUCCESS;
@@ -1301,7 +1301,7 @@ SCIP_RETCODE resolvePropagation(
 #ifndef NDEBUG
                else
                {
-                  assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
+                  assert( SCIPgetVarLbAtIndex(scip, vars[p1][p2], bdchgidx, FALSE) < 0.5 );
                   assert( pos1 == -1 && pos2 == -1 );
                   pos1 = p1;
                   pos2 = p2;
@@ -1327,7 +1327,7 @@ SCIP_RETCODE resolvePropagation(
             /* add variables before the bar in the partitioning case */
             for (k = 0; k < j; ++k)
             {
-               assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
+               assert( SCIPgetVarUbAtIndex(scip, vars[i][k], bdchgidx, FALSE) < 0.5 );
                SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
                *result = SCIP_SUCCESS;
 #ifdef SCIP_DEBUG
@@ -1353,7 +1353,7 @@ SCIP_RETCODE resolvePropagation(
             /* search for variable in the bar that is fixed to 1 in the packing case */
             for (k = j; k <= lastcolumn; ++k)
             {
-               if ( SCIPvarGetLbAtIndex(vars[i][k], bdchgidx, FALSE) > 0.5 )
+               if ( SCIPgetVarLbAtIndex(scip, vars[i][k], bdchgidx, FALSE) > 0.5 )
                {
                   SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx) );
                   *result = SCIP_SUCCESS;
@@ -1735,7 +1735,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    *result = SCIP_FEASIBLE;
 
    /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_CONSDATA* consdata;
       SCIP_VAR*** vars;
@@ -1792,7 +1792,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
                   if ( printreason )
                      SCIPinfoMessage(scip, NULL, "variable x[%d][%d] = %f on upper right nonzero.\n", i, j, vals[i][j]);
                   *result = SCIP_INFEASIBLE;
-                  return SCIP_OKAY;
                }
             }
          }
@@ -1866,8 +1865,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 
                   SCIPinfoMessage(scip, NULL, ")");
                }
-
-               return SCIP_OKAY;
             }
          }
       }
@@ -2216,21 +2213,24 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
 
       if ( j > nblocks )
       {
-         int newsize;
-
          if ( nspcons > 0 )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variables per row do not match.\n");
             *success = FALSE;
             return SCIP_OKAY;
          }
-
          nblocks = j;
-         newsize = SCIPcalcMemGrowSize(scip, nblocks);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e866*/
-         maxnblocks = newsize;
-         assert( nblocks <= maxnblocks );
+
+         if ( nblocks > maxnblocks )
+         {
+            int newsize;
+
+            newsize = SCIPcalcMemGrowSize(scip, nblocks);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e866*/
+            maxnblocks = newsize;
+         }
       }
+      assert( nblocks <= maxnblocks );
 
       /* skip white space and ',' */
       while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )

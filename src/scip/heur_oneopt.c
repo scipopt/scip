@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -468,7 +468,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* try to add new solution to sub-SCIP and free it immediately */
       valid = FALSE;
-      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );
+      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, FALSE, &valid) );
       SCIPfreeBufferArray(scip, &subsolvals);
       SCIPhashmapFree(&varmapfw);
 
@@ -562,8 +562,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    if( heurtiming == SCIP_HEURTIMING_BEFORENODE && (SCIPhasCurrentNodeLP(scip) || heurdata->forcelpconstruction) )
    {
       SCIP_Bool cutoff;
-      cutoff = FALSE;
+
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
+         return SCIP_OKAY;
+
       SCIP_CALL( SCIPflushLP(scip) );
 
       /* get problem variables again, SCIPconstructLP() might have added new variables */
@@ -760,7 +765,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          /* since we ignore local rows, we cannot guarantee their feasibility and have to set the checklprows flag to
           * TRUE if local rows are present
           */
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, localrows, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, localrows, &success) );
 
          if( success )
          {
@@ -829,7 +834,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
             /* check solution for feasibility */
             if( success )

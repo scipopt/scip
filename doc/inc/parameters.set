@@ -1,4 +1,4 @@
-# SCIP version 3.2.0
+# SCIP version 3.2.1.1
 
 # branching score function ('s'um, 'p'roduct, 'q'uotient)
 # [type: char, range: {spq}, default: p]
@@ -32,8 +32,8 @@ branching/divingpscost = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/forceallchildren = FALSE
 
-# child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic
-# [type: char, range: {adu}, default: a]
+# child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, 'h'istory-based, or 'a'utomatic
+# [type: char, range: {aduh}, default: a]
 branching/firstsbchild = a
 
 # should LP solutions during strong branching with propagation be checked for feasibility?
@@ -404,6 +404,10 @@ lp/resolveiterfac = -1
 # [type: int, range: [1,2147483647], default: 1000]
 lp/resolveitermin = 1000
 
+# random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)
+# [type: int, range: [0,2147483647], default: 0]
+lp/randomseed = 0
+
 # solver to use for solving NLPs; leave empty to select NLPI with highest priority
 # [type: string, default: ""]
 nlp/solver = ""
@@ -484,9 +488,13 @@ misc/printreason = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/estimexternmem = TRUE
 
-# should SCIP try to transfer original solutions to the extended space (after presolving)?
+# should SCIP try to transfer original solutions to the transformed space (after presolving)?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/transorigsols = TRUE
+
+# should SCIP try to transfer transformed solutions to the original space (after solving)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+misc/transsolsorig = TRUE
 
 # should SCIP calculate the primal dual integral value?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -677,8 +685,8 @@ reoptimization/objsimsol = -1
 reoptimization/delay = -1
 
 # time limit over all reoptimization rounds?.
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-reoptimization/commontimelimit = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reoptimization/commontimelimit = FALSE
 
 # replace branched inner nodes by their child nodes, if the number of bound changes is not to large
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -892,9 +900,9 @@ constraints/nonlinear/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/nonlinear/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/nonlinear/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/nonlinear/presoltiming = 28
 
 # minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy
 # [type: real, range: [0,1e+20], default: 0.0001]
@@ -968,9 +976,9 @@ constraints/quadratic/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/quadratic/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/quadratic/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/quadratic/presoltiming = 28
 
 # max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)
 # [type: int, range: [0,2147483647], default: 2147483647]
@@ -1015,6 +1023,10 @@ constraints/quadratic/checkcurvature = TRUE
 # whether constraint functions should be checked to be factorable
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/quadratic/checkfactorable = TRUE
+
+# whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)
+# [type: char, range: {bdt}, default: t]
+constraints/quadratic/checkquadvarlocks = t
 
 # whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1092,9 +1104,9 @@ constraints/linear/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linear/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 10]
-constraints/linear/presoltiming = 10
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 20]
+constraints/linear/presoltiming = 20
 
 # enable quadratic upgrading for constraint handler <linear>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1236,9 +1248,9 @@ constraints/abspower/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/abspower/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 6]
-constraints/abspower/presoltiming = 6
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 12]
+constraints/abspower/presoltiming = 12
 
 # enable quadratic upgrading for constraint handler <abspower>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1328,9 +1340,9 @@ constraints/and/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 10]
-constraints/and/presoltiming = 10
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 20]
+constraints/and/presoltiming = 20
 
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1392,9 +1404,9 @@ constraints/bivariate/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/bivariate/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-constraints/bivariate/presoltiming = 2
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+constraints/bivariate/presoltiming = 4
 
 # enable quadratic upgrading for constraint handler <bivariate>
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -1472,9 +1484,9 @@ constraints/bounddisjunction/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/bounddisjunction/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-constraints/bounddisjunction/presoltiming = 2
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+constraints/bounddisjunction/presoltiming = 4
 
 # enable quadratic upgrading for constraint handler <bounddisjunction>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1508,9 +1520,9 @@ constraints/conjunction/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/conjunction/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-constraints/conjunction/presoltiming = 2
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+constraints/conjunction/presoltiming = 4
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1540,9 +1552,9 @@ constraints/countsols/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/countsols/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/countsols/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/countsols/presoltiming = 28
 
 # is the constraint handler active?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -1600,9 +1612,9 @@ constraints/cumulative/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/cumulative/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/cumulative/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/cumulative/presoltiming = 28
 
 # should time-table (core-times) propagator be used to infer bounds?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1716,9 +1728,9 @@ constraints/disjunction/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/disjunction/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-constraints/disjunction/presoltiming = 2
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+constraints/disjunction/presoltiming = 4
 
 # alawys perform branching if one of the constraints is violated, otherwise only if all integers are fixed
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1752,9 +1764,9 @@ constraints/indicator/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-constraints/indicator/presoltiming = 2
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+constraints/indicator/presoltiming = 4
 
 # enable linear upgrading for constraint handler <indicator>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1788,13 +1800,21 @@ constraints/indicator/addcouplingcons = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/sepacouplingcuts = FALSE
 
-# Allow to use local bounds in order to separated coupling inequalities?
+# Allow to use local bounds in order to separate coupling inequalities?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/sepacouplinglocal = FALSE
 
 # maximum coefficient for binary variable in separated coupling constraint
 # [type: real, range: [0,1000000000], default: 10000]
 constraints/indicator/sepacouplingvalue = 10000
+
+# Separate cuts based on perspective formulation?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepaperspective = FALSE
+
+# Allow to use local bounds in order to separate perspective cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/indicator/sepapersplocal = TRUE
 
 # Update bounds of original variables for separation?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -1904,9 +1924,9 @@ constraints/integral/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/integral/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/integral/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/integral/presoltiming = 28
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -1936,9 +1956,9 @@ constraints/knapsack/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/knapsack/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/knapsack/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/knapsack/presoltiming = 28
 
 # enable linear upgrading for constraint handler <knapsack>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2032,9 +2052,9 @@ constraints/linking/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linking/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-constraints/linking/presoltiming = 4
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+constraints/linking/presoltiming = 8
 
 # this constraint will not propagate or separate, linear and setppc are used?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2072,9 +2092,9 @@ constraints/logicor/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/logicor/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/logicor/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/logicor/presoltiming = 28
 
 # enable linear upgrading for constraint handler <logicor>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2132,9 +2152,9 @@ constraints/or/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/or/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-constraints/or/presoltiming = 4
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+constraints/or/presoltiming = 8
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -2164,9 +2184,9 @@ constraints/orbitope/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/orbitope/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-constraints/orbitope/presoltiming = 4
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+constraints/orbitope/presoltiming = 8
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -2196,9 +2216,9 @@ constraints/pseudoboolean/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/pseudoboolean/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-constraints/pseudoboolean/presoltiming = 4
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+constraints/pseudoboolean/presoltiming = 8
 
 # decompose all normal pseudo boolean constraint into a "linear" constraint and "and" constraints
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2252,9 +2272,9 @@ constraints/setppc/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/setppc/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/setppc/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/setppc/presoltiming = 28
 
 # enable linear upgrading for constraint handler <setppc>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2320,9 +2340,9 @@ constraints/soc/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/soc/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/soc/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/soc/presoltiming = 28
 
 # enable quadratic upgrading for constraint handler <soc>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2408,9 +2428,9 @@ constraints/SOS1/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/SOS1/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-constraints/SOS1/presoltiming = 4
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+constraints/SOS1/presoltiming = 8
 
 # do not create an adjacency matrix if number of SOS1 variables is larger than predefined value (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 10000]
@@ -2424,9 +2444,13 @@ constraints/SOS1/maxextensions = 1
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/SOS1/maxtightenbds = 5
 
-# if TRUE then update conflict graph during presolving procedure
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/SOS1/updateconflpresol = FALSE
+# if TRUE then perform implication graph analysis (might add additional SOS1 constraints)
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/SOS1/perfimplanalysis = TRUE
+
+# number of recursive calls of implication graph analysis (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/SOS1/depthimplanalysis = -1
 
 # whether to use conflict graph propagation
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2440,17 +2464,9 @@ constraints/SOS1/implprop = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/SOS1/sosconsprop = FALSE
 
-# if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible)
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/SOS1/neighbranch = TRUE
-
-# if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible)
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/SOS1/bipbranch = FALSE
-
-# if TRUE turn SOS1 branching method on
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/SOS1/sos1branch = FALSE
+# which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique) (note: in some cases an automatic switching to SOS1 branching is possible)
+# [type: char, range: {nbs}, default: n]
+constraints/SOS1/branchingrule = n
 
 # if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2480,7 +2496,7 @@ constraints/SOS1/addbdsfeas = 1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/SOS1/addextendedbds = TRUE
 
-# Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?
+# Use SOS1 branching in enforcing (otherwise leave decision to branching rules)? This value can only be set to false if all SOS1 variables are binary
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/SOS1/branchsos = TRUE
 
@@ -2580,9 +2596,9 @@ constraints/SOS2/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/SOS2/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-constraints/SOS2/presoltiming = 2
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+constraints/SOS2/presoltiming = 4
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -2612,9 +2628,9 @@ constraints/superindicator/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/superindicator/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-constraints/superindicator/presoltiming = 4
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+constraints/superindicator/presoltiming = 8
 
 # should type of slack constraint be checked when creating superindicator constraint?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2660,9 +2676,9 @@ constraints/varbound/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/varbound/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 6]
-constraints/varbound/presoltiming = 6
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 12]
+constraints/varbound/presoltiming = 12
 
 # enable linear upgrading for constraint handler <varbound>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2708,9 +2724,9 @@ constraints/xor/delaysepa = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/xor/delayprop = FALSE
 
-# timing mask of the constraint handler's presolving method (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 14]
-constraints/xor/presoltiming = 14
+# timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 28]
+constraints/xor/presoltiming = 28
 
 # enable linear upgrading for constraint handler <xor>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -2828,9 +2844,9 @@ presolving/boundshift/priority = 7900000
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/boundshift/maxrounds = 0
 
-# timing mask of presolver <boundshift> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-presolving/boundshift/timing = 2
+# timing mask of presolver <boundshift> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+presolving/boundshift/timing = 4
 
 # absolute value of maximum shift
 # [type: longint, range: [0,9223372036854775807], default: 9223372036854775807]
@@ -2852,9 +2868,9 @@ presolving/components/priority = -9200000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/components/maxrounds = -1
 
-# timing mask of presolver <components> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/components/timing = 8
+# timing mask of presolver <components> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/components/timing = 16
 
 # should the single components be written as an .cip-file?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2888,9 +2904,9 @@ presolving/convertinttobin/priority = 6000000
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/convertinttobin/maxrounds = 0
 
-# timing mask of presolver <convertinttobin> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-presolving/convertinttobin/timing = 2
+# timing mask of presolver <convertinttobin> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+presolving/convertinttobin/timing = 4
 
 # absolute value of maximum domain size for converting an integer variable to binaries variables
 # [type: longint, range: [0,9223372036854775807], default: 9223372036854775807]
@@ -2912,9 +2928,9 @@ presolving/domcol/priority = -1000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/domcol/maxrounds = -1
 
-# timing mask of presolver <domcol> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/domcol/timing = 8
+# timing mask of presolver <domcol> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/domcol/timing = 16
 
 # minimal number of pair comparisons
 # [type: int, range: [100,1048576], default: 1024]
@@ -2936,9 +2952,9 @@ presolving/implfree/priority = -1000
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/implfree/maxrounds = 0
 
-# timing mask of presolver <implfree> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/implfree/timing = 8
+# timing mask of presolver <implfree> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/implfree/timing = 16
 
 # priority of presolver <dualagg>
 # [type: int, range: [-536870912,536870911], default: -12000]
@@ -2948,9 +2964,21 @@ presolving/dualagg/priority = -12000
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/dualagg/maxrounds = 0
 
-# timing mask of presolver <dualagg> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/dualagg/timing = 8
+# timing mask of presolver <dualagg> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/dualagg/timing = 16
+
+# priority of presolver <dualcomp>
+# [type: int, range: [-536870912,536870911], default: -50]
+presolving/dualcomp/priority = -50
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/dualcomp/maxrounds = -1
+
+# timing mask of presolver <dualcomp> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/dualcomp/timing = 16
 
 # priority of presolver <dualinfer>
 # [type: int, range: [-536870912,536870911], default: -200]
@@ -2960,9 +2988,9 @@ presolving/dualinfer/priority = -200
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/dualinfer/maxrounds = 0
 
-# timing mask of presolver <dualinfer> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/dualinfer/timing = 8
+# timing mask of presolver <dualinfer> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/dualinfer/timing = 16
 
 # priority of presolver <gateextraction>
 # [type: int, range: [-536870912,536870911], default: 1000000]
@@ -2972,9 +3000,9 @@ presolving/gateextraction/priority = 1000000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/gateextraction/maxrounds = -1
 
-# timing mask of presolver <gateextraction> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/gateextraction/timing = 8
+# timing mask of presolver <gateextraction> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/gateextraction/timing = 16
 
 # should we only try to extract set-partitioning constraints and no and-constraints
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2996,9 +3024,9 @@ presolving/implics/priority = -10000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/implics/maxrounds = -1
 
-# timing mask of presolver <implics> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 4]
-presolving/implics/timing = 4
+# timing mask of presolver <implics> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 8]
+presolving/implics/timing = 8
 
 # priority of presolver <inttobinary>
 # [type: int, range: [-536870912,536870911], default: 7000000]
@@ -3008,9 +3036,9 @@ presolving/inttobinary/priority = 7000000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/inttobinary/maxrounds = -1
 
-# timing mask of presolver <inttobinary> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-presolving/inttobinary/timing = 2
+# timing mask of presolver <inttobinary> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+presolving/inttobinary/timing = 4
 
 # priority of presolver <redvub>
 # [type: int, range: [-536870912,536870911], default: -9000000]
@@ -3020,9 +3048,9 @@ presolving/redvub/priority = -9000000
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/redvub/maxrounds = 0
 
-# timing mask of presolver <redvub> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/redvub/timing = 8
+# timing mask of presolver <redvub> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/redvub/timing = 16
 
 # priority of presolver <trivial>
 # [type: int, range: [-536870912,536870911], default: 9000000]
@@ -3032,9 +3060,9 @@ presolving/trivial/priority = 9000000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/trivial/maxrounds = -1
 
-# timing mask of presolver <trivial> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 2]
-presolving/trivial/timing = 2
+# timing mask of presolver <trivial> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 4]
+presolving/trivial/timing = 4
 
 # priority of presolver <tworowbnd>
 # [type: int, range: [-536870912,536870911], default: -500000]
@@ -3044,9 +3072,9 @@ presolving/tworowbnd/priority = -500000
 # [type: int, range: [-1,2147483647], default: 0]
 presolving/tworowbnd/maxrounds = 0
 
-# timing mask of presolver <tworowbnd> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/tworowbnd/timing = 8
+# timing mask of presolver <tworowbnd> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/tworowbnd/timing = 16
 
 # priority of presolver <stuffing>
 # [type: int, range: [-536870912,536870911], default: -100]
@@ -3056,9 +3084,9 @@ presolving/stuffing/priority = -100
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/stuffing/maxrounds = -1
 
-# timing mask of presolver <stuffing> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [2,14], default: 8]
-presolving/stuffing/timing = 8
+# timing mask of presolver <stuffing> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [4,28], default: 16]
+presolving/stuffing/timing = 16
 
 # priority of node selection rule <bfs> in standard mode
 # [type: int, range: [-536870912,536870911], default: 100000]
@@ -3568,6 +3596,10 @@ branching/relpscost/confidencelevel = 2
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/relpscost/randinitorder = FALSE
 
+# should smaller weights be used for pseudo cost updates after hitting the LP iteration limit?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+branching/relpscost/usesmallweightsitlim = FALSE
+
 # start seed for random number generation
 # [type: int, range: [0,2147483647], default: 12345]
 branching/relpscost/startrandseed = 12345
@@ -3884,6 +3916,10 @@ heuristics/crossover/copycuts = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/crossover/permute = FALSE
 
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/crossover/bestsollimit = -1
+
 # priority of heuristic <dins>
 # [type: int, range: [-536870912,536870911], default: -1105000]
 heuristics/dins/priority = -1105000
@@ -3947,6 +3983,10 @@ heuristics/dins/uselprows = FALSE
 # if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/dins/copycuts = TRUE
+
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: 3]
+heuristics/dins/bestsollimit = 3
 
 # priority of heuristic <distributiondiving>
 # [type: int, range: [-536870912,536870911], default: -1003300]
@@ -4584,6 +4624,10 @@ heuristics/localbranching/uselprows = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/localbranching/copycuts = TRUE
 
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: 3]
+heuristics/localbranching/bestsollimit = 3
+
 # priority of heuristic <nlpdiving>
 # [type: int, range: [-536870912,536870911], default: -1003000]
 heuristics/nlpdiving/priority = -1003000
@@ -4727,6 +4771,10 @@ heuristics/mutation/uselprows = FALSE
 # if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/mutation/copycuts = TRUE
+
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/mutation/bestsollimit = -1
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1004000]
@@ -5147,6 +5195,10 @@ heuristics/rens/addallsols = FALSE
 # should the RENS sub-CIP be solved with cuts, conflicts, strong branching,... This is only for tesing and not recommended!
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/rens/fullscale = FALSE
+
+# limit on number of improving incumbent solutions in sub-CIP
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rens/bestsollimit = -1
 
 # priority of heuristic <reoptsols>
 # [type: int, range: [-536870912,536870911], default: 40000]
@@ -5868,9 +5920,9 @@ propagating/dualfix/presolpriority = 8000000
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/dualfix/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <dualfix> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 2]
-propagating/dualfix/presoltiming = 2
+# timing mask of the presolving method of propagator <dualfix> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 4]
+propagating/dualfix/presoltiming = 4
 
 # priority of propagator <genvbounds>
 # [type: int, range: [-536870912,536870911], default: 3000000]
@@ -5896,9 +5948,9 @@ propagating/genvbounds/presolpriority = -2000000
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/genvbounds/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <genvbounds> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 2]
-propagating/genvbounds/presoltiming = 2
+# timing mask of the presolving method of propagator <genvbounds> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 4]
+propagating/genvbounds/presoltiming = 4
 
 # apply global propagation?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -5940,9 +5992,9 @@ propagating/obbt/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/obbt/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <obbt> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 14]
-propagating/obbt/presoltiming = 14
+# timing mask of the presolving method of propagator <obbt> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 28]
+propagating/obbt/presoltiming = 28
 
 # should obbt try to provide genvbounds if possible?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -6048,9 +6100,9 @@ propagating/probing/presolpriority = -100000
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/probing/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <probing> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 8]
-propagating/probing/presoltiming = 8
+# timing mask of the presolving method of propagator <probing> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 16]
+propagating/probing/presoltiming = 16
 
 # maximal number of runs, probing participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -6104,19 +6156,19 @@ propagating/pseudoobj/presolpriority = 6000000
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/pseudoobj/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <pseudoobj> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 2]
-propagating/pseudoobj/presoltiming = 2
+# timing mask of the presolving method of propagator <pseudoobj> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 4]
+propagating/pseudoobj/presoltiming = 4
 
-# minimal number of successive none binary variable propagator whithout a bound reduction before aborted
+# minimal number of successive nonbinary variable propagator whithout a bound reduction before aborted
 # [type: int, range: [0,2147483647], default: 100]
 propagating/pseudoobj/minuseless = 100
 
-# maximal fraction of none binary variables with non-zero objective without a bound reduction before aborted
+# maximal fraction of nonbinary variables with non-zero objective without a bound reduction before aborted
 # [type: real, range: [0,1], default: 0.1]
 propagating/pseudoobj/maxvarsfrac = 0.1
 
-# do we want to propagate all none binary variables if we are propagating the root node
+# do we want to propagate all nonbinary variables if we are propagating the root node
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/propfullinroot = TRUE
 
@@ -6124,7 +6176,7 @@ propagating/pseudoobj/propfullinroot = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/propcutoffbound = TRUE
 
-# should the propagator be forced even active pricer are present?
+# should the propagator be forced even if active pricer are present?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/pseudoobj/force = FALSE
 
@@ -6168,9 +6220,9 @@ propagating/redcost/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/redcost/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <redcost> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 14]
-propagating/redcost/presoltiming = 14
+# timing mask of the presolving method of propagator <redcost> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 28]
+propagating/redcost/presoltiming = 28
 
 # should reduced cost fixing be also applied to continuous variables?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -6179,6 +6231,10 @@ propagating/redcost/continuous = FALSE
 # should implications be used to strength the reduced cost for binary variables?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/redcost/useimplics = TRUE
+
+# should the propagator be forced even if active pricer are present?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/redcost/force = FALSE
 
 # priority of propagator <rootredcost>
 # [type: int, range: [-536870912,536870911], default: 10000000]
@@ -6204,9 +6260,17 @@ propagating/rootredcost/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/rootredcost/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <rootredcost> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 14]
-propagating/rootredcost/presoltiming = 14
+# timing mask of the presolving method of propagator <rootredcost> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 28]
+propagating/rootredcost/presoltiming = 28
+
+# should only binary variables be propagated?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/rootredcost/onlybinary = FALSE
+
+# should the propagator be forced even if active pricer are present?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/rootredcost/force = FALSE
 
 # priority of propagator <vbounds>
 # [type: int, range: [-536870912,536870911], default: 3000000]
@@ -6232,9 +6296,9 @@ propagating/vbounds/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/vbounds/maxprerounds = -1
 
-# timing mask of the presolving method of propagator <vbounds> (2:FAST, 4:MEDIUM, 8:EXHAUSTIVE)
-# [type: int, range: [0,14], default: 14]
-propagating/vbounds/presoltiming = 14
+# timing mask of the presolving method of propagator <vbounds> (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE)
+# [type: int, range: [2,28], default: 28]
+propagating/vbounds/presoltiming = 28
 
 # should bound widening be used to initialize conflict analysis?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -6711,6 +6775,10 @@ separating/disjunctive/maxbounddist = 0
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/disjunctive/delay = TRUE
+
+# strengthen cut if integer variables are present.
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/disjunctive/strengthen = TRUE
 
 # node depth of separating bipartite disjunctive cuts (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,7 +43,7 @@
                                              *   associated as pair by heuristic */
 #define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
 #define DEFAULT_ARRAYSIZE                10 /**< the default array size for temporary arrays */
-
+#define DEFAULT_RANDSEED                 37 /**< initial random seed */
 
 /*
  * Data structures
@@ -844,7 +844,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nbinblocks = 0;
    heurdata->nintblocks = 0;
 
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */
@@ -1600,9 +1600,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
        * try if new working solution is feasible in original problem */
       SCIP_Bool success;
 #ifndef NDEBUG
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
       if( success )
@@ -1700,9 +1700,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
          /* check solution for feasibility */
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
          if( success )
