@@ -19,6 +19,7 @@
  */
 
 #include "scip/random.h"
+#include "blockmemshell/memory.h"
 
 
 #define DEFAULT_XOR  362436000;
