@@ -115,6 +115,7 @@ SCIP_DECL_SORTINDCOMP(branchCandFractionalityComparator)
    SCIP_Real* valuesptr = (SCIP_Real*)dataptr;
    SCIP_Real value1;
    SCIP_Real value2;
+   int result;
 
    assert(valuesptr != NULL);
 
@@ -122,7 +123,20 @@ SCIP_DECL_SORTINDCOMP(branchCandFractionalityComparator)
    value2 = valuesptr[ind2];
 
    /* TODO: implement real fractionality comp */
-   return value2 - value1;/*SCIPvarCompare(valuesptr[ind1], valuesptr[ind2]);*/
+   if( value1 > value2 )
+   {
+      result = -1;
+   }
+   else if( value1 < value2 )
+   {
+      result = 1;
+   }
+   else
+   {
+      result = 0;
+   }
+   SCIPdebugMessage("Comparison result for <%g> and <%g> is <%i>\n", value1, value2, result);
+   return result;/*SCIPvarCompare(valuesptr[ind1], valuesptr[ind2]);*/
 }
 
 
@@ -145,6 +159,14 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &sortedindices, nlpcands) );
 
+   for( i = 0; i < nlpcands; i++ )
+   {
+      SCIP_VAR* sortedvar = lpcands[i];
+      SCIP_Real sortedval = lpcandssol[i];
+
+      SCIPdebugMessage("PreSort: Index: <%i>, Var: <%s>, Val: <%g>\n", i, SCIPvarGetName(sortedvar), sortedval);
+   }
+
    SCIPsort(sortedindices, branchCandFractionalityComparator, (void*)lpcandssol, nlpcands);
 
    for( i = 0; i < nlpcands; i++ )
@@ -153,7 +175,7 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
       SCIP_VAR* sortedvar = lpcands[sortedindex];
       SCIP_Real sortedval = lpcandssol[sortedindex];
 
-      SCIPdebugMessage("Index: <%i>, VarIndex: <%i>, Var: <%s>, Val: <%g>\n", i, sortedindex, SCIPvarGetName(sortedvar), sortedval);
+      SCIPdebugMessage("PostSort: Index: <%i>, VarIndex: <%i>, Var: <%s>, Val: <%g>\n", i, sortedindex, SCIPvarGetName(sortedvar), sortedval);
    }
 
    SCIPfreeBufferArray(scip, &sortedindices);
