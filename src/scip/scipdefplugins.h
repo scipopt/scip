@@ -126,7 +126,6 @@
 #include "scip/nodesel_uct.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_boundshift.h"
-#include "scip/presol_components.h"
 #include "scip/presol_convertinttobin.h"
 #include "scip/presol_domcol.h"
 #include "scip/presol_implfree.h"
