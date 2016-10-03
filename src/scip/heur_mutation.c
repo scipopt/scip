@@ -26,7 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_mutation.h"
-#include "scip/pub_misc.h"
+#include "scip/random.h"
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
@@ -67,7 +67,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Mutation should at least improve the incumbent      */
    SCIP_Longint          usednodes;          /**< nodes already used by Mutation in earlier calls                     */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
-   unsigned int          randseed;           /**< seed value for random number generator                              */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator                              */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
@@ -89,7 +89,7 @@ SCIP_RETCODE determineVariableFixings(
    SCIP_Real*            fixedvals,          /**< array to store the fixing values to fix variables in the subproblem */
    int*                  nfixedvars,         /**< pointer to store the number of variables that should be fixed */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   unsigned int*         randseed,           /**< a seed value for the random number generator                  */
+   SCIP_RANDGEN*         randnumgen,         /**< random number generator                                       */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked   */
    )
 {
@@ -126,7 +126,7 @@ SCIP_RETCODE determineVariableFixings(
    BMScopyMemoryArray(fixedvars, vars, ndiscretevars);
 
    /* shuffle the array randomly */
-   SCIPpermuteArray((void **)fixedvars, 0, nbinvars + nintvars, randseed);
+   SCIPrandomPermuteArray(randnumgen, (void **)fixedvars, 0, nbinvars + nintvars);
 
    *success = TRUE;
    /* store the fixing values for the subset of variables that should be fixed */
@@ -262,7 +262,10 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->randnumgen) );
+   SCIPrandomInit(heurdata->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
 
    return SCIP_OKAY;
 }
@@ -353,7 +356,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
 
    /* determine variables that should be fixed in the mutation subproblem */
-   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, &heurdata->randseed, &success) );
+   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, heurdata->randnumgen, &success) );
 
    /* terminate if it was not possible to create the subproblem */
    if( !success )
