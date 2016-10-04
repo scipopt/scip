@@ -20584,8 +20584,8 @@ SCIP_RETCODE SCIPtightenVarLb(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   /* ignore tightenings of lower bounds to +infinity */
-   if( SCIPisInfinity(scip, newbound) )
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
@@ -20700,8 +20700,8 @@ SCIP_RETCODE SCIPtightenVarUb(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   /* ignore tightenings of upper bounds to -infinity */
-   if( SCIPisInfinity(scip, -newbound) )
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
@@ -20880,8 +20880,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   /* ignore tightenings of lower bounds to +infinity */
-   if( SCIPisInfinity(scip, newbound) )
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound)  && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
@@ -20993,8 +20993,8 @@ SCIP_RETCODE SCIPinferVarUbCons(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   /* ignore tightenings of upper bounds to -infinity */
-   if( SCIPisInfinity(scip, -newbound) )
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
@@ -21579,8 +21579,8 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   /* ignore tightenings of lower bounds to +infinity */
-   if( SCIPisInfinity(scip, newbound) )
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
@@ -21699,8 +21699,8 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   /* ignore tightenings of upper bounds to -infinity */
-   if( SCIPisInfinity(scip, -newbound) )
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
