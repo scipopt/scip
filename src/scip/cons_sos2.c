@@ -140,7 +140,7 @@ SCIP_RETCODE fixVariableZeroNode(
 
       if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIPdebugMessage("creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
          /* we have to insert a local constraint var = 0 */
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &var, &val, 0.0, 0.0, TRUE, TRUE, TRUE, TRUE, TRUE,
                TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -539,12 +539,12 @@ SCIP_RETCODE presolRoundSOS2(
    *cutoff = FALSE;
    *success = FALSE;
 
-   SCIPdebugMessage("Presolving SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
+   SCIPdebugMsg(scip, "Presolving SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
    /* if the number of variables is at most 2 */
    if( consdata->nvars <= 2 )
    {
-      SCIPdebugMessage("Deleting constraint with <= 2 variables.\n");
+      SCIPdebugMsg(scip, "Deleting constraint with <= 2 variables.\n");
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -583,7 +583,7 @@ SCIP_RETCODE presolRoundSOS2(
       /* if constant is zero and we get a different variable, substitute variable */
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
-         SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
@@ -606,7 +606,7 @@ SCIP_RETCODE presolRoundSOS2(
          /* two variables certain to be nonzero which are not next to each other, so we are infeasible */
          if( lastFixedNonzero != -1 && lastFixedNonzero != j + 1 )
          {
-            SCIPdebugMessage("The problem is infeasible: two non-consecutive variables have bounds that keep them from being 0.\n");
+            SCIPdebugMsg(scip, "The problem is infeasible: two non-consecutive variables have bounds that keep them from being 0.\n");
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -614,7 +614,7 @@ SCIP_RETCODE presolRoundSOS2(
          /* if more than two variables are fixed to be nonzero, we are infeasible */
          if( nfixednonzeros > 2 )
          {
-            SCIPdebugMessage("The problem is infeasible: more than two variables have bounds that keep them from being 0.\n");
+            SCIPdebugMsg(scip, "The problem is infeasible: more than two variables have bounds that keep them from being 0.\n");
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -631,7 +631,7 @@ SCIP_RETCODE presolRoundSOS2(
          {
             ++(*nremovedvars);
 
-            SCIPdebugMessage("deleting variable <%s> fixed to 0.\n", SCIPvarGetName(vars[j]));
+            SCIPdebugMsg(scip, "deleting variable <%s> fixed to 0.\n", SCIPvarGetName(vars[j]));
             SCIP_CALL( deleteVarSOS2(scip, cons, consdata, eventhdlr, j) );
 
             *success = TRUE;
@@ -657,7 +657,7 @@ SCIP_RETCODE presolRoundSOS2(
          /* the variables should all be fixed to zero */
          assert(SCIPisFeasZero(scip, SCIPvarGetLbGlobal(vars[j])) && SCIPisFeasZero(scip, SCIPvarGetUbGlobal(vars[j])));
 
-         SCIPdebugMessage("deleting variable <%s> fixed to 0.\n", SCIPvarGetName(vars[j]));
+         SCIPdebugMsg(scip, "deleting variable <%s> fixed to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( deleteVarSOS2(scip, cons, consdata, eventhdlr, j) );
       }
       localnremovedvars += (lastzero + 1);
@@ -680,7 +680,7 @@ SCIP_RETCODE presolRoundSOS2(
    /* if the number of variables is at most 2 */
    if( consdata->nvars <= 2 )
    {
-      SCIPdebugMessage("Deleting constraint with <= 2 variables.\n");
+      SCIPdebugMsg(scip, "Deleting constraint with <= 2 variables.\n");
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -703,7 +703,7 @@ SCIP_RETCODE presolRoundSOS2(
       /* fix all other variables with distance two to zero */
       for( j = 0; j < lastFixedNonzero - 1; ++j )
       {
-         SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
+         SCIPdebugMsg(scip, "fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
 
          if( infeasible )
@@ -717,7 +717,7 @@ SCIP_RETCODE presolRoundSOS2(
       }
       for( j = lastFixedNonzero + 2; j < consdata->nvars; ++j )
       {
-         SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
+         SCIPdebugMsg(scip, "fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
 
          if( infeasible )
@@ -746,7 +746,7 @@ SCIP_RETCODE presolRoundSOS2(
       /* fix all variables before lastFixedNonzero to zero */
       for( j = 0; j < lastFixedNonzero - 1; ++j )
       {
-         SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
+         SCIPdebugMsg(scip, "fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
 
          if( infeasible )
@@ -760,7 +760,7 @@ SCIP_RETCODE presolRoundSOS2(
       /* fix all variables after lastFixedNonzero + 1 to zero */
       for( j = lastFixedNonzero + 1; j < consdata->nvars; ++j )
       {
-         SCIPdebugMessage("fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
+         SCIPdebugMsg(scip, "fixing variable <%s> to 0.\n", SCIPvarGetName(vars[j]));
          SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
 
          if( infeasible )
@@ -807,7 +807,7 @@ SCIP_RETCODE propSOS2(
    /* if more than two variables are fixed to be nonzero */
    if ( consdata->nfixednonzeros > 2 )
    {
-      SCIPdebugMessage("the node is infeasible, more than 2 variables are fixed to be nonzero.\n");
+      SCIPdebugMsg(scip, "the node is infeasible, more than 2 variables are fixed to be nonzero.\n");
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
       return SCIP_OKAY;
@@ -840,7 +840,7 @@ SCIP_RETCODE propSOS2(
       }
       assert( firstFixedNonzero >= 0 );
 
-      SCIPdebugMessage("variable <%s> is nonzero, fixing variables with distance at least 2 to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
+      SCIPdebugMsg(scip, "variable <%s> is nonzero, fixing variables with distance at least 2 to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
 
       /* fix variables before firstFixedNonzero-1 to 0 */
       for (j = 0; j < firstFixedNonzero-1; ++j)
@@ -863,7 +863,7 @@ SCIP_RETCODE propSOS2(
          if ( infeasible )
          {
             assert( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j])) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j])) );
-            SCIPdebugMessage("the node is infeasible: variable <%s> is fixed nonzero and variable <%s> with distance at least 2 as well.\n",
+            SCIPdebugMsg(scip, "the node is infeasible: variable <%s> is fixed nonzero and variable <%s> with distance at least 2 as well.\n",
                SCIPvarGetName(vars[firstFixedNonzero]), SCIPvarGetName(vars[j]));
             *cutoff = TRUE;
             return SCIP_OKAY;
@@ -902,7 +902,7 @@ SCIP_RETCODE propSOS2(
       }
       assert( 0 <= firstFixedNonzero && firstFixedNonzero < nvars-1 );
 
-      SCIPdebugMessage("variable <%s> is fixed to be nonzero, fixing variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
+      SCIPdebugMsg(scip, "variable <%s> is fixed to be nonzero, fixing variables to 0.\n", SCIPvarGetName(vars[firstFixedNonzero]));
 
       /* fix variables before firstFixedNonzero to 0 */
       allVarFixed = TRUE;
@@ -926,7 +926,7 @@ SCIP_RETCODE propSOS2(
          if ( infeasible )
          {
             assert( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j])) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j])) );
-            SCIPdebugMessage("the node is infeasible: variable <%s> is fixed nonzero and variable <%s> with distance at least 2 as well.\n",
+            SCIPdebugMsg(scip, "the node is infeasible: variable <%s> is fixed nonzero and variable <%s> with distance at least 2 as well.\n",
                SCIPvarGetName(vars[firstFixedNonzero]), SCIPvarGetName(vars[j]));
             *cutoff = TRUE;
             return SCIP_OKAY;
@@ -940,7 +940,7 @@ SCIP_RETCODE propSOS2(
       /* delete constraint locally, since the nonzero positions are fixed */
       if ( allVarFixed )
       {
-         SCIPdebugMessage("locally deleting constraint <%s>.\n", SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "locally deleting constraint <%s>.\n", SCIPconsGetName(cons));
          assert( !SCIPconsIsModifiable(cons) );
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       }
@@ -1013,7 +1013,7 @@ SCIP_RETCODE enforceSOS2(
    maxNonzeros = 0;
    maxInd = -1;
 
-   SCIPdebugMessage("Enforcing SOS2 constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
+   SCIPdebugMsg(scip, "Enforcing SOS2 constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
    *result = SCIP_FEASIBLE;
 
    /* check each constraint */
@@ -1046,7 +1046,7 @@ SCIP_RETCODE enforceSOS2(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propSOS2(scip, cons, consdata, &cutoff, &ngen) );
-      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
+      SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -1110,7 +1110,7 @@ SCIP_RETCODE enforceSOS2(
    /* if all constraints are feasible */
    if ( branchCons == NULL )
    {
-      SCIPdebugMessage("All SOS2 constraints are feasible.\n");
+      SCIPdebugMsg(scip, "All SOS2 constraints are feasible.\n");
       return SCIP_OKAY;
    }
 
@@ -1123,7 +1123,7 @@ SCIP_RETCODE enforceSOS2(
    assert( 0 < maxInd && maxInd < nvars-1 );
 
    /* branch on variable ind: either all variables before ind or all variables after ind are zero */
-   SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(vars[maxInd]),
+   SCIPdebugMsg(scip, "Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(vars[maxInd]),
       SCIPconsGetName(branchCons), maxNonzeros);
 
    /* calculate node selection and objective estimate for node 1 */
@@ -1339,7 +1339,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS2)
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
-      SCIPdebugMessage("Exiting SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMsg(scip, "Exiting SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* free row */
       if ( consdata->row != NULL )
@@ -1361,7 +1361,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
    assert( consdata != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
-   SCIPdebugMessage("Deleting SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
+   SCIPdebugMsg(scip, "Deleting SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
    /* drop events on transformed variables */
    if ( SCIPconsIsTransformed(cons) )
@@ -1421,7 +1421,7 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->eventhdlr != NULL );
 
-   SCIPdebugMessage("Transforming SOS2 constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
+   SCIPdebugMsg(scip, "Transforming SOS2 constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -1475,7 +1475,7 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
 #ifdef SCIP_DEBUG
    if ( consdata->nfixednonzeros > 0 )
    {
-      SCIPdebugMessage("constraint <%s> has %d variables fixed to be nonzero.\n", SCIPconsGetName(*targetcons), consdata->nfixednonzeros );
+      SCIPdebugMsg(scip, "constraint <%s> has %d variables fixed to be nonzero.\n", SCIPconsGetName(*targetcons), consdata->nfixednonzeros );
    }
 #endif
 
@@ -1547,7 +1547,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMessage("presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
+   SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
       *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss);
 
    return SCIP_OKAY;
@@ -1576,7 +1576,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
-      SCIPdebugMessage("Checking for initial rows for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMsg(scip, "Checking for initial rows for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* possibly generate row if not yet done */
       if ( consdata->row == NULL )
@@ -1624,7 +1624,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-      SCIPdebugMessage("Separating inequalities for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMsg(scip, "Separating inequalities for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* put corresponding rows into LP if they are useful */
       row = consdata->row;
@@ -1644,7 +1644,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
          ++ngen;
       }
    }
-   SCIPdebugMessage("Separated %d SOS2 constraints.\n", ngen);
+   SCIPdebugMsg(scip, "Separated %d SOS2 constraints.\n", ngen);
    if ( cutoff )
       *result = SCIP_CUTOFF;
    else if ( ngen > 0 )
@@ -1680,7 +1680,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-      SCIPdebugMessage("Separating solution for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMsg(scip, "Separating solution for SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* put corresponding row into LP if it is useful */
       row = consdata->row;
@@ -1700,7 +1700,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
          ++ngen;
       }
    }
-   SCIPdebugMessage("Separated %d SOS2 constraints.\n", ngen);
+   SCIPdebugMsg(scip, "Separated %d SOS2 constraints.\n", ngen);
    if ( cutoff )
       *result = SCIP_CUTOFF;
    else if ( ngen > 0 )
@@ -1772,7 +1772,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-      SCIPdebugMessage("Checking SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Checking SOS2 constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       /* check all variables */
       for (j = 0; j < consdata->nvars; ++j)
@@ -1801,7 +1801,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                         SCIPgetSolVal(scip, sol, consdata->vars[j]));
                   }
 
-                  SCIPdebugMessage("SOS2 constraint <%s> infeasible.\n", SCIPconsGetName(conss[c]));
+                  SCIPdebugMsg(scip, "SOS2 constraint <%s> infeasible.\n", SCIPconsGetName(conss[c]));
                }
             }
          }
@@ -1839,7 +1839,7 @@ SCIP_DECL_CONSPROP(consPropSOS2)
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
-      SCIPdebugMessage("Propagating SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
+      SCIPdebugMsg(scip, "Propagating SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( propSOS2(scip, cons, consdata, &cutoff, &ngen) );
@@ -1849,7 +1849,7 @@ SCIP_DECL_CONSPROP(consPropSOS2)
          return SCIP_OKAY;
       }
    }
-   SCIPdebugMessage("Propagated %d domains.\n", ngen);
+   SCIPdebugMsg(scip, "Propagated %d domains.\n", ngen);
    if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
@@ -1876,7 +1876,7 @@ SCIP_DECL_CONSRESPROP(consRespropSOS2)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTFIND;
-   SCIPdebugMessage("Propagation resolution method of SOS2 constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Propagation resolution method of SOS2 constraint <%s>.\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -1929,7 +1929,7 @@ SCIP_DECL_CONSLOCK(consLockSOS2)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   SCIPdebugMessage("Locking constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Locking constraint <%s>.\n", SCIPconsGetName(cons));
 
    vars = consdata->vars;
    nvars = consdata->nvars;
@@ -2008,7 +2008,7 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    else
       consname = SCIPconsGetName(sourcecons);
 
-   SCIPdebugMessage("Copying SOS2 constraint <%s> ...\n", consname);
+   SCIPdebugMsg(scip, "Copying SOS2 constraint <%s> ...\n", consname);
 
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert( sourceconsdata != NULL );
@@ -2200,7 +2200,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
    }
    assert( 0 <= consdata->nfixednonzeros && consdata->nfixednonzeros <= consdata->nvars );
 
-   SCIPdebugMessage("changed bound of variable <%s> from %f to %f (nfixednonzeros: %d).\n", SCIPvarGetName(SCIPeventGetVar(event)),
+   SCIPdebugMsg(scip, "changed bound of variable <%s> from %f to %f (nfixednonzeros: %d).\n", SCIPvarGetName(SCIPeventGetVar(event)),
       oldbound, newbound, consdata->nfixednonzeros);
 
    return SCIP_OKAY;
@@ -2374,7 +2374,7 @@ SCIP_RETCODE SCIPaddVarSOS2(
    assert( var != NULL );
    assert( cons != NULL );
 
-   SCIPdebugMessage("adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
+   SCIPdebugMsg(scip, "adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -2399,7 +2399,7 @@ SCIP_RETCODE SCIPappendVarSOS2(
    assert( var != NULL );
    assert( cons != NULL );
 
-   SCIPdebugMessage("appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
 
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

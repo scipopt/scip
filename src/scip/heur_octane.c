@@ -914,7 +914,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    *result = SCIP_DIDNOTFIND;
 
    /* starting OCTANE */
-   SCIPdebugMessage("run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
+   SCIPdebugMsg(scip, "run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
       usefracspace ? "fractional" : "all", nsubspacevars, f_max, (heurdata->lastrule+1)%5);
 
    /* generate starting point in original coordinates */

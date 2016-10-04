@@ -632,7 +632,7 @@ SCIP_RETCODE SCIPheurCopyInclude(
 
    if( heur->heurcopy != NULL )
    {
-      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
       SCIP_CALL( heur->heurcopy(set->scip, heur) );
    }
 
@@ -998,7 +998,7 @@ SCIP_RETCODE SCIPheurExec(
       SCIP_Longint oldnsolsfound;
       SCIP_Longint oldnbestsolsfound;
 
-      SCIPdebugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
+      SCIPsetDebugMsg(set, "executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
       oldnsolsfound = primal->nsolsfound;
       oldnbestsolsfound = primal->nbestsolsfound;
@@ -1039,7 +1039,7 @@ SCIP_RETCODE SCIPheurExec(
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
+      SCIPsetDebugMsg(set, "delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
          heur->name, depth, *ndelayedheurs, heur->delaypos >= 0 ? "" : " not", heur->delaypos);
 
       /* mark the heuristic delayed */

@@ -413,7 +413,7 @@ SCIP_Bool getNextLine(
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !fzninput->endline && fzninput->comment )
    {
-      SCIPdebugMessage("Throwing rest of comment away.\n");
+      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
 
       do
       {
@@ -457,12 +457,12 @@ SCIP_Bool getNextLine(
          SCIPwarningMessage(scip, "we read %d characters from the file; this might indicate a corrupted input file!\n",
             FZN_BUFFERLEN - 2);
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-         SCIPdebugMessage("the buffer might be corrupted\n");
+         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
       }
       else
       {
          SCIPfseek(fzninput->file, -(long) strlen(last), SEEK_CUR);
-         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last));
+         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last));
          *last = '\0';
       }
    }
@@ -512,7 +512,7 @@ SCIP_Bool getNextToken(
    /* if the current line got marked as comment get the next line */
    if( fzninput->comment && !getNextLine(scip, fzninput) )
    {
-      SCIPdebugMessage("(line %d) end of file\n", fzninput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) end of file\n", fzninput->linenumber);
       return FALSE;
    }
 
@@ -521,7 +521,7 @@ SCIP_Bool getNextToken(
    {
       SCIPswapPointers((void**)&fzninput->token, (void**)&fzninput->pushedtokens[fzninput->npushedtokens-1]);
       fzninput->npushedtokens--;
-      SCIPdebugMessage("(line %d) read token again: '%s'\n", fzninput->linenumber, fzninput->token);
+      SCIPdebugMsg(scip, "(line %d) read token again: '%s'\n", fzninput->linenumber, fzninput->token);
       return TRUE;
    }
 
@@ -533,7 +533,7 @@ SCIP_Bool getNextToken(
       {
          if( !getNextLine(scip, fzninput) )
          {
-            SCIPdebugMessage("(line %d) end of file\n", fzninput->linenumber);
+            SCIPdebugMsg(scip, "(line %d) end of file\n", fzninput->linenumber);
             return FALSE;
          }
          assert(fzninput->bufpos == 0);
@@ -608,7 +608,7 @@ SCIP_Bool getNextToken(
    assert(tokenlen < FZN_BUFFERLEN);
    fzninput->token[tokenlen] = '\0';
 
-   SCIPdebugMessage("(line %d) read token: '%s'\n", fzninput->linenumber, fzninput->token);
+   SCIPdebugMsg(scip, "(line %d) read token: '%s'\n", fzninput->linenumber, fzninput->token);
 
    return TRUE;
 }
@@ -965,7 +965,7 @@ SCIP_RETCODE createConstarray(
    FZNNUMBERTYPE         type                /**< constant type */
    )
 {
-   SCIPdebugMessage("create constant array <%s>\n", name);
+   SCIPdebugMsg(scip, "create constant array <%s>\n", name);
 
    /* allocate memory for the new constarray struct */
    SCIP_CALL( SCIPallocMemory(scip, constarray) );
@@ -989,7 +989,7 @@ void freeConstarray(
    CONSTARRAY**          constarray          /**< pointer to constant array */
    )
 {
-   SCIPdebugMessage("free constant array <%s>\n", (*constarray)->name);
+   SCIPdebugMsg(scip, "free constant array <%s>\n", (*constarray)->name);
 
    /* free variable pointers */
    SCIPfreeMemoryArray(scip, &(*constarray)->constants);
@@ -1339,7 +1339,7 @@ void flattenAssignment(
    assert(scip != NULL);
    assert(fzninput != NULL);
 
-   SCIPdebugMessage("parse assignment expression\n");
+   SCIPdebugMsg(scip, "parse assignment expression\n");
 
    if( !getNextToken(scip, fzninput) || isEndStatement(fzninput) )
    {
@@ -1400,7 +1400,7 @@ void computeLinearConsSides(
    SCIP_Real*            rhs                 /**< pointer to right hand side */
    )
 {
-   SCIPdebugMessage("check relation <%s>\n", name);
+   SCIPdebugMsg(scip, "check relation <%s>\n", name);
 
    /* compute left and right hand side of the linear constraint */
    if( equalTokens(scip, name, "eq") )
@@ -1429,7 +1429,7 @@ void computeLinearConsSides(
    else
       syntaxError(scip, fzninput, "unknown relation in constraint identifier name");
 
-   SCIPdebugMessage("lhs = %g, rhs = %g\n", *lhs, *rhs);
+   SCIPdebugMsg(scip, "lhs = %g, rhs = %g\n", *lhs, *rhs);
 }
 
 /** parse a list of elements which is separates by a comma */
@@ -1475,7 +1475,7 @@ SCIP_RETCODE parseList(
    }
    else
    {
-      SCIPdebugMessage("list is empty\n");
+      SCIPdebugMsg(scip, "list is empty\n");
    }
 
 
@@ -1694,7 +1694,7 @@ void parseType(
       parseRange(scip, fzninput, type, lb, ub);
    }
 
-   SCIPdebugMessage("range =  [%g,%g]\n", *lb, *ub);
+   SCIPdebugMsg(scip, "range =  [%g,%g]\n", *lb, *ub);
 
    assert(*lb <= *ub);
 }
@@ -1973,7 +1973,7 @@ SCIP_RETCODE createVariable(
    SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, !(fzninput->dynamiccols), fzninput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, varcopy) );
 
-   SCIPdebugMessage("created variable\n");
+   SCIPdebugMsg(scip, "created variable\n");
    SCIPdebug( SCIP_CALL( SCIPprintVar(scip, varcopy, NULL) ) );
 
    /* variable name should not exist before */
@@ -2153,7 +2153,7 @@ SCIP_RETCODE parseArray(
    isvararray = FALSE;
    nelements = -1;
 
-   SCIPdebugMessage("parse array expression\n");
+   SCIPdebugMsg(scip, "parse array expression\n");
 
    /* parse array dimension */
    parseArrayDimension(scip, fzninput, &nelements);
@@ -2175,7 +2175,7 @@ SCIP_RETCODE parseArray(
    if( hasError(fzninput) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("found <%s> array named <%s> of type <%s> and size <%d> with bounds [%g,%g] (output %u)\n",
+   SCIPdebugMsg(scip, "found <%s> array named <%s> of type <%s> and size <%d> with bounds [%g,%g] (output %u)\n",
       isvararray ? "variable" : "constant", name,
       type == FZN_BOOL ? "bool" : type == FZN_INT ? "integer" : "float", nelements, lb, ub, output);
 
@@ -2208,7 +2208,7 @@ SCIP_RETCODE parseVariable(
    assert(scip != NULL);
    assert(fzninput != NULL);
 
-   SCIPdebugMessage("parse variable expression\n");
+   SCIPdebugMsg(scip, "parse variable expression\n");
 
    /* pares variable type and range */
    parseType(scip, fzninput, &type, &lb, &ub);
@@ -2269,7 +2269,7 @@ SCIP_RETCODE parseConstant(
    assert(fzninput != NULL);
    assert(type == FZN_INT || type == FZN_FLOAT || type == FZN_BOOL);
 
-   SCIPdebugMessage("parse constant expression\n");
+   SCIPdebugMsg(scip, "parse constant expression\n");
 
    /* parse name of the constant */
    SCIP_CALL( parseName(scip, fzninput, name, NULL, NULL) );
@@ -3029,7 +3029,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, 1) );
       nelements = 0;
 
-      SCIPdebugMessage("found and constraint <%s>\n", fname);
+      SCIPdebugMsg(scip, "found and constraint <%s>\n", fname);
 
       /* parse operand variable array */
       SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
@@ -3173,7 +3173,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
 
-      SCIPdebugMessage("found linear constraint <%s>\n", fname);
+      SCIPdebugMsg(scip, "found linear constraint <%s>\n", fname);
 
       /* pares coefficients array */
       SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );
@@ -3271,7 +3271,7 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    nvars = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
 
-   SCIPdebugMessage("parse alldifferent expression\n");
+   SCIPdebugMsg(scip, "parse alldifferent expression\n");
 
    /* pares variable array */
    SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
@@ -3326,7 +3326,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    ndurations = 0;
    ndemads = 0;
 
-   SCIPdebugMessage("parse cumulative expression\n");
+   SCIPdebugMsg(scip, "parse cumulative expression\n");
 
    /* pares start time variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
@@ -3443,7 +3443,7 @@ SCIP_RETCODE parseConstraint(
    assert(scip != NULL);
    assert(fzninput != NULL);
 
-   SCIPdebugMessage("parse constraint expression\n");
+   SCIPdebugMsg(scip, "parse constraint expression\n");
 
    /* get next token already flatten */
    flattenAssignment(scip, fzninput, name);
@@ -3494,9 +3494,9 @@ SCIP_RETCODE parseConstraint(
    assert(token == NULL || tokens[0] != NULL); /*lint !e771*/
    for( i = 0; i < ntokens; ++i )
    {
-      SCIPdebugPrintf("%s ", tokens[i]);
+      SCIPdebugMsgPrint(scip, "%s ", tokens[i]);
    }
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    created = FALSE;
 
@@ -3536,7 +3536,7 @@ SCIP_RETCODE parseSolveItem(
    assert(scip != NULL);
    assert(fzninput != NULL);
 
-   SCIPdebugMessage("parse solve item expression\n");
+   SCIPdebugMsg(scip, "parse solve item expression\n");
 
    if( !getNextToken(scip, fzninput) )
    {
@@ -3560,7 +3560,7 @@ SCIP_RETCODE parseSolveItem(
 
    if( equalTokens(scip, fzninput->token, "satisfy") )
    {
-      SCIPdebugMessage("detected a satisfiability problem\n");
+      SCIPdebugMsg(scip, "detected a satisfiability problem\n");
    }
    else
    {
@@ -3571,13 +3571,13 @@ SCIP_RETCODE parseSolveItem(
       if( equalTokens(scip, fzninput->token, "minimize") )
       {
          fzninput->objsense = SCIP_OBJSENSE_MINIMIZE;
-         SCIPdebugMessage("detected a minimization problem\n");
+         SCIPdebugMsg(scip, "detected a minimization problem\n");
       }
       else
       {
          assert(equalTokens(scip, fzninput->token, "maximize"));
          fzninput->objsense = SCIP_OBJSENSE_MAXIMIZE;
-         SCIPdebugMessage("detected a maximization problem\n");
+         SCIPdebugMsg(scip, "detected a maximization problem\n");
       }
 
       /* parse objective coefficients */
@@ -3594,7 +3594,7 @@ SCIP_RETCODE parseSolveItem(
       }
       else if( constant != NULL )
       {
-         SCIPdebugMessage("optimizing a constant is equal to a satisfiability problem!\n");
+         SCIPdebugMsg(scip, "optimizing a constant is equal to a satisfiability problem!\n");
       }
       else if( equalTokens(scip, name, "int_float_lin") )
       {
@@ -3612,7 +3612,7 @@ SCIP_RETCODE parseSolveItem(
          SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
          SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
 
-         SCIPdebugMessage("found linear objective\n");
+         SCIPdebugMsg(scip, "found linear objective\n");
 
          if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '(') )
          {
@@ -3775,7 +3775,7 @@ SCIP_RETCODE readFZNFile(
          else if( equalTokens(scip, fzninput->token, "output") )
          {
             /* the output section is the last section in the flatzinc model and can be skipped */
-            SCIPdebugMessage("skip output section\n");
+            SCIPdebugMsg(scip, "skip output section\n");
             break;
          }
          else
@@ -4542,7 +4542,7 @@ SCIP_RETCODE writeFzn(
          if( v < ndiscretevars && SCIPisIntegral(scip, objscale*obj) )
          {
             intobjvars[nintobjvars] = v;
-            SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",
+            SCIPdebugMsg(scip, "variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",
                SCIPvarGetName(var), nintobjvars, v, obj, objscale, SCIPvarGetObj(var));
             nintobjvars++;
          }
@@ -4640,7 +4640,7 @@ SCIP_RETCODE writeFzn(
          SCIP_Real obj;
          var = vars[intobjvars[v]];
          obj = objscale*SCIPvarGetObj(var);
-         SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n", SCIPvarGetName(var), v, intobjvars[v], obj, objscale, SCIPvarGetObj(var));
+         SCIPdebugMsg(scip, "variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n", SCIPvarGetName(var), v, intobjvars[v], obj, objscale, SCIPvarGetObj(var));
 
          assert( SCIPisIntegral(scip, obj) );
          flattenFloat(scip, obj, buffy);

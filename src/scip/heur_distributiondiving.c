@@ -330,7 +330,7 @@ void rowCalculateGauss(
    }
 
    SCIPdebug( SCIPprintRow(scip, row, NULL) );
-   SCIPdebugMessage("  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
+   SCIPdebugMsg(scip, "  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
 }
 
 /** calculate the branching score of a variable, depending on the chosen score parameter */
@@ -526,9 +526,9 @@ SCIP_RETCODE calcBranchScore(
       /* update the up and down score depending on the chosen scoring parameter */
       SCIP_CALL( SCIPupdateDistributionScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam) );
 
-      SCIPdebugMessage("  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
+      SCIPdebugMsg(scip, "  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
          SCIPvarGetName(var), SCIProwGetName(row), currentrowprob, newrowprobup, newrowprobdown);
-      SCIPdebugMessage("  -->  new variable score: %g (for branching up), %g (for branching down)\n",
+      SCIPdebugMsg(scip, "  -->  new variable score: %g (for branching up), %g (for branching down)\n",
          *upscore, *downscore);
    }
 

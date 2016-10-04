@@ -573,7 +573,7 @@ SCIP_DECL_EVENTEXEC(eventExecCrossover)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n", SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n", SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -975,7 +975,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIPdebug( SCIP_CALL( SCIPwriteOrigProblem(subscip, "crossoverprob.cip", "cip", FALSE) ) );
 #endif
    /* solve the subproblem */
-   SCIPdebugMessage("Solve Crossover subMIP\n");
+   SCIPdebugMsg(scip, "Solve Crossover subMIP\n");
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
@@ -998,7 +998,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* merge histories of the subscip-variables to the SCIP variables. */
    SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-   SCIPdebugMessage("Transferring variable histories complete\n");
+   SCIPdebugMsg(scip, "Transferring variable histories complete\n");
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )

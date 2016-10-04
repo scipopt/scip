@@ -559,7 +559,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
                /* infeasible aggregation */
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible aggregation\n");
+                  SCIPdebugMsg(scip, " -> infeasible aggregation\n");
                   *result = SCIP_CUTOFF;
                   return SCIP_OKAY;
                }
