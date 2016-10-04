@@ -1128,6 +1128,116 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSuperindicator)
+{  /*lint --e{715}*/
+   SCIP_Bool cont;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   /* if the solution is infeasible anyway, skip the enforcement */
+   if( solinfeasible )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("executing enforelax callback\n");
+
+   cont = TRUE;
+   *result = SCIP_FEASIBLE;
+
+#ifdef SCIP_OUTPUT
+   SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
+#endif
+
+   /* check all constraints */
+   for( i = nconss-1; i >= 0 && cont; i-- )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_RESULT locresult;
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      locresult = SCIP_FEASIBLE;
+
+      /* enforce only if binvar is fixed to one */
+      if( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
+      {
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
+
+         SCIPdebugMessage("binvar <%s> == 1 locally --> SCIPenforelaxCons() on constraint <%s>\n",
+            SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
+
+         SCIP_CALL( SCIPenfolpCons(scip, consdata->slackcons, solinfeasible, &locresult) );
+
+         SCIPdebugPrintf(" --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
+      }
+      /* otherwise check if we have not yet detected infeasibility */
+      else if( *result == SCIP_FEASIBLE )
+      {
+         SCIP_CALL( consdataCheckSuperindicator(scip, consdata, NULL, TRUE, FALSE, FALSE, &locresult) );
+      }
+
+      /* evaluate result */
+      switch( locresult )
+      {
+      case SCIP_CUTOFF:
+      case SCIP_BRANCHED:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         *result = locresult;
+         cont = FALSE;
+         break;
+      case SCIP_CONSADDED:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF )
+            *result = locresult;
+         break;
+      case SCIP_REDUCEDDOM:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED )
+            *result = locresult;
+         break;
+      case SCIP_SEPARATED:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM )
+            *result = locresult;
+         break;
+      case SCIP_INFEASIBLE:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_BRANCHED )
+            *result = locresult;
+         break;
+      case SCIP_FEASIBLE:
+         break;
+      default:
+         SCIPerrorMessage("invalid SCIP result %d\n", locresult);
+         return SCIP_INVALIDRESULT;
+      }  /*lint !e788*/
+   }
+
+   SCIPdebugMessage("enfolp result=%d\n", *result);
+
+   return SCIP_OKAY;
+}
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
@@ -1891,6 +2001,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSuperindicator, consSepasolSuperindicator, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSuperindicator) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSuperindicator) );
 
    /* includes or updates the default dialog menus in SCIP */
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
