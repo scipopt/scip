@@ -736,7 +736,6 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       int lo;
       int pivotindex;
       int npivots;
-      int mid;
       SCIP_Real betterweightsum;
       SCIP_Real equalweightsum;
 

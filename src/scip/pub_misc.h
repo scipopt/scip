@@ -5449,6 +5449,8 @@ SCIP_Bool SCIPsortedvecFindDownLong(
    int*                  pos                 /**< pointer to store position of element */
    );
 
+#include "scip/pub_misc_select.h"
+
 /**@} */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
