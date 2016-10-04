@@ -641,7 +641,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 
 #endif
 
-/* guess a median for the key array [start, ..., end] by using median of the first, last, and middle element */
+/* guess a median for the key array [start, ..., end] by using the median of the first, last, and middle element */
 static
 int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
 (
@@ -695,20 +695,8 @@ int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
    return pivotindex;
 }
 
-/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are larger, equal, and smaller than the weighted median
- *
- *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
- *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
- *
- *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
- *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
- *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., len
- *  contains only elements that are smaller than the median.
- *
- *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
- *  largest element by using a capacity k.
+/** partially sorts a given keys array around the weighted median w.r.t. the \p capacity and permutes the additional 'field' arrays
+ *  in the same way.
  *
  *  If no weights-array is passed, the algorithm assumes weights equal to 1.
  */
@@ -725,7 +713,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that should not be exceeded */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
    int                   len,                /**< length of arrays */
    int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
    )
@@ -753,7 +741,6 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       SCIP_Real equalweightsum;
 
       SORTTPL_KEYTYPE pivot;
-
 
       ++recursiondepth;
 
@@ -870,7 +857,9 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       /* we selected the right median. */
       if( betterweightsum < residualcapacity && betterweightsum + equalweightsum >= residualcapacity)
       {
-         *medianpos = lo;
+         if( medianpos != NULL )
+            *medianpos = lo;
+
          return;
       }
 
@@ -904,25 +893,28 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          SORTTPL_HASINDCOMPPAR(dataptr)
          start, end);
 
-   /* insert the elements sorted back into the indices array */
+   /* determine the median position among the remaining elements */
    for( j = start; j < end; ++j )
    {
       SCIP_Real weight = (weights != NULL ? weights[j] : 1);
       /* we finally found the median element */
       if( weight > residualcapacity )
       {
-         *medianpos = j;
+         if( medianpos != NULL )
+            *medianpos = j;
+
          break;
       }
       else
          residualcapacity -= weight;
    }
 
-   if( j == end )
+   /* the capacity is not exceeded by the elements in the array */
+   if( j == end && medianpos != NULL )
       *medianpos = end;
 }
 
-/** partially sorts a given keys array to determine the element at the k'th position respecting the sorting order */
+/** partially sorts a given keys array around the given index \p k and permutes the additional 'field' arrays are in the same way */
 void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
@@ -946,10 +938,11 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
    if( k < 0 || k >= len )
       return;
 
-   /* The summand 0.5 is necessary because the elements are zero-index. */
+   /* The summand 0.5 is necessary because the elements are zero-indexed. */
    capacity = k + 0.5;
 
    pos = -1;
+
    /* call the general algorithm for the weighted median with weights equal to -1 (by passing NULL) */
    SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    (key,
@@ -967,8 +960,6 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
    /* the weighted median position should be exactly at position k */
    assert(pos == k);
 }
-
-
 
 /* undefine template parameters and local defines */
 #undef SORTTPL_NAMEEXT
