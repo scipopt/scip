@@ -1562,57 +1562,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    return SCIP_OKAY;
 }
 
-#ifndef NDEBUG
-/** returns, whether the the arrays transweights, transprofits and items are sorted such that 
- *  p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n and these arrays are not changed
- */
-static
-SCIP_Bool checkSolveKnapsack(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nitems,             /**< number of available items */
-   SCIP_Longint*         transweights,       /**< item weights */
-   SCIP_Real*            transprofits,       /**< item profits */
-   int*                  items,              /**< item numbers */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   SCIP_Bool             modtransused        /**< TRUE for mod trans sepa prob was used to find cover */
-   )
-{
-   int j;
-
-   assert(scip != NULL);
-   assert(nitems >= 0);
-   assert(weights != NULL);
-   assert(solvals != NULL);
-   assert(transweights != NULL);
-   assert(transprofits != NULL);
-
-   for( j = 1; j < nitems; j++ )
-   {
-      assert(SCIPisFeasGE(scip, transprofits[j-1]/transweights[j-1], transprofits[j]/transweights[j]));
-      if( SCIPisFeasLT(scip, transprofits[j-1]/transweights[j-1], transprofits[j]/transweights[j]) )
-         return FALSE;
-      assert(weights[items[j]] == transweights[j]);
-      if( weights[items[j]] != transweights[j] )
-         return FALSE;
-      if( modtransused )
-      {
-         assert(SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]) * weights[items[j]], transprofits[j]));
-         if( !SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]) * weights[items[j]], transprofits[j]) )
-            return FALSE;
-      }
-      else
-      {
-         assert(SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]), transprofits[j]));
-         if( !SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]), transprofits[j]) )
-            return FALSE;
-
-      }
-   }
-   return TRUE;
-}
-#endif
-
 #ifdef SCIP_DEBUG
 /** prints all nontrivial GUB constraints and their LP solution values */
 static
