@@ -3410,6 +3410,74 @@ SCIP_RETCODE detectRedundantConstraints(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool separated;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff;
+   int i;
+
+   separated = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
+      if( violated )
+      {
+         if( conshdlrdata->enforcecuts )
+         {
+            SCIP_Bool consseparated;
+
+            SCIP_CALL( separateCons(scip, conss[i], sol, &consseparated, &cutoff) );
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            separated = separated || consseparated;
+
+            /* following assert is wrong in the case some variables were not in relaxation (dynamic columns),
+            *
+            * e.g. the resultant, which has a negative objective value, is in the relaxation solution on its upper bound
+            * (variables with status loose are in an relaxation solution on it's best bound), but already creating a
+            * row, and thereby creating the column, changes the solution value (variable than has status column, and the
+            * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
+            * the rows, which then are not seperated into the lp
+            */
+#if 0
+            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
+#endif
+         }
+         else
+         {
+            *result = SCIP_INFEASIBLE;
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   if( separated )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
 
 /** compares constraint with all prior constraints for possible redundancy or aggregation,
  *  and removes or changes constraint accordingly
@@ -4199,63 +4267,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolAnd)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpAnd)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool separated;
-   SCIP_Bool violated;
-   SCIP_Bool cutoff;
-   int i;
-
-   separated = FALSE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
-      if( violated )
-      {
-         if( conshdlrdata->enforcecuts )
-         {
-            SCIP_Bool consseparated;
-
-            SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            separated = separated || consseparated;
-
-            /* following assert is wrong in the case some variables were not in LP (dynamic columns),
-            *
-            * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
-            * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
-            * thereby creating the column, changes the solution value (variable than has status column, and the
-            * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
-            * rows, which then are not seperated into the lp
-            */
-#if 0
-            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
-#endif
-         }
-         else
-         {
-            *result = SCIP_INFEASIBLE;
-            return SCIP_OKAY;
-         }
-      }
-   }
-
-   if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_FEASIBLE;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxAnd)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -4876,6 +4900,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAnd, consSepasolAnd, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxAnd) );
 
    /* add AND-constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
