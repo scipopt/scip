@@ -333,6 +333,19 @@ SCIP_DECL_CONSENFOLP(consEnfolpConjunction)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxConjunction)
+{  /*lint --e{715}*/
+   *result = SCIP_FEASIBLE;
+
+   /* add all constraints to the current node */
+   SCIP_CALL( addAllConss(scip, conss, nconss, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsConjunction)
@@ -751,7 +764,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintConjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransConjunction) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxConjunction) );
 
    return SCIP_OKAY;
 }
