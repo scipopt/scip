@@ -11368,6 +11368,25 @@ SCIP_RETCODE SCIPenfolpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** enforces single constraint for a given relaxation solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *        added to SCIP beforehand.
+ */
+SCIP_RETCODE SCIPenforelaxCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SOL*             sol,                /**< solution to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** calls LP initialization method for single constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

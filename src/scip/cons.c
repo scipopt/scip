@@ -7361,6 +7361,49 @@ SCIP_RETCODE SCIPconsEnfolp(
    return SCIP_OKAY;
 }
 
+/** enforces single constraint for a given relaxation solution */
+SCIP_RETCODE SCIPconsEnforelax(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+   assert(sol != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   assert(conshdlr->consenfolp != NULL);
+
+   SCIP_CALL( conshdlr->consenforelax(set->scip, sol, conshdlr, &cons, 1, 1, solinfeasible, result) );
+   SCIPdebugMessage(" -> enforelax returned result <%d>\n", *result);
+
+   if( *result != SCIP_CUTOFF
+      && *result != SCIP_CONSADDED
+      && *result != SCIP_REDUCEDDOM
+      && *result != SCIP_BRANCHED
+      && *result != SCIP_SEPARATED
+      && *result != SCIP_INFEASIBLE
+      && *result != SCIP_FEASIBLE)
+   {
+      SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation returned invalid result <%d>\n",
+         conshdlr->name, *result);
+      return SCIP_INVALIDRESULT;
+   }
+
+   /* do not update statistics */
+
+   return SCIP_OKAY;
+}
 
 /** calls LP initialization method for single constraint */
 SCIP_RETCODE SCIPconsInitlp(

@@ -803,6 +803,15 @@ SCIP_RETCODE SCIPconsEnfolp(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** enforces single constraint for a given relaxation solution */
+SCIP_RETCODE SCIPconsEnforelax(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** calls LP initialization method for single constraint */
 extern
 SCIP_RETCODE SCIPconsInitlp(
