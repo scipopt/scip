@@ -4076,6 +4076,7 @@ static
 SCIP_RETCODE getBranchingVerticesSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    SCIP_Bool*            verticesarefixed,   /**< vector that indicates which variables are currently fixed to zero */
    SCIP_Bool             bipbranch,          /**< TRUE if bipartite branching method should be used */
    int                   branchvertex,       /**< branching vertex */
@@ -4116,7 +4117,7 @@ SCIP_RETCODE getBranchingVerticesSOS1(
       /* get all the neighbors of the variable with index 'branchvertex' whose solution value is nonzero */
       for (j = 0; j < nsucc; ++j)
       {
-         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, SCIPnodeGetVarSOS1(conflictgraph, succ[j]))) )
+         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, succ[j]))) )
          {
             assert( ! verticesarefixed[succ[j]] );
             fixingsnode1[(*nfixingsnode1)++] = succ[j];
@@ -4134,7 +4135,7 @@ SCIP_RETCODE getBranchingVerticesSOS1(
 
          for (j = 0; j < *nfixingsnode2; ++j)
          {
-            solval = SCIPgetSolVal(scip, NULL, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
+            solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
             if( ! SCIPisFeasZero(scip, solval) )
                ++cnt;
          }
@@ -4145,7 +4146,7 @@ SCIP_RETCODE getBranchingVerticesSOS1(
             cnt = 0;
             for (j = 0; j < *nfixingsnode1; ++j)
             {
-               solval = SCIPgetSolVal(scip, NULL, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
+               solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
                if( ! SCIPisFeasZero(scip, solval) )
                   ++cnt;
             }
@@ -4189,6 +4190,7 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    int                   nsos1vars,          /**< number of SOS1 variables */
    SCIP_Bool*            verticesarefixed,   /**< vector that indicates which variables are currently fixed to zero */
    SCIP_Bool             bipbranch,          /**< TRUE if bipartite branching method should be used */
@@ -4225,7 +4227,7 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
 
       nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
 
-      if ( nsucc == 0 || SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, SCIPnodeGetVarSOS1(conflictgraph, i))) || verticesarefixed[i] )
+      if ( nsucc == 0 || SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, i))) || verticesarefixed[i] )
          prior = -SCIPinfinity(scip);
       else
       {
@@ -4234,12 +4236,12 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[i] );
-         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, verticesarefixed, bipbranch, i, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, i, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
          sum1 = 0.0;
          for (j = 0; j < nfixingsnode1; ++j)
          {
-            solval = SCIPgetSolVal(scip, NULL, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
+            solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
             if ( ! SCIPisFeasZero(scip, solval) )
             {
                sum1 += REALABS( solval );
@@ -4250,7 +4252,7 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
          sum2 = 0.0;
          for (j = 0; j < nfixingsnode2; ++j)
          {
-            solval = SCIPgetSolVal(scip, NULL, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
+            solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
             if ( ! SCIPisFeasZero(scip, solval) )
             {
                sum2 += REALABS( solval );
@@ -4432,6 +4434,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    int                   nsos1vars,          /**< number of SOS1 variables */
    SCIP_Real             lpobjval,           /**< current LP relaxation solution */
    SCIP_Bool             bipbranch,          /**< TRUE if bipartite branching method should be used */
@@ -4476,7 +4479,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    SCIP_CALL( SCIPallocBufferArray(scip, &branchpriors, nsos1vars) );
 
    /* get branching priorities */
-   SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, nsos1vars, verticesarefixed,
+   SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed,
          bipbranch, fixingsnode1, fixingsnode2, branchpriors, NULL, &relsolfeas) );
 
    /* if LP relaxation solution is feasible */
@@ -4558,7 +4561,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[testvertex] );
-         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, verticesarefixed, bipbranch, testvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
          /* get information for first strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2,
@@ -4644,6 +4647,7 @@ static
 SCIP_RETCODE getBoundConsFromVertices(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    int                   v1,                 /**< first vertex that shall be contained in bound constraint */
    int                   v2,                 /**< second vertex that shall be contained in bound constraint */
    SCIP_VAR*             boundvar,           /**< bound variable of @p v1 and @p v2 (or NULL if not existent) */
@@ -4676,7 +4680,7 @@ SCIP_RETCODE getBoundConsFromVertices(
    nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, v1);
    var = nodedata->var;
    assert( boundvar == NULL || SCIPvarCompare(boundvar, nodedata->ubboundvar) == 0 );
-   solval = SCIPgetSolVal(scip, NULL, var);
+   solval = SCIPgetSolVal(scip, sol, var);
 
    /* if 'v1' and 'v2' have the same bound variable then the bound cut can be strengthened */
    if ( boundvar == NULL )
@@ -4768,7 +4772,7 @@ SCIP_RETCODE getBoundConsFromVertices(
          for (s = 0; s < nextensions; ++s)
          {
             ext = extensions[s];
-            bigMval = nodeGetSolvalBinaryBigMSOS1(scip, conflictgraph, NULL, ext);
+            bigMval = nodeGetSolvalBinaryBigMSOS1(scip, conflictgraph, sol, ext);
             if ( SCIPisFeasLT(scip, bestbigMval, bigMval) )
             {
                bestbigMval = bigMval;
@@ -4781,7 +4785,7 @@ SCIP_RETCODE getBoundConsFromVertices(
       /* add bestindex variable to the constraint */
       nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, bestindex);
       var = nodedata->var;
-      solval = SCIPgetSolVal(scip, NULL, var);
+      solval = SCIPgetSolVal(scip, sol, var);
       coef = 0.0;
       if ( boundvar == NULL )
       {
@@ -4856,7 +4860,7 @@ SCIP_RETCODE getBoundConsFromVertices(
    else
    {
       SCIP_CALL( SCIPaddCoefLinear(scip, cons, boundvar, -1.0) );
-      *feas -= SCIPgetSolVal(scip, NULL, boundvar);
+      *feas -= SCIPgetSolVal(scip, sol, boundvar);
    }
 
    return SCIP_OKAY;
@@ -4874,6 +4878,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph of the current node */
    SCIP_DIGRAPH*         localconflicts,     /**< local conflicts (updates to local conflicts of child node) */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    int                   nsos1vars,          /**< number of SOS1 variables */
    SCIP_Bool*            verticesarefixed,   /**< vector that indicates which variables are currently fixed to zerox */
    int*                  fixingsnode1,       /**< vertices of variables that will be fixed to zero for the branching node in the input of this function */
@@ -4978,7 +4983,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
 
          vertex1 = succarray[i];
          var1 = SCIPnodeGetVarSOS1(conflictgraph, vertex1);
-         solval1 = SCIPgetSolVal(scip, NULL, var1);
+         solval1 = SCIPgetSolVal(scip, sol, var1);
 
          /* we only add complementarity constraints if they are violated by the current LP solution */
          if ( ! onlyviolsos1 || ! SCIPisFeasZero(scip, solval1) )
@@ -5030,7 +5035,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                   SCIP_Real solval2;
 
                   var2 = SCIPnodeGetVarSOS1(conflictgraph, vertex2);
-                  solval2 = SCIPgetSolVal(scip, NULL, var2);
+                  solval2 = SCIPgetSolVal(scip, sol, var2);
 
                   if ( onlyviolsos1 && ( SCIPisFeasZero(scip, solval1) || SCIPisFeasZero(scip, solval2) ) )
                      continue;
@@ -5120,7 +5125,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      }
                      else
                      {
-                        feas = -SCIPgetSolVal(scip, NULL, boundvar1);
+                        feas = -SCIPgetSolVal(scip, sol, boundvar1);
                         if ( SCIPisFeasPositive(scip, solval1) )
                         {
                            assert( SCIPisFeasPositive(scip, ubboundcoef1));
@@ -5182,7 +5187,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                                  TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                            /* add variables */
-                           SCIP_CALL( getBoundConsFromVertices(scip, conflictgraph, vertex1, vertex2, boundvar1, conshdlrdata->addextendedbds, conssos1, &feas) );
+                           SCIP_CALL( getBoundConsFromVertices(scip, conflictgraph, sol, vertex1, vertex2, boundvar1, conshdlrdata->addextendedbds, conssos1, &feas) );
                         }
                         else
                         {
@@ -5191,7 +5196,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                                  TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                            /* add variables */
-                           SCIP_CALL( getBoundConsFromVertices(scip, conflictgraph, vertex1, vertex2, NULL, conshdlrdata->addextendedbds, conssos1, &feas) );
+                           SCIP_CALL( getBoundConsFromVertices(scip, conflictgraph, sol, vertex1, vertex2, NULL, conshdlrdata->addextendedbds, conssos1, &feas) );
                         }
 
                         /* add linear constraint to the branching node if usefull */
@@ -5294,6 +5299,7 @@ SCIP_RETCODE enforceConflictgraph(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< SOS1 constraints */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    SCIP_RESULT*          result              /**< result */
    )
 {
@@ -5501,7 +5507,7 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_Bool relsolfeas;
 
       /* get branching vertex using most infeasible branching */
-      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, nsos1vars, verticesarefixed, bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
+      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed, bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
 
       /* if LP relaxation solution is feasible */
       if ( relsolfeas )
@@ -5529,7 +5535,7 @@ SCIP_RETCODE enforceConflictgraph(
    else
    {
       /* get branching vertex using strong branching */
-      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, nsos1vars, lpobjval, bipbranch, nstrongrounds, verticesarefixed,
+      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval, bipbranch, nstrongrounds, verticesarefixed,
             fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1, &bestobjval2, result) );
 
       if ( *result == SCIP_CUTOFF || *result == SCIP_FEASIBLE || *result == SCIP_REDUCEDDOM )
@@ -5577,7 +5583,7 @@ SCIP_RETCODE enforceConflictgraph(
    /* get vertices of variables that will be fixed to zero for each node */
    assert( branchvertex >= 0 && branchvertex < nsos1vars );
    assert( ! verticesarefixed[branchvertex] );
-   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, verticesarefixed, bipbranch, branchvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
@@ -5677,13 +5683,13 @@ SCIP_RETCODE enforceConflictgraph(
       assert( ! conshdlrdata->fixnonzero );
 
       /* add complementarity constraints to the left branching node */
-      SCIP_CALL( addBranchingComplementaritiesSOS1(scip, node1, conshdlrdata, conflictgraph, conshdlrdata->localconflicts,
+      SCIP_CALL( addBranchingComplementaritiesSOS1(scip, node1, conshdlrdata, conflictgraph, conshdlrdata->localconflicts, sol,
                nsos1vars, verticesarefixed, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2, &naddedconss, TRUE) );
 
       if ( naddedconss == 0 )
       {
          /* add complementarity constraints to the right branching node */
-         SCIP_CALL( addBranchingComplementaritiesSOS1(scip, node2, conshdlrdata, conflictgraph, conshdlrdata->localconflicts,
+         SCIP_CALL( addBranchingComplementaritiesSOS1(scip, node2, conshdlrdata, conflictgraph, conshdlrdata->localconflicts, sol,
                nsos1vars, verticesarefixed, fixingsnode2, nfixingsnode2, fixingsnode1, nfixingsnode1, &naddedconss, TRUE) );
       }
    }
@@ -5750,6 +5756,7 @@ SCIP_RETCODE enforceConssSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    SCIP_RESULT*          result              /**< result */
    )
 {
@@ -5821,7 +5828,7 @@ SCIP_RETCODE enforceConssSOS1(
       weight = 0.0;
       for (j = 0; j < nvars; ++j)
       {
-         SCIP_Real val = REALABS(SCIPgetSolVal(scip, NULL, vars[j]));
+         SCIP_Real val = REALABS(SCIPgetSolVal(scip, sol, vars[j]));
 
          if ( ! SCIPisFeasZero(scip, val) )
          {
@@ -5892,7 +5899,7 @@ SCIP_RETCODE enforceConssSOS1(
       SCIP_Bool infeasible;
 
       /* constraint is infeasible: */
-      assert( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[0])) && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[1])) );
+      assert( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[0])) && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[1])) );
 
       /* create branches */
       SCIPdebugMessage("Creating two branches.\n");
@@ -5925,7 +5932,7 @@ SCIP_RETCODE enforceConssSOS1(
       /* compute weight */
       for (j = 0; j < nvars; ++j)
       {
-         SCIP_Real val = REALABS(SCIPgetSolVal(scip, NULL, vars[j]));
+         SCIP_Real val = REALABS(SCIPgetSolVal(scip, sol, vars[j]));
          weight1 += val * (SCIP_Real) j;
          weight2 += val;
 
@@ -5983,6 +5990,67 @@ SCIP_RETCODE enforceConssSOS1(
    }
    SCIP_CALL( SCIPresetConsAge(scip, branchCons) );
    *result = SCIP_BRANCHED;
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler */
+static
+SCIP_RETCODE enforceSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of constraints */
+   SCIP_CONS**           conss,              /**< indicator constraints */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
+   SCIP_RESULT*          result              /**< result */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( result != NULL );
+   
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
+   {
+      SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
+   {
+      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
+   {
+      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
+   {
+      /* enforce SOS1 constraints */
+      SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, sol, result) );
+   }
+   else
+   {
+      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
+      {
+         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
+      /* enforce conflict graph */
+      SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, sol, result) );
+   }
 
    return SCIP_OKAY;
 }
@@ -9267,52 +9335,29 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, NULL, result) );
 
-   if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
-   {
-      SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
+   return SCIP_OKAY;
+}
 
-   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
-   {
-      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or SOS1 branching.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
 
-   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
-   {
-      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSOS1)
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
 
-   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
-   {
-      /* enforce SOS1 constraints */
-      SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
-   }
-   else
-   {
-      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
-      {
-         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-
-      /* enforce conflict graph */
-      SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, result) );
-   }
+   SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -9322,52 +9367,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
-   {
-      SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
-   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
-   {
-      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
-   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
-   {
-      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
-   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
-   {
-      /* enforce SOS1 constraints */
-      SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
-   }
-   else
-   {
-      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
-      {
-         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-
-      /* enforce conflict graph */
-      SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, result) );
-   }
+   SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -10112,6 +10118,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSOS1) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS1, consSepasolSOS1, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS1) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSOS1) );
 
    /* add SOS1 constraint handler parameters */
 
