@@ -63,6 +63,7 @@ namespace polyscip {
         const_iterator cbegin() {return nondom_projections_.cbegin();};
         const_iterator cend() {return nondom_projections_.cend();};
 
+        friend std::ostream &operator<<(std::ostream& os, const NondomProjections& nd_proj);
         bool finished() const;
         void update();
         void update(TwoDProj proj, Result res);
@@ -83,6 +84,8 @@ namespace polyscip {
         enum class PolyscipStatus {
             Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, Error
         };
+
+        using ObjPair = std::pair<std::size_t, std::size_t>;
 
         explicit Polyscip(int argc, const char *const *argv);
 
@@ -196,7 +199,8 @@ namespace polyscip {
         SCIP_RETCODE solveWeightedTchebycheff(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
                                               std::size_t obj_1,
-                                              std::size_t obj_2);
+                                              std::size_t obj_2,
+                                              std::vector<OutcomeType> & proj_nondom_outcomes);
 
         SCIP_RETCODE addSubproblemNondomPoints(std::size_t obj_1,
                                                std::size_t obj_2,
@@ -212,6 +216,30 @@ namespace polyscip {
                                               const std::pair<std::size_t, std::size_t>& considered_objs,
                                               ValPairMap nondom_projected_points);*/
 
+        void computeSingularNondomPoints(const std::map<ObjPair, std::vector<OutcomeType>>& proj_nondom_outcomes,
+                                         const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                         const std::vector<std::vector<ValueType>>& orig_vals);
+
+
+        bool projNondomPointsYieldFeasSpace(const OutcomeType &nd_12,
+                                            const OutcomeType &nd_13,
+                                            const OutcomeType &nd_23) const;
+
+        bool feasibleSpaceIsDominated(const OutcomeType &nd_01,
+                                      const OutcomeType &nd_02,
+                                      const OutcomeType &nd_12,
+                                      const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                                      const std::vector<std::vector<ValueType>> &orig_vals);
+
+
+        bool feasibleSpaceContainsFeasiblePoint(ValueType lhs_obj_0,
+                                                ValueType rhs_obj_0,
+                                                ValueType lhs_obj_1,
+                                                ValueType rhs_obj_1,
+                                                ValueType lhs_obj_2,
+                                                ValueType rhs_obj_2,
+                                                const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                                const std::vector<std::vector<ValueType>>& orig_vals);
 
         /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
@@ -280,7 +308,6 @@ namespace polyscip {
         ResultContainer supported_;
         ResultContainer unsupported_;
         ResultContainer unbounded_;
-
     };
 
 }
