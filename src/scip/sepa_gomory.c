@@ -50,7 +50,7 @@
 #include <string.h>
 
 #include "scip/sepa_gomory.h"
-#include "scip/pub_misc.h"
+#include "scip/random.h"
 #include "scip/pub_lp.h"
 
 #define SEPA_NAME              "gomory"
@@ -89,6 +89,7 @@
 /** separator data */
 struct SCIP_SepaData
 {
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             away;               /**< minimal integrality violation of a basis variable in order to try Gomory cut */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
@@ -98,7 +99,6 @@ struct SCIP_SepaData
    int                   maxrank;            /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
    int                   maxrankintegral;    /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
    int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
-   unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             makeintegral;       /**< try to scale all cuts to integral coefficients */
    SCIP_Bool             forcecuts;          /**< if conversion to integral coefficients failed still consider the cut */
@@ -182,6 +182,9 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &sepadata->randnumgen) );
 
    SCIPfreeMemory(scip, &sepadata);
 
@@ -325,7 +328,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
    /* permute basis indices to reduce performance variability */
-   SCIPpermuteIntArray(basisind, 0, nrows, &sepadata->randseed);
+   SCIPrandomPermuteIntArray(sepadata->randnumgen, basisind, 0, nrows);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -608,7 +611,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
-   sepadata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &sepadata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,

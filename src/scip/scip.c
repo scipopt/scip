@@ -23814,7 +23814,9 @@ unsigned int SCIPinitializeRandomSeed(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
  *
  */
 SCIP_RETCODE SCIPcreateRandomNumberGenerator(
@@ -23825,8 +23827,6 @@ SCIP_RETCODE SCIPcreateRandomNumberGenerator(
 {
    assert(scip != NULL);
    assert(randnumgen != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPcreateRandomNumberGenerator", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, scip->mem->probmem, initialseed) );
 
@@ -23846,7 +23846,9 @@ SCIP_RETCODE SCIPcreateRandomNumberGenerator(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
  *
  */
 SCIP_RETCODE SCIPfreeRandomNumberGenerator(
@@ -23856,8 +23858,6 @@ SCIP_RETCODE SCIPfreeRandomNumberGenerator(
 {
    assert(scip != NULL);
    assert(randnumgen != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPcreateRandomNumberGenerator", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPrandomFree(randnumgen, scip->mem->probmem);
 

@@ -21,6 +21,7 @@
 #include "scip/random.h"
 
 
+#define DEFAULT_SEED 123456789;
 #define DEFAULT_XOR  362436000;
 #define DEFAULT_MWC  521288629;
 #define DEFAULT_CST  7654321;
@@ -35,10 +36,10 @@ void randomInitialze(
 {
    assert(randgen != NULL);
 
-   randgen->seed = (uint32_t)initseed;
-   randgen->xor = DEFAULT_XOR;
-   randgen->mwc = DEFAULT_MWC;
-   randgen->cst = DEFAULT_CST;
+   randgen->seed = (uint32_t)DEFAULT_SEED + (uint32_t)initseed;
+   randgen->xor = (uint32_t)DEFAULT_XOR + (uint32_t)initseed;
+   randgen->mwc = (uint32_t)DEFAULT_MWC + (uint32_t)initseed;
+   randgen->cst = (uint32_t)DEFAULT_CST + (uint32_t)initseed;
 
    return;
 }
@@ -77,7 +78,7 @@ void SCIPrandomFree(
  *
  *  implementation of KISS random number generator developed by George Marsaglia.
  *  KISS is combination of three different random number generators:
- *   - Lbinear congruential generator
+ *   - Linear congruential generator
  *   - Xorshift
  *   - Lag-1 Multiply-with-carry
  *
