@@ -3566,12 +3566,13 @@ SCIP_RETCODE collectBranchingCands(
    return SCIP_OKAY;
 }
 
-/** enforcement pseudo or LP solution */
+/** enforcement of an LP, pseudo, or relaxation solution */
 static
 SCIP_RETCODE enforceSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to be processed */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for LP or pseudo solution) */
    SCIP_Bool             branch,             /**< should branching candidates be collected */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
@@ -3581,7 +3582,7 @@ SCIP_RETCODE enforceSolution(
       int nbranchcands;
 
       nbranchcands = 0;
-      SCIP_CALL( collectBranchingCands(scip, conss, nconss, NULL, &nbranchcands) );
+      SCIP_CALL( collectBranchingCands(scip, conss, nconss, sol, &nbranchcands) );
 
       if( nbranchcands > 0 )
          (*result) = SCIP_INFEASIBLE;
@@ -3601,7 +3602,7 @@ SCIP_RETCODE enforceSolution(
          cons = conss[c];
          assert(cons != NULL);
 
-         SCIP_CALL( checkCons(scip, cons, NULL, &violated, FALSE) );
+         SCIP_CALL( checkCons(scip, cons, sol, &violated, FALSE) );
       }
 
       if( violated )
@@ -12438,6 +12439,101 @@ SCIP_RETCODE strengthenVarbounds(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   if( solinfeasible )
+   {
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("constraint enforcing %d useful cumulative constraints of %d constraints\n", nusefulconss, nconss);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   (*result) = SCIP_FEASIBLE;
+
+   if( conshdlrdata->usebinvars )
+   {
+      SCIP_Bool separated;
+      SCIP_Bool cutoff;
+      int c;
+
+      separated = FALSE;
+
+      /* first check if a constraints is violated */
+      for( c = 0; c < nusefulconss; ++c )
+      {
+         SCIP_CONS* cons;
+         SCIP_Bool violated;
+
+         cons = conss[c];
+         assert(cons != NULL);
+
+         SCIP_CALL( checkCons(scip, cons, sol, &violated, FALSE) );
+
+         if( !violated )
+            continue;
+
+         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, sol, &separated, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+      }
+
+      for( ; c < nconss && !separated; ++c )
+      {
+         SCIP_CONS* cons;
+         SCIP_Bool violated;
+
+         cons = conss[c];
+         assert(cons != NULL);
+
+         SCIP_CALL( checkCons(scip, cons, sol, &violated, FALSE) );
+
+         if( !violated )
+            continue;
+
+         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, sol, &separated, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+      }
+
+      if( separated )
+         (*result) = SCIP_SEPARATED;
+   }
+   else
+   {
+      SCIP_CALL( enforceSolution(scip, conss, nconss, sol, conshdlrdata->fillbranchcands, result) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -12823,84 +12919,16 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpCumulative)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
 
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   if( solinfeasible )
-   {
-      *result = SCIP_INFEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   SCIPdebugMessage("LP enforcing %d useful cumulative constraints of %d constraints\n", nusefulconss, nconss);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   (*result) = SCIP_FEASIBLE;
-
-   if( conshdlrdata->usebinvars )
-   {
-      SCIP_Bool separated;
-      SCIP_Bool cutoff;
-      int c;
-
-      separated = FALSE;
-
-      /* first check if a constraints is violated */
-      for( c = 0; c < nusefulconss; ++c )
-      {
-         SCIP_CONS* cons;
-         SCIP_Bool violated;
-
-         cons = conss[c];
-         assert(cons != NULL);
-
-         SCIP_CALL( checkCons(scip, cons, NULL, &violated, FALSE) );
-
-         if( !violated )
-            continue;
-
-         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated, &cutoff) );
-         if ( cutoff )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-      }
-
-      for( ; c < nconss && !separated; ++c )
-      {
-         SCIP_CONS* cons;
-         SCIP_Bool violated;
-
-         cons = conss[c];
-         assert(cons != NULL);
-
-         SCIP_CALL( checkCons(scip, cons, NULL, &violated, FALSE) );
-
-         if( !violated )
-            continue;
-
-         SCIP_CALL( separateConsBinaryRepresentation(scip, cons, NULL, &separated, &cutoff) );
-         if ( cutoff )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-      }
-
-      if( separated )
-         (*result) = SCIP_SEPARATED;
-   }
-   else
-   {
-      SCIP_CALL( enforceSolution(scip, conss, nconss, conshdlrdata->fillbranchcands, result) );
-   }
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxCumulative)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -12929,7 +12957,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsCumulative)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( enforceSolution(scip, conss, nconss, conshdlrdata->fillbranchcands, result) );
+   SCIP_CALL( enforceSolution(scip, conss, nconss, NULL, conshdlrdata->fillbranchcands, result) );
 
    return SCIP_OKAY;
 }
@@ -13542,6 +13570,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpCumulative, consSepasolCumulative, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCumulative) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCumulative) );
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
