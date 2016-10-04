@@ -26,6 +26,7 @@
 
 #include "scip/def.h"
 #include "scip/type_reopt.h"
+#include "scip/type_random.h"
 
 #ifdef __cplusplus
 extern "C" {

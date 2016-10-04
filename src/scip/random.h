@@ -27,6 +27,10 @@
 #include "scip/struct_random.h"
 #include "blockmemshell/memory.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates and initialzes a random number generator */
 extern
 SCIP_RETCODE SCIPrandomCreate(

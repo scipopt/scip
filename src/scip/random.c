@@ -40,14 +40,14 @@ void randomInitialze(
    randgen->seed = (uint32_t)DEFAULT_SEED;
    randgen->seed += initseed;
 
-   randgen->xor = (uint32_t)DEFAULT_XOR;
-   randgen->xor += initseed;
+   randgen->xor_seed = (uint32_t)DEFAULT_XOR;
+   randgen->xor_seed += initseed;
 
-   randgen->mwc = (uint32_t)DEFAULT_MWC;
-   randgen->mwc += initseed;
+   randgen->mwc_seed = (uint32_t)DEFAULT_MWC;
+   randgen->mwc_seed += initseed;
 
-   randgen->cst = (uint32_t)DEFAULT_CST;
-   randgen->cst += initseed;
+   randgen->cst_seed = (uint32_t)DEFAULT_CST;
+   randgen->cst_seed += initseed;
 
    return;
 }
@@ -105,16 +105,16 @@ int getRand(
    randgen->seed = randgen->seed * (SCIP_Longint)1103515245 + 12345;
 
    /* Xorshift */
-   randgen->xor ^= randgen->xor << 13;
-   randgen->xor ^= randgen->xor >> 17;
-   randgen->xor ^= randgen->xor << 5;
+   randgen->xor_seed ^= (randgen->xor_seed << 13);
+   randgen->xor_seed ^= (randgen->xor_seed >> 17);
+   randgen->xor_seed ^= (randgen->xor_seed << 5);
 
    /* Multiple-with-carry */
-   t = 698769069ULL * randgen->mwc + randgen->cst;
-   randgen->cst = t >> 32;
-   randgen->mwc = (uint32_t) t;
+   t = 698769069ULL * randgen->mwc_seed + randgen->cst_seed;
+   randgen->cst_seed = t >> 32;
+   randgen->mwc_seed = (uint32_t) t;
 
-   return (int)((randgen->seed + randgen->xor + randgen->mwc) % INT_MAX);
+   return (int)((randgen->seed + randgen->xor_seed + randgen->mwc_seed) % INT_MAX);
 }
 
 /** returns a random integer between minrandval and maxrandval */

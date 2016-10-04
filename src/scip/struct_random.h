@@ -35,9 +35,9 @@ extern "C" {
 struct SCIP_RandGen
 {
    uint32_t              seed;               /**< start seed */
-   uint32_t              xor;                /**< Xorshift seed */
-   uint32_t              mwc;                /**< Multiply-with-carry seed */
-   uint32_t              cst;                /**< constant seed */
+   uint32_t              xor_seed;           /**< Xorshift seed */
+   uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
+   uint32_t              cst_seed;           /**< constant seed */
 };
 
 #ifdef __cplusplus
