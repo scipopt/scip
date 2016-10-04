@@ -1507,11 +1507,8 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP_Real* tempsort;
    SCIP_Longint solitemsweight;
    SCIP_Real* realweights;
-   int* indices;
    int j;
-   int leftmedianidx;
-   int rightmedianidx;
-   SCIP_Real median;
+   int criticalindex;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1530,38 +1527,35 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    /* initialize data for median search */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    SCIP_CALL( SCIPallocBufferArray(scip, &realweights, nitems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &indices, nitems) );
    for( j = nitems - 1; j >= 0; --j )
    {
       tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
       realweights[j] = (SCIP_Real)weights[j];
-      indices[j] = j;
 
    }
 
    /* partially sort indices such that all elements that are larger than the break item appear first */
-   SCIPselectWeightedMedian(tempsort, indices, realweights, nitems, capacity, &median, &leftmedianidx, &rightmedianidx);
+   SCIPselectWeightedDownRealLongRealInt(tempsort, weights, profits, items, realweights, capacity, nitems, &criticalindex);
 
    /* selects items as long as they fit into the knapsack */
    solitemsweight = 0;
-   for( j = 0; j < nitems && solitemsweight + weights[indices[j]] <= capacity; ++j )
+   for( j = 0; j < nitems && solitemsweight + weights[j] <= capacity; ++j )
    {
       if( solitems != NULL )
       {
-         solitems[*nsolitems] = items[indices[j]];
+         solitems[*nsolitems] = items[j];
          (*nsolitems)++;
       }
       if( solval != NULL )
-         (*solval) += profits[indices[j]];
-      solitemsweight += weights[indices[j]];
+         (*solval) += profits[j];
+      solitemsweight += weights[j];
    }
    for( ; j < nitems && solitems != NULL; j++ )
    {
-      nonsolitems[*nnonsolitems] = items[indices[j]];
+      nonsolitems[*nnonsolitems] = items[j];
       (*nnonsolitems)++;
    }
 
-   SCIPfreeBufferArray(scip, &indices);
    SCIPfreeBufferArray(scip, &realweights);
    SCIPfreeBufferArray(scip, &tempsort);
 
