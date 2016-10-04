@@ -5845,6 +5845,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
    )
 {
@@ -5879,7 +5880,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
             /* do not propose fixed variables */
             if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                continue;
-            val = SCIPgetSolVal(scip, NULL, var);
+            val = SCIPgetSolVal(scip, sol, var);
             if( REALABS(val) > brvarval )
             {
                brvarval = ABS(val);
@@ -6982,7 +6983,7 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+   SCIPdebugMessage("enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
 
    /* we propagate and separate constraints only if they are active and enforcing by branching only does not seem much effective */
    assert(SCIPconsIsActive(maxviolcons));
@@ -7056,7 +7057,7 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
-   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
+   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
    leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
@@ -7075,7 +7076,7 @@ SCIP_RETCODE enforceConstraint(
        * if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
        */
       SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
+      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {
          /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> replace by linear constraints */
