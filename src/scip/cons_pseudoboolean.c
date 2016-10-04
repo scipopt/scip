@@ -7967,6 +7967,31 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxPseudoboolean)
+{  /*lint --e{715}*/
+   SCIP_Bool violated;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   violated = FALSE;
+
+   /* check all and-constraints */
+   SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+
+   if( violated )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
@@ -8749,6 +8774,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxPseudoboolean) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
