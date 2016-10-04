@@ -7756,6 +7756,54 @@ SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
+{  /*lint --e{715}*/
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMessage("LP enforcing %d set partitioning / packing / covering constraints\n", nconss);
+
+   *result = SCIP_FEASIBLE;
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* @todo if solution is not integral, choose a variable set to branch on (only if VARUSES and BRANCHLP are defined) */
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSetppc)
@@ -8872,6 +8920,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSetppc) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
 
