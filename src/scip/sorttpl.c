@@ -656,7 +656,7 @@ int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
    int mid;
    int pivotindex;
    /* select the median of the first, last, and middle element as pivot element */
-   mid = start + end / 2;
+   mid = (start + end) / 2;
 
    /* let the elements in the unsorted order be a,b,c at positions start, mid, and end */
    if( SORTTPL_ISBETTER( key[start], key[mid]) ) /* a <= b */

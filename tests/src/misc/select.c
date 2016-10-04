@@ -44,28 +44,48 @@ Test(select, create_and_free)
    /* calls setup and teardown */
 }
 
-#define ARRAYMEMSIZE 30
+#define ARRAYMEMSIZE 700
 Test(select, random_permutation, .description = "tests selection on a bunch of random permutations of the integers 1...n")
 {
    int len = ARRAYMEMSIZE;
    int key[ARRAYMEMSIZE];
    unsigned int randomseed = 42;
    int i;
-
+   int j;
    /* initialize key */
-   for( i = 0; i < len; ++i )
-      key[i] = i;
+   for( j = 0; j < len; ++j )
+      key[j] = j;
+
 
    /* loop over all positions of the array and check whether the correct element is selected after a random permutation */
    for( i = 0; i < len; ++i )
    {
       int inputkey[ARRAYMEMSIZE];
+
       SCIPpermuteIntArray(key, 0, len, &randomseed);
 
       /* save input permutation for debugging */
       BMScopyMemoryArray(inputkey, key, len);
       SCIPselectInt(key, i, len);
 
+      /* the element key[i] must be the index itself */
       cr_assert_eq(key[i], i, "Wrong key selected: %d ~= %d", key[i], i);
+
+      /* check if the partial sorting correctly worked */
+      for( j = 0; j < len; ++j )
+      {
+         int k;
+         int start = j >= key[i] ? i : 0;
+         int end = j >= key[i] ? len : i;
+
+         for( k = start; k < end; ++k )
+         {
+            if( key[k] == j )
+               break;
+         }
+         cr_assert_lt(k, end, "Element %d is not in the right partition [%d,%d]\n", j, start, end);
+      }
+
+
    }
 }
