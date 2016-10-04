@@ -74,6 +74,7 @@
 struct SCIP_HeurData
 {
    SCIP_COL**            lpcols;             /**< stores lp columns with discrete variables before cont. variables */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generation */
    int*                  rowweights;         /**< row weight storage */
    SCIP_Bool             relax;              /**< should continuous variables be relaxed from the problem */
    SCIP_Bool             probing;            /**< should probing be executed? */
@@ -85,7 +86,6 @@ struct SCIP_HeurData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to register and process variable bound changes */
 
    SCIP_Real             maxcutoffquot;      /**< maximum percentage of allowed cutoffs before stopping the heuristic */
-   unsigned int          randseed;           /**< seed for random number generation */
    char                  sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
    SCIP_Bool             collectstats;       /**< should variable statistics be collected during probing? */
@@ -1336,7 +1336,9 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -1705,13 +1707,14 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             if( heurdata->preferbinaries )
             {
                if( nbinvars > 0 )
-                  SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
+                  SCIPrandomPermuteIntArray(heurdata->randnumgen, permutation, 0, nbinvars - 1);
                if( nbinvars < ndiscvars )
-                  SCIPpermuteIntArray(&permutation[nbinvars], nbinvars - 1, ndiscvars - nbinvars - 1, &heurdata->randseed);
+                  SCIPrandomPermuteIntArray(heurdata->randnumgen, &permutation[nbinvars], nbinvars - 1,
+                        ndiscvars - nbinvars - 1);
             }
             else
             {
-               SCIPpermuteIntArray(permutation, 0, ndiscvars - 1, &heurdata->randseed);
+               SCIPrandomPermuteIntArray(heurdata->randnumgen, permutation, 0, ndiscvars - 1);
             }
             SCIPdebugMessage("Variables permuted randomly!\n");
             break;
