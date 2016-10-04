@@ -23,7 +23,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/pub_misc.h"
+#include "scip/random.h"
 #include "scip/heur_shiftandpropagate.h"
 
 #define HEUR_NAME             "shiftandpropagate"
@@ -1299,6 +1299,10 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
 static
 SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 {  /*lint --e{715}*/
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
       SCIP_HEURDATA* heurdata;
