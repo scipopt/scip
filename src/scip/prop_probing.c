@@ -64,7 +64,7 @@
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
 #define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
-#define DEFAULT_RANDSEED            57  /**< random initial seed */
+#define DEFAULT_RANDSEED            59  /**< random initial seed */
 
 /*
  * Data structures
@@ -130,10 +130,6 @@ SCIP_RETCODE initPropdata(
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
    propdata->lastnode = -2;
-
-   /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &propdata->randnumgen,
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -729,6 +725,9 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
 
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &propdata->randnumgen) );
+
    SCIPfreeMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
@@ -764,9 +763,6 @@ SCIP_DECL_PROPEXIT(propExitProbing)
    assert(propdata->sortedvars == NULL);
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
-
-   /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &propdata->randnumgen) );
 
    return SCIP_OKAY;
 }
@@ -1111,6 +1107,10 @@ SCIP_RETCODE SCIPincludePropProbing(
    /* create probing propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
    SCIP_CALL( initPropdata(scip, propdata) );
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &propdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

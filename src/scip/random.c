@@ -35,11 +35,19 @@ void randomInitialze(
    )
 {
    assert(randgen != NULL);
+   assert(initseed > 0);
 
-   randgen->seed = (uint32_t)DEFAULT_SEED + (uint32_t)initseed;
-   randgen->xor = (uint32_t)DEFAULT_XOR + (uint32_t)initseed;
-   randgen->mwc = (uint32_t)DEFAULT_MWC + (uint32_t)initseed;
-   randgen->cst = (uint32_t)DEFAULT_CST + (uint32_t)initseed;
+   randgen->seed = (uint32_t)DEFAULT_SEED;
+   randgen->seed += initseed;
+
+   randgen->xor = (uint32_t)DEFAULT_XOR;
+   randgen->xor += initseed;
+
+   randgen->mwc = (uint32_t)DEFAULT_MWC;
+   randgen->mwc += initseed;
+
+   randgen->cst = (uint32_t)DEFAULT_CST;
+   randgen->cst += initseed;
 
    return;
 }

@@ -31,6 +31,7 @@
 #include "scip/scip.h"
 #include "scip/heur_clique.h"
 #include "scip/cons_logicor.h"
+#include "scip/random.h"
 
 
 #define HEUR_NAME             "clique"
@@ -52,7 +53,7 @@
 #define DEFAULT_NODESOFS      500LL                      /**< number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1                        /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_MAXPROPROUNDS 2                          /**< maximum number of propagation rounds during probing */
-#define DEFAULT_INITSEED      0                          /**< random seed value to initialize the random permutation
+#define DEFAULT_RANDSEED      61                         /**< random seed value to initialize the random permutation
                                                           *   value for variables
                                                           */
 #define DEFAULT_MULTIPLIER    1.1                        /**< value to increase node number to determine the next run */
@@ -68,6 +69,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
@@ -79,7 +81,6 @@ struct SCIP_HeurData
    SCIP_Longint          nnodefornextrun;    /**< node number for next run */
    SCIP_Real             multiplier;         /**< multiplier to determine next node number */
    int                   initseed;           /**< initial random seed value */
-   unsigned int          seed;               /**< seed value for random number generator */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
@@ -455,6 +456,9 @@ SCIP_DECL_HEURFREE(heurFreeClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -476,8 +480,9 @@ SCIP_DECL_HEURINIT(heurInitClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* set the seed value to the initial random seed value */
-   heurdata->seed = (unsigned int) heurdata->initseed;
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
 
    heurdata->usednodes = 0;
 
@@ -591,7 +596,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
    else
    {
-      SCIPpermuteArray((void**)binvars, 0, nbinvars, &(heurdata->seed));
+      SCIPrandomPermuteArray(heurdata->randnumgen, (void**)binvars, 0, nbinvars);
    }
 #endif
 
@@ -1102,7 +1107,7 @@ SCIP_RETCODE SCIPincludeHeurClique(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/initseed",
          "initial random seed value to permutate variables",
-         &(heurdata->initseed), TRUE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
+         &(heurdata->initseed), TRUE, DEFAULT_RANDSEED, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixable",

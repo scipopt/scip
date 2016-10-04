@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "scip/heur_randrounding.h"
+#include "scip/random.h"
 
 
 #define HEUR_NAME             "randrounding"

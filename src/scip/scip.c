@@ -9942,8 +9942,8 @@ SCIP_RETCODE SCIPpermuteProb(
 {
    SCIP_VAR** vars;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_RANDGEN* randnumgen;
    SCIP_Bool permuted;
-   unsigned int oldrandseed;
    int nconshdlrs;
    int nbinvars;
    int nintvars;
@@ -9963,6 +9963,9 @@ SCIP_RETCODE SCIPpermuteProb(
    nconshdlrs = SCIPgetNConshdlrs(scip);
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
+   /* create a random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, scip->mem->probmem, randseed) );
+
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
     * sub-SCIPs and contains the dependencies between the constraint handlers; for example the linear constraint
@@ -9971,7 +9974,6 @@ SCIP_RETCODE SCIPpermuteProb(
     */
 
    permuted = FALSE;
-   oldrandseed = randseed;
 
    /* for each constraint handler, permute its constraints */
    if( permuteconss )
@@ -9992,7 +9994,7 @@ SCIP_RETCODE SCIPpermuteProb(
 
             assert(nconss == 0 || conss != NULL);
 
-            SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+            SCIPrandomPermuteArray(randnumgen, (void**)conss, 0, nconss);
 
             /* readjust the mapping of constraints to array positions */
             for( j = 0; j < nconss; ++j )
@@ -10006,7 +10008,7 @@ SCIP_RETCODE SCIPpermuteProb(
          SCIP_CONS** conss = scip->origprob->conss;
          int nconss = scip->origprob->nconss;
 
-         SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+         SCIPrandomPermuteArray(randnumgen, (void**)conss, 0, nconss);
 
          for( j = 0; j < nconss; ++j )
          {
@@ -10021,7 +10023,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute binary variables */
    if( permutebinvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, 0, nbinvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, 0, nbinvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = 0; j < nbinvars; ++j )
@@ -10033,7 +10035,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute general integer variables */
    if( permuteintvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, nbinvars, nbinvars+nintvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars, nbinvars+nintvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars; j < nbinvars+nintvars; ++j )
@@ -10045,7 +10047,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute general integer variables */
    if( permuteimplvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars+nintvars; j < nbinvars+nintvars+nimplvars; ++j )
@@ -10057,7 +10059,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute general integer variables */
    if( permutecontvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, nbinvars+nintvars+nimplvars, nvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars+nimplvars, nvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars+nintvars+nimplvars; j < nvars; ++j )
@@ -10074,7 +10076,7 @@ SCIP_RETCODE SCIPpermuteProb(
       SCIPprobMarkPermuted(scip->transprob);
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-         "permute transformed problem using random seed %u\n", oldrandseed);
+         "permute transformed problem using random seed %u\n", randseed);
    }
    else if( permuted && !SCIPisTransformed(scip) )
    {
@@ -10084,8 +10086,11 @@ SCIP_RETCODE SCIPpermuteProb(
          SCIPprobMarkPermuted(scip->origprob);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "permute original problem using random seed %u\n", oldrandseed);
+            "permute original problem using random seed %u\n", randseed);
    }
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen, scip->mem->probmem);
 
    return SCIP_OKAY;
 }
