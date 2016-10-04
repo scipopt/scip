@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_shifting.h"
+#include "scip/random.h"
 
 
 #define HEUR_NAME             "shifting"
@@ -45,8 +46,8 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed value for random number generator */
 };
 
 
@@ -577,7 +578,11 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
@@ -595,6 +600,10 @@ SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -802,7 +811,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
             rowidx =  nviolfracrows - 1;
          else
             /* there is no violated row containing a fractional variable, select a violated row uniformly at random */
-            rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
+            rowidx = SCIPrandomGetInt(heurdata->randnumgen, 0, nviolrows-1);
 
          assert(0 <= rowidx && rowidx < nviolrows);
          row = violrows[rowidx];
