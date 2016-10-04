@@ -1615,6 +1615,68 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
+{  /*lint --e{715}*/
+   SCIP_Bool infeasible = FALSE;
+   int nfixedvars = 0;
+   int ncuts = 0;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
+
+   *result = SCIP_FEASIBLE;
+
+   /* we have a negative priority, so we should come after the integrality conshdlr */
+   assert( SCIPgetNLPBranchCands(scip) == 0 );
+
+   /* loop through constraints */
+   for (c = 0; c < nusefulconss && ! infeasible; c++)
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert( conss[c] != NULL );
+
+      /* get data of constraint */
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* get solution */
+      copyValues(scip, consdata, sol);
+      SCIPdebugMessage("Enforcing for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
+
+      /* separate */
+      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
+   }
+
+   if ( infeasible )
+   {
+      SCIPdebugMessage("Infeasible node.\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if ( nfixedvars > 0 )
+   {
+      SCIPdebugMessage("Fixed %d variables.\n", nfixedvars);
+      *result = SCIP_REDUCEDDOM;
+   }
+   else if ( ncuts > 0 )
+   {
+      SCIPdebugMessage("Separated %d SCIs during enforcement.\n", ncuts);
+      *result = SCIP_SEPARATED;
+   }
+   else
+   {
+      SCIPdebugMessage("No violated SCI found during enforcement.\n");
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
@@ -2361,6 +2423,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbitope, consSepasolOrbitope, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbitope) );
 
    return SCIP_OKAY;
 }
