@@ -329,6 +329,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpXyz)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsXyz)
@@ -601,7 +612,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consFreeXyz, consInitXyz, consExitXyz,
          consInitpreXyz, consExitpreXyz, consInitsolXyz, consExitsolXyz,
          consDeleteXyz, consTransXyz, consInitlpXyz,
-         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz,
+         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnforelaxXyz, consEnfopsXyz, consCheckXyz,
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
          consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz, consDelvarsXyz,
@@ -644,6 +655,8 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXyz) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXyz, consSepasolXyz, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXyz) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxXyz) );
+
 #endif
 
 #ifdef LINCONSUPGD_PRIORITY
