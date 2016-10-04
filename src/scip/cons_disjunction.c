@@ -500,6 +500,36 @@ SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxDisjunction)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool branch;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
+
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
+   {
+      /* check the disjunction */
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, FALSE, FALSE, result) );
+
+      if( *result == SCIP_INFEASIBLE && branch )
+      {
+         SCIP_CALL( branchCons(scip, conss[c], result) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsDisjunction)
@@ -1016,7 +1046,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransDisjunction) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxDisjunction) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/alwaysbranch",
