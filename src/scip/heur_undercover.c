@@ -39,6 +39,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_undercover.h"
+#include "scip/random.h"
 #include "nlpi/exprinterpret.h"
 
 #define HEUR_NAME               "undercover"
@@ -106,6 +107,7 @@ struct SCIP_HeurData
 {
    SCIP_CONSHDLR**       nlconshdlrs;        /**< array of nonlinear constraint handlers */
    SCIP_HEUR*            nlpheur;            /**< pointer to NLP local search heuristics */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    char*                 fixingalts;         /**< sequence of fixing values used: 'l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
@@ -128,7 +130,6 @@ struct SCIP_HeurData
    int                   nnlpfails;          /**< number of fails when solving the NLP relaxation after last success */
    int                   npostnlpfails;      /**< number of fails of the NLP local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
-   unsigned int          randseed;           /**< seed value for random number generator */
    char                  coveringobj;        /**< objective function of the covering problem */
    char                  fixingorder;        /**< order in which variables should be fixed */
    SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation? */
@@ -1726,7 +1727,7 @@ SCIP_RETCODE computeFixingOrder(
          /* add a small pertubation value to the score to reduce performance variability */
          scores[i] = heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
             + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight)
-            + SCIPgetRandomReal(0.0, SCIPepsilon(scip), &heurdata->randseed);
+            + SCIPrandomGetReal(heurdata->randnumgen, 0.0, SCIPepsilon(scip));
       }
       else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
          scores[i] = cover[i];
@@ -3111,6 +3112,9 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -3131,8 +3135,9 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* initialize data */
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
