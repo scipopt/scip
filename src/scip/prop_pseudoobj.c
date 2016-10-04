@@ -954,8 +954,8 @@ SCIP_RETCODE getMinactImplicObjchg(
    int v;
 
    assert(SCIPvarIsBinary(var));
-   assert(!local || SCIPvarGetLbAtIndex(var, bdchgidx, FALSE) < 0.5);
-   assert(!local || SCIPvarGetUbAtIndex(var, bdchgidx, FALSE) > 0.5);
+   assert(!local || SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE) < 0.5);
+   assert(!local || SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE) > 0.5);
    assert(SCIPvarGetLbGlobal(var) < 0.5);
    assert(SCIPvarGetUbGlobal(var) > 0.5);
    assert(bound == SCIP_BOUNDTYPE_LOWER || bound == SCIP_BOUNDTYPE_UPPER);
@@ -981,8 +981,8 @@ SCIP_RETCODE getMinactImplicObjchg(
 
       if( local )
       {
-         lb = SCIPvarGetLbAtIndex(implvar, bdchgidx, FALSE) > 0.5;
-         ub = SCIPvarGetUbAtIndex(implvar, bdchgidx, FALSE) > 0.5;
+         lb = SCIPgetVarLbAtIndex(scip, implvar, bdchgidx, FALSE) > 0.5;
+         ub = SCIPgetVarUbAtIndex(scip, implvar, bdchgidx, FALSE) > 0.5;
 
          /* check if variable is fixed */
          if( lb == TRUE || ub == FALSE )
@@ -1811,7 +1811,7 @@ SCIP_RETCODE addConflictBounds(
       SCIP_Real glblb;
 
       glblb = SCIPvarGetLbGlobal(var);
-      loclb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
+      loclb = SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE);
       assert(SCIPisFeasGE(scip, loclb, glblb));
 
       /* check if the local lower bound (at time stamp bdchgidx) is larger than the global lower bound */
@@ -1832,7 +1832,7 @@ SCIP_RETCODE addConflictBounds(
       SCIP_Real glbub;
 
       glbub = SCIPvarGetUbGlobal(var);
-      locub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+      locub = SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE);
       assert(SCIPisFeasLE(scip, locub, glbub));
 
       /* check if the local upper bound (at time stamp bdchgidx) is smaller than the global upper bound */
@@ -1881,8 +1881,8 @@ SCIP_RETCODE getConflictImplics(
       /* we need to take the bounds after the bdchgidx here, since the variable of the bound change may be the implied one;
        * we already counted its contribution before, so we want to see it as fixed here, which it is after the bound change.
        */
-      lb = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
-      ub = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
+      lb = SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE);
+      ub = SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE);
 
       if( lb < 0.5 && ub > 0.5 && !SCIPhashtableExists(addedvars, (void*)var) )
       {
@@ -1920,8 +1920,8 @@ SCIP_RETCODE addConflictBinvar(
    if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
       return SCIP_OKAY;
 
-   lb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
-   ub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+   lb = SCIPgetVarLbAtIndex(scip, var, bdchgidx, FALSE);
+   ub = SCIPgetVarUbAtIndex(scip, var, bdchgidx, FALSE);
 
    objval = SCIPvarGetObj(var);
    foundimplics = FALSE;
@@ -2007,7 +2007,7 @@ SCIP_RETCODE adjustCutoffbound(
       assert(var != NULL);
       assert(SCIPvarIsBinary(var));
       assert(bdchgidx != NULL);
-      assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
+      assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)));
       assert(inferinfo >= 0);
       assert(inferinfo < propdata->nminactvars);
       assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
@@ -2045,12 +2045,12 @@ SCIP_RETCODE adjustCutoffbound(
 
       if( objval > 0.0 )
       {
-         newbound = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
+         newbound = SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE);
          glbbound = SCIPvarGetLbGlobal(var);
       }
       else
       {
-         newbound = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
+         newbound = SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE);
          glbbound = SCIPvarGetUbGlobal(var);
       }
 
@@ -3600,8 +3600,8 @@ SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
    assert(infervar != NULL);
 
    SCIPdebugMessage("resolve bound change <%s> %s <%g>(%g), cutoff bound <%g>\n", SCIPvarGetName(infervar),
-      boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE),
-      SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE), cutoffbound);
+      boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE),
+      SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE), cutoffbound);
 
    /* resolve the propagation of the inference variable w.r.t. required minactivity */
    SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, infervar, inferinfo, boundtype, bdchgidx) );

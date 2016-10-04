@@ -181,7 +181,7 @@ SCIP_RETCODE tryOneOpt(
       SCIPdebugMessage("One-opt found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
 
       /* only check integrality, because we solved an LP */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &stored) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored) );
       if ( stored )
          ++(*nfoundsols);
       SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
@@ -300,7 +300,7 @@ SCIP_RETCODE trySolCandidate(
 #ifdef SCIP_MORE_DEBUG
    SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
    if ( stored )
    {
       ++(*nfoundsols);
@@ -310,7 +310,7 @@ SCIP_RETCODE trySolCandidate(
       SCIPdebugMessage("Solution was not stored.\n");
 #else
    /* only check integrality, because we solved an LP */
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored) );
    if ( stored )
       ++(*nfoundsols);
 #endif

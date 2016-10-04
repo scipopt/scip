@@ -1,12 +1,12 @@
-/* $Id: fun_check.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_FUN_CHECK_INCLUDED
-# define CPPAD_FUN_CHECK_INCLUDED
+// $Id$
+# ifndef CPPAD_FUN_CHECK_HPP
+# define CPPAD_FUN_CHECK_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,9 +22,6 @@ $spell
 	Taylor
 $$
 
-$index FunCheck$$
-$index check, ADFun$$
-$index ADFun, check$$
 
 $section Check an ADFun Sequence of Operations$$
 
@@ -77,7 +74,7 @@ $codei%
 	const %Vector% &%x%
 %$$
 (see $cref/Vector/FunCheck/Vector/$$ below)
-and its size 
+and its size
 must be equal to $icode n$$, the dimension of the
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
 
@@ -87,7 +84,7 @@ $codei%
 	%Vector% %y%
 %$$
 and its value is $latex G(x)$$.
-The size of $icode y$$ 
+The size of $icode y$$
 is equal to $icode m$$, the dimension of the
 $cref/range/seq_property/Range/$$ space for $icode f$$.
 
@@ -96,11 +93,11 @@ The $code FunCheck$$ argument $icode x$$ has prototype
 $codei%
 	const %Vector% &%x%
 %$$
-and its size 
+and its size
 must be equal to $icode n$$, the dimension of the
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
 This specifies that point at which to compare the values
-calculated by $icode f$$ and $icode G$$. 
+calculated by $icode f$$ and $icode G$$.
 
 $head r$$
 The $code FunCheck$$ argument $icode r$$ has prototype
@@ -123,12 +120,12 @@ The $code FunCheck$$ result $icode ok$$ has prototype
 $codei%
 	bool %ok%
 %$$
-It is true, if for $latex i = 0 , \ldots , m-1$$ 
+It is true, if for $latex i = 0 , \ldots , m-1$$
 either the relative error bound is satisfied
 $latex \[
-| F_i (x) - G_i (x) | 
-\leq 
-r ( | F_i (x) | + | G_i (x) | ) 
+| F_i (x) - G_i (x) |
+\leq
+r ( | F_i (x) | + | G_i (x) | )
 \] $$
 or the absolute error bound is satisfied
 $latex \[
@@ -146,7 +143,7 @@ if this is not the case.
 
 $head FunCheck Uses Forward$$
 After each call to $cref Forward$$,
-the object $icode f$$ contains the corresponding 
+the object $icode f$$ contains the corresponding
 $cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
 After $code FunCheck$$,
 the previous calls to $cref Forward$$ are undefined.
@@ -157,13 +154,13 @@ $codei%
 	if( %x% >= 0 )
 		%y% = exp(%x%)
 	else	%y% = exp(-%x%)
-%$$ 
+%$$
 where $icode x$$ and $icode y$$ are $codei%AD<double>%$$ objects.
-It follows that the 
+It follows that the
 AD of $code double$$ $cref/operation sequence/glossary/Operation/Sequence/$$
 depends on the value of $icode x$$.
-If the sequence of operations stored in $icode f$$ corresponds to 
-$icode g$$ with $latex x \geq 0$$, 
+If the sequence of operations stored in $icode f$$ corresponds to
+$icode g$$ with $latex x \geq 0$$,
 the function values computed using $icode f$$ when $latex x < 0$$
 will not agree with the function values computed by $latex g$$.
 This is because the operation sequence corresponding to $icode g$$ changed
@@ -171,8 +168,8 @@ This is because the operation sequence corresponding to $icode g$$ changed
 $latex G$$ for this value of $icode x$$).
 In this case, you probably want to re-tape the calculations
 performed by $icode g$$ with the
-$cref/independent variables/glossary/Tape/Independent Variable/$$ 
-equal to the values in $icode x$$ 
+$cref/independent variables/glossary/Tape/Independent Variable/$$
+equal to the values in $icode x$$
 (so AD operation sequence properly represents the algorithm
 for this value of independent variables).
 
@@ -183,7 +180,7 @@ $children%
 %$$
 The file
 $cref fun_check.cpp$$
-contains an example and test of this function.   
+contains an example and test of this function.
 It returns true if it succeeds and false otherwise.
 
 $end
@@ -193,17 +190,17 @@ $end
 namespace CppAD {
 	template <class Base, class Fun, class Vector>
 	bool FunCheck(
-		ADFun<Base>  &f , 
-		Fun          &g , 
-		const Vector &x , 
+		ADFun<Base>  &f ,
+		Fun          &g ,
+		const Vector &x ,
 		const Base   &r ,
 		const Base   &a )
 	{	bool ok = true;
-	
+
 		size_t m   = f.Range();
-		Vector yf  = f.Forward(0, x); 
+		Vector yf  = f.Forward(0, x);
 		Vector yg  = g(x);
-	
+
 		size_t i;
 		for(i = 0; i < m; i++)
 			ok  &= NearEqual(yf[i], yg[i], r, a);

@@ -52,7 +52,7 @@
 #define READER_EXTENSION        "fzn"
 
 
-#define FZN_BUFFERLEN         65536     /**< size of the line buffer for reading or writing */
+#define FZN_BUFFERLEN         8192      /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
@@ -1720,6 +1720,8 @@ SCIP_RETCODE applyVariableAssignment(
    constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
 
    fixvalue = 0.0;
+   realvalue = SCIP_INVALID;
+   boolvalue = FALSE;
 
    if( linkVar == NULL )
    {
@@ -1770,6 +1772,8 @@ SCIP_RETCODE createConstantAssignment(
    SCIP_Real value;
 
    (*constant) = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
+   realvalue = SCIP_INVALID;
+   boolvalue = FALSE;
 
    if( *constant != NULL )
    {

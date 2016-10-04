@@ -1116,7 +1116,7 @@ SCIP_RETCODE initLP(
 
       /* add all initial variables to LP */
       SCIPdebugMessage("init LP: initial columns\n");
-      for( v = 0; v < transprob->nvars; ++v )
+      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1125,6 +1125,10 @@ SCIP_RETCODE initLP(
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
          }
+
+         /* check for empty domains (necessary if no presolving was performed) */
+         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            *cutoff = TRUE;
       }
       assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
@@ -1132,6 +1136,9 @@ SCIP_RETCODE initLP(
       /* inform pricing storage, that initial LP setup is now finished */
       SCIPpricestoreEndInitialLP(pricestore);
    }
+
+   if( *cutoff )
+      return SCIP_OKAY;
 
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
@@ -2770,20 +2777,21 @@ SCIP_RETCODE solveNodeLP(
 #ifndef NDEBUG
          /* in the debug mode we want to explicitly check if the solution is feasible if it was stored */
          SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, sol, FALSE, TRUE, TRUE, checklprows, &stored) );
+               eventqueue, eventfilter, sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
 
          if( stored )
          {
             SCIP_Bool feasible;
 
-            SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, FALSE, TRUE, TRUE, checklprows, &feasible) );
+            SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, FALSE, FALSE, TRUE, TRUE,
+                  checklprows, &feasible) );
             assert(feasible);
          }
 
          SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
 #else
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, checklprows, &stored) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
 #endif
          if( stored )
          {
@@ -3861,6 +3869,29 @@ SCIP_RETCODE solveNode(
             stat->nnodes, stat->nlps, nlperrors);
       }
 
+      if( pricingaborted && !(*cutoff) && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         assert(SCIPsolveIsStopped(set, stat, FALSE));
+
+         SCIPtreeSetFocusNodeLP(tree, FALSE);
+
+/* if the above assert holds, this is not really a numerical trouble but we just ran into the time limit;
+ * however, if the assert proves to be wrong, we should activate the code below
+ */
+#ifdef SCIP_DISABLED_CODE
+         if( forcedlpsolve )
+         {
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
+               stat->nnodes, stat->nlps);
+            return SCIP_LPERROR;
+         }
+         nlperrors++;
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
+            stat->nnodes, stat->nlps, nlperrors);
+#endif
+      }
+
       /* if an improved solution was found, propagate and solve the relaxations again */
       if( foundsol )
       {
@@ -3923,7 +3954,7 @@ SCIP_RETCODE solveNode(
 
          SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          if( stored )
          {
@@ -4247,7 +4278,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
@@ -4280,7 +4311,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
@@ -4394,7 +4425,7 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_Longint nsuccessconflicts;
       SCIP_Bool afternodeheur;
       SCIP_Bool stopped;
-      SCIP_Bool branched = FALSE;
+      SCIP_Bool branched;
 
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 

@@ -1081,6 +1081,13 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
    );
 
+/** modifies an initial seed value with the global shift of random seeds */
+extern
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
+   );
+
 /** returns value treated as infinity */
 extern
 SCIP_Real SCIPsetInfinity(
@@ -1582,7 +1589,10 @@ SCIP_Real SCIPsetDualfeasFrac(
    SCIP_Real             val                 /**< value to return fractional part for */
    );
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1591,7 +1601,10 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1790,6 +1803,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
+#define SCIPsetInitializeRandomSeed(set, val) ( (val + (set)->random_randomseedshift) )
 
 #endif
 

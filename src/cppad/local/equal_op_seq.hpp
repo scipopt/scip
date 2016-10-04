@@ -1,12 +1,12 @@
-/* $Id: equal_op_seq.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_EQUAL_OP_SEQ_INCLUDED
-# define CPPAD_EQUAL_OP_SEQ_INCLUDED
+// $Id$
+# ifndef CPPAD_EQUAL_OP_SEQ_HPP
+# define CPPAD_EQUAL_OP_SEQ_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -15,19 +15,16 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 
 /*
 ------------------------------------------------------------------------------
-$begin EqualOpSeq$$ 
+$begin EqualOpSeq$$
 $spell
 	Op
 	const
 	bool
 $$
 
-$index EqualOpSeq$$
-$index operation, equal sequence$$
-$index sequence, equal operation$$
-$index equal, operation sequence$$
 
 $section Check if Two Value are Identically Equal$$
+$mindex EqualOpSeq operation sequence$$
 
 $head Syntax$$
 $icode%b% = EqualOpSeq(%x%, %y%)%$$
@@ -42,10 +39,10 @@ $cref/operation sequence/glossary/Operation/Sequence/$$.
 $head Motivation$$
 Sometimes it is useful to cache information
 and only recalculate when a function's arguments change.
-In the case of AD variables, 
+In the case of AD variables,
 it may be important not only when the argument values are equal,
 but when they are related to the
-$cref/independent variables/glossary/Tape/Independent Variable/$$ 
+$cref/independent variables/glossary/Tape/Independent Variable/$$
 by the same operation sequence.
 After the assignment
 $codei%
@@ -74,7 +71,7 @@ $codei%
 The result is true if and only if one of the following cases holds:
 
 $list number$$
-Both $icode x$$ and $icode y$$ are variables 
+Both $icode x$$ and $icode y$$ are variables
 and correspond to the same operation sequence.
 $lnext
 Both $icode x$$ and $icode y$$ are parameters,
@@ -97,7 +94,7 @@ contains an example and test of $code EqualOpSeq$$.
 It returns true if it succeeds and false otherwise.
 
 
-$end 
+$end
 ------------------------------------------------------------------------------
 */
 
@@ -106,7 +103,7 @@ namespace CppAD {
 	template <class Base>
 	CPPAD_INLINE_FRIEND_TEMPLATE_FUNCTION
 	bool EqualOpSeq(const AD<Base> &x, const AD<Base> &y)
-	{	
+	{
 		if( Parameter(x) )
 		{	if( Parameter(y) )
 				return EqualOpSeq(x.value_, y.value_);
@@ -117,7 +114,7 @@ namespace CppAD {
 
 		return (x.taddr_ == y.taddr_);
 	}
-		
+
 }
 
 # endif

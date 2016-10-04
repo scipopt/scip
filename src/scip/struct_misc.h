@@ -203,11 +203,11 @@ struct SCIP_Regression
 {
    SCIP_Real             intercept;          /**< the current axis intercept of the regression */
    SCIP_Real             slope;              /**< the current slope of the regression */
-   SCIP_Real             sumx;               /**< accumulated sum of all X observations */
-   SCIP_Real             sumy;               /**< accumulated sum of all Y observations */
+   SCIP_Real             meanx;              /**< mean of all X observations */
+   SCIP_Real             meany;              /**< mean of all Y observations */
    SCIP_Real             sumxy;              /**< accumulated sum of all products X * Y */
-   SCIP_Real             sumx2;              /**< sum of squares of all X observations */
-   SCIP_Real             sumy2;              /**< sum of squares of all Y observations */
+   SCIP_Real             variancesumx;       /**< incremental variance term for X observations  */
+   SCIP_Real             variancesumy;       /**< incremental variance term for Y observations */
    SCIP_Real             corrcoef;           /**< correlation coefficient of X and Y */
    int                   nobservations;      /**< number of observations so far */
 };

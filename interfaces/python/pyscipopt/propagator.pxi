@@ -6,6 +6,7 @@ cdef SCIP_RETCODE PyPropFree (SCIP* scip, SCIP_PROP* prop):
     propdata = SCIPpropGetData(prop)
     PyProp = <Prop>propdata
     PyProp.propfree()
+    Py_DECREF(PyProp)
     return SCIP_OKAY
 
 cdef SCIP_RETCODE PyPropInit (SCIP* scip, SCIP_PROP* prop):
@@ -98,14 +99,13 @@ cdef SCIP_RETCODE PyPropExec (SCIP* scip, SCIP_PROP* prop, SCIP_PROPTIMING propt
 
 cdef SCIP_RETCODE PyPropResProp (SCIP* scip, SCIP_PROP* prop, SCIP_VAR* infervar, int inferinfo,
                                  SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, SCIP_RESULT* result):
-    cdef Var v
     cdef SCIP_PROPDATA* propdata
+    cdef SCIP_VAR* tmp
+    tmp = infervar
     propdata = SCIPpropGetData(prop)
-    confvar = Variable("conflictvar")
-    v = confvar.var
-    v._var = <SCIP_VAR*> infervar
+    confvar = Variable.create(tmp)
 
-#TODO: parse bdchgidx?
+    #TODO: parse bdchgidx?
 
     PyProp = <Prop>propdata
     returnvalues = PyProp.propresprop(confvar, inferinfo, boundtype, relaxedbd)

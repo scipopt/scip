@@ -44,7 +44,7 @@
 #define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER     65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
-#define DEFAULT_RANDSEED      3141598   /**< the default random seed for random number generation */
+#define DEFAULT_RANDSEED           29   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'v'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define DEFAULT_COLLECTSTATS     TRUE   /**< should variable statistics be collected during probing? */
@@ -1336,7 +1336,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -1459,11 +1459,15 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       /* @note this call can have the side effect that variables are created */
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
@@ -2209,10 +2213,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       if( stored )
       {
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 #else
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
          if( stored )
          {
