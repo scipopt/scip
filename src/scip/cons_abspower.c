@@ -2246,6 +2246,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -2283,8 +2284,8 @@ SCIP_RETCODE registerBranchingCandidates(
             continue;
 
          /* if the value of x lies in a concave range (i.e., where a secant approximation is used), then register x as branching variable */
-         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
-            ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
+            ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
          {
             /* domain propagation should have removed constraints with fixed x, at least for violated constraints */
             assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
@@ -2314,6 +2315,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
    )
 {
@@ -2337,7 +2339,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
-      val = SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset;
+      val = SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset;
       if( REALABS(val) > brvarval )
       {
          brvarval = ABS(val);
@@ -3877,13 +3879,13 @@ SCIP_RETCODE separatePoint(
          {
             convex = !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x))
                && (!SCIPisNegative(scip, SCIPvarGetLbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, NULL, consdata->x)+consdata->xoffset >= -consdata->root*(SCIPvarGetLbLocal(consdata->x)+consdata->xoffset));
+                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset >= -consdata->root*(SCIPvarGetLbLocal(consdata->x)+consdata->xoffset));
          }
          else
          {
             convex = !SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x))
                && (!SCIPisPositive(scip, SCIPvarGetUbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, NULL, consdata->x)+consdata->xoffset <= -consdata->root*(SCIPvarGetUbLocal(consdata->x)+consdata->xoffset));
+                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset <= -consdata->root*(SCIPvarGetUbLocal(consdata->x)+consdata->xoffset));
          }
 
          feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
@@ -5309,7 +5311,7 @@ SCIP_RETCODE enforceConstraint(
    /* we are not feasible, the whole node is not infeasible, and we cannot find a reasonable cut
     * -> collect variables for branching
     */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
    /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
    leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
@@ -5336,7 +5338,7 @@ SCIP_RETCODE enforceConstraint(
       /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
          if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
       SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
+      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {
          SCIPwarningMessage(scip, "Could not find any branching variable candidate. Cutting off node. Max viol = %g.\n",
