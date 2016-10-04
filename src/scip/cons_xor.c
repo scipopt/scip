@@ -4663,6 +4663,43 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxXor)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, &violated) );
+      if( violated )
+      {
+         SCIP_Bool separated;
+
+         SCIP_CALL( separateCons(scip, conss[i], sol, conshdlrdata->separateparity, &separated, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            assert(separated); /* because the solution is integral, the separation always finds a cut */
+            *result = SCIP_SEPARATED;
+         }
+         return SCIP_OKAY;
+      }
+   }
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsXor)
@@ -5389,6 +5426,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXor, consSepasolXor, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXor) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxXor) );
 
    if ( SCIPfindConshdlr(scip, "linear") != NULL )
    {
