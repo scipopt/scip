@@ -8275,6 +8275,7 @@ SCIP_RETCODE registerBranchingCandidatesGap(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -8333,7 +8334,7 @@ SCIP_RETCODE registerBranchingCandidatesGap(
                continue;
             }
 
-            xval = SCIPgetSolVal(scip, NULL, x);
+            xval = SCIPgetSolVal(scip, sol, x);
 
             /* if variable is at bounds, then no need to branch, since secant is exact there */
             if( SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub) )
@@ -8372,8 +8373,8 @@ SCIP_RETCODE registerBranchingCandidatesGap(
          gap = SCIPinfinity(scip);
          if( !xunbounded && !yunbounded )
          {
-            xval = SCIPgetSolVal(scip, NULL, x);
-            yval = SCIPgetSolVal(scip, NULL, y);
+            xval = SCIPgetSolVal(scip, sol, x);
+            yval = SCIPgetSolVal(scip, sol, y);
 
             /* if both variables are at one of its bounds, then no need to branch, since McCormick is exact there */
             if( (SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub)) &&
@@ -8489,6 +8490,7 @@ SCIP_RETCODE registerBranchingCandidatesViolation(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -8534,7 +8536,7 @@ SCIP_RETCODE registerBranchingCandidatesViolation(
 
             if( quadvarterm->nadjbilin == 0 )
             {
-               xval = SCIPgetSolVal(scip, NULL, x);
+               xval = SCIPgetSolVal(scip, sol, x);
 
                /* if variable is at bounds and only in a nonconvex square term, then no need to branch, since secant is exact there */
                if( SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub) )
@@ -8573,6 +8575,7 @@ SCIP_RETCODE registerBranchingCandidatesCentrality(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -8623,7 +8626,7 @@ SCIP_RETCODE registerBranchingCandidatesCentrality(
                continue;
             }
 
-            xval = SCIPgetSolVal(scip, NULL, x);
+            xval = SCIPgetSolVal(scip, sol, x);
             xval = MAX(xlb, MIN(xub, xval));
 
             /* compute relative difference of xval to each of its bounds
@@ -8660,6 +8663,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -8671,15 +8675,15 @@ SCIP_RETCODE registerBranchingCandidates(
    switch( conshdlrdata->branchscoring )
    {
       case 'g' :
-         SCIP_CALL( registerBranchingCandidatesGap(scip, conshdlr, conss, nconss, nnotify) );
+         SCIP_CALL( registerBranchingCandidatesGap(scip, conshdlr, conss, nconss, sol, nnotify) );
          break;
 
       case 'v' :
-         SCIP_CALL( registerBranchingCandidatesViolation(scip, conshdlr, conss, nconss, nnotify) );
+         SCIP_CALL( registerBranchingCandidatesViolation(scip, conshdlr, conss, nconss, sol, nnotify) );
          break;
 
       case 'c' :
-         SCIP_CALL( registerBranchingCandidatesCentrality(scip, conshdlr, conss, nconss, nnotify) );
+         SCIP_CALL( registerBranchingCandidatesCentrality(scip, conshdlr, conss, nconss, sol, nnotify) );
          break;
 
       default :
@@ -8692,12 +8696,13 @@ SCIP_RETCODE registerBranchingCandidates(
 }
 
 
-/** registers a quadratic variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
+/** registers a quadratic variable from a violated constraint as branching candidate that has a large absolute value in the (LP) relaxation */
 static
 SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
    )
 {
@@ -8727,7 +8732,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
          /* do not propose fixed variables */
          if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
             continue;
-         val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
+         val = SCIPgetSolVal(scip, sol, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
          {
             brvarval = ABS(val);
@@ -10423,9 +10428,9 @@ SCIP_RETCODE enforceConstraint(
    SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
+   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
    leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
@@ -10451,7 +10456,7 @@ SCIP_RETCODE enforceConstraint(
        *  if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
        */
       SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
+      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {
          /* fallback 3: all quadratic variables seem to be fixed -> replace by linear constraint */
