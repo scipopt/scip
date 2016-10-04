@@ -25,12 +25,21 @@
 
 #include "scip/def.h"
 #include "scip/struct_random.h"
+#include "blockmemshell/memory.h"
 
-/** initialize the random number generator with a given start seed */
+/** creates and initialzes a random number generator */
 extern
-void SCIPrandomInit(
-   SCIP_RANDGEN*         randgen,
-   unsigned int          initseed
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDGEN**        randnumgen,
+   BMS_BLKMEM*           blkmem,
+   unsigned int          initialseed
+   );
+
+/** creates and initialzes a random number generator */
+extern
+void SCIPrandomFree(
+   SCIP_RANDGEN**        randnumgen,
+   BMS_BLKMEM*           blkmem
    );
 
 /** returns a random integer between minrandval and maxrandval */

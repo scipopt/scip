@@ -240,6 +240,9 @@ SCIP_DECL_HEURFREE(heurFreeMutation)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -264,8 +267,8 @@ SCIP_DECL_HEURINIT(heurInitMutation)
    heurdata->usednodes = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->randnumgen) );
-   SCIPrandomInit(heurdata->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }

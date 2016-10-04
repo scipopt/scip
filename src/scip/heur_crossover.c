@@ -641,8 +641,8 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->nextnodenumber = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->randnumgen) );
-   SCIPrandomInit(heurdata->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
@@ -678,7 +678,7 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
    }
 
    /* free random number generator */
-   SCIPfreeBlockMemory(scip, &heurdata->randnumgen);
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
 
    /* free hash table */
    assert(heurdata->hashtable != NULL);

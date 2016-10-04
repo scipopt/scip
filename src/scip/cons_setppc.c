@@ -366,8 +366,8 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nsetpart = 0;
 
    /* create a random number generator */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(*conshdlrdata)->randnumgen) );
-   SCIPrandomInit((*conshdlrdata)->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -387,7 +387,7 @@ SCIP_RETCODE conshdlrdataFree(
 #endif
 
    /* free random number generator */
-   SCIPfreeBlockMemory(scip, &(*conshdlrdata)->randnumgen);
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen) );
 
    SCIPfreeMemory(scip, conshdlrdata);
 

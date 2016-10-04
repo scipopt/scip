@@ -584,8 +584,8 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    heurdata->nsuccess = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->randnumgen) );
-   SCIPrandomInit(heurdata->randnumgen, SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -608,7 +608,7 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->roundedsol) );
 
    /* free random number generator */
-   SCIPfreeBlockMemory(scip, &heurdata->randnumgen);
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
 
    return SCIP_OKAY;
 }

@@ -1494,8 +1494,8 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    assert(branchruledata->startrandseed >= 0);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->randnumgen) );
-   SCIPrandomInit(branchruledata->randnumgen, SCIPinitializeRandomSeed(scip, branchruledata->startrandseed) );
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &branchruledata->randnumgen,
+         SCIPinitializeRandomSeed(scip, branchruledata->startrandseed)) );
 
    return SCIP_OKAY;
 }
@@ -1512,7 +1512,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
 
    /* free random number generator */
-   SCIPfreeBlockMemory(scip, &branchruledata->randnumgen);
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
 
    return SCIP_OKAY;
 }

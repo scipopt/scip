@@ -19,15 +19,16 @@
  */
 
 #include "scip/random.h"
-#include "blockmemshell/memory.h"
 
 
 #define DEFAULT_XOR  362436000;
 #define DEFAULT_MWC  521288629;
 #define DEFAULT_CST  7654321;
 
+
 /** initialize the random number generator with a given start seed */
-void SCIPrandomInit(
+static
+void randomInitialze(
    SCIP_RANDGEN*         randgen,
    unsigned int          initseed
    )
@@ -38,6 +39,36 @@ void SCIPrandomInit(
    randgen->xor = DEFAULT_XOR;
    randgen->mwc = DEFAULT_MWC;
    randgen->cst = DEFAULT_CST;
+
+   return;
+}
+
+/** creates and initialzes a random number generator */
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDGEN**        randnumgen,
+   BMS_BLKMEM*           blkmem,
+   unsigned int          initialseed
+   )
+{
+   assert(randnumgen != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, randnumgen) );
+
+   randomInitialze((*randnumgen), initialseed);
+
+   return SCIP_OKAY;
+}
+
+/** creates and initialzes a random number generator */
+void SCIPrandomFree(
+   SCIP_RANDGEN**        randnumgen,
+   BMS_BLKMEM*           blkmem
+   )
+{
+   assert(randnumgen != NULL);
+   assert((*randnumgen) != NULL);
+
+   BMSfreeBlockMemory(blkmem, randnumgen);
 
    return;
 }
