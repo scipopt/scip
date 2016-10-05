@@ -2402,6 +2402,7 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             lpfeas,             /**< is the given solution feasible for the current LP ? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
    SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
@@ -2427,13 +2428,13 @@ SCIP_RETCODE separateCons(
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
    /* skip constraints already in the LP */
-   if( sol == NULL && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+   if( lpfeas && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
-   if( sol == NULL )
+   if( lpfeas )
    {
       int nfixedvars = 0;
 
@@ -2452,12 +2453,12 @@ SCIP_RETCODE separateCons(
       assert(!addcut);
 
       /* variable's fixings didn't give us any information -> we have to check the constraint */
-      if( sol == NULL && consdata->row != NULL )
+      if( lpfeas && consdata->row != NULL )
       {
          SCIP_Real feasibility;
 
          assert(!SCIProwIsInLP(consdata->row));
-         feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
          addcut = SCIPisFeasNegative(scip, feasibility);
       }
       else
@@ -7328,7 +7329,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7371,7 +7372,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, FALSE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7723,13 +7724,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* check all obsolete set partitioning / packing / covering constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
 #ifdef VARUSES
@@ -7781,13 +7782,13 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* check all obsolete set partitioning / packing / covering constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* @todo if solution is not integral, choose a variable set to branch on (only if VARUSES and BRANCHLP are defined) */
