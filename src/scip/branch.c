@@ -2115,8 +2115,13 @@ SCIP_Real SCIPbranchGetScore(
 
    /* slightly increase gains, such that for zero gains, the branch factor comes into account */
    eps = SCIPsetSumepsilon(set);
+#ifdef OLDSCORE
    downgain = MAX(downgain, eps);
    upgain = MAX(upgain, eps);
+#else
+   downgain = downgain + eps;
+   upgain = upgain + eps;
+#endif
 
    switch( set->branch_scorefunc )
    {
