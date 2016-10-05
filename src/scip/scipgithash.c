@@ -30,3 +30,11 @@ const char* SCIPgetGitHash(
 {
    return SCIP_GITHASH;
 }
+
+/** returns the flags that were used to build SCIP */
+const char* SCIPgetBuildFlags(
+   void
+   )
+{
+   return SCIP_BUILDFLAGS;
+}

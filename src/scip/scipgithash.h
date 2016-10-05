@@ -35,6 +35,12 @@ const char* SCIPgetGitHash(
    void
    );
 
+/** returns the flags that were used to build SCIP */
+EXTERN
+const char* SCIPgetBuildFlags(
+   void
+   );
+
 #ifdef __cplusplus
 }
 #endif
