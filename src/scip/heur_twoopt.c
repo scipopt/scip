@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/heur_twoopt.h"
+#include "scip/random.h"
 
 #define HEUR_NAME             "twoopt"
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
@@ -75,7 +76,7 @@ struct SCIP_HeurData
    int                   nintblocks;         /**< number of blocks */
 
    SCIP_Bool             execute;            /**< has presolveTwoOpt detected necessary structure for execution of heuristic? */
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    int                   maxnslaves;         /**< delimits the maximum number of slave candidates for a master variable */
 
 #ifdef SCIP_STATISTIC
@@ -844,7 +845,9 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nbinblocks = 0;
    heurdata->nintblocks = 0;
 
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */
@@ -986,7 +989,7 @@ SCIP_RETCODE optimize(
 
          /* in blocks with more than heurdata->maxnslaves variables, a slave candidate region is chosen */
          if( heurdata->maxnslaves >= 0 && blocklen > heurdata->maxnslaves )
-            firstslave = SCIPgetRandomInt(blockstart[b] + m, blockend[b], &heurdata->randseed);
+            firstslave = SCIPrandomGetInt(heurdata->randnumgen, blockstart[b] + m, blockend[b]);
          else
             firstslave = blockstart[b] + m + 1;
 
@@ -1334,6 +1337,9 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
 
    assert(heurdata->binvars == NULL);
    assert(heurdata->intvars == NULL);
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
 
    SCIPheurSetData(heur, heurdata);
 

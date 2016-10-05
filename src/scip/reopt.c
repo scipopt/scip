@@ -30,6 +30,7 @@
 #include "scip/sol.h"
 #include "scip/var.h"
 #include "scip/misc.h"
+#include "scip/random.h"
 #include "scip/reopt.h"
 #include "scip/tree.h"
 #include "scip/primal.h"
@@ -46,6 +47,8 @@
 #define DEFAULT_MEM_NODES         1000
 #define DEFAULT_MEM_RUN            200
 #define DEFAULT_MEM_DUALCONS        10
+
+#define DEFAULT_RANDSEED            67
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Reopt"
@@ -3777,10 +3780,10 @@ SCIP_RETCODE reoptSaveNewObj(
 /** permute the variable and bound array randomly */
 static
 void permuteRandom(
+   SCIP_RANDGEN*         randnumgen,         /**< random number generator */
    SCIP_VAR**            vars,               /**< variable array to permute */
    SCIP_Real*            vals,               /**< bound array to permute in the same order */
-   int                   nvars,              /**< number of variables */
-   unsigned int*         randseed            /**< seed value for the random generator */
+   int                   nvars               /**< number of variables */
    )
 {
    SCIP_VAR* tmpvar;
@@ -3796,7 +3799,7 @@ void permuteRandom(
       --end;
 
       /* get a random position into which the last variable should be shuffled */
-      i = SCIPgetRandomInt(0, end, randseed);
+      i = SCIPrandomGetInt(randnumgen, 0, end);
 
       /* swap the last variable and the random variable */
       tmpvar = vars[i];
@@ -4032,6 +4035,9 @@ SCIP_RETCODE SCIPreoptCreate(
    SCIP_ALLOC( BMSallocMemory(&(*reopt)->reopttree) );
    SCIP_CALL( createReopttree((*reopt)->reopttree, set, blkmem) );
 
+   /* create a random number generator */
+   SCIP_CALL( SCIPrandomCreate(&(*reopt)->randnumgen, blkmem, SCIPsetInitializeRandomSeed(set, DEFAULT_RANDSEED)) );
+
    /* create event handler for node events */
    eventhdlr = NULL;
 
@@ -4133,6 +4139,9 @@ SCIP_RETCODE SCIPreoptFree(
 
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
+
+   /* free random number generator */
+   SCIPrandomFree(&(*reopt)->randnumgen, blkmem);
 
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
    BMSfreeMemoryArray(&(*reopt)->objs);
@@ -5483,7 +5492,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          break;
 
       case 'r':
-         permuteRandom(vars, vals, nvars, &randseed);
+         permuteRandom(reopt->randnumgen, vars, vals, nvars);
          break;
 
       default:
@@ -5917,7 +5926,7 @@ SCIP_RETCODE SCIPreoptApply(
             break;
 
          case 'r':
-            permuteRandom(vars, vals, nvars, &randseed);
+            permuteRandom(reopt->randnumgen, vars, vals, nvars);
             break;
 
          default:

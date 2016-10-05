@@ -27,6 +27,7 @@
 
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
+#include "scip/random.h"
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -102,7 +103,7 @@ struct SCIP_BranchruleData
    int                   nlcountsize;        /**< length of nlcount array */
    int                   nlcountmax;         /**< maximum entry in nlcount array or 1 if NULL */
    SCIP_Bool             randinitorder;      /**< should slight perturbation of scores be used to break ties in the prior scores? */
-   unsigned int          randseed;           /**< random seed for random number generation */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    int                   startrandseed;      /**< start random seed for random number generation */
    SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 };
@@ -852,7 +853,7 @@ SCIP_RETCODE execRelpscost(
 
             /* assign a random score to this uninitialized candidate */
             if( branchruledata->randinitorder )
-               score += SCIPgetRandomReal(0.0, 1e-4, &branchruledata->randseed);
+               score += SCIPrandomGetReal(branchruledata->randnumgen, 0.0, 1e-4);
 
             /* pseudo cost of variable is not reliable: insert candidate in initcands buffer */
             for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
@@ -1492,7 +1493,9 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    branchruledata->nlcountmax = 1;
    assert(branchruledata->startrandseed >= 0);
 
-   branchruledata->randseed = SCIPinitializeRandomSeed(scip, branchruledata->startrandseed);
+   /* create a random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &branchruledata->randnumgen,
+         SCIPinitializeRandomSeed(scip, branchruledata->startrandseed)) );
 
    return SCIP_OKAY;
 }
@@ -1507,6 +1510,9 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    /* free memory in branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
 
    return SCIP_OKAY;
 }

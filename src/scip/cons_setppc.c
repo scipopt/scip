@@ -30,7 +30,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
-#include "scip/pub_misc.h"
+#include "scip/random.h"
 
 
 #define CONSHDLR_NAME          "setppc"
@@ -119,8 +119,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             addvariablesascliques;/**< should we try to generate extra clique constraint out of all binary
                                                 *   variables to hopefully fasten the detection of redundant clique
                                                 *   constraints */
-   unsigned int          randseed;           /**< start value for randomly permutate binary variable array to create
-                                              *   extra cliques, iff addvariablesascliques is set to TRUE */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
@@ -366,6 +365,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->eventhdlr = eventhdlr;
    (*conshdlrdata)->nsetpart = 0;
 
+   /* create a random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    return SCIP_OKAY;
 }
 
@@ -382,6 +385,10 @@ SCIP_RETCODE conshdlrdataFree(
 #ifdef VARUSES
    SCIP_CALL( SCIPfreeIntarray(scip, &(*conshdlrdata)->varuses) );
 #endif
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen) );
+
    SCIPfreeMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
@@ -4931,7 +4938,7 @@ SCIP_RETCODE preprocessCliques(
       /* @todo: check for better permutations/don't permutate the first round
        * @todo: take binary variables which are not of vartype SCIP_VARTYPE_BINARY into account
        */
-      SCIPpermuteArray((void**)binvars, 0, nbinvars, &(conshdlrdata->randseed));
+      SCIPrandomPermuteArray(conshdlrdata->randnumgen, (void**)binvars, 0, nbinvars);
 
       /* try to create a clique-partition over all binary variables and create these cliques as new setppc constraints
        * and add them to the usefulconss array and adjust all necessary data this will hopefully lead to faster
@@ -7120,7 +7127,6 @@ SCIP_DECL_CONSFREE(consFreeSetppc)
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
    SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
 
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -7150,7 +7156,6 @@ SCIP_DECL_CONSINIT(consInitSetppc)
    conshdlrdata->nclqpresolve = 0;
    conshdlrdata->updatedsetppctype = FALSE;
    conshdlrdata->enablecliquelifting = TRUE;
-   conshdlrdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
