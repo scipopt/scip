@@ -3114,11 +3114,15 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
 
    *result = SCIP_FEASIBLE;
 
-   /* check, if this relaxation solution was already enforced at this node */
+   /* check, if this relaxation solution was already enforced at this node
+    * the integrality constraint handler always needs to be enforced for all constraints since external branching
+    * candidates are cleared before each resolve
+    */
    if( conshdlr->lastenforelaxdomchgcount == stat->domchgcount
       && conshdlr->lastenforelaxnode == stat->nnodes
       && conshdlr->lastenforelaxresult != SCIP_CONSADDED
       && conshdlr->lastenforelaxresult != SCIP_SOLVELP
+      && ( strcmp(conshdlr->name, "integral") != 0 )
       )
    {
       assert(conshdlr->lastenforelaxresult != SCIP_CUTOFF);
