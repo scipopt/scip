@@ -119,31 +119,6 @@ then
     fi
 fi
 
-# we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-if test $TIMEFORMAT = "format"
-then
-    #format is (d-)HH:MM:SS
-    TMP=`expr $HARDTIMELIMIT`
-    HARDTIMELIMIT=""
-    DIVISORS=(60 60 24)
-    for((i=0; i<=2; i++))
-    do
-        printf -v HARDTIMELIMIT "%02d${HARDTIMELIMIT}" `expr ${TMP} % ${DIVISORS[i]}`
-        # separate the numbers by colons except for the last (HH hours)
-        if test $i -lt 2
-        then
-            HARDTIMELIMIT=":${HARDTIMELIMIT}"
-        fi
-        TMP=`expr ${TMP} / ${DIVISORS[i]}`
-    done
-    if test ${TMP} -gt 0
-    then
-        HARDTIMELIMIT=${TMP}-${HARDTIMELIMIT}
-    fi
-fi
-
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
