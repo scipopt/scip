@@ -186,6 +186,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
          quiet = TRUE;
       else if( strcmp(argv[i], "-v") == 0 )
          onlyversion = TRUE;
+      else if( strcmp(argv[i], "--version") == 0 )
+         onlyversion = TRUE;
       else if( strcmp(argv[i], "-s") == 0 )
       {
          i++;
@@ -333,7 +335,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    else
    {
       printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
-         "  -v            : print version and build options\n"
+         "  -v, --version : print version and build options\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
