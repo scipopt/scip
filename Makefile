@@ -546,6 +546,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/reopt.o \
 			scip/retcode.o \
 			scip/scip.o \
+			scip/scipbuildflags.o \
 			scip/scipdefplugins.o \
 			scip/scipgithash.o \
 			scip/scipshell.o \
@@ -582,6 +583,7 @@ endif
 ALLSRC		+=	$(SCIPLIBSRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
+SCIPBUILDFLAGSFILE	= 	$(SRCDIR)/scip/buildflags.c
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -1107,14 +1109,14 @@ endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
 		@$(MAKE) githash
 endif
-ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
-		@$(MAKE) githash
-endif
 		@$(SHELL) -ec 'if test ! -e $(SCIPGITHASHFILE) ; \
 			then \
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
 				$(MAKE) githash ; \
 			fi'
+ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
+		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
+endif
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif

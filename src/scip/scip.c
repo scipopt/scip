@@ -66,6 +66,7 @@
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
 #include "scip/solve.h"
+#include "scip/scipbuildflags.h"
 #include "scip/scipgithash.h"
 #include "scip/scip.h"
 #include "lpi/lpi.h"
