@@ -2405,6 +2405,9 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
       SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->startcand, solcand) );
       SCIP_CALL( SCIPunlinkSol(scip, heurdata->startcand) );
       heurdata->startcandviol = violation;
+
+      /* remember which heuristic proposed the candidate */
+      SCIPsolSetHeur(heurdata->startcand, SCIPgetSolHeur(scip, solcand));
    }
 
    return SCIP_OKAY;
