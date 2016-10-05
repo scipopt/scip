@@ -117,7 +117,7 @@ int getRand(
    SCIP_RANDGEN*         randgen             /**< random number generator */
    )
 {
-   uint64_t t;
+   unsigned long t;
 
    /* linear congruential */
    randgen->seed = randgen->seed * (SCIP_Longint)1103515245 + 12345;
@@ -130,7 +130,7 @@ int getRand(
    /* Multiple-with-carry */
    t = 698769069ULL * randgen->mwc_seed + randgen->cst_seed;
    randgen->cst_seed = t >> 32;
-   randgen->mwc_seed = (uint32_t) t;
+   randgen->mwc_seed = (unsigned int) t;
 
    return (int)((randgen->seed + randgen->xor_seed + randgen->mwc_seed) % INT_MAX);
 }

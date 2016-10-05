@@ -23,7 +23,6 @@
 #ifndef __SCIP_STRUCT_RANDOM_H__
 #define __SCIP_STRUCT_RANDOM_H__
 
-#include <stdint.h>
 #include "scip/def.h"
 #include "scip/type_random.h"
 
@@ -34,10 +33,10 @@ extern "C" {
 /** random number generator data */
 struct SCIP_RandGen
 {
-   uint32_t              seed;               /**< start seed */
-   uint32_t              xor_seed;           /**< Xorshift seed */
-   uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
-   uint32_t              cst_seed;           /**< constant seed */
+   unsigned int          seed;               /**< start seed */
+   unsigned int          xor_seed;           /**< Xorshift seed */
+   unsigned int          mwc_seed;           /**< Multiply-with-carry seed */
+   unsigned int          cst_seed;           /**< constant seed */
 };
 
 #ifdef __cplusplus
