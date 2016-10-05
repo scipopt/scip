@@ -1327,7 +1327,7 @@ SCIP_RETCODE sortComponents(
          ++(*ncompsmaxsize);
 
       /* component fulfills the minsize requirement */
-      if( ncvars > minsize )
+      if( ncvars >= minsize )
          ++(*ncompsminsize);
    }
 
@@ -1954,8 +1954,45 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPinfoMessage(scip, NULL, "found %d components at node %lld at depth %d\n",
-            ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+         SCIPinfoMessage(scip, NULL, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d\n",
+            ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+
+         /* if there are components with size smaller than the limit, we merge them with the smallest component */
+         if( ncomponents > ncompsminsize )
+         {
+            int minsize;
+            int size;
+            int c;
+            int m = 0;
+
+            /* compute minimum size of components to solve individually */
+            minsize = conshdlrdata->minrelsize * SCIPgetNVars(scip);
+            minsize = MAX(minsize, conshdlrdata->minsize);
+
+            for( c = 0; c < ncomponents; ++c )
+            {
+               size = compstartsvars[c+1] - compstartsvars[c];
+
+               if( size >= minsize )
+               {
+                  ++m;
+                  compstartsvars[m] = compstartsvars[c+1];
+                  compstartsconss[m] = compstartsconss[c+1];
+               }
+               /* the last component is too small */
+               else if( c == ncomponents - 1 )
+               {
+                  assert(m == ncompsminsize);
+                  compstartsvars[m] = compstartsvars[c+1];
+                  compstartsconss[m] = compstartsconss[c+1];
+               }
+            }
+            assert(m == ncompsminsize);
+            assert(compstartsvars[m] = nsortedvars);
+            assert(compstartsconss[m] = nsortedconss);
+
+            ncomponents = m;
+         }
 
          SCIP_CALL( createAndSplitProblem(scip, conshdlrdata, fixedvarsobjsum, sortedvars, sortedconss, compstartsvars, compstartsconss, ncomponents, &problem) );
 
@@ -2063,7 +2100,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       int ncompconss;
       int comp;
 
-      SCIPinfoMessage(scip, NULL, "found %d components at node %lld at depth %d\n",
+      SCIPinfoMessage(scip, NULL, "found %d components during presolving\n",
          ncompsmaxsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 
       /* build subscip */
