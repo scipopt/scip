@@ -25,6 +25,7 @@
 
 #include "scip/branch_lookaheadabbreviated.h"
 #include "scip/pub_misc.h"
+#include "scip/branch_fullstrong.h"
 
 
 #define BRANCHRULE_NAME            "lookahead-abbreviated"
@@ -109,6 +110,7 @@ void freeCandidates(
  * Other callback methods
  */
 
+
 static
 SCIP_DECL_SORTINDCOMP(branchCandFractionalityComparator)
 {  /*lint --e{715}*/
@@ -139,7 +141,6 @@ SCIP_DECL_SORTINDCOMP(branchCandFractionalityComparator)
    return result;/*SCIPvarCompare(valuesptr[ind1], valuesptr[ind2]);*/
 }
 
-
 /* put your local methods here, and declare them static */
 
 static
@@ -147,29 +148,75 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   Candidates* allcandidates;
+   /*Candidates* allcandidates;*/
    SCIP_VAR** lpcands;
+   SCIP_VAR** tmplpcands;
+   SCIP_Real* tmplpcandssol;
+   SCIP_Real* tmplpcandsfrac;
    SCIP_Real* lpcandssol;
-   int* sortedindices;
+   SCIP_Real* lpcandsfrac;
+   SCIP_Real* scores;
+   SCIP_Bool* skipup;
+   SCIP_Bool* skipdown;
+   SCIP_Real bestdown;
+   SCIP_Real bestup;
+   SCIP_Real bestscore;
+   SCIP_Real provedbound;
+   SCIP_Bool bestdownvalid;
+   SCIP_Bool bestupvalid;
+   SCIP_RESULT result = SCIP_DIDNOTRUN;
+   /*int* sortedindices;*/
+   int bestcand;
+   int lastcand = 0;
    int nlpcands;
+   int npriolpcands; /* TODO CS: what exactly is this? */
    int i;
+   const char* names[18] = {"", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
+            "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
+            "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS"};
 
    /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands, NULL) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortedindices, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &skipdown, nlpcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &skipup, nlpcands) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &scores, nlpcands) );
    for( i = 0; i < nlpcands; i++ )
    {
-      SCIP_VAR* sortedvar = lpcands[i];
-      SCIP_Real sortedval = lpcandssol[i];
-
-      SCIPdebugMessage("PreSort: Index: <%i>, Var: <%s>, Val: <%g>\n", i, SCIPvarGetName(sortedvar), sortedval);
+      scores[i] = -SCIPinfinity(scip);
+      skipup[i] = FALSE;
+      skipdown[i] = FALSE;
    }
 
-   SCIPsort(sortedindices, branchCandFractionalityComparator, (void*)lpcandssol, nlpcands);
+   SCIP_CALL( SCIPselectVarStrongBranchingRanking(scip, lpcands, lpcandssol, lpcandsfrac, skipdown, skipup, scores, nlpcands, npriolpcands,
+      nlpcands, &lastcand, TRUE, -2, TRUE, TRUE, &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, &result) );
 
+   SCIPdebugMessage("SB Result <%s>\n", names[result]);
+   SCIPdebugMessage("BestCand <%s> with a score of <%g>\n", SCIPvarGetName(lpcands[bestcand]), bestscore);
    for( i = 0; i < nlpcands; i++ )
+   {
+      SCIPdebugMessage("Var: <%s>, Score: <%g>\n", SCIPvarGetName(lpcands[i]), scores[i]);
+   }
+
+   SCIPfreeBufferArray(scip, &scores);
+
+   SCIPfreeBufferArray(scip, &skipup);
+   SCIPfreeBufferArray(scip, &skipdown);
+
+   SCIPfreeBufferArray(scip, &lpcandsfrac);
+   SCIPfreeBufferArray(scip, &lpcandssol);
+   SCIPfreeBufferArray(scip, &lpcands);
+
+   /*SCIP_CALL( SCIPallocBufferArray(scip, &sortedindices, nlpcands) );
+
+   SCIPsort(sortedindices, branchCandFractionalityComparator, (void*)lpcandsfrac, nlpcands);*/
+
+   /*for( i = 0; i < nlpcands; i++ )
    {
       int sortedindex = sortedindices[i];
       SCIP_VAR* sortedvar = lpcands[sortedindex];
@@ -177,9 +224,7 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
 
       SCIPdebugMessage("PostSort: Index: <%i>, VarIndex: <%i>, Var: <%s>, Val: <%g>\n", i, sortedindex, SCIPvarGetName(sortedvar), sortedval);
    }
-
-   SCIPfreeBufferArray(scip, &sortedindices);
-
+   SCIPfreeBufferArray(scip, &sortedindices);*/
 
    /*SCIP_CALL( allocCandidates(scip, &allcandidates, nlpcands) );
    initCandidates(allcandidates);

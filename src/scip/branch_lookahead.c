@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*#define SCIP_DEBUG*/
-/*#define SCIP_STATISTICS*/
+#define SCIP_STATISTICS
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -41,7 +41,7 @@
 
 #define BRANCHRULE_NAME            "lookahead"
 #define BRANCHRULE_DESC            "fullstrong branching over two levels"
-#define BRANCHRULE_PRIORITY        536870911
+#define BRANCHRULE_PRIORITY        0
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
@@ -1019,7 +1019,7 @@ SCIP_Bool isConstraintViolatedByBaseSolution(
          SCIPvarGetName(basevarforbound), SCIPvarGetName(deepvarforbound));
    }
 
-   return violated;
+   return FALSE;/*violated;*/
 }
 
 /**
@@ -2315,11 +2315,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 #ifdef SCIP_STATISTICS
    {
       int i;
+      const char* names[18] = {"", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
+         "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
+         "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS"};
+
       branchruledata->nresults[*result]++;
       for( i = 1; i < 18; i++ )
       {
          /* see type_result.h for the id <-> enum mapping */
-         SCIPinfoMessage(scip, NULL, "Result with index <%i> was chosen <%i> times\n", i, branchruledata->nresults[i]);
+         SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", names[i], branchruledata->nresults[i]);
       }
       SCIPinfoMessage(scip, NULL, "Solved <%i> lps on the first level and <%i> lps on the second level\n",
          branchruledata->nfirstlvllps, branchruledata->nsecondlvllps);
