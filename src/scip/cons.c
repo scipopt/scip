@@ -3238,6 +3238,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       if( *result != SCIP_CUTOFF
          && *result != SCIP_CONSADDED
          && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
          && *result != SCIP_BRANCHED
          && *result != SCIP_SOLVELP
          && *result != SCIP_INFEASIBLE
