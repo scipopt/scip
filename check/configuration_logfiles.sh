@@ -41,9 +41,9 @@ SETNAME=$7   # the name of the setting
 TSTNAME=$8   # the name of the testset
 CONTINUE=$9  # should test continue an existing run
 # optional variables
-QUEUE=$9     # the queue name
-p=${10}         # the index of the current permutation - only needed if permutations are used
-s=${11}         # shift of the global random seed - only needed if different seeds are used
+QUEUE=$10    # the queue name
+p=${11}      # the index of the current permutation - only needed if permutations are used
+s=${12}      # shift of the global random seed - only needed if different seeds are used
 
 if test "$QUEUE" = ""
 then
