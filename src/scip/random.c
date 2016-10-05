@@ -39,15 +39,33 @@ void randomInitialze(
 
    randgen->seed = (uint32_t)DEFAULT_SEED;
    randgen->seed += initseed;
+   /* this is a special case to avoid zero after over flowing */
+   if( randgen->seed == 0 )
+      randgen->seed = initseed;
+   assert(randgen->seed > 0);
 
    randgen->xor_seed = (uint32_t)DEFAULT_XOR;
    randgen->xor_seed += initseed;
+   /* this is a special case to avoid zero after over flowing */
+   if( randgen->xor_seed == 0 )
+      randgen->xor_seed = initseed;
+   assert(randgen->xor_seed > 0);
 
    randgen->mwc_seed = (uint32_t)DEFAULT_MWC;
    randgen->mwc_seed += initseed;
 
    randgen->cst_seed = (uint32_t)DEFAULT_CST;
    randgen->cst_seed += initseed;
+   /* this is a special case to avoid zero after over flowing */
+   if( randgen->mwc_seed == 0 && randgen->cst_seed == 0 )
+   {
+      randgen->mwc_seed = (uint32_t)DEFAULT_MWC;
+      randgen->mwc_seed -= initseed;
+
+      randgen->cst_seed = (uint32_t)DEFAULT_CST;
+      randgen->cst_seed -= initseed;
+   }
+   assert(randgen->mwc_seed > 0 || randgen->cst_seed > 0);
 
    return;
 }

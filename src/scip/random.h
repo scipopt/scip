@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_random.h
+/**@file   random.h
  * @brief  data structures for random number generator
  * @author Jakob Witzig
  */
