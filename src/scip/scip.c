@@ -648,40 +648,8 @@ void SCIPprintBuildOptions(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
 #endif
 
-   /* build options */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Build options:\n");
-
-   /**@todo extend this list */
-#ifdef BMS_NOBLOCKMEM
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  NOBLKMEM=true\n");
-#else
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  NOBLKMEM=false\n");
-#endif
-#ifdef SCIP_NOBUFFERMEM
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  NOBUFMEM=true\n");
-#else
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  NOBUFMEM=false\n");
-#endif
-#ifdef WITH_ZLIB
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  ZLIB=true\n");
-#else
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  ZLIB=false\n");
-#endif
-#ifdef WITH_GMP
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  GMP=true\n");
-#else
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  GMP=false\n");
-#endif
-#ifdef WITH_ZIMPL
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  ZIMPL=true\n");
-#else
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  ZIMPL=false\n");
-#endif
-#ifdef WITH_READLINE
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  READLINE=true\n");
-#else
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  READLINE=false\n");
-#endif
+   /* build flags */
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\nBuild options:\n%s", SCIPgetBuildFlags());
 }
 
 /** prints error message for the given SCIP_RETCODE via the error prints method */
