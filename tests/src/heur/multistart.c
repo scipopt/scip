@@ -220,7 +220,7 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    lincoefs[0] = 5.0;
    lincoefs[1] = 1.0;
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, &maxviol) );
+   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &maxviol) );
    cr_expect(SCIPisFeasEQ(scip, maxviol, 0.0));
 
    /* consider one quadratic constraint of the form sqrt(x^2 + y^2) = 0.5 */
@@ -235,19 +235,19 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    /* start inside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.2) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, &maxviol) );
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, INT_MAX, &maxviol) );
    cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
 
    /* start outside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, &maxviol) );
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, INT_MAX, &maxviol) );
    cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
 
    /* consider linear and quadratic constraint */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -10.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, &maxviol) );
+   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, INT_MAX, &maxviol) );
    cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
 
    /* free nlrows */
