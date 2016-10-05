@@ -168,7 +168,7 @@ namespace polyscip {
                                    const V_RepT& r2,
                                    const V_RepC& v_rep) const;
 
-            /** Check whether first parameter is multiple of second or third parameter
+            /** Check whether first parameter is multiple of second parameter
              */
             bool isMultiple(const V_RepT& v, const V_RepT& w) const;
             bool weightIsMultiple(SCIP* scip, double v_multiple, const V_RepT& v, const V_RepT& w) const;

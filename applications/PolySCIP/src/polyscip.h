@@ -21,6 +21,7 @@
 #define POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <iterator>
 #include <ostream>
@@ -87,6 +88,8 @@ namespace polyscip {
 
         using ObjPair = std::pair<std::size_t, std::size_t>;
 
+        using Box = std::vector<std::pair<ValueType, ValueType>>;
+
         explicit Polyscip(int argc, const char *const *argv);
 
         ~Polyscip();
@@ -122,6 +125,8 @@ namespace polyscip {
 
         /*using ValPair = std::pair<ValueType, ValueType>;
         using ValPairMap = std::map<ValPair, std::vector<OutcomeType>>;*/
+
+
 
         bool filenameIsOkay(const std::string &filename);
 
@@ -216,30 +221,21 @@ namespace polyscip {
                                               const std::pair<std::size_t, std::size_t>& considered_objs,
                                               ValPairMap nondom_projected_points);*/
 
-        void computeSingularNondomPoints(const std::map<ObjPair, std::vector<OutcomeType>>& proj_nondom_outcomes,
+        SCIP_RETCODE computeSingularNondomPoints(const std::map<ObjPair, std::vector<OutcomeType>>& proj_nondom_outcomes,
                                          const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                          const std::vector<std::vector<ValueType>>& orig_vals);
 
+        void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;
 
-        bool projNondomPointsYieldFeasSpace(const OutcomeType &nd_12,
-                                            const OutcomeType &nd_13,
-                                            const OutcomeType &nd_23) const;
+        bool boxIsFeasible(const Box& box) const;
 
-        bool feasibleSpaceIsDominated(const OutcomeType &nd_01,
-                                      const OutcomeType &nd_02,
-                                      const OutcomeType &nd_12,
-                                      const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                                      const std::vector<std::vector<ValueType>> &orig_vals);
+        void incorporateOutcomes(Box& box,
+                                 ResultContainer::const_iterator beg,
+                                 ResultContainer::const_iterator end,
+                                 std::vector<std::reference_wrapper<const OutcomeType>> outcomes_to_incorporate) const;
 
-
-        bool feasibleSpaceContainsFeasiblePoint(ValueType lhs_obj_0,
-                                                ValueType rhs_obj_0,
-                                                ValueType lhs_obj_1,
-                                                ValueType rhs_obj_1,
-                                                ValueType lhs_obj_2,
-                                                ValueType rhs_obj_2,
-                                                const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                                const std::vector<std::vector<ValueType>>& orig_vals);
+        ObjPair outcomeValsLessEqAndGreater(const Box& box,
+                                            const OutcomeType& outcome) const;
 
         /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
@@ -292,6 +288,12 @@ namespace polyscip {
                           std::pair<std::size_t, std::size_t> objs_to_be_ignored,
                           SCIP_CLOCK* clock_total);
 
+        explicit Polyscip(const CmdLineArgs& cmd_line_args,
+                          SCIP *scip,
+                          SCIP_Objsense obj_sense,
+                          std::size_t no_objs,
+                          SCIP_CLOCK *clock_total);
+
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
         SCIP* scip_;
@@ -302,7 +304,8 @@ namespace polyscip {
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;
 
-        bool is_subproblem_;
+        bool is_lower_dim_prob_;
+        bool is_sub_prob_;
 
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
         ResultContainer supported_;

@@ -38,6 +38,7 @@ int main(int argc, char** argv) {
             polyscip.writeResultsToFile();
         else
             polyscip.printResults();
+
         assert (!polyscip.dominatedPointsFound());
         //polyscip.writeFileForVertexEnumeration();
     }
