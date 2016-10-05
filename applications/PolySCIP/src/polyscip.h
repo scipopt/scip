@@ -207,13 +207,13 @@ namespace polyscip {
                                               std::size_t obj_2,
                                               std::vector<OutcomeType> & proj_nondom_outcomes);
 
-        SCIP_RETCODE addSubproblemNondomPoints(std::size_t obj_1,
-                                               std::size_t obj_2,
-                                               const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                                               const std::vector<std::vector<ValueType>> &orig_vals,
-                                               const TwoDProj &proj,
-                                               const ResultContainer &known_results,
-                                               ResultContainer &new_results_to_be_added);
+        SCIP_RETCODE addLowerDimProbNondomPoints(std::size_t obj_1,
+                                                 std::size_t obj_2,
+                                                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                                                 const std::vector<std::vector<ValueType>> &orig_vals,
+                                                 const TwoDProj &proj,
+                                                 const ResultContainer &known_results,
+                                                 ResultContainer &new_results_to_be_added);
 
         /*SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
@@ -221,18 +221,23 @@ namespace polyscip {
                                               const std::pair<std::size_t, std::size_t>& considered_objs,
                                               ValPairMap nondom_projected_points);*/
 
-        SCIP_RETCODE computeSingularNondomPoints(const std::map<ObjPair, std::vector<OutcomeType>>& proj_nondom_outcomes,
-                                         const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                         const std::vector<std::vector<ValueType>>& orig_vals);
+        SCIP_RETCODE computeSubProbNondomPoints(const std::map<ObjPair, std::vector<OutcomeType>> &proj_nondom_outcomes,
+                                                const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                                                const std::vector<std::vector<ValueType>> &orig_vals);
+
+        SCIP_RETCODE addSubProbNondomPoints(const Box& box,
+                                            const std::vector<std::reference_wrapper<const OutcomeType>>& outcomes_for_constraints,
+                                            const std::vector<std::vector<SCIP_VAR *>>& orig_vars,
+                                            const std::vector<std::vector<ValueType>>& orig_vals);
 
         void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;
 
         bool boxIsFeasible(const Box& box) const;
 
-        void incorporateOutcomes(Box& box,
-                                 ResultContainer::const_iterator beg,
-                                 ResultContainer::const_iterator end,
-                                 std::vector<std::reference_wrapper<const OutcomeType>> outcomes_to_incorporate) const;
+        void incorporateOutcomesToBox(Box &box,
+                                      ResultContainer::const_iterator beg,
+                                      ResultContainer::const_iterator end,
+                                      std::vector<std::reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const;
 
         ObjPair outcomeValsLessEqAndGreater(const Box& box,
                                             const OutcomeType& outcome) const;

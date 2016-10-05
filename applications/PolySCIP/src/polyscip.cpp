@@ -405,9 +405,9 @@ namespace polyscip {
 
         if (no_objs_ == 3) {
             std::cout << "TESTING validity: \n";
-            computeSingularNondomPoints(proj_nondom_outcomes,
-                                        nonzero_obj_orig_vars,
-                                        nonzero_obj_orig_vals);
+            computeSubProbNondomPoints(proj_nondom_outcomes,
+                                       nonzero_obj_orig_vars,
+                                       nonzero_obj_orig_vals);
         }
 
         /*// clean up
@@ -449,10 +449,10 @@ namespace polyscip {
         }
     }
 
-    void Polyscip::incorporateOutcomes(Box& box,
-                                       ResultContainer::const_iterator beg_it,
-                                       ResultContainer::const_iterator end_it,
-                                       vector<reference_wrapper<const OutcomeType>> outcomes_to_incorporate) const {
+    void Polyscip::incorporateOutcomesToBox(Box &box,
+                                            ResultContainer::const_iterator beg_it,
+                                            ResultContainer::const_iterator end_it,
+                                            vector<reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const {
         auto it = beg_it;
         while (boxIsFeasible(box) && it != end_it) {
             auto bounds = outcomeValsLessEqAndGreater(box, it->second);
@@ -469,34 +469,70 @@ namespace polyscip {
         }
     }
 
-    SCIP_RETCODE Polyscip::computeSingularNondomPoints(const std::map<ObjPair, vector<OutcomeType>>& proj_nd_outcomes,
-                                               const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                               const std::vector<std::vector<ValueType>>& orig_vals) {
+    SCIP_RETCODE Polyscip::addSubProbNondomPoints(const Box& box,
+                                                  const vector<reference_wrapper<const OutcomeType>>& outcomes_for_constraints,
+                                                  const vector<vector<SCIP_VAR *>>& orig_vars,
+                                                  const vector<vector<ValueType>>& orig_vals) {
+        assert (box.size() == orig_vars.size());
+        assert (box.size() == orig_vals.size());
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL(SCIPfreeTransform(scip_));
+        auto cons = vector<SCIP_CONS *>{};
+        for (size_t i=0; i<box.size(); ++i) {
+            cons.push_back(createObjValCons(orig_vars[i],
+                                            orig_vals[i],
+                                            box[i].first,
+                                            box[i].second));
+            SCIP_CALL( SCIPaddCons(scip_, cons.back()) );
+        }
 
-        auto nd_outcomes_01 = proj_nd_outcomes.at(ObjPair(0,1));
+        std::unique_ptr<Polyscip> sub_poly(new Polyscip(cmd_line_args_,
+                                                        scip_,
+                                                        obj_sense_,
+                                                        no_objs_,
+                                                        clock_total_) );
+        sub_poly->computeNondomPoints();
+        std::cout << "SUBPOLY:\n";
+        sub_poly->printResults();
+        sub_poly.reset();
+        // release and delete constraints
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL(SCIPfreeTransform(scip_));
+        for (auto c : cons) {
+            SCIP_CALL(SCIPdelCons(scip_, c));
+            SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
+        }
+        return SCIP_OKAY;
+    }
+
+    SCIP_RETCODE Polyscip::computeSubProbNondomPoints(const std::map<ObjPair, vector<OutcomeType>> &proj_nd_outcomes,
+                                                      const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                                                      const std::vector<std::vector<ValueType>> &orig_vals) {
+
+        auto& nd_outcomes_01 = proj_nd_outcomes.at(ObjPair(0,1));
         assert (!nd_outcomes_01.empty());
-        auto nd_outcomes_02 = proj_nd_outcomes.at(ObjPair(0,2));
+        auto& nd_outcomes_02 = proj_nd_outcomes.at(ObjPair(0,2));
         assert (!nd_outcomes_02.empty());
-        auto nd_outcomes_12 = proj_nd_outcomes.at(ObjPair(1,2));
+        auto& nd_outcomes_12 = proj_nd_outcomes.at(ObjPair(1,2));
         assert (!nd_outcomes_12.empty());
 
         for (const auto& nd_01 : nd_outcomes_01) {
             for (const auto& nd_02 : nd_outcomes_02) {
                 for (const auto& nd_12 : nd_outcomes_12) {
+
                     auto box = Box{{max(nd_01[0], nd_02[0]), nd_12[0]-cmd_line_args_.getEpsilon()},
                                    {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getEpsilon()},
                                    {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getEpsilon()}};
 
-
                     auto outcomes_to_be_incorporated = vector<reference_wrapper<const OutcomeType>>{};
-                    incorporateOutcomes(box,
-                                        supported_.cbegin(),
-                                        supported_.cend(),
-                                        outcomes_to_be_incorporated);
-                    incorporateOutcomes(box,
-                                        unsupported_.cbegin(),
-                                        unsupported_.cend(),
-                                        outcomes_to_be_incorporated);
+                    incorporateOutcomesToBox(box,
+                                             supported_.cbegin(),
+                                             supported_.cend(),
+                                             outcomes_to_be_incorporated);
+                    incorporateOutcomesToBox(box,
+                                             unsupported_.cbegin(),
+                                             unsupported_.cend(),
+                                             outcomes_to_be_incorporated);
 
                     if (boxIsFeasible(box)) {
                         std::cout << "TESTING BOX: \n";
@@ -504,45 +540,10 @@ namespace polyscip {
                         std::cout << "[ " << box[1].first << ", " << box[1].second << "]\n";
                         std::cout << "[ " << box[2].first << ", " << box[2].second << "]\n";
 
-                        if (SCIPisTransformed(scip_))
-                            SCIP_CALL(SCIPfreeTransform(scip_));
-                        auto cons = vector<SCIP_CONS *>{};
-                        cons.push_back(createObjValCons(orig_vars[0],
-                                                        orig_vals[0],
-                                                        box[0].first,
-                                                        box[0].second));
-
-                        cons.push_back(createObjValCons(orig_vars[1],
-                                                        orig_vals[1],
-                                                        box[1].first,
-                                                        box[1].second));
-
-                        cons.push_back(createObjValCons(orig_vars[2],
-                                                        orig_vals[2],
-                                                        box[2].first,
-                                                        box[2].second));
-
-                        for (auto c : cons) {
-                            SCIP_CALL(SCIPaddCons(scip_, c));
-                        }
-
-                        std::unique_ptr<Polyscip> sub_poly(new Polyscip(cmd_line_args_,
-                                                                        scip_,
-                                                                        obj_sense_,
-                                                                        no_objs_,
-                                                                        clock_total_) );
-                        sub_poly->computeNondomPoints();
-                        std::cout << "SUBPOLY:\n";
-                        sub_poly->printResults();
-                        sub_poly.reset();
-                        // release and delete constraints
-                        if (SCIPisTransformed(scip_))
-                            SCIP_CALL(SCIPfreeTransform(scip_));
-                        for (auto c : cons) {
-                            SCIP_CALL(SCIPdelCons(scip_, c));
-                            SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
-                        }
-
+                        SCIP_CALL( addSubProbNondomPoints(box,
+                                                          outcomes_to_be_incorporated,
+                                                          orig_vars,
+                                                          orig_vals) );
                     }
                 }
             }
@@ -784,13 +785,13 @@ namespace polyscip {
                 proj_nondom_outcomes.push_back(res.second);
             }
             if (no_objs_ > 3) {
-                SCIP_CALL (addSubproblemNondomPoints(obj_1,
-                                                     obj_2,
-                                                     orig_vars,
-                                                     orig_vals,
-                                                     it->first,
-                                                     it->second,
-                                                     new_nondom_results) );
+                SCIP_CALL (addLowerDimProbNondomPoints(obj_1,
+                                                       obj_2,
+                                                       orig_vars,
+                                                       orig_vals,
+                                                       it->first,
+                                                       it->second,
+                                                       new_nondom_results) );
             }
         }
         for (auto& res : new_nondom_results) {
@@ -801,13 +802,13 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::addSubproblemNondomPoints(size_t obj_1,
-                                                     size_t obj_2,
-                                                     const vector<vector<SCIP_VAR *>> &orig_vars,
-                                                     const vector<vector<ValueType>> &orig_vals,
-                                                     const TwoDProj &proj,
-                                                     const ResultContainer &known_results,
-                                                     ResultContainer &new_results_to_be_added) {
+    SCIP_RETCODE Polyscip::addLowerDimProbNondomPoints(size_t obj_1,
+                                                       size_t obj_2,
+                                                       const vector<vector<SCIP_VAR *>> &orig_vars,
+                                                       const vector<vector<ValueType>> &orig_vals,
+                                                       const TwoDProj &proj,
+                                                       const ResultContainer &known_results,
+                                                       ResultContainer &new_results_to_be_added) {
         assert (!known_results.empty());
         auto new_results = ResultContainer{};
         // create constraint pred.first <= c_{objs.first} \cdot x <= succ.first
@@ -1031,7 +1032,7 @@ namespace polyscip {
         }
         if (no_objs_ > 3) {
             for (auto nd_it=nondom_projs.cbegin(); nd_it!=nondom_projs.cend(); ++nd_it) {
-                auto res = addSubproblemNondomPoints(obj_1, obj_2, orig_vars, orig_vals,
+                auto res = addLowerDimProbNondomPoints(obj_1, obj_2, orig_vars, orig_vals,
                                                          nd_it->first, nd_it->second);
 
             }
