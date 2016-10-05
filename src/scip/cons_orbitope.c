@@ -1647,7 +1647,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
 
       /* get solution */
       copyValues(scip, consdata, sol);
-      SCIPdebugMessage("Enforcing for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMessage("Relaxation enforcement for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
 
       /* separate */
       SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
