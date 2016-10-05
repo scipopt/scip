@@ -71,6 +71,7 @@ interface:
 - methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- SCIPapplyHeurSubNlp returns the solution found by the sub-NLP heuristic
 
 fixed bugs:
 
