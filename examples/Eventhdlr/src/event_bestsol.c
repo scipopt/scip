@@ -83,7 +83,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    assert(scip != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
 
-   SCIPdebugMessage("exec method of event handler for best solution found\n");
+   SCIPdebugMsg(scip, "exec method of event handler for best solution found\n");
    
    bestsol = SCIPgetBestSol(scip);
    assert(bestsol != NULL);

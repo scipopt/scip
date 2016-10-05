@@ -39,6 +39,10 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #ifdef WITH_ZLIB
 #include <zlib.h>
@@ -149,7 +153,7 @@ SCIP_RETCODE checkStage(
    assert(scip != NULL);
    assert(method != NULL);
 
-   /*SCIPdebugMessage("called method <%s> at stage %d ------------------------------------------------\n",
+   /*SCIPdebugMsg(scip, "called method <%s> at stage %d ------------------------------------------------\n",
      method, scip->set->stage);*/
 
    assert(scip->mem != NULL);
@@ -1265,6 +1269,49 @@ void SCIPwarningMessage(
    va_end(ap);
 }
 
+/** prints a debug message */
+void SCIPprintDebugMessage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   int subscipdepth = 0;
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( scip != NULL );
+
+   if ( scip->stat != NULL )
+      subscipdepth = scip->stat->subscipdepth;
+   if ( subscipdepth > 0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+void SCIPdebugMessagePrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( scip != NULL );
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
 void SCIPdialogMessage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1446,7 +1493,7 @@ SCIP_RETCODE copyCuts(
 
                if( !success )
                {
-                  SCIPdebugMessage("Converting cuts to constraints failed.\n");
+                  SCIPdebugMsg(sourcescip, "Converting cuts to constraints failed.\n");
 
                   /* free temporary memory */
                   SCIPfreeBufferArray(targetscip, &vars);
@@ -1461,7 +1508,7 @@ SCIP_RETCODE copyCuts(
                TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(targetscip, cons) );
 
-         SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
+         SCIPdebugMsg(sourcescip, "Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
          SCIPdebugPrintCons(targetscip, cons, NULL);
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
@@ -2689,7 +2736,7 @@ SCIP_RETCODE SCIPcopyConss(
 
       if( nsourceconss > 0 )
       {
-         SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
+         SCIPdebugMsg(sourcescip, "Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
 
       /* copy all constraints of one constraint handler */
@@ -2703,7 +2750,7 @@ SCIP_RETCODE SCIPcopyConss(
          /* in case of copying the global problem we have to ignore the local constraints which are active */
          if( global && SCIPconsIsLocal(sourceconss[c]) )
          {
-            SCIPdebugMessage("did not copy local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
+            SCIPdebugMsg(sourcescip, "did not copy local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
 
@@ -2732,7 +2779,7 @@ SCIP_RETCODE SCIPcopyConss(
          else
          {
             *valid = FALSE;
-            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
+            SCIPdebugMsg(sourcescip, "failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
          }
       }
    }
@@ -2842,7 +2889,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
 
    *valid = TRUE;
 
-   SCIPdebugMessage("Attempting to copy %d original constraints\n", nsourceconss);
+   SCIPdebugMsg(sourcescip, "Attempting to copy %d original constraints\n", nsourceconss);
 
    /* copy constraints: loop through all (source) constraint handlers */
    for( c = 0; c < nsourceconss; ++c )
@@ -2882,7 +2929,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
       else
       {
          *valid = FALSE;
-         SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
+         SCIPdebugMsg(sourcescip, "failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
       }
    }
 
@@ -3014,7 +3061,7 @@ SCIP_RETCODE SCIPcopyCuts(
 
    if( SCIPfindConshdlr(targetscip, "linear") == NULL )
    {
-      SCIPdebugMessage("No linear constraint handler available. Cannot convert cuts.\n");
+      SCIPdebugMsg(sourcescip, "No linear constraint handler available. Cannot convert cuts.\n");
       return SCIP_OKAY;
    }
 
@@ -3027,7 +3074,7 @@ SCIP_RETCODE SCIPcopyCuts(
    if( ncutsadded != NULL )
       *ncutsadded = nlocalcutsadded;
 
-   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
+   SCIPdebugMsg(sourcescip, "Converted %d active cuts to constraints.\n", nlocalcutsadded);
 
    /* convert delayed cuts from global delayed cut pool */
    cuts = SCIPgetDelayedPoolCuts(sourcescip);
@@ -3038,7 +3085,7 @@ SCIP_RETCODE SCIPcopyCuts(
    if( ncutsadded != NULL )
       *ncutsadded += nlocalcutsadded;
 
-   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
+   SCIPdebugMsg(sourcescip, "Converted %d active cuts to constraints.\n", nlocalcutsadded);
 
    return SCIP_OKAY;
 }
@@ -3151,7 +3198,7 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
             SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, cliquevars[j], &targetclique[j], varmap, consmap, global, &success) );
             if ( ! success )
             {
-               SCIPdebugMessage("Getting copy for variable <%s> failed.\n", SCIPvarGetName(cliquevars[j]));
+               SCIPdebugMsg(sourcescip, "Getting copy for variable <%s> failed.\n", SCIPvarGetName(cliquevars[j]));
                SCIPfreeBufferArray(targetscip, &targetclique);
                return SCIP_OKAY;
             }
@@ -3185,7 +3232,7 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, &targetvar, varmap, consmap, global, &success) );
       if ( ! success )
       {
-         SCIPdebugMessage("Getting copy for variable <%s> failed.\n", SCIPvarGetName(sourcevar));
+         SCIPdebugMsg(sourcescip, "Getting copy for variable <%s> failed.\n", SCIPvarGetName(sourcevar));
          return SCIP_OKAY;
       }
 
@@ -3215,7 +3262,7 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
             SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, implvars[l], &implvar, varmap, consmap, global, &success) );
             if ( ! success )
             {
-               SCIPdebugMessage("Getting copy for variable <%s> failed.\n", SCIPvarGetName(implvars[l]));
+               SCIPdebugMsg(sourcescip, "Getting copy for variable <%s> failed.\n", SCIPvarGetName(implvars[l]));
                return SCIP_OKAY;
             }
 
@@ -3379,7 +3426,7 @@ SCIP_RETCODE doCopy(
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, valid) );
 
-   SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
+   SCIPdebugMsg(sourcescip, "Copying plugins was%s valid.\n", *valid ? "" : " not");
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -3445,7 +3492,7 @@ SCIP_RETCODE doCopy(
       SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
    }
 
-   SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
+   SCIPdebugMsg(sourcescip, "Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
 
    (*valid) = *valid && consscopyvalid;
 
@@ -13181,7 +13228,7 @@ SCIP_RETCODE SCIPtransformProb(
       }
       else
          scip->set->mem_externestim = SCIPgetMemUsed(scip);
-      SCIPdebugMessage("external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->set->mem_externestim);
+      SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->set->mem_externestim);
    }
 
    return SCIP_OKAY;
@@ -13473,7 +13520,7 @@ SCIP_RETCODE presolveRound(
          ++(scip->stat->npresolroundsmed);
    }
 
-   SCIPdebugMessage("starting presolving round %d (%d/%d/%d), timing = %u\n",
+   SCIPdebugMsg(scip, "starting presolving round %d (%d/%d/%d), timing = %u\n",
       scip->stat->npresolrounds, scip->stat->npresolroundsfast, scip->stat->npresolroundsmed,
       scip->stat->npresolroundsext, *timing);
 
@@ -13497,7 +13544,7 @@ SCIP_RETCODE presolveRound(
          if( prioprop < 0 )
             break;
 
-         SCIPdebugMessage("executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
+         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
          SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
@@ -13516,7 +13563,7 @@ SCIP_RETCODE presolveRound(
          if( priopresol < 0 )
             break;
 
-         SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
+         SCIPdebugMsg(scip, "executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
          SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
@@ -13556,7 +13603,7 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp,
             scip->branchcand) );
 
-      SCIPdebugMessage("presolving callback returned result <%d>\n", result);
+      SCIPdebugMsg(scip, "presolving callback returned result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
       if( (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
@@ -13582,7 +13629,7 @@ SCIP_RETCODE presolveRound(
    /* call presolve methods of constraint handlers */
    while( k < consend && !(*unbounded) && !(*infeasible) && !aborted )
    {
-      SCIPdebugMessage("executing presolve method of constraint handler <%s>\n",
+      SCIPdebugMsg(scip, "executing presolve method of constraint handler <%s>\n",
          SCIPconshdlrGetName(scip->set->conshdlrs[k]));
       SCIP_CALL( SCIPconshdlrPresolve(scip->set->conshdlrs[k], scip->mem->probmem, scip->set, scip->stat,
             *timing, scip->stat->npresolrounds,
@@ -13613,7 +13660,7 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp,
             scip->branchcand) );
 
-      SCIPdebugMessage("presolving callback returned with result <%d>\n", result);
+      SCIPdebugMsg(scip, "presolving callback returned with result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
       if( (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
@@ -13645,7 +13692,7 @@ SCIP_RETCODE presolveRound(
       {
          assert(prioprop <= 0);
 
-         SCIPdebugMessage("executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
+         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
          SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
@@ -13661,7 +13708,7 @@ SCIP_RETCODE presolveRound(
       {
          assert(priopresol < 0);
 
-         SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
+         SCIPdebugMsg(scip, "executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
          SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
@@ -13701,7 +13748,7 @@ SCIP_RETCODE presolveRound(
       SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp,
             scip->branchcand) );
 
-      SCIPdebugMessage("presolving callback return with result <%d>\n", result);
+      SCIPdebugMsg(scip, "presolving callback return with result <%d>\n", result);
 
       /* if we work off the exhaustive presolvers, we stop immediately if a reduction was found */
       if( (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE) && !lastround && !SCIPisPresolveFinished(scip) )
@@ -13744,7 +13791,7 @@ SCIP_RETCODE presolveRound(
          /* call primal heuristics that are applicable during presolving */
          SCIP_Bool foundsol;
 
-         SCIPdebugMessage("calling primal heuristics during presolving\n");
+         SCIPdebugMsg(scip, "calling primal heuristics during presolving\n");
 
          /* call primal heuristics */
          SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
@@ -13776,7 +13823,7 @@ SCIP_RETCODE presolveRound(
          {
             assert((*timing == SCIP_PRESOLTIMING_FAST) || (*timing == SCIP_PRESOLTIMING_MEDIUM));
 
-            SCIPdebugMessage("not enough reductions in %s presolving, running %s presolving now...\n",
+            SCIPdebugMsg(scip, "not enough reductions in %s presolving, running %s presolving now...\n",
                *timing == SCIP_PRESOLTIMING_FAST ? "fast" : "medium",
                *timing == SCIP_PRESOLTIMING_FAST ? "medium" : "exhaustive");
 
@@ -13804,7 +13851,7 @@ SCIP_RETCODE presolveRound(
             int newpropstart = 0;
             int newconsstart = 0;
 
-            SCIPdebugMessage("reached end of exhaustive presolving loop, starting from the beginning...\n");
+            SCIPdebugMsg(scip, "reached end of exhaustive presolving loop, starting from the beginning...\n");
 
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, &newpresolstart,
                   oldpresolstart, &newpropstart, oldpropstart, &newconsstart, oldconsstart) );
@@ -13874,7 +13921,7 @@ SCIP_RETCODE presolve(
    {
       SCIP_Bool foundsol;
 
-      SCIPdebugMessage("calling primal heuristics before presolving\n");
+      SCIPdebugMsg(scip, "calling primal heuristics before presolving\n");
 
       /* call primal heuristics */
       SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
@@ -13946,7 +13993,7 @@ SCIP_RETCODE presolve(
       /* check, if we should abort presolving due to not enough changes in the last round */
       finished = SCIPisPresolveFinished(scip);
 
-      SCIPdebugMessage("presolving round %d returned with unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, *unbounded, *infeasible, finished);
+      SCIPdebugMsg(scip, "presolving round %d returned with unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, *unbounded, *infeasible, finished);
 
       /* check whether problem is infeasible or unbounded */
       finished = finished || *unbounded || *infeasible;
@@ -14076,7 +14123,7 @@ SCIP_RETCODE transformSols(
    if( nsols == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("try to transfer %d original solutions into the transformed problem space\n", nsols);
+   SCIPdebugMsg(scip, "try to transfer %d original solutions into the transformed problem space\n", nsols);
 
    ntransvars = scip->transprob->nvars;
    naddedsols = 0;
@@ -14161,7 +14208,7 @@ SCIP_RETCODE initSolve(
    /* initialize NLP if there are nonlinearities */
    if( scip->transprob->nlpenabled && !scip->set->nlp_disable )
    {
-      SCIPdebugMessage("constructing empty NLP\n");
+      SCIPdebugMsg(scip, "constructing empty NLP\n");
 
       SCIP_CALL( SCIPnlpCreate(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, SCIPprobGetName(scip->transprob), scip->transprob->nvars) );
       assert(scip->nlp != NULL);
@@ -15100,7 +15147,7 @@ SCIP_RETCODE SCIPsolve(
          }
       }
 
-      SCIPdebugMessage("-> saved %d solution.\n", nsols);
+      SCIPdebugMsg(scip, "-> saved %d solution.\n", nsols);
    }
 
    /* stop solving timer */
@@ -16520,7 +16567,7 @@ SCIP_RETCODE SCIPparseVarName(
    /* check if we have a negated variable */
    if( *varname == '~' )
    {
-      SCIPdebugMessage("parsed negated variable name <%s>\n", &varname[1]);
+      SCIPdebugMsg(scip, "parsed negated variable name <%s>\n", &varname[1]);
 
       /* search for the variable and ignore '~' */
       (*var) = SCIPfindVar(scip, &varname[1]);
@@ -16532,7 +16579,7 @@ SCIP_RETCODE SCIPparseVarName(
    }
    else
    {
-      SCIPdebugMessage("parsed variable name <%s>\n", varname);
+      SCIPdebugMsg(scip, "parsed variable name <%s>\n", varname);
 
       /* search for the variable */
       (*var) = SCIPfindVar(scip, varname);
@@ -16608,7 +16655,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
       if( var == NULL )
       {
-         SCIPdebugMessage("variable with name <%s> does not exist\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
          (*success) = FALSE;
          break;
       }
@@ -16840,7 +16887,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    exponents = NULL;
    coef = SCIP_INVALID;
 
-   SCIPdebugMessage("parsing polynomial from '%s'\n", str);
+   SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
    while( *str && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
    {
@@ -16856,7 +16903,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       {
          if( coef != SCIP_INVALID  ) /*lint !e777*/
          {
-            SCIPdebugMessage("push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+            SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
             /* push previous monomial */
             if( monomialssize <= *nmonomials )
             {
@@ -17046,7 +17093,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       if( coef != SCIP_INVALID ) /*lint !e777*/
       {
          /* push last monomial */
-         SCIPdebugMessage("push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+         SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
          if( monomialssize <= *nmonomials )
          {
             monomialssize = *nmonomials+1;
@@ -18628,7 +18675,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
 
    assert(!SCIPinProbing(scip));
 
-   SCIPdebugMessage("starting strong branching mode%s: lpcount=%" SCIP_LONGINT_FORMAT "\n", enablepropagation ? " with propagation" : "", scip->stat->lpcount - scip->stat->nsbdivinglps);
+   SCIPdebugMsg(scip, "starting strong branching mode%s: lpcount=%" SCIP_LONGINT_FORMAT "\n", enablepropagation ? " with propagation" : "", scip->stat->lpcount - scip->stat->nsbdivinglps);
 
    /* start probing mode to allow propagation before solving the strong branching LPs; if no propagation should be done,
     * start the strong branching mode in the LP interface
@@ -18729,7 +18776,7 @@ SCIP_RETCODE SCIPendStrongbranch(
          ++nbnds;
       }
 
-      SCIPdebugMessage("ending strong branching with probing: %d bound changes collected\n", nbnds);
+      SCIPdebugMsg(scip, "ending strong branching with probing: %d bound changes collected\n", nbnds);
 
       /* inform the LP that the probing mode is not used for strong branching anymore */
       SCIPlpEndStrongbranchProbing(scip->lp);
@@ -18741,12 +18788,12 @@ SCIP_RETCODE SCIPendStrongbranch(
       {
          if( boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
          {
-            SCIPdebugMessage("apply probing lower bound change <%s> >= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
+            SCIPdebugMsg(scip, "apply probing lower bound change <%s> >= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
             SCIP_CALL( SCIPchgVarLb(scip, boundchgvars[i], bounds[i]) );
          }
          else
          {
-            SCIPdebugMessage("apply probing upper bound change <%s> <= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
+            SCIPdebugMsg(scip, "apply probing upper bound change <%s> <= %.9g\n", SCIPvarGetName(boundchgvars[i]), bounds[i]);
             SCIP_CALL( SCIPchgVarUb(scip, boundchgvars[i], bounds[i]) );
          }
       }
@@ -18757,7 +18804,7 @@ SCIP_RETCODE SCIPendStrongbranch(
    }
    else
    {
-      SCIPdebugMessage("ending strong branching\n");
+      SCIPdebugMsg(scip, "ending strong branching\n");
 
       SCIP_CALL( SCIPlpEndStrongbranch(scip->lp) );
    }
@@ -19078,7 +19125,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          if( valid != NULL )
             *valid = TRUE;
 
-         SCIPdebugMessage("%s branch of var <%s> detected infeasible during propagation\n",
+         SCIPdebugMsg(scip, "%s branch of var <%s> detected infeasible during propagation\n",
             down ? "down" : "up", SCIPvarGetName(var));
       }
    }
@@ -19098,7 +19145,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          if( valid != NULL )
             *valid = TRUE;
 
-         SCIPdebugMessage("%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
+         SCIPdebugMsg(scip, "%s branch of var <%s> detected infeasible in LP solving: status=%d\n",
             down ? "down" : "up", SCIPvarGetName(var), SCIPgetLPSolstat(scip));
       }
       else if( !(*lperror) )
@@ -19114,7 +19161,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             *value = SCIPgetLPObjval(scip);
             assert(SCIPisLT(scip, *value, SCIPgetCutoffbound(scip)));
 
-            SCIPdebugMessage("probing LP solved to optimality, objective value: %16.9g\n", *value);
+            SCIPdebugMsg(scip, "probing LP solved to optimality, objective value: %16.9g\n", *value);
 
             if( valid != NULL )
                *valid = TRUE;
@@ -19148,7 +19195,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
                if( *foundsol )
                {
-                  SCIPdebugMessage("found new solution in strong branching\n");
+                  SCIPdebugMsg(scip, "found new solution in strong branching\n");
 
                   scip->stat->nsbsolsfound++;
 
@@ -19177,7 +19224,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
             SCIP_Real objval;
             SCIP_Real looseobjval;
 
-            SCIPdebugMessage("probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
+            SCIPdebugMsg(scip, "probing LP hit %s limit\n", SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT ? "iteration" : "time");
 
             /* we access the LPI directly, because when a time limit was hit, we cannot access objective value and dual
              * feasibility using the SCIPlp... methods; we should try to avoid direct calls to the LPI, but this is rather
@@ -19237,7 +19284,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 #ifndef NDEBUG
       if( *lperror )
       {
-         SCIPdebugMessage("error during strong branching probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
+         SCIPdebugMsg(scip, "error during strong branching probing LP solving: status=%d\n", SCIPgetLPSolstat(scip));
       }
 #endif
    }
@@ -19425,7 +19472,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    newlb = SCIPfeasFloor(scip, solval + 1.0);
    newub = SCIPfeasCeil(scip, solval - 1.0);
 
-   SCIPdebugMessage("strong branching on var <%s>: solval=%g, lb=%g, ub=%g\n", SCIPvarGetName(var), solval,
+   SCIPdebugMsg(scip, "strong branching on var <%s>: solval=%g, lb=%g, ub=%g\n", SCIPvarGetName(var), solval,
       SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
    /* the up branch is infeasible due to the branching bound change; since this means that solval is not within the
@@ -23389,7 +23436,7 @@ SCIP_RETCODE SCIPchgVarType(
 
    if( SCIPvarIsNegated(var) )
    {
-      SCIPdebugMessage("upgrading type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+      SCIPdebugMsg(scip, "upgrading type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
       var = SCIPvarGetNegationVar(var);
    }
 #ifndef NDEBUG
@@ -23397,7 +23444,7 @@ SCIP_RETCODE SCIPchgVarType(
    {
       if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       {
-         SCIPdebugMessage("upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
+         SCIPdebugMsg(scip, "upgrading type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetType(var), vartype);
       }
    }
 #endif
@@ -31588,7 +31635,7 @@ void SCIPaddBilinMcCormick(
       constant = -constant;
    }
 
-   SCIPdebugMessage("%.20g * x[%.20g,%.20g] * y[%.20g,%.20g] %c= %.20g * x %+.20g * y %+.20g\n", bilincoef, lbx, ubx,
+   SCIPdebugMsg(scip, "%.20g * x[%.20g,%.20g] * y[%.20g,%.20g] %c= %.20g * x %+.20g * y %+.20g\n", bilincoef, lbx, ubx,
       lby, uby, overestimate ? '<' : '>', coefx, coefy, constant);
 
    *lincoefx    += coefx;
@@ -33728,7 +33775,7 @@ SCIP_RETCODE SCIPsolveProbingRelax(
       {
       case SCIP_CUTOFF:
          *cutoff = TRUE;
-         SCIPdebugMessage(" -> relaxator <%s> detected cutoff\n", SCIPrelaxGetName(relax));
+         SCIPdebugMsg(scip, " -> relaxator <%s> detected cutoff\n", SCIPrelaxGetName(relax));
          break;
 
       case SCIP_CONSADDED:
@@ -35288,7 +35335,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
 
       if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
       {
-         SCIPdebugMessage("var <%s> is fixed to infinite value %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
+         SCIPdebugMsg(scip, "var <%s> is fixed to infinite value %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
          break;
       }
    }
@@ -35312,7 +35359,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
          {
             assert(SCIPisEQ(scip, SCIPvarGetLbOriginal(var), SCIPvarGetUbOriginal(var)));
 
-            SCIPdebugMessage("--> var <%s> is fixed to infinite value %g in the original problem, stop making solution finite\n",
+            SCIPdebugMsg(scip, "--> var <%s> is fixed to infinite value %g in the original problem, stop making solution finite\n",
                SCIPvarGetName(var), SCIPvarGetLbOriginal(var));
 
             goto TERMINATE;
@@ -35441,7 +35488,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("created finites solution copy:\n");
+   SCIPdebugMsg(scip, "created finites solution copy:\n");
    SCIP_CALL( SCIPprintSol(scip, *sol, NULL, FALSE) );
 #endif
 

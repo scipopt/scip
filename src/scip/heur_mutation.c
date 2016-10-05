@@ -364,7 +364,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    /* terminate if it was not possible to create the subproblem */
    if( !success )
    {
-      SCIPdebugMessage("Could not create the subproblem -> skip call\n");
+      SCIPdebugMsg(scip, "Could not create the subproblem -> skip call\n");
       goto TERMINATE;
    }
 
@@ -499,7 +499,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
 
    /* solve the subproblem */
-   SCIPdebugMessage("Solve Mutation subMIP\n");
+   SCIPdebugMsg(scip, "Solve Mutation subMIP\n");
    retcode = SCIPsolve(subscip);
 
    /* Errors in solving the subproblem should not kill the overall solving process

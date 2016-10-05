@@ -132,7 +132,7 @@ SCIP_RETCODE performRandRounding(
       ceilval = SCIPfeasCeil(scip, oldsolval);
       floorval = SCIPfeasFloor(scip, oldsolval);
 
-      SCIPdebugMessage("rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
+      SCIPdebugMsg(scip, "rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* abort if rounded ceil and floor value lie outside the variable domain. Otherwise, check if
@@ -253,7 +253,7 @@ SCIP_RETCODE performRandRounding(
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
@@ -320,7 +320,7 @@ SCIP_RETCODE performLPRandRounding(
    *result = SCIP_DIDNOTFIND;
 
    /* perform random rounding */
-   SCIPdebugMessage("executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
+   SCIPdebugMsg(scip, "executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
    SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, nlpcands, propagate, result) );
 
    return SCIP_OKAY;

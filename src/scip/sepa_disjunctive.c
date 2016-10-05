@@ -824,7 +824,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          *result = SCIP_DIDNOTFIND;
    }
 
-   SCIPdebugMessage("Number of found disjunctive cuts: %d.\n", ndisjcuts);
+   SCIPdebugMsg(scip, "Number of found disjunctive cuts: %d.\n", ndisjcuts);
 
    /* free buffer arrays */
    SCIPfreeBufferArrayNull(scip, &cutcoefs);

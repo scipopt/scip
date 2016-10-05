@@ -308,7 +308,7 @@ SCIP_RETCODE updateBestCandidate(
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       assert(!SCIPisNegative(scip, branchscore));
    }
-   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; wscore = %g; type=%d bestbrscore=%g\n",
+   SCIPdebugMsg(scip, "branching score variable <%s>[%g,%g] = %g; wscore = %g; type=%d bestbrscore=%g\n",
       SCIPvarGetName(cand), SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum),
       SCIPvarGetType(cand), *bestscore);
 
@@ -603,7 +603,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of pscost branching\n");
+   SCIPdebugMsg(scip, "Execlp method of pscost branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
@@ -633,7 +633,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(lpcands[bestcand], TRUE)));
 
    /* perform the branching */
-   SCIPdebugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
+   SCIPdebugMsg(scip, " -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestscore);
 
    /* perform the branching */
@@ -665,7 +665,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPdebugMessage("Execext method of pscost branching\n");
+   SCIPdebugMsg(scip, "Execext method of pscost branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nprioexterncands, NULL, NULL, NULL) );
@@ -689,7 +689,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    assert(SCIPvarIsActive(SCIPvarGetProbvar(brvar)));
 
-   SCIPdebugMessage("branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
+   SCIPdebugMsg(scip, "branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
       SCIPvarGetName(brvar), SCIPvarGetLbLocal(brvar), SCIPadjustedVarUb(scip, brvar, brpoint), SCIPadjustedVarLb(scip, brvar, brpoint), SCIPvarGetUbLocal(brvar));
 
    if( branchruledata->nchildren > 2 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) <= branchruledata->narymaxdepth )
