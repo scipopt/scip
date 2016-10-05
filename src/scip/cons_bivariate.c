@@ -5339,7 +5339,6 @@ SCIP_RETCODE propagateBounds(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool   redundant;
    SCIP_Bool   domainerror;
@@ -5377,8 +5376,6 @@ SCIP_RETCODE propagateBounds(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
-         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-         assert(consdata != NULL);
          if( SCIPconsIsMarkedPropagate(conss[c]) )
             break;
       }
@@ -5418,9 +5415,6 @@ SCIP_RETCODE propagateBounds(
          assert(conss != NULL);
          if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
             continue;
-
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
 
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
          if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )

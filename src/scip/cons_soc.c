@@ -329,7 +329,6 @@ SCIP_RETCODE dropVarEvents(
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
-   SCIP_CONSDATA* consdata;
    SCIP_CONS* cons;
 
    assert(scip      != NULL);
@@ -339,9 +338,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    cons = ((VAREVENTDATA*)eventdata)->cons;
    assert(cons != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata  != NULL);
 
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    /* @todo look at bounds on x_i to decide whether propagation makes sense */
