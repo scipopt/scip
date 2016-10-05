@@ -30,8 +30,8 @@
 /** initialize the random number generator with a given start seed */
 static
 void randomInitialze(
-   SCIP_RANDGEN*         randgen,
-   unsigned int          initseed
+   SCIP_RANDGEN*         randgen,            /**< random number generator */
+   unsigned int          initseed            /**< initial random seed (> 0) */
    )
 {
    assert(randgen != NULL);
@@ -72,9 +72,9 @@ void randomInitialze(
 
 /** creates and initialzes a random number generator */
 SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDGEN**        randnumgen,
-   BMS_BLKMEM*           blkmem,
-   unsigned int          initialseed
+   SCIP_RANDGEN**        randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed (> 0) */
    )
 {
    assert(randnumgen != NULL);
@@ -88,8 +88,8 @@ SCIP_RETCODE SCIPrandomCreate(
 
 /** creates and initialzes a random number generator */
 void SCIPrandomFree(
-   SCIP_RANDGEN**        randnumgen,
-   BMS_BLKMEM*           blkmem
+   SCIP_RANDGEN**        randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(randnumgen != NULL);

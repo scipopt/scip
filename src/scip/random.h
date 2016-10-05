@@ -34,16 +34,16 @@ extern "C" {
 /** creates and initialzes a random number generator */
 extern
 SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDGEN**        randnumgen,
-   BMS_BLKMEM*           blkmem,
-   unsigned int          initialseed
+   SCIP_RANDGEN**        randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed (> 0) */
    );
 
 /** creates and initialzes a random number generator */
 extern
 void SCIPrandomFree(
-   SCIP_RANDGEN**        randnumgen,
-   BMS_BLKMEM*           blkmem
+   SCIP_RANDGEN**        randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** returns a random integer between minrandval and maxrandval */
