@@ -1,8 +1,8 @@
-/* $Id: base_float.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_BASE_FLOAT_INCLUDED
-# define CPPAD_BASE_FLOAT_INCLUDED
+// $Id$
+# ifndef CPPAD_BASE_FLOAT_HPP
+# define CPPAD_BASE_FLOAT_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the
@@ -11,11 +11,21 @@ the terms of the
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
+# include <cppad/configure.hpp>
 # include <limits>
 
 /*
 $begin base_float.hpp$$
 $spell
+	cppad
+	hpp
+	azmul
+	expm1
+	atanh
+	acosh
+	asinh
+	erf
+	endif
 	abs_geq
 	acos
 	asin
@@ -38,9 +48,6 @@ $spell
 	const
 $$
 
-$index float, Base$$
-$index Base, float$$
-$index float, Base$$
 
 $section Enable use of AD<Base> where Base is float$$
 
@@ -51,11 +58,11 @@ $cref/ordered type/base_cond_exp/CondExpTemplate/Ordered Type/$$.
 Hence its $code CondExpOp$$ function is defined by
 $codep */
 namespace CppAD {
-	inline float CondExpOp( 
+	inline float CondExpOp(
 		enum CompareOp     cop          ,
 		const float&       left         ,
-		const float&       right        , 
-		const float&       exp_if_true  , 
+		const float&       right        ,
+		const float&       exp_if_true  ,
 		const float&       exp_if_false )
 	{	return CondExpTemplate(cop, left, right, exp_if_true, exp_if_false);
 	}
@@ -106,6 +113,13 @@ namespace CppAD {
 }
 /* $$
 
+$head azmul$$
+$codep */
+namespace CppAD {
+	CPPAD_AZMUL( float )
+}
+/* $$
+
 $head Ordered$$
 The $code float$$ type supports ordered comparisons
 $codep */
@@ -143,9 +157,17 @@ namespace CppAD {
 	CPPAD_STANDARD_MATH_UNARY(float, sqrt)
 	CPPAD_STANDARD_MATH_UNARY(float, tan)
 	CPPAD_STANDARD_MATH_UNARY(float, tanh)
+# if CPPAD_USE_CPLUSPLUS_2011
+	CPPAD_STANDARD_MATH_UNARY(float, erf)
+	CPPAD_STANDARD_MATH_UNARY(float, asinh)
+	CPPAD_STANDARD_MATH_UNARY(float, acosh)
+	CPPAD_STANDARD_MATH_UNARY(float, atanh)
+	CPPAD_STANDARD_MATH_UNARY(float, expm1)
+	CPPAD_STANDARD_MATH_UNARY(float, log1p)
+# endif
 }
 /* $$
-The absolute value function is special because its $code std$$ name is 
+The absolute value function is special because its $code std$$ name is
 $code fabs$$
 $codep */
 namespace CppAD {
@@ -168,7 +190,7 @@ namespace CppAD {
 	}
 }
 /* $$
- 
+
 $head pow $$
 The following defines a $code CppAD::pow$$ function that
 is required to use $code AD<float>$$:
@@ -179,31 +201,22 @@ namespace CppAD {
 }
 /*$$
 
-$head limits$$
-The following defines the numeric limits functions
-$code epsilon$$, $code min$$, and $code max$$ for the type
-$code float$$:
+$head numeric_limits$$
+The following defines the CppAD $cref numeric_limits$$
+for the type $code float$$:
 $codep */
 namespace CppAD {
-	template <>
-	class numeric_limits<float> {
-	public:
-		// machine epsilon
-		static float epsilon(void)
-		{	return std::numeric_limits<float>::epsilon(); }
-		// minimum positive normalized value
-		static float min(void)
-		{	return std::numeric_limits<float>::min(); }
-		// maximum finite value
-		static float max(void)
-		{	return std::numeric_limits<float>::max(); }
-	};
-	// deprecated machine epsilon
-	template <> 
-	inline float epsilon<float>(void)
-	{	return numeric_limits<float>::epsilon(); }
+	CPPAD_NUMERIC_LIMITS(float, float)
 }
-/* $$
+/*$$
+
+$head to_string$$
+There is no need to define $code to_string$$ for $code float$$
+because it is defined by including $code cppad/utility/to_string.hpp$$;
+see $cref to_string$$.
+See $cref/base_complex.hpp/base_complex.hpp/to_string/$$ for an example where
+it is necessary to define $code to_string$$ for a $icode Base$$ type.
+
 $end
 */
 

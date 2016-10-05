@@ -62,6 +62,7 @@
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
+#define DEFAULT_RANDSEED          13    /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -121,7 +122,7 @@ SCIP_RETCODE setupProbingSCIP(
    *success = FALSE;
 
    /* copy SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, TRUE, success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE, TRUE, success) );
 
    if( copycuts )
    {
@@ -517,7 +518,7 @@ SCIP_RETCODE createNewSols(
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
       /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    SCIPfreeBufferArray(scip, &subvars);
@@ -580,7 +581,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
@@ -793,7 +794,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    maxloops = (heurdata->maxloops == -1 ? INT_MAX : heurdata->maxloops);
    maxstallloops = (heurdata->maxstallloops == -1 ? INT_MAX : heurdata->maxstallloops);
 
-   SCIPdebugMessage("executing feasibility pump heuristic, nlpiters=%" SCIP_LONGINT_FORMAT ", maxnlpit:%" SCIP_LONGINT_FORMAT ", maxflips:%d \n",
+   SCIPdebugMsg(scip, "executing feasibility pump heuristic, nlpiters=%" SCIP_LONGINT_FORMAT ", maxnlpit:%" SCIP_LONGINT_FORMAT ", maxflips:%d \n",
       nlpiterations, maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
@@ -853,7 +854,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
-         SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
+         SCIPdebugMsg(scip, "successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
       }
    }
 
@@ -917,7 +918,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       nloops++;
       alpha *= objfactor;
 
-      SCIPdebugMessage("feasibility pump loop %d: %d fractional variables (alpha: %.4f, stall: %d/%d)\n",
+      SCIPdebugMsg(scip, "feasibility pump loop %d: %d fractional variables (alpha: %.4f, stall: %d/%d)\n",
          nloops, nfracs, alpha, nstallloops, maxstallloops);
 
       success = FALSE;
@@ -929,7 +930,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* if the rounded solution is feasible and better, add it to SCIP */
       /*if( success )
       {
-         SCIPdebugMessage("feasibility pump trying rounded solution\n");
+         SCIPdebugMsg(scip, "feasibility pump trying rounded solution\n");
          SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
          if( success )
             *result = SCIP_FOUNDSOL;
@@ -960,7 +961,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIPsortRealPtr(pseudocandsfrac, (void**)pseudocands, npseudocands);
          SCIPfreeBufferArray(scip, &pseudocandsfrac);
 
-         SCIPdebugMessage("iteratively fix and propagate variables\n");
+         SCIPdebugMsg(scip, "iteratively fix and propagate variables\n");
       }
 
       for( i = 0; i < npseudocands; i++ )
@@ -996,21 +997,21 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             {
                assert(SCIPisFeasLE(probingscip, lb, ub));
                /* SCIP_CALL( SCIPnewProbingNode(probingscip) ); */
-               SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
+               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
                   solval);
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
                SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
-               SCIPdebugMessage("  -> reduced %" SCIP_LONGINT_FORMAT " domains\n", ndomreds);
+               SCIPdebugMsg(scip, "  -> reduced %" SCIP_LONGINT_FORMAT " domains\n", ndomreds);
 
                if( infeasible )
                {
-                  SCIPdebugMessage("  -> infeasible!\n");
+                  SCIPdebugMsg(scip, "  -> infeasible!\n");
                   SCIP_CALL( SCIPbacktrackProbing(probingscip, 0/*SCIPgetProbingDepth(probingscip)-1*/) );
                }
             }
             else
             {
-               SCIPdebugMessage("variable <%s> is already fixed to %f\n",SCIPvarGetName(probingvar), solval);
+               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n",SCIPvarGetName(probingvar), solval);
             }
          }
 
@@ -1087,7 +1088,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       assert(heurdata->perturbfreq > 0);
       if( nloops % heurdata->perturbfreq == 0 || (heurdata->pertsolfound && SCIPgetNBestSolsFound(scip) > nbestsolsfound) )
       {
-         SCIPdebugMessage(" -> random perturbation\n");
+         SCIPdebugMsg(scip, " -> random perturbation\n");
          SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
          nbestsolsfound = SCIPgetNBestSolsFound(scip);
       }
@@ -1103,12 +1104,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                /* 1-cycles have a special flipping rule (flip most fractional variables) */
                if( j == 0 )
                {
-                  SCIPdebugMessage(" -> avoiding 1-cycle: flipping %d candidates\n", nflipcands);
+                  SCIPdebugMsg(scip, " -> avoiding 1-cycle: flipping %d candidates\n", nflipcands);
                   SCIP_CALL( handle1Cycle(scip, heurdata, mostfracvars, nflipcands, alpha) );
                }
                else
                {
-                  SCIPdebugMessage(" -> avoiding %d-cycle by random flip\n", j+1);
+                  SCIPdebugMsg(scip, " -> avoiding %d-cycle by random flip\n", j+1);
                   SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
                }
                break;
@@ -1120,7 +1121,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       nlpiterations = SCIPgetNLPIterations(scip);
       nlpiterationsleft = adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops) - heurdata->nlpiterations;
       iterlimit = MAX((int)nlpiterationsleft, MINLPITER);
-      SCIPdebugMessage(" -> solve LP with iteration limit %d\n", iterlimit);
+      SCIPdebugMsg(scip, " -> solve LP with iteration limit %d\n", iterlimit);
 
       if( heurdata->stage3 )
       {
@@ -1147,7 +1148,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      SCIPdebugMessage(" -> number of iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", lperror=%u, lpsolstat=%d\n",
+      SCIPdebugMsg(scip, " -> number of iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", lperror=%u, lpsolstat=%d\n",
          heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops), lperror, lpsolstat);
 
       /* check whether LP was solved optimal */
@@ -1206,7 +1207,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       else
          nstallloops++;
 
-      SCIPdebugMessage(" -> loop finished: %d fractional variables (stall: %d/%d, iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
+      SCIPdebugMsg(scip, " -> loop finished: %d fractional variables (stall: %d/%d, iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          nfracs, nstallloops, maxstallloops, heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops));
    }
 
@@ -1216,8 +1217,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIPdebugMessage("feasibility pump found solution (%d fractional variables)\n", nfracs);
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIPdebugMsg(scip, "feasibility pump found solution (%d fractional variables)\n", nfracs);
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
    }
@@ -1335,7 +1336,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIPfreeBufferArray(scip, &mostfracvals);
    SCIPfreeBufferArray(scip, &mostfracvars);
 
-   SCIPdebugMessage("feasibility pump finished [%d iterations done].\n", nloops);
+   SCIPdebugMsg(scip, "feasibility pump finished [%d iterations done].\n", nloops);
 
 #ifdef SCIP_STATISTIC
    if( nfracs == 0 )

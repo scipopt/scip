@@ -43,7 +43,7 @@
                                              *   associated as pair by heuristic */
 #define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
 #define DEFAULT_ARRAYSIZE                10 /**< the default array size for temporary arrays */
-
+#define DEFAULT_RANDSEED                 37 /**< initial random seed */
 
 /*
  * Data structures
@@ -435,7 +435,7 @@ SCIP_Real determineBound(
    assert(nslaverows == 0 || slavecolvals != NULL);
    assert(nmasterrows == 0 || mastercolvals != NULL);
 
-   SCIPdebugMessage("  Master: %s with direction %d and %d rows, Slave: %s with direction %d and %d rows \n", SCIPvarGetName(master),
+   SCIPdebugMsg(scip, "  Master: %s with direction %d and %d rows, Slave: %s with direction %d and %d rows \n", SCIPvarGetName(master),
       (int)masterdirection, nmasterrows, SCIPvarGetName(slave), (int)slavedirection, nslaverows);
 
    /* loop over all LP rows and determine the maximum integer bound by which both variables
@@ -459,13 +459,13 @@ SCIP_Real determineBound(
       /* check if one pointer already reached the end of the respective array */
       if( i < nslaverows && SCIProwGetLPPos(slaverows[i]) == -1 )
       {
-         SCIPdebugMessage("  Slaverow %s is not in LP (i=%d, j=%d)\n", SCIProwGetName(slaverows[i]), i, j);
+         SCIPdebugMsg(scip, "  Slaverow %s is not in LP (i=%d, j=%d)\n", SCIProwGetName(slaverows[i]), i, j);
          i = nslaverows;
          continue;
       }
       if( j < nmasterrows && SCIProwGetLPPos(masterrows[j]) == -1 )
       {
-         SCIPdebugMessage("  Masterrow %s is not in LP (i=%d, j=%d) \n", SCIProwGetName(masterrows[j]), i, j);
+         SCIPdebugMsg(scip, "  Masterrow %s is not in LP (i=%d, j=%d) \n", SCIProwGetName(masterrows[j]), i, j);
          j = nmasterrows;
          continue;
       }
@@ -536,7 +536,7 @@ SCIP_Real determineBound(
 
             assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
 
-            SCIPdebugMessage("   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n", lhs, activity, rhs, bound, effect,
+            SCIPdebugMsg(scip, "   %g <= %g <= %g, bound = %g, effect = %g (%g * %d + %g * %d) (i=%d,j=%d)\n", lhs, activity, rhs, bound, effect,
                slaveindex <= masterindex ? slavecolvals[i] : 0.0, (int)slavedirection, masterindex <= slaveindex ? mastercolvals[j] : 0.0,
                (int)masterdirection, i, j);
 
@@ -567,13 +567,13 @@ SCIP_Real determineBound(
          }
          else
          {
-            SCIPdebugMessage("  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)\n",
+            SCIPdebugMsg(scip, "  Zero effect on row %s, effect %g, master coeff: %g slave coeff: %g (i=%d, j=%d)\n",
                SCIProwGetName(row), effect, mastercolvals[j], slavecolvals[i], i, j);
          }
       }
       else
       {
-         SCIPdebugMessage("  Row %s is local.\n", SCIProwGetName(row));
+         SCIPdebugMsg(scip, "  Row %s is local.\n", SCIProwGetName(row));
       }
 
       /* increase the counters which belong to the corresponding row. Both counters are increased by
@@ -844,7 +844,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nbinblocks = 0;
    heurdata->nintblocks = 0;
 
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */
@@ -957,7 +957,7 @@ SCIP_RETCODE optimize(
          if( SCIPisFeasGT(scip, mastersolval, SCIPvarGetUbGlobal(master)) || SCIPisFeasLT(scip, mastersolval, SCIPvarGetLbGlobal(master)) )
          {
             *varboundserr = TRUE;
-            SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
+            SCIPdebugMsg(scip, "Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
                SCIPvarGetName(master), SCIPvarGetLbGlobal(master), mastersolval, SCIPvarGetUbGlobal(master));
             goto TERMINATE;
          }
@@ -1030,7 +1030,7 @@ SCIP_RETCODE optimize(
             if( SCIPisFeasGT(scip, slavesolval, SCIPvarGetUbGlobal(slave)) || SCIPisFeasLT(scip, slavesolval, SCIPvarGetLbGlobal(slave)) )
             {
                *varboundserr = TRUE;
-               SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
+               SCIPdebugMsg(scip, "Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
                   SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), slavesolval, SCIPvarGetUbGlobal(slave));
                goto TERMINATE;
             }
@@ -1141,7 +1141,7 @@ SCIP_RETCODE optimize(
 
             assert(objchanges[npairs] < 0);
 
-            SCIPdebugMessage("  Saved candidate pair {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g} %d\n",
+            SCIPdebugMsg(scip, "  Saved candidate pair {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g} %d\n",
                SCIPvarGetName(master), mastersolval, SCIPvarGetName(bestslaves[npairs]), SCIPgetSolVal(scip, worksol, bestslaves[npairs]) ,
                masterobj, SCIPvarGetObj(bestslaves[npairs]), mastersolval + (int)bestmasterdir * bestbound, SCIPgetSolVal(scip, worksol, bestslaves[npairs])
                + (int)bestslavedir * bestbound, bestdirections[npairs]);
@@ -1196,7 +1196,7 @@ SCIP_RETCODE optimize(
          SCIP_Real changedobj;
 #endif
 
-         SCIPdebugMessage("  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
+         SCIPdebugMsg(scip, "  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
             SCIPvarGetName(master), mastersolval, SCIPvarGetName(slave), slavesolval,
             masterobj, slaveobj, mastersolval + (int)masterdir * bound, slavesolval + (int)slavedir * bound);
 
@@ -1220,9 +1220,9 @@ SCIP_RETCODE optimize(
 
             SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolval + (int)masterdir * bound) );
             SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolval + (int)slavedir * bound) );
-            SCIPdebugMessage("  Feasible shift: <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
+            SCIPdebugMsg(scip, "  Feasible shift: <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
                SCIPvarGetName(master), SCIPvarGetLbGlobal(master), SCIPvarGetUbGlobal(master), masterobj, mastersolval, SCIPgetSolVal(scip, worksol, master));
-            SCIPdebugMessage("                  <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
+            SCIPdebugMsg(scip, "                  <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
                SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), SCIPvarGetUbGlobal(slave), slaveobj, slavesolval, SCIPgetSolVal(scip, worksol, slave));
 
 #ifdef SCIP_STATISTIC
@@ -1510,7 +1510,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
    assert(heurdata->presolved);
 
-   SCIPdebugMessage("  Twoopt heuristic is %sexecuting.\n", heurdata->execute ? "" : "not ");
+   SCIPdebugMsg(scip, "  Twoopt heuristic is %sexecuting.\n", heurdata->execute ? "" : "not ");
    /* ensure that presolve has detected structures in the problem to which the 2-optimization can be applied.
     * That is if variables exist which share a common set of LP-rows. */
    if( !heurdata->execute )
@@ -1545,7 +1545,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       row = lprows[i];
       assert(row != NULL);
       assert(SCIProwGetLPPos(row) == i);
-      SCIPdebugMessage("  Row <%d> is %sin LP: \n", i, SCIProwGetLPPos(row) >= 0 ? "" : "not ");
+      SCIPdebugMsg(scip, "  Row <%d> is %sin LP: \n", i, SCIProwGetLPPos(row) >= 0 ? "" : "not ");
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
 
@@ -1562,7 +1562,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       for( i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
    }
-   SCIPdebugMessage("  Twoopt heuristic has initialized activities and sorted rows! \n");
+   SCIPdebugMsg(scip, "  Twoopt heuristic has initialized activities and sorted rows! \n");
 
    /* start with binary optimization */
    improvement = FALSE;
@@ -1573,7 +1573,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_CALL( optimize(scip, worksol, heurdata->binvars, heurdata->binblockstart, heurdata->binblockend, heurdata->nbinblocks,
             OPTTYPE_BINARY, activities, nlprows, &improvement, &varboundserr, heurdata) );
 
-      SCIPdebugMessage("  Binary Optimization finished!\n");
+      SCIPdebugMsg(scip, "  Binary Optimization finished!\n");
    }
 
    if( varboundserr )
@@ -1588,7 +1588,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_CALL( optimize(scip, worksol, heurdata->intvars, heurdata->intblockstart, heurdata->intblockend, heurdata->nintblocks,
             OPTTYPE_INTEGER, activities, nlprows, &improvement, &varboundserr, heurdata) );
 
-      SCIPdebugMessage("  Integer Optimization finished!\n");
+      SCIPdebugMsg(scip, "  Integer Optimization finished!\n");
    }
 
    if( ! improvement || varboundserr )
@@ -1600,14 +1600,14 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
        * try if new working solution is feasible in original problem */
       SCIP_Bool success;
 #ifndef NDEBUG
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
       if( success )
       {
-         SCIPdebugMessage("found feasible shifted solution:\n");
+         SCIPdebugMsg(scip, "found feasible shifted solution:\n");
          SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
          heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
          *result = SCIP_FOUNDSOL;
@@ -1627,14 +1627,14 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_RETCODE retstat;
 #endif
 
-      SCIPdebugMessage("shifted solution should be feasible -> solve LP to fix continuous variables to best values\n");
+      SCIPdebugMsg(scip, "shifted solution should be feasible -> solve LP to fix continuous variables to best values\n");
 
       allvars = SCIPgetVars(scip);
 
 #ifdef SCIP_DEBUG
       for( i = ndiscvars; i < SCIPgetNVars(scip); ++i )
       {
-         SCIPdebugMessage("  Cont. variable <%s>, status %d with bounds [%g <= %g <= x <= %g <= %g]\n",
+         SCIPdebugMsg(scip, "  Cont. variable <%s>, status %d with bounds [%g <= %g <= x <= %g <= %g]\n",
             SCIPvarGetName(allvars[i]), SCIPvarGetStatus(allvars[i]), SCIPvarGetLbGlobal(allvars[i]), SCIPvarGetLbLocal(allvars[i]), SCIPvarGetUbLocal(allvars[i]),
             SCIPvarGetUbGlobal(allvars[i]));
       }
@@ -1673,7 +1673,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          assert( SCIPisFeasEQ(scip, SCIPgetVarLbDive(scip, allvars[i]), SCIPgetVarUbDive(scip, allvars[i])) );
       }
       /* solve LP */
-      SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
@@ -1687,8 +1687,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -1700,14 +1700,14 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
          /* check solution for feasibility */
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #else
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
          if( success )
          {
-            SCIPdebugMessage("found feasible shifted solution:\n");
+            SCIPdebugMsg(scip, "found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
             heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
@@ -1724,7 +1724,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    }
 
  TERMINATE:
-   SCIPdebugMessage("Termination of Twoopt heuristic\n");
+   SCIPdebugMsg(scip, "Termination of Twoopt heuristic\n");
    SCIPfreeBufferArray(scip, &activities);
    SCIP_CALL( SCIPfreeSol(scip, &worksol) );
 

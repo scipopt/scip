@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -33,7 +34,7 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_INITSEED                0 /**< initial random seed */
+#define DEFAULT_INITSEED                41   /**< initial random seed */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -82,7 +83,7 @@ void getRandomVariable(
       if( idx == firstidx )
       {
          /* odd: all variables seem to be fixed */
-         SCIPdebugMessage("Warning: all branching candidates seem to be fixed\n");
+         SCIPdebugMsg(scip, "Warning: all branching candidates seem to be fixed\n");
          return;
       }
    }
@@ -152,9 +153,10 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+   assert(branchruledata->initseed >= 0);
 
    /* set the seed value to the initial random seed value */
-   branchruledata->seed = (unsigned int) branchruledata->initseed;
+   branchruledata->seed = SCIPinitializeRandomSeed(scip, branchruledata->initseed);
 
    return SCIP_OKAY;
 }
@@ -174,7 +176,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of random branching in depth %d\n", SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "Execlp method of random branching in depth %d\n", SCIPgetDepth(scip));
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -187,7 +189,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    bestcand = SCIPgetRandomInt(0, nlpcands-1, &branchruledata->seed);
    assert(bestcand >= 0);
 
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s>\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]));
 
    /* perform the branching */
@@ -218,7 +220,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execrel method of random branching\n");
+   SCIPdebugMsg(scip, "Execrel method of random branching\n");
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -246,7 +248,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
 
    brpoint = SCIPgetBranchingPoint(scip, bestcand, bestcandsol);
 
-   SCIPdebugMessage(" -> %d candidates, selected variable <%s> with solution value %g, branching point=%g\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s> with solution value %g, branching point=%g\n",
       nprioexterncands, SCIPvarGetName(bestcand), bestcandsol, brpoint);
 
    SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, &downchild, &eqchild, &upchild) );
@@ -279,7 +281,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execps method of random branching\n");
+   SCIPdebugMsg(scip, "Execps method of random branching\n");
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -292,7 +294,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
    bestcand = SCIPgetRandomInt(0, npseudocands-1, &branchruledata->seed);
    assert(bestcand >= 0);
 
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s>\n",
       npseudocands, bestcand, SCIPvarGetName(pseudocands[bestcand]));
 
    /* perform the branching */

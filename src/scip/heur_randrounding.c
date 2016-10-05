@@ -44,11 +44,11 @@
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
-#define DEFAULT_RANDSEED      14081986       /**< default random seed */
+#define DEFAULT_RANDSEED         23          /**< default random seed */
 #define DEFAULT_USESIMPLEROUNDING    FALSE   /**< should the heuristic apply the variable lock strategy of simple rounding,
                                                *  if possible? */
 #define DEFAULT_MAXPROPROUNDS 1              /**< limit of rounds for each propagation call */
-#define DEFAULT_PROPAGATEONLYROOT TRUE      /**< should the probing part of the heuristic be applied exclusively at the root node */
+#define DEFAULT_PROPAGATEONLYROOT TRUE       /**< should the probing part of the heuristic be applied exclusively at the root node */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -131,7 +131,7 @@ SCIP_RETCODE performRandRounding(
       ceilval = SCIPfeasCeil(scip, oldsolval);
       floorval = SCIPfeasFloor(scip, oldsolval);
 
-      SCIPdebugMessage("rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
+      SCIPdebugMsg(scip, "rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* abort if rounded ceil and floor value lie outside the variable domain. Otherwise, check if
@@ -239,20 +239,20 @@ SCIP_RETCODE performRandRounding(
           * neither integrality nor feasibility of LP rows has to be checked, because all fractional
           * variables were already moved in feasible direction to the next integer
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
       }
       else
       {
          /* if there are variables which are not present in the LP, e.g., for
           * column generation, we need to check their bounds
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
       }
 
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
@@ -319,7 +319,7 @@ SCIP_RETCODE performLPRandRounding(
    *result = SCIP_DIDNOTFIND;
 
    /* perform random rounding */
-   SCIPdebugMessage("executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
+   SCIPdebugMsg(scip, "executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
    SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, nlpcands, propagate, result) );
 
    return SCIP_OKAY;
@@ -375,7 +375,7 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = DEFAULT_RANDSEED;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }

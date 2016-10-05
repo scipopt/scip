@@ -650,6 +650,8 @@ SCIP_Bool isZero(
    iszero = TRUE; 
    for( v = nsubspacevars - 1; v >= 0; --v )
    {
+      assert(!SCIPisInfinity(scip, raydirection[v]));
+
       if( !SCIPisFeasZero(scip, raydirection[v]/100) )
          iszero = FALSE;
       else
@@ -912,7 +914,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    *result = SCIP_DIDNOTFIND;
 
    /* starting OCTANE */
-   SCIPdebugMessage("run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
+   SCIPdebugMsg(scip, "run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
       usefracspace ? "fractional" : "all", nsubspacevars, f_max, (heurdata->lastrule+1)%5);
 
    /* generate starting point in original coordinates */
@@ -1120,7 +1122,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
          {
             assert(first_sols[i] != NULL);
-            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
          }
@@ -1131,7 +1133,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                break;
             generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
          }

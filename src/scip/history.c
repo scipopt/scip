@@ -213,7 +213,7 @@ void SCIPhistoryUpdatePseudocost(
    history->pscostweightedmean[dir] += weight * olddelta / history->pscostcount[dir];
    history->pscostvariance[dir] = history->pscostvariance[dir] + weight * olddelta * (sumcontribution - history->pscostweightedmean[dir]);
 
-   SCIPdebugMessage("updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
+   SCIPsetDebugMsg(set, "updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
       (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostweightedmean[dir]);
 }
 

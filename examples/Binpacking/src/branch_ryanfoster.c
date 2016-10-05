@@ -127,7 +127,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -210,7 +210,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    }
    SCIPfreeBufferArray(scip, &pairweights);
 
-   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n",
+   SCIPdebugMsg(scip, "branch on order pair <%d,%d> with weight <%g>\n",
       SCIPprobdataGetIds(probdata)[id1], SCIPprobdataGetIds(probdata)[id2], bestvalue);
 
    /* create the branch-and-bound tree child nodes of the current node */

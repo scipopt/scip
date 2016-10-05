@@ -35,6 +35,10 @@
 
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/reader_bnd.h"
 #include "scip/pub_misc.h"
@@ -91,6 +95,7 @@ SCIP_RETCODE readBounds(
       char varname[SCIP_MAXSTRLEN];
       char lbstring[SCIP_MAXSTRLEN];
       char ubstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -102,7 +107,8 @@ SCIP_RETCODE readBounds(
       lineno++;
 
       /* parse the line */
-      nread = sscanf(buffer, "%s %s %s\n", varname, lbstring, ubstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, lbstring, ubstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);

@@ -503,7 +503,7 @@ SCIP_RETCODE SCIPmatrixCreate(
     */
    if( nconss < nconssall )
    {
-      SCIPdebugMessage("Warning: milp matrix not complete!\n");
+      SCIPdebugMsg(scip, "Warning: milp matrix not complete!\n");
    }
    else
    {

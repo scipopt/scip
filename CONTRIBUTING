@@ -33,3 +33,6 @@ will auto-link to the commit. Commit hashes from other repositories, however,
 won't autolink, so be sure to include an explicit link. Also, please apply the
 ~bug label when using the above template.
 
+## Linting
+
+Currently, `flexelint` and `cppcheck` are the preferred light-weight static analysis tooling that we use. `flexelint` supressions are done inline. `cppcheck` supresssions can also be performed inline, but it's typically preferably to disable a category of checks in `supressions.txt`

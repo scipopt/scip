@@ -1,0 +1,7 @@
+# For CrayXC systems, tested on 5.2UP04-5.2.82 with craype module 2.5.6.1 and PrgEnv-cray/5.2.82
+# but should be usable on other systems
+# contributed to SCIP 2016 Utz-Uwe Haus <uhaus@cray.com>
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
+OFLAGS		+=	-O3 
+CFLAGS		+=	-h msglevel_1
+CXXFLAGS	+=	-h msglevel_1

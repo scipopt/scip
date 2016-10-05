@@ -25,6 +25,10 @@
 
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/scip.h"
 #include "scip/set.h"
@@ -243,28 +247,35 @@ SCIP_RETCODE paramWrite(
       switch( param->paramtype )
       {
       case SCIP_PARAMTYPE_BOOL:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: bool, range: {TRUE,FALSE}, default: %s]\n",
-            param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: bool, advanced: %s, range: {TRUE,FALSE}, default: %s]\n",
+               SCIPparamIsAdvanced(param) ? "TRUE" : "FALSE",
+               param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
          break;
       case SCIP_PARAMTYPE_INT:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: int, range: [%d,%d], default: %d]\n", 
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: int, advanced: %s, range: [%d,%d], default: %d]\n",
+            SCIPparamIsAdvanced(param) ? "TRUE" : "FALSE",
             param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_LONGINT:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: longint, range: [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "], default: %" SCIP_LONGINT_FORMAT "]\n",
-            param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: longint, advanced: %s, range: [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "], default: %" SCIP_LONGINT_FORMAT "]\n",
+               SCIPparamIsAdvanced(param) ? "TRUE" : "FALSE",
+               param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_REAL:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: real, range: [%.15g,%.15g], default: %.15g]\n",
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: real, advanced: %s, range: [%.15g,%.15g], default: %.15g]\n",
+            SCIPparamIsAdvanced(param) ? "TRUE" : "FALSE",
             param->data.realparam.minvalue, param->data.realparam.maxvalue, param->data.realparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_CHAR:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: char, range: {%s}, default: %c]\n",
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: char, advanced: %s, range: {%s}, default: %c]\n",
+            SCIPparamIsAdvanced(param) ? "TRUE" : "FALSE",
             param->data.charparam.allowedvalues != NULL ? param->data.charparam.allowedvalues : "all chars",
             param->data.charparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_STRING:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: string, advanced: %s, default: \"%s\"]\n",
+               SCIPparamIsAdvanced(param) ? "TRUE" : "FALSE",
+               param->data.stringparam.defaultvalue);
          break;
       default:
          SCIPerrorMessage("unknown parameter type\n");
@@ -331,7 +342,7 @@ SCIP_RETCODE paramSetBool(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -367,7 +378,7 @@ SCIP_RETCODE paramSetChar(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -403,7 +414,7 @@ SCIP_RETCODE paramSetInt(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -439,7 +450,7 @@ SCIP_RETCODE paramSetLongint(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -475,7 +486,7 @@ SCIP_RETCODE paramSetReal(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -4496,7 +4507,7 @@ SCIP_RETCODE SCIPparamSetToDefault(
    /* do not change the parameter if it is fixed */
    if( SCIPparamIsFixed(param) )
    {
-      SCIPdebugMessage("parameter <%s> is fixed and is not reset to its default value.\n", param->name);
+      SCIPsetDebugMsg(set, "parameter <%s> is fixed and is not reset to its default value.\n", param->name);
 
       return SCIP_OKAY;
    }

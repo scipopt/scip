@@ -1133,6 +1133,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new rows are added - this is likely to be a mistake */
+      int nrows = lpi->spx->numRowsReal();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
+
    SPxSCIP* spx = lpi->spx;
    try
    {
@@ -1250,6 +1260,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols = lpi->spx->numColsReal();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    try
    {
@@ -1388,6 +1408,18 @@ SCIP_RETCODE SCIPlpiChgBounds(
       for( i = 0; i < ncols; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsReal());
+
+         if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+         if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+
          lpi->spx->changeBoundsReal(ind[i], lb[i], ub[i]);
          assert(lpi->spx->lowerReal(ind[i]) <= lpi->spx->upperReal(ind[i]) + lpi->spx->realParam(SoPlex::EPSILON_ZERO));
       }

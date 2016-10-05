@@ -1093,12 +1093,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* ReOptimizeNLP with Ipopt <= 3.10.3 could return a solution not within bounds if all variables are fixed (see Ipopt ticket #179) */
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 10) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 10 && IPOPT_VERSION_RELEASE > 3)
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
-#else
-         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
-#endif
       }
 
       // catch the very bad status codes
@@ -1128,7 +1123,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lasttime  = stats->TotalCPUTime();
       }
    }
-   catch( IpoptException except )
+   catch( IpoptException& except )
    {
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;

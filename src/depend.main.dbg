@@ -23,4 +23,4 @@ $(BINOBJDIR)/main.o: src/main.c src/scip/scip.h src/scip/def.h src/scip/type_ret
  src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
  src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/scip.h \
- src/scip/scipshell.h
+ src/scip/heuristics.h src/scip/scipshell.h
