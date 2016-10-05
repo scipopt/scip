@@ -180,6 +180,16 @@ void SCIPprintVersion(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** prints detailed information on the compile-time flags
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
+EXTERN
+void SCIPprintBuildOptions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
 /** prints error message for the given SCIP_RETCODE via the error prints method */
 EXTERN
 void SCIPprintError(
