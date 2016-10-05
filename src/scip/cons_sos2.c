@@ -59,6 +59,9 @@
  *   SOS2 constraint: \f$ \min \{l_x, l_y\} \leq x + y \leq \max \{u_x, u_y\}\f$, where \f$l_x, u_x,
  *   l_y, u_y\f$ are the lower and upper bounds of x and y, respectively.
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would affect lhs/rhs of rows)
+ * @todo Try to compute better ChildEstimates in enforceSOS2 when called for relaxation solution,
+ *   currently this uses SCIPcalcChildEstimate, which uses SCIPvarGetSol and can only get either the
+ *   LP or the pseudo solution, as well as pseudo costs, which are not computed for the relaxation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
