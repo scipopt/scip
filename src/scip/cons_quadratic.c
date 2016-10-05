@@ -8698,7 +8698,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
 /** registers a quadratic variable from a violated constraint as branching candidate that has a large absolute value in the (LP) relaxation */
 static
-SCIP_RETCODE registerLargeLPValueVariableForBranching(
+SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
@@ -10456,7 +10456,7 @@ SCIP_RETCODE enforceConstraint(
        *  if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
        */
       SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
+      SCIP_CALL( registerLargeRelaxValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {
          /* fallback 3: all quadratic variables seem to be fixed -> replace by linear constraint */
