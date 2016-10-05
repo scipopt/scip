@@ -601,6 +601,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
    else
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+
+      nrows = QSget_rowcount(lpi->prob);
+      for (i = 0; i < nnonz; ++i)
+         assert( 0 <= ind[i] && ind[i] < nrows );
+#endif
+
       /* compute column lengths */
       for( i = 0; i < ncols - 1; ++i )
       {
@@ -729,6 +738,17 @@ SCIP_RETCODE SCIPlpiAddRows(
       assert(beg != NULL);
       assert(ind != NULL);
       assert(val != NULL);
+
+#ifndef NDEBUG
+      {
+         /* perform check that no new cols are added - this is forbidden */
+         int ncols;
+
+         ncols = QSget_colcount(lpi->prob);
+         for (i = 0; i < nnonz; ++i)
+            assert( 0 <= ind[i] && ind[i] < ncols );
+      }
+#endif
 
       for( i = 0 ; i < nrows -1 ; i++ )
       {
@@ -1010,17 +1030,27 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    lpi->solstat = 0;
 
    SCIPdebugMessage("changing %d bounds in QSopt\n", ncols);
-#ifdef SCIP_DEBUG
+
+   for (i = 0; i < ncols; ++i)
    {
-      int j;
-      for( j = 0; j < ncols; ++j )
-         SCIPdebugPrintf("  col %d: [%lg,%lg]\n", ind[j], lb[j], ub[j]);
+      SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
    }
-#endif
 
    SCIP_CALL(ensureColMem(lpi, ncols));
    for( i = 0; i < ncols; ++i )

@@ -35,6 +35,10 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 
+#ifndef NDEBUG
+#include "scip/random.h"
+#endif
+
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
 
@@ -1631,6 +1635,9 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
 
 /** point evaluation for EXPR_DIV */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalDiv )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -8787,21 +8794,24 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    )
 {
 #ifndef NDEBUG
+   SCIP_RANDGEN* randnumgen;
    SCIP_Real* testx;
    SCIP_Real testval_before;
    SCIP_Real testval_after;
    int i;
-   unsigned int seed;
 #endif
 
    assert(tree != NULL);
 
 #ifndef NDEBUG
-   seed = 42;
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, tree->blkmem, 42) );
+
    SCIP_ALLOC( BMSallocMemoryArray(&testx, SCIPexprtreeGetNVars(tree)) );  /*lint !e666*/
    for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
+
+   SCIPrandomFree(&randnumgen, tree->blkmem);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -15760,9 +15770,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_Real* testx;
    SCIP_HASHMAP* testvalidx;
    SCIP_Real* testvals;
+   SCIP_RANDGEN* randnumgen;
    int testvalssize;
    int ntestvals;
-   unsigned int seed;
 #endif
 
    assert(exprgraph != NULL);
@@ -15771,7 +15781,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   seed = 42;
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, 42) );
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;
@@ -15779,7 +15789,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
 
    SCIP_ALLOC( BMSallocMemoryArray(&testx, exprgraph->nvars) );
    for( i = 0; i < exprgraph->nvars; ++i )
-      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprgraphEval(exprgraph, testx) );
    for( d = 1; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
@@ -15796,6 +15806,8 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             ++ntestvals;
          }
       }
+
+   SCIPrandomFree(&randnumgen, exprgraph->blkmem);
 #endif
 
 #ifdef SCIP_OUTPUT

@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.2.1"
+VERSION="3.2.1.2"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -63,7 +63,7 @@ $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
-$NAME/src/cppad/* $NAME/src/cppad/local/* \
+$NAME/src/cppad/* $NAME/src/cppad/local/* $NAME/src/cppad/utility/* \
 $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \

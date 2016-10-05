@@ -1,27 +1,28 @@
-/* $Id: pod_vector.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_POD_VECTOR_INCLUDED
-# define CPPAD_POD_VECTOR_INCLUDED
+// $Id$
+# ifndef CPPAD_POD_VECTOR_HPP
+# define CPPAD_POD_VECTOR_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
+# if CPPAD_CSTDINT_HAS_8_TO_64
+# include <cstdint>
+# endif
 # include <algorithm>
-# include <cppad/thread_alloc.hpp>
+# include <cppad/utility/thread_alloc.hpp>
 # include <cppad/local/cppad_assert.hpp>
 # include <cppad/local/op_code.hpp>
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup pod_vector_hpp pod_vector.hpp
-\{
 \file pod_vector.hpp
 File used to define pod_vector class
 */
@@ -30,19 +31,35 @@ File used to define pod_vector class
 A list of which Types pod_vector<Type> consideres to be plain old data
 */
 /// default value is false
-template <class Type> inline bool is_pod(void)           { return false; }   
+template <class Type> inline bool is_pod(void)           { return false; }
 /// system pod types so far:
 template <> inline bool is_pod<bool>(void)               { return true; }
-template <> inline bool is_pod<char>(void)               { return true; }
 template <> inline bool is_pod<float>(void)              { return true; }
 template <> inline bool is_pod<double>(void)             { return true; }
+# if CPPAD_CSTDINT_HAS_8_TO_64
+template <> inline bool is_pod<int8_t>(void)             { return true;  }
+template <> inline bool is_pod<int16_t>(void)            { return true;  }
+template <> inline bool is_pod<int32_t>(void)            { return true;  }
+template <> inline bool is_pod<int64_t>(void)            { return true;  }
+//
+template <> inline bool is_pod<uint8_t>(void)            { return true;  }
+template <> inline bool is_pod<uint16_t>(void)           { return true;  }
+template <> inline bool is_pod<uint32_t>(void)           { return true;  }
+template <> inline bool is_pod<uint64_t>(void)           { return true;  }
+# else // CPPAD_CSTDINT_HAS_8_TO_64
+template <> inline bool is_pod<char>(void)               { return true; }
+template <> inline bool is_pod<short int>(void)          { return true; }
+template <> inline bool is_pod<int>(void)                { return true; }
+//
 template <> inline bool is_pod<unsigned char>(void)      { return true; }
 template <> inline bool is_pod<unsigned short int>(void) { return true; }
 template <> inline bool is_pod<unsigned int>(void)       { return true; }
-# if ! CPPAD_SIZE_T_SAME_UNSIGNED_INT
+# if CPPAD_SIZE_T_NOT_UNSIGNED_INT
 template <> inline bool is_pod<size_t>(void)             { return true; }
 # endif
-/// CppAD pod types so far: 
+# endif // CPPAD_CSTDINT_HAS_8_TO_64
+
+/// CppAD pod types so far:
 template <> inline bool is_pod<OpCode>(void)             { return true; }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +76,7 @@ private:
 	size_t length_;
 	/// maximum number of Type elements current allocation can hold
 	size_t capacity_;
-	/// pointer to the first type elements 
+	/// pointer to the first type elements
 	/// (not defined and should not be used when capacity_ = 0)
 	Type   *data_;
 	/// do not use the copy constructor
@@ -72,12 +89,12 @@ public:
 	/// value for maximum number of elements in this vector.
 	inline pod_vector(
 		size_t max_length = std::numeric_limits<size_t>::max()
-	) 
+	)
 	: max_length_(max_length), length_(0), capacity_(0), data_(CPPAD_NULL)
 	{ }
 	// ----------------------------------------------------------------------
-	/// Destructor: returns allocated memory to \c thread_alloc; 
-	/// see \c extend.  If this is not plain old data, 
+	/// Destructor: returns allocated memory to \c thread_alloc;
+	/// see \c extend.  If this is not plain old data,
 	/// the destructor for each element is called.
 	~pod_vector(void)
 	{	if( capacity_ > 0 )
@@ -88,7 +105,7 @@ public:
 				for(i = 0; i < capacity_; i++)
 					(data_ + i)->~Type();
 			}
-			thread_alloc::return_memory(v_ptr); 
+			thread_alloc::return_memory(v_ptr);
 		}
 	}
 	// ----------------------------------------------------------------------
@@ -99,7 +116,7 @@ public:
 	inline size_t capacity(void) const
 	{	return capacity_; }
 	/// current data pointer, no longer valid after any of the following:
-	/// extend, erase, operator=, and ~pod_vector. 
+	/// extend, erase, operator=, and ~pod_vector.
 	/// Take extreem care when using this function.
 	inline Type* data(void)
 	{	return data_; }
@@ -108,7 +125,7 @@ public:
 	{	return data_; }
 	// ----------------------------------------------------------------------
 	/*!
-	Increase the number of elements the end of this vector. 
+	Increase the number of elements the end of this vector.
 
 	\param n
 	is the number of elements to add to end of this vector.
@@ -116,7 +133,7 @@ public:
 	\return
 	is the number  of elements in the vector before \c extend was extended.
 
-	- If \c Type is plain old data, new elements are not initialized; 
+	- If \c Type is plain old data, new elements are not initialized;
 	i.e., their constructor is not called. Otherwise, the constructor
 	is called for each new element.
 
@@ -157,7 +174,7 @@ public:
 			for(i = 0; i < capacity_; i++)
 				new(data_ + i) Type();
 		}
-		
+
 		// copy old data to new data
 		for(i = 0; i < old_length; i++)
 			data_[i] = old_data[i];
@@ -168,8 +185,8 @@ public:
 			if( ! is_pod<Type>() )
 			{	for(i = 0; i < old_capacity; i++)
 					(old_data + i)->~Type();
-			} 
-			thread_alloc::return_memory(v_ptr); 
+			}
+			thread_alloc::return_memory(v_ptr);
 		}
 
 		// return value for extend(n) is the old length
@@ -182,7 +199,7 @@ public:
 		size_t i
 	)
 	{	CPPAD_ASSERT_UNKNOWN( i < length_ );
-		return data_[i]; 
+		return data_[i];
 	}
 	// ----------------------------------------------------------------------
 	/// constant element access; i.e., we cannot change this element value
@@ -191,21 +208,21 @@ public:
 		size_t i
 	) const
 	{	CPPAD_ASSERT_UNKNOWN( i < length_ );
-		return data_[i]; 
+		return data_[i];
 	}
 	// ----------------------------------------------------------------------
 	/*!
- 	Remove all the elements from this vector but leave the capacity
+	Remove all the elements from this vector but leave the capacity
 	and data pointer as is.
 
 	*/
 	void erase(void)
 	{	length_ = 0;
 		return;
-	}	
+	}
 	// ----------------------------------------------------------------------
 	/*!
- 	Remove all the elements from this vector and delete its memory.
+	Remove all the elements from this vector and delete its memory.
 	*/
 	void free(void)
 	{	if( capacity_ > 0 )
@@ -216,22 +233,22 @@ public:
 				for(i = 0; i < capacity_; i++)
 					(data_ + i)->~Type();
 			}
-			thread_alloc::return_memory(v_ptr); 
+			thread_alloc::return_memory(v_ptr);
 		}
 		data_     = CPPAD_NULL;
 		capacity_ = 0;
 		length_   = 0;
 	}
 	/// vector assignment operator
-	/// If the resulting length of the vector would be more than 
-	/// \c max_length_, and \c NDEBUG is not defined, 
+	/// If the resulting length of the vector would be more than
+	/// \c max_length_, and \c NDEBUG is not defined,
 	/// a CPPAD_ASSERT is generated.
 	void operator=(
 		/// right hand size of the assingment operation
 		const pod_vector& x
 	)
 	{	size_t i;
-	
+
 		if( x.length_ <= capacity_ )
 		{	// use existing allocation for this vector
 			length_ = x.length_;
@@ -250,7 +267,7 @@ public:
 					for(i = 0; i < capacity_; i++)
 						(data_ + i)->~Type();
 				}
-				thread_alloc::return_memory(v_ptr); 
+				thread_alloc::return_memory(v_ptr);
 			}
 			length_ = capacity_ = 0;
 			extend( x.length_ );
@@ -264,7 +281,7 @@ public:
 
 	\param other
 	is the other vector that we are swapping this vector with.
- 	*/
+	*/
 	void swap(pod_vector& other)
 	{	std::swap(capacity_, other.capacity_);
 		std::swap(length_,   other.length_);
@@ -272,6 +289,5 @@ public:
 	}
 };
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

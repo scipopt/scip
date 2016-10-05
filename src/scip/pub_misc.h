@@ -114,6 +114,67 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
+/**@} */
+
+/**@defgroup Regression Regression methods for linear regression
+ *
+ * @{
+ */
+
+/** returns the number of observations of this regression */
+EXTERN
+int SCIPregressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** return the current slope of the regression */
+EXTERN
+SCIP_Real SCIPregressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** get the current y-intercept of the regression */
+EXTERN
+SCIP_Real SCIPregressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** removes an observation (x,y) from the regression */
+EXTERN
+void SCIPregressionRemoveObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   );
+
+/** update regression by a new observation (x,y) */
+EXTERN
+void SCIPregressionAddObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   );
+
+/** reset regression data structure */
+EXTERN
+void SCIPregressionReset(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** creates and resets a regression */
+EXTERN
+SCIP_RETCODE SCIPregressionCreate(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   );
+
+/** frees a regression */
+EXTERN
+void SCIPregressionFree(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   );
+
+/**@} */
+
 /*
  * GML graphical printing methods
  * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
@@ -5462,16 +5523,24 @@ SCIP_Real SCIPrelDiff(
  *@{
  */
 
-/** returns a random integer between minrandval and maxrandval */
+/** returns a random integer between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
+ */
 EXTERN
+SCIP_DEPRECATED
 int SCIPgetRandomInt(
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/** returns a random real between minrandval and maxrandval */
+/** returns a random real between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetReal() to request a random real.
+ */
 EXTERN
+SCIP_DEPRECATED
 SCIP_Real SCIPgetRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval,         /**< maximal value to return */
@@ -5525,32 +5594,43 @@ void SCIPswapPointers(
    void**                pointer2            /**< second pointer */
    );
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteIntArray()
+ */
 EXTERN
+SCIP_DEPRECATED
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                              *   array)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    );
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteArray()
+ */
 EXTERN
+SCIP_DEPRECATED
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                              *   array)
+                                              */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ *
+ *  @deprecated Please use SCIPrandomGetSubset()
  */
 EXTERN
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPgetRandomSubset(
    void**                set,                /**< original set, from which elements should be drawn */
    int                   nelems,             /**< number of elements in original set */

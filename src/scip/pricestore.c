@@ -194,7 +194,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    }
 #endif
 
-   SCIPdebugMessage("adding variable <%s> (lb=%g, ub=%g) to pricing storage (initiallp=%u)\n", 
+   SCIPsetDebugMsg(set, "adding variable <%s> (lb=%g, ub=%g) to pricing storage (initiallp=%u)\n",
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->initiallp);
 
    if( pricestore->initiallp )
@@ -257,8 +257,7 @@ SCIP_RETCODE SCIPpricestoreAddBdviolvar(
    assert(SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) || SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)));
    assert(pricestore->naddedbdviolvars <= pricestore->nbdviolvars);
 
-   SCIPdebugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+   SCIPsetDebugMsg(set, "zero violates bounds of <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
    if( !pricestore->initiallp )
       pricestore->nvarsfound++;
@@ -317,8 +316,7 @@ SCIP_RETCODE addBoundViolated(
    /* add variable, if zero is not feasible within the bounds */
    if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) || SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)) )
    {
-      SCIPdebugMessage(" -> zero violates bounds of <%s> [%g,%g]\n",
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      SCIPsetDebugMsg(set, " -> zero violates bounds of <%s> [%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       SCIP_CALL( SCIPpricestoreAddBdviolvar(pricestore, blkmem, set, stat, lp, branchcand, eventqueue, var) );
       *added = TRUE;
    }
@@ -330,7 +328,7 @@ SCIP_RETCODE addBoundViolated(
       bestbound = SCIPvarGetBestBoundLocal(var);
       if( !SCIPsetIsZero(set, bestbound) )
       {
-         SCIPdebugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",
+         SCIPsetDebugMsg(set, " -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
          SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 
                -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
@@ -407,7 +405,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
 
          if( !SCIPcolIsInLP(col) )
          {
-            SCIPdebugMessage("price column variable <%s> in bounds [%g,%g]\n", 
+            SCIPsetDebugMsg(set, "price column variable <%s> in bounds [%g,%g]\n",
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
             /* add variable to pricing storage, if zero is not best bound w.r.t. objective function */
@@ -436,7 +434,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                    * Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0
                    */
                   feasibility = -SCIPcolGetFarkasValue(col, stat, lp);
-                  SCIPdebugMessage("  <%s> Farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
+                  SCIPsetDebugMsg(set, "  <%s> Farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                else
                {
@@ -446,7 +444,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                    *  - negative reduced costs for variables with positive upper bound
                    */
                   feasibility = SCIPcolGetFeasibility(col, set, stat, lp);
-                  SCIPdebugMessage("  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
+                  SCIPsetDebugMsg(set, "  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
 
                /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns
@@ -494,7 +492,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
    assert(tree != NULL);
    assert(SCIPtreeIsFocusNodeLPConstructed(tree));
 
-   SCIPdebugMessage("adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",
+   SCIPsetDebugMsg(set, "adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",
       SCIPpricestoreGetNVars(pricestore), pricestore->nbdviolvars - pricestore->naddedbdviolvars,
       pricestore->nvars, SCIPlpGetNCols(lp));
 
@@ -516,7 +514,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       col = SCIPvarGetCol(var);
       assert(col != NULL);
       assert(col->lppos == -1);
-      SCIPdebugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var), 
+      SCIPsetDebugMsg(set, "adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var),
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
@@ -543,7 +541,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       col = SCIPvarGetCol(var);
       assert(col != NULL);
       assert(col->lppos == -1);
-      SCIPdebugMessage("adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
+      SCIPsetDebugMsg(set, "adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
       /* release the variable */
@@ -587,7 +585,7 @@ SCIP_RETCODE SCIPpricestoreResetBounds(
       var = pricestore->bdviolvars[v];
       assert(var != NULL);
 
-      SCIPdebugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", var->name, 
+      SCIPsetDebugMsg(set, "resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", var->name,
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarslb[v]) );
       SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarsub[v]) );

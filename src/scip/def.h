@@ -46,6 +46,13 @@
 #endif
 
 /*
+ * define whether compiler allows variadic macros
+ */
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#define SCIP_HAVE_VARIADIC_MACROS 1
+#endif
+
+/*
  * Boolean values
  */
 
@@ -87,7 +94,7 @@ extern "C" {
 
 
 #define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 

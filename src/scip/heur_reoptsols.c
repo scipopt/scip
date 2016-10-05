@@ -93,7 +93,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &solvals);
 
@@ -277,7 +277,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 #endif
       }
 
-   SCIPdebugMessage(">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
+   SCIPdebugMsg(scip, ">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
 
    if( nsolsadded > 0 )
       *result = SCIP_FOUNDSOL;

@@ -129,7 +129,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.2.1
+ * @version  3.2.1.2
  *
  * \image html scippy.png
  *
@@ -614,7 +614,7 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT >= 3.11)
  *
  * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
  *
@@ -7357,10 +7357,6 @@
   *   - Removed method SCIPreallocBufferSize()
   *   - Removed method SCIPfreeBufferSize()
   *   - Removed method callback SCIPdialogExecConflictgraph()
-  *
-  * <br>
-  * @section MISCELLANEOUS7 Miscellaneous
-  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
