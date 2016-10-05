@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "scip/prop_probing.h"
+#include "scip/random.h"
 
 
 #define PROP_NAME               "probing"
@@ -63,7 +64,7 @@
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
 #define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
-#define DEFAULT_RANDSEED            57  /**< random initial seed */
+#define DEFAULT_RANDSEED            59  /**< random initial seed */
 
 /*
  * Data structures
@@ -98,7 +99,7 @@ struct SCIP_PropData
    int                   nsumuseless;        /**< current number of useless probings */
    int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
-   unsigned int          randseed;           /**< random seed for variable selection */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
 };
 
 
@@ -107,7 +108,7 @@ struct SCIP_PropData
  */
 /** initializes the propagator data */
 static
-void initPropdata(
+SCIP_RETCODE initPropdata(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
@@ -129,7 +130,8 @@ void initPropdata(
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
    propdata->lastnode = -2;
-   propdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   return SCIP_OKAY;
 }
 
 /** frees the sorted vars array */
@@ -280,7 +282,7 @@ SCIP_RETCODE sortVariables(
          assert(propdata->nprobed[SCIPvarGetIndex(var)] >= 0);
 
          /* use a random offset to break possible ties arbitrarily */
-         randomoffset = SCIPgetRandomReal(0.0, 0.5, &propdata->randseed);
+         randomoffset = SCIPrandomGetReal(propdata->randnumgen, 0.0, 0.5);
 
 #ifndef VARIANT_B
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
@@ -723,6 +725,9 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
 
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &propdata->randnumgen) );
+
    SCIPfreeMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
@@ -739,7 +744,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   initPropdata(scip, propdata);
+   SCIP_CALL( initPropdata(scip, propdata) );
 
    return SCIP_OKAY;
 }
@@ -758,7 +763,6 @@ SCIP_DECL_PROPEXIT(propExitProbing)
    assert(propdata->sortedvars == NULL);
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
-
 
    return SCIP_OKAY;
 }
@@ -1102,7 +1106,11 @@ SCIP_RETCODE SCIPincludePropProbing(
 
    /* create probing propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-   initPropdata(scip, propdata);
+   SCIP_CALL( initPropdata(scip, propdata) );
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &propdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

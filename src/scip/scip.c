@@ -85,6 +85,7 @@
 #include "scip/heur.h"
 #include "scip/compr.h"
 #include "scip/nodesel.h"
+#include "scip/random.h"
 #include "scip/reader.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
@@ -9973,6 +9974,8 @@ SCIP_RETCODE SCIPfreeProb(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
+ *
+ *  @todo This need to be changed to use the new random number generator implemented in random.c
  */
 SCIP_RETCODE SCIPpermuteProb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9986,8 +9989,8 @@ SCIP_RETCODE SCIPpermuteProb(
 {
    SCIP_VAR** vars;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_RANDGEN* randnumgen;
    SCIP_Bool permuted;
-   unsigned int oldrandseed;
    int nconshdlrs;
    int nbinvars;
    int nintvars;
@@ -10007,6 +10010,9 @@ SCIP_RETCODE SCIPpermuteProb(
    nconshdlrs = SCIPgetNConshdlrs(scip);
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
+   /* create a random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, scip->mem->probmem, randseed) );
+
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
     * sub-SCIPs and contains the dependencies between the constraint handlers; for example the linear constraint
@@ -10015,7 +10021,6 @@ SCIP_RETCODE SCIPpermuteProb(
     */
 
    permuted = FALSE;
-   oldrandseed = randseed;
 
    /* for each constraint handler, permute its constraints */
    if( permuteconss )
@@ -10036,7 +10041,7 @@ SCIP_RETCODE SCIPpermuteProb(
 
             assert(nconss == 0 || conss != NULL);
 
-            SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+            SCIPrandomPermuteArray(randnumgen, (void**)conss, 0, nconss);
 
             /* readjust the mapping of constraints to array positions */
             for( j = 0; j < nconss; ++j )
@@ -10050,7 +10055,7 @@ SCIP_RETCODE SCIPpermuteProb(
          SCIP_CONS** conss = scip->origprob->conss;
          int nconss = scip->origprob->nconss;
 
-         SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+         SCIPrandomPermuteArray(randnumgen, (void**)conss, 0, nconss);
 
          for( j = 0; j < nconss; ++j )
          {
@@ -10065,7 +10070,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute binary variables */
    if( permutebinvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, 0, nbinvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, 0, nbinvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = 0; j < nbinvars; ++j )
@@ -10077,7 +10082,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute general integer variables */
    if( permuteintvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, nbinvars, nbinvars+nintvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars, nbinvars+nintvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars; j < nbinvars+nintvars; ++j )
@@ -10089,7 +10094,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute general integer variables */
    if( permuteimplvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars+nintvars; j < nbinvars+nintvars+nimplvars; ++j )
@@ -10101,7 +10106,7 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute general integer variables */
    if( permutecontvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPpermuteArray((void**)vars, nbinvars+nintvars+nimplvars, nvars, &randseed);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars+nimplvars, nvars);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars+nintvars+nimplvars; j < nvars; ++j )
@@ -10118,7 +10123,7 @@ SCIP_RETCODE SCIPpermuteProb(
       SCIPprobMarkPermuted(scip->transprob);
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-         "permute transformed problem using random seed %u\n", oldrandseed);
+         "permute transformed problem using random seed %u\n", randseed);
    }
    else if( permuted && !SCIPisTransformed(scip) )
    {
@@ -10128,8 +10133,11 @@ SCIP_RETCODE SCIPpermuteProb(
          SCIPprobMarkPermuted(scip->origprob);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "permute original problem using random seed %u\n", oldrandseed);
+            "permute original problem using random seed %u\n", randseed);
    }
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen, scip->mem->probmem);
 
    return SCIP_OKAY;
 }
@@ -23843,6 +23851,69 @@ unsigned int SCIPinitializeRandomSeed(
    assert(scip != NULL);
 
    return (unsigned int)SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
+}
+
+/** creates a random number generator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ */
+SCIP_RETCODE SCIPcreateRandomNumberGenerator(
+   SCIP*                 scip,
+   SCIP_RANDGEN**        randnumgen,
+   int                   initialseed
+   )
+{
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   SCIP_CALL( SCIPrandomCreate(randnumgen, scip->mem->probmem, initialseed) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a random number generator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ */
+SCIP_RETCODE SCIPfreeRandomNumberGenerator(
+   SCIP*                 scip,
+   SCIP_RANDGEN**        randnumgen
+   )
+{
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   SCIPrandomFree(randnumgen, scip->mem->probmem);
+
+   return SCIP_OKAY;
 }
 
 /** marks the variable that it must not be multi-aggregated
