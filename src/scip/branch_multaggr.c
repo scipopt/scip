@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,13 +84,13 @@ struct SCIP_BranchruleData
    int                   nmultaggrbranch;    /**< number of branchings on multi-aggregated variables */
    int                   nfracbranch;        /**< number of branchings on fractional variables */
    int                   nEscore;            /**< number of times that the bestscore over all multi-aggregated variables is equal to the best
-                                              *   fractional variable´s score and thus we do not branch on the multi-aggregate variable */
+                                              *   fractional variables score and thus we do not branch on the multi-aggregate variable */
    int                   nmultaggrcutoff;    /**< number of cutoffs detected during the probing mode on multi-aggregated variables */
    int                   nmultaggrconsadd;   /**< number of times that a probing constraint of a multi-aggregated variable has been
                                               *   added to the original problem */
    int                   nfractcutoff;       /**< number of cutoffs detected during strong branching on fractional variables */
    int                   nfractconsadd;      /**< number of times that during strong branching on fractional variables a constraint has been
-                                              *   added to the original problem or a variable´s domain has been reduced */
+                                              *   added to the original problem or a variables domain has been reduced */
    int                   nmultaggrvars;      /**< number of multi-aggregated variables in the problem of the last run */
    int                   nrun;               /**< number of restarts */
    int                   size;               /**< size of the provided array to store the ratio gain */
@@ -146,8 +146,8 @@ SCIP_RETCODE selectVarMultAggrBranching(
    SCIP_Bool*            bestdownvalid,      /**< is bestdown a valid dual bound for the down branch? */
    SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch? */
    SCIP_Real*            provedbound,        /**< proved dual bound for the current subtree */
-   SCIP_Real*            estimatedown,       /**< pointer to store the down child node´s estimate */
-   SCIP_Real*            estimateup,         /**< pointer to store the up child node´s estimate */
+   SCIP_Real*            estimatedown,       /**< pointer to store the down child nodes estimate */
+   SCIP_Real*            estimateup,         /**< pointer to store the up child nodes estimate */
 #ifdef SCIP_STATISTIC
    SCIP_Real*            bestmultaggrscore,  /**< pointer to store the multi aggregated score */
 #endif
@@ -198,7 +198,15 @@ SCIP_RETCODE selectVarMultAggrBranching(
    /* get fixed variables */
    fixvars = SCIPgetFixedVars(scip);
    nfixvars = SCIPgetNFixedVars(scip);
-   SCIPdebugMessage(" fractional variable: <%s> with value: %f is selected by strong branching\n", SCIPvarGetName(*bestcand), *bestsol);
+   SCIPdebugMsg(scip, " fractional variable: <%s> with value: %f is selected by strong branching\n", SCIPvarGetName(*bestcand), *bestsol);
+
+   /* check if we would exceed the depth limit */
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      SCIPdebugMsg(scip, "cannot perform probing in selectVarMultAggrBranching, depth limit reached.\n");
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    if( nfixvars != 0 )
    {
@@ -250,10 +258,10 @@ SCIP_RETCODE selectVarMultAggrBranching(
                   startprobing = FALSE;
                   endprobing = TRUE;
 
-                  SCIPdebugMessage("PROBING MODE:\n");
+                  SCIPdebugMsg(scip, "PROBING MODE:\n");
                }
 
-               SCIPdebugMessage(" multi-aggregated variable: <%s> with value: %f\n", SCIPvarGetName(fixvars[i]), fixvarssol);
+               SCIPdebugMsg(scip, " multi-aggregated variable: <%s> with value: %f\n", SCIPvarGetName(fixvars[i]), fixvarssol);
 
                SCIPstatistic(branchruledata->totalmultaggrcands += 1);
 
@@ -273,7 +281,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                SCIP_CALL( SCIPreleaseCons(scip, &probingconsdown) );
 
 #ifdef PRINTNODECONS
-               SCIPdebugMessage(" created down probing node with constraint:\n");
+               SCIPdebugMsg(scip, " created down probing node with constraint:\n");
                SCIP_CALL( SCIPprintCons(scip, probingconsdown, NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -288,7 +296,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                /* break the branching rule if an error occurred, problem was not solved, iteration or time limit was reached */
                if( lperror )
                {
-                  SCIPdebugMessage("error solving down node probing LP: status=%d\n", solstatdown);
+                  SCIPdebugMsg(scip, "error solving down node probing LP: status=%d\n", solstatdown);
                   SCIPstatistic(branchruledata->noupdate = TRUE);
                   break;
                }
@@ -336,7 +344,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                SCIP_CALL( SCIPreleaseCons(scip, &probingconsup) );
 
 #ifdef PRINTNODECONS
-               SCIPdebugMessage(" created up probing node with constraint:\n");
+               SCIPdebugMsg(scip, " created up probing node with constraint:\n");
                SCIP_CALL( SCIPprintCons(scip, probingconsup, NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -350,7 +358,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                /* break the branching rule if an error occurred, problem was not solved, iteration or time limit was reached */
                if( lperror )
                {
-                  SCIPdebugMessage("error solving up node probing LP: status=%d\n", solstatup);
+                  SCIPdebugMsg(scip, "error solving up node probing LP: status=%d\n", solstatup);
                   SCIPstatistic(branchruledata->noupdate = TRUE);
                   break;
                }
@@ -359,7 +367,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                upinf = upinf || SCIPisGE(scip, upobjval, SCIPgetCutoffbound(scip));
                assert(((solstatup != SCIP_LPSOLSTAT_INFEASIBLE) && (solstatup != SCIP_LPSOLSTAT_OBJLIMIT)) || upinf);
 
-               SCIPdebugMessage(" down node objval: %g up node objval: %g\n", downobjval, upobjval);
+               SCIPdebugMsg(scip, " down node objval: %g up node objval: %g\n", downobjval, upobjval);
 
                if( !upinf )
                {
@@ -397,7 +405,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                       */
                      if( downinf && upinf )
                      {
-                        SCIPdebugMessage("node can be cut off due to strong branching on multi-aggregated variable <%s>\n",
+                        SCIPdebugMsg(scip, "node can be cut off due to strong branching on multi-aggregated variable <%s>\n",
                            SCIPvarGetName(fixvars[i]));
                         SCIPstatistic(branchruledata->nmultaggrcutoff += 1);
 
@@ -411,7 +419,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                         if( downinf )
                            downnodeinf = TRUE;
 
-                        SCIPdebugMessage("%s child of multi-aggregated variable <%s> is infeasible\n",
+                        SCIPdebugMsg(scip, "%s child of multi-aggregated variable <%s> is infeasible\n",
                            downinf ? "down" : "up", SCIPvarGetName(fixvars[i]) );
                         SCIPstatistic(branchruledata->nmultaggrconsadd += 1);
 
@@ -436,7 +444,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                   assert(!upinf);
                   assert(!lperror);
 
-                  SCIPdebugMessage(" both probing nodes are valid while branching on multi-aggregated variable: <%s>\n ", SCIPvarGetName(fixvars[i]));
+                  SCIPdebugMsg(scip, " both probing nodes are valid while branching on multi-aggregated variable: <%s>\n ", SCIPvarGetName(fixvars[i]));
 
                   down = MAX(downobjval, lpobjval);
                   up = MAX(upobjval, lpobjval);
@@ -467,7 +475,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                         }
                         )
 
-                     SCIPdebugMessage(" <%s> is a better candidate for branching\n", SCIPvarGetName(fixvars[i]));
+                     SCIPdebugMsg(scip, " <%s> is a better candidate for branching\n", SCIPvarGetName(fixvars[i]));
 
                      *bestscore = MAX(score, *bestscore);
                      *bestcand = fixvars[i];
@@ -494,7 +502,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
          SCIP_CALL( SCIPendProbing(scip) );
       }
 
-      SCIPdebugMessage("\n");
+      SCIPdebugMsg(scip, "\n");
 
       /* one of the child nodes was infeasible, add the other constraint to the current node */
       if( *result == SCIP_CONSADDED )
@@ -508,7 +516,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                   TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
             assert(probingconsup != NULL);
             SCIP_CALL( SCIPaddConsNode(scip, node, probingconsup, NULL) );
-            SCIPdebugMessage(" <%s> new valid constraint has been added to the original problem\n", SCIPconsGetName(probingconsup));
+            SCIPdebugMsg(scip, " <%s> new valid constraint has been added to the original problem\n", SCIPconsGetName(probingconsup));
             SCIP_CALL( SCIPreleaseCons(scip, &probingconsup) );
          }
          else
@@ -519,7 +527,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                   TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
             assert(probingconsdown != NULL);
             SCIP_CALL( SCIPaddConsNode(scip, node, probingconsdown, NULL) );
-            SCIPdebugMessage(" <%s> new valid constraint has been added to the original problem\n", SCIPconsGetName(probingconsdown));
+            SCIPdebugMsg(scip, " <%s> new valid constraint has been added to the original problem\n", SCIPconsGetName(probingconsdown));
             SCIP_CALL( SCIPreleaseCons(scip, &probingconsdown) );
          }
       }
@@ -740,7 +748,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of mult-aggreg branching\n ");
+   SCIPdebugMsg(scip, "Execlp method of mult-aggreg branching\n ");
    *result = SCIP_DIDNOTRUN;
 
    /* get branching rule data */
@@ -878,7 +886,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             )
 
          assert(bestcand != NULL);
-         SCIPdebugMessage("BRANCHING MODE:\n");
+         SCIPdebugMsg(scip, "BRANCHING MODE:\n");
 
          /* perform branching on the best found candidate */
          if( SCIPvarGetStatus(bestcand) == SCIP_VARSTATUS_MULTAGGR )
@@ -938,10 +946,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
             /* create the child nodes */
             SCIP_CALL( SCIPcreateChild(scip, &downchild, 1.0, estimatedown) );
-            SCIPdebugMessage(" down node: lowerbound %f estimate %f\n", SCIPnodeGetLowerbound(downchild), SCIPnodeGetEstimate(downchild));
+            SCIPdebugMsg(scip, " down node: lowerbound %f estimate %f\n", SCIPnodeGetLowerbound(downchild), SCIPnodeGetEstimate(downchild));
 
             SCIP_CALL( SCIPcreateChild(scip, &upchild, 1.0, estimateup) );
-            SCIPdebugMessage(" up node: lowerbound %f estimate %f\n", SCIPnodeGetLowerbound(upchild), SCIPnodeGetEstimate(upchild));
+            SCIPdebugMsg(scip, " up node: lowerbound %f estimate %f\n", SCIPnodeGetLowerbound(upchild), SCIPnodeGetEstimate(upchild));
 
             assert(downchild != NULL);
             assert(upchild != NULL);
@@ -950,13 +958,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             SCIP_CALL( SCIPaddConsNode(scip, upchild, multaggrconsup, NULL) );
 
 #ifdef PRINTNODECONS
-            SCIPdebugMessage("branching at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+            SCIPdebugMsg(scip, "branching at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
-            SCIPdebugMessage("created child node %lld with constraint:\n", SCIPnodeGetNumber(downchild));
+            SCIPdebugMsg(scip, "created child node %lld with constraint:\n", SCIPnodeGetNumber(downchild));
             SCIP_CALL( SCIPprintCons(scip, multaggrconsdown, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 
-            SCIPdebugMessage("created child node %lld with constraint:\n", SCIPnodeGetNumber(upchild));
+            SCIPdebugMsg(scip, "created child node %lld with constraint:\n", SCIPnodeGetNumber(upchild));
             SCIP_CALL( SCIPprintCons(scip, multaggrconsup, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -965,7 +973,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             SCIP_CALL( SCIPreleaseCons(scip, &multaggrconsdown) );
             SCIP_CALL( SCIPreleaseCons(scip, &multaggrconsup) );
 
-            SCIPdebugMessage("BRANCHED on multi-aggregated variable <%s>\n", SCIPvarGetName(bestcand));
+            SCIPdebugMsg(scip, "BRANCHED on multi-aggregated variable <%s>\n", SCIPvarGetName(bestcand));
 
             *result = SCIP_BRANCHED;
          }
@@ -979,12 +987,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             assert(*result == SCIP_DIDNOTRUN);
             assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
-            SCIP_CALL( SCIPbranchVar(scip, bestcand, &downchild, NULL, &upchild) );
+            SCIP_CALL( SCIPbranchVarVal(scip, bestcand, bestsol, &downchild, NULL, &upchild) );
 
             assert(downchild != NULL);
             assert(upchild != NULL);
 
-            SCIPdebugMessage("BRANCHED on fractional variable <%s>\n", SCIPvarGetName(bestcand));
+            SCIPdebugMsg(scip, "BRANCHED on fractional variable <%s>\n", SCIPvarGetName(bestcand));
 
             *result = SCIP_BRANCHED;
          }
@@ -997,13 +1005,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
             SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
          }
-         SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
-         SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
+         SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+         SCIPdebugMsg(scip, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
       }
    }
    else
    {
-      SCIPdebugMessage("strong branching breaks\n" );
+      SCIPdebugMsg(scip, "strong branching breaks\n" );
 
       SCIPstatistic(
          if( *result == SCIP_CUTOFF )
@@ -1033,7 +1041,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 /** creates the multi-aggregated branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;

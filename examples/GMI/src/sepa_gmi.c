@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,11 +38,11 @@
  *   at the upper bound must be flipped. Nonbasic free variables at zero are currently untested in the cut generator,
  *   but they should be handled properly anyway.
  *
- * - Nonbasic rows can be at lower or upper bound. Non-ranged nonbasic rows are always at the lower bound. SCIP always
- *   adds slack/surplus variables with a coefficient of +1: the variable is nonnegative in case of a <= constraint, it
- *   is nonpositive in case of a >= or ranged constraint. Therefore, slack variables corresponding to >= or ranged
- *   constraints must be flipped if they are at the lower bound. (Ranged constraints at the upper bound do not have to
- *   be flipped because the variable is nonpositive.)
+ * - Nonbasic rows can be at lower or upper bound, depending on whether the lower or upper bound of the row is
+ *   attained. SCIP always adds slack/surplus variables with a coefficient of +1: the slack variable is nonnegative in
+ *   case of a <= constraint, it is nonpositive in case of a >= or ranged constraint. Therefore, slack variables
+ *   corresponding to >= or ranged constraints must be flipped if the row is at its lower bound. (Ranged constraints at
+ *   the upper bound do not have to - * be flipped because the variable is nonpositive.)
  *
  * Generated cuts are modified and their numerical properties are checked before being added to the LP relaxation.
  * Default parameters for cut modification and checking procedures are taken from the paper
@@ -229,7 +229,7 @@ SCIP_Bool checkNumerics(
    /* Check maximum support */
    if( *cutnz > (ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs )
    {
-      SCIPdebugMessage("Cut too dense (%d > %d).\n", *cutnz, (int) ((ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs));
+      SCIPdebugMsg(scip, "Cut too dense (%d > %d).\n", *cutnz, (int) ((ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs));
       return FALSE;
    }
 
@@ -248,7 +248,7 @@ SCIP_Bool checkNumerics(
    /* Check dynamism */
    if( maxcoef > mincoef * sepadata->maxdynamism )
    {
-      SCIPdebugMessage("Cut too dynamic (%g > %g).\n", maxcoef, mincoef * sepadata->maxdynamism);
+      SCIPdebugMsg(scip, "Cut too dynamic (%g > %g).\n", maxcoef, mincoef * sepadata->maxdynamism);
       return FALSE;
    }
 
@@ -346,7 +346,9 @@ SCIP_Bool getGMIFromRow(
       /* Integer variables */
       if( SCIPcolIsIntegral(col) )
       {
-         cutelem = SCIPfeasFrac(scip, rowelem);
+         /* if cutelem < 0, then we know SCIPisZero(scip, cutelem) is true and hope it doesn't do much damage */
+         cutelem = SCIPfrac(scip, rowelem);
+
          if( cutelem > f0 )
          {
             /* cut element if f > f0 */
@@ -401,7 +403,7 @@ SCIP_Bool getGMIFromRow(
       case SCIP_BASESTAT_LOWER:
          /* Take element if nonbasic at lower bound. */
          rowelem = binvrow[SCIProwGetLPPos(row)];
-         /* But if this is a >= or ranged constraint, we have to flip the row element. */
+         /* But if this is a >= or ranged constraint at the lower bound, we have to flip the row element. */
          if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
             rowelem = -rowelem;
          break;
@@ -412,7 +414,7 @@ SCIP_Bool getGMIFromRow(
          break;
       case SCIP_BASESTAT_ZERO:
          /* Nonbasic free variable at zero: cut coefficient is zero, skip */
-         SCIPdebugMessage("Free nonbasic slack variable, this should not happen!\n");
+         SCIPdebugMsg(scip, "Free nonbasic slack variable, this should not happen!\n");
          continue;
       case SCIP_BASESTAT_BASIC:
       default:
@@ -424,7 +426,9 @@ SCIP_Bool getGMIFromRow(
        * coefficient */
       if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
       {
-         cutelem = SCIPfeasFrac(scip, rowelem);
+         /* if cutelem < 0, then we know SCIPisZero(scip, cutelem) is true and hope it doesn't do much damage */
+         cutelem = SCIPfrac(scip, rowelem);
+
          if( cutelem > f0 )
          {
             /* cut element if f > f0 */
@@ -474,7 +478,7 @@ SCIP_Bool getGMIFromRow(
          act = SCIPgetRowLPActivity(scip, row);
          rhsslack = rrhs - act;
 
-         /* Unflip slack variable and adjust rhs if necessary */
+         /* Unflip slack variable and adjust rhs if necessary. */
          if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
          {
             /* If >= or ranged constraint, flip element back to original */
@@ -485,7 +489,7 @@ SCIP_Bool getGMIFromRow(
          rowcols = SCIProwGetCols(row);
          rowvals = SCIProwGetVals(row);
 
-         /* Eliminate slack variable */
+         /* Eliminate slack variable. */
          for( i = 0; i < SCIProwGetNLPNonz(row); ++i )
             workcoefs[SCIPcolGetLPPos(rowcols[i])] -= cutelem * rowvals[i];
 
@@ -507,10 +511,10 @@ SCIP_Bool getGMIFromRow(
    if ( success )
    {
       success = checkNumerics(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs, cutact);
-      SCIPdebugMessage("checkNumerics returned: %u.\n", success);
+      SCIPdebugMsg(scip, "checkNumerics returned: %u.\n", success);
       return success;
    }
-   SCIPdebugMessage("modifyAndPackCut was not successful.\n");
+   SCIPdebugMsg(scip, "modifyAndPackCut was not successful.\n");
 
    return FALSE;
 }
@@ -660,7 +664,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
       c = basisind[i];
       primsol = SCIP_INVALID;
 
-      SCIPdebugMessage("Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
+      SCIPdebugMsg(scip, "Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
       if( c >= 0 )
       {
          SCIP_VAR* var;
@@ -674,7 +678,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1 - sepadata->away) )
             {
-               SCIPdebugMessage("trying gomory cut for col <%s> [%g] row %i\n", SCIPvarGetName(var), primsol, i);
+               SCIPdebugMsg(scip, "trying gomory cut for col <%s> [%g] row %i\n", SCIPvarGetName(var), primsol, i);
                tryrow = TRUE;
             }
          }
@@ -694,7 +698,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1 - sepadata->away) )
             {
-               SCIPdebugMessage("trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebugMsg(scip, "trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                tryrow = TRUE;
             }
@@ -723,7 +727,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          /* create a GMI cut out of the simplex tableau row */
          success = getGMIFromRow(scip, sepadata, ncols, nrows, cols, rows, binvrow, binvarow, primsol, cutcoefs, cutind, &cutnz, &cutrhs, &cutact, workcoefs);
 
-         SCIPdebugMessage(" -> success = %u: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMsg(scip, " -> success = %u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, add the row as a cut */
          if( success )
@@ -751,7 +755,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
             if( SCIProwGetNNonz(cut) == 0 )
             {
                assert(SCIPisFeasNegative(scip, cutrhs));
-               SCIPdebugMessage(" -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+               SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
                *result = SCIP_CUTOFF;
                break;
             }
@@ -762,11 +766,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
             {
                SCIP_Bool infeasible;
 
-               SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
+               SCIPdebugMsg(scip, " -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
                   c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                   cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
 
-               SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+               SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                   cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                   SCIPgetCutEfficacy(scip, NULL, cut),
                   SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -804,7 +808,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &cutind);
 
-   SCIPdebugMessage("end searching gomory cuts: found %d cuts.\n", ncuts);
+   SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts.\n", ncuts);
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 

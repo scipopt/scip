@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -75,9 +75,11 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(echo ''; echo '--> running pdflatex to create documentation'; echo ''); 
-		@-(cd doc && pdflatex scip_intro.tex && pdflatex scip_intro.tex);
-		@-(echo ''; echo '--> open doc/scip_intro.pdf for documentation')
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
@@ -88,6 +90,14 @@ $(OBJDIR):
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
+
+.PHONY: test
+test: $(MAINFILE)
+		for i in 1 2 4 8 16 ; do \
+			echo ; echo "Testing the n-queens solver with n = $$i" ; \
+			$(MAINFILE) $$i || break 1 ; \
+			echo ; \
+		done
 
 .PHONY: clean
 clean:		$(OBJDIR)

@@ -1,12 +1,12 @@
-/* $Id: configure.hpp.in 3064 2013-12-28 18:01:30Z bradbell $ */
-# ifndef CPPAD_CONFIGURE_INCLUDED
-# define CPPAD_CONFIGURE_INCLUDED
+// $Id$
+# ifndef CPPAD_CONFIGURE_HPP
+# define CPPAD_CONFIGURE_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -19,13 +19,9 @@ $spell
 	CppAD
 $$
 
-$section Preprocessor Definitions Used by CppAD$$
-$index configure, symbol$$
-$index symbol, configure$$
+$section Configuration Preprocessor Symbols Used by CppAD$$
 
 $head Preprocessor Symbols$$
-$index preprocessor, symbol$$
-$index symbol, processor$$
 All of the preprocessor symbols used by CppAD begin with
 $code CPPAD_$$
 (there are some deprecated symbols that begin with $code CppAD$$).
@@ -34,26 +30,60 @@ $end
 */
 
 /*!
-\defgroup configure_hpp configure.hpp
-\{
  \file configure.hpp
-Replacement for config.h so that all preprocessor symbols begin with CPPAD_ 
+Replacement for config.h so that all preprocessor symbols begin with CPPAD_
 */
+
+/*!
+\def CPPAD_DISABLE_SOME_MICROSOFT_COMPILER_WARNINGS
+This macro is only used to document the pragmas that disables the
+follow warnings:
+
+\li C4100
+unreferenced formal parameter.
+\li C4127
+conditional expression is constant.
+*/
+# define CPPAD_DISABLE_SOME_MICROSOFT_COMPILER_WARNINGS 1
+# if _MSC_VER
+# pragma warning( disable : 4100 )
+# pragma warning( disable : 4127 )
+# endif
+# undef CPPAD_DISABLE_SOME_MICROSOFT_COMPILER_WARNINGS
+
+/*!
+\def CPPAD_USE_CPLUSPLUS_2011
+Should CppAD use C++11 features. This will be true if the current
+compiler flags request C++11 features and the install procedure
+determined that all the necessary features are avaiable.
+*/
+# if     _MSC_VER
+# if _MSC_VER > 1600
+# define    CPPAD_USE_CPLUSPLUS_2011 1
+# else
+# define    CPPAD_USE_CPLUSPLUS_2011 0
+# endif
+# else   //
+# if         __cplusplus >= 201100
+# define         CPPAD_USE_CPLUSPLUS_2011 1
+# else       //
+# define         CPPAD_USE_CPLUSPLUS_2011 0
+# endif      //
+# endif //
 
 /*!
 \def CPPAD_PACKAGE_STRING
 cppad-yyyymmdd as a C string where yyyy is year, mm is month, and dd is day.
 */
-# define CPPAD_PACKAGE_STRING "cppad-20140000.3"
+# define CPPAD_PACKAGE_STRING "CppAD 20160000.1"
 
 /*!
-def CPPAD_HAS_NULLPTR
-Does this compiler support the a c++11 null-pointer constant nullptr
-(true = 1, false = 0).
+def CPPAD_HAS_COLPACK
+Was a colpack_prefix specified on the cmake command line.
 */
-# define CPPAD_HAS_NULLPTR 0
- 
- /*!
+# define CPPAD_HAS_COLPACK 0
+
+/*!
 def CPPAD_INTERNAL_SPARSE_SET
 is the internal representation used for sparse vectors of std::set<size_t>
 either sparse_set or sparse_list).
@@ -61,45 +91,45 @@ either sparse_set or sparse_list).
 # define CPPAD_INTERNAL_SPARSE_SET sparse_list
 
 /*!
-\def CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE
+\def CPPAD_DEPRECATED
 If this symbol is one, an implicit constor of AD<Base> is defined
 where the argument has any type.
 Otherwise this constructor is explicit.
 */
-# define CPPAD_IMPLICIT_CTOR_FROM_ANY_TYPE 0
+# define CPPAD_DEPRECATED 0
 
 /*!
 \def CPPAD_BOOSTVECTOR
 If this symbol is one, and _MSC_VER is not defined,
 we are using boost vector for CPPAD_TESTVECTOR.
-It this symbol is zero, 
+It this symbol is zero,
 we are not using boost vector for CPPAD_TESTVECTOR.
 */
 # define CPPAD_BOOSTVECTOR 0
 
 /*!
 \def CPPAD_CPPADVECTOR
-If this symbol is one, 
+If this symbol is one,
 we are using CppAD vector for CPPAD_TESTVECTOR.
-It this symbol is zero, 
+It this symbol is zero,
 we are not using CppAD vector for CPPAD_TESTVECTOR.
 */
 # define CPPAD_CPPADVECTOR 1
 
 /*!
 \def CPPAD_STDVECTOR
-If this symbol is one, 
+If this symbol is one,
 we are using standard vector for CPPAD_TESTVECTOR.
-It this symbol is zero, 
+It this symbol is zero,
 we are not using standard vector for CPPAD_TESTVECTOR.
 */
 # define CPPAD_STDVECTOR 0
 
 /*!
 \def CPPAD_EIGENVECTOR
-If this symbol is one, 
+If this symbol is one,
 we are using Eigen vector for CPPAD_TESTVECTOR.
-If this symbol is zero, 
+If this symbol is zero,
 we are not using Eigen vector for CPPAD_TESTVECTOR.
 */
 # define CPPAD_EIGENVECTOR 0
@@ -113,15 +143,15 @@ Otherwise, this smybol should be zero.
 # define CPPAD_HAS_GETTIMEOFDAY 1
 
 /*!
-\def CPPAD_SIZE_T_SAME_UNSIGNED_INT 
-If this symbol is one, the type size_t is the same as the type unsigned int,
-otherwise this symbol is zero.
+\def CPPAD_SIZE_T_NOT_UNSIGNED_INT
+If this symbol is zero, the type size_t is the same as the type unsigned int,
+otherwise this symbol is one.
 */
-# define CPPAD_SIZE_T_SAME_UNSIGNED_INT 1
+# define CPPAD_SIZE_T_NOT_UNSIGNED_INT 0
 
 /*!
 \def CPPAD_TAPE_ADDR_TYPE
-Is the type used to store address on the tape. If not size_t, then 
+Is the type used to store address on the tape. If not size_t, then
 <code>sizeof(CPPAD_TAPE_ADDR_TYPE) <= sizeof( size_t )</code>
 to conserve memory.
 This type must support \c std::numeric_limits,
@@ -135,7 +165,7 @@ This type is later defined as \c addr_t in the CppAD namespace.
 
 /*!
 \def CPPAD_TAPE_ID_TYPE
-Is the type used to store tape identifiers. If not size_t, then 
+Is the type used to store tape identifiers. If not size_t, then
 <code>sizeof(CPPAD_TAPE_ID_TYPE) <= sizeof( size_t )</code>
 to conserve memory.
 This type must support \c std::numeric_limits,
@@ -159,5 +189,34 @@ header files.  If it is not yet defined,
 # define CPPAD_MAX_NUM_THREADS 48
 # endif
 
-/*! \} */
+/*!
+\def CPPAD_HAS_MKSTEMP
+It true, mkstemp works in C++ on this system.
+*/
+# define CPPAD_HAS_MKSTEMP 0
+
+/*!
+\def CPPAD_HAS_TMPNAM_S
+It true, tmpnam_s works in C++ on this system.
+*/
+# define CPPAD_HAS_TMPNAM_S 0
+
+// ---------------------------------------------------------------------------
+// defines that only depend on values above
+// ---------------------------------------------------------------------------
+/*!
+\def CPPAD_NULL
+This preprocessor symbol is used for a null pointer.
+
+If it is not yet defined,
+it is defined when cppad/local/define.hpp is included.
+*/
+# ifndef CPPAD_NULL
+# if CPPAD_USE_CPLUSPLUS_2011
+# define CPPAD_NULL     nullptr
+# else
+# define CPPAD_NULL     0
+# endif
+# endif
+
 # endif

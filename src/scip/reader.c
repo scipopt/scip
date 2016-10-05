@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,6 +22,10 @@
 
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 #include <math.h>
 
 #include "scip/def.h"
@@ -51,7 +55,7 @@ SCIP_RETCODE SCIPreaderCopyInclude(
 
    if( reader->readercopy != NULL )
    {
-      SCIPdebugMessage("including reader %s in subscip %p\n", SCIPreaderGetName(reader), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including reader %s in subscip %p\n", SCIPreaderGetName(reader), (void*)set->scip);
       SCIP_CALL( reader->readercopy(set->scip, reader) );
    }
    return SCIP_OKAY;
@@ -286,7 +290,7 @@ SCIP_RETCODE SCIPreaderWrite(
                nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
          }
 
-         SCIPdebugMessage("Writing %d constraints.\n", nconss);
+         SCIPsetDebugMsg(set, "Writing %d constraints.\n", nconss);
 
 
          SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
@@ -311,7 +315,7 @@ SCIP_RETCODE SCIPreaderWrite(
                nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
             }
 
-            SCIPdebugMessage("Conshdlr <%s> has %d constraints to write from all in all %d constraints.\n", SCIPconshdlrGetName(conshdlrs[i]), nconshdlrconss, SCIPconshdlrGetNConss(conshdlrs[i]));
+            SCIPsetDebugMsg(set, "Conshdlr <%s> has %d constraints to write from all in all %d constraints.\n", SCIPconshdlrGetName(conshdlrs[i]), nconshdlrconss, SCIPconshdlrGetNConss(conshdlrs[i]));
 
             for( c = 0; c < nconshdlrconss; ++c )
             {

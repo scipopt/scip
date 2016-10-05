@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,7 +13,7 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-This is a very-beta-version of a functional MATLAB interface for SCIP
+This is a very-beta-version of a functional MATLAB/Octave interface for SCIP
 Up to now, it has only been tested with SCIP version 2.1.0 and MATLAB version 7.9
 
 It supports solving LPs and MIPs with SCIP that are defined via dense matrices in MATLAB.
@@ -30,15 +30,20 @@ Please let us know (e-mail to berthold@zib.de and gleixner@zib.de), if you are m
 Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
 
 To use SCIP from MATLAB, you have to do the following:
- - set a link called libsoplex.a in the lib/-folder of your SCIP installation, pointing to the used SoPlex library, e.g.,
-   "cd  /home/ziboptsuite-2.1.0/scip-2.1.0/lib; ln -s libsoplex.linux.x86_64.gnu.opt.a libsoplex.a"
- - start MATLAB from the Matlab interface bas directory, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/interfaces/matlab
- - run installscip
- - specify the path to your SCIP installation, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0
-   - this makes a function called scip available, which has 8 input and two output parameters
-   - it might be necessary that you compiled SCIP with make USRCFLAGS="-fPIC" USRCXXFLAGS="-fPIC"
- - if this works fine, you should try to run the example files diet_lp and stein9_ip
- - now try your own application
+ - Compile SoPlex and ZIMPL with 'make ... SHARED=true'
+ - Compile SCIP with 'make ... LPS=spx2 SHARED=true'
+ - Start MATLAB/Octave from the Matlab interface base directory, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/interfaces/matlab .
+ - Run installscip.
+ - If this works fine, you should try to run the example files diet_lp and stein9_ip.
+ - Now try your own application.
+
+Further comments:
+ - Possibly you have to enter paths to the following files:
+   + the SCIP installation, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0
+   + the LPI library, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/lib/liblpispx.a
+   + the NLPI library, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/lib/libnlpispx.a
+   + the library for soplex, e.g., libsoplex.linux.x86_64.gnu.opt.a
+ - This makes a function called scip available, which has 8 input and two output parameters.
 
 syntax of the function scip:
 [bestsol, objval] = scip(matrix, lhs, rhs, obj, lb, ub, vartype, objsense)

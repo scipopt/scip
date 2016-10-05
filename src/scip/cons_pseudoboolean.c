@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -634,6 +634,7 @@ SCIP_RETCODE getLinearConsVarsData(
    case SCIP_LINEARCONSTYPE_LOGICOR:
       *nvars = SCIPgetNVarsLogicor(scip, cons);
       linvars = SCIPgetVarsLogicor(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -656,6 +657,7 @@ SCIP_RETCODE getLinearConsVarsData(
 
       *nvars = SCIPgetNVarsKnapsack(scip, cons);
       linvars = SCIPgetVarsKnapsack(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -678,6 +680,7 @@ SCIP_RETCODE getLinearConsVarsData(
    case SCIP_LINEARCONSTYPE_SETPPC:
       *nvars = SCIPgetNVarsSetppc(scip, cons);
       linvars = SCIPgetVarsSetppc(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -701,6 +704,7 @@ SCIP_RETCODE getLinearConsVarsData(
 
       *nvars = SCIPgetNVarsEQKnapsack(scip, cons);
       linvars = SCIPgetVarsEQKnapsack(scip, cons);
+      assert( linvars != NULL );
 
       if( coefs != NULL )
       {
@@ -1633,11 +1637,10 @@ static
 SCIP_RETCODE lockRoundingAndCons(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
-   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to delete the locks and the
-                                              *   capture of the corresponding and-constraint */
+   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to add the locks */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
-   SCIP_Real const       lhs,                /**< left hand side which led to old locks */
-   SCIP_Real const       rhs                 /**< right hand side which led to old locks */
+   SCIP_Real const       lhs,                /**< left hand side */
+   SCIP_Real const       rhs                 /**< right hand side */
    )
 {
    SCIP_VAR** vars;
@@ -1702,8 +1705,7 @@ static
 SCIP_RETCODE unlockRoundingAndCons(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
-   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to delete the locks and the
-                                              *   capture of the corresponding and-constraint */
+   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to delete the locks */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
    SCIP_Real const       lhs,                /**< left hand side which led to old locks */
    SCIP_Real const       rhs                 /**< right hand side which led to old locks */
@@ -2925,7 +2927,7 @@ SCIP_RETCODE createAndAddLinearCons(
          }
       }
 
-      SCIPdebugMessage("While creating the linear constraint of the pseudoboolean constraint we found %d zero coefficients that were removed\n", nzero);
+      SCIPdebugMsg(scip, "While creating the linear constraint of the pseudoboolean constraint we found %d zero coefficients that were removed\n", nzero);
 
       /* try to upgrade to a special linear constraint */
       if( integral )
@@ -2950,7 +2952,7 @@ SCIP_RETCODE createAndAddLinearCons(
             SCIP_VAR** transvars;
             int mult;
 
-            SCIPdebugMessage("linear constraint will be logic-or constraint\n");
+            SCIPdebugMsg(scip, "linear constraint will be logic-or constraint\n");
 
             /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
             mult = SCIPisInfinity(scip, *rhs) ? +1 : -1;
@@ -3022,7 +3024,7 @@ SCIP_RETCODE createAndAddLinearCons(
 
             if( SCIPisEQ(scip, *lhs, *rhs) && (SCIPisEQ(scip, *lhs, 1.0 - ncoeffsnone) || SCIPisEQ(scip, *lhs, ncoeffspone - 1.0)) )
             {
-               SCIPdebugMessage("linear pseudoboolean constraint will be a set partitioning constraint\n");
+               SCIPdebugMsg(scip, "linear pseudoboolean constraint will be a set partitioning constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
                mult = SCIPisEQ(scip, *lhs, 1.0 - ncoeffsnone) ? +1 : -1;
@@ -3072,7 +3074,7 @@ SCIP_RETCODE createAndAddLinearCons(
             else if( (SCIPisInfinity(scip, -*lhs) && SCIPisEQ(scip, *rhs, 1.0 - ncoeffsnone))
                || (SCIPisEQ(scip, *lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, *rhs)) )
             {
-               SCIPdebugMessage("linear pseudoboolean constraint will be a set packing constraint\n");
+               SCIPdebugMsg(scip, "linear pseudoboolean constraint will be a set packing constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
                mult = SCIPisInfinity(scip, -*lhs) ? +1 : -1;
@@ -3133,7 +3135,7 @@ SCIP_RETCODE createAndAddLinearCons(
                      SCIPwarningMessage(scip, "Does not expect this, because this constraint should be a logicor constraint.\n");
                   }
                }
-               SCIPdebugMessage("linear pseudoboolean constraint will be a set covering constraint\n");
+               SCIPdebugMsg(scip, "linear pseudoboolean constraint will be a set covering constraint\n");
 
                /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
                mult = SCIPisInfinity(scip, *rhs) ? +1 : -1;
@@ -3197,7 +3199,7 @@ SCIP_RETCODE createAndAddLinearCons(
             SCIP_Longint weight;
             int mult;
 
-            SCIPdebugMessage("linear pseudoboolean constraint will be a knapsack constraint\n");
+            SCIPdebugMsg(scip, "linear pseudoboolean constraint will be a knapsack constraint\n");
 
             /* get temporary memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
@@ -3288,7 +3290,7 @@ SCIP_RETCODE createAndAddLinearCons(
 
             assert(!SCIPisInfinity(scip, *rhs));
 
-            SCIPdebugMessage("linear pseudoboolean constraint will be a equality-knapsack constraint\n");
+            SCIPdebugMsg(scip, "linear pseudoboolean constraint will be a equality-knapsack constraint\n");
 
             /* get temporary memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
@@ -3438,7 +3440,7 @@ SCIP_RETCODE checkOrigPbCons(
 
    *violated = FALSE;
 
-   SCIPdebugMessage("checking original pseudo boolean constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "checking original pseudo boolean constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -3537,8 +3539,10 @@ SCIP_RETCODE checkOrigPbCons(
    }
    assert(nandress == consdata->nconsanddatas);
 
-   SCIPdebugMessage("nlinvars = %d, nandress = %d\n", nlinvars, nandress);
-   SCIPdebugMessage("linear activity = %g\n", activity);
+   SCIPsortPtrReal((void**)andress, andcoefs, SCIPvarComp, nandress);
+
+   SCIPdebugMsg(scip, "nlinvars = %d, nandress = %d\n", nlinvars, nandress);
+   SCIPdebugMsg(scip, "linear activity = %g\n", activity);
 
    /* compute and add solution values on terms */
    for( c = consdata->nconsanddatas - 1; c >= 0; --c )
@@ -3555,7 +3559,7 @@ SCIP_RETCODE checkOrigPbCons(
        */
       if( andcons == NULL )
       {
-	 andcons = consdata->consanddatas[c]->cons;
+         andcons = consdata->consanddatas[c]->cons;
       }
       assert(andcons != NULL);
 
@@ -3578,7 +3582,7 @@ SCIP_RETCODE checkOrigPbCons(
       }
       activity += andvalue * andcoefs[c];
    }
-   SCIPdebugMessage("lhs = %g, overall activity = %g, rhs = %g\n", lhs, activity, rhs);
+   SCIPdebugMsg(scip, "lhs = %g, overall activity = %g, rhs = %g\n", lhs, activity, rhs);
 
    /* check left hand side for violation */
    if( SCIPisFeasLT(scip, activity, lhs) )
@@ -3863,7 +3867,7 @@ SCIP_RETCODE copyConsPseudoboolean(
       /* no correct pseudoboolean constraint */
       if( ntargetandconss == 0 )
       {
-         SCIPdebugMessage("no and-constraints copied for pseudoboolean constraint <%s>\n", SCIPconsGetName(sourcecons));
+         SCIPdebugMsg(sourcescip, "no and-constraints copied for pseudoboolean constraint <%s>\n", SCIPconsGetName(sourcecons));
          *valid = FALSE;
       }
 
@@ -4133,7 +4137,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    SCIP_Real const       newrhs,             /**< new right hand side of pseudoboolean constraint */
    SCIP_VAR**const       andress,            /**< current and-resultants in pseudoboolean constraint */
    SCIP_Real*const       andcoefs,           /**< current and-resultants-coeffcients in pseudoboolean constraint */
-   SCIP_Bool*const       andnegs,           /**< current negation status of and-resultants in pseudoboolean constraint */
+   SCIP_Bool*const       andnegs,            /**< current negation status of and-resultants in pseudoboolean constraint */
    int const             nandress            /**< number of current and-resultants in pseudoboolean constraint */
    )
 {
@@ -4164,7 +4168,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    assert(consdata != NULL);
 
    /* sort and-constraints after indices of corresponding and-resultants */
-   SCIPsortPtrReal((void**)(consdata->consanddatas), consdata->andcoefs, resvarCompWithInactive, consdata->nconsanddatas);
+   SCIPsortPtrRealBool((void**)(consdata->consanddatas), consdata->andcoefs, consdata->andnegs, resvarCompWithInactive, consdata->nconsanddatas);
 
    consanddatas = consdata->consanddatas;
    oldandcoefs = consdata->andcoefs;
@@ -4428,6 +4432,7 @@ SCIP_RETCODE correctLocksAndCaptures(
 
    /* delete old and-coefficients and consanddata objects */
    SCIPfreeBlockMemoryArray(scip, &(consdata->andcoefs), consdata->sconsanddatas);
+   SCIPfreeBlockMemoryArray(scip, &(consdata->andnegs), consdata->sconsanddatas);
    SCIPfreeBlockMemoryArray(scip, &(consdata->consanddatas), consdata->sconsanddatas);
 
    if( !SCIPisEQ(scip, consdata->lhs, newlhs) || !SCIPisEQ(scip, consdata->rhs, newrhs) )
@@ -4460,7 +4465,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    /* we need to re-sort and-constraints after indices of corresponding and-resultants, since we might have replaced
     * negated variables
     */
-   SCIPsortPtrReal((void**)(consdata->consanddatas), consdata->andcoefs, resvarCompWithInactive, consdata->nconsanddatas);
+   SCIPsortPtrRealBool((void**)(consdata->consanddatas), consdata->andcoefs, consdata->andnegs, resvarCompWithInactive, consdata->nconsanddatas);
 
 #ifndef NDEBUG
    consanddatas = consdata->consanddatas;
@@ -4663,7 +4668,7 @@ SCIP_RETCODE addCliques(
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+               SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebugPrintCons(scip, newcons, NULL);
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -4706,7 +4711,7 @@ SCIP_RETCODE addCliques(
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+               SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebugPrintCons(scip, newcons, NULL);
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -4832,7 +4837,7 @@ SCIP_RETCODE addCliques(
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+               SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebugPrintCons(scip, newcons, NULL);
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -4876,7 +4881,7 @@ SCIP_RETCODE addCliques(
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+               SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebugPrintCons(scip, newcons, NULL);
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -5892,10 +5897,10 @@ SCIP_RETCODE tryUpgradingXor(
       /* add and release new constraint */
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-      SCIPdebugMessage("created upgraded XOR constraint:\n");
-      SCIPdebugMessage("old -> ");
+      SCIPdebugMsg(scip, "created upgraded XOR constraint:\n");
+      SCIPdebugMsg(scip, "old -> ");
       SCIPdebugPrintCons(scip, lincons, NULL);
-      SCIPdebugMessage("new -> ");
+      SCIPdebugMsg(scip, "new -> ");
       SCIPdebugPrintCons(scip, newcons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -6065,10 +6070,10 @@ SCIP_RETCODE tryUpgradingLogicor(
       /* add and release new constraint */
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-      SCIPdebugMessage("created upgraded linear constraint:\n");
-      SCIPdebugMessage("old -> ");
+      SCIPdebugMsg(scip, "created upgraded linear constraint:\n");
+      SCIPdebugMsg(scip, "old -> ");
       SCIPdebugPrintCons(scip, lincons, NULL);
-      SCIPdebugMessage("new -> ");
+      SCIPdebugMsg(scip, "new -> ");
       SCIPdebugPrintCons(scip, newcons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -6241,7 +6246,7 @@ SCIP_RETCODE tryUpgradingLogicor(
          SCIP_CALL( SCIPfixVar(scip, eqvars[v], 1.0, &infeasible, &fixed) );
          if( infeasible )
          {
-            SCIPdebugMessage(" -> infeasible fixing\n");
+            SCIPdebugMsg(scip, " -> infeasible fixing\n");
             *cutoff = TRUE;
             goto TERMINATE;
          }
@@ -6410,10 +6415,10 @@ SCIP_RETCODE tryUpgradingLogicor(
       /* add and release new constraint */
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-      SCIPdebugMessage("created upgraded linear constraint:\n");
-      SCIPdebugMessage("old -> ");
+      SCIPdebugMsg(scip, "created upgraded linear constraint:\n");
+      SCIPdebugMsg(scip, "old -> ");
       SCIPdebugPrintCons(scip, lincons, NULL);
-      SCIPdebugMessage("new -> ");
+      SCIPdebugMsg(scip, "new -> ");
       SCIPdebugPrintCons(scip, newcons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -6757,7 +6762,7 @@ SCIP_RETCODE tryUpgradingSetppc(
             SCIP_CALL( SCIPfixVar(scip, SCIPgetResultantAnd(scip, consanddata->cons), 0.0, &infeasible, &fixed) );
             if( infeasible )
             {
-               SCIPdebugMessage(" -> infeasible fixing\n");
+               SCIPdebugMsg(scip, " -> infeasible fixing\n");
                *cutoff = TRUE;
                goto TERMINATE;
             }
@@ -6794,7 +6799,7 @@ SCIP_RETCODE tryUpgradingSetppc(
                   SCIP_CALL( SCIPfixVar(scip, vars[v2], 0.0, &infeasible, &fixed) );
                   if( infeasible )
                   {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
+                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
                      *cutoff = TRUE;
                      goto TERMINATE;
                   }
@@ -6828,7 +6833,7 @@ SCIP_RETCODE tryUpgradingSetppc(
                   SCIP_CALL( SCIPfixVar(scip, vars[v2], 0.0, &infeasible, &fixed) );
                   if( infeasible )
                   {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
+                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
                      *cutoff = TRUE;
                      goto TERMINATE;
                   }
@@ -6851,7 +6856,7 @@ SCIP_RETCODE tryUpgradingSetppc(
             SCIP_CALL( SCIPfixVar(scip, eqvars[v], 1.0, &infeasible, &fixed) );
             if( infeasible )
             {
-               SCIPdebugMessage(" -> infeasible fixing\n");
+               SCIPdebugMsg(scip, " -> infeasible fixing\n");
                *cutoff = TRUE;
                goto TERMINATE;
             }
@@ -6879,10 +6884,10 @@ SCIP_RETCODE tryUpgradingSetppc(
       {
          SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-         SCIPdebugMessage("created upgraded linear constraint:\n");
-         SCIPdebugMessage("old -> ");
+         SCIPdebugMsg(scip, "created upgraded linear constraint:\n");
+         SCIPdebugMsg(scip, "old -> ");
          SCIPdebugPrintCons(scip, lincons, NULL);
-         SCIPdebugMessage("new -> ");
+         SCIPdebugMsg(scip, "new -> ");
          SCIPdebugPrintCons(scip, newcons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -7309,12 +7314,12 @@ SCIP_RETCODE findAggregation(
 	    }
 	    assert(var != NULL);
 
-	    SCIPdebugMessage("aggregating variables <%s> == 1 - <%s> in pseudoboolean <%s>\n", SCIPvarGetName(linvar), SCIPvarGetName(var), SCIPconsGetName(cons));
+	    SCIPdebugMsg(scip, "aggregating variables <%s> == 1 - <%s> in pseudoboolean <%s>\n", SCIPvarGetName(linvar), SCIPvarGetName(var), SCIPconsGetName(cons));
 
 	    SCIP_CALL( SCIPaggregateVars(scip, linvar, var, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
 
 	    SCIPdebugPrintCons(scip, cons, NULL);
-	    SCIPdebugMessage("aggregation of variables: <%s> == 1 - <%s>, infeasible = %u, aggregated = %u\n", SCIPvarGetName(linvar), SCIPvarGetName(var), infeasible, aggregated);
+	    SCIPdebugMsg(scip, "aggregation of variables: <%s> == 1 - <%s>, infeasible = %u, aggregated = %u\n", SCIPvarGetName(linvar), SCIPvarGetName(var), infeasible, aggregated);
 
 	    if( infeasible )
 	       *cutoff = TRUE;
@@ -7547,7 +7552,7 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
       assert(!SCIPhashmapExists(conshdlrdata->hashmap, (void*)resultant));
       SCIP_CALL( SCIPhashmapInsert(conshdlrdata->hashmap, (void*)resultant, (void*)(conshdlrdata->allconsanddatas[c])) );
 
-      SCIPdebugMessage("insert into hashmap <%s> (%p) -> <%s> (%p/%p)\n", SCIPvarGetName(resultant), (void*)resultant,
+      SCIPdebugMsg(scip, "insert into hashmap <%s> (%p) -> <%s> (%p/%p)\n", SCIPvarGetName(resultant), (void*)resultant,
          SCIPconsGetName(conshdlrdata->allconsanddatas[c]->cons), (void*)(conshdlrdata->allconsanddatas[c]),
          (void*)(conshdlrdata->allconsanddatas[c]->cons));
    }
@@ -8000,7 +8005,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   violated = FALSE;
+   *result = SCIP_FEASIBLE;
 
    if( nconss > 0 )
    {
@@ -8008,7 +8013,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
       {
          SCIP_CONSDATA* consdata;
 
-         for( c = nconss - 1; c >= 0 && !violated; --c )
+         for( c = nconss - 1; c >= 0 && (*result == SCIP_FEASIBLE || completely); --c )
          {
             consdata = SCIPconsGetData(conss[c]);
             assert(consdata != NULL);
@@ -8016,24 +8021,24 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
             if( consdata->issoftcons )
             {
                assert(consdata->indvar != NULL);
+
                if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, consdata->indvar), 1.0) )
                   continue;
             }
 
             SCIP_CALL( checkOrigPbCons(scip, conss[c], sol, &violated, printreason) );
+            if( violated )
+               *result = SCIP_INFEASIBLE;
          }
       }
       else
       {
          /* check all and-constraints */
          SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+         if( violated )
+            *result = SCIP_INFEASIBLE;
       }
    }
-
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -8152,7 +8157,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       if( SCIPconsIsModifiable(cons) )
          goto CONTTERMINATE;
 
-      SCIPdebugMessage("presolving pseudoboolean constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "presolving pseudoboolean constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
 
       /* remember the first changed constraint to begin the next aggregation round with */
@@ -8263,7 +8268,7 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
    haslhs = !SCIPisInfinity(scip, -lhs);
    hasrhs = !SCIPisInfinity(scip, rhs);
 
-   SCIPdebugMessage("%socking constraint <%s> by [%d;%d].\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons), nlocksneg, nlockspos);
+   SCIPdebugMsg(scip, "%socking constraint <%s> by [%d;%d].\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons), nlocksneg, nlockspos);
 
    /* update rounding locks of every single variable corresponding to the and-constraints */
    for( c = consdata->nconsanddatas - 1; c >= 0; --c )
@@ -8276,11 +8281,11 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
       CONSANDDATA* consanddata;
 
       consanddata = consdata->consanddatas[c];
+      assert( consanddata != NULL );
 
       if( !consanddata->istransformed )
          continue;
 
-      assert(consanddata != NULL);
       andcons = consanddata->cons;
 
       if( andcons == NULL )

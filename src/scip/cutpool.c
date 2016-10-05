@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -234,7 +234,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
    unsigned int keyval;
-   int maxabsval;
+   unsigned int maxabsval;
    SCIP_Real maxval;  
    SCIP_SET* set;
 
@@ -249,11 +249,11 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    if( maxval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
-      maxabsval = (int) (10000*maxval);
+      maxabsval = (unsigned int) (10000*maxval);
    else
-      maxabsval = (int) maxval;
+      maxabsval = (unsigned int) maxval;
 
-   keyval = (row->maxidx << 29) + (row->len << 22) + (row->minidx << 11) + maxabsval; /*lint !e701*/
+   keyval = ((unsigned int)row->maxidx << 29) + ((unsigned int)row->len << 22) + ((unsigned int)row->minidx << 11) + maxabsval; /*lint !e701*/
 
    return keyval;
 }
@@ -500,6 +500,10 @@ SCIP_RETCODE SCIPcutpoolAddRow(
    assert(cutpool != NULL);
    assert(row != NULL);
 
+   /* only called to ensure that minidx and maxidx are up-to-date */
+   (void) SCIProwGetMaxidx(row, set);
+   assert(row->validminmaxidx);
+
    /* check in hash table, if cut already exists in the pool */
    if( SCIPhashtableRetrieve(cutpool->hashtable, (void*)row) == NULL )
    {
@@ -720,7 +724,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    cutpool->ncalls++;
    found = FALSE;
 
-   SCIPdebugMessage("separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
+   SCIPsetDebugMsg(set, "separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);
@@ -769,7 +773,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
             {
                /* insert cut in separation storage */
-               SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
+               SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
 

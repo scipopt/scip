@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,11 +66,11 @@ SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
       *selnode = SCIPgetPrioSibling(scip);
       if( *selnode == NULL )
       {
-         SCIPdebugMessage("select best leaf\n");
+         SCIPdebugMsg(scip, "select best leaf\n");
          *selnode = SCIPgetBestLeaf(scip);
       }
 
-      SCIPdebugMessage("select best sibling leaf\n");
+      SCIPdebugMsg(scip, "select best sibling leaf\n");
    }
 
    return SCIP_OKAY;

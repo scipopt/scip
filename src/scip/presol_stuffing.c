@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,6 +19,8 @@
  *
  * Investigate singleton continuous variables if one can be fixed at a bound.
  *
+ * @todo enhancement from singleton continuous variables to continuous
+ *       variables with only one lock in a common row
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,7 +56,7 @@ typedef enum Fixingdirection FIXINGDIRECTION;
 static
 SCIP_RETCODE singletonColumnStuffing(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
    int*                  nfixings            /**< number of possible fixings */
    )
@@ -70,9 +72,7 @@ SCIP_RETCODE singletonColumnStuffing(
    SCIP_Bool* swapped;
    SCIP_Real upperconst;
    SCIP_Real lowerconst;
-   SCIP_Real coef;
-   SCIP_Real value;
-   SCIP_Real boundoffset;
+   SCIP_Real rhs;
    SCIP_Bool tryfixing;
    int idx;
    int col;
@@ -104,8 +104,10 @@ SCIP_RETCODE singletonColumnStuffing(
    for( col = 0; col < ncols; col++ )
    {
       /* consider only rows with minimal one continuous singleton column */
-      if( SCIPmatrixGetColNNonzs(matrix, col) == 1 &&
-          SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPmatrixGetColNNonzs(matrix, col) == 1
+         && SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS
+         && SCIPvarGetNLocksUp(SCIPmatrixGetVar(matrix, col)) == SCIPmatrixGetColNUplocks(matrix, col)
+         && SCIPvarGetNLocksDown(SCIPmatrixGetVar(matrix, col)) == SCIPmatrixGetColNDownlocks(matrix, col) )
       {
          row = *(SCIPmatrixGetColIdxPtr(matrix, col));
          if( rowprocessed[row] )
@@ -113,13 +115,14 @@ SCIP_RETCODE singletonColumnStuffing(
 
          rowprocessed[row] = TRUE;
 
-         /* claim >= relation */
+         /* treat all >= rows from matrix, but internally we transform to <= relation */
          if( SCIPmatrixIsRowRhsInfinity(matrix, row) )
          {
             fillcnt = 0;
             tryfixing = TRUE;
             upperconst = 0.0;
             lowerconst = 0.0;
+            rhs = -SCIPmatrixGetRowLhs(matrix, row);
 
             rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
             rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
@@ -127,21 +130,28 @@ SCIP_RETCODE singletonColumnStuffing(
 
             for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
             {
+               SCIP_Real coef;
                SCIP_VAR* var;
                SCIP_Real lb;
                SCIP_Real ub;
 
-               coef = *valpnt;
+               coef = -(*valpnt);
                idx = *rowpnt;
                var = SCIPmatrixGetVar(matrix, idx);
                lb = SCIPvarGetLbGlobal(var);
                ub = SCIPvarGetUbGlobal(var);
 
-               if( SCIPmatrixGetColNNonzs(matrix, idx) == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               /* we need to check if this is a singleton continuous variable and
+                * all constraints containing this variable are present inside
+                * the mixed integer linear matrix
+                */
+               if( SCIPmatrixGetColNNonzs(matrix, idx) == 1 &&
+                   (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
+                   SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
-                  /* need obj > 0 and coef > 0 */
-                  if( SCIPvarGetObj(var) > 0 && coef > 0 )
+                  if( SCIPisLT(scip, SCIPvarGetObj(var), 0.0) && SCIPisGT(scip, coef, 0.0) )
                   {
+                     /* case 1: obj < 0 and coef > 0 */
                      if( SCIPisInfinity(scip, -lb) )
                      {
                         tryfixing = FALSE;
@@ -155,28 +165,34 @@ SCIP_RETCODE singletonColumnStuffing(
                      colcoeffs[fillcnt] = coef;
                      fillcnt++;
                   }
-                  else if( SCIPvarGetObj(var) < 0 && coef < 0 )
+                  else if( SCIPisGT(scip, SCIPvarGetObj(var), 0.0) && SCIPisLT(scip, coef, 0.0) )
                   {
+                     /* case 2: obj > 0 and coef < 0 */
                      if( SCIPisInfinity(scip, ub) )
                      {
                         tryfixing = FALSE;
                         break;
                      }
 
-                     /* swap column and bounds */
+                     /* multiply column by (-1) to become case 1.
+                      * now bounds are swapped: ub := -lb, lb := -ub
+                      */
                      swapped[idx] = TRUE;
                      upperconst += coef * ub;
                      lowerconst += coef * ub;
                      colratios[fillcnt] = SCIPvarGetObj(var) / coef;
                      colindices[fillcnt] = idx;
-                     colcoeffs[fillcnt] = coef;
+                     colcoeffs[fillcnt] = -coef;
                      fillcnt++;
                   }
-                  else if( SCIPvarGetObj(var) > 0 && coef < 0 )
+                  else if( SCIPisGE(scip, SCIPvarGetObj(var), 0.0) && SCIPisGE(scip, coef, 0.0) )
                   {
+                     /* case 3: obj >= 0 and coef >= 0 is handled by duality fixing.
+                      *  we only consider the lower bound for the constants
+                      */
                      if( SCIPisInfinity(scip, -lb) )
                      {
-                        /* unbounded */
+                        /* maybe unbounded */
                         tryfixing = FALSE;
                         break;
                      }
@@ -186,10 +202,15 @@ SCIP_RETCODE singletonColumnStuffing(
                   }
                   else
                   {
-                     /* obj < 0 and coef > 0 */
+                     /* case 4: obj <= 0 and coef <= 0 is also handled by duality fixing.
+                      * we only consider the upper bound for the constants
+                      */
+                     assert(SCIPisLE(scip, SCIPvarGetObj(var), 0.0));
+                     assert(SCIPisLE(scip, coef, 0.0));
+
                      if( SCIPisInfinity(scip, ub) )
                      {
-                        /* unbounded */
+                        /* maybe unbounded */
                         tryfixing = FALSE;
                         break;
                      }
@@ -200,13 +221,15 @@ SCIP_RETCODE singletonColumnStuffing(
                }
                else
                {
+                  /* consider contribution of discrete variables, non-singleton
+                   * continuous variables and variables with more than one lock
+                   */
                   if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
                   {
                      tryfixing = FALSE;
                      break;
                   }
 
-                  /* discrete variables and non-singleton continuous variables */
                   if( coef > 0 )
                   {
                      upperconst += coef * ub;
@@ -224,12 +247,13 @@ SCIP_RETCODE singletonColumnStuffing(
             {
                SCIPsortRealRealIntInt(colratios, colcoeffs, colindices, dummy, fillcnt);
 
-               /* verify which variable can be fixed */
+               /* verify which singleton continuous variable can be fixed */
                for( k = 0; k < fillcnt; k++ )
                {
                   SCIP_VAR* var;
                   SCIP_Real lb;
                   SCIP_Real ub;
+                  SCIP_Real delta;
 
                   idx = colindices[k];
                   var = SCIPmatrixGetVar(matrix, idx);
@@ -240,20 +264,22 @@ SCIP_RETCODE singletonColumnStuffing(
                   if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
                      break;
 
-                  assert(SCIPmatrixGetColNNonzs(matrix, idx) == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+                  assert(SCIPmatrixGetColNNonzs(matrix, idx) == 1);
+                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+                  assert((SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1);
+                  assert(colcoeffs[k] >= 0);
 
+                  /* calculate the change in the row activities if this variable changes
+                   * its value from to its other bound
+                   */
                   if( swapped[idx] )
-                  {
-                     value = colcoeffs[k] * lb;
-                     boundoffset = colcoeffs[k] * ub;
-                  }
+                     delta = -(lb - ub) * colcoeffs[k];
                   else
-                  {
-                     value = colcoeffs[k] * ub;
-                     boundoffset = colcoeffs[k] * lb;
-                  }
+                     delta =  (ub - lb) * colcoeffs[k];
 
-                  if( SCIPisLE(scip, value, SCIPmatrixGetRowLhs(matrix, row) - upperconst + boundoffset) )
+                  assert(delta >= 0);
+
+                  if( SCIPisLE(scip, delta, rhs - upperconst) )
                   {
                      if( swapped[idx] )
                         varstofix[idx] = FIXATLB;
@@ -262,7 +288,7 @@ SCIP_RETCODE singletonColumnStuffing(
 
                      (*nfixings)++;
                   }
-                  else if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, row), lowerconst) )
+                  else if( SCIPisLE(scip, rhs, lowerconst) )
                   {
                      if( swapped[idx] )
                         varstofix[idx] = FIXATUB;
@@ -272,11 +298,8 @@ SCIP_RETCODE singletonColumnStuffing(
                      (*nfixings)++;
                   }
 
-                  upperconst += value;
-                  upperconst -= boundoffset;
-
-                  lowerconst += value;
-                  lowerconst -= boundoffset;
+                  upperconst += delta;
+                  lowerconst += delta;
                }
             }
          }
@@ -315,7 +338,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyStuffing)
 static
 SCIP_DECL_PRESOLEXEC(presolExecStuffing)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
@@ -366,16 +389,12 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
 
             var = SCIPmatrixGetVar(matrix, v);
 
-            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
-               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
-            {
-               /* no fixing, locks not consistent */
-               continue;
-            }
-
             if( varstofix[v] == FIXATLB )
             {
                SCIP_Real lb;
+
+               assert(SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, v) &&
+                  SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, v));
 
                lb = SCIPvarGetLbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
@@ -383,13 +402,13 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, -lb));
 
-               SCIPdebugMessage("Fix variable %s at lower bound %.15g\n", SCIPvarGetName(var), lb);
+               SCIPdebugMsg(scip, "Fix variable %s at lower bound %.15g\n", SCIPvarGetName(var), lb);
 
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -401,19 +420,22 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
             {
                SCIP_Real ub;
 
+               assert(SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, v) &&
+                  SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, v));
+
                ub = SCIPvarGetUbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, ub));
 
-               SCIPdebugMessage("Fix variable %s at upper bound %.15g\n", SCIPvarGetName(var), ub);
+               SCIPdebugMsg(scip, "Fix variable %s at upper bound %.15g\n", SCIPvarGetName(var), ub);
 
                /* fix at upper bound */
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPcomprCopyInclude(
 
    if( compr->comprcopy != NULL )
    {
-      SCIPdebugMessage("including compr %s in subscip %p\n", SCIPcomprGetName(compr), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including compr %s in subscip %p\n", SCIPcomprGetName(compr), (void*)set->scip);
       SCIP_CALL( compr->comprcopy(set->scip, compr) );
    }
 
@@ -272,7 +272,7 @@ SCIP_RETCODE SCIPcomprExec(
    if( SCIPreoptGetNLeaves(reopt, NULL) < compr->minnnodes )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("executing tree compression <%s>\n", compr->name);
+   SCIPsetDebugMsg(set, "executing tree compression <%s>\n", compr->name);
 
    /* start timing */
    SCIPclockStart(compr->comprclock, set);

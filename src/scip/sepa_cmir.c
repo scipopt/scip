@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -231,7 +231,7 @@ SCIP_RETCODE addCut(
          /* set cut rank */
          SCIProwChgRank(cut, cutrank);
 
-         SCIPdebugMessage(" -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
+         SCIPdebugMsg(scip, " -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
             cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 
@@ -240,7 +240,7 @@ SCIP_RETCODE addCut(
                (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
          if( success && !SCIPisCutEfficacious(scip, sol, cut) )
          {
-            SCIPdebugMessage(" -> %s cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+            SCIPdebugMsg(scip, " -> %s cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
             success = FALSE;
@@ -251,7 +251,7 @@ SCIP_RETCODE addCut(
          /* if scaling was successful, add the cut */
          if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
          {
-            SCIPdebugMessage(" -> found %s cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
+            SCIPdebugMsg(scip, " -> found %s cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
@@ -390,7 +390,7 @@ SCIP_RETCODE tryDelta(
             maxweightrange, minfrac, maxfrac, rowweights, maxweight, weightinds, nweightinds, rowlensum, NULL, delta,
             mksetcoefs, mksetcoefsvalid, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, NULL) );
       assert(allowlocal || !cutislocal);
-      SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
+      SCIPdebugMsg(scip, "delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
          delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
 
       /* check if delta generates cut which is more violated */
@@ -404,8 +404,7 @@ SCIP_RETCODE tryDelta(
             SCIP_Real efficacy;
 
             efficacy = (cutact - cutrhs)/norm;
-            SCIPdebugMessage("act = %g  rhs = %g  eff = %g, old besteff = %g, old bestdelta=%g\n", 
-                             cutact, cutrhs, efficacy, *bestefficacy, *bestdelta);
+            SCIPdebugMsg(scip, "act = %g  rhs = %g  eff = %g, old besteff = %g, old bestdelta=%g\n", cutact, cutrhs, efficacy, *bestefficacy, *bestdelta);
             if( efficacy > *bestefficacy )
             {
                *bestdelta = delta;
@@ -450,7 +449,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    int*                  ncuts,              /**< pointer to count the number of generated cuts */
    SCIP_Real*            delta,              /**< pointer to store best delta found; NULL, if cut should be added here */
    SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */
-)
+   )
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real* cutcoefs;        
@@ -762,7 +761,7 @@ SCIP_RETCODE aggregation(
    assert(nrows == 0 || rows != NULL);
    assert(0 <= startrow && startrow < nrows);
 
-   SCIPdebugMessage("start c-MIR aggregation with row <%s> (%d/%d)\n", SCIProwGetName(rows[startrow]), startrow, nrows);
+   SCIPdebugMsg(scip, "start c-MIR aggregation with row <%s> (%d/%d)\n", SCIProwGetName(rows[startrow]), startrow, nrows);
 
    /* calculate maximal number of non-zeros in aggregated row */
    maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols) + sepadata->densityoffset;
@@ -840,7 +839,7 @@ SCIP_RETCODE aggregation(
    /* don't try aggregation if there is no integer variable with fractional value */
    if( !hasfractional )
    {
-      SCIPdebugMessage(" -> row has no fractional integer variables: ignore\n");
+      SCIPdebugMsg(scip, " -> row has no fractional integer variables: ignore\n");
       maxaggrs = -1;
    }
 
@@ -870,15 +869,15 @@ SCIP_RETCODE aggregation(
       *wastried = TRUE;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("aggregation of startrow %d and %d additional rows with %d integer and %d continuous variables (%d active):\n",
+      SCIPdebugMsg(scip, "aggregation of startrow %d and %d additional rows with %d integer and %d continuous variables (%d active):\n",
          startrow, naggrs, naggrintnonzs, naggrcontnonzs, nactiveconts);
       for( c = 0; c < ncols; ++c )
       {
          if( aggrcoefs[c] != 0.0 )
-            SCIPdebugPrintf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
+            SCIPdebugMsgPrint(scip, " %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
                varsolvals[SCIPvarGetProbindex(SCIPcolGetVar(cols[c]))]);
       }
-      SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "\n");
 #endif
 
       /* Step 1: 
@@ -896,7 +895,7 @@ SCIP_RETCODE aggregation(
       /* if the cut was successfully added, abort the aggregation of further rows */
       if( *ncuts > oldncuts )
       {
-         SCIPdebugMessage(" -> abort aggregation: cut found\n");
+         SCIPdebugMsg(scip, " -> abort aggregation: cut found\n");
          break;
       }
 
@@ -907,12 +906,12 @@ SCIP_RETCODE aggregation(
       /* abort, if we reached the maximal number of aggregations */
       if( naggrs == maxaggrs )
       {
-         SCIPdebugMessage(" -> abort aggregation: %s\n", nactiveconts == 0 ? "no more active continuous variables"
+         SCIPdebugMsg(scip, " -> abort aggregation: %s\n", nactiveconts == 0 ? "no more active continuous variables"
             : "maximal number of aggregations reached");
          break;
       }
 
-      SCIPdebugMessage(" -> search column to eliminate\n");
+      SCIPdebugMsg(scip, " -> search column to eliminate\n");
 
       /* search for "best" continuous variable in aggregated row:
        * - solution value is strictly between lower and upper bound
@@ -957,8 +956,7 @@ SCIP_RETCODE aggregation(
             probindex = SCIPvarGetProbindex(var);
             assert(probindex >= nintvars);
 
-            SCIPdebugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", 
-               SCIPvarGetName(var), bestcontlbs[probindex - nintvars],
+            SCIPdebugMsg(scip, "     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", SCIPvarGetName(var), bestcontlbs[probindex - nintvars],
                bestcontubs[probindex - nintvars], varsolvals[probindex], bounddist);
 
             /* if we know that we will not find a better row, just skip the column */
@@ -989,9 +987,9 @@ SCIP_RETCODE aggregation(
                lppos = SCIProwGetLPPos(nonzrows[r]);
                assert(0 <= lppos && lppos < nrows);
 
-               SCIPdebugMessage("        -> r=%d row <%s>: weight=%g, pos=%d, alpha_j=%g, a^r_j=%g, factor=%g, %g <= %g <= %g\n",
-                  r, SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, aggrcoefs[c], nonzcoefs[r], 
-                  - aggrcoefs[c] / nonzcoefs[r], SCIProwGetLhs(nonzrows[r]), 
+               SCIPdebugMsg(scip, "        -> r=%d row <%s>: weight=%g, pos=%d, alpha_j=%g, a^r_j=%g, factor=%g, %g <= %g <= %g\n",
+                  r, SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, aggrcoefs[c], nonzcoefs[r],
+                  - aggrcoefs[c] / nonzcoefs[r], SCIProwGetLhs(nonzrows[r]),
                   SCIPgetRowSolActivity(scip, nonzrows[r], sol), SCIProwGetRhs(nonzrows[r]));
 
                /* update maxrowscore */
@@ -1039,7 +1037,7 @@ SCIP_RETCODE aggregation(
                bestcol = col;
                bestrow = nonzrows[r];
                aggrfac = factor;
-               SCIPdebugMessage("     -> col <%s>: %g * row <%s>, bounddist=%g, score=%g\n",
+               SCIPdebugMsg(scip, "     -> col <%s>: %g * row <%s>, bounddist=%g, score=%g\n",
                   SCIPvarGetName(SCIPcolGetVar(bestcol)), aggrfac, SCIProwGetName(bestrow), bestbounddist, score);
             }
 
@@ -1073,7 +1071,7 @@ SCIP_RETCODE aggregation(
 
          bounddist = aggrcontnonzbounddists[nzi];
 
-         SCIPdebugMessage("     -> ignoring col <%s>[%g,%g]: sol=%g, dist=%g\n", 
+         SCIPdebugMsg(scip, "     -> ignoring col <%s>[%g,%g]: sol=%g, dist=%g\n",
             SCIPvarGetName(var), bestcontlbs[SCIPvarGetProbindex(var) - nintvars],
             bestcontubs[SCIPvarGetProbindex(var) - nintvars], varsolvals[SCIPvarGetProbindex(var)], bounddist);
 
@@ -1085,13 +1083,13 @@ SCIP_RETCODE aggregation(
       /* abort, if no row can be added to remove an additional active continuous variable */
       if( bestcol == NULL )
       {
-         SCIPdebugMessage(" -> abort aggregation: no removable column found\n");
+         SCIPdebugMsg(scip, " -> abort aggregation: no removable column found\n");
          break;
       }
 
       /* Step 3: add row to aggregation */
       bestrowpos = SCIProwGetLPPos(bestrow);
-      SCIPdebugMessage(" -> adding %+g<%s> to eliminate variable <%s> (aggregation %d)\n", 
+      SCIPdebugMsg(scip, " -> adding %+g<%s> to eliminate variable <%s> (aggregation %d)\n",
          aggrfac, SCIProwGetName(bestrow), SCIPvarGetName(SCIPcolGetVar(bestcol)), naggrs+1);
       assert(rowweights[bestrowpos] == 0.0);
       assert(!SCIPisZero(scip, aggrfac));
@@ -1195,17 +1193,17 @@ SCIP_RETCODE aggregation(
 
       naggrs++;
 
-      SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d nonzeros, %d/%d aggregations\n", 
+      SCIPdebugMsg(scip, " -> %d continuous variables left (%d/%d active), %d/%d nonzeros, %d/%d aggregations\n",
          naggrcontnonzs, nactiveconts, maxconts, naggrcontnonzs + naggrintnonzs, maxaggrnonzs, naggrs, maxaggrs);
    }
 #ifdef SCIP_DEBUG
    if( nactiveconts > maxconts )
    {
-      SCIPdebugMessage(" -> abort aggregation: %d/%d active continuous variables\n", nactiveconts, maxconts);
+      SCIPdebugMsg(scip, " -> abort aggregation: %d/%d active continuous variables\n", nactiveconts, maxconts);
    }
    if( naggrcontnonzs + naggrintnonzs > maxaggrnonzs )
    {
-      SCIPdebugMessage(" -> abort aggregation: %d/%d nonzeros\n", naggrcontnonzs + naggrintnonzs, maxaggrnonzs);
+      SCIPdebugMsg(scip, " -> abort aggregation: %d/%d nonzeros\n", naggrcontnonzs + naggrintnonzs, maxaggrnonzs);
    }
 #endif
 
@@ -1301,7 +1299,7 @@ SCIP_RETCODE separateCuts(
    if( nvars == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("separating c-MIR cuts\n");
+   SCIPdebugMsg(scip, "separating c-MIR cuts\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1466,8 +1464,7 @@ SCIP_RETCODE separateCuts(
          }
       }
 
-      SCIPdebugMessage(" -> row %d <%s>: lhsscore=%g rhsscore=%g maxscore=%g\n", r, SCIProwGetName(rows[r]),
-                       rowlhsscores[r], rowrhsscores[r], rowscores[r]);
+      SCIPdebugMsg(scip, " -> row %d <%s>: lhsscore=%g rhsscore=%g maxscore=%g\n", r, SCIProwGetName(rows[r]), rowlhsscores[r], rowrhsscores[r], rowscores[r]);
    }
    assert(nrows == nnonzrows + zerorows);
 

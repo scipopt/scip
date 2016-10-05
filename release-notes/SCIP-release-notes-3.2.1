@@ -1,0 +1,45 @@
+Notes for SCIP Release 3.2.1
+
+
+Interface Changes
+=================
+
+- SCIPsolveLinearProb now uses a 1-dimensional matrix representation
+
+- renamed MIP matrix structure to SCIP_MATRIX
+
+- changed the numeric values for PRESOLTIMING flags
+
+Features
+========
+
+- significantly improved Python interface to support user callbacks
+  as well as linear and quadratic expressions
+
+- new interactive shell command "write history" to write the command line history
+  (only when compiled with Readline)
+
+- several improvements of SCIP-Jack (STP application)
+
+- several improvements of PolySCIP (former MultiObjective application)
+
+- improved disjunctive cut separator by the 'monoidal cut strengthening'
+  procedure of Balas and Jeroslow
+
+Bug Fixes
+=========
+
+- handle cutoffs in cons_indicator detected by infeasible inequalities
+
+- fixed wrong objective sense when copying the original problem
+
+- (root) reduced cost propagators are not run anymore when doing branch-and-price,
+  since they may install upper bounds on variables which might interfere with the
+  pricing (they may be enabled again by their force parameters)
+
+- fixed some problems using reoptimization on infeasible instances or
+  instances solved in presolving
+
+- fixed library problems on Windows operating systems
+
+- many small bug fixes, see CHANGELOG

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -402,12 +402,17 @@ SCIPInterval function(                                                          
 
 SCIP_INTERVALARITH_UNDEFFUNC(tan)
 SCIP_INTERVALARITH_UNDEFFUNC(acos)
+SCIP_INTERVALARITH_UNDEFFUNC(acosh)
 SCIP_INTERVALARITH_UNDEFFUNC(asin)
+SCIP_INTERVALARITH_UNDEFFUNC(asinh)
 SCIP_INTERVALARITH_UNDEFFUNC(atan)
+SCIP_INTERVALARITH_UNDEFFUNC(atanh)
 SCIP_INTERVALARITH_UNDEFFUNC(cosh)
 SCIP_INTERVALARITH_UNDEFFUNC(sinh)
 SCIP_INTERVALARITH_UNDEFFUNC(tanh)
 SCIP_INTERVALARITH_UNDEFFUNC(erf)
+SCIP_INTERVALARITH_UNDEFFUNC(expm1)
+SCIP_INTERVALARITH_UNDEFFUNC(log1p)
 #undef SCIP_INTERVALARITH_UNDEFFUNC
 
 #ifdef SCIPInterval_NAMESPACE

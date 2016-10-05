@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_local.h
- * @brief  Improvement heuristic for STP
+ * @brief  Improvement heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
  * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
@@ -44,11 +44,24 @@ SCIP_RETCODE SCIPincludeHeurLocal(
 extern
 SCIP_RETCODE SCIPheurImproveSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< arc cost array */
-   const SCIP_Real*      costrev,            /**< reversed arc cost array */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_Real*            cost,               /**< arc cost array */
+   SCIP_Real*            costrev,            /**< reversed arc cost array */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    );
+
+/** local heuristic for (R)PC and MW */
+extern
+SCIP_RETCODE extendSteinerTreePcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure array */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
+   int*                  vbase,              /**< array to store Voronoi bases to each vertex */
+   int*                  stedge,             /**< array to indicate whether an edge is part of the Steiner tree */
+   char*                 stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
+   int*                  adds                /**< pointer to store number of added vertices */
+);
 
 #ifdef __cplusplus
 }

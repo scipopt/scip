@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,15 +84,15 @@ SCIP_RETCODE LapackDsyev(
    SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
    );
 
-/** Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+/** solves a linear problem of the form Ax = b for a regular matrix A
+ *
+ *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
  *  It's here, because Ipopt is linked against Lapack.
  */
-
-/* solves a linear problem of the form Ax = b */
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
-   SCIP_Real**           A,                  /**< matrix data on input (size N*N) */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */

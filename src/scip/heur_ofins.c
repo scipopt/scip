@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_ofins.c
- * @brief  OFINS - Objective Function Induced Neighborhood Search. Primal heuristic for reoptimization
+ * @brief  OFINS - Objective Function Induced Neighborhood Search - a primal heuristic for reoptimization
  * @author Jakob Witzig
  */
 
@@ -39,18 +39,17 @@
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* default values for OFINS-specific plugins */
-#define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MAXCHGRATE    0.50      /* maximum percentage of changed objective coefficients */
-#define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
-                                         * of the original scip be copied to constraints of the subscip
-                                         */
-#define DEFAULT_MAXCHANGE     0.04     /* maximal rate of change per coefficient to get fixed */
-#define DEFAULT_MINIMPROVE    0.01      /* factor by which OFINS should at least improve the incumbent          */
-#define DEFAULT_ADDALLSOLS   FALSE      /* should all subproblem solutions be added to the original SCIP? */
-#define DEFAULT_MINNODES      50LL      /* minimum number of nodes to regard in the subproblem */
-#define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes */
-#define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_LPLIMFAC      2.0       /* factor by which the limit on the number of LP depends on the node limit */
+#define DEFAULT_MAXNODES      5000LL    /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MAXCHGRATE    0.50      /**< maximum percentage of changed objective coefficients */
+#define DEFAULT_COPYCUTS      TRUE      /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
+                                         *   of the original scip be copied to constraints of the subscip */
+#define DEFAULT_MAXCHANGE     0.04      /**< maximal rate of change per coefficient to get fixed */
+#define DEFAULT_MINIMPROVE    0.01      /**< factor by which OFINS should at least improve the incumbent */
+#define DEFAULT_ADDALLSOLS   FALSE      /**< should all subproblem solutions be added to the original SCIP? */
+#define DEFAULT_MINNODES      50LL      /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_NODESOFS      500LL     /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_NODESQUOT     0.1       /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_LPLIMFAC      2.0       /**< factor by which the limit on the number of LP depends on the node limit */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Ofins"
@@ -60,17 +59,17 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Real             maxchangerate;           /**< maximal rate of changed coefficients in the objective function */
-   SCIP_Longint          maxnodes;                /**< maximum number of nodes to regard in the subproblem */
-   SCIP_Bool             copycuts;                /**< should all active cuts from cutpool be copied to constraints in subproblem? */
-   SCIP_Bool             addallsols;              /**< should all subproblem solutions be added to the original SCIP? */
-   SCIP_Longint          minnodes;                /**< minimum number of nodes to regard in the subproblem */
-   SCIP_Longint          nodesofs;                /**< number of nodes added to the contingent of the total nodes */
-   SCIP_Real             maxchange;               /**< maximal rate of change per coefficient to get fixed */
-   SCIP_Real             minimprove;              /**< factor by which OFINS should at least improve the incumbent */
-   SCIP_Real             nodesquot;               /**< subproblem nodes in relation to nodes of the original problem */
-   SCIP_Real             nodelimit;               /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
-   SCIP_Real             lplimfac;                /**< factor by which the limit on the number of LP depends on the node limit */
+   SCIP_Real             maxchangerate;      /**< maximal rate of changed coefficients in the objective function */
+   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
+   SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in subproblem? */
+   SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP? */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
+   SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
+   SCIP_Real             maxchange;          /**< maximal rate of change per coefficient to get fixed */
+   SCIP_Real             minimprove;         /**< factor by which OFINS should at least improve the incumbent */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
+   SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
+   SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
 };
 
 /* ---------------- Callback methods of event handler ---------------- */
@@ -96,7 +95,7 @@ SCIP_DECL_EVENTEXEC(eventExecOfins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -147,7 +146,7 @@ SCIP_RETCODE createSubproblem(
    }
 
    /* set an objective limit */
-   SCIPdebugMessage("set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
+   SCIPdebugMsg(scip, "set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
 
    return SCIP_OKAY;
@@ -192,7 +191,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -237,18 +236,18 @@ SCIP_RETCODE applyOfins(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("+---+ Start OFINS heuristic +---+\n");
+   SCIPdebugMsg(scip, "+---+ Start OFINS heuristic +---+\n");
 
    /* check whether there is enough time and memory left */
    timelimit = 0.0;
    memorylimit = 0.0;
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
+   if( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
+   if( ! SCIPisInfinity(scip, memorylimit) )
    {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
@@ -257,11 +256,15 @@ SCIP_RETCODE applyOfins(
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
-      SCIPdebugMessage("-> not enough memory left\n");
+      SCIPdebugMsg(scip, "-> not enough memory left\n");
       return SCIP_OKAY;
    }
 
    *result = SCIP_DIDNOTFIND;
+
+   /* do not run, if no solution was found */
+   if ( SCIPgetReoptLastOptSol(scip) == NULL )
+      return SCIP_OKAY;
 
    /* get variable data */
    vars = SCIPgetVars(scip);
@@ -279,6 +282,7 @@ SCIP_RETCODE applyOfins(
    valid = FALSE;
 
    /* copy complete SCIP instance */
+   /* todo determine number of variables to fix beforehand */
    SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", TRUE, FALSE, TRUE, &valid) );
 
    if( heurdata->copycuts )
@@ -287,7 +291,7 @@ SCIP_RETCODE applyOfins(
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
    }
 
-   SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecOfins, NULL) );
@@ -307,7 +311,7 @@ SCIP_RETCODE applyOfins(
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs) );
-   SCIPdebugMessage("OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+   SCIPdebugMsg(scip, "OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -350,7 +354,7 @@ SCIP_RETCODE applyOfins(
    }
 
 #ifdef SCIP_DEBUG
-   /* for debugging RENS, enable MIP output */
+   /* for debugging OFINS, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #endif
@@ -374,7 +378,7 @@ SCIP_RETCODE applyOfins(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("%s presolved subproblem: %d vars, %d cons\n", HEUR_NAME, SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+   SCIPdebugMsg(scip, "%s presolved subproblem: %d vars, %d cons\n", HEUR_NAME, SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    assert(eventhdlr != NULL);
 
@@ -382,7 +386,7 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
+   SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
    retcode = SCIPsolve(subscip);
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
@@ -425,12 +429,26 @@ SCIP_RETCODE applyOfins(
    return SCIP_OKAY;
 }
 
-/* put your local methods here, and declare them static */
+
 
 
 /*
  * Callback methods of primal heuristic
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyOfins)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurOfins(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -505,7 +523,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping OFINS: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping OFINS: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -562,7 +580,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
        */
       else if( SCIPisPositive(scip, newcoef) == SCIPisPositive(scip, oldcoef) )
       {
-         frac = MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs);
+         frac = 1.0 - MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs);
       }
       /* if both coefficients have a different sign, we set frac = 1 */
       else
@@ -582,7 +600,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
          chgcoeffs[v] = FALSE;
    }
 
-   SCIPdebugMessage("%d (rate %.4f) changed coefficients\n", nchgcoefs, nchgcoefs/((SCIP_Real)nvars));
+   SCIPdebugMsg(scip, "%d (rate %.4f) changed coefficients\n", nchgcoefs, nchgcoefs/((SCIP_Real)nvars));
 
    /* we only want to run the heuristic, if there at least 3 changed coefficients.
     * if the number of changed coefficients is 2 the trivialnegation heuristic will construct an
@@ -628,6 +646,7 @@ SCIP_RETCODE SCIPincludeHeurOfins(
    assert(heur != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOfins) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOfins) );
 
    /* add ofins primal heuristic parameters */

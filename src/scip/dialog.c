@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,6 +127,20 @@ SCIP_RETCODE removeHistory(
    return SCIP_OKAY;
 }
 
+/** writes command history into file of the specified name */
+static
+SCIP_RETCODE writeHistory(
+   const char*           filename            /**< name of file to (over)write history to */
+   )
+{
+   int retval = write_history(filename);
+
+   if( retval == 0 )
+      return SCIP_OKAY;
+   else
+      return SCIP_FILECREATEERROR;
+}
+
 #else
 
 /** reads a line of input from stdin */
@@ -193,6 +207,17 @@ int getHistoryLength(
 static
 SCIP_RETCODE removeHistory(
    int                   pos                 /**< list position of history entry to remove */
+   )
+{  /*lint --e{715}*/
+   /* nothing to do here */
+   return SCIP_OKAY;
+}
+
+
+/** writes command history into file of the specified name */
+static
+SCIP_RETCODE writeHistory(
+   const char*           filename            /**< name of file to (over)write history to */
    )
 {  /*lint --e{715}*/
    /* nothing to do here */
@@ -293,7 +318,7 @@ SCIP_RETCODE SCIPdialogCopyInclude(
 
    if( dialog->dialogcopy != NULL )
    {
-      SCIPdebugMessage("including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
       SCIP_CALL( dialog->dialogcopy(set->scip, dialog) );
    }
    return SCIP_OKAY;
@@ -428,7 +453,84 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
    return (dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
 }
 
-/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
+/** returns the next line in the handler's command buffer; if the buffer is empty, displays the given prompt or the
+ *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
+ */
+SCIP_RETCODE SCIPdialoghdlrGetLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputline,          /**< pointer to store the complete line in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
+   )
+{
+   char path[SCIP_MAXSTRLEN];
+   char p[SCIP_MAXSTRLEN];
+
+   assert(dialoghdlr != NULL);
+   assert(dialoghdlr->buffer != NULL);
+   assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
+   assert(inputline != NULL);
+
+   /* get input from the user, if the buffer is empty */
+   if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
+   {
+      int len;
+
+      /* clear the buffer */
+      SCIPdialoghdlrClearBuffer(dialoghdlr);
+
+      if( prompt == NULL )
+      {
+         /* use current dialog's path as prompt */
+         SCIPdialogGetPath(dialog, '/', path);
+         (void) SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
+         prompt = p;
+      }
+
+      /* read command line from stdin or from the input line list */
+      SCIP_CALL( readInputLine(dialoghdlr, prompt, endoffile) );
+
+      /* strip trailing spaces */
+      len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+      if( len > 0 )
+      {
+         while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         {
+            dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
+            len--;
+         }
+      }
+
+      /* insert command in command history */
+      if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
+      {
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos], FALSE) );
+      }
+   }
+
+   /* the last character in the buffer must be a '\0' */
+   dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
+
+
+   /* skip leading spaces: find start of first word */
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+      dialoghdlr->bufferpos++;
+
+   /* copy the complete line */
+   *inputline = &dialoghdlr->buffer[dialoghdlr->bufferpos];
+
+   /* go to the end of the line */
+   dialoghdlr->bufferpos += (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+
+   if( dialoghdlr->buffer[dialoghdlr->buffersize-1] == '\0' )
+      *endoffile = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
 SCIP_RETCODE SCIPdialoghdlrGetWord(
@@ -1143,4 +1245,12 @@ void SCIPdialogSetData(
    assert(dialog != NULL);
 
    dialog->dialogdata = dialogdata;
+}
+
+/** writes command history to specified filename */
+SCIP_RETCODE SCIPdialogWriteHistory(
+   const char*           filename            /**< file name for (over)writing history */
+   )
+{
+   return writeHistory(filename);
 }

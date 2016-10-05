@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,7 +135,7 @@ SCIP_RETCODE fixVariable(
    }
 
    assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
-   SCIPdebugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n",
+   SCIPdebugMsg(scip, " -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n",
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval, npseudocands - 1);
    SCIP_CALL( SCIPfixVarProbing(scip, var, solval) );
 
@@ -204,16 +204,9 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    if( ncands == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
-
-   *result = SCIP_DIDNOTFIND;
-
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-
-   /* start probing */
-   SCIP_CALL( SCIPstartProbing(scip) );
 
    /* fix variables and propagate inferences as long as the problem is still feasible and there are
     * unfixed integral variables
@@ -221,6 +214,22 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    cutoff = FALSE;
    divedepth = 0;
    startncands = ncands;
+
+   /* start probing */
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* create next probing node */
+   SCIP_CALL( SCIPnewProbingNode(scip) );
 
    /* determine large value to set variables to */
    large = SCIPinfinity(scip);
@@ -232,9 +241,6 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
       && !SCIPisStopped(scip) )
    {
       divedepth++;
-
-      /* create next probing node */
-      SCIP_CALL( SCIPnewProbingNode(scip) );
 
       /* fix next variable */
       SCIP_CALL( fixVariable(scip, cands, ncands, large) );
@@ -252,7 +258,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    /* check, if we are still feasible */
    if( cutoff )
    {
-      SCIPdebugMessage("propagation detected a cutoff\n");
+      SCIPdebugMsg(scip, "propagation detected a cutoff\n");
    }
    else if( ncands == 0 )
    {
@@ -261,21 +267,21 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
       success = FALSE;
 
       /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, FALSE, FALSE, TRUE, &success) );
 
       if( success )
       {
-         SCIPdebugMessage("found primal feasible solution\n");
+         SCIPdebugMsg(scip, "found primal feasible solution\n");
          *result = SCIP_FOUNDSOL;
       }
       else
       {
-         SCIPdebugMessage("primal solution was rejected\n");
+         SCIPdebugMsg(scip, "primal solution was rejected\n");
       }
    }
    else
    {
-      SCIPdebugMessage("probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
+      SCIPdebugMsg(scip, "probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
    }
 
    /* end probing */

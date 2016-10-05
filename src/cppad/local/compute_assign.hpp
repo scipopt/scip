@@ -1,12 +1,12 @@
-/* $Id: compute_assign.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_COMPUTE_ASSIGN_INCLUDED
-# define CPPAD_COMPUTE_ASSIGN_INCLUDED
+// $Id$
+# ifndef CPPAD_COMPUTE_ASSIGN_HPP
+# define CPPAD_COMPUTE_ASSIGN_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -23,31 +23,19 @@ $spell
 $$
 
 $section AD Computed Assignment Operators$$
+$mindex + add plus - subtract minus * multiply times / divide multiple$$
 
-$index assignment, operator$$
-$index operator, assignment$$
 
-$index +, computed assignment$$
-$index add, computed assignment$$
-$index plus, computed assignment$$
 
-$index -, computed assignment$$
-$index subtract, computed assignment$$
-$index minus, computed assignment$$
 
-$index *, computed assignment$$
-$index multiply, computed assignment$$
-$index times, computed assignment$$
 
-$index /, computed assignment$$
-$index divide, computed assignment$$
 
 $head Syntax$$
 $icode%x% %Op% %y%$$
 
 $head Purpose$$
-Performs computed assignment operations 
-where either $icode x$$ has type 
+Performs computed assignment operations
+where either $icode x$$ has type
 $codei%AD<%Base%>%$$.
 
 $head Op$$
@@ -57,7 +45,7 @@ $bold Op$$  $cnext $bold Meaning$$ $rnext
 $code +=$$   $cnext $icode x$$ is assigned $icode x$$ plus $icode y$$ $rnext
 $code -=$$   $cnext $icode x$$ is assigned $icode x$$ minus $icode y$$ $rnext
 $code *=$$   $cnext $icode x$$ is assigned $icode x$$ times $icode y$$ $rnext
-$code /=$$   $cnext $icode x$$ is assigned $icode x$$ divided by $icode y$$ 
+$code /=$$   $cnext $icode x$$ is assigned $icode x$$ divided by $icode y$$
 $tend
 
 $head Base$$
@@ -81,9 +69,7 @@ $icode Base$$, or
 $code double$$.
 
 $head Result$$
-$index assignment, multiple$$
-$index multiple, assignment$$
-The result of this assignment 
+The result of this assignment
 can be used as a reference to $icode x$$.
 For example, if $icode z$$ has the following type
 $codei%
@@ -94,14 +80,14 @@ $codei%
 	%z% = %x% += %y%
 %$$
 will compute $icode x$$ plus $icode y$$
-and then assign this value to both $icode x$$ and $icode z$$. 
+and then assign this value to both $icode x$$ and $icode z$$.
 
 
 $head Operation Sequence$$
 This is an $cref/atomic/glossary/Operation/Atomic/$$
 $cref/AD of Base/glossary/AD of Base/$$ operation
 and hence it is part of the current
-AD of $icode Base$$ 
+AD of $icode Base$$
 $cref/operation sequence/glossary/Operation/Sequence/$$.
 
 $children%
@@ -122,7 +108,7 @@ $rref div_eq.cpp$$
 $tend
 
 $head Derivative$$
-If $latex f$$ and $latex g$$ are 
+If $latex f$$ and $latex g$$ are
 $cref/Base functions/glossary/Base Function/$$
 
 $subhead Addition$$
@@ -142,11 +128,11 @@ $latex \[
 
 $subhead Division$$
 $latex \[
-	\D{[ f(x) / g(x) ]}{x} = 
+	\D{[ f(x) / g(x) ]}{x} =
 		[1/g(x)] * \D{f(x)}{x} - [f(x)/g(x)^2] * \D{g(x)}{x}
 \] $$
 
-$end 
+$end
 -----------------------------------------------------------------------------
 */
 # include <cppad/local/add_eq.hpp>

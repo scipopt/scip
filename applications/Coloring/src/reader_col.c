@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,13 +135,15 @@ SCIP_RETCODE readCol(
    while( !SCIPfeof(fp) && (buf[0] != 'p') )
    {
       SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
-   } 
+   }
+
    /* no graph information in file! */
    if ( SCIPfeof(fp) )
    {
       SCIPerrorMessage("Error! Could not find line starting with 'p'.\n");
       return SCIP_READERROR;
    }
+
    /* wrong format of the line containig number of nodes and edges */
    if ( buf[2] != 'e' || buf[3] != 'd' || buf[4] != 'g' || buf[5] != 'e' )
    {
@@ -149,6 +151,7 @@ SCIP_RETCODE readCol(
       return SCIP_READERROR;
    }
    char_p = &buf[6];
+
    /* if line reads 'edges' (non-standard!), instead of 'edge'. */
    if ( *char_p == 's' )
       ++(char_p);
@@ -157,22 +160,26 @@ SCIP_RETCODE readCol(
    nduplicateedges = 0;
    nnodes = (int) getNextNumber(&char_p);
    nedges = (int) getNextNumber(&char_p);
+
    if ( nnodes <= 0 )
    {
       SCIPerrorMessage("Number of vertices must be positive!\n");
       return SCIP_READERROR;
    }
+
    if ( nedges < 0 )
    {	  
       SCIPerrorMessage("Number of edges must be nonnegative!\n");
       return SCIP_READERROR;
    }
+
    /* create array for edges */
    SCIP_CALL( SCIPallocMemoryArray(scip, &edges, nedges) );
    for( i = 0; i < nedges; i++)
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(edges[i]), 2) ); /*lint !e866*/
    }
+
    /* fill array for edges */
    i = 0;
    while ( !SCIPfeof(fp) )
@@ -222,10 +229,9 @@ SCIP_RETCODE readCol(
    SCIP_CALL( SCIPcreateProbColoring(scip, probname, nnodes, nedges-nduplicateedges, edges) );
 
    /* create LP */
-   SCIPdebugMessage("Erstelle LP...\n");
+   SCIPdebugMessage("Create LP...\n");
    SCIP_CALL( COLORprobSetUpArrayOfCons(scip) );
 
-   
    /* activate the pricer */
    SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "coloring")) );
    SCIP_CALL( SCIPsetObjIntegral(scip) );
@@ -293,12 +299,10 @@ SCIP_RETCODE SCIPincludeReaderCol(
   readerdata = NULL;
 
   /* include col reader */
-  SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
-        readerdata) );
+  SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCol) );
   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCol) );
-
 
   return SCIP_OKAY;
 }

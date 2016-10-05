@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -892,6 +892,18 @@ SCIP_RETCODE SCIPlpiAddCols(
    /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureValMem(lpi, ncols+1) );
 
+#ifndef NDEBUG
+   {
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+      int j;
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
+
    /* we need ncol+1 entries in the start array for Xpress */
    for( c = 0; c < ncols; c++ )
       lpi->indarray[c] = beg[c];
@@ -1002,6 +1014,18 @@ SCIP_RETCODE SCIPlpiAddRows(
    SCIPdebugMessage("adding %d rows with %d nonzeros to Xpress\n", nrows, nnonz);
 
    invalidateSolution(lpi);
+
+#ifndef NDEBUG
+   {
+      /* perform check that no new cols are added - this is forbidden */
+      int ncols;
+      int j;
+
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
@@ -1123,12 +1147,29 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
+   int j;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("changing %d bounds in Xpress\n", ncols);
 
    invalidateSolution(lpi);
+
+   for (j = 0; j < ncols; ++j)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+   }
 
    /* ensure that the temporary arrays are large enough */
    SCIP_CALL( ensureBoundchgMem(lpi, ncols) );

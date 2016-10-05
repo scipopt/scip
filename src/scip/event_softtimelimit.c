@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -139,7 +139,7 @@ SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPdebugMessage("exec method of event handler for soft time limit\n");
+   SCIPdebugMsg(scip, "exec method of event handler for soft time limit\n");
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", eventhdlrdata->softtimelimit) );
 

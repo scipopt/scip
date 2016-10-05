@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -20,13 +20,14 @@ BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-THREADS=$8
-FEASTOL=$9
-DISPFREQ=${10}
-CONTINUE=${11}
-LOCK=${12}
-LPS=${13}
-VALGRIND=${14}
+GAPLIMIT=${8:-0}
+THREADS=$9
+FEASTOL=${10}
+DISPFREQ=${11}
+CONTINUE=${12}
+LOCK=${13}
+LPS=${14}
+VALGRIND=${15}
 
 SETDIR=../settings
 
@@ -141,6 +142,7 @@ fi
 echo "limits/time = $TIMELIMIT"       >> $SETFILE
 echo "limits/nodes = $NODELIMIT"      >> $SETFILE
 echo "limits/memory = $MEMLIMIT"      >> $SETFILE
+echo "limits/gap = $GAPLIMIT"         >> $SETFILE
 echo "lp/threads = $THREADS"          >> $SETFILE
 echo "timing/clocktype = 1"           >> $SETFILE
 echo "display/freq = $DISPFREQ"       >> $SETFILE

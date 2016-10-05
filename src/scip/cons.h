@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -188,9 +188,10 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+   SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    );
 
 /** calls separator method of constraint handler to separate LP solution */
@@ -271,9 +272,10 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -760,9 +762,9 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -789,7 +791,8 @@ SCIP_RETCODE SCIPconsEnfolp(
 extern
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    );
 
 /** calls separation method of single constraint for LP solution */

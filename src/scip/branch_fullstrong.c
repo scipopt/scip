@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -305,12 +305,12 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          downconflict = FALSE;
          upconflict = FALSE;
          lperror = FALSE;
-         SCIPdebugMessage("strong branching on variable <%s> already performed (lpage=%" SCIP_LONGINT_FORMAT ", down=%g (%+g), up=%g (%+g))\n",
+         SCIPdebugMsg(scip, "strong branching on variable <%s> already performed (lpage=%" SCIP_LONGINT_FORMAT ", down=%g (%+g), up=%g (%+g))\n",
             SCIPvarGetName(lpcands[c]), SCIPgetVarStrongbranchLPAge(scip, lpcands[c]), down, downgain, up, upgain);
       }
       else
       {
-         SCIPdebugMessage("applying strong branching%s on variable <%s> with solution %g\n",
+         SCIPdebugMsg(scip, "applying strong branching%s on variable <%s> with solution %g\n",
             propagate ? "with propagation" : "", SCIPvarGetName(lpcands[c]), lpcandssol[c]);
          assert(i >= ncomplete || (!skipdown[i] && !skipup[i]));
 
@@ -324,7 +324,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                   maxproprounds, skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid,
                   &upvalid, NULL, NULL, &downinf, &upinf, &downconflict, &upconflict, &lperror, newlbs, newubs) );
 
-            SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u)\n",
+            SCIPdebugMsg(scip, "-> down=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u)\n",
                down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);
          }
          else
@@ -383,7 +383,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
             {
                /* both roundings are infeasible -> node is infeasible */
                *result = SCIP_CUTOFF;
-               SCIPdebugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
+               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because node is infeasible */
             }
             else if( downinf )
@@ -399,7 +399,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                assert(tightened || propagate);
 
                *result = SCIP_REDUCEDDOM;
-               SCIPdebugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
+               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
             }
             else
@@ -416,7 +416,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                assert(tightened || propagate);
 
                *result = SCIP_REDUCEDDOM;
-               SCIPdebugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
+               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
             }
          }
@@ -445,7 +445,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                {
                   if( SCIPisGT(scip, newlbs[v], SCIPvarGetLbLocal(vars[v])) )
                   {
-                     SCIPdebugMessage("better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                     SCIPdebugMsg(scip, "better lower bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(lpcands[c]));
 
                      SCIP_CALL( SCIPchgVarLb(scip, vars[v], newlbs[v]) );
@@ -453,7 +453,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                   }
                   if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
                   {
-                     SCIPdebugMessage("better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
+                     SCIPdebugMsg(scip, "better upper bound for variable <%s>: %.9g -> %.9g (strongbranching on var <%s>\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(lpcands[c]));
 
                      SCIP_CALL( SCIPchgVarUb(scip, vars[v], newubs[v]) );
@@ -464,7 +464,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                if( nboundchgs > 0 )
                {
                   *result = SCIP_REDUCEDDOM;
-                  SCIPdebugMessage(" -> strong branching with propagation on variable <%s> led to %d bound changes\n",
+                  SCIPdebugMsg(scip, " -> strong branching with propagation on variable <%s> led to %d bound changes\n",
                      SCIPvarGetName(lpcands[c]), nboundchgs);
                   break; /* terminate initialization loop, because LP was changed */
                }
@@ -495,7 +495,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
       else
          score = 0.0;
 
-      SCIPdebugMessage(" -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
+      SCIPdebugMsg(scip, " -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
          c, nlpcands, npriolpcands, SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
          SCIPvarGetName(lpcands[*bestcand]), *bestscore);
    }
@@ -543,7 +543,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of fullstrong branching\n");
+   SCIPdebugMsg(scip, "Execlp method of fullstrong branching\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -586,6 +586,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
       SCIP_VAR* var;
+      SCIP_Real val;
       SCIP_Bool allcolsinlp;
       SCIP_Bool exactsolve;
 
@@ -594,11 +595,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
       var = lpcands[bestcand];
+      val = lpcandssol[bestcand];
 
       /* perform the branching */
-      SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
+      SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
          nlpcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand], bestdown, bestup, bestscore);
-      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
+      SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
 
@@ -616,8 +618,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
          SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
          SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
       }
-      SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
-      SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
+      SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+      SCIPdebugMsg(scip, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
       *result = SCIP_BRANCHED;
    }

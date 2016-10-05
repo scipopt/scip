@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -187,7 +187,7 @@ SCIP_RETCODE addAllConss(
 
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            SCIPdebugMessage("adding constraint <%s> from add conjunction <%s>\n",
+            SCIPdebugMsg(scip, "adding constraint <%s> from add conjunction <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPaddConsLocal(scip, consdata->conss[i], NULL) );
             *result = SCIP_CONSADDED;
@@ -211,9 +211,10 @@ SCIP_RETCODE checkAllConss(
    SCIP_CONS**           conss,              /**< active conjunction constraints */
    int                   nconss,             /**< number of active conjunction constraints */
    SCIP_SOL*             sol,                /**< solution to check */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -223,22 +224,33 @@ SCIP_RETCODE checkAllConss(
 
    assert(result != NULL);
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   *result = SCIP_FEASIBLE;
+
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_RESULT subresult = SCIP_FEASIBLE;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       /* check all constraints */
-      for( i = 0; i < consdata->nconss && *result == SCIP_FEASIBLE; ++i )
+      for( i = 0; i < consdata->nconss && subresult == SCIP_FEASIBLE; ++i )
       {
-         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, result) );
-	 assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
+         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, &subresult) );
+         assert(subresult == SCIP_FEASIBLE || subresult == SCIP_INFEASIBLE);
       }
 
-      if( printreason && *result == SCIP_INFEASIBLE )
+      if( subresult == SCIP_INFEASIBLE )
       {
-	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n", SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         /* mark solution as violated */
+         *result = SCIP_INFEASIBLE;
+         if( printreason )
+         {
+            assert( 0 < i && i <= consdata->nconss );
+            SCIPinfoMessage(scip, NULL, "Conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution.\n",
+               SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         }
       }
    }
 
@@ -352,7 +364,7 @@ SCIP_DECL_CONSCHECK(consCheckConjunction)
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the conjunction */
-   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, printreason, result) );
+   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, printreason, completely, result) );
 
    return SCIP_OKAY;
 }
@@ -392,7 +404,7 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            SCIPdebugMessage("adding constraint <%s> from add conjunction <%s>\n",
+            SCIPdebugMsg(scip, "adding constraint <%s> from add conjunction <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPaddCons(scip, consdata->conss[i]) );
             *result = SCIP_SUCCESS;
@@ -480,7 +492,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    assert(str != NULL);
    assert(name != NULL);
 
-   SCIPdebugMessage("parsing conjunction <%s>\n", name);
+   SCIPdebugMsg(scip, "parsing conjunction <%s>\n", name);
 
    *success = TRUE;
 
@@ -495,7 +507,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -540,7 +552,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 		  }
 		  else
 		  {
-		     SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+		     SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
 		     *success = FALSE;
 		     goto TERMINATE;
 		  }
@@ -571,7 +583,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 	    SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
 	    token[saveptr - nexttokenstart] = '\0';
 
-	    SCIPdebugMessage("conjunctive parsing token(constraint): %s\n", token);
+	    SCIPdebugMsg(scip, "conjunctive parsing token(constraint): %s\n", token);
 
 	    /* parsing a constraint, part of the conjunction */
 	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
@@ -582,7 +594,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 	       ++nconss;
 	    else
 	    {
-	       SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+	       SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
 	       goto TERMINATE;
 	    }
 	    /* skip ',' delimeter */
@@ -601,7 +613,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -621,7 +633,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
       token[saveptr - nexttokenstart] = '\0';
 
-      SCIPdebugMessage("conjunctive parsing token(constraint): %s\n", token);
+      SCIPdebugMsg(scip, "conjunctive parsing token(constraint): %s\n", token);
 
       /* parsing a constraint, part of the conjunction */
       SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );

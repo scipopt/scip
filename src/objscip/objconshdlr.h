@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,10 +89,10 @@ public:
    const SCIP_Bool scip_needscons_;
 
    /** positions in the node solving loop where propagation method of constraint handler should be executed */
-   const unsigned int scip_proptiming_;
+   const SCIP_PROPTIMING scip_proptiming_;
 
    /**< timing mask of the constraint handler's presolving method */
-   const unsigned int scip_presoltiming_;
+   const SCIP_PRESOLTIMING scip_presoltiming_;
 
    /** default constructor */
    ObjConshdlr(
@@ -110,8 +110,8 @@ public:
       SCIP_Bool          delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
       SCIP_Bool          delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
       SCIP_Bool          needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-      unsigned int       proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
-      unsigned int       presoltiming        /**< timing mask of the constraint handler's presolving method */
+      SCIP_PROPTIMING    proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+      SCIP_PRESOLTIMING  presoltiming        /**< timing mask of the constraint handler's presolving method */
       )
       : scip_(scip),
         scip_name_(0),

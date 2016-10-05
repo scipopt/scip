@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,7 +70,7 @@ public:
    const int scip_maxdepth_;
 
    /** positions in the node solving loop where heuristic should be executed */
-   const unsigned int scip_timingmask_;
+   const SCIP_HEURTIMING scip_timingmask_;
 
    /** does the heuristic use a secondary SCIP instance? */
    const SCIP_Bool scip_usessubscip_;
@@ -85,8 +85,8 @@ public:
       int                freq,               /**< frequency for calling primal heuristic */
       int                freqofs,            /**< frequency offset for calling primal heuristic */
       int                maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-      unsigned int       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+      SCIP_HEURTIMING    timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
       SCIP_Bool          usessubscip         /**< does the heuristic use a secondary SCIP instance? */
       )
       : scip_(scip),

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -167,7 +167,7 @@ void calculateBounds(
          return;
       }
 
-      SCIPdebugMessage("colval: %15.8g, downslack: %15.8g, upslack: %5.2g, lb: %5.2g, ub: %5.2g\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
+      SCIPdebugMsg(scip, "colval: %15.8g, downslack: %15.8g, upslack: %5.2g, lb: %5.2g, ub: %5.2g\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
          *lowerbound, *upperbound);
 
       /* if coefficient > 0, rounding up might violate up slack and rounding down might violate down slack
@@ -302,7 +302,7 @@ void rowFindSlackVar(
    SCIP_ROW*             row,                /**< the row for which a slack variable is searched */
    SCIP_VAR**            varpointer,         /**< pointer to store the slack variable */
    SCIP_Real*            coeffpointer        /**< pointer to store the coefficient of the slack variable */
-)
+   )
 {
    int v;
    SCIP_COL** rowcols;
@@ -335,7 +335,7 @@ void rowFindSlackVar(
          && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(colvar), SCIPvarGetUbGlobal(colvar))
          && SCIPcolGetNLPNonz(rowcols[v]) == 1 )
       {
-         SCIPdebugMessage("  slack variable for row %s found: %s\n", SCIProwGetName(row), SCIPvarGetName(colvar));
+         SCIPdebugMsg(scip, "  slack variable for row %s found: %s\n", SCIProwGetName(row), SCIPvarGetName(colvar));
 
          *coeffpointer = rowvals[v];
          *varpointer = colvar;
@@ -347,7 +347,7 @@ void rowFindSlackVar(
    *varpointer = NULL;
    *coeffpointer = 0.0;
 
-   SCIPdebugMessage("No slack variable for row %s found. \n", SCIProwGetName(row));
+   SCIPdebugMsg(scip, "No slack variable for row %s found. \n", SCIProwGetName(row));
 }
 
 /*
@@ -590,7 +590,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          if( rowpos >= 0 && SCIPisFeasEQ(scip, SCIProwGetLhs(candrows[r]), SCIProwGetRhs(candrows[r])) )
          {
             rowneedsslackvar[rowpos] = TRUE;
-            SCIPdebugMessage("  Row %s needs slack variable for variable %s\n", SCIProwGetName(candrows[r]), SCIPvarGetName(cand));
+            SCIPdebugMsg(scip, "  Row %s needs slack variable for variable %s\n", SCIProwGetName(candrows[r]), SCIPvarGetName(cand));
          }
       }
    }
@@ -627,7 +627,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       else
          upslacks[i] = rhs - activities[i];
 
-      SCIPdebugMessage("lhs:%5.2f <= act:%5.2g <= rhs:%5.2g --> down: %5.2g, up:%5.2g\n", lhs, activities[i], rhs, downslacks[i], upslacks[i]);
+      SCIPdebugMsg(scip, "lhs:%5.2f <= act:%5.2g <= rhs:%5.2g --> down: %5.2g, up:%5.2g\n", lhs, activities[i], rhs, downslacks[i], upslacks[i]);
 
       /* row is an equation. Try to find a slack variable in the row, i.e.,
        * a continuous variable which occurs only in this row. If no such variable exists,
@@ -640,7 +640,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
          if( slackvars[i] == NULL )
          {
-            SCIPdebugMessage("No slack variable found for equation %s, terminating ZI Round heuristic\n", SCIProwGetName(row));
+            SCIPdebugMsg(scip, "No slack variable found for equation %s, terminating ZI Round heuristic\n", SCIProwGetName(row));
             goto TERMINATE;
          }
          else
@@ -690,7 +690,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
                else
                   downslacks[i] = SCIPinfinity(scip);
             }
-            SCIPdebugMessage("  Slack variable for row %s at pos %d: %g <= %s = %g <= %g; Coeff %g, upslack = %g, downslack = %g  \n",
+            SCIPdebugMsg(scip, "  Slack variable for row %s at pos %d: %g <= %s = %g <= %g; Coeff %g, upslack = %g, downslack = %g  \n",
                SCIProwGetName(row), SCIProwGetLPPos(row), lbslackvar, SCIPvarGetName(slackvars[i]), solvalslackvar, ubslackvar, coeffslackvar,
                upslacks[i], downslacks[i]);
          }
@@ -713,7 +713,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    {  /*lint --e{850}*/
       improvementfound = FALSE;
       nroundings++;
-      SCIPdebugMessage("zirounding enters while loop for %d time with %d candidates left. \n", nroundings, currentlpcands);
+      SCIPdebugMsg(scip, "zirounding enters while loop for %d time with %d candidates left. \n", nroundings, currentlpcands);
 
       /* check for every remaining fractional variable if a shifting decreases ZI-value of the variable */
       for( c = 0; c < currentlpcands; ++c )
@@ -795,7 +795,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             SCIP_CALL( updateSlacks(scip, sol, var, shiftval, upslacks,
                   downslacks, activities, slackvars, slackvarcoeffs, nslacks) );
 
-            SCIPdebugMessage("zirounding update step : %d var index, oldsolval=%g, shiftval=%g\n",
+            SCIPdebugMsg(scip, "zirounding update step : %d var index, oldsolval=%g, shiftval=%g\n",
                SCIPvarGetIndex(var), oldsolval, shiftval);
             /* since at least one improvement has been found, heuristic will enter main loop for another time because the improvement
              * might affect many LP rows and their current slacks and thus make further rounding steps possible */
@@ -826,11 +826,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    if( currentlpcands == 0 )
    {
       SCIP_Bool stored;
-      SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, &stored));
+      SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored));
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          SCIPstatisticMessage("  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));

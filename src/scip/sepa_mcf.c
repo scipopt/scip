@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1028,7 +1028,7 @@ SCIP_RETCODE extractFlowRows(
    for( r = 0; r < mcfdata->nflowcands; r++ )
    {
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL)) );*/
-      SCIPdebugMessage("%4d [score: %2g]: %s\n", mcfdata->flowcands[r], flowrowscores[mcfdata->flowcands[r]],
+      SCIPdebugMsg(scip, "%4d [score: %2g]: %s\n", mcfdata->flowcands[r], flowrowscores[mcfdata->flowcands[r]],
                        SCIProwGetName(rows[mcfdata->flowcands[r]]));
    }
 #endif
@@ -1304,7 +1304,7 @@ SCIP_RETCODE extractCapacityRows(
             capacityrowscores[r] += 10.0;
 
          assert(capacityrowscores[r] > 0.0);
-         SCIPdebugMessage("row <%s>: maxcolspercommodity=%d capacityrowsign=%d nposflowcoefs=%d nnegflowcoefs=%d nposcapacitycoefs=%d nnegcapacitycoefs=%d nbadcoefs=%d nactivecommodities=%d sameflowcoef=%g -> score=%g\n",
+         SCIPdebugMsg(scip, "row <%s>: maxcolspercommodity=%d capacityrowsign=%d nposflowcoefs=%d nnegflowcoefs=%d nposcapacitycoefs=%d nnegcapacitycoefs=%d nbadcoefs=%d nactivecommodities=%d sameflowcoef=%g -> score=%g\n",
                           SCIProwGetName(row), maxcolspercommodity[r], capacityrowsigns[r], nposflowcoefs, nnegflowcoefs, nposcapacitycoefs, nnegcapacitycoefs, nbadcoefs, nactivecommodities, sameflowcoef, capacityrowscores[r]);
 
          /* update maximum dual solution value for additional score tie breaking */
@@ -1322,7 +1322,7 @@ SCIP_RETCODE extractCapacityRows(
       }
       else
       {
-         SCIPdebugMessage("row <%s>: rowsign = %d  nposflowcoefs = %d  nnegflowcoefs = %d -> discard\n",
+         SCIPdebugMsg(scip, "row <%s>: rowsign = %d  nposflowcoefs = %d  nnegflowcoefs = %d -> discard\n",
                           SCIProwGetName(row), rowsign, nposflowcoefs, nnegflowcoefs);
       }
    }
@@ -1391,7 +1391,7 @@ SCIP_RETCODE extractCapacityRows(
 #ifdef SCIP_DEBUG
    for( r = 0; r < mcfdata->ncapacitycands; r++ )
    {
-      SCIPdebugMessage("row %4d [score: %2g]: %s\n", mcfdata->capacitycands[r],
+      SCIPdebugMsg(scip, "row %4d [score: %2g]: %s\n", mcfdata->capacitycands[r],
                        capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL)) );*/
    }
@@ -1421,7 +1421,7 @@ SCIP_RETCODE createNewCommodity(
    assert(mcfdata->ncommodities < mcfdata->commoditysignssize);
 
    /* create commodity */
-   SCIPdebugMessage("**** creating new commodity %d ****\n", mcfdata->ncommodities);
+   SCIPdebugMsg(scip, "**** creating new commodity %d ****\n", mcfdata->ncommodities);
    mcfdata->commoditysigns[mcfdata->ncommodities] = 0;
    mcfdata->ncommodities++;
 
@@ -1466,7 +1466,7 @@ SCIP_RETCODE createNewArc(
    assert(mcfdata->narcs < mcfdata->capacityrowssize);
 
    /* create new arc */
-   SCIPdebugMessage("**** creating new arc %d: %d -> %d ****\n", mcfdata->narcs, source, target);
+   SCIPdebugMsg(scip, "**** creating new arc %d: %d -> %d ****\n", mcfdata->narcs, source, target);
 
    mcfdata->arcsources[*newarcid]   = source;
    mcfdata->arctargets[*newarcid]   = target;
@@ -1580,7 +1580,7 @@ void addFlowrowToCommodity(
    }
    flowrowsigns[r] |= rowsign;
 
-   SCIPdebugMessage("adding flow row %d <%s> with sign %+d%s to commodity %d [score:%g]\n",
+   SCIPdebugMsg(scip, "adding flow row %d <%s> with sign %+d%s to commodity %d [score:%g]\n",
                     r, SCIProwGetName(row), rowscale, (rowsign & INVERTED) != 0 ? " (inverted)" : "",
                     k, mcfdata->flowrowscores[r]);
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );*/
@@ -1718,7 +1718,7 @@ void deleteCommodity(
    assert( ndelflowrows != NULL );
    assert( ndelflowvars != NULL );
 
-   SCIPdebugMessage("deleting commodity %d (%d total commodities) with %d flow rows\n", k, ncommodities, nrows);
+   SCIPdebugMsg(scip, "deleting commodity %d (%d total commodities) with %d flow rows\n", k, ncommodities, nrows);
 
    *ndelflowrows = 0;
    *ndelflowvars = 0;
@@ -1737,7 +1737,7 @@ void deleteCommodity(
       assert(rowcommodity[r] == k);
       assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
 
-      SCIPdebugMessage(" -> removing row <%s> from commodity\n", SCIProwGetName(row));
+      SCIPdebugMsg(scip, " -> removing row <%s> from commodity\n", SCIProwGetName(row));
 
       /* remove the lhs/rhs assignment and the inverted flag */
       flowrowsigns[r] &= ~(LHSASSIGNED | RHSASSIGNED | INVERTED);
@@ -1903,7 +1903,7 @@ void getFlowrowFit(
    else
    {
       /* we can discard the row, since it can also not be member of a different commodity */
-      SCIPdebugMessage(" -> discard flow row %d <%s>, comoditysign=%d\n", r, SCIProwGetName(row), commoditysigns[k]);
+      SCIPdebugMsg(scip, " -> discard flow row %d <%s>, comoditysign=%d\n", r, SCIProwGetName(row), commoditysigns[k]);
       flowrowsigns[r] |= DISCARDED;
    }
 }
@@ -2121,7 +2121,7 @@ SCIP_RETCODE extractFlow(
       assert((newrowsign & INVERTED) == 0);
 
       /* start new commodity */
-      SCIPdebugMessage(" -------------------start new commodity %d--------------------- \n", mcfdata->ncommodities );
+      SCIPdebugMsg(scip, " -------------------start new commodity %d--------------------- \n", mcfdata->ncommodities );
       SCIP_CALL( createNewCommodity(scip, mcfdata) );
       nnodes = 0;
       ncomcolids = 0;
@@ -2134,7 +2134,7 @@ SCIP_RETCODE extractFlow(
             invertCommodity(scip, mcfdata, mcfdata->ncommodities-1, comrows, nnodes, comcolids, ncomcolids);
 
          /* add new row to commodity */
-         SCIPdebugMessage(" -> add flow row  <%s> \n",  SCIProwGetName(newrow));
+         SCIPdebugMsg(scip, " -> add flow row  <%s> \n",  SCIProwGetName(newrow));
          addFlowrowToCommodity(scip, mcfdata, newrow, newrowsign, comcolids, &ncomcolids);
          comrows[nnodes] = newrow;
          nnodes++;
@@ -2148,7 +2148,7 @@ SCIP_RETCODE extractFlow(
       ncomnodes[mcfdata->ncommodities-1] = nnodes;
       maxnnodes = MAX(maxnnodes, nnodes);
       nflowvars += ncomcolids;
-      SCIPdebugMessage(" -> finished commodity %d: identified %d nodes, maxnnodes=%d\n", mcfdata->ncommodities-1, nnodes, maxnnodes);
+      SCIPdebugMsg(scip, " -> finished commodity %d: identified %d nodes, maxnnodes=%d\n", mcfdata->ncommodities-1, nnodes, maxnnodes);
 
       /* if the commodity has too few nodes, or if it has much fewer nodes than the largest commodity, discard it */
       if( nnodes < MINNODES || nnodes < MINCOMNODESFRACTION * maxnnodes )
@@ -2330,7 +2330,7 @@ SCIP_RETCODE extractCapacities(
        */
       if( nunassignedflowvars == 0 || nassignedflowvars >= nunassignedflowvars * 2 )
       {
-         SCIPdebugMessage("discarding capacity candidate row %d <%s> [score:%g]: %d assigned flowvars, %d unassigned flowvars\n",
+         SCIPdebugMsg(scip, "discarding capacity candidate row %d <%s> [score:%g]: %d assigned flowvars, %d unassigned flowvars\n",
                           r, SCIProwGetName(capacityrow), mcfdata->capacityrowscores[r], nassignedflowvars, nunassignedflowvars);
          capacityrowsigns[r] |= DISCARDED;
          continue;
@@ -2361,7 +2361,7 @@ SCIP_RETCODE extractCapacities(
          capacityrowsigns[r] |= LHSASSIGNED;
       }
 
-      SCIPdebugMessage("assigning capacity row %d <%s> with sign %+d to arc %d [score:%g]: %d assigned flowvars, %d unassigned flowvars\n",
+      SCIPdebugMsg(scip, "assigning capacity row %d <%s> with sign %+d to arc %d [score:%g]: %d assigned flowvars, %d unassigned flowvars\n",
                        r, SCIProwGetName(capacityrow), (capacityrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1, mcfdata->narcs,
                        mcfdata->capacityrowscores[r], nassignedflowvars, nunassignedflowvars);
 
@@ -2664,7 +2664,7 @@ SCIP_RETCODE getNodeSimilarityScore(
 
    }
 
-   SCIPdebugMessage(" -> node similarity: row <%s>: incompatible=%u overlap=%g rowlen=%d baserowlen=%d score=%g\n",
+   SCIPdebugMsg(scip, " -> node similarity: row <%s>: incompatible=%u overlap=%g rowlen=%d baserowlen=%d score=%g\n",
                     SCIProwGetName(row), incompatible, overlap, rowlen, baserowlen, *score);
 
    /* free temporary memory */
@@ -2765,7 +2765,7 @@ SCIP_RETCODE extractNodes(
          continue;
 
       /* assign row to new node id */
-      SCIPdebugMessage("assigning row %d <%s> of commodity %d to node %d [score: %g]\n",
+      SCIPdebugMsg(scip, "assigning row %d <%s> of commodity %d to node %d [score: %g]\n",
                        r, SCIProwGetName(rows[r]), basecommodity, mcfdata->nnodes, mcfdata->flowrowscores[r]);
       rownodeid[r] = mcfdata->nnodes;
 
@@ -2915,7 +2915,7 @@ SCIP_RETCODE extractNodes(
          assert(rownodeid[comr] == -1);
          assert(mcfdata->nnodes >= 1);
          /* assign flow row to current node */
-         SCIPdebugMessage(" -> assigning row %d <%s> of commodity %d to node %d [invert:%u]\n",
+         SCIPdebugMsg(scip, " -> assigning row %d <%s> of commodity %d to node %d [invert:%u]\n",
                           comr, SCIProwGetName(rows[comr]), i, mcfdata->nnodes-1, bestinverted[i]);
          rownodeid[comr] = mcfdata->nnodes-1;
 
@@ -3107,7 +3107,7 @@ SCIP_RETCODE findUncapacitatedArcs(
    if( ncommodities == 0 || nflowcands == 0 || nnodes == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("finding uncapacitated arcs\n");
+   SCIPdebugMsg(scip, "finding uncapacitated arcs\n");
 
    /* get LP data */
    rows = SCIPgetLPRows(scip);
@@ -3178,7 +3178,7 @@ SCIP_RETCODE findUncapacitatedArcs(
       assert(nadjnodes == 0);
       assert(ninccols == 0);
 
-      SCIPdebugMessage(" node %d starts with flowcand %d: <%s>\n", v, n, SCIProwGetName(rows[sortedflowcands[n]]));
+      SCIPdebugMsg(scip, " node %d starts with flowcand %d: <%s>\n", v, n, SCIProwGetName(rows[sortedflowcands[n]]));
 
       /* process all flow rows that belong to node v */
       for( ; n < nflowcands && sortedflowcandnodeid[n] == v; n++ )
@@ -3225,7 +3225,7 @@ SCIP_RETCODE findUncapacitatedArcs(
                /* identify the (at most) two nodes which contain this flow variable */
                getIncidentNodes(scip, mcfdata, col, &s, &t);
 
-               SCIPdebugMessage("   col <%s> [%g,%g] (s,t):(%i,%i)\n", SCIPvarGetName(SCIPcolGetVar(col)),
+               SCIPdebugMsg(scip, "   col <%s> [%g,%g] (s,t):(%i,%i)\n", SCIPvarGetName(SCIPcolGetVar(col)),
                                 SCIPvarGetLbGlobal(SCIPcolGetVar(col)), SCIPvarGetUbGlobal(SCIPcolGetVar(col)), s, t);
 
                assert(-1 <= s && s < nnodes);
@@ -3295,7 +3295,7 @@ SCIP_RETCODE findUncapacitatedArcs(
 
             /* create new arc */
             SCIP_CALL( createNewArc(scip, mcfdata, u, v, &arcid) );
-            SCIPdebugMessage("         -> new arc: <%i> = (%i,%i)\n", arcid, u, v);
+            SCIPdebugMsg(scip, "         -> new arc: <%i> = (%i,%i)\n", arcid, u, v);
 
             /* assign arcid to all involved columns */
             for( m = 0; m < ninccols; m++ )
@@ -3313,7 +3313,7 @@ SCIP_RETCODE findUncapacitatedArcs(
 
                if( s == u || (modeltype == SCIP_MCFMODELTYPE_UNDIRECTED && t == u) )
                {
-                  SCIPdebugMessage("         -> assign arcid:%i to column <%s>\n", arcid, SCIPvarGetName(SCIPcolGetVar(cols[c])));
+                  SCIPdebugMsg(scip, "         -> assign arcid:%i to column <%s>\n", arcid, SCIPvarGetName(SCIPcolGetVar(cols[c])));
                   colarcid[c] = arcid;
 
                   /* remove column from incidence array */
@@ -3332,7 +3332,7 @@ SCIP_RETCODE findUncapacitatedArcs(
 
             /* create new arc */
             SCIP_CALL( createNewArc(scip, mcfdata, v, u, &arcid) );
-            SCIPdebugMessage("         -> new arc: <%i> = (%i,%i)\n", arcid, v, u);
+            SCIPdebugMsg(scip, "         -> new arc: <%i> = (%i,%i)\n", arcid, v, u);
 
             /* assign arcid to all involved columns */
             for( m = 0; m < ninccols; m++ )
@@ -3351,7 +3351,7 @@ SCIP_RETCODE findUncapacitatedArcs(
                if( t == u )
                {
                   assert(cols != NULL);
-                  SCIPdebugMessage("         -> assign arcid:%i to column <%s>\n", arcid, SCIPvarGetName(SCIPcolGetVar(cols[c])));
+                  SCIPdebugMsg(scip, "         -> assign arcid:%i to column <%s>\n", arcid, SCIPvarGetName(SCIPcolGetVar(cols[c])));
                   colarcid[c] = arcid;
 
                   /* remove column from incidence array */
@@ -3527,13 +3527,13 @@ SCIP_RETCODE cleanupNetwork(
 
    nnodesthreshold = (int)(MINCOMNODESFRACTION * maxnnodes);
    nnodesthreshold = MAX(nnodesthreshold, MINNODES);
-   SCIPdebugMessage(" -> node threshold: %d\n", nnodesthreshold);
+   SCIPdebugMsg(scip, " -> node threshold: %d\n", nnodesthreshold);
 
    /* discard trivial commodities */
    newncommodities = 0;
    for( k = 0; k < ncommodities; k++ )
    {
-      SCIPdebugMessage(" -> commodity %d: %d nodes, %d arcs\n", k, nnodespercom[k], narcspercom[k]);
+      SCIPdebugMsg(scip, " -> commodity %d: %d nodes, %d arcs\n", k, nnodespercom[k], narcspercom[k]);
 
       /* only keep commodities of a certain size that have at least one arc */
       if( nnodespercom[k] >= nnodesthreshold && narcspercom[k] >= 1 )
@@ -3556,7 +3556,7 @@ SCIP_RETCODE cleanupNetwork(
       int c;
       int v;
 
-      SCIPdebugMessage(" -> discarding %d of %d commodities\n", ncommodities - newncommodities, ncommodities);
+      SCIPdebugMsg(scip, " -> discarding %d of %d commodities\n", ncommodities - newncommodities, ncommodities);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &arcisused, narcs) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nodeisused, nnodes) );
@@ -3637,7 +3637,7 @@ SCIP_RETCODE cleanupNetwork(
       /* update remaining data structures to new arc ids */
       if( newnarcs < narcs )
       {
-         SCIPdebugMessage(" -> discarding %d of %d arcs\n", narcs - newnarcs, narcs);
+         SCIPdebugMsg(scip, " -> discarding %d of %d arcs\n", narcs - newnarcs, narcs);
 
          for( c = 0; c < ncols; c++ )
          {
@@ -3678,7 +3678,7 @@ SCIP_RETCODE cleanupNetwork(
       /* update data structures to new node ids */
       if( newnnodes < nnodes )
       {
-         SCIPdebugMessage(" -> discarding %d of %d nodes\n", nnodes - newnnodes, nnodes);
+         SCIPdebugMsg(scip, " -> discarding %d of %d nodes\n", nnodes - newnnodes, nnodes);
 
          for( i = 0; i < nflowcands; i++ )
          {
@@ -4016,7 +4016,7 @@ SCIP_RETCODE identifySourcesTargets(
       assert(bestsourcev == -1 || bestsourcev != besttargetv);
       arcsources[a] = bestsourcev;
       arctargets[a] = besttargetv;
-      SCIPdebugMessage("arc %d: %d -> %d (len=%d, sourcecnt=%g/%g, targetcnt=%g/%g, %g/%g inconsistencies)\n",
+      SCIPdebugMsg(scip, "arc %d: %d -> %d (len=%d, sourcecnt=%g/%g, targetcnt=%g/%g, %g/%g inconsistencies)\n",
                        a, bestsourcev, besttargetv, rowlen,
                        bestsourcecnt, totalsourcecnt, besttargetcnt, totaltargetcnt,
                        nsourceinconsistencies, ntargetinconsistencies);
@@ -4453,7 +4453,7 @@ SCIP_RETCODE mcfnetworkExtract(
             /* if we exceeded the maximal number of networks, delete the last one */
             if( *nmcfnetworks > MAXNETWORKS )
             {
-               SCIPdebugMessage(" -> discarded network with %d nodes and %d arcs due to maxnetworks (minnodes=%d)\n",
+               SCIPdebugMsg(scip, " -> discarded network with %d nodes and %d arcs due to maxnetworks (minnodes=%d)\n",
                                 (*mcfnetworks)[*nmcfnetworks-1]->nnodes, (*mcfnetworks)[*nmcfnetworks-1]->narcs, minnodes);
                SCIP_CALL( mcfnetworkFree(scip, &(*mcfnetworks)[*nmcfnetworks-1]) );
                (*nmcfnetworks)--;
@@ -4462,7 +4462,7 @@ SCIP_RETCODE mcfnetworkExtract(
          }
          else
          {
-            SCIPdebugMessage(" -> discarded component with %d nodes and %d arcs\n", ncompnodes, ncomparcs);
+            SCIPdebugMsg(scip, " -> discarded component with %d nodes and %d arcs\n", ncompnodes, ncomparcs);
          }
 
       }
@@ -4909,7 +4909,7 @@ SCIP_RETCODE nodepairqueueCreate(
 
       capacityrow = mcfnetwork->arccapacityrows[a];
 
-      SCIPdebugMessage("arc %i = (%i %i)\n", a, mcfnetwork->arcsources[a], mcfnetwork->arctargets[a]);
+      SCIPdebugMsg(scip, "arc %i = (%i %i)\n", a, mcfnetwork->arcsources[a], mcfnetwork->arctargets[a]);
 
       /* construct fresh nodepair: smaller node gets node1 in nodeentry */
       if( mcfnetwork->arcsources[a] <= mcfnetwork->arctargets[a] )
@@ -4957,30 +4957,30 @@ SCIP_RETCODE nodepairqueueCreate(
          rowlen    = SCIProwGetNLPNonz(capacityrow);
          totalflow = 0.0;
          totalcap  = 0.0;
-         SCIPdebugMessage(" row <%s>: \n", SCIProwGetName(capacityrow));
+         SCIPdebugMsg(scip, " row <%s>: \n", SCIProwGetName(capacityrow));
 
          for( i = 0; i < rowlen; i++ )
          {
             c = SCIPcolGetLPPos(rowcols[i]);
             assert(0 <= c && c < SCIPgetNLPCols(scip));
 
-            SCIPdebugMessage("    col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPcolGetPrimsol(rowcols[i]) );
+            SCIPdebugMsg(scip, "    col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPcolGetPrimsol(rowcols[i]) );
             /* sum up flow on arc a*/
             if(colcommodity[c] >= 0)
             {
-               SCIPdebugMessage("  flow  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), REALABS(SCIPcolGetPrimsol(rowcols[i])) );
+               SCIPdebugMsg(scip, "  flow  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), REALABS(SCIPcolGetPrimsol(rowcols[i])) );
                totalflow += REALABS(SCIPcolGetPrimsol(rowcols[i]));
             }
             else
             {
-               SCIPdebugMessage("  cap  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), REALABS(SCIPcolGetPrimsol(rowcols[i])) );
+               SCIPdebugMsg(scip, "  cap  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), REALABS(SCIPcolGetPrimsol(rowcols[i])) );
                totalcap += REALABS(SCIPcolGetPrimsol(rowcols[i]));
             }
          }
 
-         SCIPdebugMessage("cap arc -- slack:%g -- dual:%g -- flow:%g -- cap:%g \n", scale * slack, dualsol/scale, totalflow * scale, totalcap * scale);
+         SCIPdebugMsg(scip, "cap arc -- slack:%g -- dual:%g -- flow:%g -- cap:%g \n", scale * slack, dualsol/scale, totalflow * scale, totalcap * scale);
 #else
-         SCIPdebugMessage("cap arc -- slack:%g -- dual:%g1\n", scale * slack, dualsol/scale);
+         SCIPdebugMsg(scip, "cap arc -- slack:%g -- dual:%g1\n", scale * slack, dualsol/scale);
 #endif
 
          /* put the arc weight into a fresh nodepair */
@@ -5004,7 +5004,7 @@ SCIP_RETCODE nodepairqueueCreate(
       else
       {
          /* uncapacitated arc has infinite slack */
-         SCIPdebugMessage("uncap arc ... slack infinite\n");
+         SCIPdebugMsg(scip, "uncap arc ... slack infinite\n");
          nodepair.weight = SCIPinfinity(scip);
       }
 
@@ -5015,7 +5015,7 @@ SCIP_RETCODE nodepairqueueCreate(
       if( nodepairptr != NULL )
       {
          /* adapt weight */
-         SCIPdebugMessage("nodepair known [%d,%d] -- old weight:%g -- new weight:%g\n", nodepair.node1,nodepair.node2,nodepairptr->weight,
+         SCIPdebugMsg(scip, "nodepair known [%d,%d] -- old weight:%g -- new weight:%g\n", nodepair.node1,nodepair.node2,nodepairptr->weight,
                           MIN(nodepair.weight, nodepairptr->weight));
          nodepairptr->weight = MIN(nodepair.weight, nodepairptr->weight);
       }
@@ -5028,7 +5028,7 @@ SCIP_RETCODE nodepairqueueCreate(
          nodepairs[nnodepairs] = nodepair;
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) (&nodepairs[nnodepairs]) ) );
 
-         SCIPdebugMessage("new nodepair [%d,%d]-- weight:%g\n", nodepair.node1, nodepair.node2, nodepair.weight);
+         SCIPdebugMsg(scip, "new nodepair [%d,%d]-- weight:%g\n", nodepair.node1, nodepair.node2, nodepair.weight);
 
          nnodepairs++;
       }
@@ -5057,7 +5057,7 @@ SCIP_RETCODE nodepairqueueCreate(
       minweight = MIN(minweight, nodepairs[n].weight);
    }
 
-   SCIPdebugMessage("min/max weight:%g / %g\n", minweight, maxweight);
+   SCIPdebugMsg(scip, "min/max weight:%g / %g\n", minweight, maxweight);
 #endif
 
    /* initialize priority queue */
@@ -5076,7 +5076,7 @@ SCIP_RETCODE nodepairqueueCreate(
 
       int k; /* commodity */
 
-      SCIPdebugMessage("nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
+      SCIPdebugMsg(scip, "nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
       /* check both nodes for their demand value in all commodities
        * the demand value can be read from the rhs
        * of the flowrows
@@ -5140,7 +5140,7 @@ SCIP_RETCODE nodepairqueueCreate(
             nodepairs[n].weight += minweight;
       }
 #endif
-      SCIPdebugMessage("nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
+      SCIPdebugMsg(scip, "nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
 
       /* fill priority queue */
       SCIP_CALL( SCIPpqueueInsert((*nodepairqueue)->pqueue, (void*)&(*nodepairqueue)->nodepairs[n]) );
@@ -5283,7 +5283,7 @@ SCIP_RETCODE nodepartitionCreate(
          continue;
 
       /* shrink nodepair by joining the two clusters */
-      SCIPdebugMessage("shrinking nodepair (%d,%d) with weight %g: join representatives %d and %d\n",
+      SCIPdebugMsg(scip, "shrinking nodepair (%d,%d) with weight %g: join representatives %d and %d\n",
                        node1, node2, weight, node1rep, node2rep);
       nodepartitionJoin(*nodepartition, node1rep, node2rep);
       nclustersleft--;
@@ -5828,7 +5828,7 @@ SCIP_RETCODE addCut(
    /* check efficacy */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {
-      SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
+      SCIPdebugMsg(scip, " -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
@@ -5961,7 +5961,7 @@ SCIP_RETCODE generateClusterCuts(
       /* loop over all nodes and generate single-node cuts */
       startpartition = 0;
       allpartitions = (unsigned int) nnodes;
-      SCIPdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nnodes: %d \n", maxtestdelta, maxsepacuts, nnodes);
+      SCIPdebugMsg(scip, "maxtestdelta: %d, maxsepacuts: %d, nnodes: %d \n", maxtestdelta, maxsepacuts, nnodes);
    }
    else
    {
@@ -5971,7 +5971,7 @@ SCIP_RETCODE generateClusterCuts(
       int nclusters = nodepartition->nclusters;
 
       assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
-      SCIPdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nclusters: %d \n", maxtestdelta, maxsepacuts, nclusters);
+      SCIPdebugMsg(scip, "maxtestdelta: %d, maxsepacuts: %d, nclusters: %d \n", maxtestdelta, maxsepacuts, nclusters);
 
       /* We fix the last cluster to belong to partition T. In the undirected case, this is sufficient,
        * because S-T is equivalent to T-S. In the directed case, the loop below is conducted two times,
@@ -6003,8 +6003,8 @@ SCIP_RETCODE generateClusterCuts(
             /* if S or T are not connected, it is very likely that there is a cut in our cluster partition
                that gives dominating inequalities
              */
-            SCIPdebugMessage("generating cluster cuts for partition 0x%x \n", partition );
-            SCIPdebugMessage(" -> either shore S or shore T is not connected - skip partition.\n");
+            SCIPdebugMsg(scip, "generating cluster cuts for partition 0x%x \n", partition );
+            SCIPdebugMsg(scip, " -> either shore S or shore T is not connected - skip partition.\n");
             continue;
          }
       }
@@ -6014,11 +6014,11 @@ SCIP_RETCODE generateClusterCuts(
 
          if( nodepartition == NULL )
          {
-            SCIPdebugMessage("generating single-node cuts for node %u (inverted: %u)\n", partition, inverted);
+            SCIPdebugMsg(scip, "generating single-node cuts for node %u (inverted: %u)\n", partition, inverted);
          }
          else
          {
-            SCIPdebugMessage("generating cluster cuts for partition 0x%x (inverted: %u)\n", partition, inverted);
+            SCIPdebugMsg(scip, "generating cluster cuts for partition 0x%x (inverted: %u)\n", partition, inverted);
          }
 
 #ifdef OUTPUTGRAPH
@@ -6074,7 +6074,7 @@ SCIP_RETCODE generateClusterCuts(
           */
          if( sepadata->separatesinglenodecuts && nodepartition != NULL && (nnodesinS == 1 || nnodesinS == nnodes-1) )
          {
-            SCIPdebugMessage(" -> shore S or T has only one node - skip partition.\n");
+            SCIPdebugMsg(scip, " -> shore S or T has only one node - skip partition.\n");
             break;
          }
 
@@ -6084,7 +6084,7 @@ SCIP_RETCODE generateClusterCuts(
             for( k = 0; k < ncommodities; k++ )
             {
                /* in the directed case, use commodities with positive demand (negative -d_k) */
-               SCIPdebugMessage(" -> commodity %d: directed cutdemand=%g\n", k, comcutdemands[k]);
+               SCIPdebugMsg(scip, " -> commodity %d: directed cutdemand=%g\n", k, comcutdemands[k]);
                if( SCIPisNegative(scip, comcutdemands[k]) )
                   break;
             }
@@ -6094,7 +6094,7 @@ SCIP_RETCODE generateClusterCuts(
             for( k = 0; k < ncommodities; k++ )
             {
                /* in the undirected case, use commodities with non-zero demand */
-               SCIPdebugMessage(" -> commodity %d: undirected cutdemand=%g\n", k, comcutdemands[k]);
+               SCIPdebugMsg(scip, " -> commodity %d: undirected cutdemand=%g\n", k, comcutdemands[k]);
                if( !SCIPisZero(scip, comcutdemands[k]) )
                   break;
             }
@@ -6174,7 +6174,7 @@ SCIP_RETCODE generateClusterCuts(
             }
 
             rowweights[r] = arccapacityscales[a];
-            SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
+            SCIPdebugMsg(scip, " -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
                              SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
             /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, arccapacityrows[a], NULL)) );*/
 
@@ -6249,7 +6249,7 @@ SCIP_RETCODE generateClusterCuts(
                      }
                      deltas[left] = coef;
                      ndeltas++;
-                     SCIPdebugMessage(" -> new capacity %g considered as delta\n", coef);
+                     SCIPdebugMsg(scip, " -> new capacity %g considered as delta\n", coef);
                   }
                }
             }
@@ -6328,7 +6328,7 @@ SCIP_RETCODE generateClusterCuts(
                      rowweights[r] = scale * nodeflowscales[v][k];
                      if( nodeflowinverted[v][k] )
                         rowweights[r] *= -1.0;
-                     SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
+                     SCIPdebugMsg(scip, " -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
                                       v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
                                       SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
                      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, nodeflowrows[v][k], NULL)) );*/
@@ -6358,7 +6358,7 @@ SCIP_RETCODE generateClusterCuts(
 
          oldncuts = *ncuts; /* save number of cuts */
 
-         SCIPdebugMessage(" -> found %d different deltas to try\n", ndeltas);
+         SCIPdebugMsg(scip, " -> found %d different deltas to try\n", ndeltas);
          for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
          {
             SCIP_Real cutrhs = 0.0;
@@ -6375,7 +6375,7 @@ SCIP_RETCODE generateClusterCuts(
             /* we should not have too large deltas */
             assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
-            SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
+            SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
             SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
                   (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, -1.0, NULL, -1, -1,
                   NULL, 1.0/deltas[d], NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
@@ -6400,7 +6400,7 @@ SCIP_RETCODE generateClusterCuts(
 
             if( SCIPisFeasGT(scip, cutact, cutrhs) )
             {
-               SCIPdebugMessage("success -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
+               SCIPdebugMsg(scip, "success -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
                SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, cutrank, ncuts, cutoff) );
                if( *cutoff )
                   break;
@@ -6537,7 +6537,7 @@ SCIP_RETCODE generateClusterCuts(
 
                   if( SCIPisPositive(scip, violationdelta) )
                   {
-                     SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
+                     SCIPdebugMsg(scip, " -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
                                       SCIProwGetName(arccapacityrows[a]), rowweights[r], SCIPgetRowFeasibility(scip, arccapacityrows[a]),
                                       violationdelta);
                      rowweights[r] = 0.0;
@@ -6559,7 +6559,7 @@ SCIP_RETCODE generateClusterCuts(
                   /* we should not have too large deltas */
                   assert( !SCIPisZero(scip, 1.0/bestdelta) );
 
-                  SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
+                  SCIPdebugMsg(scip, "applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
                   SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
                         (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, -1.0, NULL, -1, -1,
                         NULL, 1.0/bestdelta, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
@@ -6567,7 +6567,7 @@ SCIP_RETCODE generateClusterCuts(
 
                   if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
                   {
-                     SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
+                     SCIPdebugMsg(scip, " -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
                      SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, cutrank, ncuts, cutoff) );
                   }
                }

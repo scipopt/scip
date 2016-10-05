@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -517,6 +517,7 @@ void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
    {
       if( gr->nodes[i].mincap < 2.0 - minviol )
       {
+         cuts[k][0] = FALSE;
          for( int j = 1 ; j < gr->nnodes; j++ )
             cuts[k][j] = nodeOnRootPath(gr, i, j);
          k++;
@@ -529,6 +530,7 @@ void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
 // an according cut is generated, using information from BFS in method maxflow
 void constructSingleCut(GRAPH *gr, SCIP_Bool** cuts)
 {
+   cuts[0][0] = FALSE;
    for( int i = 1; i < gr->nnodes; i++ )
       cuts[0][i]=gr->nodes[i].unmarked;
 }

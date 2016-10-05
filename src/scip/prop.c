@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPpropCopyInclude(
 
    if( prop->propcopy != NULL )
    {
-      SCIPdebugMessage("including propagator %s in subscip %p\n", SCIPpropGetName(prop), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including propagator %s in subscip %p\n", SCIPpropGetName(prop), (void*)set->scip);
       SCIP_CALL( prop->propcopy(set->scip, prop) );
    }
    return SCIP_OKAY;
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPpropCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> propagator instead.\n", name);
@@ -517,7 +517,7 @@ SCIP_RETCODE SCIPpropPresol(
       int nnewchgcoefs;
       int nnewchgsides;
 
-      SCIPdebugMessage("calling presolving method of propagator <%s>\n", prop->name);
+      SCIPsetDebugMsg(set, "calling presolving method of propagator <%s>\n", prop->name);
 
       /* calculate the number of changes since last call */
       nnewfixedvars = *nfixedvars - prop->lastnfixedvars;
@@ -615,7 +615,7 @@ SCIP_RETCODE SCIPpropExec(
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
 
-         SCIPdebugMessage("executing propagator <%s>\n", prop->name);
+         SCIPsetDebugMsg(set, "executing propagator <%s>\n", prop->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -660,7 +660,7 @@ SCIP_RETCODE SCIPpropExec(
       }
       else
       {
-         SCIPdebugMessage("propagator <%s> was delayed\n", prop->name);
+         SCIPsetDebugMsg(set, "propagator <%s> was delayed\n", prop->name);
          *result = SCIP_DELAYED;
       }
 
@@ -692,9 +692,9 @@ SCIP_RETCODE SCIPpropResolvePropagation(
 {
    assert(prop != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
-         && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;

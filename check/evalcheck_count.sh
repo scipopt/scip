@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -22,9 +22,9 @@ for i in $@
 do
     if test ! -e $i
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="$AWKARGS $i"
     else
-	FILES="$FILES $i"
+        FILES="$FILES $i"
     fi
 done
 
@@ -41,21 +41,21 @@ do
 
     if test -f testset/$TSTNAME.test
     then
-	TESTFILE=testset/$TSTNAME.test
+        TESTFILE=testset/$TSTNAME.test
     else
-	TESTFILE=""
+        TESTFILE=""
     fi
 
-    if test -f testset/$TSTNAME.solu
-    then
-	SOLUFILE=testset/$TSTNAME.solu
-    else if test -f testset/all.solu
-    then
-	SOLUFILE=testset/all.solu
-    else
-        SOLUFILE=""
-    fi
-    fi
+    # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
+    SOLUFILE=""
+    for f in $TSTNAME ${TSTNAME%%_*} all
+    do
+        if test -f testset/${f}.solu
+        then
+            SOLUFILE=testset/${f}.solu
+            break
+        fi
+    done
 
     awk -f check_count.awk $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done

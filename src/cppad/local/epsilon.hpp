@@ -1,11 +1,11 @@
-/* $Id: epsilon.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_EPSILON_INCLUDED
-# define CPPAD_EPSILON_INCLUDED
+// $Id$
+# ifndef CPPAD_EPSILON_HPP
+# define CPPAD_EPSILON_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,15 +22,12 @@ $spell
 	namespace
 	const
 $$
-$index AD, epsilon$$
-$index epsilon, AD$$
 
 $section Machine Epsilon For AD Types$$
 
-$head Deprecated$$
-$index deprecated, epsilon$$
-This routine has bee deprecated.
-You should use the $cref/numeric_limits/limits/$$ $code epsilon$$ instead.
+$head Deprecated 2012-06-17$$
+This routine has been deprecated.
+You should use the $cref numeric_limits$$ $code epsilon$$ instead.
 
 $head Syntax$$
 $icode%eps% = epsilon<%Float%>()%$$
@@ -49,17 +46,15 @@ $codei%
 	%Float% eps
 %$$
 
-$end 
+$end
 ------------------------------------------------------------------------------
 */
 
 namespace CppAD {
 
-	template <class ADtype>
-	inline ADtype epsilon(void)
-	{	typedef typename ADtype::value_type value_type;
-		return ADtype ( epsilon<value_type>() ); 
-	}
+	template <class Type>
+	inline Type epsilon(void)
+	{	return Type ( numeric_limits<Type>::epsilon() ); }
 
 }
 # endif

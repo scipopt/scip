@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -177,7 +177,7 @@ void SCIPvisualExit(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
-  )
+   )
 {
    assert( visual != NULL );
    assert( set != NULL );
@@ -409,10 +409,13 @@ SCIP_RETCODE SCIPvisualUpdateChild(
          /* the focus node is updated to a branch node */
          nodeinfo = "branched";
 
-         /* calculate infeasibility information */
-         SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
-         for (j = 0; j < nlpcands; ++j)
-            sum += lpcandsfrac[j];
+         /* calculate infeasibility information only if the LP was solved to optimality */
+         if( SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         {
+            SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
+            for( j = 0; j < nlpcands; ++j )
+               sum += lpcandsfrac[j];
+         }
 
          break;
       default:

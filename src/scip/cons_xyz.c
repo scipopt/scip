@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,7 @@
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 /* optional constraint handler properties */
@@ -42,7 +42,7 @@
 
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP/**< propagation timing mask of the constraint handler*/
+#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
@@ -102,7 +102,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
 
    if( upgrade )
    {
-      SCIPdebugMessage("upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
 
       /* create the bin Xyz constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));

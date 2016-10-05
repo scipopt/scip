@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,7 +137,7 @@ SCIP_RETCODE branch(
       var = pseudocands[bestpseudocand];
 
       /* perform the branching */
-      SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
+      SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
          npseudocands, bestpseudocand, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var),
          bestdown, bestup, bestscore);
       SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPvarGetLPSol(var), &downchild, &eqchild, &upchild) );
@@ -148,17 +148,17 @@ SCIP_RETCODE branch(
          if( downchild != NULL )
          {
             SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
-            SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+            SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
          }
          if( eqchild != NULL )
          {
             SCIP_CALL( SCIPupdateNodeLowerbound(scip, eqchild, provedbound) );
-            SCIPdebugMessage(" -> eq child's lowerbound:   %g\n", SCIPnodeGetLowerbound(eqchild));
+            SCIPdebugMsg(scip, " -> eq child's lowerbound:   %g\n", SCIPnodeGetLowerbound(eqchild));
          }
          if( upchild != NULL )
          {
             SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
-            SCIPdebugMessage(" -> up child's lowerbound:   %g\n", SCIPnodeGetLowerbound(upchild));
+            SCIPdebugMsg(scip, " -> up child's lowerbound:   %g\n", SCIPnodeGetLowerbound(upchild));
          }
       }
 
@@ -225,7 +225,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 {  /*lint --e{715}*/
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of allfullstrong branching\n");
+   SCIPdebugMsg(scip, "Execlp method of allfullstrong branching\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -241,7 +241,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 {  /*lint --e{715}*/
    assert(result != NULL);
 
-   SCIPdebugMessage("Execps method of allfullstrong branching\n");
+   SCIPdebugMsg(scip, "Execps method of allfullstrong branching\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -375,7 +375,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
          solval = SCIPvarGetLPSol(pseudocands[c]);
          integral = SCIPisFeasIntegral(scip, solval);
 
-         SCIPdebugMessage("applying strong branching on %s variable <%s>[%g,%g] with solution %g\n",
+         SCIPdebugMsg(scip, "applying strong branching on %s variable <%s>[%g,%g] with solution %g\n",
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]),
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
@@ -446,7 +446,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
                   assert(!infeasible);
                   assert(fixed);
                   *result = SCIP_REDUCEDDOM;
-                  SCIPdebugMessage(" -> integral variable <%s> is infeasible in both directions\n",
+                  SCIPdebugMsg(scip, " -> integral variable <%s> is infeasible in both directions\n",
                      SCIPvarGetName(pseudocands[c]));
                   break; /* terminate initialization loop, because LP was changed */
                }
@@ -454,7 +454,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
                {
                   /* both roundings are infeasible: the node is infeasible */
                   *result = SCIP_CUTOFF;
-                  SCIPdebugMessage(" -> fractional variable <%s> is infeasible in both directions\n",
+                  SCIPdebugMsg(scip, " -> fractional variable <%s> is infeasible in both directions\n",
                      SCIPvarGetName(pseudocands[c]));
                   break; /* terminate initialization loop, because node is infeasible */
                }
@@ -469,7 +469,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
                {
                   SCIP_CALL( SCIPchgVarLb(scip, pseudocands[c], newlb) );
                   *result = SCIP_REDUCEDDOM;
-                  SCIPdebugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(pseudocands[c]));
+                  SCIPdebugMsg(scip, " -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(pseudocands[c]));
                   break; /* terminate initialization loop, because LP was changed */
                }
             }
@@ -484,7 +484,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
                {
                   SCIP_CALL( SCIPchgVarUb(scip, pseudocands[c], newub) );
                   *result = SCIP_REDUCEDDOM;
-                  SCIPdebugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(pseudocands[c]));
+                  SCIPdebugMsg(scip, " -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(pseudocands[c]));
                   break; /* terminate initialization loop, because LP was changed */
                }
             }
@@ -552,7 +552,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
                   solval-SCIPfeasFloor(scip, solval+1.0), upgain, 1.0) );
          }
 
-         SCIPdebugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
+         SCIPdebugMsg(scip, " -> var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
             SCIPvarGetName(pseudocands[c]), solval, downgain, upgain, score,
             SCIPvarGetName(pseudocands[*bestpseudocand]), *bestscore);
       }

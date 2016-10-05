@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,7 +50,7 @@
 static
 SCIP_Real getMaxActSingleRowWithoutCol(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
    int                   col                 /**< column index */
    )
@@ -102,7 +102,7 @@ SCIP_Real getMaxActSingleRowWithoutCol(
 static
 SCIP_Real getMinActSingleRowWithoutCol(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
    int                   col                 /**< column index */
    )
@@ -154,7 +154,7 @@ SCIP_Real getMinActSingleRowWithoutCol(
 static
 void getActivityResiduals(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             val,                /**< coefficient of this variable in this row */
@@ -295,7 +295,7 @@ void getActivityResiduals(
 static
 void getVarBoundsOfRow(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index of variable */
    int                   row,                /**< row index */
    SCIP_Real             val,                /**< coefficient of this column in this row */
@@ -362,7 +362,7 @@ void getVarBoundsOfRow(
 static
 SCIP_Bool isVarImpliedFree(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index for implied free test */
    int                   row,                /**< constraint planned for multi-aggregation */
    SCIP_Bool*            lockedcons,         /**< constraint not suitable for bound implication */
@@ -444,7 +444,7 @@ SCIP_Bool isVarImpliedFree(
 /** calculate the amount of fill-in getting from multi-aggregation */
 static
 SCIP_Real getFillIn(
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row                 /**< row index */
    )
@@ -491,7 +491,7 @@ SCIP_Real sideChangeNumericalStable(
 static
 void getNumHugeActivities(
    SCIP*                 scip,               /**< current scip instance */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int*                  maxactposhuge,      /**< max activity positive contribution counter */
    int*                  maxactneghuge,      /**< max activity negative contribution counter */
    int*                  minactposhuge,      /**< min activity positive contribution counter */
@@ -576,7 +576,7 @@ void getNumHugeActivities(
 static
 void getActivityRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   row,                /**< row index */
    int                   col,                /**< column index */
    SCIP_Real             val,                /**< coefficient value of variable in linear constraint */
@@ -727,7 +727,7 @@ void getActivityRelax(
 static
 SCIP_Bool numericalStable(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             aggrconst,          /**< aggregation constant */
@@ -837,7 +837,7 @@ SCIP_Bool numericalStable(
 static
 void calcNewSidesAfterAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             coef,               /**< coefficient of aggregated variable */
@@ -893,7 +893,7 @@ void calcNewSidesAfterAggregation(
 static
 SCIP_Bool isConsRedundant(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             coef                /**< coefficient of aggregated variable */
@@ -922,7 +922,7 @@ SCIP_Bool isConsRedundant(
 static
 void getMultiaggVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    SCIP_Bool*            multiaggvars,       /**< array indicating multi-aggregatable variables */
    int*                  nummultiaggvars,    /**< number of multi-aggregatable variables */
    int*                  multiaggequalities, /**< array holding aggregation equality row indices */
@@ -1073,7 +1073,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplfree)
 static
 SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
@@ -1213,19 +1213,19 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
                valpnt = SCIPmatrixGetRowValPtr(matrix, row);
                cnt = 0;
-               SCIPdebugMessage("constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
+               SCIPdebugMsg(scip, "constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
                for( ; rowpnt < rowend; rowpnt++, valpnt++ )
                {
                   if( *rowpnt == v )
                      continue;
 
                   scalars[cnt] = -(*valpnt) / multiaggcoef; /*lint !e414*/
-                  SCIPdebugPrintf(" %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
+                  SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
 
                   cnt++;
                }
 
-               SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
+               SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
                   aggrconst, SCIPvarGetName(multiaggvar), SCIPvarGetLbGlobal(multiaggvar), SCIPvarGetUbGlobal(multiaggvar));
 
                /* perform multi-aggregation */
@@ -1238,7 +1238,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                /* check for infeasible aggregation */
                if( infeasible )
                {
-                  SCIPdebugMessage("constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
+                  SCIPdebugMsg(scip, "constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
                   return SCIP_OKAY;
                }
 

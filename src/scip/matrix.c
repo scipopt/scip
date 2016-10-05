@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,10 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   matrix.c
- * @brief  methods for MILP matrix data structure
+ * @brief  methods for MIP matrix data structure
  * @author Dieter Weninger
+ * @author Gerald Gamrath
  *
- * The MILP matrix is organized as sparse data structure in row and
+ * The MIP matrix is organized as sparse data structure in row and
  * and column major format.
  */
 
@@ -79,7 +80,7 @@ SCIP_RETCODE getActiveVariables(
 static
 SCIP_RETCODE addRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    SCIP_VAR**            vars,               /**< variables of this row */
    SCIP_Real*            vals,               /**< coefficients of this row */
    int                   nvars,              /**< number of variables of this row */
@@ -197,7 +198,7 @@ SCIP_RETCODE addRow(
 static
 SCIP_RETCODE addConstraint(
    SCIP*                 scip,               /**< current scip instance */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    SCIP_VAR**            vars,               /**< variables of this constraint */
    SCIP_Real*            vals,               /**< variable coefficients of this constraint */
    int                   nvars,              /**< number of variables */
@@ -274,7 +275,7 @@ SCIP_RETCODE addConstraint(
 static
 SCIP_RETCODE setColumnMajorFormat(
    SCIP*                 scip,               /**< current scip instance */
-   SCIPMILPMATRIX*       matrix              /**< constraint matrix */
+   SCIP_MATRIX*          matrix              /**< constraint matrix */
    )
 {
    int colidx;
@@ -341,7 +342,7 @@ SCIP_RETCODE setColumnMajorFormat(
 static
 SCIP_RETCODE calcActivityBounds(
    SCIP*                 scip,               /**< current scip instance */
-   SCIPMILPMATRIX*       matrix              /**< constraint matrix */
+   SCIP_MATRIX*          matrix              /**< constraint matrix */
    )
 {
    SCIP_Real val;
@@ -428,12 +429,12 @@ SCIP_RETCODE calcActivityBounds(
 /** initialize matrix */
 SCIP_RETCODE SCIPmatrixCreate(
    SCIP*                 scip,               /**< current scip instance */
-   SCIPMILPMATRIX**      matrixptr,          /**< pointer to constraint matrix object to be initialized */
+   SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
    SCIP_Bool*            complete            /**< are all constraint represented within the matrix? */
    )
 {
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_CONSHDLR** conshdlrs;
    const char* conshdlrname;
    SCIP_Bool stopped;
@@ -502,7 +503,7 @@ SCIP_RETCODE SCIPmatrixCreate(
     */
    if( nconss < nconssall )
    {
-      SCIPdebugMessage("Warning: milp matrix not complete!\n");
+      SCIPdebugMsg(scip, "Warning: milp matrix not complete!\n");
    }
    else
    {
@@ -574,7 +575,6 @@ SCIP_RETCODE SCIPmatrixCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->cons, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->constype, nconss) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &matrix->isrhsinfinite, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->minactivity, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->maxactivity, nconss) );
@@ -617,7 +617,6 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                assert(cnt < nconss);
                matrix->cons[cnt] = cons;
-               matrix->constype[cnt] = CONSTYPE_LINEAR;
                cnt++;
             }
          }
@@ -657,7 +656,6 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                assert(cnt < nconss);
                matrix->cons[cnt] = cons;
-               matrix->constype[cnt] = CONSTYPE_SETPPC;
                cnt++;
             }
          }
@@ -676,7 +674,6 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                assert(cnt < nconss);
                matrix->cons[cnt] = cons;
-               matrix->constype[cnt] = CONSTYPE_LOGICOR;
                cnt++;
             }
          }
@@ -718,7 +715,6 @@ SCIP_RETCODE SCIPmatrixCreate(
                {
                   assert(cnt < nconss);
                   matrix->cons[cnt] = cons;
-                  matrix->constype[cnt] = CONSTYPE_KNAPSACK;
                   cnt++;
                }
             }
@@ -754,7 +750,6 @@ SCIP_RETCODE SCIPmatrixCreate(
                {
                   assert(cnt < nconss);
                   matrix->cons[cnt] = cons;
-                  matrix->constype[cnt] = CONSTYPE_VARBOUND;
                   cnt++;
                }
             }
@@ -786,7 +781,7 @@ SCIP_RETCODE SCIPmatrixCreate(
 /** frees the constraint matrix */
 void SCIPmatrixFree(
    SCIP*                 scip,               /**< current SCIP instance */
-   SCIPMILPMATRIX**      matrix              /**< constraint matrix object */
+   SCIP_MATRIX**         matrix              /**< constraint matrix object */
    )
 {
    assert(scip != NULL);
@@ -818,7 +813,6 @@ void SCIPmatrixFree(
       SCIPfreeBufferArray(scip, &((*matrix)->minactivity));
 
       SCIPfreeMemoryArray(scip, &((*matrix)->isrhsinfinite));
-      SCIPfreeBufferArray(scip, &((*matrix)->constype));
       SCIPfreeBufferArray(scip, &((*matrix)->cons));
 
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
@@ -847,10 +841,10 @@ void SCIPmatrixFree(
    }
 }
 
-/** print one row of the MILP matrix */
+/** print one row of the matrix */
 void SCIPmatrixPrintRow(
    SCIP*                 scip,               /**< current SCIP instance */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   row                 /**< row index */
    )
 {
@@ -882,7 +876,7 @@ void SCIPmatrixPrintRow(
 /** detect parallel rows of matrix. rhs/lhs are ignored. */
 SCIP_RETCODE SCIPmatrixGetParallelRows(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real*            scale,              /**< scale factors of rows */
    int*                  pclass              /**< parallel row classes */
    )
@@ -1038,7 +1032,7 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
  */
 SCIP_RETCODE SCIPmatrixGetParallelCols(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real*            scale,              /**< scale factors of cols */
    int*                  pclass,             /**< parallel column classes */
    SCIP_Bool*            varineq             /**< indicating if variable is within an equation */
@@ -1237,300 +1231,328 @@ SCIP_RETCODE SCIPmatrixGetParallelCols(
 
 /** get column based start pointer of values */
 SCIP_Real* SCIPmatrixGetColValPtr(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return matrix->colmatval + matrix->colmatbeg[col];
 }
 
 /** get column based start pointer of row indices */
 int* SCIPmatrixGetColIdxPtr(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return matrix->colmatind + matrix->colmatbeg[col];
 }
 
 /** get the number of non-zero entries of this column */
 int SCIPmatrixGetColNNonzs(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return matrix->colmatcnt[col];
 }
 
 /** get number of columns of the matrix */
 int SCIPmatrixGetNColumns(
-   SCIPMILPMATRIX*       matrix              /**< matrix instance */
+   SCIP_MATRIX*          matrix              /**< matrix instance */
    )
 {
    assert(matrix != NULL);
+
    return matrix->ncols;
 }
 
 /** get upper bound of column */
 SCIP_Real SCIPmatrixGetColUb(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
+
    return matrix->ub[col];
 }
 
 /** get lower bound of column */
 SCIP_Real SCIPmatrixGetColLb(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
+
    return matrix->lb[col];
 }
 
 /** get number of uplocks of column */
 int SCIPmatrixGetColNUplocks(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return matrix->nuplocks[col];
 }
 
 /** get number of downlocks of column */
 int SCIPmatrixGetColNDownlocks(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return matrix->ndownlocks[col];
 }
 
 /** get variable pointer of column */
 SCIP_VAR* SCIPmatrixGetVar(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return matrix->vars[col];
 }
 
 /** get name of column/variable */
 const char* SCIPmatrixGetColName(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return SCIPvarGetName(matrix->vars[col]);
 }
 
 /** get row based start pointer of values */
 SCIP_Real* SCIPmatrixGetRowValPtr(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->rowmatval + matrix->rowmatbeg[row];
 }
 
 /** get row based start pointer of column indices */
 int* SCIPmatrixGetRowIdxPtr(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->rowmatind + matrix->rowmatbeg[row];
 }
 
 /** get number of non-zeros of this row */
 int SCIPmatrixGetRowNNonzs(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->rowmatcnt[row];
 }
 
 /** get name of row */
 const char* SCIPmatrixGetRowName(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return SCIPconsGetName(matrix->cons[row]);
 }
 
 /** get number of rows of the matrix */
 int SCIPmatrixGetNRows(
-   SCIPMILPMATRIX*       matrix              /**< matrix instance */
+   SCIP_MATRIX*          matrix              /**< matrix instance */
    )
 {
    assert(matrix != NULL);
+
    return matrix->nrows;
 }
 
 /** get left-hand-side of row */
 SCIP_Real SCIPmatrixGetRowLhs(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->lhs[row];
 }
 
 /** get right-hand-side of row */
 SCIP_Real SCIPmatrixGetRowRhs(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->rhs[row];
 }
 
 /** flag indicating if right-hand-side of row is infinity */
 SCIP_Bool SCIPmatrixIsRowRhsInfinity(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->isrhsinfinite[row];
 }
 
 /** get number of non-zeros of matrix */
 int SCIPmatrixGetNNonzs(
-   SCIPMILPMATRIX*       matrix              /**< matrix instance */
+   SCIP_MATRIX*          matrix              /**< matrix instance */
    )
 {
    assert(matrix != NULL);
+
    return matrix->nnonzs;
 }
 
 /** get minimal activity of row */
 SCIP_Real SCIPmatrixGetRowMinActivity(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->minactivity[row];
 }
 
 /** get maximal activity of row */
 SCIP_Real SCIPmatrixGetRowMaxActivity(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->maxactivity[row];
 }
 
 /** get number of negative infinities present within minimal activity */
 int SCIPmatrixGetRowNMinActNegInf(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->minactivityneginf[row];
 }
 
 /** get number of positive infinities present within minimal activity */
 int SCIPmatrixGetRowNMinActPosInf(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->minactivityposinf[row];
 }
 
 /** get number of negative infinities present within maximal activity */
 int SCIPmatrixGetRowNMaxActNegInf(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->maxactivityneginf[row];
 }
 
 /** get number of positive infinities present within maximal activity */
 int SCIPmatrixGetRowNMaxActPosInf(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->maxactivityposinf[row];
 }
 
 /** get constraint pointer for constraint representing row */
 SCIP_CONS* SCIPmatrixGetCons(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= row && row < matrix->nrows);
+
    return matrix->cons[row];
 }
 
 /** get if conflicting uplocks of a specific variable present */
 SCIP_Bool SCIPmatrixUplockConflict(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return (SCIPvarGetNLocksUp(matrix->vars[col]) == matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
 SCIP_Bool SCIPmatrixDownlockConflict(
-   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    )
 {
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
+
    return (SCIPvarGetNLocksDown(matrix->vars[col]) == matrix->ndownlocks[col]);
 }

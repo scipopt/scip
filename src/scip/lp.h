@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1507,7 +1507,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Real             objscale,           /**< objective scaling factor */
    SCIP_Real             objoffset,          /**< objective offset, e.g., caused by variable fixings in presolving */
    SCIP_Bool             lazyconss           /**< output removable rows as lazy constraints? */
-);
+   );
 
 /** recalculates Euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
 extern
@@ -1665,6 +1665,12 @@ void SCIPlpUnmarkDivingObjChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/* returns TRUE if at least one left/right hand side of an LP row was changed during diving mode */
+extern
+SCIP_Bool SCIPlpDivingRowsChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 
 #ifdef NDEBUG
 
@@ -1693,6 +1699,7 @@ void SCIPlpUnmarkDivingObjChanged(
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
 #define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
+#define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivechgsides > 0)
 
 #endif
 

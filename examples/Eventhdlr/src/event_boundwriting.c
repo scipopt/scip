@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -522,7 +522,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
    assert(event != NULL);
    assert(((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEINFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEBRANCHED));
 
-   SCIPdebugMessage("exec method of event handler for writing primal- and dualbounds\n");
+   SCIPdebugMsg(scip, "exec method of event handler for writing primal- and dualbounds\n");
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
