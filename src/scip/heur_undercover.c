@@ -2988,7 +2988,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIP_RESULT nlpresult;
 
-                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL) );
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL, NULL) );
                   SCIPdebugMessage("NLP local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
 
                   if( nlpresult == SCIP_FOUNDSOL )

@@ -1624,7 +1624,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
-   SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
+   SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
+   SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -1745,7 +1746,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
-   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, timelimit, iterused, FALSE, NULL) );
+   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, timelimit, iterused, FALSE, resultsol) );
 
    if( heurdata->subscip == NULL )
    {
@@ -2206,7 +2207,8 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    if( heurdata->nlpverblevel >= 1 )
       SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "calling subnlp heuristic\n");
 
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit, heurdata->minimprove, &iterused) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit,
+         heurdata->minimprove, &iterused, NULL) );
    heurdata->iterused += iterused;
 
    /* SCIP does not like cutoff as return, so we say didnotfind, since we did not find a solution */
