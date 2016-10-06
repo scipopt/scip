@@ -5320,9 +5320,6 @@ SCIP_RETCODE presolveAddKKT(
 
    SCIP_CONS* objcons;
    SCIP_VAR* objvar = NULL;
-   SCIP_VAR** consvars;
-   int nconsvars;
-   SCIP_Bool success;
    SCIP_Real scale = 0.0;
    SCIP_Real objrhs = 0.0;
    int c;
@@ -5463,30 +5460,61 @@ SCIP_RETCODE presolveAddKKT(
          return SCIP_OKAY;
    }
 
+   /* get bilinear terms */
+   bilinterms = SCIPgetBilinTermsQuadratic(scip, cons);
+   nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
+
+   /* get quadratic terms */
+   quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+   nquadterms = SCIPgetNQuadVarTermsQuadratic(scip, cons);
+
    /* the update is only valid if a finite optimal solution of the problem exists,
     * since only finite optimal solutions satisfy the KKT conditions;
     * we check whether all variables have finite bounds, otherwise we return */
-   SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
-   assert( success );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
-   SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &success) );
-
    if ( updatequadbounded )
    {
-      for (j = 0; j < nconsvars; ++j)
+      /* check linear term variables */
+      for (j = 0; j < nlintermvars; ++j)
       {
 	 SCIP_VAR* var;
 
-	 var = consvars[j];
+	 var = lintermvars[j];
 	 if ( var != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) ) )
 	 {
-	    SCIPdebugMessage("quadratic constraint update failed, since not all variables to quadratic constraint <%s> are bounded.\n", SCIPconsGetName(cons) );
-	    SCIPfreeBufferArray(scip, &consvars);
+	    SCIPdebugMessage("failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are bounded.\n", SCIPconsGetName(cons) );
+	    return SCIP_OKAY;
+	 }
+      }
+
+      /* check linear term variables */
+      for (j = 0; j < nbilinterms; ++j)
+      {
+         SCIP_VAR* bilvar1;
+         SCIP_VAR* bilvar2;
+
+         bilvar1 = bilinterms[j].var1;
+         bilvar2 = bilinterms[j].var2;
+	 if ( ( bilvar1 != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bilvar1)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bilvar1)) ) )
+            || ( bilvar2 != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bilvar2)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bilvar2)) ) ) )
+	 {
+	    SCIPdebugMessage("failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are bounded.\n", SCIPconsGetName(cons) );
+	    return SCIP_OKAY;
+	 }
+      }
+
+      /* check quadratic term variables */
+      for (j = 0; j < nquadterms; ++j)
+      {
+	 SCIP_VAR* var;
+
+	 var = quadterms[j].var;
+	 if ( var != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) ) )
+	 {
+	    SCIPdebugMessage("failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are bounded.\n", SCIPconsGetName(cons) );
 	    return SCIP_OKAY;
 	 }
       }
    }
-   SCIPfreeBufferArray(scip, &consvars);
 
 
    /* add KKT constraints */
@@ -5524,16 +5552,8 @@ SCIP_RETCODE presolveAddKKT(
             varhash, dualconss, &ndualconss, naddconss) );
    }
 
-   /* get bilinear terms */
-   bilinterms = SCIPgetBilinTermsQuadratic(scip, cons);
-   nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
-
    /* handle bilinear terms of quadratic constraint */
    SCIP_CALL( presolveAddKKTQuadBilinearTerms(scip, objcons, bilinterms, nbilinterms, varhash, scale, dualconss, &ndualconss, naddconss) );
-
-   /* get quadratic terms */
-   quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
-   nquadterms = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
    /* handle quadratic terms of quadratic constraint */
    SCIP_CALL( presolveAddKKTQuadQuadraticTerms(scip, objcons, quadterms, nquadterms, varhash, scale, dualconss, &ndualconss, naddconss) );
