@@ -3186,12 +3186,12 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/probing/maxprerounds", 0, quiet) );
    }
 
-   /* explicitly disable components presolver, if included */
+   /* explicitly disable components constraint handler, if included */
 #ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "components") != NULL )
+   if( SCIPsetFindConshdlr(set, "components") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
    }
 
    /* explicitly disable dominated columns presolver, if included */

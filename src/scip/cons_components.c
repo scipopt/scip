@@ -30,7 +30,7 @@
 #define CONSHDLR_NAME          "components"
 #define CONSHDLR_DESC          "independent components constraint handler"
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_CHECKPRIORITY -9999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -44,15 +44,13 @@
 
 #define DEFAULT_MAXDEPTH             10      /**< maximum depth of a node to run components detection */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
-#define DEFAULT_MINSIZE               1      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
-#define DEFAULT_MINRELSIZE          0.0      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
+#define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
+#define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems during presolving */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
                                               *   to allow running again during presolving (1.0: do not run again) */
 #define DEFAULT_FEASTOLFACTOR       1.0      /**< default value for parameter to increase the feasibility tolerance in all sub-SCIPs */
-
-#define INTFACTOR 10
 
 /*
  * Data structures
@@ -158,6 +156,21 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
    else
       return comp1->number - comp2->number;
 }
+
+static
+int getMinsize(
+   SCIP*                 scip,               /**< main SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   int minsize;
+
+   minsize = conshdlrdata->minrelsize * SCIPgetNVars(scip);
+   minsize = MAX(minsize, conshdlrdata->minsize);
+
+   return minsize;
+}
+
 
 /** forward declaration: free subproblem structure */
 static
@@ -357,6 +370,7 @@ SCIP_RETCODE createSubscip(
       assert(!SCIPisParamFixed(*subscip, "misc/usevartable"));
       assert(!SCIPisParamFixed(*subscip, "misc/useconstable"));
       assert(!SCIPisParamFixed(*subscip, "numerics/feastol"));
+      assert(!SCIPisParamFixed(*subscip, "misc/usesmalltables"));
 
       /* disable solution limits */
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
@@ -365,9 +379,12 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPsetIntParam(*subscip, "constraints/" CONSHDLR_NAME "/maxdepth",
             MAX(-1, conshdlrdata->maxdepth - SCIPgetDepth(scip))) );
 
+      SCIP_CALL( SCIPsetIntParam(*subscip, "constraints/" CONSHDLR_NAME "/maxprerounds", 0) );
+      SCIP_CALL( SCIPfixParam(*subscip, "constraints/" CONSHDLR_NAME "/maxprerounds") );
+
       /* reduce the effort spent for hash tables */
-      //SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
-      //SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
 
       /* disable output, unless in extended debug mode */
 #ifndef SCIP_MORE_DEBUG
@@ -496,9 +513,10 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP_Bool*            success             /**< pointer to store whether the copying process was successful */
    )
 {
+   char name[SCIP_MAXSTRLEN];
    PROBLEM* problem;
    SCIP* scip;
-   char name[SCIP_MAXSTRLEN];
+   int minsize;
 
    assert(component != NULL);
    assert(consmap != NULL);
@@ -515,6 +533,11 @@ SCIP_RETCODE componentCreateSubscip(
    (*success) = TRUE;
 
    SCIP_CALL( createSubscip(scip, conshdlrdata, &component->subscip) );
+
+   /* get minimum size of components to solve individually and set the parameter in the sub-SCIP */
+   minsize = getMinsize(scip, conshdlrdata);
+
+   SCIP_CALL( SCIPsetIntParam(component->subscip, "constraints/" CONSHDLR_NAME "/minsize", minsize) );
 
    if( component->subscip != NULL )
    {
@@ -1283,15 +1306,14 @@ SCIP_RETCODE sortComponents(
    assert(firstvaridxpercons != NULL);
 
    /* compute minimum size of components to solve individually */
-   minsize = conshdlrdata->minrelsize * SCIPgetNVars(scip);
-   minsize = MAX(minsize, conshdlrdata->minsize);
+   minsize = getMinsize(scip, conshdlrdata);
 
    ncomponents = SCIPdigraphGetNComponents(digraph);
    *ncompsminsize = 0;
    *ncompsmaxsize = 0;
 
    /* We want to sort the components in increasing complexity (number of discrete variables,
-    * integer weighted with factor INTFACTOR, continuous used as tie-breaker).
+    * integer weighted with factor intfactor, continuous used as tie-breaker).
     * Therefore, we now get the variables for each component, count the different variable types
     * and compute a size as described above. Then, we rename the components
     * such that for i < j, component i has no higher complexity than component j.
@@ -1319,7 +1341,7 @@ SCIP_RETCODE sortComponents(
             nintvars++;
       }
       ncontvars = ncvars - nintvars - nbinvars;
-      ndiscvars = nbinvars + INTFACTOR * nintvars;
+      ndiscvars = nbinvars + conshdlrdata->intfactor * nintvars;
       compsize[c] = ((1000 * ndiscvars + (950.0 * ncontvars)/nvars));
 
       /* component fulfills the maxsize requirement */
@@ -1337,8 +1359,6 @@ SCIP_RETCODE sortComponents(
    /* now, we need the reverse direction, i.e., for each component number, we store its new number
     * such that the components are sorted; for this, we abuse the conscomponent array
     */
-   assert(nconss >= ncomponents);
-
    for( c = 0; c < ncomponents; ++c )
       conscomponent[permu[c]] = c;
 
@@ -1966,8 +1986,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
             int m = 0;
 
             /* compute minimum size of components to solve individually */
-            minsize = conshdlrdata->minrelsize * SCIPgetNVars(scip);
-            minsize = MAX(minsize, conshdlrdata->minsize);
+            minsize = getMinsize(scip, conshdlrdata);
 
             for( c = 0; c < ncomponents; ++c )
             {
@@ -2100,8 +2119,8 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       int ncompconss;
       int comp;
 
-      SCIPinfoMessage(scip, NULL, "found %d components during presolving\n",
-         ncompsmaxsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+      SCIPinfoMessage(scip, NULL, "found %d components (%d with small size) during presolving\n",
+         ncomponents, ncompsmaxsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 
       /* build subscip */
       SCIP_CALL( createSubscip(scip, conshdlrdata, &subscip) );
@@ -2109,18 +2128,20 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       if( subscip == NULL )
          goto TERMINATE;
 
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/" CONSHDLR_NAME "/propfreq", -1) );
+
       /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
       SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * nsortedconss) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nsortedvars) );
 
       /* loop over all components */
-      for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); comp++ )
+      for( comp = 0; comp < ncompsmaxsize && !SCIPisStopped(scip); comp++ )
       {
          /* get component variables */
          compvars = &(sortedvars[compstartsvars[comp]]);
          ncompvars = compstartsvars[comp + 1 ] - compstartsvars[comp];
-         SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * ncompvars) );
 
          /* get component constraints */
          compconss = &(sortedconss[compstartsconss[comp]]);
@@ -2132,6 +2153,8 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             assert(ncompvars == 1);
             continue;
          }
+
+         SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * ncompvars) );
 
          SCIPinfoMessage(scip, NULL, "solve component %d: %d vars, %d conss\n", comp, ncompvars, ncompconss);
 
@@ -2151,13 +2174,14 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
          if( !success )
          {
+            SCIPhashmapFree(&varmap);
             SCIP_CALL( SCIPfreeTransform(subscip) );
             continue;
          }
 
          /* solve the subproblem and evaluate the result, i.e. apply fixings of variables and remove constraints */
          SCIP_CALL( solveAndEvalSubscip(scip, conshdlrdata, subscip, compvars, subvars, compconss,
-               ncompvars, nconss, ndelconss, nfixedvars, nchgbds, result) );
+               ncompvars, ncompconss, ndelconss, nfixedvars, nchgbds, result) );
 
          /* free variable hash map */
          SCIPhashmapFree(&varmap);
