@@ -5696,7 +5696,7 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/proptiming", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, (int) proptiming) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delayprop", name);
    SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delayprop) );
 
    return SCIP_OKAY;

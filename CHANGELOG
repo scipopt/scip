@@ -34,6 +34,7 @@ parameters:
 - new parameter class randomization
 - moved permutationseed from misc to randomization
 - new parameter randomization/lpseed to set the initial seed of the LP solver
+- setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 
 performance improvements:
 - successful propagation with DURINGLPLOOP timing now triggers a new round of node solving, starting with BEFORELP
