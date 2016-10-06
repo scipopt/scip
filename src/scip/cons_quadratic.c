@@ -5344,7 +5344,7 @@ SCIP_RETCODE presolveAddKKT(
    /* desired structure: all integer variables are binary (for mixed binary QPs, KKT-like conditions can also be added to the problem);
     * if the parameter 'updatequadbinary' is set to FALSE, then we only add the KKT conditions to continuous QPs.
     */
-   if ( SCIPgetNIntVars(scip) > 0 || ( updatequadbinary && SCIPgetNBinVars(scip) > 0 ) )
+   if ( SCIPgetNIntVars(scip) > 0 || ( ! updatequadbinary && SCIPgetNBinVars(scip) > 0 ) )
       return SCIP_OKAY;
 
    /* desired structure: there exists only one quadratic constraint */
