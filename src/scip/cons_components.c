@@ -19,7 +19,8 @@
  *
  * This constraint handler looks for independent components.
  */
-
+#define DETAILED_OUTPUT
+#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -641,7 +642,8 @@ SCIP_RETCODE solveAndEvalSubscip(
    int*                  ndeletedconss,      /**< pointer to store the number of deleted constraints */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  ntightenedbounds,   /**< pointer to store the number of bound tightenings */
-   SCIP_RESULT*          result              /**< pointer to store the result of the component solving */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the component solving */
+   SCIP_Bool*            solved              /**< pointer to store if the problem was solved to optimality */
    )
 {
    int i;
@@ -655,6 +657,8 @@ SCIP_RETCODE solveAndEvalSubscip(
    assert(nfixedvars != NULL);
    assert(ntightenedbounds != NULL);
    assert(result != NULL);
+
+   *solved  = FALSE;
 
    SCIP_CALL( solveSubscip(scip, subscip, conshdlrdata->nodelimit, 0.0) );
 
@@ -817,6 +821,7 @@ SCIP_RETCODE solveAndEvalSubscip(
             }
 
             *result = SCIP_SUCCESS;
+            *solved = TRUE;
          }
       }
 
@@ -1005,6 +1010,8 @@ SCIP_RETCODE solveComponent(
       SCIP_CALL( solveSubscip(scip, subscip, nodelimit, gaplimit) );
 
       SCIP_CALL( SCIPmergeStatistics(subscip, scip) );
+
+      SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
 
       status = SCIPgetStatus(subscip);
 
@@ -1435,9 +1442,27 @@ SCIP_RETCODE createAndSplitProblem(
       ncompconss = compstartsconss[comp + 1] - compstartsconss[comp];
 
       if( component->nvars > 1 && ncompconss > 1 )
-         SCIPinfoMessage(scip, NULL, "component %d at node %lld, depth %d: %d vars, %d conss\n",
-            comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), component->nvars, ncompconss);
 
+#ifdef DETAILED_OUTPUT
+      {
+         int nbinvars = 0;
+         int nintvars = 0;
+         int ncontvars = 0;
+         int i;
+
+         for( i = 0; i < component->nvars; ++i )
+         {
+            if( SCIPvarGetType(compvars[i]) == SCIP_VARTYPE_BINARY )
+               ++nbinvars;
+            else if( SCIPvarGetType(compvars[i]) == SCIP_VARTYPE_INTEGER )
+               ++nintvars;
+            else
+               ++ncontvars;
+         }
+         SCIPinfoMessage(scip, NULL, "component %d at node %lld, depth %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+            comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), component->nvars, nbinvars, nintvars, ncontvars, ncompconss);
+      }
+#endif
       assert(ncompconss > 0 || component->nvars == 1);
 
       SCIPdebugMessage("build sub-SCIP for component %d of problem <%s>: %d vars, %d conss\n",
@@ -2120,12 +2145,14 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       SCIP_VAR** subvars;
       SCIP_CONS** compconss;
       SCIP_Bool success;
+      SCIP_Bool solved;
+      int nsolved = 0;
       int ncompvars;
       int ncompconss;
       int comp;
 
-      SCIPinfoMessage(scip, NULL, "found %d components (%d with small size) during presolving\n",
-         ncomponents, ncompsmaxsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+      SCIPinfoMessage(scip, NULL, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d int, %d bin, %d cont), %d conss\n",
+         ncomponents, ncompsmaxsize, SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip), SCIPgetNConss(scip));
 
       /* build subscip */
       SCIP_CALL( createSubscip(scip, conshdlrdata, &subscip) );
@@ -2160,9 +2187,26 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          }
 
          SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * ncompvars) );
+#ifdef DETAILED_OUTPUT
+         {
+            int nbinvars = 0;
+            int nintvars = 0;
+            int ncontvars = 0;
+            int i;
 
-         SCIPinfoMessage(scip, NULL, "solve component %d: %d vars, %d conss\n", comp, ncompvars, ncompconss);
-
+            for( i = 0; i < ncompvars; ++i )
+            {
+               if( SCIPvarGetType(compvars[i]) == SCIP_VARTYPE_BINARY )
+                  ++nbinvars;
+               else if( SCIPvarGetType(compvars[i]) == SCIP_VARTYPE_INTEGER )
+                  ++nintvars;
+               else
+                  ++ncontvars;
+            }
+            SCIPinfoMessage(scip, NULL, "solve component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+               comp, ncompvars, nbinvars, nintvars, ncontvars, ncompconss);
+         }
+#endif
 #ifndef NDEBUG
          {
             int i;
@@ -2186,15 +2230,20 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
          /* solve the subproblem and evaluate the result, i.e. apply fixings of variables and remove constraints */
          SCIP_CALL( solveAndEvalSubscip(scip, conshdlrdata, subscip, compvars, subvars, compconss,
-               ncompvars, ncompconss, ndelconss, nfixedvars, nchgbds, result) );
+               ncompvars, ncompconss, ndelconss, nfixedvars, nchgbds, result, &solved) );
 
          /* free variable hash map */
          SCIPhashmapFree(&varmap);
 
+         if( solved )
+            ++nsolved;
+
+         /* if the component is unbounded or infeasible, this holds for the complete problem as well */
          if( *result == SCIP_UNBOUNDED || *result == SCIP_CUTOFF )
-         {
             break;
-         }
+         /* if there is only one component left, let's solve this in the main SCIP */
+         else if( nsolved == ncomponents - 1 )
+            break;
       }
 
       SCIPfreeBufferArray(scip, &subvars);
