@@ -456,9 +456,6 @@ SCIP_DECL_HEURFREE(heurFreeClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
-
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -485,6 +482,27 @@ SCIP_DECL_HEURINIT(heurInitClique)
          SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
 
    heurdata->usednodes = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitClique)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
 
    return SCIP_OKAY;
 }
@@ -1098,6 +1116,7 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyClique) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeClique) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitClique) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitClique) );
 
    /* add clique primal heuristic parameters */
 
