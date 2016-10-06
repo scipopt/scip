@@ -43,6 +43,7 @@ extern "C" {
 #define SCIP_PRESOLTIMING_FAST            0x004u  /**< timing for fast presolving methods */
 #define SCIP_PRESOLTIMING_MEDIUM          0x008u  /**< timing for more expensive presolving methods */
 #define SCIP_PRESOLTIMING_EXHAUSTIVE      0x010u  /**< timing for most expensive presolving methods */
+#define SCIP_PRESOLTIMING_FINAL           0x020u  /**< timing for final presolving methods */
 
 /** call presolver in every timing */
 #define SCIP_PRESOLTIMING_ALWAYS (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE )

@@ -13766,16 +13766,16 @@ SCIP_RETCODE presolveRound(
       /* call more expensive presolvers */
       if( (SCIPisPresolveFinished(scip) || lastround) )
       {
-         if( *timing != SCIP_PRESOLTIMING_EXHAUSTIVE )
+         if( *timing != SCIP_PRESOLTIMING_FINAL )
          {
-            assert((*timing == SCIP_PRESOLTIMING_FAST) || (*timing == SCIP_PRESOLTIMING_MEDIUM));
+            assert((*timing == SCIP_PRESOLTIMING_FAST) || (*timing == SCIP_PRESOLTIMING_MEDIUM) || (*timing == SCIP_PRESOLTIMING_EXHAUSTIVE));
 
             SCIPdebugMessage("not enough reductions in %s presolving, running %s presolving now...\n",
-               *timing == SCIP_PRESOLTIMING_FAST ? "fast" : "medium",
-               *timing == SCIP_PRESOLTIMING_FAST ? "medium" : "exhaustive");
+               *timing == SCIP_PRESOLTIMING_FAST ? "fast" : *timing == SCIP_PRESOLTIMING_MEDIUM ? "medium" : "exhaustive",
+               *timing == SCIP_PRESOLTIMING_FAST ? "medium" : *timing == SCIP_PRESOLTIMING_MEDIUM ? "exhaustive" : "final");
 
             /* increase timing */
-            *timing = ((*timing == SCIP_PRESOLTIMING_FAST) ? SCIP_PRESOLTIMING_MEDIUM : SCIP_PRESOLTIMING_EXHAUSTIVE);
+            *timing = ((*timing == SCIP_PRESOLTIMING_FAST) ? SCIP_PRESOLTIMING_MEDIUM : (*timing == SCIP_PRESOLTIMING_MEDIUM) ? SCIP_PRESOLTIMING_EXHAUSTIVE : SCIP_PRESOLTIMING_FINAL);
 
             /* computational experiments showed that always starting the loop of exhaustive presolvers from the beginning
              * performs better than continuing from the last processed presolver. Therefore, we start from 0, but keep
@@ -13938,7 +13938,7 @@ SCIP_RETCODE presolve(
             &presolstart, scip->set->npresols, &propstart, scip->set->nprops, &consstart, scip->set->nconshdlrs) );
 
       /* check, if we should abort presolving due to not enough changes in the last round */
-      finished = SCIPisPresolveFinished(scip);
+      finished = SCIPisPresolveFinished(scip) || presoltiming == SCIP_PRESOLTIMING_FINAL;
 
       SCIPdebugMessage("presolving round %d returned with unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, *unbounded, *infeasible, finished);
 
@@ -13954,7 +13954,9 @@ SCIP_RETCODE presolve(
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(round %d, %-11s %d del vars, %d del conss, %d add conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
             scip->stat->npresolrounds, ( presoltiming == SCIP_PRESOLTIMING_FAST ? "fast)" :
-               (presoltiming == SCIP_PRESOLTIMING_MEDIUM ? "medium)" : "exhaustive)") ),
+               (presoltiming == SCIP_PRESOLTIMING_MEDIUM ? "medium)" :
+                  (presoltiming == SCIP_PRESOLTIMING_EXHAUSTIVE ?"exhaustive)" :
+                     "final)")) ),
             scip->stat->npresolfixedvars + scip->stat->npresolaggrvars,
             scip->stat->npresoldelconss, scip->stat->npresoladdconss,
             scip->stat->npresolchgbds, scip->stat->npresolchgsides,
