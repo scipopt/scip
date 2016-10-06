@@ -5336,6 +5336,169 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
    return SCIP_OKAY;
 }
 
+/** checks for a given constraint whether it is the objective function of a (mixed-binary) quadratic program
+ * \f[
+ *  \begin{array}{ll}
+ *  \min         & z \\
+ *  s.t.         & x^T Q x + c^T x + d <= z \\
+ *               & A x \leq b, \\
+ *               & x \in \{0, 1\}^{p} \times R^{n-p},
+ * \end{array}
+ * \f]
+ * which is equivalent to
+ * \f[
+ *  \begin{array}{ll}
+ *  \min         & x^T Q x + c^T x + d \\
+ *  s.t.         & A x \leq b, \\
+ *               & x \in \{0, 1\}^{p} \times R^{n-p}.
+ * \end{array}
+ * \f]
+ */
+static
+SCIP_RETCODE checkConsQuadraticProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_CONS*            cons,               /**< quadratic constraint */
+   SCIP_Bool             allowbinary,        /**< if TRUE then allow binary variables in the problem, if FALSE then all variables have to be continuous */
+   SCIP_VAR**            objvar,             /**< pointer to store the objective variable @p z */
+   SCIP_Real*            scale,              /**< pointer to store the value by which we have to scale the quadratic constraint such that the objective variable @p z has coefficient -1 */
+   SCIP_Real*            objrhs,             /**< pointer to store the right hand side @p -d of the objective constraint */
+   SCIP_Bool*            isqp                /**< pointer to store whether the problem is a (mixed-binary) QP */
+   )
+{
+   SCIP_CONSHDLR* linconshdlr;
+   SCIP_VAR** lintermvars;
+   SCIP_Real* lintermcoefs;
+   int nlintermvars;
+   int nlinconss = 0;
+   SCIP_Real quadlhs;
+   SCIP_Real quadrhs;
+   int j;
+
+   *objrhs = 0.0;
+   *scale = 0.0;
+   *isqp = FALSE;
+   *objvar = NULL;
+
+   /* desired structure: there exists only one variable with nonzero objective value; this is the objective variable 'z' */
+   if ( SCIPgetNObjVars(scip) != 1 )
+      return SCIP_OKAY;
+
+   /* desired structure: all integer variables are binary; if the parameter 'allowbinary' is set to FALSE, then all variables have to be continuous */
+   if ( SCIPgetNIntVars(scip) > 0 || ( ! allowbinary && SCIPgetNBinVars(scip) > 0 ) )
+      return SCIP_OKAY;
+
+   /* desired structure: there exists only one quadratic constraint */
+   if ( SCIPconshdlrGetNConss(conshdlr) != 1 )
+      return SCIP_OKAY;
+
+   /* desired structure: the constraint has to take one of the three forms
+    * i)   x^T Q x + c^T x <= d
+    * ii)  x^T Q x + c^T x >= d
+    * iii) x^T Q x + c^T x == d
+    * the case a <= x^T Q x + c^T x <= d with 'a' and 'd' finite and a != d is not allowed.
+    */
+   quadlhs = SCIPgetLhsQuadratic(scip, cons);
+   quadrhs = SCIPgetRhsQuadratic(scip, cons);
+   if ( ! SCIPisFeasEQ(scip, quadlhs, quadrhs) && ! SCIPisInfinity(scip, -quadlhs) && ! SCIPisInfinity(scip, quadrhs) )
+      return SCIP_OKAY;
+
+   /* get constraint handler data of linear constraints */
+   linconshdlr = SCIPfindConshdlr(scip, "linear");
+
+   /* get number of linear constraints */
+   if ( linconshdlr != NULL )
+      nlinconss = SCIPconshdlrGetNConss(linconshdlr);
+
+   /* desired structure: all the nonquadratic constraints are linear constraints */
+   if ( nlinconss != SCIPgetNConss(scip) - 1 )
+      return SCIP_OKAY;
+
+   /* get variables that are in the linear term of the quadratic constraint */
+   nlintermvars = SCIPgetNLinearVarsQuadratic(scip, cons);
+   lintermvars = SCIPgetLinearVarsQuadratic(scip, cons);
+   lintermcoefs = SCIPgetCoefsLinearVarsQuadratic(scip, cons);
+
+   /* compute the objective shift of the QP. Note that
+    *
+    * min z     s.t.    x^T Q x + c^T x <= d + z
+    *                   Ax <= b
+    *
+    * is equivalent to
+    *
+    * min x^T Q x + c^T x - d    s.t.    Ax <= b
+    *
+    * Here, -d is the objective shift. We define b to be the right hand side of the objective constraint.
+    */
+   if ( ! SCIPisInfinity(scip, -quadlhs) )
+      *objrhs = quadlhs;
+   else
+      *objrhs = quadrhs;
+   assert( ! SCIPisInfinity(scip, REALABS(*objrhs)) );
+
+   /* search for the objective variable 'objvar' in linear term variables of quadratic constraint (it is already known that at most one variable
+    * has a nonzero objective value);
+    * additionally, check the sign of the objective variable */
+   for (j = 0; j < nlintermvars; ++j)
+   {
+      SCIP_Real coef;
+      SCIP_Real obj;
+
+      *objvar = lintermvars[j];
+      coef = lintermcoefs[j];
+      obj = SCIPvarGetObj(*objvar);
+
+      /* check sign of coefficient */
+      if ( ( SCIPisFeasPositive(scip, obj)
+            && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
+               || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
+               )
+            )
+         || ( SCIPisFeasNegative(scip, obj)
+            && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
+                  || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
+                  )
+            )
+         )
+      {
+         *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable has coefficient -1 */
+         break;
+      }
+   }
+
+   /* if the objective variable is not in the linear term of the quadratic constraint or the objective coefficient has not the correct sign */
+   if ( j == nlintermvars )
+      return SCIP_OKAY;
+   assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
+
+   /* check objective sense of problem */
+   if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+      *scale *= -1.0;
+   assert( ! SCIPisFeasZero(scip, *scale) );
+
+   /* scale the right hand side of the objective constraint */
+   *objrhs = (*objrhs)/(*scale); /*lint !e414*/
+
+   /* check whether 'objvar' is part of a linear constraint; if this is true then return
+    * whether 'objvar' is part of a linear constraint can be deduced from the variable locks */
+   if ( SCIPisFeasEQ(scip, quadlhs, quadrhs) )
+   {
+      if ( SCIPvarGetNLocksDown(*objvar) != 1 || SCIPvarGetNLocksUp(*objvar) != 1 )
+         return SCIP_OKAY;
+   }
+   else
+   {
+      assert( SCIPisInfinity(scip, -quadlhs) || SCIPisInfinity(scip, quadrhs) );
+
+      if ( ( SCIPvarGetNLocksDown(*objvar) != 1 || SCIPvarGetNLocksUp(*objvar) != 0 ) && ( SCIPvarGetNLocksDown(*objvar) != 0 || SCIPvarGetNLocksUp(*objvar) != 1 ) )
+         return SCIP_OKAY;
+   }
+
+   *isqp = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** tries to add the KKT conditions as additional (redundant) constraints to the (mixed-binary) quadratic program
  * \f[
  *  \begin{array}{ll}
@@ -5410,9 +5573,6 @@ SCIP_RETCODE presolveAddKKT(
    int nquadterms;
    int nbilinterms;
 
-   SCIP_Real quadlhs;
-   SCIP_Real quadrhs;
-
    SCIP_VAR** lintermvars;
    SCIP_Real* lintermcoefs;
    int nlintermvars;
@@ -5426,9 +5586,10 @@ SCIP_RETCODE presolveAddKKT(
    int ndualconss = 0;
 
    SCIP_CONS* objcons;
-   SCIP_VAR* objvar = NULL;
-   SCIP_Real scale = 0.0;
-   SCIP_Real objrhs = 0.0;
+   SCIP_VAR* objvar;
+   SCIP_Real scale;
+   SCIP_Real objrhs;
+   SCIP_Bool isqp;
    int c;
    int j;
 
@@ -5438,33 +5599,14 @@ SCIP_RETCODE presolveAddKKT(
     *
     * min   z
     * s.t.  x^T Q x + c^T x <= b + z
+    *       x \in \{0, 1\}^{p} \times R^{n-p}.
     *
     */
-
-   /* desired structure: there exists only one variable with nonzero objective value; this is the objective variable 'z' */
-   if ( SCIPgetNObjVars(scip) != 1 )
+   SCIP_CALL( checkConsQuadraticProblem(scip, conshdlr, cons, updatequadbinary, &objvar, &scale, &objrhs, &isqp) );
+   if ( ! isqp )
       return SCIP_OKAY;
-
-   /* desired structure: all integer variables are binary (for mixed binary QPs, KKT-like conditions can also be added to the problem);
-    * if the parameter 'updatequadbinary' is set to FALSE, then we only add the KKT conditions to continuous QPs.
-    */
-   if ( SCIPgetNIntVars(scip) > 0 || ( ! updatequadbinary && SCIPgetNBinVars(scip) > 0 ) )
-      return SCIP_OKAY;
-
-   /* desired structure: there exists only one quadratic constraint */
-   if ( SCIPconshdlrGetNConss(conshdlr) != 1 )
-      return SCIP_OKAY;
-
-   /* desired structure: the constraint has to take one of the three forms
-    * i)   x^T Q x + c^T x <= b
-    * ii)  x^T Q x + c^T x >= b
-    * iii) x^T Q x + c^T x == b
-    * the case a <= x^T Q x + c^T x <= b with 'a' and 'b' finite and a != b is not allowed.
-    */
-   quadlhs = SCIPgetLhsQuadratic(scip, cons);
-   quadrhs = SCIPgetRhsQuadratic(scip, cons);
-   if ( ! SCIPisFeasEQ(scip, quadlhs, quadrhs) && ! SCIPisInfinity(scip, -quadlhs) && ! SCIPisInfinity(scip, quadrhs) )
-      return SCIP_OKAY;
+   assert( objvar != NULL );
+   getchar();
 
    /* get constraint handler data of linear constraints */
    linconshdlr = SCIPfindConshdlr(scip, "linear");
@@ -5476,88 +5618,10 @@ SCIP_RETCODE presolveAddKKT(
       linconss = SCIPconshdlrGetConss(linconshdlr);
    }
 
-   /* desired structure: all the nonquadratic constraints are linear constraints */
-   if ( nlinconss != SCIPgetNConss(scip) - 1 )
-      return SCIP_OKAY;
-
    /* get variables that are in the linear term of the quadratic constraint */
    nlintermvars = SCIPgetNLinearVarsQuadratic(scip, cons);
    lintermvars = SCIPgetLinearVarsQuadratic(scip, cons);
    lintermcoefs = SCIPgetCoefsLinearVarsQuadratic(scip, cons);
-
-   /* compute the objective shift of the QP. Note that
-    *
-    * min z     s.t.    x^T Q x + c^T x <= b + z
-    *
-    * is equivalent to
-    *
-    * min x^T Q x + c^T x - b
-    *
-    * Here, -b is the objective shift. We define b to be the right hand side of the objective constraint.
-    */
-   if ( ! SCIPisInfinity(scip, -quadlhs) )
-      objrhs = quadlhs;
-   else
-      objrhs = quadrhs;
-   assert( ! SCIPisInfinity(scip, REALABS(objrhs)) );
-
-   /* search for the objective variable 'objvar' in linear term variables of quadratic constraint (it is already known that at most one variable
-    * has a nonzero objective value);
-    * additionally, check the sign of the objective variable */
-   for (j = 0; j < nlintermvars; ++j)
-   {
-      SCIP_Real coef;
-      SCIP_Real obj;
-
-      objvar = lintermvars[j];
-      coef = lintermcoefs[j];
-      obj = SCIPvarGetObj(objvar);
-
-      /* check sign of coefficient */
-      if ( ( SCIPisFeasPositive(scip, obj)
-            && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadrhs, objrhs) )
-               || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, objrhs) )
-               )
-            )
-         || ( SCIPisFeasNegative(scip, obj)
-            && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, objrhs) )
-                  || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, objrhs) )
-                  )
-            )
-         )
-      {
-         scale = -1.0/coef; /* we scale the quadratic constraint such that the objective variable has coefficient -1 */
-         break;
-      }
-   }
-
-   /* if the objective variable is not in the linear term of the quadratic constraint or the objective coefficient has not the correct sign */
-   if ( j == nlintermvars )
-      return SCIP_OKAY;
-   assert( objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(objvar)) );
-
-   /* check objective sense of problem */
-   if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
-      scale *= -1.0;
-   assert( ! SCIPisFeasZero(scip, scale) );
-
-   /* scale the right hand side of the objective constraint */
-   objrhs = objrhs/scale; /*lint !e414*/
-
-   /* check whether 'objvar' is part of a linear constraint; if this is true then return
-    * whether 'objvar' is part of a linear constraint can be deduced from the variable locks */
-   if ( SCIPisFeasEQ(scip, quadlhs, quadrhs) )
-   {
-      if ( SCIPvarGetNLocksDown(objvar) != 1 || SCIPvarGetNLocksUp(objvar) != 1 )
-         return SCIP_OKAY;
-   }
-   else
-   {
-      assert( SCIPisInfinity(scip, -quadlhs) || SCIPisInfinity(scip, quadrhs) );
-
-      if ( ( SCIPvarGetNLocksDown(objvar) != 1 || SCIPvarGetNLocksUp(objvar) != 0 ) && ( SCIPvarGetNLocksDown(objvar) != 0 || SCIPvarGetNLocksUp(objvar) != 1 ) )
-         return SCIP_OKAY;
-   }
 
    /* get bilinear terms */
    bilinterms = SCIPgetBilinTermsQuadratic(scip, cons);
