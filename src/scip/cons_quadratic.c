@@ -5544,26 +5544,18 @@ SCIP_RETCODE presolveAddKKT(
    /* scale the right hand side of the objective constraint */
    objrhs = objrhs/scale; /*lint !e414*/
 
-   /* check whether 'objvar' is part of a linear constraint; if this is true then return */
-   if ( linconss != NULL )
+   /* check whether 'objvar' is part of a linear constraint; if this is true then return
+    * whether 'objvar' is part of a linear constraint can be deduced from the variable locks */
+   if ( SCIPisFeasEQ(scip, quadlhs, quadrhs) )
    {
-      for (c = 0; c < nlinconss; ++c)
-      {
-         SCIP_VAR** vars;
-         int nvars;
+      if ( SCIPvarGetNLocksDown(objvar) != 1 || SCIPvarGetNLocksUp(objvar) != 1 )
+         return SCIP_OKAY;
+   }
+   else
+   {
+      assert( SCIPisInfinity(scip, -quadlhs) || SCIPisInfinity(scip, quadrhs) );
 
-         assert( linconss[c] != NULL );
-         nvars = SCIPgetNVarsLinear(scip, linconss[c]);
-         vars = SCIPgetVarsLinear(scip, linconss[c]);
-         for (j = 0; j < nvars; ++j)
-         {
-            if ( vars[j] == objvar )
-               break;
-         }
-         if ( j != nvars )
-            break;
-      }
-      if ( c != nlinconss )
+      if ( ( SCIPvarGetNLocksDown(objvar) != 1 || SCIPvarGetNLocksUp(objvar) != 0 ) && ( SCIPvarGetNLocksDown(objvar) != 0 || SCIPvarGetNLocksUp(objvar) != 1 ) )
          return SCIP_OKAY;
    }
 
