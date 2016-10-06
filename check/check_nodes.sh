@@ -116,12 +116,12 @@ for ((p = 0; $p <= $PERMUTE; p++))
 do
 
     # loop over testset
-    for INSTANCE in $INSTANCELIST DONE
+    for idx in ${!INSTANCELIST[@]}
     do
-        if test "$INSTANCE" = "DONE"
-        then
-            break
-        fi
+        # retrieve instance and timelimits from arrays set in the configuration_set.sh script
+        INSTANCE=${INSTANCELIST[$idx]}
+        TIMELIMIT=${TIMELIMLIST[$idx]}
+        HARDTIMELIMIT=${HARDTIMELIMLIST[$idx]}
 
         # increase the index for the instance tried to solve, even if the filename does not exist
         COUNT=`expr $COUNT + 1`

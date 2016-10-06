@@ -3921,9 +3921,9 @@ GENERALUPG:
 #endif
 
  cleanup:
-   SCIPfreeBufferArray(scip, &lhsvars);
-   SCIPfreeBufferArray(scip, &lhscoefs);
    SCIPfreeBufferArray(scip, &lhsoffsets);
+   SCIPfreeBufferArray(scip, &lhscoefs);
+   SCIPfreeBufferArray(scip, &lhsvars);
    SCIPfreeBufferArrayNull(scip, &a);
    SCIPfreeBufferArrayNull(scip, &bp);
    SCIPfreeBufferArrayNull(scip, &quadvars);

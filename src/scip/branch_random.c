@@ -141,9 +141,6 @@ SCIP_DECL_BRANCHFREE(branchFreeRandom)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
-
    /* free branching rule data */
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -169,6 +166,21 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of branching rule */
+static
+SCIP_DECL_BRANCHEXIT(branchExitRandom)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
+
+   return SCIP_OKAY;
+}
 
 /** branching execution method for fractional LP solutions */
 static
@@ -338,6 +350,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyRandom) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeRandom) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitRandom) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitRandom) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRandom) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextRandom) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsRandom) );

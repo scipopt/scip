@@ -2195,9 +2195,9 @@ SCIP_RETCODE readQCMatrix(
    }
 
  TERMINATE:
-   SCIPfreeBufferArray(scip, &quadvars1);
-   SCIPfreeBufferArray(scip, &quadvars2);
    SCIPfreeBufferArray(scip, &quadcoefs);
+   SCIPfreeBufferArray(scip, &quadvars2);
+   SCIPfreeBufferArray(scip, &quadvars1);
 
    SCIP_CALL( retcode );
 

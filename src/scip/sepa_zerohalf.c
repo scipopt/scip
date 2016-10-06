@@ -284,7 +284,7 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
 #define BITARRAY                             BITARRAYBASETYPE*
 
 /** get the bit mask where the pos-th bit is set */
-#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))
+#define BITMASK(pos)                         ((unsigned int)(1u << (pos)))
 
 /** set the pos-th bit of var */
 #define BITSET(var, pos)                     (var) |= BITMASK(pos)

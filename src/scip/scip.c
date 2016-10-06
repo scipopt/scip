@@ -73,6 +73,7 @@
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
 #include "scip/solve.h"
+#include "scip/scipbuildflags.h"
 #include "scip/scipgithash.h"
 #include "scip/scip.h"
 #include "lpi/lpi.h"
@@ -632,6 +633,35 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "%s\n", SCIP_COPYRIGHT);
 }
 
+/** prints detailed information on the compile-time flags
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
+void SCIPprintBuildOptions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   assert( scip != NULL );
+
+   /* compiler */
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Compiler: ");
+#if defined(__INTEL_COMPILER)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Intel %d\n", __INTEL_COMPILER);
+#elif defined(__clang__)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "clang %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#elif defined(_MSC_VER)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c++ %d\n", _MSC_FULL_VER);
+#elif defined(__GNUC__)
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
+#endif
+
+   /* build flags */
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\nBuild options:\n%s", SCIPgetBuildFlags());
+}
+
 /** prints error message for the given SCIP_RETCODE via the error prints method */
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
@@ -887,7 +917,7 @@ SCIP_RETCODE SCIPprintStage(
       SCIP_CALL( SCIPprintStatus(scip, file) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
 
-      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, getPrimalbound(scip))  )
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, SCIPgetObjsense(scip) * getPrimalbound(scip))  )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " (objective limit reached)");
 
       break;
@@ -5593,7 +5623,7 @@ SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, sepafreq) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
-      SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delaysepa) );
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delaysepa) );
 
    return SCIP_OKAY;
 }
@@ -14165,8 +14195,8 @@ SCIP_RETCODE transformSols(
       scip->stat->nexternalsolsfound += scip->primal->nsolsfound - oldnsolsfound;
    }
 
-   SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &solvalset);
+   SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &sols);
 
    return SCIP_OKAY;
@@ -18798,9 +18828,9 @@ SCIP_RETCODE SCIPendStrongbranch(
          }
       }
 
-      SCIPfreeBufferArray(scip, &boundchgvars);
-      SCIPfreeBufferArray(scip, &bounds);
       SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &bounds);
+      SCIPfreeBufferArray(scip, &boundchgvars);
    }
    else
    {

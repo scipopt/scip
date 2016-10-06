@@ -3112,9 +3112,6 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
-
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -3138,6 +3135,25 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitUndercover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
 
    return SCIP_OKAY;
 }
@@ -3398,6 +3414,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitUndercover) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 
