@@ -3163,9 +3163,6 @@ SCIP_RETCODE enforceConstraints(
       /* @ENFORELAX either we enforce the LP, pseudo, or relaxation solution (depending on the values) */
       if( enforcerelaxsol )
       {
-         assert(SCIPrelaxationIsSolValid(relaxation));
-         assert(SCIPsetIsEQ(set, bestrelaxval, SCIPrelaxationGetSolObj(relaxation)) || set->nrelaxs > 1);
-
          SCIPdebugMessage("enforce relaxation solution with value %g\n", bestrelaxval);
 
          SCIP_CALL( SCIPconshdlrEnforceRelaxSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, sepastore,
