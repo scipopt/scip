@@ -3564,6 +3564,9 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with non-negative priority */
    if( solverelax && !(*cutoff) )
    {
+      /* @ENFORELAX initialize value for the best relaxation solution; probably with SCIP_INVALID to detect the case where no relaxation solution has been found */
+      *bestrelaxval = -SCIPsetInfinity(set);
+      
       /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
@@ -3892,9 +3895,6 @@ SCIP_RETCODE solveNode(
       propagate = propagateagain;
       propagateagain = FALSE;
       forcedenforcement = FALSE;
-
-      /* @ENFORELAX initialize value for the best relaxation solution; probably with SCIP_INVALID to detect the case where no relaxation solution has been found */
-      bestrelaxval = -SCIPsetInfinity(set);
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, cutoff) );
