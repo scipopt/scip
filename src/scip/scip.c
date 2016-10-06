@@ -648,7 +648,7 @@ void SCIPprintBuildOptions(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c++ %d\n", _MSC_FULL_VER);
 #elif defined(__GNUC__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-#elif
+#else
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
 #endif
 
