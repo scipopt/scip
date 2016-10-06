@@ -1004,6 +1004,8 @@ SCIP_RETCODE solveComponent(
 
       SCIP_CALL( solveSubscip(scip, subscip, nodelimit, gaplimit) );
 
+      SCIP_CALL( SCIPmergeStatistics(subscip, scip) );
+
       status = SCIPgetStatus(subscip);
 
       component->lastnodelimit = nodelimit;
@@ -1890,6 +1892,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
 {  /*lint --e{715}*/
    PROBLEM* problem;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Longint nodelimit;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2026,13 +2029,15 @@ SCIP_DECL_CONSPROP(consPropComponents)
       SCIPfreeBufferArray(scip, &sortedvars);
    }
 
+   SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &nodelimit) );
+
    do
    {
       if( problem != NULL )
       {
          SCIP_CALL( solveProblem(problem, result) );
       }
-   } while( *result == SCIP_DELAYNODE && SCIPgetDepth(scip) == 0 && !SCIPisStopped(scip) );
+   } while( *result == SCIP_DELAYNODE && SCIPgetDepth(scip) == 0 && !SCIPisStopped(scip) && SCIPgetNNodes(scip) < nodelimit);
 
    return SCIP_OKAY;
 }

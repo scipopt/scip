@@ -2413,6 +2413,38 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    return SCIP_OKAY;
 }
 
+/** merges the statistics from a source SCIP into a target SCIP. The two data structures should point to
+ *  different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+SCIP_RETCODE SCIPmergeStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   SCIP_Longint nnodes;
+
+   /* check if target scip has been set to allow merging variable statistics ???? */
+   //if( !targetscip->set->history_allowmerge )
+   //return SCIP_OKAY;
+
+   assert(sourcescip != targetscip);
+
+   /* we do not want to copy statistics from a scip that has not really started solving */
+   if( SCIPgetStage(sourcescip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   nnodes = sourcescip->stat->ntotalnodes - sourcescip->stat->ntotalnodesmerged;
+   sourcescip->stat->ntotalnodesmerged = sourcescip->stat->ntotalnodes;
+
+   targetscip->stat->nnodes += nnodes;
+   targetscip->stat->ntotalnodes += nnodes;
+
+   return SCIP_OKAY;
+}
+
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
  *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
  *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of

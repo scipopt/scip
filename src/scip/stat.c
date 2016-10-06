@@ -228,6 +228,7 @@ void SCIPstatReset(
    stat->nconflictlpiterations = 0;
    stat->ntotalnodes = 0;
    stat->ntotalinternalnodes = 0;
+   stat->ntotalnodesmerged = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
