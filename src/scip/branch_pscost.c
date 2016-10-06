@@ -589,7 +589,7 @@ SCIP_DECL_BRANCHEXIT(branchExitPscost)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-      /* get branching rule data */
+   /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
