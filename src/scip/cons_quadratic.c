@@ -5351,6 +5351,17 @@ SCIP_RETCODE presolveAddKKT(
    if ( SCIPconshdlrGetNConss(conshdlr) != 1 )
       return SCIP_OKAY;
 
+   /* desired structure: the constraint has to take one of the three forms
+    * i)   x^T Q x + c^T x <= b
+    * ii)  x^T Q x + c^T x >= b
+    * iii) x^T Q x + c^T x == b
+    * the case a <= x^T Q x + c^T x <= b with 'a' and 'b' finite and a != b is not allowed.
+    */
+   quadlhs = SCIPgetLhsQuadratic(scip, cons);
+   quadrhs = SCIPgetRhsQuadratic(scip, cons);
+   if ( ! SCIPisFeasEQ(scip, quadlhs, quadrhs) && ! SCIPisInfinity(scip, -quadlhs) && ! SCIPisInfinity(scip, quadrhs) )
+      return SCIP_OKAY;
+
    /* get constraint handler data of linear constraints */
    linconshdlr = SCIPfindConshdlr(scip, "linear");
 
@@ -5369,17 +5380,6 @@ SCIP_RETCODE presolveAddKKT(
    nlintermvars = SCIPgetNLinearVarsQuadratic(scip, cons);
    lintermvars = SCIPgetLinearVarsQuadratic(scip, cons);
    lintermcoefs = SCIPgetCoefsLinearVarsQuadratic(scip, cons);
-
-   /* check left and right hand side of quadratic constraint; the constraint has to take one of the three forms:
-    * i)   x^T Q x + c^T x <= b
-    * ii)  x^T Q x + c^T x >= b
-    * iii) x^T Q x + c^T x == b
-    * the case a <= x^T Q x + c^T x <= b with 'a' and 'b' finite and a != b is not allowed.
-    */
-   quadlhs = SCIPgetLhsQuadratic(scip, cons);
-   quadrhs = SCIPgetRhsQuadratic(scip, cons);
-   if ( ! SCIPisFeasEQ(scip, quadlhs, quadrhs) && ! SCIPisInfinity(scip, -quadlhs) && ! SCIPisInfinity(scip, quadrhs) )
-      return SCIP_OKAY;
 
    /* compute the objective shift of the QP. Note that
     *
