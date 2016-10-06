@@ -5353,6 +5353,13 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
  *               & x \in \{0, 1\}^{p} \times R^{n-p}.
  * \end{array}
  * \f]
+ *
+ *
+ * We check whether
+ * 1. there is a single quadratic constraint that can be written as \f$x^T Q x + c^T x + d \leq t\f$
+ * 2. all other constraints are linear
+ * 3. all integer variables are binary if allowbinary = TRUE, or all variables are continuous if allowbinary = FALSE
+ * 4. t is the only variable in the objective and doesn't appear in any other constraint
  */
 static
 SCIP_RETCODE checkConsQuadraticProblem(
@@ -5508,13 +5515,10 @@ SCIP_RETCODE checkConsQuadraticProblem(
  * \end{array}
  * \f]
  *
- * We first check if the structure of the program is like (QP). We check
- * 1. There is a single quadratic constraint that can be written as \f$x^T Q x + c^T x + d \leq t\f$
- * 2. All other constraints are linear
- * 3. All integer variables are binary if updatequadbinary = TRUE, or all variables are continuous if updatequadbinary = FALSE
- * 4. t is the only variable in the objective and doesn't appear in any other constraint
+ * We first check if the structure of the program is like (QP), see the documentation of the function checkConsQuadraticProblem().
  *
- * Then we add the KKT conditions. For a continuous QPs the KKT conditions have the form
+ * If the problem is known to be bounded (all variables have finite lower and upper bounds), then we add the KKT conditions. For a continuous QPs the KKT
+ * conditions have the form
  * \f[
  *  \begin{array}{ll}
  *   Q x + c + A^T \mu = 0,\\
