@@ -4373,7 +4373,9 @@ SCIP_RETCODE presolveDisaggregate(
    return SCIP_OKAY;
 }
 
-/** create complementarity constraints of KKT conditions belonging to linear constraits */
+/** for a linear constraint \f$a^T x \leq b\f$, create the complementarity constraint \f$\mu \cdot s = 0\f$, where \f$s = b - a^T x\f$
+ *  and \f$\mu\f$ is the dual variable belonging to the constraint \f$a^T x \leq b\f$
+ */
 static
 SCIP_RETCODE createKKTComplementarityLinear(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -4451,7 +4453,12 @@ SCIP_RETCODE createKKTComplementarityLinear(
    return SCIP_OKAY;
 }
 
-/** create complementarity constraints of KKT conditions belonging to bounds of variables */
+/** create complementarity constraints of KKT conditions belonging to bounds of variables
+ * - for an upper bound constraint \f$x_i \leq u_i\f$, create the complementarity constraint \f$\mu_i \cdot s_i = 0\f$, where \f$s_i = u_i - x_i\f$
+ *   and \f$\mu_i\f$ is the dual variable of the upper bound constraint
+ * - for a lower bound constraint \f$x_i \geq l_i\f$, create the complementarity constraint \f$\lambda_i \cdot w_i = 0\f$, where \f$w_i = x_i - l_i\f$
+ *   and \f$\lambda_i\f$ is the dual variable of the lower bound constraint
+ */
 static
 SCIP_RETCODE createKKTComplementarityBounds(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -4542,7 +4549,9 @@ SCIP_RETCODE createKKTComplementarityBounds(
    return SCIP_OKAY;
 }
 
-/** create complementarity constraints of KKT conditions belonging to a binary variable */
+/** create the complementarity constraints of the KKT-like conditions belonging to a binary variable \f$x_i\f$;
+ *  these are \f$(1 - x_i) \cdot z_i = 0\f$ and \f$x_i \cdot (z_i - \lambda_i) = 0\f$, where \f$z_i\f$ and \f$\lambda_i\f$ are dual variables
+ */
 static
 SCIP_RETCODE createKKTComplementarityBinary(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -4633,9 +4642,17 @@ SCIP_RETCODE createKKTComplementarityBinary(
    return SCIP_OKAY;
 }
 
-/** create/get dual constraint of KKT conditions belonging to primal variable
+/** create/get dual constraint of KKT conditions belonging to primal variable @n@n
+ * if variable does not already exist in hashmap then
+ * 1. create dual constraint for variable
+ * 2. create a dual variable \f$\mu_i\f$ for the upper bound constraint \f$x_i \leq u_i\f$
+ * 3. create a dual variable \f$\lambda_i\f$ for the lower bound constraint \f$x_i \geq l_i\f$
+ * 4. create the complementarity constraint \f$\mu_i \cdot s_i = 0\f$, where \f$s_i = u_i - x_i\f$
+ * 5. create the complementarity constraint \f$\lambda_i \cdot w_i = 0\f$, where \f$w_i = x_i - l_i\f$
+ * 6. add objective coefficients of dual variables
+ * 7. the treatment of binary variables needs special care see the documentation of createKKTComplementarityBinary()
  *
- *  if variable does not already exist in hashmap then create dual variables for its bounds
+ * if variable exists in hasmap then the dual constraint belonging to the variable has already been created and is returned
  */
 static
 SCIP_RETCODE createKKTDualCons(
@@ -4771,7 +4788,17 @@ SCIP_RETCODE createKKTDualCons(
    return SCIP_OKAY;
 }
 
-/** handle (a single) linear constraint for quadratic constraint update */
+/** handle (a single) linear constraint for quadratic constraint update
+ * 1. create the dual constraints (i.e., the two rows of \f$Q x + c + A^T \mu = 0\f$) belonging to the variables of the linear constraint, if not done already
+ * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of the variables of the linear constraint,
+ *    if not done already
+ * 3. create the dual variable \f$\mu_i\f$ belonging to this linear constraint
+ * 4. create the complementarity constraint \f$\mu_i \cdot (Ax - b)_i = 0\f$ belonging to this linear constraint
+ * 5. add objective coefficients of dual variables
+ *
+ * for steps 1 and 2 see the documentation of createKKTDualCons() for further information.@n
+ * for step 4 see the documentation of the function createKKTComplementarityLinear() for further information.
+ */
 static
 SCIP_RETCODE presolveAddKKTLinearCons(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -4870,7 +4897,7 @@ SCIP_RETCODE presolveAddKKTLinearCons(
 }
 
 
-/** handle linear constraints for quadratic constraint update */
+/** handle linear constraints for quadratic constraint update, see the documentation of the function presolveAddKKTLinearCons() for an explanation */
 static
 SCIP_RETCODE presolveAddKKTLinearConss(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -4924,7 +4951,9 @@ SCIP_RETCODE presolveAddKKTLinearConss(
 }
 
 
-/** handle aggregated variables for quadratic constraint update */
+/** handle aggregated variables for quadratic constraint update @n
+ *  we apply the function presolveAddKKTLinearCons() to the aggregation constraint, see the documentation of this function for further information
+ */
 static
 SCIP_RETCODE presolveAddKKTAggregatedVars(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -5074,8 +5103,16 @@ SCIP_RETCODE presolveAddKKTAggregatedVars(
    return SCIP_OKAY;
 }
 
-
-/** handle bilinear terms of quadratic constraint for quadratic constraint update */
+/** handle bilinear terms of quadratic constraint for quadratic constraint update
+ *
+ * For the two variables of each bilinear term
+ * 1. create the dual constraints (i.e., the two rows of \f$Q x + c + A^T \mu = 0\f$) belonging to these variables, if not done already
+ * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of the two variables of the bilinear term,
+ *    if not done already
+ * 3. add the coefficient \f$Q_{ij}\f$ of the bilinear term to the dual constraint
+ *
+ * for steps 1 and 2 see the documentation of createKKTDualCons() for further information.
+ **/
 static
 SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -5139,8 +5176,15 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
    return SCIP_OKAY;
 }
 
-
-/** handle quadratic terms of quadratic constraint for quadratic constraint update */
+/** handle quadratic terms of quadratic constraint for quadratic constraint update
+ *
+ * For each quadratic term variable
+ * 1. create the dual constraint (i.e., a row of \f$Q x + c + A^T \mu = 0\f$) belonging to this variable, if not done already
+ * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of this variable, if not done already
+ * 3. add the coefficient \f$Q_{ii}\f$ of this variable to the dual constraint
+ *
+ * for steps 1 and 2 see the documentation of createKKTDualCons() for further information.
+ **/
 static
 SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -5188,7 +5232,16 @@ SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
    return SCIP_OKAY;
 }
 
-/** handle linear terms of quadratic constraint for quadratic constraint update */
+/** handle linear terms of quadratic constraint for quadratic constraint update
+ *
+ * For each linear term variable
+ * 1. create the dual constraint (i.e., a row of \f$Q x + c + A^T \mu = 0\f$) belonging to this variable, if not done already
+ * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of this variable, if not done already
+ * 3. add the right hand side \f$-c_i\f$ to the dual constraint
+ * 4. add \f$c_i\f$ to the objective constraint \f$1/2 ( c^T x + b^T \mu) = t\f$, where t is the objective variable
+ *
+ * for steps 1 and 2 see the documentation of createKKTDualCons() for further information.
+ **/
 static
 SCIP_RETCODE presolveAddKKTQuadLinearTerms(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -5265,7 +5318,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
          coef = quadterms[j].lincoef;
          assert( var != objvar );
 
-         /* get dual constraint belonging to variable */
+         /* get dual constraint belonging to variable (has already been created in function presolveAddKKTQuadQuadraticTerms() */
          assert( SCIPhashmapExists(varhash, var) );
          ind = (int) (size_t) SCIPhashmapGetImage(varhash, var);
          dualcons = dualconss[ind];
@@ -5307,7 +5360,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
  *   \mu \geq 0.
  * \end{array}
  * \f]
- * where \f$\mu\f$ are the Lagrangian variables. Each of the complementarity constraints \f$\mu_i \cdot (Ax - b)_i = 0\f$ is enforced 
+ * where \f$\mu\f$ are the Lagrangian variables. Each of the complementarity constraints \f$\mu_i \cdot (Ax - b)_i = 0\f$ is enforced
  * via an SOS1 constraint for \f$\mu_i\f$ and an additional slack variable \f$s_i = (Ax - b)_i\f$.
  *
  * For mixed-binary QPs, the KKT-like conditions are
@@ -5322,7 +5375,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
  *   \mu \geq 0,
  * \end{array}
  * \f]
- * where \f$J = \{1,\dots, p\}\f$, \f$\mu\f$ and \f$\lambda\f$ are the Lagrangian variables, and \f$I_J\f$ is the submatrix of the 
+ * where \f$J = \{1,\dots, p\}\f$, \f$\mu\f$ and \f$\lambda\f$ are the Lagrangian variables, and \f$I_J\f$ is the submatrix of the
  * \f$n\times n\f$ identity matrix with columns indexed by \f$J\f$. For the derivation of the KKT-like conditions, see
  *
  *  Branch-And-Cut for Complementarity and Cardinality Constrained Linear Programs,@n
