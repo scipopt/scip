@@ -5038,6 +5038,16 @@ SCIP_Real SCIPsetInfinity(
    return set->num_infinity;
 }
 
+/** returns value treated as -infinity */
+SCIP_Real SCIPsetNegativeInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return -set->num_infinity;
+}
+
 /** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
  *  computation)
  */
@@ -5175,6 +5185,17 @@ SCIP_Bool SCIPsetIsInfinity(
    assert(set != NULL);
 
    return (val >= set->num_infinity);
+}
+
+/** checks, if value is (negative) infinite */
+SCIP_Bool SCIPsetIsNegativeInfinity(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against negative infinity */
+   )
+{
+   assert(set != NULL);
+
+   return (val <= -set->num_infinity);
 }
 
 /** checks, if value is huge and should be handled separately (e.g., in activity computation) */
