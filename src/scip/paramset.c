@@ -25,6 +25,10 @@
 
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/scip.h"
 #include "scip/set.h"
@@ -338,7 +342,7 @@ SCIP_RETCODE paramSetBool(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -374,7 +378,7 @@ SCIP_RETCODE paramSetChar(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -410,7 +414,7 @@ SCIP_RETCODE paramSetInt(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -446,7 +450,7 @@ SCIP_RETCODE paramSetLongint(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -482,7 +486,7 @@ SCIP_RETCODE paramSetReal(
 
       if( SCIPparamIsFixed(param) )
       {
-         SCIPdebugMessage("hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
+         SCIPsetDebugMsg(set, "hard coded parameter <%s> is fixed and is thus not changed.\n", param->name);
 
          return SCIP_OKAY;
       }
@@ -4535,7 +4539,7 @@ SCIP_RETCODE SCIPparamSetToDefault(
    /* do not change the parameter if it is fixed */
    if( SCIPparamIsFixed(param) )
    {
-      SCIPdebugMessage("parameter <%s> is fixed and is not reset to its default value.\n", param->name);
+      SCIPsetDebugMsg(set, "parameter <%s> is fixed and is not reset to its default value.\n", param->name);
 
       return SCIP_OKAY;
    }

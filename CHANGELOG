@@ -20,6 +20,8 @@ features:
 - added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
+- use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
+- new random number gerator in random.{c,h}
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -65,7 +67,13 @@ interface:
 - new function SCIPisDualSolAvailable() to query the dual solution availability
 - submakefile for CrayXC systems added
 - new method SCIPinitializeRandomSeed()
+- new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
+  subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
 - add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
+- methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
+- methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
+- method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
 
 fixed bugs:
 
@@ -110,6 +118,7 @@ interface:
 - removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
 - removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
 - removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
+- new command line parameter -v to print detailed build options
 
 Makefile:
 - revise sub-makefiles for MSVC on MinGW

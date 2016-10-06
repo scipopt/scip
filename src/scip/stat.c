@@ -642,7 +642,7 @@ void SCIPstatComputeRootLPBestEstimate(
       assert(varminpseudoscore >= 0);
       stat->rootlpbestestimate += varminpseudoscore;
 
-      SCIPdebugMessage("Root LP Estimate initialization: <%s> + %15.9f\n", SCIPvarGetName(vars[v]), varminpseudoscore);
+      SCIPstatDebugMsg(stat, "Root LP Estimate initialization: <%s> + %15.9f\n", SCIPvarGetName(vars[v]), varminpseudoscore);
    }
 }
 
@@ -676,7 +676,46 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    assert(varminpseudoscore >= 0.0);
    stat->rootlpbestestimate += varminpseudoscore;
 
-   SCIPdebugMessage("Root LP estimate update: <%s> - %15.9f + %15.9f\n", SCIPvarGetName(var), oldrootpscostscore, varminpseudoscore);
+   SCIPstatDebugMsg(stat, "Root LP estimate update: <%s> - %15.9f + %15.9f\n", SCIPvarGetName(var), oldrootpscostscore, varminpseudoscore);
 
    return SCIP_OKAY;
+}
+
+/** prints a debug message */
+void SCIPstatPrintDebugMessage(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( stat != NULL );
+
+   if ( stat->subscipdepth > 0 )
+      printf("%d: [%s:%d] debug: ", stat->subscipdepth, sourcefile, sourceline);
+   else
+      printf("[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMessagePrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{  /*lint --e{715}*/
+   va_list ap;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
 }
