@@ -141,7 +141,7 @@ SCIP_RETCODE sampleRandomPoints(
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
             val = SCIPgetRandomReal( -0.5*maxboundsize, 0.5*maxboundsize, rndseed);
          }
-         assert(val >= lb && val <= ub);
+         assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
 
          /* set solution value */
          SCIP_CALL( SCIPsetSolVal(scip, rndpoints[k], vars[i], val) );
