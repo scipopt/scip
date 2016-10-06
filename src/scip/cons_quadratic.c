@@ -5606,7 +5606,6 @@ SCIP_RETCODE presolveAddKKT(
    if ( ! isqp )
       return SCIP_OKAY;
    assert( objvar != NULL );
-   getchar();
 
    /* get constraint handler data of linear constraints */
    linconshdlr = SCIPfindConshdlr(scip, "linear");
