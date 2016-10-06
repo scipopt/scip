@@ -53,7 +53,6 @@
                                               * constraints of the subscip? (if uselprows-parameter is FALSE)
                                               */
 #define DEFAULT_DUALBASISEQUATIONS FALSE    /**< should the dually nonbasic rows be turned into equations?        */
-#define DEFAULT_IGNOREOBJECTIVE FALSE       /**< should the objective function of the original problem be ignored? */
 #define DEFAULT_KEEPSUBSCIP   FALSE         /**< should the heuristic continue solving the same sub-SCIP? */
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lpface"
@@ -93,8 +92,8 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?                                     */
    SCIP_Bool             dualbasisequations; /**< should the dually nonbasic rows be turned into equations?        */
-   SCIP_Bool             ignoreobjective;    /**< should the objective function of the original problem be ignored? */
    SCIP_Bool             keepsubscip;        /**< should the heuristic continue solving the same sub-SCIP? */
+   char                  subscipobjective;   /**< objective function in the sub-SCIP: (z)ero, (r)oot-LP-difference, (i)nference, LP (f)ractionality, (o)riginal */
 
 
    SCIP_STATUS           submipstatus;       /**< return status of the sub-MIP */
@@ -325,7 +324,7 @@ SCIP_RETCODE createNewSol(
    *solindex = SCIPsolGetIndex(newsol);
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -720,6 +719,63 @@ SCIP_RETCODE subscipGetInfo(
    return SCIP_OKAY;
 }
 
+/** todo create the objective function based on the user selection */
+static
+SCIP_RETCODE changeSubvariableObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SCIP_VAR*             var,                /**< SCIP variable */
+   SCIP_VAR*             subvar,             /**< sub-SCIP variable whose objective coefficient is changed */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data structure to control how the objective is changed */
+   )
+{
+   SCIP_Real objcoeff;
+   SCIP_Real upfrac;
+   SCIP_Real downfrac;
+   SCIP_Real lpsolval;
+   SCIP_Real rootlpsolval;
+   /* create the objective value based on the choice of the sub-SCIP objective */
+   switch( heurdata->subscipobjective )
+   {
+      /* use zero as objective function */
+      case 'z':
+         objcoeff = 0.0;
+         break;
+
+      case 'f':
+      /* use current LP fractionality as objective */
+         lpsolval = SCIPvarGetLPSol(var);
+         upfrac = SCIPfloor(scip, lpsolval + 1.0) - lpsolval;
+         downfrac = lpsolval - SCIPceil(scip, lpsolval - 1.0);
+
+         objcoeff = downfrac - upfrac;
+         break;
+
+      /* use root LP solution difference */
+      case 'r':
+         lpsolval = SCIPvarGetLPSol(var);
+         rootlpsolval = SCIPvarGetRootSol(var);
+         objcoeff = rootlpsolval - lpsolval;
+         break;
+
+      /* use average inferences */
+      case 'i':
+         objcoeff = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS) - SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
+         break;
+
+      /* use original objective function */
+      case 'o':
+         objcoeff = SCIPvarGetObj(var);
+         break;
+      default:
+         break;
+   }
+
+   SCIP_CALL( SCIPchgVarObj(subscip, subvar, objcoeff) );
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -895,7 +951,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
          /* copy all variables */
-         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
+         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
       }
       else
       {
@@ -919,14 +975,12 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       /* we use a memory array here because we might want to keep the array for several runs */
       SCIP_CALL( SCIPallocMemoryArray(scip, &subvars, nvars) );
 
-      /* fill subvars array with mapping from original variables and set the objective coefficient to 0.0 */
+      /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
       for( i = 0; i < nvars; i++ )
       {
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-         if( heurdata->ignoreobjective )
-         {
-            SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
-         }
+
+         SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
 
       }
       /* free hash map */
@@ -959,12 +1013,13 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       int nobjvars;
       nobjvars = 0;
 #endif
+/*
 
-      /* create cutoff to optimal LP facet as a constraint, not as an objective limit because we allow to ignore the original objective */
+       create cutoff to optimal LP facet as a constraint, not as an objective limit because we allow to ignore the original objective
       SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objfacet_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), focusnodelb,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-      /* create coefficients for every variable with a nonzero objective coefficient */
+       create coefficients for every variable with a nonzero objective coefficient
       for( i = 0; i < nvars; ++i)
       {
          if( !SCIPisZero(subscip, SCIPvarGetObj(vars[i])) )
@@ -978,6 +1033,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       assert(nobjvars == SCIPgetNObjVars(scip));
       SCIP_CALL( SCIPaddCons(subscip, origobjcons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &origobjcons) );
+*/
 
 
       /* set up sub-SCIP parameters */
@@ -1189,19 +1245,18 @@ SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/dualbasisequations",
          "should dually nonbasic rows be turned into equations?",
          &heurdata->dualbasisequations, TRUE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/ignoreobjective",
-         "should the objective function of the original problem be ignored?",
-         &heurdata->ignoreobjective, TRUE, DEFAULT_IGNOREOBJECTIVE, NULL, NULL) );
+
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/keepsubscip",
          "should the heuristic continue solving the same sub-SCIP?",
          &heurdata->keepsubscip, TRUE, DEFAULT_KEEPSUBSCIP, NULL, NULL) );
 
-
-
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/subscipobjective",
+            "objective function in the sub-SCIP: (z)ero, (r)oot-LP-difference, (i)nference, LP (f)ractionality, (o)riginal",
+            &heurdata->subscipobjective, TRUE, 'z', "forzi", NULL, NULL) );
    return SCIP_OKAY;
 }
