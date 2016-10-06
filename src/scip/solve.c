@@ -3120,14 +3120,27 @@ SCIP_RETCODE enforceConstraints(
 
    *branched = FALSE;
    /**@todo avoid checking the same pseudosolution twice */
-
+   
+   
+   /* enforce (best) relaxation solution if the LP has a worse objective value */
+   enforcerelaxsol = bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree) || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, prob)));
+   
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
     */
-   SCIPdebugMessage("enforcing constraints on %s solution\n", SCIPtreeHasFocusNodeLP(tree) ? "LP" : "pseudo");
+#ifndef SCIP_NDEBUG
+   if( bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree) || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, prob))))
+   {
+      SCIPdebugMessage("enforcing constraints on relaxation solution\n");
+   }
+   else
+   {
+      SCIPdebugMessage("enforcing constraints on %s solution\n", SCIPtreeHasFocusNodeLP(tree) ? "LP" : "pseudo");
+   }
+#endif
 
    /* check, if the solution is infeasible anyway due to it's objective value */
-   if( SCIPtreeHasFocusNodeLP(tree) )
+   if( SCIPtreeHasFocusNodeLP(tree) || enforcerelaxsol )
       objinfeasible = FALSE;
    else
    {
@@ -3146,9 +3159,6 @@ SCIP_RETCODE enforceConstraints(
     * have to be enforced themselves
     */
    resolved = FALSE;
-
-   /* enforce (best) relaxation solution if the LP has a worse objective value */
-   enforcerelaxsol = bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree) || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, prob)));
 
    /* check if all constraint handler implement the enforelax callback, otherwise enforce the LP solution */
    /* @todo move  this somewhere else since the included constraint handler should not change during solving */
