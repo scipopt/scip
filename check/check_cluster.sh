@@ -123,6 +123,12 @@ do
     # increase the index for the instance tried to solve, even if the filename does not exist
     COUNT=`expr $COUNT + 1`
 
+    # we need the DONE keyword for the check.sh script to automatically run evalcheck, here it is not needed
+    if test "$INSTANCE" = "DONE"
+    then
+        continue
+    fi
+
     # run different random seeds
     for ((s = 0; $s <= $SEEDS; s++))
     do

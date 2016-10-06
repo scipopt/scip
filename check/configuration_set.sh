@@ -176,6 +176,9 @@ do
     done
     COUNT=$(( $COUNT + 1 ))
 done
+INSTANCELIST[$COUNT]="DONE"
+COUNT=$(( $COUNT + 1 ))
+
 #write timelimits to an array
 #if no second column with timelimits exists in the test file the normal timelimit will be returned by the awk command
 COUNT=0
