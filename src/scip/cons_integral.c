@@ -123,8 +123,10 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
 
       if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i])) )
       {
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
          {
+            SCIPdebugMessage("Cutoff for integral variable %s with bounds [%f, %f] and value %f\n", SCIPvarGetName(vars[i]),
+                  SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]), SCIPgetSolVal(scip, sol, vars[i]));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
