@@ -1804,10 +1804,10 @@ SCIP_RETCODE findComponents(
             SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, varcomponent, ncomponents) );
 #ifndef NDEBUG
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-               "prop components found %d undirected components at node %lld, depth %d\n",
+               "cons components found %d undirected components at node %lld, depth %d\n",
                *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 #else
-            SCIPdebugMessage("prop components found %d undirected components at node %lld, depth %d\n",
+            SCIPdebugMessage("cons components found %d undirected components at node %lld, depth %d\n",
                *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 #endif
 
