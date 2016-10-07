@@ -2688,7 +2688,7 @@ SCIP_RETCODE SCIPsetChgBoolParam(
 
    assert(set != NULL);
 
-   retcode = SCIPparamSetBool(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetBool(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2741,7 +2741,7 @@ SCIP_RETCODE SCIPsetChgIntParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetInt(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetInt(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2793,7 +2793,7 @@ SCIP_RETCODE SCIPsetChgLongintParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetLongint(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetLongint(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2831,7 +2831,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetReal(param, set, messagehdlr,  value, TRUE);
+   retcode = SCIPparamSetReal(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2869,7 +2869,7 @@ SCIP_RETCODE SCIPsetChgCharParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetChar(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetChar(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
