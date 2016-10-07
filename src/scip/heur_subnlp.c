@@ -850,7 +850,8 @@ static
 SCIP_RETCODE createSolFromNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
-   SCIP_SOL**            sol                 /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
+   SCIP_SOL**            sol,                /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
+   SCIP_HEUR*            authorheur          /**< the heuristic which should be registered as author of the solution */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -867,7 +868,11 @@ SCIP_RETCODE createSolFromNLP(
 
    if( *sol == NULL )
    {
-      SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
+      SCIP_CALL( SCIPcreateSol(scip, sol, authorheur) );
+   }
+   else
+   {
+      SCIPsolSetHeur(*sol, authorheur);
    }
 
    /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
@@ -897,7 +902,8 @@ SCIP_RETCODE createSolFromSubScipSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL**            sol,                /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
-   SCIP_SOL*             subsol              /**< solution of sub-SCIP */
+   SCIP_SOL*             subsol,             /**< solution of sub-SCIP */
+   SCIP_HEUR*            authorheur          /**< the heuristic which should be registered as author of the solution */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -913,7 +919,11 @@ SCIP_RETCODE createSolFromSubScipSol(
 
    if( *sol == NULL )
    {
-      SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
+      SCIP_CALL( SCIPcreateSol(scip, sol, authorheur) );
+   }
+   else
+   {
+      SCIPsolSetHeur(*sol, authorheur);
    }
 
    assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
@@ -948,6 +958,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
+   SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1036,6 +1047,14 @@ SCIP_RETCODE solveSubNLP(
       goto CLEANUP;
    }
 
+   /* if the refpoint comes from a heuristic, then make it the author of a found solution,
+    * otherwise let the subNLP heuristic claim authorship
+    */
+   if( refpoint == NULL || SCIPsolGetHeur(refpoint) == NULL )
+      authorheur = heur;
+   else
+      authorheur = SCIPsolGetHeur(refpoint);
+
    /* if sub-SCIP found solutions already, then pass them to main scip */
    for( i = 0; i < SCIPgetNSols(heurdata->subscip); ++i )
    {
@@ -1046,7 +1065,7 @@ SCIP_RETCODE solveSubNLP(
          SCIP_SOL* sol;
 
          sol = NULL;
-         SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, SCIPgetSols(heurdata->subscip)[i]) );
+         SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
          SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
@@ -1072,7 +1091,7 @@ SCIP_RETCODE solveSubNLP(
       }
       else
       {
-         SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i]) );
+         SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
          SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
@@ -1278,7 +1297,7 @@ SCIP_RETCODE solveSubNLP(
          SCIP_Bool  stored;
 
          sol = NULL;
-         SCIP_CALL( createSolFromNLP(scip, heur, &sol) );
+         SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
          if( heurdata->resolvefromscratch )
          {
@@ -1346,7 +1365,7 @@ SCIP_RETCODE solveSubNLP(
       {
          SCIP_Bool feasible;
 
-         SCIP_CALL( createSolFromNLP(scip, heur, &resultsol) );
+         SCIP_CALL( createSolFromNLP(scip, heur, &resultsol, authorheur) );
 
 #ifdef SCIP_DEBUG
          /* print the infeasibilities to stdout */
@@ -1405,7 +1424,7 @@ SCIP_RETCODE solveSubNLP(
          SCIP_Bool feasible;
 
          sol = NULL;
-         SCIP_CALL( createSolFromNLP(scip, heur, &sol) );
+         SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
          SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasbile\n");
 
@@ -2387,6 +2406,7 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
 
+   /* FIXME this does not work anymore, as we may not store heur as solution author anymore */
    /* if the solution is from our heuristic, then it is useless to use it as starting point again */
    if( SCIPsolGetHeur(solcand) == heur )
       return SCIP_OKAY;
