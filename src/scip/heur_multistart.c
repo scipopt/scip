@@ -129,8 +129,10 @@ SCIP_RETCODE sampleRandomPoints(
          lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
          ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
 
+         if( SCIPisEQ(scip, lb, ub) )
+            val = (lb + ub) / 2.0;
          /* use a smaller domain for unbounded variables */
-         if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+         else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
             val = SCIPgetRandomReal(lb, ub, rndseed);
          else if( !SCIPisInfinity(scip, -lb) )
             val = SCIPgetRandomReal(lb, lb + maxboundsize, rndseed);
