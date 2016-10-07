@@ -301,15 +301,15 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPgetRandomReal(-10.0, 10.0, &seed)) );
    }
 
-   SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, maxreldist) );
+   SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, maxreldist, INT_MAX) );
    cr_assert(nclusters > 0 && nclusters <= NPOINTS);
 
    for( i = 0; i < NPOINTS; ++i )
    {
       int j;
 
-      cr_assert(clusteridx[i] > 0);
-      cr_assert(clusteridx[i] <= nclusters);
+      cr_assert(clusteridx[i] >= 0);
+      cr_assert(clusteridx[i] < nclusters);
 
       for( j = i + 1; j < NPOINTS; ++j )
       {

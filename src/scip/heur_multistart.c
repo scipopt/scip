@@ -33,7 +33,7 @@
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'm'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -46,8 +46,10 @@
 #define DEFAULT_MINIMPRFAC    0.05           /**< default minimum required improving factor to proceed in improvement of a point */
 #define DEFAULT_MINIMPRITER   10             /**< default number of iteration when checking the minimum improvement */
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
-
 #define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
+#define DEFAULT_MAXNCLUSTER   10             /**< default maximum number of considered clusters per heuristic call */
+
+#define MAXVIOL               -1e+4          /**< maximum violation when improving the feasibility of a point */
 
 /*
  * Data structures
@@ -67,6 +69,8 @@ struct SCIP_HeurData
 
    SCIP_Real             maxreldist;         /**< maximum distance between two points in the same cluster */
    SCIP_Real             nlpminimpr;         /**< factor by which heuristic should at least improve the incumbent */
+
+   int                   maxncluster;        /**< maximum number of considered clusters per heuristic call */
 };
 
 
@@ -407,7 +411,7 @@ SCIP_RETCODE improvePoint(
       /* check stopping criterion */
       if( r % 5 == 0 && r > 0 )
       {
-         if( (*maxviol - lastmaxviol) / MAX(REALABS(*maxviol), REALABS(lastmaxviol)) < minimprfac )
+         if( *maxviol <= MAXVIOL || (*maxviol - lastmaxviol) / MAX(REALABS(*maxviol), REALABS(lastmaxviol)) < minimprfac )
             break;
          lastmaxviol = *maxviol;
       }
@@ -467,7 +471,7 @@ SCIP_RETCODE filterPoints(
 
    for( i = 0; i < npoints; ++i )
    {
-      if( SCIPisFeasLT(scip, violations[i], 0.0) && violations[i] <= 1.05 * meanviol )
+      if( SCIPisFeasLT(scip, violations[i], 0.0) && (violations[i] <= 1.05 * meanviol || SCIPisLE(scip, violations[i], MAXVIOL)) )
          break;
 
       ++(*nusefulpoints);
@@ -500,7 +504,7 @@ SCIP_Real getRelDistance(
    return distance / SCIPgetNVars(scip);
 }
 
-/** cluster (useful) points with a greedy algorithm */
+/** cluster useful points with a greedy algorithm */
 static
 SCIP_RETCODE clusterPointsGreedy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -508,7 +512,8 @@ SCIP_RETCODE clusterPointsGreedy(
    int                   npoints,            /**< total number of points */
    int*                  clusteridx,         /**< array to store for each point the index of the cluster */
    int*                  ncluster,           /**< pointer to store the total number of cluster */
-   SCIP_Real             maxreldist          /**< maximum relative distance between any two points of the same cluster */
+   SCIP_Real             maxreldist,         /**< maximum relative distance between any two points of the same cluster */
+   int                   maxncluster         /**< maximum number of clusters to compute */
    )
 {
    int i;
@@ -518,35 +523,39 @@ SCIP_RETCODE clusterPointsGreedy(
    assert(clusteridx != NULL);
    assert(ncluster != NULL);
    assert(maxreldist >= 0.0);
+   assert(maxncluster >= 0);
 
-   BMSclearMemoryArray(clusteridx, npoints);
+   /* initialize cluster indices */
+   for( i = 0; i < npoints; ++i )
+      clusteridx[i] = INT_MAX;
 
    *ncluster = 0;
 
-   for( i = 0; i < npoints; ++i )
+   for( i = 0; i < npoints && (*ncluster < maxncluster); ++i )
    {
       int j;
 
-      /* point is already in a cluster */
-      if( clusteridx[i] != 0 )
+      /* point is already assigned to a cluster */
+      if( clusteridx[i] != INT_MAX )
          continue;
 
       /* create a new cluster for i */
-      ++(*ncluster);
       clusteridx[i] = *ncluster;
 
       for( j = i + 1; j < npoints; ++j )
       {
-         if( clusteridx[j] == 0 && getRelDistance(scip, points[i], points[j]) <= maxreldist )
+         if( clusteridx[j] == INT_MAX && getRelDistance(scip, points[i], points[j]) <= maxreldist )
             clusteridx[j] = *ncluster;
       }
+
+      ++(*ncluster);
    }
 
 #ifndef NDEBUG
    for( i = 0; i < npoints; ++i )
    {
-      assert(clusteridx[i] > 0);
-      assert(clusteridx[i] <= *ncluster);
+      assert(clusteridx[i] >= 0);
+      assert(clusteridx[i] < *ncluster || clusteridx[i] == INT_MAX);
    }
 #endif
 
@@ -636,7 +645,7 @@ SCIP_RETCODE solveNLP(
 #ifdef SCIP_DEBUG
       SCIP_CALL( SCIPtrySolFree(scip, &refpoint, TRUE, TRUE, TRUE, TRUE, success) );
 #else
-      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, FALSE, FALSE, FALSE, FALSE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, TRUE, FALSE, FALSE, FALSE, success) );
 #endif
    }
    else
@@ -693,13 +702,11 @@ SCIP_RETCODE applyHeur(
 
    SCIPdebugMessage("call applyHeur()\n");
 
-   /* create expression interpreter */
    if( heurdata->exprinterpreter == NULL )
    {
       SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &heurdata->exprinterpreter) );
    }
 
-   /* allocate memory needed memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &points, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violations, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &clusteridx, heurdata->nrndpoints) );
@@ -711,30 +718,45 @@ SCIP_RETCODE applyHeur(
       SCIP_CALL( SCIPhashmapInsert(varindex, (void*)SCIPgetVars(scip)[i], (void*)(size_t)i) );
    }
 
-   /* 1. sample random points; note that the solutions need to be freed again */
+   /*
+    * 1. sample random points; note that the solutions need to be freed again
+    */
    SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, &heurdata->randseed, heurdata->maxboundsize) );
 
-   /* 2. improve points via consensus vectors */
+   /*
+    * 2. improve points via consensus vectors
+    */
    for( i = 0; i < heurdata->nrndpoints; ++i )
    {
       SCIP_CALL( improvePoint(scip, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), varindex, heurdata->exprinterpreter, points[i],
          heurdata->nmaxiter, heurdata->minimprfac, heurdata->minimpriter, &violations[i]) );
    }
 
-   /* 3. filter points with a too large violation */
+   /*
+    * 3. filter points with a too large violation
+    */
    SCIP_CALL( filterPoints(scip, points, violations, heurdata->nrndpoints, &nusefulpoints) );
-   assert(nusefulpoints > 0);
+   assert(nusefulpoints >= 0);
    SCIPdebugMessage("nusefulpoints = %d\n", nusefulpoints);
 
-   /* 4. compute clusters */
-   SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxreldist) );
-   assert(ncluster > 0);
-   SCIPsortIntPtr(clusteridx, (void**)points, nusefulpoints);
+   if( nusefulpoints == 0 )
+      goto TERMINATE;
+
+   /*
+    * 4. compute clusters
+    */
+   SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxreldist,
+         heurdata->maxncluster) );
+   assert(ncluster >= 0 && ncluster <= heurdata->maxncluster);
    SCIPdebugMessage("ncluster = %d\n", ncluster);
 
-   /* 5. solve for each cluster a corresponding NLP problem via the sub-NLP heuristic */
+   SCIPsortIntPtr(clusteridx, (void**)points, nusefulpoints);
+
+   /*
+    * 5. solve for each cluster a corresponding sub-problem
+    */
    start = 0;
-   while( start < nusefulpoints && !SCIPisStopped(scip) )
+   while( start < nusefulpoints && clusteridx[start] != INT_MAX && !SCIPisStopped(scip) )
    {
       SCIP_Real timelimit;
       SCIP_Bool success;
@@ -769,6 +791,7 @@ SCIP_RETCODE applyHeur(
       start = end;
    }
 
+TERMINATE:
    /* free memory */
    for( i = heurdata->nrndpoints - 1; i >= 0 ; --i )
    {
@@ -962,6 +985,10 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nlpminimpr",
          "factor by which heuristic should at least improve the incumbent",
          &heurdata->nlpminimpr, FALSE, DEFAULT_NLPMINIMPR, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxncluster",
+         "maximum number of considered clusters per heuristic call",
+         &heurdata->maxncluster, FALSE, DEFAULT_MAXNCLUSTER, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
