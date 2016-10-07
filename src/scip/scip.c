@@ -13249,16 +13249,16 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      if ( ! SCIPisInfinity(scip, scip->set->limit_memory) )
+      if( scip->set->limit_memory < SCIP_MEM_NOLIMIT )
       {
          SCIP_Longint memused = SCIPgetMemUsed(scip);
 
          /* if the memory limit is set, we take 1% as the minimum external memory storage */
-         scip->set->mem_externestim = MAX(memused, (SCIP_Longint) (0.01 * scip->set->limit_memory * 1048576.0));
+         scip->stat->externmemestim = MAX(memused, (SCIP_Longint) (0.01 * scip->set->limit_memory * 1048576.0));
       }
       else
-         scip->set->mem_externestim = SCIPgetMemUsed(scip);
-      SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->set->mem_externestim);
+         scip->stat->externmemestim = SCIPgetMemUsed(scip);
+      SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
    }
 
    return SCIP_OKAY;
@@ -43103,7 +43103,7 @@ SCIP_Longint SCIPgetMemExternEstim(
 {
    assert(scip != NULL);
 
-   return SCIPsetGetMemExternEstim(scip->set);
+   return SCIPstatGetMemExternEstim(scip->stat);
 }
 
 /** calculate memory size for dynamically allocated arrays
