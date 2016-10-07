@@ -5296,7 +5296,7 @@ SCIP_RETCODE SCIPconssetchgApply(
 
    return SCIP_OKAY;
 }
-fixed buggy asserts in SCIPconssetchgUndo(), cons may have been be deleted
+
 /** undoes constraint set change */
 SCIP_RETCODE SCIPconssetchgUndo(
    SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
