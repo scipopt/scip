@@ -442,8 +442,15 @@ SCIP_RETCODE filterPoints(
 
    /* sort points w.r.t their violations; non-negative violations correspond to feasible points for the NLP */
    SCIPsortDownRealPtr(violations, (void**)points, npoints);
-
    maxviolation = violations[npoints - 1];
+
+   /* check if all points are feasible */
+   if( SCIPisFeasGE(scip, maxviolation, 0.0) )
+   {
+      *nusefulpoints = npoints;
+      return SCIP_OKAY;
+   }
+
    *nusefulpoints = 0;
 
    /* compute shifted geometric mean of violations (shift value = maxviolation + 1) */
@@ -458,7 +465,7 @@ SCIP_RETCODE filterPoints(
 
    for( i = 0; i < npoints; ++i )
    {
-      if( violations[i] <= 1.05 * meanviol )
+      if( SCIPisFeasLT(scip, violations[i], 0.0) && violations[i] <= 1.05 * meanviol )
          break;
 
       ++(*nusefulpoints);
