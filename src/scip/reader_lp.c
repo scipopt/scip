@@ -2286,6 +2286,14 @@ SCIP_RETCODE readSos(
             }
             else
             {
+               int sign = +1;
+
+               /* get sign */
+               if( isSign(lpinput, &sign) )
+               {
+                 getNextToken(scip, lpinput);
+               }
+
                /* get weight */
                if( !isValue(scip, lpinput, &weight) )
                {
@@ -2300,10 +2308,10 @@ SCIP_RETCODE readSos(
                   switch( type )
                   {
                   case 1: 
-                     SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); 
+                     SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, sign * weight) );
                      break;
                   case 2: 
-                     SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
+                     SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, sign * weight) );
                      break;
                   default: 
                      SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
