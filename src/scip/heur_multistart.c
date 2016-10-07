@@ -734,7 +734,7 @@ SCIP_RETCODE applyHeur(
 
    /* 5. solve for each cluster a corresponding NLP problem via the sub-NLP heuristic */
    start = 0;
-   while( start < nusefulpoints )
+   while( start < nusefulpoints && !SCIPisStopped(scip) )
    {
       SCIP_Real timelimit;
       SCIP_Bool success;
