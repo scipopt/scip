@@ -1798,7 +1798,7 @@ SCIP_RETCODE findComponents(
             int* conscomponent;
 
             SCIP_CALL( SCIPallocBufferArray(scip, &varcomponent, nunfixedvars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &conscomponent, nunfixedvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &conscomponent, MAX(nunfixedvars,*nsortedconss)) );
 
             /* compute independent components */
             SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, varcomponent, ncomponents) );
