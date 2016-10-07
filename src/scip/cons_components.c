@@ -118,6 +118,7 @@ struct SCIP_ConshdlrData
    int                   maxdepth;           /** maximum depth of a node to run components detection */
    int                   minsize;            /** minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
    SCIP_Real             minrelsize;         /** minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
+   int                   subscipdepth;       /** depth offset of the current (sub-)problem compared to the original problem */
 };
 
 
@@ -363,6 +364,9 @@ SCIP_RETCODE createSubscip(
    /* only if the plugins were successfully copied */
    if( success )
    {
+      SCIP_CONSHDLR* newconshdlr;
+      SCIP_CONSHDLRDATA* newconshdlrdata;
+
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
 
@@ -377,15 +381,21 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
 
-      SCIP_CALL( SCIPsetIntParam(*subscip, "constraints/" CONSHDLR_NAME "/maxdepth",
-            MAX(-1, conshdlrdata->maxdepth - SCIPgetDepth(scip))) );
-
       SCIP_CALL( SCIPsetIntParam(*subscip, "constraints/" CONSHDLR_NAME "/maxprerounds", 0) );
       SCIP_CALL( SCIPfixParam(*subscip, "constraints/" CONSHDLR_NAME "/maxprerounds") );
 
       /* reduce the effort spent for hash tables */
       SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
       SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
+
+      SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+      newconshdlr = SCIPfindConshdlr(*subscip, CONSHDLR_NAME);
+      assert(newconshdlr != NULL);
+
+      newconshdlrdata = SCIPconshdlrGetData(newconshdlr);
+      assert(newconshdlrdata != NULL);
+      newconshdlrdata->subscipdepth = conshdlrdata->subscipdepth + SCIPgetDepth(scip);
 
       /* disable output, unless in extended debug mode */
 #ifndef SCIP_MORE_DEBUG
@@ -1459,8 +1469,9 @@ SCIP_RETCODE createAndSplitProblem(
             else
                ++ncontvars;
          }
-         SCIPinfoMessage(scip, NULL, "component %d at node %lld, depth %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
-            comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), component->nvars, nbinvars, nintvars, ncontvars, ncompconss);
+         SCIPinfoMessage(scip, NULL, "component %d at node %lld, depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
+            comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth,
+            component->nvars, nbinvars, nintvars, ncontvars, ncompconss);
       }
 #endif
       assert(ncompconss > 0 || component->nvars == 1);
@@ -1804,11 +1815,11 @@ SCIP_RETCODE findComponents(
             SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, varcomponent, ncomponents) );
 #ifndef NDEBUG
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-               "cons components found %d undirected components at node %lld, depth %d\n",
-               *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+               "cons components found %d undirected components at node %lld, depth %d (%d)\n",
+               *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 #else
-            SCIPdebugMessage("cons components found %d undirected components at node %lld, depth %d\n",
-               *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+            //SCIPdebugMessage("cons components found %d undirected components at node %lld, depth %d (%d)\n",
+            //   *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 #endif
 
             if( *ncomponents > 1 )
@@ -1957,7 +1968,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
    if( proptiming == SCIP_PROPTIMING_AFTERLPLOOP && SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
 
-   if( SCIPgetDepth(scip) > conshdlrdata->maxdepth )
+   if( SCIPgetDepth(scip) + conshdlrdata->subscipdepth > conshdlrdata->maxdepth )
    {
       assert(SCIPconshdlrGetNActiveConss(conshdlr) == 0);
 
@@ -2002,8 +2013,8 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPinfoMessage(scip, NULL, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d\n",
-            ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
+         SCIPinfoMessage(scip, NULL, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d (%d)\n",
+            ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
          /* if there are components with size smaller than the limit, we merge them with the smallest component */
          if( ncomponents > ncompsminsize )
@@ -2353,6 +2364,7 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    /* create components propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   conshdlrdata->subscipdepth = 0;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC, CONSHDLR_ENFOPRIORITY,
