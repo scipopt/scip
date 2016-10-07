@@ -3750,6 +3750,7 @@ SCIP_RETCODE solveNode(
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store whether the focus node is unbounded */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the focus node's solution is infeasible */
+   SCIP_Bool*            enforcedrelaxsol,   /**< pointer to store whether the final enforcementround used the relaxation solution */
    SCIP_Bool*            restart,            /**< should solving process be started again with presolving? */
    SCIP_Bool*            afternodeheur,      /**< pointer to store whether AFTERNODE heuristics were already called */
    SCIP_Bool*            stopped             /**< pointer to store whether solving was interrupted */
@@ -4058,6 +4059,7 @@ SCIP_RETCODE solveNode(
        * but the pricing was aborted and the current feasible solution does not have to be the
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
+       * @todo: changes needed for @ENFORELAX ?
        */
       if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
@@ -4294,6 +4296,10 @@ SCIP_RETCODE solveNode(
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || SCIPconflictGetNConflicts(conflict) == 0);
+   
+   /* check whether the final enforcement round was called for the relaxation solution */
+   *enforcedrelaxsol = (bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+         || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, transprob))));
 
    /* free solution used to save the best relaxation solution */
    SCIP_CALL( SCIPsolFree(&bestrelaxsol, blkmem, primal) );
@@ -4368,11 +4374,13 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_Bool             enforcedrelaxsol,   /**< was the final enforcement round called for a relaxation solution ? */
    SCIP_Bool             checksol            /**< should the solution be checked? */
    )
 {
@@ -4381,7 +4389,41 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_Bool foundsol;
 
    /* found a feasible solution */
-   if( SCIPtreeHasFocusNodeLP(tree) )
+   if( enforcedrelaxsol )
+   {
+      /* start clock for relaxation solutions */
+      SCIPclockStart(stat->relaxsoltime, set);
+      
+      /* add solution to storage */
+      SCIP_CALL( SCIPsolCreateRelaxSol(&sol, blkmem, set, stat, primal, tree, relaxation, NULL) );
+      if( checksol || set->misc_exactsolve )
+      {
+         /* if we want to solve exactly, we have to check the solution exactly again */
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+               eventqueue, eventfilter, &sol, &foundsol) );
+      }
+
+      if( foundsol )
+      {
+         stat->nrelaxsolsfound++;
+
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->nrelaxbestsolsfound++;
+            SCIPstoreSolutionGap(set->scip);
+         }
+      }
+      
+      /* stop clock for LP solutions */
+      SCIPclockStop(stat->relaxsoltime, set);
+      
+   }
+   else if( SCIPtreeHasFocusNodeLP(tree) )
    {
       assert(lp->primalfeasible);
 
@@ -4491,6 +4533,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool foundsol;
+   SCIP_Bool enforcedrelaxsol;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4617,7 +4660,8 @@ SCIP_RETCODE SCIPsolveCIP(
 
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore, branchcand,
-            cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, &cutoff, &unbounded, &infeasible, restart, &afternodeheur, &stopped) );
+            cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, &cutoff, &unbounded, &infeasible, &enforcedrelaxsol, restart,
+            &afternodeheur, &stopped) );
       assert(!cutoff || infeasible);
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
@@ -4648,8 +4692,12 @@ SCIP_RETCODE SCIPsolveCIP(
             if( unbounded )
             {
                SCIP_SOL* sol;
-
-               if( SCIPtreeHasFocusNodeLP(tree) )
+               
+               if( enforcedrelaxsol )
+               {
+                  SCIP_CALL( SCIPsolCreateRelaxSol(&sol, blkmem, set, stat, primal, tree, relaxation, NULL) );
+               }
+               else if( SCIPtreeHasFocusNodeLP(tree) )
                {
                   SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
                }
@@ -4667,8 +4715,8 @@ SCIP_RETCODE SCIPsolveCIP(
             /* node solution is feasible: add it to the solution store */
             if( feasible )
             {
-               SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, reopt,
-                     lp, eventqueue, eventfilter, FALSE) );
+               SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, relaxation, tree, reopt,
+                     lp, eventqueue, eventfilter, enforcedrelaxsol, FALSE) );
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;
@@ -4813,8 +4861,8 @@ SCIP_RETCODE SCIPsolveCIP(
           * feasible, we might just have skipped the check. Thus, we try to add it to the solution store, but check it
           * again.
           */
-         SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, reopt, lp,
-               eventqueue, eventfilter, TRUE) );
+         SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, relaxation, tree, reopt, lp,
+               eventqueue, eventfilter, enforcedrelaxsol, TRUE) );
 
          if( set->reopt_enable )
          {

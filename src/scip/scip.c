@@ -41296,6 +41296,9 @@ void printHeuristicStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
       scip->stat->nlpsolsfound, scip->stat->nlpbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  relax solutions  : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPclockGetTime(scip->stat->relaxsoltime),
+      scip->stat->nrelaxsolsfound, scip->stat->nrelaxbestsolsfound);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound, scip->stat->npsbestsolsfound);
