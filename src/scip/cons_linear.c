@@ -13513,7 +13513,7 @@ SCIP_RETCODE singletonColumnStuffing(
             if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
                ++(*nfixedvars);
             else
-               ++(nchgbds);
+               ++(*nchgbds);
 
             printf("\ncons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
             for( v = 0; v < nvars; ++v )
@@ -13547,8 +13547,8 @@ SCIP_RETCODE singletonColumnStuffing(
                if( tightened )
                   ++(*nfixedvars);
             }
+            printf("### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
          }
-         printf("### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
       }
    }
 
@@ -15582,7 +15582,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       }
 
       /* singleton column stuffing */
-      if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
       {
          SCIP_CALL( singletonColumnStuffing(scip, cons, &cutoff, nfixedvars, nchgbds, ndelconss) );
 
