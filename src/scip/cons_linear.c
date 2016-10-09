@@ -13319,12 +13319,16 @@ SCIP_RETCODE singletonColumnStuffing(
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real upperconst;
-   SCIP_Real lowerconst;
+   SCIP_Real minactivity;
+   SCIP_Real maxactivity;
+   SCIP_Real maxcondactivity;
+   SCIP_Real mincondactivity;
    SCIP_Real rhs;
    SCIP_Real val;
    SCIP_Real obj;
    SCIP_Real factor;
+   SCIP_Bool minactisrelax;
+   SCIP_Bool maxactisrelax;
    SCIP_Bool tryfixing;
    int nsingletons;
    int idx;
@@ -13344,10 +13348,17 @@ SCIP_RETCODE singletonColumnStuffing(
    /* we want to have a <= constraint */
    factor = SCIPisInfinity(scip, consdata->rhs) ? -1.0 : 1.0;
 
+   consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+
    if( SCIPisInfinity(scip, consdata->rhs) )
    {
-      rhs = consdata->lhs;
+      SCIP_Real tmp;
+
+      rhs = -consdata->lhs;
       factor = -1.0;
+      tmp = minactivity;
+      minactivity = -maxactivity;
+      maxactivity = -tmp;
    }
    else
    {
@@ -13359,12 +13370,196 @@ SCIP_RETCODE singletonColumnStuffing(
    nvars = consdata->nvars;
    vars = consdata->vars;
    vals = consdata->vals;
-   tryfixing = TRUE;
-   nsingletons = 0;
+
+   if( !SCIPisInfinity(scip, -minactivity) )
+   {
+      SCIP_Real bestratio = -SCIPinfinity(scip);
+      SCIP_Real secondbestratio = -SCIPinfinity(scip);
+      SCIP_Real ratio;
+      int bestindex = -1;
+      int bestuplocks;
+      int bestdownlocks;
+      int oldnfixedvars = *nfixedvars;
+      int oldnchgbds = *nchgbds;
+
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v];
+         obj = SCIPvarGetObj(var);
+         val = factor * vals[v];
+
+         assert(!SCIPisZero(scip, val));
+
+         ratio = obj / val;
+
+         /* if both objective and constraint push the variable to the same direction, we can do nothing here */
+         if( !SCIPisNegative(scip, ratio) )
+         {
+            bestindex = -1;
+            break;
+         }
+
+         /* better ratio, update best candidate */
+         if( ratio > bestratio )
+         {
+            if( bestindex != -1 )
+            {
+               if( bestuplocks > 1 )
+               {
+                  bestindex = -1;
+                  break;
+               }
+               else
+               {
+                  secondbestratio = bestratio;
+               }
+            }
+            bestratio = ratio;
+            bestindex = v;
+            if( val > 0 )
+            {
+               bestdownlocks = SCIPvarGetNLocksDown(var);
+               bestuplocks = SCIPvarGetNLocksUp(var);
+            }
+            else
+            {
+               bestdownlocks = SCIPvarGetNLocksUp(var);
+               bestuplocks = SCIPvarGetNLocksDown(var);
+            }
+
+            if( bestdownlocks > 0 && bestuplocks > 1 )
+            {
+               bestindex = -1;
+               break;
+            }
+         }
+         else
+         {
+            if( ((val > 0) && SCIPvarGetNLocksUp(var) > 1) ||
+               ((val < 0) && SCIPvarGetNLocksDown(var) > 1) )
+            {
+               bestindex = -1;
+               break;
+            }
+            if( ratio > secondbestratio )
+            {
+               secondbestratio = ratio;
+            }
+         }
+      }
+
+      /* check if we can dual-fix this variable */
+      if( bestindex != -1 && bestdownlocks == 0 )
+      {
+         SCIP_Bool tightened = FALSE;
+         SCIP_Real bounddelta;
+
+         var = vars[bestindex];
+         obj = SCIPvarGetObj(var);
+         val = factor * vals[bestindex];
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+         tryfixing = TRUE;
+
+         if( val < 0 )
+         {
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               bounddelta = SCIPceil(scip, (maxactivity - rhs)/-val);
+               assert(SCIPisPositive(scip, bounddelta));
+               assert(SCIPisNegative(scip, -bounddelta * obj / (maxactivity - rhs)));
+
+               tryfixing = SCIPisGE(scip, -bounddelta * obj / (maxactivity - rhs), secondbestratio);
+            }
+            else
+               bounddelta = (maxactivity - rhs)/-val;
+
+            tryfixing = tryfixing && SCIPisLE(scip, bounddelta, ub - lb);
+
+            if( tryfixing )
+            {
+               assert(SCIPvarGetNLocksUp(var) == 0);
+               printf("tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
+               SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+            }
+         }
+         else
+         {
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               bounddelta = SCIPceil(scip, (maxactivity - rhs)/val);
+               assert(SCIPisPositive(scip, bounddelta));
+               assert(SCIPisNegative(scip, bounddelta * obj / (maxactivity - rhs)));
+
+               tryfixing = SCIPisGE(scip, bounddelta * obj / (maxactivity - rhs), secondbestratio);
+            }
+            else
+               bounddelta = (maxactivity - rhs)/val;
+
+            tryfixing = tryfixing && SCIPisLE(scip, bounddelta, ub - lb);
+
+            if( tryfixing )
+            {
+               assert(SCIPvarGetNLocksDown(var) == 0);
+               printf("tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
+               SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+            }
+         }
+
+         if( *cutoff )
+            return SCIP_OKAY;
+         if( tightened )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+               ++(*nfixedvars);
+            else
+               ++(nchgbds);
+
+            printf("\ncons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
+            for( v = 0; v < nvars; ++v )
+            {
+               printf("%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
+                  SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), SCIPvarGetNLocksUp(vars[v]),
+                  SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
+            }
+            printf("<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
+
+            for( v = 0; v < nvars; ++v )
+            {
+               if( v == bestindex )
+                  continue;
+
+               if( factor * vals[v] < 0 )
+               {
+                  assert(SCIPvarGetNLocksDown(vars[v]) == 1);
+                  printf("fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
+                  SCIP_CALL( SCIPtightenVarUb(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), FALSE, cutoff, &tightened) );
+               }
+               else
+               {
+                  assert(SCIPvarGetNLocksUp(vars[v]) == 1);
+                  printf("fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
+                  SCIP_CALL( SCIPtightenVarLb(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), FALSE, cutoff, &tightened) );
+               }
+
+               if( *cutoff )
+                  return SCIP_OKAY;
+               if( tightened )
+                  ++(*nfixedvars);
+            }
+         }
+         printf("### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+      }
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varpos, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ratios, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &swapped, nvars) ); /* @todo: use clean buffer */
+
+   tryfixing = TRUE;
+   nsingletons = 0;
+   mincondactivity = 0.0;
+   maxcondactivity = 0.0;
 
    for( v = 0; v < nvars; ++v )
    {
@@ -13388,8 +13583,8 @@ SCIP_RETCODE singletonColumnStuffing(
                tryfixing = FALSE;
                break;
             }
-            upperconst += val * lb;
-            lowerconst += val * lb;
+            maxcondactivity += val * lb;
+            mincondactivity += val * lb;
             ratios[nsingletons] = obj / val;
             varpos[nsingletons] = v;
             nsingletons++;
@@ -13405,8 +13600,8 @@ SCIP_RETCODE singletonColumnStuffing(
             /* multiply column by (-1) to become case 1.
              * now bounds are swapped: ub := -lb, lb := -ub
              */
-            upperconst += val * ub;
-            lowerconst += val * ub;
+            maxcondactivity += val * ub;
+            mincondactivity += val * ub;
             swapped[v] = TRUE;
             ratios[nsingletons] = obj / val;
             varpos[nsingletons] = v;
@@ -13426,8 +13621,8 @@ SCIP_RETCODE singletonColumnStuffing(
                break;
             }
 
-            upperconst += val * lb;
-            lowerconst += val * lb;
+            maxcondactivity += val * lb;
+            mincondactivity += val * lb;
          }
          else
          {
@@ -13444,8 +13639,8 @@ SCIP_RETCODE singletonColumnStuffing(
                break;
             }
 
-            upperconst += val * ub;
-            lowerconst += val * ub;
+            maxcondactivity += val * ub;
+            mincondactivity += val * ub;
          }
       }
       else
@@ -13461,23 +13656,35 @@ SCIP_RETCODE singletonColumnStuffing(
 
          if( val > 0 )
          {
-            upperconst += val * ub;
-            lowerconst += val * lb;
+            maxcondactivity += val * ub;
+            mincondactivity += val * lb;
          }
          else
          {
-            upperconst += val * lb;
-            lowerconst += val * ub;
+            maxcondactivity += val * lb;
+            mincondactivity += val * ub;
          }
       }
    }
-   if( tryfixing && nsingletons > 0 )
+   if( tryfixing && nsingletons > 0 && (SCIPisGT(scip, rhs, maxcondactivity) || SCIPisLE(scip, rhs, mincondactivity)) )
    {
       SCIP_Real delta;
       SCIP_Bool tightened;
       int oldnfixedvars = *nfixedvars;
+      int oldnchgbds = *nchgbds;
 
       SCIPsortRealInt(ratios, varpos, nsingletons);
+
+      // printf("\ncons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
+      // for( v = 0; v < nvars; ++v )
+      // {
+      //    printf("%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
+      //       SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), SCIPvarGetNLocksUp(vars[v]),
+      //       SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
+      // }
+      // printf("<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
+
+      // printf("mincondactivity: %g, maxcondactivity: %g, nsingletons: %d\n", mincondactivity, maxcondactivity, nsingletons);
 
       /* verify which singleton continuous variables can be fixed */
       for( v = 0; v < nsingletons; ++v )
@@ -13489,6 +13696,7 @@ SCIP_RETCODE singletonColumnStuffing(
          ub = SCIPvarGetUbGlobal(var);
 
          assert(val > 0 || SCIPisPositive(scip, SCIPvarGetObj(var)));
+         assert((val < 0) == swapped[idx]);
          val = REALABS(val);
 
          /* stop fixing if variable bounds are not finite */
@@ -13508,14 +13716,16 @@ SCIP_RETCODE singletonColumnStuffing(
 
          assert(!SCIPisNegative(scip, delta));
 
-         if( SCIPisLE(scip, delta, rhs - upperconst) )
+         if( SCIPisLE(scip, delta, rhs - maxcondactivity) )
          {
             if( swapped[idx] )
             {
+               printf("fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                SCIP_CALL( SCIPtightenVarUb(scip, var, lb, FALSE, cutoff, &tightened) );
             }
             else
             {
+               printf("fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                SCIP_CALL( SCIPtightenVarLb(scip, var, ub, FALSE, cutoff, &tightened) );
             }
 
@@ -13526,14 +13736,38 @@ SCIP_RETCODE singletonColumnStuffing(
                (*nfixedvars)++;
             }
          }
-         else if( SCIPisLE(scip, rhs, lowerconst) )
+         /* the variable does not fit completely, but we can at least tighten its bound */
+         else if( SCIPisGT(scip, rhs, maxcondactivity) )
+         {
+            SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
+            if( swapped[idx] )
+            {
+               printf("tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
+               SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+            }
+            else
+            {
+               printf("tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
+               SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+            }
+
+            if( *cutoff )
+               break;
+            if( tightened )
+            {
+               (*nchgbds)++;
+            }
+         }
+         else if( SCIPisLE(scip, rhs, mincondactivity) )
          {
             if( swapped[idx] )
             {
+               printf("fix3 <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                SCIP_CALL( SCIPtightenVarLb(scip, var, ub, FALSE, cutoff, &tightened) );
             }
             else
             {
+               printf("fix3 <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                SCIP_CALL( SCIPtightenVarUb(scip, var, lb, FALSE, cutoff, &tightened) );
             }
 
@@ -13545,11 +13779,11 @@ SCIP_RETCODE singletonColumnStuffing(
             }
          }
 
-         upperconst += delta;
-         lowerconst += delta;
+         maxcondactivity += delta;
+         mincondactivity += delta;
       }
       //????????
-      printf("### stuffing fixed %d variables\n", *nfixedvars - oldnfixedvars);
+      printf("### stuffing fixed %d variables and changed %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
    }
 
    SCIPfreeBufferArray(scip, &swapped);
