@@ -13299,6 +13299,266 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+/** do stuffing presolving on a single constraint */
+static
+SCIP_RETCODE singletonColumnStuffing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
+   int*                  nfixedvars,         /**< pointer to count the total number of fixed variables */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   int*                  ndelconss           /**< pointer to count the total number of deleted constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real* ratios;
+   int* varpos;
+   SCIP_Bool* swapped;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_VAR* var;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real upperconst;
+   SCIP_Real lowerconst;
+   SCIP_Real rhs;
+   SCIP_Real val;
+   SCIP_Real obj;
+   SCIP_Real factor;
+   SCIP_Bool tryfixing;
+   int nsingletons;
+   int idx;
+   int v;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+
+   consdata = SCIPconsGetData(cons);
+
+   /* we only want to run for inequalities */
+   if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+      return SCIP_OKAY;
+
+   /* we want to have a <= constraint */
+   factor = SCIPisInfinity(scip, consdata->rhs) ? -1.0 : 1.0;
+
+   if( SCIPisInfinity(scip, consdata->rhs) )
+   {
+      rhs = consdata->lhs;
+      factor = -1.0;
+   }
+   else
+   {
+      assert(SCIPisInfinity(scip, -consdata->lhs));
+      rhs = consdata->rhs;
+      factor = 1.0;
+   }
+
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+   vals = consdata->vals;
+   tryfixing = TRUE;
+   nsingletons = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varpos, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ratios, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &swapped, nvars) ); /* @todo: use clean buffer */
+
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+      obj = SCIPvarGetObj(var);
+      val = factor * vals[v];
+
+      assert(!SCIPisZero(scip, val));
+
+      /* the variable is a singleton and continuous */
+      if( (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
+         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      {
+         if( SCIPisNegative(scip, obj) && val > 0 )
+         {
+            /* case 1: obj < 0 and coef > 0 */
+            if( SCIPisInfinity(scip, -lb) )
+            {
+               tryfixing = FALSE;
+               break;
+            }
+            upperconst += val * lb;
+            lowerconst += val * lb;
+            ratios[nsingletons] = obj / val;
+            varpos[nsingletons] = v;
+            nsingletons++;
+         }
+         else if( SCIPisPositive(scip, obj) && val < 0 )
+         {
+            /* case 2: obj > 0 and coef < 0 */
+            if( SCIPisInfinity(scip, ub) )
+            {
+               tryfixing = FALSE;
+               break;
+            }
+            /* multiply column by (-1) to become case 1.
+             * now bounds are swapped: ub := -lb, lb := -ub
+             */
+            upperconst += val * ub;
+            lowerconst += val * ub;
+            swapped[v] = TRUE;
+            ratios[nsingletons] = obj / val;
+            varpos[nsingletons] = v;
+            nsingletons++;
+         }
+         else if( val > 0 )
+         {
+            /* case 3: obj >= 0 and coef >= 0 is handled by duality fixing.
+             *  we only consider the lower bound for the constants
+             */
+            assert(!SCIPisNegative(scip, obj));
+
+            if( SCIPisInfinity(scip, -lb) )
+            {
+               /* maybe unbounded */
+               tryfixing = FALSE;
+               break;
+            }
+
+            upperconst += val * lb;
+            lowerconst += val * lb;
+         }
+         else
+         {
+            /* case 4: obj <= 0 and coef <= 0 is also handled by duality fixing.
+             * we only consider the upper bound for the constants
+             */
+            assert(!SCIPisPositive(scip, obj));
+            assert(val < 0);
+
+            if( SCIPisInfinity(scip, ub) )
+            {
+               /* maybe unbounded */
+               tryfixing = FALSE;
+               break;
+            }
+
+            upperconst += val * ub;
+            lowerconst += val * ub;
+         }
+      }
+      else
+      {
+         /* consider contribution of discrete variables, non-singleton
+          * continuous variables and variables with more than one lock
+          */
+         if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+         {
+            tryfixing = FALSE;
+            break;
+         }
+
+         if( val > 0 )
+         {
+            upperconst += val * ub;
+            lowerconst += val * lb;
+         }
+         else
+         {
+            upperconst += val * lb;
+            lowerconst += val * ub;
+         }
+      }
+   }
+   if( tryfixing && nsingletons > 0 )
+   {
+      SCIP_Real delta;
+      SCIP_Bool tightened;
+      int oldnfixedvars = *nfixedvars;
+
+      SCIPsortRealInt(ratios, varpos, nsingletons);
+
+      /* verify which singleton continuous variables can be fixed */
+      for( v = 0; v < nsingletons; ++v )
+      {
+         idx = varpos[v];
+         var = vars[idx];
+         val = factor * vals[idx];
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+
+         assert(val > 0 || SCIPisPositive(scip, SCIPvarGetObj(var)));
+         val = REALABS(val);
+
+         /* stop fixing if variable bounds are not finite */
+         if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+            break;
+
+         assert((SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1);
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
+         /* calculate the change in the row activities if this variable changes
+          * its value from its worst to its best bound
+          */
+         if( swapped[idx] )
+            delta = -(lb - ub) * val;
+         else
+            delta =  (ub - lb) * val;
+
+         assert(!SCIPisNegative(scip, delta));
+
+         if( SCIPisLE(scip, delta, rhs - upperconst) )
+         {
+            if( swapped[idx] )
+            {
+               SCIP_CALL( SCIPtightenVarUb(scip, var, lb, FALSE, cutoff, &tightened) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, var, ub, FALSE, cutoff, &tightened) );
+            }
+
+            if( *cutoff )
+               break;
+            if( tightened )
+            {
+               (*nfixedvars)++;
+            }
+         }
+         else if( SCIPisLE(scip, rhs, lowerconst) )
+         {
+            if( swapped[idx] )
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, var, ub, FALSE, cutoff, &tightened) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPtightenVarUb(scip, var, lb, FALSE, cutoff, &tightened) );
+            }
+
+            if( *cutoff )
+               break;
+            if( tightened )
+            {
+               (*nfixedvars)++;
+            }
+         }
+
+         upperconst += delta;
+         lowerconst += delta;
+      }
+      //????????
+      printf("### stuffing fixed %d variables\n", *nfixedvars - oldnfixedvars);
+   }
+
+   SCIPfreeBufferArray(scip, &swapped);
+   SCIPfreeBufferArray(scip, &ratios);
+   SCIPfreeBufferArray(scip, &varpos);
+
+   return SCIP_OKAY;
+}
+
 /** applies full dual presolving on variables that only appear in linear constraints */
 static
 SCIP_RETCODE fullDualPresolve(
@@ -15085,6 +15345,34 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
          if( firstupgradetry == INT_MAX && !consdata->upgradetried )
             firstupgradetry = c;
+      }
+
+      /* singleton column stuffing */
+      if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      {
+         SCIP_CALL( singletonColumnStuffing(scip, cons, &cutoff, nfixedvars, nchgbds, ndelconss) );
+
+         /* handle empty constraint */
+         if( consdata->nvars == 0 )
+         {
+            if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+            {
+               SCIPdebugMsg(scip, "empty linear constraint <%s> is infeasible: sides=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               cutoff = TRUE;
+            }
+            else
+            {
+               SCIPdebugMsg(scip, "empty linear constraint <%s> is redundant: sides=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               assert(!SCIPconsIsActive(cons));
+
+               if( !consdata->upgraded )
+                  (*ndelconss)++;
+            }
+            break;
+         }
       }
    }
 
