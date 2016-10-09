@@ -54,7 +54,7 @@ extern "C" {
 /** executes command only if SCIP_DEBUG flag is set */
 #define SCIPdebug(x)                        x
 
-/** prints a debugging message if SCIP_DEBUG flag is set */
+/** prints a debugging message if SCIP_DEBUG flag is set - also consider using SCIPdebugMsg/SCIPsetDebugMsg */
 #define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
@@ -73,7 +73,7 @@ extern "C" {
 /** executes command only if SCIP_DEBUG flag is set */
 #define SCIPdebug(x)                        /**/
 
-/** prints a debugging message if SCIP_DEBUG flag is set */
+/** prints a debugging message if SCIP_DEBUG flag is set - also consider using SCIPdebugMsg/SCIPsetDebugMsg */
 #define SCIPdebugMessage                while( FALSE ) printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */

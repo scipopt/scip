@@ -94,8 +94,13 @@ fi
 
 INIT="true"
 COUNT=0
-for INSTANCE in $INSTANCELIST DONE
+for idx in ${!INSTANCELIST[@]}
 do
+    # retrieve instance and timelimits from arrays set in the configuration_set.sh script
+    INSTANCE=${INSTANCELIST[$idx]}
+    TIMELIMIT=${TIMELIMLIST[$idx]}
+    HARDTIMELIMIT=${HARDTIMELIMLIST[$idx]}
+
     COUNT=`expr $COUNT + 1`
 
     # run different random seeds

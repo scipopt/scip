@@ -968,12 +968,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
-/** returns the estimated number of bytes used by external software, e.g., the LP solver */
-extern
-SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
 /** calculate memory size for dynamically allocated arrays */
 extern
 int SCIPsetCalcMemGrowSize(
@@ -1824,6 +1818,52 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFreeCleanBuffer(set,ptr)              BMSfreeBufferMemory((set)->cleanbuffer, (ptr))
 #define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
 #define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
+
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(scip, ...) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
+#else
+#define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(scip, ...) while ( FALSE ) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg                 printf("debug: "), SCIPsetDebugMessagePrint
+#define SCIPsetDebugMsgPrint            printf("debug: "), SCIPsetDebugMessagePrint
+#else
+#define SCIPsetDebugMsg                 while ( FALSE ) SCIPsetDebugMsgPrint
+#define SCIPsetDebugMsgPrint            while ( FALSE ) SCIPsetDebugMessagePrint
+#endif
+
+#endif
+
+
+/** prints a debug message */
+EXTERN
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPsetDebugMessagePrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
 
 #ifdef __cplusplus
 }
