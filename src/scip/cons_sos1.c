@@ -6893,6 +6893,10 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
    *cutoff = FALSE;
    *ngen = 0;
 
+   /* return if conflict graph is not available */
+   if ( conshdlrdata->conflictgraph == NULL )
+      return SCIP_OKAY;
+
    /* get implication graph  */
    implgraph = conshdlrdata->implgraph;
 
@@ -9477,7 +9481,7 @@ SCIP_DECL_CONSPROP(consPropSOS1)
 
    /* get/initialize implication graph */
    implgraph = conshdlrdata->implgraph;
-   if ( implgraph == NULL && conshdlrdata->implprop )
+   if ( implgraph == NULL && conshdlrdata->implprop && conflictgraph != NULL )
    {
       if ( SCIPgetDepth(scip) == 0 )
       {
