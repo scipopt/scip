@@ -768,6 +768,7 @@ SCIP_RETCODE changeSubvariableObjective(
          objcoeff = SCIPvarGetObj(var);
          break;
       default:
+	 objcoeff = 0.0;
          break;
    }
 
