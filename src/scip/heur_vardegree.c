@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 #define SCIP_STATISTIC
 /**@file   heur_vardegree.c
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
