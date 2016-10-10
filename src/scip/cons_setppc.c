@@ -664,7 +664,7 @@ SCIP_RETCODE consdataCreateTransformed(
    SCIP_CALL( consdataCreate(scip, consdata, nvars, vars, setppctype) );
 
    /* transform the variables */
-   SCIP_CALL( SCIPgetTransformedVars(scip, nvars, (*consdata)->vars, (*consdata)->vars) );
+   SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
    return SCIP_OKAY;
 }
