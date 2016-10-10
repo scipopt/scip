@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/branch_lookahead.h"
+#include "scip/common_branch_lookahead.h"
 #include "scip/cons_setppc.h"
 #include "scip/def.h"
 #include "scip/pub_branch.h"
@@ -52,18 +53,6 @@
 /*
  * Data structures
  */
-
-/**
- * This enum is used to represent whether an upper bound, lower bound or both are set for a variable in the ValidDomRedData
- * container.
- */
-typedef enum
-{
-   BOUNDSTATUS_NONE        = 0,              /**< The corresponding variable has no new bound set. Has to have the value 0! */
-   BOUNDSTATUS_UPPERBOUND  = 1,              /**< The corresponding variable only has a new upper bound set. */
-   BOUNDSTATUS_LOWERBOUND  = 2,              /**< The corresponding variable only has a new lower bound set. */
-   BOUNDSTATUS_BOTH        = 3               /**< The corresponding variable has both, an upper and a lower bound set. */
-} BOUNDSTATUS;
 
 /**
  * branching rule data
@@ -141,27 +130,6 @@ typedef struct
    SCIP_Bool             nobranch;           /**< Indicates whether the lp wasn't solved, as domain reduction for the
                                               *   branching didn't change the domain. Currently unused. */
 } BranchingResultData;
-
-/**
- * This struct collect the bounds, which can be used in the root problem. Therefore it contains two types of bounds:
- * - The bounds that occur when both up and down branches of a variable after a first level branch are cutoff. In this case
- *   the whole first level branch can be added as a restriction.
- * - The bounds that occur implicitly while branching on the second level. See SupposedBoundData for more information.
- */
-typedef struct
-{
-   SCIP_Real*            upperbounds;        /**< The current upper bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_UPPERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   SCIP_Real*            lowerbounds;        /**< The current lower bound for each active variable. Only contains meaningful
-                                              *   data, if the corresponding boundstatus entry is BOUNDSTATUS_LOWERBOUND or
-                                              *   BOUNDSTATUS_BOTH. */
-   BOUNDSTATUS*          boundstatus;        /**< The current boundstatus for each active variable. Depending on this value
-                                              *   the corresponding upperbound and lowerbound values are meaningful.*/
-   int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
-                                              *   may be used to only iterate over the relevant variables. */
-   int                   nboundedvars;       /**< The length of the boundedvars array. */
-} ValidDomRedData;
 
 /**
  * This struct collects the bounds, that are given implicitly on the second branching level.
@@ -281,73 +249,6 @@ void initBranchingResultData(
    resultdata->cutoff = TRUE;
    resultdata->lperror = FALSE;
    resultdata->nobranch = FALSE;
-}
-
-/**
- * Allocates buffer memory for the given ValidDomRedData and the contained arrays.
- */
-static
-SCIP_RETCODE allocValidBoundData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   ValidDomRedData**     validbounddata      /**< The struct to be allocated. */
-)
-{
-   int ntotalvars;
-
-   ntotalvars = SCIPgetNVars(scip);
-
-   SCIP_CALL( SCIPallocBuffer(scip, validbounddata) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->upperbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->lowerbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(*validbounddata)->boundstatus, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->boundedvars, ntotalvars) );
-   return SCIP_OKAY;
-}
-
-/**
- * Resets the given struct.
- * Assumptions:
- * - The boundstatus array was cleared, when the bounds were transferred to the valid bounds data structure.
- * - The upper-/lowerbounds arrays don't have to be reset, as these are only read in connection with the boundstatus array.
- * - The boundedvars array is only read in connection with the nboundedvars value, which will be set to 0.
- */
-static
-void initValidBoundData(
-   ValidDomRedData*       validbounddata     /*< The struct that should get reset.*/
-)
-{
-   validbounddata->nboundedvars = 0;
-}
-
-static
-void resetValidBoundData(
-   ValidDomRedData*      validbounddata      /**<  */
-)
-{
-   int i;
-
-   for( i = 0; i < validbounddata->nboundedvars; i++ )
-   {
-      int probvarindex = validbounddata->boundedvars[i];
-      validbounddata->boundstatus[probvarindex] = 0;
-   }
-   initValidBoundData(validbounddata);
-}
-
-/**
- * Frees the buffer memory of the given ValidDomRedData and the contained arrays.
- */
-static
-void freeValidBoundData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   ValidDomRedData**     validbounddata      /**< The struct that should be freed. */
-)
-{
-   SCIPfreeBufferArray(scip, &(*validbounddata)->boundedvars);
-   SCIPfreeCleanBufferArray(scip, &(*validbounddata)->boundstatus);
-   SCIPfreeBufferArray(scip, &(*validbounddata)->lowerbounds);
-   SCIPfreeBufferArray(scip, &(*validbounddata)->upperbounds);
-   SCIPfreeBuffer(scip, validbounddata);
 }
 
 /**
@@ -665,147 +566,6 @@ SCIP_RETCODE executeUpBranching(
    }
 
    return SCIP_OKAY;
-}
-
-/**
- * Handles the assignment of ne bounds (valid and supposed). Therefore the new bound is written directly over the old
- * bound. Analog the new bound status is written directly over the old one.
- *
- * @return TRUE, if no upper and lower bound for the given var were yet set; FALSE, else.
- */
-static
-SCIP_Bool addBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< The variable for which a bound should be added. */
-   SCIP_Real             newbound,           /**< The value of the new bound. */
-   SCIP_Bool             keepminbound,       /**< In case there is already a bound for the variable, this Indicates
-                                              *   whether the min or the max value of the new and the old bound should
-                                              *   be kept. */
-   BOUNDSTATUS           boundtype,          /**< The type of the new bound. Must be BOUNDSTATUS_UPPERBOUND or
-                                              *   BOUNDSTATUS_LOWERBOUND. */
-   SCIP_Real*            oldbound,           /**< Pointer to the old bound. Depending on the oldboundstatus this may contain
-                                              *   no meaningful data. Also gets the new bound set */
-   BOUNDSTATUS*          oldboundstatus      /**< Pointer to the old boundstatus. Also gets the new status set*/
-)
-{
-   SCIP_Bool newboundadded = FALSE;
-
-   assert(scip != NULL);
-   assert(branchvar != NULL);
-   assert(boundtype == BOUNDSTATUS_LOWERBOUND || boundtype == BOUNDSTATUS_UPPERBOUND);
-   assert(oldbound != NULL);
-   assert(oldboundstatus != NULL);
-
-   if( *oldboundstatus == boundtype || *oldboundstatus == BOUNDSTATUS_BOTH )
-   {
-      /* we already have a valid bound with a fitting type set, so we can take min/max of this and the "newbound". */
-      if (keepminbound)
-      {
-         *oldbound = MIN(newbound, *oldbound);
-      }
-      else
-      {
-         *oldbound = MAX(newbound, *oldbound);
-      }
-      SCIPdebugMessage("Updating an existent new bound. var <%s> type <%d> oldbound <%g> newbound <%g>.\n",
-         SCIPvarGetName(branchvar), boundtype, *oldbound, newbound);
-   }
-   else
-   {
-      /* We either have no new bounds or only a bound with the other type for our var, so we can set the new bound directly. */
-      SCIPdebugMessage("Adding new bound. var <%s> type <%d> newbound <%g>.\n", SCIPvarGetName(branchvar), boundtype,
-         newbound);
-      *oldbound = newbound;
-
-      if( *oldboundstatus == BOUNDSTATUS_NONE )
-      {
-         *oldboundstatus = boundtype;
-         newboundadded = TRUE;
-      }
-      else
-      {
-         *oldboundstatus = BOUNDSTATUS_BOTH;
-      }
-   }
-   return newboundadded;
-}
-
-/**
- * Adds the given upper bound as a valid bound to the ValidDomRedData container.
- * A valid bound comes from a cutoff on the first level.
- */
-static
-void addValidUpperBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
-   SCIP_Real             newupperbound,      /**< the new upper bound */
-   ValidDomRedData*      validbounds         /**< the container to a add the bound to */
-)
-{
-   int varindex;
-   SCIP_Real* oldupperbound;
-   BOUNDSTATUS* oldboundstatus;
-   SCIP_Bool newboundadded;
-
-   assert(scip != NULL);
-   assert(branchvar != NULL);
-   assert(validbounds != NULL);
-
-   /* the container is indexed with the probindex */
-   varindex = SCIPvarGetProbindex( branchvar );
-   oldupperbound = &validbounds->upperbounds[varindex];
-   oldboundstatus = &validbounds->boundstatus[varindex];
-
-   /* Add the given bound to the container and keep the min of the new and the old bound.
-    * We want to keep the min bound, as the minimum of both valid upper bounds is tighter and still valid. */
-   newboundadded = addBound(scip, branchvar, newupperbound, TRUE, BOUNDSTATUS_UPPERBOUND, oldupperbound, oldboundstatus);
-
-   if( newboundadded )
-   {
-      /* in case of a new entry add the varindex to the container */
-      int nboundedvars = validbounds->nboundedvars;
-      validbounds->boundedvars[nboundedvars] = varindex;
-      validbounds->nboundedvars = nboundedvars + 1;
-   }
-}
-
-/**
- * Adds the given lower bound as a valid bound to the ValidDomRedData container.
- * A valid bound comes from a cutoff on the first level.
- */
-static
-void addValidLowerBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
-   SCIP_Real             newlowerbound,      /**< the new lower bound */
-   ValidDomRedData*      validbounds         /**< the container to a add the bound to */
-)
-{
-   int varindex;
-   SCIP_Real* oldlowerbound;
-   BOUNDSTATUS* oldboundstatus;
-   SCIP_Bool newboundadded;
-
-   assert(scip != NULL);
-   assert(branchvar != NULL);
-   assert(validbounds != NULL);
-
-   /* the container is indexed with the probindex */
-   varindex = SCIPvarGetProbindex( branchvar );
-   oldlowerbound = &validbounds->lowerbounds[varindex];
-   oldboundstatus = &validbounds->boundstatus[varindex];
-
-   /* Add the given bound to the container and keep the max of the new and the old bound.
-    * We want to keep the max bound, as the maximum of both valid lower bounds is tighter and still valid. */
-   newboundadded = addBound(scip, branchvar, newlowerbound, FALSE, BOUNDSTATUS_LOWERBOUND, oldlowerbound, oldboundstatus);
-
-   if( newboundadded )
-   {
-      /* in case of a new entry add the varindex to the container */
-      int nboundedvars = validbounds->nboundedvars;
-      validbounds->boundedvars[nboundedvars] = varindex;
-      validbounds->nboundedvars = nboundedvars + 1;
-   }
 }
 
 /**
@@ -1435,13 +1195,13 @@ void calculateCurrentWeight(
  *
  * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- * @see ValidDomRedData
+ * @see VALIDDOMREDDATA
  * @see SupposedDomRedData
  */
 static
 SCIP_RETCODE addDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
-   ValidDomRedData*      validbounds,        /**< The struct containing all bounds that should be added. */
+   VALIDDOMREDDATA*      validbounds,        /**< The struct containing all bounds that should be added. */
    Status*               status              /**< Pointer to the result flag. Used to set the correct flags. */
 )
 {
@@ -1621,7 +1381,7 @@ static
 void transferBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
    SupposedDomRedData*   supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
-   ValidDomRedData*      validbounds         /**< Bound data from the first level branches. Target for the transfer. */
+   VALIDDOMREDDATA*      validbounds         /**< Bound data from the first level branches. Target for the transfer. */
 )
 {
    int i;
@@ -1747,7 +1507,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       int highestscoreindex = -1;
       int i;
 
-      ValidDomRedData* validbounds = NULL;
+      VALIDDOMREDDATA* validbounds = NULL;
       SupposedDomRedData* supposedbounds = NULL;
       BinaryBoundData* binarybounddata = NULL;
 
@@ -1761,7 +1521,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
       if( branchruledata->usedirectdomred || branchruledata->useimplieddomred )
       {
          SCIP_CALL( allocValidBoundData(scip, &validbounds) );
-         initValidBoundData(validbounds);
          if( branchruledata->useimplieddomred )
          {
             SCIP_CALL( allocSupposedBoundData(scip, &supposedbounds) );
@@ -1982,7 +1741,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
             resetSupposedBoundData(supposedbounds);
             freeSupposedBoundData(scip, &supposedbounds);
          }
-         resetValidBoundData(validbounds);
          freeValidBoundData(scip, &validbounds);
       }
 
@@ -2000,37 +1758,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPdebugMessage("The new best candidate is <%i>\n", *bestcand);
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/**
- * Executes the branching on a given variable with a given value.
- * If everything worked the result pointer is set to SCIP_BRANCHED.
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- * */
-static
-SCIP_RETCODE branchOnVar(
-   SCIP*                 scip                /**< SCIP data structure */,
-   SCIP_VAR*             var,                /**< the variable to branch on */
-   SCIP_Real             val,                /**< the value to branch on */
-   SCIP_RESULT*          result              /**< the current result, will get overwritten with SCIP_BRANCHED */
-)
-{
-   SCIP_NODE* downchild = NULL;
-   SCIP_NODE* upchild = NULL;
-
-   SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
-      SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
-   SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
-
-   assert(downchild != NULL);
-   assert(upchild != NULL);
-
-   *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
 }
@@ -2078,7 +1805,8 @@ SCIP_RETCODE usePreviousResult(
    val = branchruledata->prevbinbranchsol;
 
    /* execute the actual branching */
-   SCIP_CALL( branchOnVar(scip, var, val, result) );
+   SCIP_CALL( branchOnVar(scip, var, val) );
+   *result = SCIP_BRANCHED;
 
    SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n",
       SCIPvarGetName(branchruledata->prevbinbranchvar));
@@ -2265,7 +1993,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g)\n",
             nlpcands, bestcand, SCIPvarGetName(var), val);
 
-         SCIP_CALL( branchOnVar(scip, var, val, result) );
+         SCIP_CALL( branchOnVar(scip, var, val) );
+         *result = SCIP_BRANCHED;
       }
 
 #ifdef SCIP_DEBUG
@@ -2315,15 +2044,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 #ifdef SCIP_STATISTICS
    {
       int i;
-      const char* names[18] = {"", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
-         "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
-         "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS"};
 
       branchruledata->nresults[*result]++;
       for( i = 1; i < 18; i++ )
       {
          /* see type_result.h for the id <-> enum mapping */
-         SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", names[i], branchruledata->nresults[i]);
+         SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", getStatusString(i), branchruledata->nresults[i]);
       }
       SCIPinfoMessage(scip, NULL, "Solved <%i> lps on the first level and <%i> lps on the second level\n",
          branchruledata->nfirstlvllps, branchruledata->nsecondlvllps);

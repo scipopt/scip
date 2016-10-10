@@ -23,9 +23,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/branch_lookaheadabbreviated.h"
-#include "scip/pub_misc.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/branch_lookaheadabbreviated.h"
+#include "scip/common_branch_lookahead.h"
+#include "scip/pub_misc.h"
 
 
 #define BRANCHRULE_NAME            "lookahead-abbreviated"
@@ -571,6 +572,7 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
    Status*               status,
+   VALIDDOMREDDATA*      domainreductions,
    SCIP_VAR*             firstvar,
    SCIP_Real             firstval,
    SCIP_VAR*             secondvar,
@@ -659,7 +661,28 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
    {
       *score = calculateScores(scip, baselpsol, uuresult, ulresult, luresult, llresult);
       *ncutoffs = countCutoffs(uuresult, ulresult, luresult, llresult);
+
+      if( uuresult->cutoff && ulresult->cutoff )
+      {
+         addValidLowerBound(scip, firstvar, firstval, domainreductions);
+      }
+
+      if( llresult->cutoff && luresult->cutoff )
+      {
+         addValidUpperBound(scip, firstvar, firstval, domainreductions);
+      }
+
+      if( uuresult->cutoff && luresult->cutoff )
+      {
+         addValidLowerBound(scip, secondvar, secondval, domainreductions);
+      }
+
+      if( ulresult->cutoff && llresult->cutoff )
+      {
+         addValidUpperBound(scip, secondvar, secondval, domainreductions);
+      }
    }
+
 
    freeLPResult(scip, &llresult);
    freeLPResult(scip, &luresult);
@@ -690,6 +713,7 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranching(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
    Status*               status,
+   VALIDDOMREDDATA*      domainreductions,
    Candidates*           candidates
 )
 {
@@ -714,8 +738,8 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranching(
          SCIP_VAR* secondvar = candidates->vars[j];
          SCIP_Real secondval = candidates->vals[j];
 
-         SCIP_CALL( executeAbbreviatedLookaheadBranchingOnVars(scip, branchruledata, status, firstvar, firstval, secondvar,
-            secondval, baselpsol, &score, &ncutoffs) );
+         SCIP_CALL( executeAbbreviatedLookaheadBranchingOnVars(scip, branchruledata, status, domainreductions, firstvar,
+            firstval, secondvar, secondval, baselpsol, &score, &ncutoffs) );
 
          if( !status->lperror )
          {
@@ -732,46 +756,6 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranching(
    freeBranchingResults(scip, &results);
 
    return SCIP_OKAY;
-}
-
-/**
- * Executes the branching on a given variable with a given value.
- * If everything worked the result pointer is set to SCIP_BRANCHED.
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- * */
-/* TODO: copied from branch_lookahead.c, create a shared copy for both */
-static
-SCIP_RETCODE branchOnVar(
-   SCIP*                 scip                /**< SCIP data structure */,
-   SCIP_VAR*             var,                /**< the variable to branch on */
-   SCIP_Real             val                 /**< the value to branch on */
-)
-{
-   SCIP_NODE* downchild = NULL;
-   SCIP_NODE* upchild = NULL;
-
-   SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
-      SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
-   SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
-
-   assert(downchild != NULL);
-   assert(upchild != NULL);
-
-   return SCIP_OKAY;
-}
-
-static
-const char* getStatusString(
-   SCIP_RESULT           result
-)
-{
-   const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
-      "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
-      "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS" };
-   return names[result];
 }
 
 /*
@@ -849,9 +833,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
    }
    else if( candidates->ncandidates >= 1)
    {
+      VALIDDOMREDDATA* domainreductions;
+
+      allocValidBoundData(scip, &domainreductions);
+
       SCIPdebugMessage("Found <%i> candidates with non-infinite score for branching\n", candidates->ncandidates);
 
-      SCIP_CALL( executeAbbreviatedLookaheadBranching(scip, branchruledata, status, candidates) );
+      SCIP_CALL( executeAbbreviatedLookaheadBranching(scip, branchruledata, status, domainreductions, candidates) );
       if( !status->lperror )
       {
          branchOnVar(scip, candidates->vars[0], candidates->vals[0]);
@@ -861,6 +849,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
       {
          *result = SCIP_DIDNOTFIND;
       }
+
+      freeValidBoundData(scip, &domainreductions);
    }
    else
    {
