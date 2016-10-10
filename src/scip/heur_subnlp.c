@@ -64,6 +64,7 @@ struct SCIP_HeurData
 
    SCIP_SOL*             startcand;          /**< candidate for start point for heuristic */
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
+   SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
    SCIP_Bool             comblinearconsadded;/**< whether the linear constraint adding method has been called for combinatorial constraints already */
@@ -1077,6 +1078,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP stored solution from sub-SCIP root node\n");
             }
             *result = SCIP_FOUNDSOL;
+            heurdata->lastsol = sol;
             break;
          }
          else
@@ -1103,6 +1105,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is feasible\n");
             }
             *result = SCIP_FOUNDSOL;
+            heurdata->lastsol = resultsol;
             break;
          }
          else
@@ -1328,6 +1331,7 @@ SCIP_RETCODE solveSubNLP(
             }
 
             *result = SCIP_FOUNDSOL;
+            heurdata->lastsol = sol;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
@@ -1383,6 +1387,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
             }
             *result = SCIP_FOUNDSOL;
+            heurdata->lastsol = resultsol;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
@@ -2406,9 +2411,10 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
 
-   /* FIXME this does not work anymore, as we may not store heur as solution author anymore */
-   /* if the solution is from our heuristic, then it is useless to use it as starting point again */
-   if( SCIPsolGetHeur(solcand) == heur )
+   /* if the solution is the one we created (last), then it is useless to use it as starting point again
+    * (we cannot check SCIPsolGetHeur()==heur, as subnlp may not be registered as author of the solution)
+    */
+   if( heurdata->lastsol == solcand )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "consider solution candidate with violation %g and objective %g from %s\n",
