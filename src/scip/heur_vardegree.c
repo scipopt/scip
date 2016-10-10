@@ -55,7 +55,7 @@
 #define DEFAULT_POTENTIAL      'r'          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
 #define DEFAULT_MAXDISTANCE     3           /**< maximum distance to selected variable to enter the subproblem, or -1 to
                                              *   select the distance that best approximates the minimum fixing rate from below */
-
+#define NHISTOGRAMBINS         10           /* number of bins for histograms */
 /*
  * Data structures
  */
@@ -83,6 +83,10 @@ struct SCIP_HeurData
    int                   sumdiscneighborhoodvars; /**< neighborhood discrete variables sum over all seen neighboorhoods */
    int                   nneighborhoods;     /**< number of calculated neighborhoods */
    char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
+   int                   maxseendistance;    /**< maximum of all distances between two variables */
+   int                   consvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the densities of the constraints */
+   int                   consdiscvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the discrete variable densities of the constraints */
+   int                   conscontvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the continuous variable densities of the constraints */
 };
 
 /** variable graph data structure;
@@ -240,20 +244,49 @@ SCIP_RETCODE variablegraphBreadthFirst(
    return SCIP_OKAY;
 }
 
+/** resets a histogram */
+static
+void resetHistogram(
+   int*                  histogram           /**< the histogram */
+   )
+{
+   BMSclearMemoryArray(histogram, NHISTOGRAMBINS);
+}
+
+/** adds a ratio to the histogram at the right position */
+static
+void addHistogramEntry(
+   int*                  histogram,          /**< the histogram */
+   int                   value,              /**< the value */
+   int                   basevalue           /**< base value */
+   )
+{
+   SCIP_Real ratio;
+   int index;
+   assert(value <= basevalue);
+   ratio = value/ MAX(1.0, (SCIP_Real)basevalue);
+
+   index = (int)(ratio * NHISTOGRAMBINS);
+   ++histogram[index];
+}
+
 /* fills variable graph data structure
  *
  * loops over global problem constraints and updates a mapping from the variables to their respective constraints
  */
 static
 SCIP_RETCODE fillVariableGraph(
-   SCIP*                scip,                /**< SCIP data structure */
-   VARIABLEGRAPH*       vargraph             /**< pointer to the variable graph */
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARIABLEGRAPH*        vargraph,           /**< pointer to the variable graph */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    SCIP_CONS** conss;
    int nconss;
    int nvars;
    int c;
+   int ndiscvars;
+   int ncontvars;
    SCIP_VAR** varbuffer;
 
    assert(scip != NULL);
@@ -265,10 +298,19 @@ SCIP_RETCODE fillVariableGraph(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, nvars) );
 
+   ncontvars = SCIPgetNContVars(scip);
+   ndiscvars = SCIPgetNVars(scip) - ncontvars;
+
+   resetHistogram(heurdata->conscontvarshist);
+   resetHistogram(heurdata->consdiscvarshist);
+   resetHistogram(heurdata->conscontvarshist);
+
    for( c = 0; c < nconss; ++c )
    {
       int nconsvars;
       int v;
+      int nconsdiscvars;
+      int nconscontvars;
       SCIP_Bool success;
       SCIP_CONS* cons = conss[c];
 
@@ -288,6 +330,7 @@ SCIP_RETCODE fillVariableGraph(
       if( !success )
          continue;
 
+      nconsdiscvars = nconscontvars = 0;
       /* loop over constraint variables and add this constraint to them if they are active */
       for( v = 0; v < nconsvars; ++v )
       {
@@ -296,6 +339,12 @@ SCIP_RETCODE fillVariableGraph(
          /* skip inactive variables */
          if( varpos == -1 )
             continue;
+
+         /* count discrete and continuous problem variables */
+         if( SCIPvarIsIntegral(varbuffer[v]) )
+            ++nconsdiscvars;
+         else
+            ++nconscontvars;
 
          /* ensure array size */
          if( vargraph->varconssize[varpos] == vargraph->nvarconss[varpos]  )
@@ -322,6 +371,10 @@ SCIP_RETCODE fillVariableGraph(
          vargraph->nvarconss[varpos] += 1;
       }
 
+      /* update the histograms */
+      addHistogramEntry(heurdata->consvarshist, nconsvars, SCIPgetNVars(scip));
+      addHistogramEntry(heurdata->consdiscvarshist, nconsdiscvars, ndiscvars);
+      addHistogramEntry(heurdata->conscontvarshist, nconscontvars, nconsvars);
    }
 
    /* free the buffer */
@@ -333,8 +386,9 @@ SCIP_RETCODE fillVariableGraph(
 /** initialization method of variable graph data structure */
 static
 SCIP_RETCODE variableGraphCreate(
-   SCIP*                scip,                /**< SCIP data structure */
-   VARIABLEGRAPH**      vargraph             /**< pointer to the variable graph */
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARIABLEGRAPH**       vargraph,           /**< pointer to the variable graph */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    int nvars;
@@ -354,7 +408,7 @@ SCIP_RETCODE variableGraphCreate(
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &(*vargraph)->nvarconss, nvars) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &(*vargraph)->varconssize, nvars) );
 
-   SCIP_CALL( fillVariableGraph(scip, *vargraph) );
+   SCIP_CALL( fillVariableGraph(scip, *vargraph, heurdata) );
 
    return SCIP_OKAY;
 }
@@ -573,6 +627,8 @@ SCIP_RETCODE determineMaxDistance(
    /* distances can be infinite in the case of multiple connected components; therefore, search for the index of the
     * zero entry, which is the unique representative of the chosen variable in the sorted distances */
    zeropos = -1;
+
+   /* todo: use selection method instead */
    SCIPsortedvecFindInt(distancestmp, 0, nrelevantdistances, &zeropos);
    assert(zeropos >= 0);
 
@@ -589,6 +645,9 @@ SCIP_RETCODE determineMaxDistance(
     */
    if( criticalidx != nrelevantdistances - 1 && distancestmp[criticalidx + 1] == *choosevardistance )
       (*choosevardistance)--;
+
+   /* update the maximum distance */
+   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancestmp[nrelevantdistances]);
 
    SCIPfreeBufferArray(scip, &distancestmp);
 
@@ -642,7 +701,7 @@ SCIP_RETCODE createSubproblem(
 
    /* create variable graph */
    SCIPdebugMessage("Creating variable constraint graph\n");
-   SCIP_CALL( variableGraphCreate(scip, &vargraph) );
+   SCIP_CALL( variableGraphCreate(scip, &vargraph, heurdata) );
 
    /* allocate buffer memory to hold distances */
    SCIP_CALL( SCIPallocBufferArray(scip, &distances, nvars) );
@@ -926,8 +985,29 @@ SCIP_DECL_HEURINIT(heurInitVardegree)
    heurdata->randseed = 0;
    heurdata->sumdiscneighborhoodvars = heurdata->sumneighborhoodvars = 0;
    heurdata->nneighborhoods = 0;
+   heurdata->maxseendistance = 0;
+
+   resetHistogram(heurdata->conscontvarshist);
+   resetHistogram(heurdata->consdiscvarshist);
+   resetHistogram(heurdata->conscontvarshist);
 
    return SCIP_OKAY;
+}
+
+/** prints a histogram */
+static
+void printHistogram(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  histogram,          /**< histogram values */
+   const char*           name                /**< display name of this histogram */
+   )
+{
+   int i;
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Vardegree: %s", name);
+   /* write out entries of this histogram */
+   for( i = 0; i < NHISTOGRAMBINS; ++i )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %d", histogram[i]);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
 }
 
 /** initialization method of primal heuristic (called after problem was transformed) */
@@ -945,6 +1025,10 @@ SCIP_DECL_HEUREXIT(heurExitVardegree)
 
    SCIPstatistic(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Vardegree: Avg Neighborhood size: %.1f Avg. discrete neighboorhood vars: %.1f\n", heurdataAvgNeighborhoodSize(heurdata), heurdataAvgDiscreteNeighborhoodSize(heurdata));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Vardegree: Max seen distance %d\n", heurdata->maxseendistance);
+      printHistogram(scip, heurdata->consvarshist, "Constraint density histogram");
+      printHistogram(scip, heurdata->conscontvarshist, "Constraint continuous density histogram");
+      printHistogram(scip, heurdata->consdiscvarshist, "Constraint discrete density histogram");
       )
 
    return SCIP_OKAY;
