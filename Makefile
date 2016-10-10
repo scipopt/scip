@@ -443,6 +443,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_trysol.o \
 			scip/heur_twoopt.o \
 			scip/heur_undercover.o \
+			scip/heur_vardegree.o \
 			scip/heur_vbounds.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zeroobj.o \

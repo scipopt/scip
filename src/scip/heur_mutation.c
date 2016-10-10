@@ -132,14 +132,19 @@ SCIP_RETCODE determineVariableFixings(
    /* store the fixing values for the subset of variables that should be fixed */
    for( i = 0; i < *nfixedvars; ++i )
    {
-      /* fix all randomly marked variables */
+      SCIP_VAR* var;
       SCIP_Real solval;
       SCIP_Real lb;
       SCIP_Real ub;
 
-      solval = SCIPgetSolVal(scip, sol, fixedvars[i]);
-      lb = SCIPvarGetLbGlobal(fixedvars[i]);
-      ub = SCIPvarGetUbGlobal(fixedvars[i]);
+
+      var = fixedvars[i];
+      solval = SCIPgetSolVal(scip, sol, var);
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+      assert(SCIPvarGetProbindex(var) < nbinvars + nintvars);
+
+      solval = SCIPgetSolVal(scip, sol, var);
       assert(SCIPisLE(scip, lb, ub));
 
       /* due to dual reductions, it may happen that the solution value is not in
