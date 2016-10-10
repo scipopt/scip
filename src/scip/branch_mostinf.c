@@ -237,7 +237,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of mostinf branching\n");
+   SCIPdebugMsg(scip, "Execlp method of mostinf branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
@@ -267,7 +267,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
    }
    assert(bestcand >= 0);
 
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], bestobj,
       SCIPvarGetBranchFactor(lpcands[bestcand]), bestscore);
 
@@ -301,7 +301,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execext method of mostinf branching\n");
+   SCIPdebugMsg(scip, "Execext method of mostinf branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nexterncands, NULL, NULL, NULL) );
@@ -326,7 +326,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 
    brpoint = SCIPgetBranchingPoint(scip, bestcand, bestsol);
 
-   SCIPdebugMessage(" -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
       nexterncands, SCIPvarGetName(bestcand), bestsol, bestobj,
       SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
 

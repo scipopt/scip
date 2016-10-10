@@ -81,6 +81,12 @@ then
     echo set randomization permutationseed $p   >> $TMPFILE
 fi
 
+# if seed counter is positive add random seed shift
+if test $s -gt 0
+then
+    echo set randomization randomseedshift "$s + $GLBSEEDSHIFT" >> $TMPFILE
+fi
+
 # avoid solving LPs in case of LPS=none
 if test "$LPS" = "none"
 then

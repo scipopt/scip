@@ -7900,7 +7900,8 @@ int getRand(
 #endif
 
 /** returns a random integer between minrandval and maxrandval */
-int SCIPgetRandomInt(
+static
+int getRandomInt(
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
@@ -7919,7 +7920,8 @@ int SCIPgetRandomInt(
 }
 
 /** returns a random real between minrandval and maxrandval */
-SCIP_Real SCIPgetRandomReal(
+static
+SCIP_Real getRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
@@ -7935,6 +7937,32 @@ SCIP_Real SCIPgetRandomReal(
     * SCIP_REAL_MAX apart
     */
    return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
+}
+
+/** returns a random integer between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
+ */
+int SCIPgetRandomInt(
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return getRandomInt(minrandval, maxrandval, seedp);
+}
+
+/** returns a random real between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetReal() to request a random real.
+ */
+SCIP_Real SCIPgetRandomReal(
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return getRandomReal(minrandval, maxrandval, seedp);
 }
 
 
@@ -8054,13 +8082,16 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteIntArray()
+ */
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                               *   array)
+                                               */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8073,7 +8104,7 @@ void SCIPpermuteIntArray(
       --end;
 
       /* get a random position into which the last entry should be shuffled */
-      i = SCIPgetRandomInt(begin, end, randseed);
+      i = getRandomInt(begin, end, randseed);
 
       /* swap the last element and the random element */
       tmp = array[i];
@@ -8083,13 +8114,16 @@ void SCIPpermuteIntArray(
 }
 
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteArray()
+ */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                              *   array)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8102,7 +8136,7 @@ void SCIPpermuteArray(
       end--;
 
       /* get a random position into which the last entry should be shuffled */
-      i = SCIPgetRandomInt(begin, end, randseed);
+      i = getRandomInt(begin, end, randseed);
 
       /* swap the last element and the random element */
       tmp = array[i];
@@ -8113,6 +8147,8 @@ void SCIPpermuteArray(
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ *
+ *  @deprecated Please use SCIPrandomGetSubset()
  */
 SCIP_RETCODE SCIPgetRandomSubset(
    void**                set,                /**< original set, from which elements should be drawn */
@@ -8150,7 +8186,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
    {
       int r;
 
-      r = SCIPgetRandomInt(0, nelems-1, &randseed);
+      r = getRandomInt(0, nelems-1, &randseed);
       subset[i] = set[r];
 
       /* if we get an element that we already had, we will draw again */

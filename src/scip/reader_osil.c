@@ -995,9 +995,9 @@ SCIP_RETCODE readLinearCoefs(
    }
 
  CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &start);
-   SCIPfreeBufferArrayNull(scip, &idx);
    SCIPfreeBufferArrayNull(scip, &val);
+   SCIPfreeBufferArrayNull(scip, &idx);
+   SCIPfreeBufferArrayNull(scip, &start);
 
    return SCIP_OKAY;
 }

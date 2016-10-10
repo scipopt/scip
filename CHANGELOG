@@ -21,6 +21,8 @@ features:
 - added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
+- use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
+- new random number gerator in random.{c,h}
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -32,9 +34,11 @@ parameters:
 - new parameter class randomization
 - moved permutationseed from misc to randomization
 - new parameter randomization/lpseed to set the initial seed of the LP solver
+- setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 
 performance improvements:
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
+- improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
   and only create and populate a sub-SCIP if enough variables will be fixed.
 - SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
@@ -65,6 +69,13 @@ interface:
 - new function SCIPisDualSolAvailable() to query the dual solution availability
 - submakefile for CrayXC systems added
 - new method SCIPinitializeRandomSeed()
+- new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
+  subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
+- add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
+- methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
+- methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
+- method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
 
 fixed bugs:
 
@@ -75,6 +86,10 @@ misc:
 
 SCIP version 3.2.2
 ==================
+
+features:
+- for users of the ampl interface, the display/logfile option has been added to set the name of a
+  file to write the SCIP log to (additionally to stdout)
 
 fixed bugs:
 - fixed bug in XML reader concerning comments
@@ -92,6 +107,7 @@ fixed bugs:
 - writing of solutions or parameters to a file now works also with the message handler set to quiet
 - fixed bug in heur_octane with uninitialized ray direction
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
+- SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
@@ -102,6 +118,7 @@ interface:
 - removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
 - removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
 - removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
+- new command line parameter -v to print detailed build options
 
 Makefile:
 - revise sub-makefiles for MSVC on MinGW
