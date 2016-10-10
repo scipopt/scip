@@ -74,11 +74,14 @@ typedef struct
 
 typedef struct
 {
-   SCIP_Bool             lperror;
    SCIP_Bool             cutoff;
    SCIP_Real             objval;
-   // TODO: maybe add three other objvals?
-}LPResult;
+} LPResult;
+
+typedef struct
+{
+   SCIP_Bool             lperror;
+} Status;
 
 /*
  * Local methods
@@ -177,6 +180,46 @@ void freeBranchingResults(
    SCIPfreeBufferArray(scip, &(*results)->maxscore);
    SCIPfreeBufferArray(scip, &(*results)->scoresum);
    SCIPfreeBuffer(scip, results);
+}
+
+static
+SCIP_RETCODE allocLPResult(
+   SCIP*                 scip,
+   LPResult**            result
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, result) );
+   (*result)->cutoff = FALSE;
+   return SCIP_OKAY;
+}
+
+static
+void freeLPResult(
+   SCIP*                 scip,
+   LPResult**            result
+)
+{
+   SCIPfreeBuffer(scip, result);
+}
+
+static
+SCIP_RETCODE allocStatus(
+   SCIP*                 scip,
+   Status**              status
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, status) );
+   (*status)->lperror = FALSE;
+   return SCIP_OKAY;
+}
+
+static
+void freeStatus(
+   SCIP*                 scip,
+   Status**              status
+)
+{
+   SCIPfreeBuffer(scip, status);
 }
 
 /*
@@ -422,12 +465,13 @@ SCIP_RETCODE setLowerBound(
 static
 SCIP_RETCODE solveLP(
    SCIP*                 scip,
+   SCIP_Bool*            lperror,
    LPResult*             result
 )
 {
    SCIP_LPSOLSTAT solstat;
 
-   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &result->lperror, &result->cutoff) );
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, lperror, &result->cutoff) );
 
    solstat = SCIPgetLPSolstat(scip);
 
@@ -435,10 +479,10 @@ SCIP_RETCODE solveLP(
 
    /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
     * cutoff, or if the iter or time limit was reached. */
-   result->lperror = result->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && result->cutoff == FALSE)
+   *lperror = *lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && result->cutoff == FALSE)
       || (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
 
-   if( !result->lperror )
+   if( !*lperror )
    {
       /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
       result->objval = SCIPgetLPObjval(scip);
@@ -449,23 +493,101 @@ SCIP_RETCODE solveLP(
    return SCIP_OKAY;
 }
 
+static
+SCIP_Real getGain(
+   SCIP_Real             baselpsol,
+   LPResult*             result
+)
+{
+   if( !result->cutoff )
+   {
+      return MAX(0, result->objval - baselpsol);
+   }
+   else
+   {
+      /* TODO: what to return here? */
+      return 0;
+   }
+}
+
+static
+SCIP_Real calculateScores(
+   SCIP*                 scip,
+   SCIP_Real             baselpsol,
+   LPResult*             uuresult,
+   LPResult*             ulresult,
+   LPResult*             luresult,
+   LPResult*             llresult
+)
+{
+   SCIP_Real uscore;
+   SCIP_Real uugain;
+   SCIP_Real ulgain;
+   SCIP_Real lscore;
+   SCIP_Real lugain;
+   SCIP_Real llgain;
+
+   uugain = getGain(baselpsol, uuresult);
+   ulgain = getGain(baselpsol, ulresult);
+   lugain = getGain(baselpsol, luresult);
+   llgain = getGain(baselpsol, luresult);
+
+   uscore = SCIPgetBranchScore(scip, NULL, uugain, ulgain);
+   lscore = SCIPgetBranchScore(scip, NULL, lugain, llgain);
+
+   return SCIPgetBranchScore(scip, NULL, uscore, lscore);
+}
+
+static
+int countCutoffs(
+   LPResult*             uuresult,
+   LPResult*             ulresult,
+   LPResult*             luresult,
+   LPResult*             llresult
+)
+{
+   int count = 0;
+   if( uuresult->cutoff )
+   {
+      count++;
+   }
+   if( ulresult->cutoff )
+   {
+      count++;
+   }
+   if( luresult->cutoff )
+   {
+      count++;
+   }
+   if( llresult->cutoff )
+   {
+      count++;
+   }
+   return count;
+}
 
 static
 SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
+   Status*               status,
    SCIP_VAR*             firstvar,
    SCIP_Real             firstval,
    SCIP_VAR*             secondvar,
    SCIP_Real             secondval,
    SCIP_Real             baselpsol,
-   BranchingResults*     results
+   SCIP_Real*            score,
+   int*                  ncutoffs
 )
 {
    SCIP_Real firstvallowerbound;
    SCIP_Real firstvalupperbound;
    SCIP_Real secondvallowerbound;
    SCIP_Real secondvalupperbound;
+   LPResult* uuresult;
+   LPResult* ulresult;
+   LPResult* luresult;
+   LPResult* llresult;
 
    assert(scip != NULL);
    assert(branchruledata != NULL);
@@ -482,51 +604,93 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
    SCIPdebugMessage("\tand on var <%s> with val <%g> in [<%g>..<%g>]\n", SCIPvarGetName(secondvar),
       secondval, secondvallowerbound, secondvalupperbound);
 
-   SCIPdebugMessage("1. Adding upper bounds for both variables.\n");
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-   SCIP_CALL( setUpperBound(scip, firstvar, firstval) );
-   SCIP_CALL( setUpperBound(scip, secondvar, secondval) );
-   SCIP_CALL( solveLP(scip) );
+   allocLPResult(scip, &uuresult);
+   allocLPResult(scip, &ulresult);
+   allocLPResult(scip, &luresult);
+   allocLPResult(scip, &llresult);
 
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   if( !status->lperror )
+   {
+      SCIPdebugMessage("1. Adding upper bounds for both variables.\n");
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+      SCIP_CALL( setUpperBound(scip, firstvar, firstval) );
+      SCIP_CALL( setUpperBound(scip, secondvar, secondval) );
+      SCIP_CALL( solveLP(scip, &status->lperror, uuresult) );
 
-   SCIPdebugMessage("2. Adding upper bound for var <%s> and lower bound for <%s>.\n", SCIPvarGetName(firstvar),
-      SCIPvarGetName(secondvar));
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-   SCIP_CALL( setUpperBound(scip, firstvar, firstval) );
-   SCIP_CALL( setLowerBound(scip, secondvar, secondval) );
-   SCIP_CALL( solveLP(scip) );
+      SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   }
 
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   if( !status->lperror )
+   {
+      SCIPdebugMessage("2. Adding upper bound for var <%s> and lower bound for <%s>.\n", SCIPvarGetName(firstvar),
+         SCIPvarGetName(secondvar));
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+      SCIP_CALL( setUpperBound(scip, firstvar, firstval) );
+      SCIP_CALL( setLowerBound(scip, secondvar, secondval) );
+      SCIP_CALL( solveLP(scip, &status->lperror, ulresult) );
 
-   SCIPdebugMessage("3. Adding lower bound for var <%s> and upper bound for <%s>.\n", SCIPvarGetName(firstvar),
-      SCIPvarGetName(secondvar));
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-   SCIP_CALL( setLowerBound(scip, firstvar, firstval) );
-   SCIP_CALL( setUpperBound(scip, secondvar, secondval) );
-   SCIP_CALL( solveLP(scip) );
+      SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   }
 
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   if( !status->lperror )
+   {
+      SCIPdebugMessage("3. Adding lower bound for var <%s> and upper bound for <%s>.\n", SCIPvarGetName(firstvar),
+         SCIPvarGetName(secondvar));
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+      SCIP_CALL( setLowerBound(scip, firstvar, firstval) );
+      SCIP_CALL( setUpperBound(scip, secondvar, secondval) );
+      SCIP_CALL( solveLP(scip, &status->lperror, luresult) );
 
-   SCIPdebugMessage("4. Adding lower bounds for both variables.\n");
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-   SCIP_CALL( setLowerBound(scip, firstvar, firstval) );
-   SCIP_CALL( setLowerBound(scip, secondvar, secondval) );
-   SCIP_CALL( solveLP(scip) );
+      SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   }
 
-   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   if( !status->lperror )
+   {
+      SCIPdebugMessage("4. Adding lower bounds for both variables.\n");
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+      SCIP_CALL( setLowerBound(scip, firstvar, firstval) );
+      SCIP_CALL( setLowerBound(scip, secondvar, secondval) );
+      SCIP_CALL( solveLP(scip, &status->lperror, llresult) );
 
-   /* TODO: handle the constraints that may be added and the resulting branching decision */
+      SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+   }
+
+   if( !status->lperror )
+   {
+      *score = calculateScores(scip, baselpsol, uuresult, ulresult, luresult, llresult);
+      *ncutoffs = countCutoffs(uuresult, ulresult, luresult, llresult);
+   }
+
+   freeLPResult(scip, &llresult);
+   freeLPResult(scip, &luresult);
+   freeLPResult(scip, &ulresult);
+   freeLPResult(scip, &uuresult);
 
    return SCIP_OKAY;
+}
+
+static
+void updateResult(
+   BranchingResults*     results,
+   int                   varindex,
+   SCIP_Real             score,
+   int                   ncutoffs
+)
+{
+
+   results->ncutoffs[varindex] = results->ncutoffs[varindex] + ncutoffs;
+   results->maxscore[varindex] = MAX(results->maxscore[varindex], score);
+   results->minscore[varindex] = MIN(results->maxscore[varindex], score);
+   results->nscores[varindex] = results->nscores[varindex] + 1;
+   results->scoresum[varindex] = results->scoresum[varindex] + score;
 }
 
 static
 SCIP_RETCODE executeAbbreviatedLookaheadBranching(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
-   Candidates*           candidates,
-   SCIP_RESULT*          tmpresult
+   Status*               status,
+   Candidates*           candidates
 )
 {
    BranchingResults* results;
@@ -539,25 +703,75 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranching(
 
    SCIPstartProbing(scip);
 
-   for( i = 0; i < candidates->ncandidates; i++ )
+   for( i = 0; i < candidates->ncandidates && !status->lperror; i++ )
    {
       SCIP_VAR* firstvar = candidates->vars[i];
       SCIP_Real firstval = candidates->vals[i];
-      for( j = i+1; j < candidates->ncandidates; j++)
+      for( j = i+1; j < candidates->ncandidates && !status->lperror; j++)
       {
+         SCIP_Real score;
+         int ncutoffs;
          SCIP_VAR* secondvar = candidates->vars[j];
          SCIP_Real secondval = candidates->vals[j];
 
-         SCIP_CALL( executeAbbreviatedLookaheadBranchingOnVars(scip, branchruledata, firstvar, firstval, secondvar,
-            secondval, baselpsol, results) );
+         SCIP_CALL( executeAbbreviatedLookaheadBranchingOnVars(scip, branchruledata, status, firstvar, firstval, secondvar,
+            secondval, baselpsol, &score, &ncutoffs) );
+
+         if( !status->lperror )
+         {
+            updateResult(results, i, score, ncutoffs);
+            updateResult(results, j, score, ncutoffs);
+         }
       }
    }
 
    SCIPendProbing(scip);
 
+   SCIPsortDownRealRealPtr(results->maxscore, candidates->vals, (void**)candidates->vars, candidates->ncandidates);
+
    freeBranchingResults(scip, &results);
 
    return SCIP_OKAY;
+}
+
+/**
+ * Executes the branching on a given variable with a given value.
+ * If everything worked the result pointer is set to SCIP_BRANCHED.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ * */
+/* TODO: copied from branch_lookahead.c, create a shared copy for both */
+static
+SCIP_RETCODE branchOnVar(
+   SCIP*                 scip                /**< SCIP data structure */,
+   SCIP_VAR*             var,                /**< the variable to branch on */
+   SCIP_Real             val                 /**< the value to branch on */
+)
+{
+   SCIP_NODE* downchild = NULL;
+   SCIP_NODE* upchild = NULL;
+
+   SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
+      SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+
+   SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
+
+   assert(downchild != NULL);
+   assert(upchild != NULL);
+
+   return SCIP_OKAY;
+}
+
+static
+const char* getStatusString(
+   SCIP_RESULT           result
+)
+{
+   const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
+      "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
+      "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS" };
+   return names[result];
 }
 
 /*
@@ -610,9 +824,9 @@ SCIP_DECL_BRANCHEXIT(branchExitLookaheadAbbreviated)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
 {  /*lint --e{715}*/
-   SCIP_RESULT tmpresult = SCIP_DIDNOTRUN;
    SCIP_BRANCHRULEDATA* branchruledata;
    Candidates* candidates;
+   Status* status;
    int nlookaheadcandidates;
 
    assert( scip != NULL );
@@ -625,21 +839,36 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
    nlookaheadcandidates = branchruledata->nalabcandidates;
 
    allocCandidates(scip, &candidates, nlookaheadcandidates);
+   allocStatus(scip, &status);
 
-   SCIP_CALL( getLookaheadBranchingCandidates(scip, branchruledata, candidates, nlookaheadcandidates, &tmpresult) );
+   SCIP_CALL( getLookaheadBranchingCandidates(scip, branchruledata, candidates, nlookaheadcandidates, result) );
 
-   SCIPdebugMessage("Found <%i> candidates with non-infinite scrore for branching\n", candidates->ncandidates);
-
-   if( tmpresult == SCIP_CUTOFF || tmpresult == SCIP_REDUCEDDOM || tmpresult == SCIP_CONSADDED )
+   if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED )
    {
-      *result = tmpresult;
+      SCIPdebugMessage("Strong Branching finished with status <%s>\n", getStatusString(*result));
    }
-   else if( candidates->ncandidates > 1)
+   else if( candidates->ncandidates >= 1)
    {
-      SCIP_CALL( executeAbbreviatedLookaheadBranching(scip, branchruledata, candidates, &tmpresult) );
-      *result = SCIP_DIDNOTRUN;
+      SCIPdebugMessage("Found <%i> candidates with non-infinite score for branching\n", candidates->ncandidates);
+
+      SCIP_CALL( executeAbbreviatedLookaheadBranching(scip, branchruledata, status, candidates) );
+      if( !status->lperror )
+      {
+         branchOnVar(scip, candidates->vars[0], candidates->vals[0]);
+         *result = SCIP_BRANCHED;
+      }
+      else
+      {
+         *result = SCIP_DIDNOTFIND;
+      }
+   }
+   else
+   {
+      SCIPdebugMessage("Found no candidates with non-infinite score for branching\n");
    }
 
+
+   freeStatus(scip, &status);
    freeCandidates(scip, &candidates);
 
    SCIPdebugMessage("--- Finished Abbreviated Lookahead Branching\n");
