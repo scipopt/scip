@@ -14,10 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_select.h
- * @brief  methods for partial sorting around (weighted) k-medians
+ * @brief  methods for selecting (weighted) k-medians
  * @author Gregor Hendel
  *
- * This file contains headers for partial sorting around (weighted) k-medians
+ * This file contains headers for selecting (weighted) k-medians
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,10 +26,20 @@
 #define __SCIP_PUB_MISC_SELECT_H__
 
 #include "scip/def.h"
+#include "type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*
+ * Selection and weighted selection algorithms
+ */
+
+/**@defgroup SelectionAlgorithms Selection and weighted selection algorithms
+ *
+ * @{
+ */
 
 /** partial sort an index array in non-decreasing order around the \p k-th element */
 EXTERN
@@ -2915,6 +2925,8 @@ void SCIPselectWeightedDownIntPtrIntIntBoolBool(
    int                   len,                /**< length of arrays */
    int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
    );
+
+/**@} */
 
 #ifdef __cplusplus
 }
