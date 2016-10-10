@@ -79,6 +79,8 @@
 #include "scip/presol_qpkktref.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 
 
@@ -629,7 +631,6 @@ SCIP_RETCODE presolveAddKKTLinearCons(
    return SCIP_OKAY;
 }
 
-
 /** handle linear constraints for quadratic constraint update, see the documentation of the function presolveAddKKTLinearCons() for an explanation */
 static
 SCIP_RETCODE presolveAddKKTLinearConss(
@@ -651,10 +652,6 @@ SCIP_RETCODE presolveAddKKTLinearConss(
    assert( dualconss != NULL );
    assert( ndualconss != NULL );
    assert( naddconss != NULL );
-
-   /* return if there are no linear constraints */
-   if ( savelinconss == NULL )
-      return SCIP_OKAY;
 
    /* loop through linear constraints */
    for (c = 0; c < nlinconss; ++c)
@@ -683,6 +680,132 @@ SCIP_RETCODE presolveAddKKTLinearConss(
    return SCIP_OKAY;
 }
 
+/** handle knapsack constraints for quadratic constraint update, see the documentation of the function presolveAddKKTLinearCons() for an explanation */
+static
+SCIP_RETCODE presolveAddKKTKnapsackConss(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            objcons,            /**< objective constraint */
+   SCIP_CONS**           conss,              /**< copy of array with knapsack constraints */
+   int                   nconss,             /**< number of knapsack constraints */
+   SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
+   SCIP_CONS**           dualconss,          /**< array with dual constraints */
+   int*                  ndualconss,         /**< pointer to store number of dual constraints */
+   int*                  naddconss           /**< buffer to increase with number of created additional constraints */
+   )
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( objcons != NULL );
+   assert( varhash != NULL );
+   assert( dualconss != NULL );
+   assert( ndualconss != NULL );
+   assert( naddconss != NULL );
+
+   /* loop through knapsack constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      int nvars;
+
+      /* get data of constraint */
+      cons = conss[c];
+      assert( cons != NULL );
+      lhs = -SCIPinfinity(scip);
+      rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons);
+      nvars = SCIPgetNVarsKnapsack(scip, cons);
+      vars = SCIPgetVarsKnapsack(scip, cons);
+      vals = (SCIP_Real*) SCIPgetWeightsKnapsack(scip, cons);
+
+      /* handle linear constraint for quadratic constraint update */
+      SCIP_CALL( presolveAddKKTLinearCons(scip, objcons, SCIPconsGetName(cons),
+            vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** handle set packing constraints for quadratic constraint update, see the documentation of the function presolveAddKKTLinearCons() for an explanation */
+static
+SCIP_RETCODE presolveAddKKTSetppcConss(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            objcons,            /**< objective constraint */
+   SCIP_CONS**           conss,              /**< copy of array with set packing constraints */
+   int                   nconss,             /**< number of set packing constraints */
+   SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
+   SCIP_CONS**           dualconss,          /**< array with dual constraints */
+   int*                  ndualconss,         /**< pointer to store number of dual constraints */
+   int*                  naddconss           /**< buffer to increase with number of created additional constraints */
+   )
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( objcons != NULL );
+   assert( varhash != NULL );
+   assert( dualconss != NULL );
+   assert( ndualconss != NULL );
+   assert( naddconss != NULL );
+
+   /* loop through linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_SETPPCTYPE type;
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      int nvars;
+      int v;
+
+      /* get data of constraint */
+      cons = conss[c];
+      assert( cons != NULL );
+
+      /* get setppc type */
+      type = SCIPgetTypeSetppc(scip, cons);
+      lhs = -SCIPinfinity(scip);
+      rhs = SCIPinfinity(scip);
+      switch( type )
+      {
+         case SCIP_SETPPCTYPE_PARTITIONING:
+            lhs = 1.0;
+            rhs = 1.0;
+            break;
+         case SCIP_SETPPCTYPE_PACKING:
+            rhs = 1.0;
+            break;
+         case SCIP_SETPPCTYPE_COVERING:
+            lhs = 1.0;
+            break;
+         default:
+            SCIPerrorMessage("unknown setppc type\n");
+            return SCIP_INVALIDDATA;
+      }
+
+      nvars = SCIPgetNVarsSetppc(scip, cons);
+      vars = SCIPgetVarsSetppc(scip, cons);
+
+      /* set coefficients of variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+      for (v = 0; v < nvars; ++v)
+         vals[v] = 1.0;
+
+      /* handle linear constraint for quadratic constraint update */
+      SCIP_CALL( presolveAddKKTLinearCons(scip, objcons, SCIPconsGetName(cons),
+            vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
+
+      /* free buffer array */
+      SCIPfreeBufferArray(scip, &vals);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** handle aggregated variables for quadratic constraint update @n
  *  we apply the function presolveAddKKTLinearCons() to the aggregation constraint, see the documentation of this function for further information
@@ -1107,10 +1230,12 @@ SCIP_RETCODE checkConsQuadraticProblem(
    )
 {
    SCIP_CONSHDLR* linconshdlr;
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONSHDLR* knapsackconshdlr;
    SCIP_VAR** lintermvars;
    SCIP_Real* lintermcoefs;
    int nlintermvars;
-   int nlinconss = 0;
+   int nconss = 0;
    SCIP_Real quadlhs;
    SCIP_Real quadrhs;
    int j;
@@ -1143,15 +1268,21 @@ SCIP_RETCODE checkConsQuadraticProblem(
    if ( ! SCIPisFeasEQ(scip, quadlhs, quadrhs) && ! SCIPisInfinity(scip, -quadlhs) && ! SCIPisInfinity(scip, quadrhs) )
       return SCIP_OKAY;
 
-   /* get constraint handler data of linear constraints */
+   /* get constraint handler data of linear, knapsack and set packing constraints */
    linconshdlr = SCIPfindConshdlr(scip, "linear");
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   knapsackconshdlr = SCIPfindConshdlr(scip, "knapsack");
 
-   /* get number of linear constraints */
+   /* get number of linear, knapsack and set packing constraints */
    if ( linconshdlr != NULL )
-      nlinconss = SCIPconshdlrGetNConss(linconshdlr);
+      nconss += SCIPconshdlrGetNConss(linconshdlr);
+   if ( setppcconshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(setppcconshdlr);
+   if ( knapsackconshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(knapsackconshdlr);
 
-   /* desired structure: all the nonquadratic constraints are linear constraints */
-   if ( nlinconss != SCIPgetNConss(scip) - 1 )
+   /* desired structure: all the nonquadratic constraints are linear, knapsack or set packing constraints */
+   if ( nconss != SCIPgetNConss(scip) - 1 )
       return SCIP_OKAY;
 
    /* get variables that are in the linear term of the quadratic constraint */
@@ -1282,6 +1413,8 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIP_PRESOLDATA* presoldata;
    SCIP_CONSHDLR* linconshdlr;
    SCIP_CONSHDLR* quadconshdlr;
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONSHDLR* knapsackconshdlr;
    SCIP_CONS** conss;
    SCIP_CONS* cons;
 
@@ -1296,7 +1429,11 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    SCIP_CONS** savelinconss = NULL;
    SCIP_CONS** linconss = NULL;
+   SCIP_CONS** setppcconss = NULL;
+   SCIP_CONS** knapsackconss = NULL;
    int nlinconss = 0;
+   int nsetppcconss = 0;
+   int nknapsackconss = 0;
 
    SCIP_HASHMAP* varhash; /* hash map from variable to index of dual constraint */
    SCIP_CONS** dualconss; /* constraints belonging to the Lagrangean function */
@@ -1448,7 +1585,28 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    }
 
    /* handle linear constraints */
-   SCIP_CALL( presolveAddKKTLinearConss(scip, objcons, savelinconss, nlinconss, varhash, dualconss, &ndualconss, naddconss) );
+   if ( savelinconss != NULL )
+   {
+      SCIP_CALL( presolveAddKKTLinearConss(scip, objcons, savelinconss, nlinconss, varhash, dualconss, &ndualconss, naddconss) );
+   }
+
+   /* handle set packing constraints */
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( setppcconshdlr != NULL )
+   {
+      nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
+      setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
+      SCIP_CALL( presolveAddKKTSetppcConss(scip, objcons, setppcconss, nsetppcconss, varhash, dualconss, &ndualconss, naddconss) );
+   }
+
+   /* handle knapsack constraints */
+   knapsackconshdlr = SCIPfindConshdlr(scip, "knapsack");
+   if ( knapsackconshdlr != NULL )
+   {
+      nknapsackconss = SCIPconshdlrGetNConss(knapsackconshdlr);
+      knapsackconss = SCIPconshdlrGetConss(knapsackconshdlr);
+      SCIP_CALL( presolveAddKKTKnapsackConss(scip, objcons, knapsackconss, nknapsackconss, varhash, dualconss, &ndualconss, naddconss) );
+   }
 
    /* handle linear constraints belonging to aggregations of variables */
    if ( SCIPgetNFixedVars(scip) > 0 )
@@ -1481,7 +1639,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    }
    *naddconss = *naddconss + ndualconss;
 
-   /* remove linear constraints with lhs != rhs, since they are now redundant; their feasibility is already expressed
+   /* remove linear constraints, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
    if ( linconss != NULL )
    {
@@ -1495,6 +1653,26 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
       /* free buffer array */
       SCIPfreeBufferArrayNull(scip, &savelinconss);
+   }
+
+   if ( setppcconss != NULL )
+   {
+      for (c = 0; c < nsetppcconss; ++c)
+      {
+         assert( setppcconss[c] != NULL );
+         SCIP_CALL( SCIPdelCons(scip, setppcconss[c]) );
+         ++(*ndelconss);
+      }
+   }
+
+   if ( knapsackconss != NULL )
+   {
+      for (c = 0; c < nknapsackconss; ++c)
+      {
+         assert( knapsackconss[c] != NULL );
+         SCIP_CALL( SCIPdelCons(scip, knapsackconss[c]) );
+         ++(*ndelconss);
+      }
    }
 
    /* free buffer array */
