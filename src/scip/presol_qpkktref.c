@@ -570,9 +570,15 @@ SCIP_RETCODE presolveAddKKTLinearCons(
       SCIP_VAR* duallin = NULL;
       int j;
 
+      /* scip one iteration if lhs equals rhs */
+      if ( SCIPisFeasEQ(scip, lhs, rhs) )
+         i = 1;
+
       /* create dual variable corresponding to linear constraint */
       if ( i == 0 )
       {
+         assert( ! SCIPisFeasEQ(scip, lhs, rhs) );
+
          if ( SCIPisInfinity(scip, -lhs) )
             continue;
 
@@ -590,12 +596,21 @@ SCIP_RETCODE presolveAddKKTLinearCons(
             continue;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_rhs", namepart);
-         SCIP_CALL( SCIPcreateVarBasic(scip, &duallin, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL( SCIPaddVar(scip, duallin) );
-         SCIP_CALL( SCIPaddCoefLinear(scip, objcons, duallin, -0.5 * rhs) );
+         if ( SCIPisFeasEQ(scip, lhs, rhs) )
+         {
+            SCIP_CALL( SCIPcreateVarBasic(scip, &duallin, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPaddVar(scip, duallin) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, objcons, duallin, -0.5 * rhs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateVarBasic(scip, &duallin, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPaddVar(scip, duallin) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, objcons, duallin, -0.5 * rhs) );
 
-         /* create complementarity constraint between dual variable and slack variable of linear constraint */
-         SCIP_CALL( createKKTComplementarityLinear(scip, namepart, vars, vals, lhs, rhs, nvars, duallin, FALSE, naddconss) );
+            /* create complementarity constraint between dual variable and slack variable of linear constraint */
+            SCIP_CALL( createKKTComplementarityLinear(scip, namepart, vars, vals, lhs, rhs, nvars, duallin, FALSE, naddconss) );
+         }
       }
       assert( duallin != NULL );
 
@@ -1639,16 +1654,23 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    }
    *naddconss = *naddconss + ndualconss;
 
-   /* remove linear constraints, since they are now redundant; their feasibility is already expressed
+   /* remove linear constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
    if ( linconss != NULL )
    {
       assert( savelinconss != NULL );
       for (c = 0; c < nlinconss; ++c)
       {
+         SCIP_CONS* lincons;
+
+         lincons = savelinconss[c];
          assert( savelinconss[c] != NULL );
-         SCIP_CALL( SCIPdelCons(scip, savelinconss[c]) );
-         ++(*ndelconss);
+
+         if ( ! SCIPisFeasEQ(scip, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons)) )
+         {
+            SCIP_CALL( SCIPdelCons(scip, savelinconss[c]) );
+            ++(*ndelconss);
+         }
       }
 
       /* free buffer array */
@@ -1660,8 +1682,14 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
       for (c = 0; c < nsetppcconss; ++c)
       {
          assert( setppcconss[c] != NULL );
-         SCIP_CALL( SCIPdelCons(scip, setppcconss[c]) );
-         ++(*ndelconss);
+
+         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) != SCIP_SETPPCTYPE_PARTITIONING )
+         {
+            assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING || SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING );
+
+            SCIP_CALL( SCIPdelCons(scip, setppcconss[c]) );
+            ++(*ndelconss);
+         }
       }
    }
 
