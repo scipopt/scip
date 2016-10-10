@@ -741,7 +741,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
       SCIP_Real newbd;
 
       SCIPdebugMessage("changed %s bound on expression graph variable <%s> from %g to %g\n",
-         eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
+         (eventtype & SCIP_EVENTTYPE_LBCHANGED) ? "lower" : "upper",
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
@@ -2815,6 +2815,9 @@ SCIP_RETCODE reformulate(
             char                name[SCIP_MAXSTRLEN];
             SCIP_INTERVAL       bounds;
 
+            assert(children != NULL);
+            assert(nchildren == 2);
+
             bounds = SCIPexprgraphGetNodeBounds(node);
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%d", *naddcons);
 
@@ -3185,6 +3188,7 @@ SCIP_RETCODE reformulate(
             nfactors = SCIPexprGetMonomialNFactors(monomial);
             assert(nfactors >= 1); /* constant monomials should have been simplified away */
             assert(coef != 0.0);  /* zero-monomials should have been simplified away */
+            assert(children != NULL);
 
             /* check if we make monomial convex or concave by making a child linear */
             modified = FALSE;
@@ -3656,14 +3660,18 @@ SCIP_RETCODE getGradientMaxElement(
 }
 
 /** computes activity and violation of a constraint
- * during presolving and if the constraint is active, it is assumes that SCIPexprgraphEval has been called for sol before
+ *
+ * During presolving and if the constraint is active, it is assumes that SCIPexprgraphEval has been called for sol before.
+ *
+ * If a solution is found to violate the variable bounds, then violation calculation is stopped and solviolbounds is set to TRUE.
  */
 static
 SCIP_RETCODE computeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
-   SCIP_SOL*             sol                 /**< solution or NULL if LP solution should be used */
+   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   SCIP_Bool*            solviolbounds       /**< buffer to indicate whether solution is found to violate variable bounds by more than feastol */
    )
 {  /*lint --e{666}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3675,6 +3683,7 @@ SCIP_RETCODE computeViolation(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
+   assert(solviolbounds != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3685,6 +3694,7 @@ SCIP_RETCODE computeViolation(
 
    consdata->activity = 0.0;
    varval = 0.0;
+   *solviolbounds = FALSE;
 
    for( i = 0; i < consdata->nlinvars; ++i )
    {
@@ -3703,10 +3713,12 @@ SCIP_RETCODE computeViolation(
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
-         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case
-         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
-         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-         */
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+         {
+            *solviolbounds = TRUE;
+            return SCIP_OKAY;
+         }
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
@@ -3735,10 +3747,12 @@ SCIP_RETCODE computeViolation(
          /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
          if( sol == NULL )
          {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
-            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+            /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+            if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+            {
+               *solviolbounds = TRUE;
+               return SCIP_OKAY;
+            }
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
@@ -3759,10 +3773,13 @@ SCIP_RETCODE computeViolation(
             /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
             if( sol == NULL )
             {
-#if 0 /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
-               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
-#endif
+               /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+               if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+               {
+                  *solviolbounds = TRUE;
+                  SCIPfreeBufferArray(scip, &x);
+                  return SCIP_OKAY;
+               }
                varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
             }
 
@@ -3860,7 +3877,10 @@ SCIP_RETCODE computeViolation(
    return SCIP_OKAY;
 }
 
-/** computes violation of a set of constraints */
+/** computes violation of a set of constraints
+ *
+ * If the solution is found to violate bounds of some variable in some constraint, then violation computation is stopped and solviolbounds is set to TRUE.
+ */
 static
 SCIP_RETCODE computeViolations(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3868,6 +3888,7 @@ SCIP_RETCODE computeViolations(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   SCIP_Bool*            solviolbounds,      /**< buffer to indicate whether solution violates bounds of some variable by more than feastol */
    SCIP_CONS**           maxviolcon          /**< buffer to store constraint with largest violation, or NULL if solution is feasible */
    )
 {
@@ -3880,6 +3901,7 @@ SCIP_RETCODE computeViolations(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    assert(maxviolcon != NULL);
+   assert(solviolbounds != NULL);
 
    if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
@@ -3907,7 +3929,11 @@ SCIP_RETCODE computeViolations(
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol) );
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, solviolbounds) );
+
+      /* stop if solution violates bounds */
+      if( *solviolbounds )
+         break;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -5634,7 +5660,7 @@ SCIP_RETCODE addLinearizationCuts(
          continue;
 
       SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, ref, TRUE,
-            consdata->curvature & SCIP_EXPRCURV_CONVEX ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
+            (consdata->curvature & SCIP_EXPRCURV_CONVEX) ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
             &row, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
 
       if( row == NULL )
@@ -6765,6 +6791,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real viol;
    SCIP_Real delta;
    SCIP_Real gap;
+   SCIP_Bool solviolbounds;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -6800,12 +6827,14 @@ SCIP_RETCODE proposeFeasibleSolution(
        * get absolution violation and sign */
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
       {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         assert(!solviolbounds);
          viol = consdata->lhs - consdata->activity;
       }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         assert(!solviolbounds);
          viol = consdata->rhs - consdata->activity;
       }
       else
@@ -7449,6 +7478,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          newsol;
+   SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7460,7 +7490,13 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
+
+   /* it can happen here that the solution violates some bound - we then just don't separate, see also discussion in issue #627 */
+   if( solviolbounds )
+      return SCIP_OKAY;
+
+   /* nothing violated -> nothing to separate */
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
@@ -7597,6 +7633,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
+   SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7609,7 +7646,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &solviolbounds, &maxviolcon) );
+
+   /* odd, if this happens for non-LP solutions, but luckily we can just give up here */
+   if( solviolbounds )
+      return SCIP_OKAY;
+
+   /* nothing violated -> nothing to separate */
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
@@ -7633,6 +7676,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    SCIP_Real          sepaefficacy;
    SCIP_Real          minefficacy;
    SCIP_Real          leastpossibleefficacy;
+   SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7641,7 +7685,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcons) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcons) );
+
    if( maxviolcons == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -7649,6 +7694,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
    }
 
    *result = SCIP_INFEASIBLE;
+
+   if( solviolbounds )
+   {
+      /* if LP solution violates variable bounds, then this should be because a row was added that
+       * introduced this variable newly to the LP, in which case it gets value 0.0; the row should
+       * have been added to resolve an infeasibility, so solinfeasible should be TRUE
+       * see also issue #627
+       */
+      assert(solinfeasible);
+      return SCIP_OKAY;
+   }
 
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);
@@ -7803,11 +7859,16 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
    int                c;
    int                i;
    int                j;
+   SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcons) );
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcons) );
+
+   /* we enforce a pseudo-solution, which should be within (read: at) bounds by definition */
+   assert(!solviolbounds);
+
    if( maxviolcons == NULL )
    {
       *result = SCIP_FEASIBLE;
@@ -7886,6 +7947,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    SCIP_Real          maxviol;
    int                c;
    SCIP_Bool          maypropfeasible; /* whether we may be able to propose a feasible solution */
+   SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
@@ -7921,7 +7983,8 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol) );
+      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &solviolbounds) );
+      assert(!solviolbounds);  /* see also issue #627 */
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -7943,7 +8006,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
             }
          }
 
-         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
+         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible && !completely )
             return SCIP_OKAY;
 
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
@@ -9732,6 +9795,7 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool      solviolbounds;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -9748,7 +9812,13 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( computeViolation(scip, conshdlr, cons, sol) );
+   SCIP_CALL( computeViolation(scip, conshdlr, cons, sol, &solviolbounds) );
+
+   if( solviolbounds )
+   {
+      SCIPerrorMessage("Solution passed to SCIPgetViolationNonlinear() does not satisfy variable bounds.\n");
+      return SCIP_ERROR;
+   }
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

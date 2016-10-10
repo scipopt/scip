@@ -150,7 +150,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
                SCIPdebugMessage("try solution with all negations\n");
-               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
@@ -167,7 +167,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
                SCIPdebugMessage("try solution with feasible negations\n");
-               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
@@ -190,7 +190,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             {
                success = FALSE;
                SCIPdebugMessage("try solution with a single negation\n");
-               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {

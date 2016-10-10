@@ -860,7 +860,7 @@ SCIP_RETCODE boundchgApplyGlobal(
    newbound = SCIPboundchgGetNewbound(boundchg);
    boundtype = SCIPboundchgGetBoundtype(boundchg);
 
-   /* check if the bound change is redundant which can happen due to a (better) global bound change which was perforemed
+   /* check if the bound change is redundant which can happen due to a (better) global bound change which was performed
     * after that bound change was applied
     *
     * @note a global bound change is not captured by the redundant member of the bound change data structure
@@ -11577,13 +11577,17 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_Bool active = FALSE;
 #ifndef NDEBUG
    SCIP_Real constant = 0.0;
-   SCIP_Bool orignegated = *negated;
+   SCIP_Bool orignegated;
 #endif
 
    assert(var != NULL);
    assert(*var != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
+
+#ifndef NDEBUG
+   orignegated = *negated;
+#endif
 
    while( !active && *var != NULL )
    {
@@ -13622,6 +13626,7 @@ SCIP_RETCODE SCIPvarAddToRow(
 #ifdef SCIP_HISTORYTOFILE
 SCIP_Longint counter = 0l;
 const char* historypath="."; /* allows for user-defined path; use '.' for calling directory of SCIP */
+#include "scip/scip.h"
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
@@ -13676,13 +13681,24 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    {
       FILE* f;
       char filename[256];
+      SCIP_NODE* currentnode;
+      SCIP_NODE* parentnode;
+      currentnode = SCIPgetFocusNode(set->scip);
+      parentnode = SCIPnodeGetParent(currentnode);
 
       sprintf(filename, "%s/%s.pse", historypath, SCIPgetProbName(set->scip));
       f = fopen(filename, "a");
       if( NULL != f )
       {
-         fprintf(f, "%lld %s \t %lld \t %d %15.9f %.3f\n", ++counter,
-            SCIPvarGetName(var), stat->nnodes, SCIPgetDepth(set->scip), objdelta, solvaldelta);
+         fprintf(f, "%lld %s \t %lld \t %lld \t %lld \t %d \t %15.9f \t %.3f\n",
+            ++counter,
+            SCIPvarGetName(var),
+            SCIPnodeGetNumber(currentnode),
+            parentnode != NULL ? SCIPnodeGetNumber(parentnode) : -1,
+            SCIPgetNLPIterations(set->scip),
+            SCIPgetDepth(set->scip),
+            objdelta,
+            solvaldelta);
          fclose(f);
       }
    }
@@ -15774,6 +15790,8 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -15896,6 +15914,8 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16018,6 +16038,8 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16035,7 +16057,10 @@ SCIP_Real SCIPvarGetBdAtIndex(
    }
 }
 
-/** returns whether the binary variable was fixed at the time given by the bound change index */
+/** returns whether the binary variable was fixed at the time given by the bound change index
+ *
+ *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
+ */
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */

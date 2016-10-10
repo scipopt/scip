@@ -1,12 +1,12 @@
-/* $Id: test_vector.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_TEST_VECTOR_INCLUDED
-# define CPPAD_TEST_VECTOR_INCLUDED
+// $Id$
+# ifndef CPPAD_TEST_VECTOR_HPP
+# define CPPAD_TEST_VECTOR_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -29,14 +29,11 @@ $spell
 	stdvector
 $$
 
-$index CPPAD_TEST_VECTOR$$
-$index vector, test$$
-$index test, vector$$
 
 $section Choosing The Vector Testing Template Class$$
+$mindex CPPAD_TEST_VECTOR test$$
 
-$head Deprecated$$
-$index deprecated, test vector$$
+$head Deprecated 2012-07-03$$
 The $code CPPAD_TEST_VECTOR$$ macro has been deprecated,
 use $cref/CPPAD_TESTVECTOR/testvector/$$ instead.
 
@@ -45,7 +42,7 @@ $codei%CPPAD_TEST_VECTOR<%Scalar%>
 %$$
 
 $head Introduction$$
-Many of the CppAD $cref/examples/example/$$ and tests use 
+Many of the CppAD $cref/examples/example/$$ and tests use
 the $code CPPAD_TEST_VECTOR$$ template class to pass information.
 The default definition for this template class is
 $cref/CppAD::vector/CppAD_vector/$$.
@@ -75,8 +72,8 @@ $codep */
 # define CPPAD_TEST_VECTOR CppAD::vector
 # endif
 /* $$
-If you specify $code --with-eigenvector$$ on the 
-$cref/configure/InstallUnix/Configure/$$ command line,
+If you specify $code --with-eigenvector$$ on the
+$cref/configure/auto_tools/Configure/$$ command line,
 $code CPPAD_EIGENVECTOR$$ is true.
 This vector type cannot be supported by $code CPPAD_TEST_VECTOR$$
 (use $cref/CPPAD_TESTVECTOR/testvector/$$ for this support)
@@ -90,8 +87,8 @@ $codep */
 
 
 $head std::vector$$
-If you specify $code --with-stdvector$$ on the 
-$cref/configure/InstallUnix/Configure/$$
+If you specify $code --with-stdvector$$ on the
+$cref/configure/auto_tools/Configure/$$
 command line during CppAD installation,
 $code CPPAD_STDVECTOR$$ is true
 and $code CPPAD_TEST_VECTOR$$ is defined by the following source code
@@ -106,12 +103,12 @@ In this case CppAD will use $code std::vector$$ for its examples and tests.
 Use of $code CppAD::vector$$, $code std::vector$$,
 and $code std::valarray$$ with CppAD is always tested to some degree.
 Specifying $code --with-stdvector$$ will increase the amount of
-$code std::vector$$ testing. 
+$code std::vector$$ testing.
 
 $head boost::numeric::ublas::vector$$
 If you specify a value for $icode boost_dir$$ on the configure
 command line during CppAD installation,
-$code CPPAD_BOOSTVECTOR$$ is true 
+$code CPPAD_BOOSTVECTOR$$ is true
 and $code CPPAD_TEST_VECTOR$$ is defined by the following source code
 $codep */
 // The next 4 lines are C++ source code.
@@ -124,16 +121,16 @@ In this case CppAD will use Ublas vectors for its examples and tests.
 Use of $code CppAD::vector$$, $code std::vector$$,
 and $code std::valarray$$ with CppAD is always tested to some degree.
 Specifying $icode boost_dir$$ will increase the amount of
-Ublas vector testing. 
+Ublas vector testing.
 
-$head CppADvector$$
+$head CppADvector Deprecated 2007-07-28$$
 The preprocessor symbol $code CppADvector$$ is defined to
 have the same value as $code CPPAD_TEST_VECTOR$$ but its use is deprecated:
 $codep */
 # define CppADvector CPPAD_TEST_VECTOR
 /* $$
 $end
------------------------------------------------------------------------- 
+------------------------------------------------------------------------
 */
 
 # endif

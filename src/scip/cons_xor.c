@@ -784,7 +784,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
     * SCIPvarCompareActiveAndNegated (see var.c)
     */
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
 
    return hashval;
 }
@@ -2655,7 +2655,7 @@ SCIP_RETCODE checkSystemGF2(
                SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
                /* check feasibility of new solution and pass it to trysol heuristic */
-               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &success) );
+               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
                if ( success )
                {
                   SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
@@ -2738,7 +2738,7 @@ SCIP_RETCODE addConflictBounds(
       /* the integral variable was fixed, because all variables were fixed */
       for (i = 0; i < nvars; ++i)
       {
-         assert( SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)) );
+         assert( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)) );
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       break;
@@ -2748,15 +2748,15 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 1 before */
-         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
          /* add variables that were fixed to 0 */
-         else if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         else if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
          else
@@ -2779,9 +2779,9 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 0 */
-         if ( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE) < 0.5 );
+            assert( SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE) < 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -2798,9 +2798,9 @@ SCIP_RETCODE addConflictBounds(
       for (i = 0; i < nvars; ++i)
       {
          /* add variables that were fixed to 1 */
-         if ( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) > 0.5 );
+            assert( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE) > 0.5 );
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -3642,10 +3642,8 @@ SCIP_RETCODE detectRedundantConstraints(
             goto TERMINATE;
          }
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* delete cons0 and update flags of cons1 s.t. nonredundant information doesn't get lost */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
-
-         /* delete consdel */
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          (*ndelconss)++;
 
@@ -3961,6 +3959,9 @@ SCIP_RETCODE preprocessConstraintPairs(
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
             SCIPdebugPrintCons(scip, cons0, NULL);
             SCIPdebugPrintCons(scip, cons1, NULL);
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
 
@@ -4042,6 +4043,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             *cutoff = *cutoff || infeasible;
             if ( fixed )
                (*nfixedvars)++;
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -4083,6 +4087,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
             (*nfixedvars)++;
+
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -4139,6 +4146,8 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          if( redundant )
          {
+            /* delete cons1 and update flags of cons0 s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
 
@@ -4684,8 +4693,10 @@ SCIP_DECL_CONSCHECK(consCheckXor)
    SCIP_Bool violated;
    int i;
 
+   *result = SCIP_FEASIBLE;
+
    /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
       if( violated )
@@ -4718,11 +4729,8 @@ SCIP_DECL_CONSCHECK(consCheckXor)
                SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE\n", sum );
             }
          }
-
-         return SCIP_OKAY;
       }
    }
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

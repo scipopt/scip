@@ -486,75 +486,15 @@ SCIP_Bool isVariableInNeighborhood(
    return (distances[SCIPvarGetProbindex(var)] != -1 && distances[SCIPvarGetProbindex(var)] <= maxdistance);
 }
 
-/** creates subproblem out of LP rows */
-static
-SCIP_RETCODE createConstraintsFromRows(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
-   )
-{
-   SCIP_ROW** rows;   /* original scip rows */
-   int nrows;
-   int i;
-   int j;
-
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_COL** cols;
-      SCIP_Real constant;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real* vals;
-      int nnonz;
-
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-
-      assert( lhs <= rhs );
-
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ )
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &consvars);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** fixes variables in subproblem based on long breadth-first distances in variable graph */
 static
 SCIP_RETCODE fixNonNeighborhoodVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_SOL*             sol,                /**< solution in main SCIP for fixing values */
    SCIP_VAR**            vars,               /**< variables in the main SCIP */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_VAR**            fixedvars,          /**< buffer to store variables that should be fixed */
+   SCIP_Real*            fixedvals,          /**< buffer to store fixing values for fixed variables */
    int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
    int                   maxdistance,        /**< maximum distance (inclusive) to be considered for neighborhoods */
    int*                  nfixings            /**< pointer to store number of fixed variables */
@@ -581,8 +521,8 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
          SCIP_Real ub;
 
          solval = SCIPgetSolVal(scip, sol, vars[i]);
-         lb = SCIPvarGetLbGlobal(subvars[i]);
-         ub = SCIPvarGetUbGlobal(subvars[i]);
+         lb = SCIPvarGetLbGlobal(vars[i]);
+         ub = SCIPvarGetUbGlobal(vars[i]);
          assert(SCIPisLE(scip, lb, ub));
 
          /* due to dual reductions, it may happen that the solution value is not in
@@ -595,8 +535,8 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
          /* perform the bound change */
          if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
          {
-            SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
-            SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
+            fixedvars[*nfixings] = vars[i];
+            fixedvals[*nfixings] = solval;
             ++(*nfixings);
          }
       }
@@ -659,8 +599,9 @@ SCIP_RETCODE determineMaxDistance(
 static
 SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_VAR**            fixedvars,          /**< buffer to store variables that should be fixed */
+   SCIP_Real*            fixedvals,          /**< buffer to store fixing values for fixed variables */
+   int*                  nfixings,           /**< pointer to store the number of fixed variables */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed */
    unsigned int*         randseed,           /**< a seed value for the random number generator */
@@ -677,7 +618,6 @@ SCIP_RETCODE createSubproblem(
    SCIP_Real maxpotential;
    int nintegralvarsleft; /* the number of remaining discrete variables after deletion of previous neighborhood from graph */
    int nvars;
-   int nfixings;
    int nbinvars;
    int nintvars;
    int nimplvars;
@@ -689,6 +629,9 @@ SCIP_RETCODE createSubproblem(
    int maxdistance;
    int selvarmaxdistance;
 
+   assert(fixedvars != NULL);
+   assert(fixedvals != NULL);
+   assert(nfixings != NULL);
 
    *success = TRUE;
 
@@ -703,8 +646,6 @@ SCIP_RETCODE createSubproblem(
 
    /* allocate buffer memory to hold distances */
    SCIP_CALL( SCIPallocBufferArray(scip, &distances, nvars) );
-
-
 
    /* copy SCIP variables */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nbinvars + nintvars + nimplvars) );
@@ -865,23 +806,15 @@ SCIP_RETCODE createSubproblem(
    SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, selvar, distances, selvarmaxdistance) );
 
    /* fix variables that are not in the neighborhood around the selected variable */
-   SCIP_CALL( fixNonNeighborhoodVariables(scip, subscip, heurdata, sol, vars, subvars, distances, selvarmaxdistance, &nfixings) );
+   SCIP_CALL( fixNonNeighborhoodVariables(scip, heurdata, sol, vars, fixedvars, fixedvals, distances, selvarmaxdistance, nfixings) );
 
    fixthreshold = (int)(minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
 
    /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here; we also terminate if no discrete variables are left */
-   if( nfixings < fixthreshold )
+   if( *nfixings < fixthreshold )
    {
-      SCIPdebugMessage("Fixed %d/%d variables in vardegree heuristic, stopping", nfixings, fixthreshold);
+      SCIPdebugMessage("Fixed %d < %d variables in vardegree heuristic, stopping", *nfixings, fixthreshold);
       *success = FALSE;
-      goto TERMINATE;
-
-   }
-
-   /* create problem constraints from rows. If uselprows is FALSE, the entire problem was copied already, including constraints */
-   if( uselprows )
-   {
-      SCIP_CALL( createConstraintsFromRows(scip, subscip, subvars) );
    }
 
  TERMINATE:
@@ -929,7 +862,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -1029,6 +962,8 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
    SCIP* subscip;                            /* the subproblem created by vardegree */
    SCIP_VAR** vars;                          /* original problem's variables */
    SCIP_VAR** subvars;                       /* subproblem's variables */
+   SCIP_VAR** fixedvars;
+   SCIP_Real* fixedvals;
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
@@ -1039,6 +974,7 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
 
    int nvars;                                /* number of original problem's variables */
    int i;
+   int nfixedvars;
 
    SCIP_Bool success;
 
@@ -1073,6 +1009,23 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
    if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
+  /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    maxnnodesr = heurdata->nodesquot * SCIPgetNNodes(scip);
 
@@ -1095,54 +1048,11 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* initializing the subproblem */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-   SCIP_CALL( SCIPcreate(&subscip) );
-
-   /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
-
-   if( heurdata->uselprows )
-   {
-      char probname[SCIP_MAXSTRLEN];
-
-      /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-      /* get name of the original problem and add the string "_vardegreesub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_vardegreesub", SCIPgetProbName(scip));
-
-      /* create the subproblem */
-      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-      /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-   }
-   else
-   {
-      SCIP_Bool valid;
-      valid = FALSE;
-
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "vardegree", TRUE, FALSE, TRUE, &valid) );
-
-      if( heurdata->copycuts )
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
-      }
-
-      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
-   }
-
-   for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nvars) );
 
    /* create a new problem, by fixing all variables except for a small neighborhood */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata, heurdata->minfixingrate, &heurdata->randseed,
+   SCIP_CALL( createSubproblem(scip, fixedvars, fixedvals, &nfixedvars, heurdata, heurdata->minfixingrate, &heurdata->randseed,
          heurdata->uselprows, &success) );
 
    /* terminate if it was not possible to create the subproblem */
@@ -1152,28 +1062,29 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
       goto TERMINATE;
    }
 
+   /* initializing the subproblem */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+
+   for( i = 0; i < nvars; i++ )
+     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
-  /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      goto TERMINATE;
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
@@ -1299,11 +1210,13 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
       if( success )
          *result = SCIP_FOUNDSOL;
    }
-
- TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
+
+ TERMINATE:
+ SCIPfreeBufferArray(scip, &fixedvals);
+ SCIPfreeBufferArray(scip, &fixedvars);
 
    return SCIP_OKAY;
 }

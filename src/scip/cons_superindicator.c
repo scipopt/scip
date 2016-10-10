@@ -1275,7 +1275,7 @@ SCIP_DECL_CONSCHECK(consCheckSuperindicator)
 
    *result = SCIP_FEASIBLE;
 
-   for( i = nconss-1; i >= 0 && *result == SCIP_FEASIBLE; i-- )
+   for( i = nconss-1; i >= 0 && (*result == SCIP_FEASIBLE || completely); i-- )
    {
       SCIP_CONSDATA* consdata;
 
@@ -1516,7 +1516,7 @@ SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
    *result = SCIP_DIDNOTFIND;
 
    /* check that we only propagated if the binvar is fixed to one */
-   assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(consdata->binvar, bdchgidx, TRUE), 1.0));
+   assert(SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, consdata->binvar, bdchgidx, TRUE), 1.0));
 
    /* add tightened lower bound on binvar to conflict set */
    SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );

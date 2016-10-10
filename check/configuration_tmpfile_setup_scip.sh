@@ -56,7 +56,7 @@ then
 else
     OBJECTIVEVAL=""
 fi
-echo "Reference value $OBJECTIVEVAL $SOLUFILE"
+#echo "Reference value $OBJECTIVEVAL $SOLUFILE"
 # reset TMPFILE
 echo > $TMPFILE
 
@@ -78,7 +78,13 @@ fi
 # if permutation counter is positive add permutation seed (0 = default)
 if test $p -gt 0
 then
-    echo set misc permutationseed $p   >> $TMPFILE
+    echo set randomization permutationseed $p   >> $TMPFILE
+fi
+
+# if seed counter is positive add random seed shift
+if test $s -gt 0
+then
+    echo set randomization randomseedshift "$s + $GLBSEEDSHIFT" >> $TMPFILE
 fi
 
 # avoid solving LPs in case of LPS=none
@@ -88,7 +94,7 @@ then
 fi
 if test "$OBJECTIVEVAL" != ""
 then
-    echo "Reference value $OBJECTIVEVAL"
+    #echo "Reference value $OBJECTIVEVAL"
     echo set misc referencevalue $OBJECTIVEVAL      >> $TMPFILE
 fi
 echo set limits time $TIMELIMIT        >> $TMPFILE

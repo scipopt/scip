@@ -26,8 +26,6 @@
 #include "scip/heur_distributiondiving.h"
 #include "scip/branch_distribution.h"
 
-#include "pub_dive.h"
-
 #define HEUR_NAME             "distributiondiving"
 #define HEUR_DESC             "Diving heuristic that chooses fixings w.r.t. changes in the solution density"
 #define HEUR_DISPCHAR         'e'

@@ -1875,7 +1875,7 @@ void rowAddNorms(
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
 
-   /* Euclidean norm, sum norm, and objective function scalar product only take into accout LP columns */
+   /* Euclidean norm, sum norm, and objective function scalar product only take LP columns into account */
    if( col->lppos >= 0 )
    {
       /* update squared Euclidean norm and sum norm */
@@ -1952,7 +1952,7 @@ void rowDelNorms(
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
       row->validminmaxidx = FALSE;
 
-   /* Euclidean norm, sum norm, and objective function scalar product only take into accout LP columns */
+   /* Euclidean norm, sum norm, and objective function scalar product only take LP columns into account */
    if( forcenormupdate || col->lppos >= 0 )
    {
       /* update squared Euclidean norm and sum norm */
@@ -7443,12 +7443,44 @@ SCIP_Real SCIProwGetParallelism(
    {
    case 'e':
       scalarprod = SCIProwGetScalarProduct(row1, row2);
-      parallelism = (REALABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2)));
+      if( scalarprod == 0.0 )
+      {
+         parallelism = 0.0;
+         break;
+      }
+
+      if( SCIProwGetNorm(row1) == 0.0 )
+      {
+         /* In theory, this should not happen if the scalarproduct is not zero
+          * But due to bug 520 (also issue 44), it is possible that norms are not correct.
+          * Thus, if the norm is so bad that it is even 0, then reevaluate it here.
+          * But as we don't have set available here, we cannot call rowCalcNorms, so do it by hand.
+          */
+         int i;
+         for( i = 0; i < row1->len; ++i )
+            if( row1->cols[i]->lppos >= 0 )
+               row1->sqrnorm += SQR(row1->vals[i]);
+         assert(SCIProwGetNorm(row1) != 0.0);
+      }
+
+      if( SCIProwGetNorm(row2) == 0.0 )
+      {
+         /* same as for row1 above: reeval norms if it is 0, which is wrong */
+         int i;
+         for( i = 0; i < row2->len; ++i )
+            if( row2->cols[i]->lppos >= 0 )
+               row2->sqrnorm += SQR(row2->vals[i]);
+         assert(SCIProwGetNorm(row2) != 0.0);
+      }
+
+      parallelism = REALABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2));
       break;
+
    case 'd':
       scalarprod = (SCIP_Real) SCIProwGetDiscreteScalarProduct(row1, row2);
       parallelism = scalarprod / (sqrt((SCIP_Real) SCIProwGetNNonz(row1)) * sqrt((SCIP_Real) SCIProwGetNNonz(row2)));
       break;
+
    default:
       SCIPerrorMessage("invalid orthogonality function parameter '%c'\n", orthofunc);
       SCIPABORT();
@@ -8800,7 +8832,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->lpitiming = (int) set->time_clocktype;
-   (*lp)->lpirandomseed = set->lp_randomseed;
+   (*lp)->lpirandomseed = set->random_randomseed;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -13653,7 +13685,7 @@ SCIP_RETCODE lpAlgorithm(
    assert(lperror != NULL);
 
    /* check if a time limit is set, and set time limit for LP solver accordingly */
-   lptimelimit = SCIPsetInfinity(set);
+   lptimelimit = SCIPlpiInfinity(lp->lpi);
    if( set->istimelimitfinite )
       lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
 
@@ -13792,7 +13824,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
-   SCIP_CALL( lpSetRandomseed(lp, set->lp_randomseed, &success) );
+   SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
@@ -19958,6 +19990,8 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 #endif
 
    /* set time limit */
+   if( SCIPsetIsInfinity(set, timelimit) )
+      timelimit = SCIPlpiInfinity(lpi);
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit);
 
    /* check, if parameter is unknown */

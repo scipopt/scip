@@ -320,6 +320,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
+   (*prob)->conscompression = FALSE;
 
    return SCIP_OKAY;
 }
@@ -952,6 +953,11 @@ SCIP_RETCODE SCIPprobAddVar(
 
       /* update the number of variables with non-zero objective coefficient */
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
+
+      /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
+       * new variables beyond that stage has to be compatible. */
+      assert( SCIPsetGetStage(set) == SCIP_STAGE_TRANSFORMING || ! prob->objisintegral || SCIPsetIsZero(set, SCIPvarGetObj(var)) ||
+         ( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, SCIPvarGetObj(var)) ) );
    }
 
    return SCIP_OKAY;
@@ -2097,6 +2103,8 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+#undef SCIPisConsCompressedEnabled
+#undef SCIPprobEnableConsCompression
 
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
@@ -2253,6 +2261,26 @@ SCIP_Real SCIPprobGetObjscale(
 {
    assert(prob != NULL);
    return prob->objscale;
+}
+
+/** is constraint compression enabled for this problem? */
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->conscompression;
+}
+
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
+void SCIPprobEnableConsCompression(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->conscompression = TRUE;
 }
 
 #endif

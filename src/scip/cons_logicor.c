@@ -1891,7 +1891,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLogicorcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
 
    return hashval;
 }
@@ -4256,7 +4256,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
    *result = SCIP_FEASIBLE;
 
    /* check all logic or constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -4286,8 +4286,6 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                SCIPinfoMessage(scip, NULL, ";\n");
                SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
             }
-
-            return SCIP_OKAY;
          }
       }
    }
@@ -4577,7 +4575,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
    /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
-   assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
+   assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
 
 #ifndef NDEBUG
    infervarfound = FALSE;
@@ -4587,7 +4585,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
       if( consdata->vars[v] != infervar )
       {
          /* the reason variable must have been assigned to zero */
-         assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, consdata->vars[v], bdchgidx, FALSE) < 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
       }
 #ifndef NDEBUG

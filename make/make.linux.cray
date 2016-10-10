@@ -1,0 +1,16 @@
+# For CrayXC systems, tested on 5.2UP04-5.2.82 with craype module 2.5.6.1 and PrgEnv-cray/5.2.82
+# but should be usable on other systems
+# contributed to SCIP 2016 Utz-Uwe Haus <uhaus@cray.com>
+CC              =       cc
+CXX             =       CC
+LINKCC          =       cc
+LINKCXX         =       CC
+ARFLAGS         =       crs
+ZLIB_FLAGS      =
+ZLIB_LDFLAGS    =       -lz
+GMP_FLAGS       =
+GMP_LDFLAGS     =       -lgmp
+READLINE_FLAGS  =
+READLINE_LDFLAGS=       -lreadline -lncurses
+CFLAGS		=	-h std=c99
+CXXFLAGS        =	-h std=c++11

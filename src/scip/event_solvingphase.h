@@ -24,8 +24,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EVENT_XYZ_H__
-#define __SCIP_EVENT_XYZ_H__
+#ifndef __SCIP_EVENT_SOLVINGPHASE_H__
+#define __SCIP_EVENT_SOLVINGPHASE_H__
 
 #include "scip/scip.h"
 

@@ -212,7 +212,6 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
-#define SCIP_DEFAULT_LP_RANDOMSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 
 /* NLP */
 
@@ -235,7 +234,6 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_PERMUTECONSS     TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_PERMUTEVARS     FALSE /**< should order of variables be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
@@ -255,6 +253,11 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+
+/* Randomization */
+#define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
+#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED  -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
+#define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 
 /* Node Selection */
 
@@ -390,7 +393,7 @@
 /* Writing */
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
-
+#define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should varibales set to zero be printed? */
 
 
 
@@ -1345,7 +1348,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "display/allviols",
-         "display all violations of the best solution after the solving process finished?",
+         "display all violations for a given start solution / the best solution after the solving process?",
          &(*set)->disp_allviols, FALSE, SCIP_DEFAULT_DISP_ALLVIOLS,
          NULL, NULL) );
 
@@ -1600,11 +1603,6 @@ SCIP_RETCODE SCIPsetCreate(
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "lp/randomseed",
-         "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
-         &(*set)->lp_randomseed, TRUE, SCIP_DEFAULT_LP_RANDOMSEED, 0, INT_MAX,
-         NULL, NULL) );
 
    /* NLP parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -1685,12 +1683,6 @@ SCIP_RETCODE SCIPsetCreate(
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
 #endif
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "misc/permutationseed",
-         "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
-         &(*set)->misc_permutationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
-         NULL, NULL) );
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/permuteconss",
          "should order of constraints be permuted (depends on permutationseed)?",
@@ -1764,6 +1756,25 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/referencevalue",
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
+
+   /* randomization parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/randomseedshift",
+         "global shift of all random seeds in the plugins and the LP random seed",
+         &(*set)->random_randomseedshift, FALSE, SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT, 0, INT_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/permutationseed",
+         "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
+         &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, -1, INT_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/lpseed",
+         "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
+         &(*set)->random_randomseed, FALSE, SCIP_DEFAULT_RANDOM_LPSEED, 0, INT_MAX,
          NULL, NULL) );
 
    /* node selection */
@@ -2226,6 +2237,11 @@ SCIP_RETCODE SCIPsetCreate(
          "write/allconss",
          "should all constraints be written (including the redundant constraints)?",
          &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "write/printzeros",
+         "should varibales set to zero be printed?",
+         &(*set)->write_printzeros, FALSE, SCIP_DEFAULT_PRINTZEROS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "write/genericnamesoffset",
@@ -5008,6 +5024,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetIsSumRelGT
 #undef SCIPsetIsSumRelGE
 #undef SCIPsetIsUpdateUnreliable
+#undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
@@ -5708,9 +5725,7 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    )
 {
    assert(set != NULL);
-   /* TODO: maybe we should compare with REALABS(val) to handle
-      numerical issues, e.g., if val < 0 */
-   assert(SCIPsetIsGE(set, val, -set->num_feastol));
+   assert(SCIPsetIsGE(set, val, -2*set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 
    return (val <= set->num_feastol);
@@ -5972,7 +5987,8 @@ SCIP_Real SCIPsetDualfeasFrac(
 }
 
 /** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
- *  strengthening epsilon better than the old one
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
  */
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5986,13 +6002,18 @@ SCIP_Bool SCIPsetIsLbBetter(
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
+   /* if lower bound is moved to 0 or higher, always accept bound change */
+   if( oldlb < 0.0 && newlb >= 0.0 )
+      return TRUE;
+
    eps = REALABS(oldlb);
    eps = MIN(oldub - oldlb, eps);
    return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
 /** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
- *  strengthening epsilon better than the old one
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
  */
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6005,6 +6026,10 @@ SCIP_Bool SCIPsetIsUbBetter(
 
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+
+   /* if upper bound is moved to 0 or lower, always accept bound change */
+   if( oldub > 0.0 && newub <= 0.0 )
+      return TRUE;
 
    eps = REALABS(oldub);
    eps = MIN(oldub - oldlb, eps);
@@ -6270,4 +6295,15 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
+}
+
+/** modifies an initial seed value with the global shift of random seeds */
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
+   )
+{
+   assert(set != NULL);
+
+   return (initialseedvalue + set->random_randomseedshift);
 }

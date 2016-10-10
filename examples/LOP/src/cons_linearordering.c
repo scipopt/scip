@@ -104,7 +104,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	    SCIPdebug( SCIProwPrint(row, NULL) );
+	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -138,7 +138,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	       SCIPdebug( SCIProwPrint(row, NULL) );
+	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	       SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -270,6 +270,9 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( infeasible != NULL );
+
+   *infeasible = FALSE;
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -294,7 +297,6 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	 for (j = i+1; j < n; ++j)
 	 {
 	    char s[SCIP_MAXSTRLEN];
-            SCIP_Bool infeasible;
 	    SCIP_ROW* row;
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
@@ -304,14 +306,14 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	    SCIPdebug( SCIProwPrint(row, NULL) );
+	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
-	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
 	    ++nGen;
 
             /* cannot handle infeasible case here - just exit */
-            if ( infeasible )
+            if ( *infeasible )
                return SCIP_OKAY;
 	 }
       }
@@ -470,7 +472,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	       SCIPdebug( SCIProwPrint(row, NULL) );
+	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -508,7 +510,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 		  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-		  SCIPdebug( SCIProwPrint(row, NULL) );
+		  SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 		  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 		  SCIP_CALL( SCIPreleaseRow(scip, &row));

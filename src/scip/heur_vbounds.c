@@ -454,7 +454,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -653,9 +653,9 @@ SCIP_RETCODE applyVbounds(
           * are guaranteed by the heuristic at this stage.
           */
 #ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
-         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
 
          foundsol = TRUE;
@@ -691,7 +691,7 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

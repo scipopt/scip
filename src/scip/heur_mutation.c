@@ -51,7 +51,7 @@
                                              * cutpool of the original scip be copied to constraints of the subscip */
 #define DEFAULT_BESTSOLLIMIT   -1           /* limit on number of improving incumbent solutions in sub-CIP            */
 #define DEFAULT_USEUCT         FALSE        /* should uct node selection be used at the beginning of the search?     */
-
+#define DEFAULT_RANDSEED       19           /* initial random seed */
 /*
  * Data structures
  */
@@ -81,69 +81,70 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** creates a subproblem for subscip by fixing a number of variables */
+/** determine variables and values which should be fixed in the mutation subproblem */
 static
-SCIP_RETCODE createSubproblem(
+SCIP_RETCODE determineVariableFixings(
    SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
+   SCIP_VAR**            fixedvars,          /**< array to store the variables that should be fixed in the subproblem */
+   SCIP_Real*            fixedvals,          /**< array to store the fixing values to fix variables in the subproblem */
+   int*                  nfixedvars,         /**< pointer to store the number of variables that should be fixed */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
    unsigned int*         randseed,           /**< a seed value for the random number generator                  */
-   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?  */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked   */
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                    */
    SCIP_SOL* sol;                            /* pool of solutions                          */
-   SCIP_VAR** varscopy;                      /* copy of the variables array that gets permuted */
 
    int nvars;
    int nbinvars;
    int nintvars;
+   int ndiscretevars;
    int i;
-   int nvarstofix;
 
-   *success = TRUE;
+   assert(fixedvars != NULL);
+   assert(fixedvals != NULL);
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    sol = SCIPgetBestSol(scip);
    assert(sol != NULL);
 
-   /* determine the number of variables that must be fixed */
-   nvarstofix = SCIPceil(scip, minfixingrate * (nbinvars + nintvars));
+   /* compute the number of variables that should be fixed in the subproblem */
+   *nfixedvars = (int)(minfixingrate * (nbinvars + nintvars));
 
-   /* on problems with very few variables or with a very small fixing rate, the minimum fixing rate might require fixing all or no variable */
-   if( nvarstofix == nbinvars + nintvars || nvarstofix == 0 )
+   /* avoid the two corner cases that no or all discrete variables should be fixed */
+   if( *nfixedvars == 0 || *nfixedvars == nbinvars + nintvars )
    {
       *success = FALSE;
       return SCIP_OKAY;
    }
+   assert(*nfixedvars < nbinvars + nintvars);
 
-   /* copy binary and integer variables into buffer array */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nbinvars+nintvars) );
+   ndiscretevars = nbinvars + nintvars;
+   /* copy the binary and integer variables into fixedvars */
+   BMScopyMemoryArray(fixedvars, vars, ndiscretevars);
 
-   /* shuffle variables */
-   SCIPpermuteArray((void **)varscopy, 0, nbinvars + nintvars, randseed);
+   /* shuffle the array randomly */
+   SCIPpermuteArray((void **)fixedvars, 0, ndiscretevars, randseed);
 
-   /* fix the first 'nvarstofix' many variables of the subproblem in the shuffled array */
-   for( i = 0; i < nvarstofix; i++ )
+   *success = TRUE;
+   /* store the fixing values for the subset of variables that should be fixed */
+   for( i = 0; i < *nfixedvars; ++i )
    {
-      SCIP_VAR* subvar;
       SCIP_VAR* var;
       SCIP_Real solval;
       SCIP_Real lb;
       SCIP_Real ub;
 
-      var = varscopy[i];
-      assert(var != NULL);
-      assert(SCIPvarGetProbindex(var) >= 0);
+
+      var = fixedvars[i];
+      solval = SCIPgetSolVal(scip, sol, var);
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
       assert(SCIPvarGetProbindex(var) < nbinvars + nintvars);
-      subvar = subvars[SCIPvarGetProbindex(var)];
 
       solval = SCIPgetSolVal(scip, sol, var);
-      lb = SCIPvarGetLbGlobal(subvar);
-      ub = SCIPvarGetUbGlobal(subvar);
       assert(SCIPisLE(scip, lb, ub));
 
       /* due to dual reductions, it may happen that the solution value is not in
@@ -153,66 +154,17 @@ SCIP_RETCODE createSubproblem(
       else if( SCIPisGT(scip, solval, ub) )
          solval = ub;
 
-      /* perform the bound change */
-      if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
+      /* we cannot fix to infinite solution values, better break in this case */
+      if( SCIPisInfinity(scip, REALABS(solval)) )
       {
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvar, solval) );
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvar, solval) );
+         *success = FALSE;
+         break;
       }
+
+      /* store the possibly adjusted solution value as fixing value */
+      fixedvals[i] = solval;
    }
 
-   if( uselprows )
-   {
-      SCIP_ROW** rows;   /* original scip rows */
-      int nrows;
-
-      /* get the rows and their number */
-      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-      /* copy all rows to linear constraints */
-      for( i = 0; i < nrows; i++ )
-      {
-         SCIP_CONS* cons;
-         SCIP_VAR** consvars;
-         SCIP_COL** cols;
-         SCIP_Real constant;
-         SCIP_Real lhs;
-         SCIP_Real rhs;
-         SCIP_Real* vals;
-         int nnonz;
-         int j;
-
-         /* ignore rows that are only locally valid */
-         if( SCIProwIsLocal(rows[i]) )
-            continue;
-
-         /* get the row's data */
-         constant = SCIProwGetConstant(rows[i]);
-         lhs = SCIProwGetLhs(rows[i]) - constant;
-         rhs = SCIProwGetRhs(rows[i]) - constant;
-         vals = SCIProwGetVals(rows[i]);
-         nnonz = SCIProwGetNNonz(rows[i]);
-         cols = SCIProwGetCols(rows[i]);
-
-         assert( lhs <= rhs );
-
-         /* allocate memory array to be filled with the corresponding subproblem variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-         for( j = 0; j < nnonz; j++ )
-            consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-         /* create a new linear constraint and add it to the subproblem */
-         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-         SCIP_CALL( SCIPaddCons(subscip, cons) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &consvars);
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &varscopy);
    return SCIP_OKAY;
 }
 
@@ -232,10 +184,10 @@ SCIP_RETCODE createNewSol(
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
 
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subvars != NULL);
+   assert(subsol != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -254,7 +206,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -286,12 +238,12 @@ SCIP_DECL_HEURFREE(heurFreeMutation)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
@@ -306,16 +258,16 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->randseed = 0;
+   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
 
    return SCIP_OKAY;
 }
@@ -331,6 +283,8 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                                    */
    SCIP* subscip;                            /* the subproblem created by mutation                  */
    SCIP_VAR** vars;                          /* original problem's variables                        */
+   SCIP_VAR** fixedvars;                     /* array to store variables that should be fixed in the subproblem */
+   SCIP_Real* fixedvals;                     /* array to store fixing values for the variables */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
 
@@ -340,6 +294,9 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_Real timelimit;                      /* timelimit for the subproblem                        */
    SCIP_Real upperbound;
 
+   int nfixedvars;
+   int nbinvars;
+   int nintvars;
    int nvars;                                /* number of original problem's variables              */
    int i;
 
@@ -353,7 +310,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    *result = SCIP_DELAYED;
 
@@ -362,7 +319,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       return SCIP_OKAY;
 
    /* only call heuristic, if the best solution comes from transformed problem */
-   assert( SCIPgetBestSol(scip) != NULL );
+   assert(SCIPgetBestSol(scip) != NULL);
    if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       return SCIP_OKAY;
 
@@ -372,8 +329,10 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    *result = SCIP_DIDNOTRUN;
 
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
    /* only call heuristic, if discrete variables are present */
-   if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
+   if( nbinvars + nintvars == 0 )
       return SCIP_OKAY;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
@@ -395,9 +354,20 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   /* determine variables that should be fixed in the mutation subproblem */
+   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, &heurdata->randseed, &success) );
+
+   /* terminate if it was not possible to create the subproblem */
+   if( !success )
+   {
+      SCIPdebugMessage("Could not create the subproblem -> skip call\n");
+      goto TERMINATE;
+   }
+
+   *result = SCIP_DIDNOTFIND;
 
    /* initializing the subproblem */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -406,54 +376,14 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   if( heurdata->uselprows )
-   {
-      char probname[SCIP_MAXSTRLEN];
-
-      /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-      /* get name of the original problem and add the string "_mutationsub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_mutationsub", SCIPgetProbName(scip));
-
-      /* create the subproblem */
-      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-      /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-   }
-   else
-   {
-      SCIP_Bool valid;
-      valid = FALSE;
-
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, TRUE, &valid) );
-
-      if( heurdata->copycuts )
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
-      }
-
-      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
-   }
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
 
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-
-   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed,
-         heurdata->uselprows, &success) );
-
-   /* terminate if it was not possible to create the subproblem */
-   if( !success )
-   {
-      SCIPdebugMessage("Could not create the subproblem -> skip call\n");
-      goto TERMINATE;
-   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -609,10 +539,13 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
          *result = SCIP_FOUNDSOL;
    }
 
- TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
+   /* free storage for subproblem fixings */
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &fixedvals);
+   SCIPfreeBufferArray(scip, &fixedvars);
 
    return SCIP_OKAY;
 }

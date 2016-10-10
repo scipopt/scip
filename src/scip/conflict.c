@@ -3229,7 +3229,7 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
       {
       case SCIP_BOUNDTYPE_LOWER:
 
-         newbound = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
+         newbound = SCIPgetVarLbAtIndex(set->scip, var, bdchgidx, FALSE);
 
          if( var->conflictlbcount == conflict->count && var->conflictlb >= newbound )
          {
@@ -3241,7 +3241,7 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
          break;
       case SCIP_BOUNDTYPE_UPPER:
 
-         newbound = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+         newbound = SCIPgetVarUbAtIndex(set->scip, var, bdchgidx, FALSE);
 
          if( var->conflictubcount == conflict->count && var->conflictub <= newbound )
          {
@@ -3514,11 +3514,13 @@ SCIP_RETCODE conflictResolveBound(
    int i;
 
    /* store the current size of the conflict queues */
+   assert(conflict != NULL);
    nforcedbdchgqueue = SCIPpqueueNElems(conflict->forcedbdchgqueue);
    nbdchgqueue = SCIPpqueueNElems(conflict->bdchgqueue);
+#else
+   assert(conflict != NULL);
 #endif
 
-   assert(conflict != NULL);
    assert(resolved != NULL);
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
@@ -3608,7 +3610,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
             SCIPvarGetName(infervar),
             inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
             SCIPconsGetName(infercons),
             SCIPconsIsGlobal(infercons) ? "global" : "local",
             inferinfo);
@@ -3667,7 +3669,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
             SCIPvarGetName(infervar),
             inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
             SCIPpropGetName(inferprop), inferinfo);
 
          SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
@@ -5335,6 +5337,7 @@ SCIP_RETCODE undoBdchgsDualsol(
       }
       else
       {
+         SCIP_Real capped_primsol;          /* we're not primal feasible, primsol may exceed SCIP_INFINITY */
          SCIP_COL* col;
          int c;
 
@@ -5347,9 +5350,16 @@ SCIP_RETCODE undoBdchgsDualsol(
          /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
          varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
+         /* cap primal solution */
+         capped_primsol = primsols[c];
+         if( SCIPsetIsInfinity(set, primsols[c]) )
+            capped_primsol = SCIPsetInfinity(set);
+         else if( SCIPsetIsInfinity(set, -primsols[c]) )
+            capped_primsol = -SCIPsetInfinity(set);
+
          /* check dual feasibility */
-         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
-            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
+         if( (SCIPsetIsGT(set, capped_primsol, curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
+            || (SCIPsetIsLT(set, capped_primsol, curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
          {
             SCIPdebugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
                varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);

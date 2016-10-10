@@ -43,7 +43,7 @@
 #define DEFAULT_MAXSEPACUTS          10 /**< maximal number of clique cuts separated per separation round (-1: no limit) */
 #define DEFAULT_MAXZEROEXTENSIONS  1000 /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
 #define DEFAULT_CLIQUETABLEMEM  20000.0 /**< maximal memory size of dense clique table (in kb) */
-#define DEFAULT_CLIQUEDENSITY      0.05 /**< minimal density of cliques to use a dense clique table */
+#define DEFAULT_CLIQUEDENSITY      0.00 /**< minimal density of cliques to use a dense clique table */
 
 
 /*
@@ -362,9 +362,9 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
-#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored, 
-        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if 
-        * this feature it incorporated. 
+#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored,
+        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if
+        * this feature it incorporated.
         */
       assert(nvars <= tcliquegraph->nnodes);
 #endif
@@ -399,7 +399,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          nu = varids[u];
          rowstart = nu*tablewidth;
          colofs = nu/nbits;
-         colmask = 1 << (nu % nbits); /*lint !e701*/
+         colmask = 1U << (nu % nbits); /*lint !e701*/
          for( v = u+1; v < nvars; ++v )
          {
             int nv;
@@ -409,7 +409,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
                continue;
 
             nv = varids[v];
-            mask = 1 << (nv % nbits); /*lint !e701*/
+            mask = 1U << (nv % nbits); /*lint !e701*/
             cliquetable[rowstart+nv/nbits] |= mask;
             cliquetable[nv*tablewidth+colofs] |= colmask;
          }
@@ -544,10 +544,10 @@ SCIP_Bool nodesHaveCommonClique(
 
       /* check entry in the table */
       nbits = 8*sizeof(unsigned int);
-      mask = (1 << (node2 % nbits)); /*lint !e701*/
+      mask = (1U << (node2 % nbits)); /*lint !e701*/
       colofs = node2 / nbits;
       assert(((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0)
-         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1 << (node1 % nbits))) != 0)); /*lint !e701*/
+         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1U << (node1 % nbits))) != 0)); /*lint !e701*/
       return ((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0);
    }
    else

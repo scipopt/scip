@@ -3591,6 +3591,7 @@ SCIP_RETCODE propIndicator(
 
       /* perform conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
       SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -6155,8 +6156,10 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          }
          else
          {
-            SCIPdebugMessage("Indicator constraints are not feasible.\n");
-            return SCIP_OKAY;
+            SCIPdebugMessage("Indicator constraint %s is not feasible.\n", SCIPconsGetName(conss[c]));
+
+            if( !completely )
+               return SCIP_OKAY;
          }
       }
       else
@@ -6362,7 +6365,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    /* if the binary variable was the reason */
    if ( inferinfo == 0 )
    {
-      assert( SCIPvarGetLbAtIndex(consdata->binvar, bdchgidx, FALSE) > 0.5 );
+      assert( SCIPgetVarLbAtIndex(scip, consdata->binvar, bdchgidx, FALSE) > 0.5 );
       assert( infervar != consdata->binvar );
 
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->binvar, bdchgidx) );
@@ -6373,13 +6376,13 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
       assert( infervar != consdata->slackvar );
       /* Use a weaker comparison to SCIPvarGetLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
        * because SCIPvarGetLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
-      assert( SCIPisPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
+      assert( SCIPisPositive(scip, SCIPgetVarLbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
    }
    else
    {
       assert( inferinfo == 2 );
-      assert( SCIPisFeasZero(scip, SCIPvarGetUbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
@@ -7391,6 +7394,25 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
+
+      if ( SCIPisTransformed(scip) )
+      {
+         /* make sure that binary variable hash exists */
+         if ( conshdlrdata->sepaalternativelp )
+         {
+            if ( conshdlrdata->binvarhash == NULL )
+            {
+               SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNOrigVars(scip))) );
+            }
+
+            /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
+            assert( conshdlrdata->binvarhash != NULL );
+            if ( ! SCIPhashmapExists(conshdlrdata->binvarhash, (void*) consdata->binvar) )
+            {
+               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binvarhash, (void*) consdata->binvar, (void*) (*cons)) );
+            }
+         }
+      }
    }
 
    /* release slack variable and linear constraint */

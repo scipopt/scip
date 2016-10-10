@@ -2205,7 +2205,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
    *result = SCIP_FEASIBLE;
 
    /* check all linking constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -2266,8 +2266,6 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                      SCIPvarGetName(consdata->binvars[pos]) );
                }
             }
-
-            break;
          }
       }
    }
@@ -2669,19 +2667,19 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    {
       /* we have to resolve a fixing of a binary variable which was done due to fixed binary variables */
       assert(SCIPvarIsBinary(infervar));
-      assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)));
-      assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)));
+      assert(SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)));
+      assert(SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)));
 
       if( boundtype == SCIP_BOUNDTYPE_UPPER )
       {
          /* we fixed the binary variable to zero since one of the other binary variable was fixed to one (set
           * partitioning condition)
           */
-         assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
 
          for( v = 0; v < consdata->nbinvars; ++v )
          {
-            if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
+            if( SCIPgetVarLbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
                break;
@@ -2693,14 +2691,14 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       {
          /* we fixed the binary variable to one since all other binary variable were fixed to zero */
          assert(boundtype == SCIP_BOUNDTYPE_LOWER);
-         assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+         assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
 
          for( v = 0; v < consdata->nbinvars; ++v )
          {
             if( consdata->binvars[v] != infervar )
             {
                /* the reason variable must be assigned to zero */
-               assert(SCIPvarGetUbAtIndex(consdata->binvars[v], bdchgidx, FALSE) < 0.5);
+               assert(SCIPgetVarUbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) < 0.5);
                SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
             }
          }
@@ -2710,11 +2708,11 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    {
       /* we have to resolve a fixing of a binary variable which was done due to the integer variable lower bound */
       assert(SCIPvarIsBinary(infervar));
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5); /*@repair: neu*/
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5); /*@repair: neu*/
-      assert( SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)) );
-      assert( SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)) );
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5); /*@repair: neu*/
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5); /*@repair: neu*/
+      assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
 
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
@@ -2723,11 +2721,11 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    {
       /* we have to resolve a fixing of a binary variable which was done due to the integer variable upper bound */
       assert(SCIPvarIsBinary(infervar));
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5);
-      assert( SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)) );
-      assert( SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)) );
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5);
+      assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
 
       SCIP_CALL( SCIPaddConflictUb( scip, intvar, bdchgidx) );
    }
@@ -2748,7 +2746,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get propagated lower bound */
-      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE));
+      lb = SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE));
 
       for( b = 0;  b < nbinvars; ++b )
       {
@@ -2777,7 +2775,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get old and new upper bound */
-      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE));
+      ub = SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE));
 
       /* resolve tightening of upper bound of the integer variable by binary variables */
       for( b = nbinvars - 1; b >= 0; --b )
@@ -2794,12 +2792,12 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       /* we fixed a binary variable to one since the integer variable was fixed */
       assert(SCIPvarIsBinary(infervar));
       assert(boundtype == SCIP_BOUNDTYPE_LOWER);
-      assert( SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)) );
-      assert( SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetUbAtIndex(intvar, bdchgidx, FALSE)) );
-      assert( SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)) );
-      assert( SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(intvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
+      assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
 
-      assert( !SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE))  );
+      assert( !SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE))  );
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
       SCIP_CALL( SCIPaddConflictUb( scip, intvar, bdchgidx) );
@@ -2810,10 +2808,10 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(infervar == intvar);
       assert(inferinfo >= 0);
       assert(inferinfo < consdata->nbinvars);
-      assert(consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE))
-         || consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE)));
+      assert(consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPgetVarUbAtIndex(scip, consdata->intvar, bdchgidx, TRUE))
+         || consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPgetVarLbAtIndex(scip, consdata->intvar, bdchgidx, TRUE)));
 
-      assert(SCIPvarGetLbAtIndex(consdata->binvars[inferinfo], bdchgidx, FALSE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, consdata->binvars[inferinfo], bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[inferinfo]) );
    }
 

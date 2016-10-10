@@ -96,8 +96,9 @@
 #include "lpi/lpi.h"
 #include "nlpi/pub_expr.h"
 
-/* include global presolving methods */
+/* include global presolving and heuristics methods */
 #include "scip/presolve.h"
+#include "scip/heuristics.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -652,6 +653,52 @@ SCIP_RETCODE SCIPcopyOrigProb(
    const char*           name                /**< problem name of target */
    );
 
+/** enables constraint compression.
+ *
+ *  If constraint compression is enabled, fixed variables will be treated as constants
+ *  by all constraints that are copied after calling this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPenableConsCompression(
+   SCIP*                 scip                /**< source SCIP data structure */
+   );
+
+/** is constraint compression enabled?
+ *
+ *  If constraint compression is enabled, fixed variables can be treated as constants
+ *  by all constraints that are copied after calling this method.
+ *
+ *  @return TRUE if problem constraint compression is enabled, otherwise FALSE
+ *
+ *  @pre This method can be called if scip is in one of the following stages:
+  *      - \ref SCIP_STAGE_PROBLEM
+  *      - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Bool SCIPisConsCompressionEnabled(
+   SCIP*                 scip                /**< source SCIP data structure */
+   );
+
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
  *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
  *  created variable is added to the variable hash map and returned as target variable
@@ -742,6 +789,9 @@ SCIP_RETCODE SCIPcopyVars(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             global              /**< should global or local bounds be used? */
    );
 
@@ -783,8 +833,11 @@ SCIP_RETCODE SCIPcopyOrigVars(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
                                               *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars          /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    );
 
 /** merges the histories of variables from a source SCIP into a target SCIP. The two data structures should point to
@@ -1226,6 +1279,75 @@ SCIP_RETCODE SCIPcopy(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
+/** copies source SCIP to target SCIP but compresses constraints
+ *
+ *  constraint compression is performed by removing fixed variables immediately
+ *  during constraint creation if the involved constraint handlers support
+ *  compression
+ *
+ *  the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all active variables
+ *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
+ *     b) enable constraint compression
+ *  5) copy all constraints
+ *
+ *  @note: in case that a combination of local bounds and explicit fixing values should be used,
+ *         the fixing value of a variable is prefered if local bounds and fixing value disagree.
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyConsCompression(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   );
+
 /** copies source SCIP original problem to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) copy the settings
@@ -1272,6 +1394,71 @@ SCIP_RETCODE SCIPcopyOrig(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   );
+
+/** copies source SCIP original problem to target SCIP but compresses constraints
+ *
+ *  constraint compression is performed by removing fixed variables immediately
+ *  during constraint creation if the involved constraint handlers support
+ *  compression
+ *
+ *  the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all original variables
+ *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
+ *     b) enable constraint compression
+ *  5) copy all constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigConsCompression(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
@@ -3467,8 +3654,8 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
@@ -3499,8 +3686,8 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
@@ -4993,6 +5180,12 @@ SCIP_Real SCIPgetObjlimit(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This function should be used to inform SCIP that the objective function is integral, helping to improve the
+ *        performance. This is useful when using column generation. If no column generation (pricing) is used, SCIP
+ *        automatically detects whether the objective function is integral or can be scaled to be integral. However, in
+ *        any case, the user has to make sure that no variable is added during the solving process that destroys this
+ *        property.
  */
 EXTERN
 SCIP_RETCODE SCIPsetObjIntegral(
@@ -5011,6 +5204,11 @@ SCIP_RETCODE SCIPsetObjIntegral(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note If no pricing is performed, SCIP automatically detects whether the objective function is integral or can be
+ *        scaled to be integral, helping to improve performance. This function returns the result. Otherwise
+ *        SCIPsetObjIntegral() can be used to inform SCIP. However, in any case, the user has to make sure that no
+ *        variable is added during the solving process that destroys this property.
  */
 EXTERN
 SCIP_Bool SCIPisObjIntegral(
@@ -7242,6 +7440,49 @@ SCIP_Real SCIPgetVarFarkasCoef(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
+/** returns lower bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarLbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarUbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarBdAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns whether the binary variable was fixed at the time given by the bound change index */
+EXTERN
+SCIP_Bool SCIPgetVarWasFixedAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
 /** gets solution value for variable in current node
  *
  *  @return solution value for variable in current node
@@ -9146,6 +9387,13 @@ SCIP_Bool SCIPallowDualReds(
 EXTERN
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** modifies an initial seed value with the global shift of random seeds */
+EXTERN
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** marks the variable that it must not be multi-aggregated
@@ -12452,6 +12700,8 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variable will not added.
+ *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -12478,6 +12728,8 @@ SCIP_RETCODE SCIPaddVarToRow(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @attention If a coefficients absolute value is below the SCIP epsilon tolerance, the variable with its value is not added.
+ *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -12496,6 +12748,8 @@ SCIP_RETCODE SCIPaddVarsToRow(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variables will not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -15976,6 +16230,21 @@ SCIP_RETCODE SCIPcreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates a partial primal solution, initialized to unknown values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPcreatePartialSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a primal solution, initialized to unknown values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -16923,6 +17192,31 @@ SCIP_RETCODE SCIPreadSol(
    const char*           filename            /**< name of the input file */
    );
 
+/** reads a given solution file and store the solution values in the given solution pointer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPreadSolFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   SCIP_SOL*             sol,                /**< solution pointer */
+   SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            error               /**< pointer store if an error occured */
+   );
+
 /** adds feasible primal solution to solution storage by copying it
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -17007,6 +17301,7 @@ SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -17033,6 +17328,7 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -17053,9 +17349,41 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   );
+
+/** returns all partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_SOL** SCIPgetPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number of partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+int SCIPgetNPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** checks solution for feasibility without adding it to the solution store
@@ -17079,6 +17407,7 @@ SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -17334,6 +17663,23 @@ SCIP_RETCODE SCIPdropRowEvent(
 
 /**@name Tree Methods */
 /**@{ */
+
+/** gets focus node in the tree
+ *
+ *  if we are in probing/diving mode this method returns the node in the tree where the probing/diving mode was started.
+ *
+ *  @return the current node of the search tree
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_NODE* SCIPgetFocusNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** gets current node in the tree
  *

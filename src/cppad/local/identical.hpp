@@ -1,12 +1,12 @@
-/* $Id: identical.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_IDENTICAL_INCLUDED
-# define CPPAD_IDENTICAL_INCLUDED
+// $Id$
+# ifndef CPPAD_IDENTICAL_HPP
+# define CPPAD_IDENTICAL_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -17,15 +17,13 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup identical_hpp identical.hpp
-\{
 \file identical.hpp
 Check if certain properties is true for any possible AD tape play back.
 */
 
 // ---------------------------------------------------------------------------
 /*!
-Determine if an AD<Base> object is a parameter, and could never have 
+Determine if an AD<Base> object is a parameter, and could never have
 a different value during any tape playback.
 
 An AD<Base> object \c x is identically a parameter if and only if
@@ -80,7 +78,7 @@ bool IdenticalOne(const AD<Base> &x)
 {	return Parameter(x) && IdenticalOne(x.value_); }
 // Equal ===================================================================
 /*!
-Determine if two AD<Base> objects are equal, 
+Determine if two AD<Base> objects are equal,
 and must be equal during any tape playback.
 
 \param x
@@ -99,10 +97,9 @@ bool IdenticalEqualPar
 (const AD<Base> &x, const AD<Base> &y)
 {	bool parameter;
 	parameter = ( Parameter(x) & Parameter(y) );
-	return parameter  && IdenticalEqualPar(x.value_, y.value_); 
+	return parameter  && IdenticalEqualPar(x.value_, y.value_);
 }
 // ==========================================================================
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif
