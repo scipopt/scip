@@ -693,7 +693,8 @@ SCIP_RETCODE createSubproblem(
    assert(nfixings != NULL);
 
    *success = TRUE;
-
+   *nfixings = 0;
+   selvarmaxdistance = 0;
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
    sol = SCIPgetBestSol(scip);
