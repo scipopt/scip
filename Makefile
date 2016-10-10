@@ -436,6 +436,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
+			scip/presol_qpkktref.o \
 			scip/presol_redvub.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
