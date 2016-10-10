@@ -14,7 +14,7 @@
 
 #include "polyscip.h"
 
-#include <algorithm> //std::transform, std::max
+#include <algorithm> //std::transform, std::max, std::copy
 #include <array>
 #include <cmath> //std::abs
 #include <cstddef> //std::size_t
@@ -22,7 +22,7 @@
 #include <functional> //std::plus, std::negate, std::function, std::reference_wrapper
 #include <iomanip> //std::set_precision
 #include <iostream>
-#include <iterator> //std::advance
+#include <iterator> //std::advance, std::back_inserter
 #include <limits>
 #include <list>
 #include <ostream>
@@ -31,7 +31,7 @@
 #include <numeric> //std::inner_product
 #include <stdexcept>
 #include <string>
-#include <type_traits>
+#include <type_traits> //std::remove_const
 #include <utility> //std::make_pair
 #include <vector>
 
@@ -52,6 +52,7 @@ using std::cout;
 using std::end;
 using std::list;
 using std::make_pair;
+using std::map;
 using std::max;
 using std::ostream;
 using std::pair;
@@ -168,6 +169,97 @@ namespace polyscip {
         return current_ == std::prev(end(nondom_projections_));
     }
 
+    RectangularBox::RectangularBox(const std::vector<Interval>& box)
+            : box_(box)
+    { assert (box_.size() == 3);}
+
+    RectangularBox::RectangularBox(std::vector<Interval>&& box)
+            : box_(box)
+    { assert (box_.size() == 3);}
+
+    RectangularBox::RectangularBox(vector<Interval>::const_iterator first_beg,
+                                   vector<Interval>::const_iterator first_end,
+                                   Interval second,
+                                   vector<Interval>::const_iterator third_beg,
+                                   vector<Interval>::const_iterator third_end) {
+        std::copy(first_beg, first_end, std::back_inserter(box_));
+        box_.push_back(second);
+        std::copy(third_beg, third_end, std::back_inserter(box_));
+    }
+
+    std::ostream &operator<<(std::ostream& os, const RectangularBox& box) {
+        for (auto interval : box.box_)
+            os << "[ " << interval.first << ", " << interval.second << " ] ";
+        os << "\n";
+        return os;
+    }
+
+    bool RectangularBox::isSuperSet(const RectangularBox& other) const {
+        assert (other.box_.size() == this->box_.size());
+        for (size_t i=0; i!=box_.size(); ++i) {
+            if (box_[i].first < other.box_[i].first || box_[i].second < other.box_[i].second)
+                return false;
+        }
+        return true;
+    }
+
+    bool RectangularBox::isSubSet(const RectangularBox& other) const {
+        assert (this->box_.size() == other.box_.size());
+        for (size_t i=0; i!=box_.size(); ++i) {
+            if (box_[i].first > other.box_[i].first || box_[i].second > other.box_[i].second)
+                return false;
+        }
+        return true;
+    }
+
+    bool RectangularBox::isFeasible() const {
+        for (const auto& elem : box_) {
+            if (elem.first > elem.second)
+                return false;
+        }
+        return true;
+    }
+
+    RectangularBox::Interval RectangularBox::getIntervalIntersection(std::size_t index, const RectangularBox& other) const {
+        assert (box_.size() == other.box_.size());
+        auto int_beg = std::max(box_[index].first, other.box_[index].first);
+        auto int_end = std::min(box_[index].second, other.box_[index].second);
+        assert (int_beg <= int_end);
+        return {int_beg, int_end};
+    }
+
+    bool RectangularBox::intervalsCoincide(const Interval& int1, const Interval& int2) {
+        if (std::fabs(int1.first - int2.first) > epsilon)
+            return false;
+        else if (std::fabs(int2.second - int2.second) > epsilon)
+            return false;
+        else
+            return true;
+    }
+
+    vector<RectangularBox> RectangularBox::getDisjointPartition(const RectangularBox& other) const {
+        auto size = this->box_.size();
+        assert (size == other.box_.size());
+        auto disjoint_partitions = vector<RectangularBox>{};
+        auto intersections = vector<Interval>{};
+        for (size_t i=0; i<size; ++i) {
+            intersections.push_back(getIntervalIntersection(i, other));
+            if (other.box_[i].first <= box_[i].first - epsilon) { // non-empty to the left
+                disjoint_partitions.push_back( RectangularBox(begin(intersections), begin(intersections)+i,
+                                                              {other.box_[i].first, box_[i].first-epsilon},
+                                                              begin(box_)+(i+1), end(box_)) );
+                assert (disjoint_partitions.back().box_.size() == other.box_.size());
+            }
+            if (box_[i].second + epsilon <= other.box_[i].second) { // non-empty to the right
+                disjoint_partitions.push_back( RectangularBox(begin(intersections), begin(intersections)+i,
+                                                              {box_[i].second + epsilon, other.box_[i].second},
+                                                              begin(box_)+(i+1), end(box_)) );
+                assert (disjoint_partitions.back().box_.size() == other.box_.size());
+            }
+        }
+        return disjoint_partitions;
+    }
+
     Polyscip::Polyscip(int argc, const char *const *argv)
             : cmd_line_args_(argc, argv),
               polyscip_status_(PolyscipStatus::Unsolved),
@@ -220,7 +312,7 @@ namespace polyscip {
             : cmd_line_args_{cmd_line_args},
               polyscip_status_{PolyscipStatus::Unsolved},
               scip_{scip},
-              obj_sense_{obj_sense},
+              obj_sense_{SCIP_OBJSENSE_MINIMIZE},//obj_sense_{obj_sense},
               no_objs_{no_objs},
               clock_total_{clock_total},
               is_lower_dim_prob_(false),
@@ -424,7 +516,7 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    Polyscip::ObjPair Polyscip::outcomeValsLessEqAndGreater(const Box& box, const OutcomeType& outcome) const {
+    /*Polyscip::ObjPair Polyscip::outcomeValsLessEqAndGreater(const Box& box, const OutcomeType& outcome) const {
         assert (box.size() == outcome.size());
         size_t less_eq_count = 0,
                 greater_count = 0;
@@ -437,19 +529,19 @@ namespace polyscip {
             }
         }
         return {less_eq_count, greater_count};
-    }
+    }*/
 
 
-    void Polyscip::adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const {
+    /*void Polyscip::adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const {
         assert (box.size() == outcome.size());
         for (size_t i=0; i<box.size(); ++i) {
             if (outcome[i] <= box[i].second) {
                 box[i].second = outcome[i] - cmd_line_args_.getEpsilon();
             }
         }
-    }
+    }*/
 
-    void Polyscip::incorporateOutcomesToBox(Box &box,
+    /*void Polyscip::incorporateOutcomesToBox(Box &box,
                                             ResultContainer::const_iterator beg_it,
                                             ResultContainer::const_iterator end_it,
                                             vector<reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const {
@@ -467,23 +559,110 @@ namespace polyscip {
             }
             ++it;
         }
+    }*/
+
+    vector<SCIP_VAR*> Polyscip::createAndAddDisjunctiveVars(size_t num) const {
+        auto disj_vars = vector<SCIP_VAR*>{};
+        for (size_t i=0; i<num; ++i) {
+            SCIP_VAR* w = nullptr;
+            auto var_name = "w_" + std::to_string(i);
+            SCIPcreateVarBasic(scip_,
+                               addressof(w),
+                               var_name.data(),
+                               0,
+                               1,
+                               0,
+                               SCIP_VARTYPE_BINARY);
+            assert (w != nullptr);
+            SCIPaddVar(scip_, w);
+            disj_vars.push_back(w);
+        }
+        return disj_vars;
     }
 
-    SCIP_RETCODE Polyscip::addSubProbNondomPoints(const Box& box,
+    /*vector<SCIP_CONS*> Polyscip::createAndAddDisjunctiveCons(
+            const vector<SCIP_VAR *> &disj_vars, // is not 'const vector<T>&' because of SCIP API
+            const OutcomeType &outcome,
+            const Box &box,
+            const vector<vector<SCIP_VAR *>> &orig_vars,
+            const vector<vector<ValueType>> &orig_vals) const {
+        assert (disj_vars.size() == outcome.size());
+        assert (outcome.size() == box.size());
+        assert (orig_vars.size() == box.size());
+        assert (orig_vals.size() == box.size());
+
+        std::remove_const<const vector<SCIP_VAR*>>::type non_const_disj_vars(disj_vars);
+        //std::remove_const<const vector<ValueType>>::type non_const_vals(vals);
+
+        auto all_cons = vector<SCIP_CONS*>{};
+        // create cons: w_1 + w_2 + ... w_k >= 1 with w_i being 'disj_vars'
+        auto ones = vector<SCIP_Real>(disj_vars.size(), 1.);
+        SCIP_CONS* sum_cons = nullptr;
+        SCIPcreateConsBasicLinear(scip_,
+                                  addressof(sum_cons),
+                                  "disjunctive_variable_sum_cons",
+                                  global::narrow_cast<int>(disj_vars.size()),
+                                  non_const_disj_vars.data(),
+                                  ones.data(),
+                                  1.,
+                                  SCIPinfinity(scip_));
+        assert (sum_cons != nullptr);
+        SCIPaddCons(scip_, sum_cons);
+        all_cons.push_back(sum_cons);
+
+        // create cons: c_i(x) <= (outcome[i] - epsilon) + M * (1 - disj_vars[i]) where M = 10^6
+        std::cout << "\n";
+        for (size_t i=0; i<box.size(); ++i) {
+            std::cout << "o[i]= " << outcome[i] << ", ";
+            auto vars_in_cons = vector<SCIP_VAR*>(begin(orig_vars[i]), end(orig_vars[i]));
+            vars_in_cons.push_back(disj_vars[i]);
+            auto vals_in_cons = vector<ValueType>(begin(orig_vals[i]), end(orig_vals[i]));
+
+            vals_in_cons.push_back(1e06); // M = 10^6
+            SCIP_CONS* less_cons = nullptr;
+            SCIPcreateConsBasicLinear(scip_,
+                                      addressof(less_cons),
+                                      "objective_value_disj_cons",
+                                      global::narrow_cast<int>(vars_in_cons.size()),
+                                      vars_in_cons.data(),
+                                      vals_in_cons.data(),
+                                      -SCIPinfinity(scip_),
+                                      outcome[i] - cmd_line_args_.getEpsilon() + 1e06);
+            assert (less_cons != nullptr);
+            SCIPaddCons(scip_, less_cons);
+            all_cons.push_back(less_cons);
+        }
+        std::cout << "\n";
+        return all_cons;
+    }*/
+
+
+    /*SCIP_RETCODE Polyscip::addSubProbNondomPoints(const Box& box,
                                                   const vector<reference_wrapper<const OutcomeType>>& outcomes_for_constraints,
                                                   const vector<vector<SCIP_VAR *>>& orig_vars,
                                                   const vector<vector<ValueType>>& orig_vals) {
         assert (box.size() == orig_vars.size());
         assert (box.size() == orig_vals.size());
+        auto all_cons = vector<SCIP_CONS *>{};
+        auto all_vars = vector<SCIP_VAR*>{};
         if (SCIPisTransformed(scip_))
             SCIP_CALL(SCIPfreeTransform(scip_));
-        auto cons = vector<SCIP_CONS *>{};
         for (size_t i=0; i<box.size(); ++i) {
-            cons.push_back(createObjValCons(orig_vars[i],
-                                            orig_vals[i],
-                                            box[i].first,
-                                            box[i].second));
-            SCIP_CALL( SCIPaddCons(scip_, cons.back()) );
+            auto new_cons = createObjValCons(orig_vars[i],
+                                             orig_vals[i],
+                                             box[i].first,
+                                             box[i].second);
+            SCIP_CALL( SCIPaddCons(scip_, new_cons) );
+            all_cons.push_back(new_cons);
+        }
+
+        for (const auto& outcome : outcomes_for_constraints) {
+            global::print(outcome.get(), "ADD constraint for outcome: ");
+            assert (outcome.get().size() == box.size());
+            auto disj_vars = createAndAddDisjunctiveVars(box.size());
+            auto disj_cons = createAndAddDisjunctiveCons(disj_vars, outcome.get(), box, orig_vars, orig_vals);
+            std::copy(begin(disj_vars), end(disj_vars), std::back_inserter(all_vars));
+            std::copy(begin(disj_cons), end(disj_cons), std::back_inserter(all_cons));
         }
 
         std::unique_ptr<Polyscip> sub_poly(new Polyscip(cmd_line_args_,
@@ -492,22 +671,41 @@ namespace polyscip {
                                                         no_objs_,
                                                         clock_total_) );
         sub_poly->computeNondomPoints();
-        std::cout << "SUBPOLY:\n";
-        sub_poly->printResults();
+        assert (!sub_poly->unboundedResultsExist());
+        assert (sub_poly->getStatus() == PolyscipStatus::Finished);
+        if (sub_poly->numberOfBoundedResults() > 0) {
+            std::cout << "NUMBER OF RESULTS IN SUBPOLY: " << sub_poly->numberOfBoundedResults() << "\n";
+            sub_poly->printResults();
+            for (auto it=sub_poly->supportedCBegin(); it!=sub_poly->supportedCEnd(); ++it) {
+                unsupported_.push_back(*it);
+            }
+            for (auto it=sub_poly->unboundedCBegin(); it!=sub_poly->unboundedCEnd(); ++it) {
+                unsupported_.push_back(*it);
+            }
+        }
         sub_poly.reset();
+
         // release and delete constraints
         if (SCIPisTransformed(scip_))
             SCIP_CALL(SCIPfreeTransform(scip_));
-        for (auto c : cons) {
-            SCIP_CALL(SCIPdelCons(scip_, c));
-            SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
+        for (auto cons : all_cons) {
+            SCIP_CALL(SCIPdelCons(scip_, cons));
+            SCIP_CALL(SCIPreleaseCons(scip_, addressof(cons)));
+        }
+        for (auto var : all_vars) {
+            SCIP_Bool var_deleted = FALSE;
+            SCIP_CALL(SCIPdelVar(scip_, var, addressof(var_deleted)));
+            assert (var_deleted);
+            SCIP_CALL(SCIPreleaseVar(scip_, addressof(var)));
         }
         return SCIP_OKAY;
-    }
+    }*/
 
-    SCIP_RETCODE Polyscip::computeSubProbNondomPoints(const std::map<ObjPair, vector<OutcomeType>> &proj_nd_outcomes,
-                                                      const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                                                      const std::vector<std::vector<ValueType>> &orig_vals) {
+
+
+    SCIP_RETCODE Polyscip::computeSubProbNondomPoints(const map<ObjPair, vector<OutcomeType>> &proj_nd_outcomes,
+                                                      const vector<vector<SCIP_VAR *>> &orig_vars,
+                                                      const vector<vector<ValueType>> &orig_vals) {
 
         auto& nd_outcomes_01 = proj_nd_outcomes.at(ObjPair(0,1));
         assert (!nd_outcomes_01.empty());
@@ -516,38 +714,38 @@ namespace polyscip {
         auto& nd_outcomes_12 = proj_nd_outcomes.at(ObjPair(1,2));
         assert (!nd_outcomes_12.empty());
 
+        auto non_disjoint_boxes = vector<RectangularBox>{};
         for (const auto& nd_01 : nd_outcomes_01) {
             for (const auto& nd_02 : nd_outcomes_02) {
                 for (const auto& nd_12 : nd_outcomes_12) {
-
-                    auto box = Box{{max(nd_01[0], nd_02[0]), nd_12[0]-cmd_line_args_.getEpsilon()},
-                                   {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getEpsilon()},
-                                   {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getEpsilon()}};
-
-                    auto outcomes_to_be_incorporated = vector<reference_wrapper<const OutcomeType>>{};
-                    incorporateOutcomesToBox(box,
-                                             supported_.cbegin(),
-                                             supported_.cend(),
-                                             outcomes_to_be_incorporated);
-                    incorporateOutcomesToBox(box,
-                                             unsupported_.cbegin(),
-                                             unsupported_.cend(),
-                                             outcomes_to_be_incorporated);
-
-                    if (boxIsFeasible(box)) {
-                        std::cout << "TESTING BOX: \n";
-                        std::cout << "[ " << box[0].first << ", " << box[0].second << "]\n";
-                        std::cout << "[ " << box[1].first << ", " << box[1].second << "]\n";
-                        std::cout << "[ " << box[2].first << ", " << box[2].second << "]\n";
-
-                        SCIP_CALL( addSubProbNondomPoints(box,
-                                                          outcomes_to_be_incorporated,
-                                                          orig_vars,
-                                                          orig_vals) );
+                    auto box = RectangularBox({{max(nd_01[0], nd_02[0]), nd_12[0]-cmd_line_args_.getEpsilon()},
+                                               {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getEpsilon()},
+                                               {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getEpsilon()}});
+                    if (box.isFeasible()) {
+                        non_disjoint_boxes.push_back(std::move(box));
                     }
                 }
             }
         }
+        // todo find dominated_boxes
+        assert (!non_disjoint_boxes.empty());
+        auto disjoint_boxes = vector<RectangularBox>{};
+        while (!non_disjoint_boxes.empty()) {
+            auto box_to_be_added = non_disjoint_boxes.back();
+            non_disjoint_boxes.pop_back();
+            auto current_boxes = vector<RectangularBox>{};
+            for (const auto& elem : disjoint_boxes) {
+                auto elem_disjoint = elem.getDisjointPartition(box_to_be_added);
+                std::move(begin(elem_disjoint), end(elem_disjoint), std::back_inserter(current_boxes));
+            }
+            disjoint_boxes.clear();
+            std::move(begin(current_boxes), end(current_boxes), std::back_inserter(disjoint_boxes));
+            disjoint_boxes.push_back(std::move(box_to_be_added));
+        }
+        std::cout << "NUMBER OF disjoint boxes: " << disjoint_boxes.size() << "\n";
+        for (const auto& box : disjoint_boxes)
+            std::cout << box << "\n";
+        // todo disjoint boxes
         return SCIP_OKAY;
     }
 
@@ -650,14 +848,16 @@ namespace polyscip {
             return false;
     }*/
 
-    bool Polyscip::boxIsFeasible(const Box& box) const {
+    /*bool Polyscip::boxIsFeasible(const Box& box) const {
         for (const auto& bound : box) {
             if (bound.first > bound.second) {
                 return false;
             }
         }
         return true;
-    }
+    }*/
+
+
 
     SCIP_RETCODE Polyscip::solveWeightedTchebycheff(const vector<vector<SCIP_VAR*>>& orig_vars,
                                                     const vector<vector<ValueType>>& orig_vals,

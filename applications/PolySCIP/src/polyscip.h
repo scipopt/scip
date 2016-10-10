@@ -80,6 +80,30 @@ namespace polyscip {
         ProjMap::iterator current_;
     };
 
+    class RectangularBox {
+    public:
+        using Interval = std::pair<ValueType, ValueType>;
+        explicit RectangularBox(const std::vector<Interval>& box);
+        explicit RectangularBox(std::vector<Interval>&& box);
+        friend std::ostream &operator<<(std::ostream& os, const RectangularBox& box);
+        bool isSuperSet(const RectangularBox& other) const;
+        bool isSubSet(const RectangularBox& other) const;
+        bool isFeasible() const;
+        std::vector<RectangularBox> getDisjointPartition(const RectangularBox& other) const;
+
+
+    private:
+        static bool intervalsCoincide(const Interval& int1, const Interval& int2);
+        Interval getIntervalIntersection(std::size_t index, const RectangularBox& other) const;
+
+        RectangularBox(std::vector<Interval>::const_iterator first_beg, std::vector<Interval>::const_iterator first_end,
+                       Interval second,
+                       std::vector<Interval>::const_iterator third_beg, std::vector<Interval>::const_iterator third_end);
+
+        constexpr static double epsilon = 1e-5;
+        std::vector<Interval> box_;
+    };
+
     class Polyscip {
     public:
         enum class PolyscipStatus {
@@ -232,7 +256,7 @@ namespace polyscip {
 
         void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;
 
-        bool boxIsFeasible(const Box& box) const;
+        //bool boxIsFeasible(const Box& box) const;
 
         void incorporateOutcomesToBox(Box &box,
                                       ResultContainer::const_iterator beg,
@@ -249,6 +273,15 @@ namespace polyscip {
                                              const std::vector<ValueType> &orig_vals,
                                              const ValueType &rhs,
                                              const ValueType &beta_i);
+
+        std::vector<SCIP_CONS*> createAndAddDisjunctiveCons(
+                const std::vector<SCIP_VAR *> &disj_vars,
+                const OutcomeType &outcome,
+                const Box &box,
+                const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                const std::vector<std::vector<ValueType>> &orig_vals) const;
+
+        std::vector<SCIP_VAR*> createAndAddDisjunctiveVars(std::size_t) const;
 
         /** create constraint: lhs <= c_i^T x <= rhs*
          * @param new_var
