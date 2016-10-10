@@ -735,10 +735,8 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       int hi;
       int lo;
       int pivotindex;
-      int npivots;
       SCIP_Real betterweightsum;
-      SCIP_Real equalweightsum;
-
+      SCIP_Real pivotweight;
       SORTTPL_KEYTYPE pivot;
 
       ++recursiondepth;
@@ -768,6 +766,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[end], field5[pivotindex]); )
          SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[end], field6[pivotindex]); )
       }
+
       lo = start;
       hi = end - 1;
 
@@ -795,37 +794,29 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          while( hi >= start && !SORTTPL_ISBETTER(key[hi], pivot) )
             --hi;
 
-
          while( lo < end && SORTTPL_ISBETTER(key[lo], pivot) )
             ++lo;
       }
+
       assert(hi == lo - 1);
-      npivots = 0;
 
-      /* place pivot element(s) back to where they belong */
-      for( i = lo; i <= end; ++i )
+      /* place pivot element back to where it belongs */
+      if( lo != end )
       {
-         if( !SORTTPL_ISWORSE(key[i], pivot) )
-         {
-            /* because lo skipped all elements that are better, there should be no element left that is better to the right of lo */
-            assert(!SORTTPL_ISBETTER(key[i], pivot));
-            SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo + npivots], key[i]);
+         /* because lo skipped all elements that are better, there should be no element left that is better to the right of lo */
+         assert(!SORTTPL_ISBETTER(key[lo], pivot));
+         SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[end]);
 
-            if( weights != NULL )
-               SORTTPL_SWAP(SCIP_Real, weights[lo + npivots], weights[i]);
+         if( weights != NULL )
+            SORTTPL_SWAP(SCIP_Real, weights[lo], weights[end]);
 
-            SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo + npivots], field1[i]); )
-            SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo + npivots], field2[i]); )
-            SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo + npivots], field3[i]); )
-            SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo + npivots], field4[i]); )
-            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo + npivots], field5[i]); )
-            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo + npivots], field6[i]); )
-
-            ++npivots;
-         }
+         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[end]); )
+         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[end]); )
+         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[end]); )
+         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[end]); )
+         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo], field5[end]); )
+         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo], field6[end]); )
       }
-
-      assert(npivots > 0);
 
       if( weights != NULL )
       {
@@ -836,25 +827,17 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
             assert(SORTTPL_ISBETTER(key[i], pivot));
             betterweightsum += weights[i];
          }
-
-         equalweightsum = 0.0;
-
-         /* collect weights of elements that are equal to the pivot */
-         for( ; i < lo + npivots; ++i )
-         {
-            assert(!SORTTPL_ISBETTER(key[i], pivot) && !SORTTPL_ISWORSE(key[i], pivot));
-            equalweightsum += weights[i];
-         }
+         pivotweight = weights[lo];
       }
       else
       {
          /* if all weights are equal to one, we directly know the larger and the equal weight sum */
          betterweightsum = lo - start;
-         equalweightsum = npivots;
+         pivotweight = 1.0;
       }
 
       /* we selected the right median. */
-      if( betterweightsum < residualcapacity && betterweightsum + equalweightsum >= residualcapacity)
+      if( betterweightsum < residualcapacity && betterweightsum + pivotweight >= residualcapacity)
       {
          if( medianpos != NULL )
             *medianpos = lo;
@@ -869,9 +852,9 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       }
       else
       {
-         assert(betterweightsum + equalweightsum < residualcapacity);
-         start = lo + npivots;
-         residualcapacity -= betterweightsum + equalweightsum;
+         assert(betterweightsum + pivotweight < residualcapacity);
+         start = lo + 1;
+         residualcapacity -= betterweightsum + pivotweight;
       }
    }
 

@@ -15,10 +15,10 @@
 
 /**@file   select.c
  * @brief  unit tests for selection of unweighted and weighted median
- * @author Gselector Hendel
+ * @author Gregor Hendel
  */
 
-#include "scip/misc.c"
+#include "scip/pub_misc.h"
 #include "scip/scip.h"
 
 #include "include/scip_test.h"
