@@ -204,6 +204,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
 
+#ifndef NDEBUG
+   {
+      /* perform check that no new rows are added - this is forbidden */
+      int j;
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+   }
+#endif
+
    lpi->ncols += ncols;
 
    return SCIP_OKAY;
@@ -271,6 +280,15 @@ SCIP_RETCODE SCIPlpiAddRows(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
+
+#ifndef NDEBUG
+   /* perform check that no new columns are added - this is forbidden */
+   {
+      int j;
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < lpi->ncols );
+   }
+#endif
 
    lpi->nrows += nrows;
 

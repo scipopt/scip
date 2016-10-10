@@ -724,7 +724,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    cutpool->ncalls++;
    found = FALSE;
 
-   SCIPdebugMessage("separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
+   SCIPsetDebugMsg(set, "separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);
@@ -773,7 +773,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
             {
                /* insert cut in separation storage */
-               SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
+               SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
 

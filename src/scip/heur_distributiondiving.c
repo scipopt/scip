@@ -330,7 +330,7 @@ void rowCalculateGauss(
    }
 
    SCIPdebug( SCIPprintRow(scip, row, NULL) );
-   SCIPdebugMessage("  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
+   SCIPdebugMsg(scip, "  Row %s has a mean value of %g at a sigma2 of %g \n", SCIProwGetName(row), *mu, *sigma2);
 }
 
 /** calculate the branching score of a variable, depending on the chosen score parameter */
@@ -526,9 +526,9 @@ SCIP_RETCODE calcBranchScore(
       /* update the up and down score depending on the chosen scoring parameter */
       SCIP_CALL( SCIPupdateDistributionScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam) );
 
-      SCIPdebugMessage("  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
+      SCIPdebugMsg(scip, "  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
          SCIPvarGetName(var), SCIProwGetName(row), currentrowprob, newrowprobup, newrowprobdown);
-      SCIPdebugMessage("  -->  new variable score: %g (for branching up), %g (for branching down)\n",
+      SCIPdebugMsg(scip, "  -->  new variable score: %g (for branching up), %g (for branching down)\n",
          *upscore, *downscore);
    }
 
@@ -544,16 +544,6 @@ SCIP_RETCODE heurdataFreeArrays(
 {
    assert(heurdata->memsize == 0 || heurdata->rowmeans != NULL);
    assert(heurdata->memsize >= 0);
-
-   if( heurdata->memsize > 0 )
-   {
-      SCIPfreeBufferArray(scip, &heurdata->rowmeans);
-      SCIPfreeBufferArray(scip, &heurdata->rowvariances);
-      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesup);
-      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesdown);
-
-      heurdata->memsize = 0;
-   }
 
    if( heurdata->varpossmemsize > 0 )
    {
@@ -579,7 +569,16 @@ SCIP_RETCODE heurdataFreeArrays(
       SCIPfreeBufferArray(scip, &heurdata->varposs);
       SCIPfreeBufferArray(scip, &heurdata->varfilterposs);
    }
-   /* allocate variable update event processing array storage */
+
+   if( heurdata->memsize > 0 )
+   {
+      SCIPfreeBufferArray(scip, &heurdata->rowvariances);
+      SCIPfreeBufferArray(scip, &heurdata->rowmeans);
+      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesup);
+      SCIPfreeBufferArray(scip, &heurdata->rowinfinitiesdown);
+
+      heurdata->memsize = 0;
+   }
 
    heurdata->varpossmemsize = 0;
    heurdata->nupdatedvars = 0;

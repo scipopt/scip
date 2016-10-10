@@ -27,7 +27,7 @@
 #include "scip/heur_subnlp.h"
 
 #include "nlpi/exprinterpret.h"
-
+#include "scip/random.h"
 
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
@@ -103,10 +103,11 @@ SCIP_RETCODE sampleRandomPoints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            rndpoints,          /**< array to store all random points */
    int                   nrndpoints,         /**< total number of random points to compute */
-   unsigned int*         rndseed,            /**< random seed */
+   unsigned int          rndseed,            /**< random seed */
    SCIP_Real             maxboundsize        /**< maximum variable domain size for unbounded variables */
    )
 {
+   SCIP_RANDGEN* rgen;
    SCIP_VAR** vars;
    SCIP_Real val;
    SCIP_Real lb;
@@ -121,6 +122,7 @@ SCIP_RETCODE sampleRandomPoints(
    assert(rndseed != NULL);
    assert(maxboundsize > 0.0);
 
+   SCIP_CALL( SCIPrandomCreate(&rgen, SCIPblkmem(scip), rndseed) );
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
@@ -137,15 +139,15 @@ SCIP_RETCODE sampleRandomPoints(
             val = (lb + ub) / 2.0;
          /* use a smaller domain for unbounded variables */
          else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
-            val = SCIPgetRandomReal(lb, ub, rndseed);
+            val = SCIPrandomGetReal(rgen, lb, ub);
          else if( !SCIPisInfinity(scip, -lb) )
-            val = SCIPgetRandomReal(lb, lb + maxboundsize, rndseed);
+            val = SCIPrandomGetReal(rgen, lb, lb + maxboundsize);
          else if( !SCIPisInfinity(scip, ub) )
-            val = SCIPgetRandomReal(ub - maxboundsize, ub, rndseed);
+            val = SCIPrandomGetReal(rgen, ub - maxboundsize, ub);
          else
          {
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
-            val = SCIPgetRandomReal( -0.5*maxboundsize, 0.5*maxboundsize, rndseed);
+            val = SCIPrandomGetReal(rgen, -0.5*maxboundsize, 0.5*maxboundsize);
          }
          assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
 
@@ -155,6 +157,8 @@ SCIP_RETCODE sampleRandomPoints(
 
       assert(rndpoints[k] != NULL);
    }
+
+   SCIPrandomFree(&rgen, SCIPblkmem(scip));
 
    return SCIP_OKAY;
 }
@@ -643,9 +647,9 @@ SCIP_RETCODE solveNLP(
    if( nlpresult == SCIP_FOUNDSOL )
    {
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, TRUE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, TRUE, TRUE, TRUE, TRUE, TRUE, success) );
 #else
-      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, TRUE, FALSE, FALSE, FALSE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, FALSE, FALSE, FALSE, FALSE, FALSE, success) );
 #endif
    }
    else
@@ -721,7 +725,7 @@ SCIP_RETCODE applyHeur(
    /*
     * 1. sample random points; note that the solutions need to be freed again
     */
-   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, &heurdata->randseed, heurdata->maxboundsize) );
+   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->randseed, heurdata->maxboundsize) );
 
    /*
     * 2. improve points via consensus vectors
