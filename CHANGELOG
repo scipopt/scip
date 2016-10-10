@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- implemented linear time methods for (weighted) median selection for joint arrays of various types
 - new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
 - new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
 - added leaf statistics about LP objective limit|feasible|infeasible leaves to the statistics output and
@@ -33,6 +34,7 @@ parameters:
 - new parameter randomization/lpseed to set the initial seed of the LP solver
 
 performance improvements:
+- knapsack approximation algorithms use linear-time weighted median selection instead of sorting
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
   and only create and populate a sub-SCIP if enough variables will be fixed.
 - SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
@@ -43,6 +45,8 @@ performance improvements:
 - reduce performance variability by using random numbers as tie-breaker for external branching candidates
 
 interface:
+- separated header pub_misc.h from repeated methods for sorting and (weighted) median selection; those are also available in separate headers pub_misc_sort.h
+  and pub_misc_select.h, but included into pub_misc.h
 - new library methods SCIPenableConsCompression(), SCIPisConsCompressionEnabled(), SCIPcopyConsCompression(), SCIPcopyOrigConsCompression()
 - new method SCIPcopyLargeNeighborhoodSearch() in heuristics.h that supports compressed copying and two kinds of problem copy: the MIP-relaxation or
   a 1-1 problem copy (by copying the constraints, and not the LP relaxation)
