@@ -953,12 +953,16 @@ void* SCIPlpiGetSolverPointer(
 
 //#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
 /** pass integrality information about variables to the solver */
-void SCIPlpiSetIntegralityInformation(
-   SCIP_LPI*             lpi,
-   int*                  intInfo
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   nvars,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
 {
+   assert(nvars == lpi->spx->numColsReal());
    lpi->spx->setIntegralityInformation(intInfo);
+
+   return SCIP_OKAY;
 }
 //#endif
 

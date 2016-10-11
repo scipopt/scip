@@ -51,8 +51,6 @@
 #include "scip/pub_message.h"
 #include "lpi/lpi.h"
 
-#include "scip/scip.h"
-
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 
 
@@ -3102,6 +3100,29 @@ SCIP_RETCODE lpSetRandomseed(
       SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_RANDOMSEED, randomseed, success) );
       if( *success )
          lp->lpirandomseed = randomseed;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets the LP solution polishing method */
+static
+SCIP_RETCODE lpSetSolutionPolishing(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             polishing,          /**< LP solution polishing activated (0: disabled, 1: enabled) */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   if( polishing != lp->lpisolutionpolishing )
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_POLISHING, (polishing ? 1 : 0), success) );
+      if( *success )
+         lp->lpisolutionpolishing = polishing;
    }
    else
       *success = FALSE;
@@ -7658,6 +7679,7 @@ SCIP_RETCODE lpFlushDelCols(
       }
       lp->nlpicols = lp->lpifirstchgcol;
       lp->flushdeletedcols = TRUE;
+      lp->updateintegrality = TRUE;
 
       /* mark the LP unsolved */
       lp->solved = FALSE;
@@ -7854,6 +7876,7 @@ SCIP_RETCODE lpFlushAddCols(
    SCIPsetFreeBufferArray(set, &obj);
 
    lp->flushaddedcols = TRUE;
+   lp->updateintegrality = TRUE;
 
    /* mark the LP unsolved */
    lp->solved = FALSE;
@@ -8317,6 +8340,37 @@ SCIP_RETCODE lpFlushChgRows(
    return SCIP_OKAY;
 }
 
+/** copy integrality information to the LP */
+static
+SCIP_RETCODE lpCopyIntegrality(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+   int* integerInfo;
+   SCIP_VAR* var;
+
+   assert(lp != NULL);
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &integerInfo, lp->ncols) );
+
+   for( i = 0; i < lp->ncols; ++i )
+   {
+      var = SCIPcolGetVar(lp->cols[i]);
+      if( SCIPvarIsIntegral(var) || SCIPvarIsBinary(var) )
+         integerInfo[i] = 1;
+      else
+         integerInfo[i] = 0;
+   }
+
+   SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo);
+   SCIPsetFreeBufferArray(set, &integerInfo);
+   lp->updateintegrality = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -8325,11 +8379,6 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   SCIP_VAR** vars;
-   int* intInfo;
-   int nvars;
-   int i;
-
    assert(lp != NULL);
    assert(blkmem != NULL);
 
@@ -8372,21 +8421,6 @@ SCIP_RETCODE SCIPlpFlush(
       assert(nrows == lp->nrows);
    }
 #endif
-
-   /* pass integrality information to LP solver (only SoPlex) */
-   vars = SCIPgetVars(set->scip);
-   nvars = SCIPgetNVars(set->scip);
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &intInfo, nvars) );
-   for( i = 0; i < nvars; ++i )
-   {
-      if( SCIPvarIsBinary(vars[i]) || SCIPvarIsIntegral(vars[i]) )
-         intInfo[i] = 1;
-      else
-         intInfo[i] = 0;
-   }
-
-   SCIPlpiSetIntegralityInformation(lp->lpi, intInfo);
-   SCIPsetFreeBufferArray(set, &intInfo);
 
    return SCIP_OKAY;
 }
@@ -8810,6 +8844,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->flushaddedcols = FALSE;
    (*lp)->flushdeletedrows = FALSE;
    (*lp)->flushaddedrows = FALSE;
+   (*lp)->updateintegrality = TRUE;
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
@@ -8949,6 +8984,14 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: row representation of the basis not available -- SCIP parameter lp/rowrepswitch has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_POLISHING, (*lp)->lpisolutionpolishing, &success) );
+   (*lp)->lpihaspolishing = success;
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: solution polishing not available -- SCIP parameter lp/solutionpolishing has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_CONDITIONLIMIT, (*lp)->lpiconditionlimit, &success) );
@@ -13789,6 +13832,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_Bool success3;
    SCIP_Bool simplex;
    SCIP_Bool itlimishard;
+   SCIP_Bool usepolishing;
 
    assert(lp != NULL);
    assert(lp->flushed);
@@ -13816,6 +13860,16 @@ SCIP_RETCODE lpSolveStable(
    /* check whether the iteration limit is a hard one */
    itlimishard = (itlim == harditlim);
 
+   /* check whether solution polishing should be used */
+   if( set->lp_solutionpolishing == 2 || (set->lp_solutionpolishing == 1 && stat->nnodes == 1 && !lp->probing))
+   {
+      usepolishing = TRUE;
+      if( lp->updateintegrality )
+         lpCopyIntegrality(lp, set);
+   }
+   else
+      usepolishing = FALSE;
+
    /* solve with given settings (usually fast but imprecise) */
    if( SCIPsetIsInfinity(set, lp->cutoffbound) )
    {
@@ -13842,6 +13896,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
+   SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
