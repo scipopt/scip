@@ -763,7 +763,6 @@ SCIP_RETCODE SCIPconflictstoreCleanSwitching(
    assert(conflictstore->ncbconflicts >= 0);
 
    SCIPdebugMessage("-> removed %d/%d conflicts, %d were already marked as deleted\n", ndelconfs+ndelconfs_del, conflictstore->nconflicts, ndelconfs_del);
-   printf("-> removed %d/%d conflicts, %d were already marked as deleted\n", ndelconfs+ndelconfs_del, conflictstore->nconflicts, ndelconfs_del);
    conflictstore->nconflicts -= (ndelconfs+ndelconfs_del);
 
    return SCIP_OKAY;
@@ -806,9 +805,9 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
 
    /* TODO we may want to introduce a paramter */
    if( SCIPsetIsPositive(set, cutoffbound) )
-      improvement = (1 - 0.95);
+      improvement = (1 - 0.05);
    else
-      improvement = (1 + 0.95);
+      improvement = (1 + 0.05);
 
    /* remove al conflicts depending on the cutoffbound */
    while( nseenconfs < conflictstore->nconflicts )

@@ -6515,10 +6515,6 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
    assert(SCIPlpiIsPrimalInfeasible(lpi) || !SCIPlpDivingObjChanged(lp));
 
-   /* if solve for some reason did not produce a dual ray, e.g. because of numerical instabilities, abort conflict analysis */
-   if( !SCIPlpiHasDualRay(lpi) )
-      return SCIP_OKAY;
-
    if( !SCIPlpiIsPrimalInfeasible(lpi) )
    {
       SCIP_Real objval;
@@ -6611,6 +6607,9 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, SCIPprobGetNVars(transprob)) );
       BMSclearMemoryArray(farkascoefs, SCIPprobGetNVars(transprob));
 
+      farkasactivity = 0.0;
+      farkaslhs = 0.0;
+
       /* get temporary memory for remembering variables' current bounds and corresponding bound change information
        * positions in variable's bound change information arrays
        */
@@ -6663,8 +6662,12 @@ SCIP_RETCODE conflictAnalyzeLP(
       if( !valid )
          goto TERMINATE;
 
-      SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
-            curvarubs, &stopped) );
+      stopped = FALSE;
+      if( SCIPlpiIsPrimalInfeasible(lpi) )
+      {
+         SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
+               curvarubs, &stopped) );
+      }
 
       if( stopped )
          goto TERMINATE;
@@ -6678,7 +6681,8 @@ SCIP_RETCODE conflictAnalyzeLP(
 //      }
 
       /* start dual ray analysis */
-      if( set->conf_enabledualray && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+      if( SCIPlpiIsPrimalInfeasible(lpi) && set->conf_enabledualray
+            && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP )
       {
          /* start dual ray analysis */
          SCIP_CALL( performDualRayAnalysis(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, branchcand,
