@@ -26,15 +26,15 @@
 # To get the result files call "./evalcheck_cluster.sh
 # results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
 # This leads to result files
-#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
-#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
-#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
+#  - results/check.$TSTNAME.$BINNAME.$SETNAME.out
+#  - results/check.$TSTNAME.$BINNAME.$SETNAME.res
+#  - results/check.$TSTNAME.$BINNAME.$SETNAME.err
 
 TSTNAME=$1
 BINNAME=$2
-SETNAME=$3
+SETNAMES=$3
 BINID=$4
-TIMEFACTOR=$5
+TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
@@ -49,27 +49,27 @@ CLIENTTMPDIR=${16}
 NOWAITCLUSTER=${17}
 EXCLUSIVE=${18}
 PERMUTE=${19}
-
-MAXFACTOR=24
-
-if [ $TIMEFACTOR -gt $MAXFACTOR ]
-then
-    TIMEFACTOR=1
-fi
+SEEDS=${20}
+VALGRIND=${21}
+REOPT=${22}
+OPTCOMMAND=${23}
+SETCUTOFF=${24}
+VISUALIZE=${25}
 
 # check if all variables defined (by checking the last one)
-if test -z $PERMUTE
+if test -z $VISUALIZE
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
-    echo "SETNAME       = $SETNAME"
+    echo "SETNAMES      = $SETNAME"
     echo "BINID         = $BINID"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
     echo "MEMLIMIT      = $MEMLIMIT"
     echo "THREADS       = $THREADS"
     echo "FEASTOL       = $FEASTOL"
+    echo "LPS           = $LPS"
     echo "DISPFREQ      = $DISPFREQ"
     echo "CONTINUE      = $CONTINUE"
     echo "QUEUETYPE     = $QUEUETYPE"
@@ -79,270 +79,127 @@ then
     echo "NOWAITCLUSTER = $NOWAITCLUSTER"
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
+    echo "SEEDS         = $SEEDS"
+    echo "VALGRIND      = $VALGRIND"
+    echo "REOPT         = $REOPT"
+    echo "OPTCOMMAND    = $OPTCOMMAND"
+    echo "SETCUTOFF     = $SETCUTOFF"
+    echo "VISUALIZE     = $VISUALIZE"
     exit 1;
 fi
 
-# get current SCIP path
-SCIPPATH=`pwd`
+# configure cluster-related environment variables
+. ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
-if test ! -e $SCIPPATH/results
+# the srun queue requires a format duration HH:MM:SS (and optionally days),
+# whereas the qsub requires the memory limit in kB
+if test "$QUEUETYPE" != "qsub"
 then
-    mkdir $SCIPPATH/results
-fi
-
-SETTINGS=$SCIPPATH/../settings/$SETNAME.set
-
-# check if the settings file exists
-if test $SETNAME != "default"
-then
-    if test ! -e $SETTINGS
-    then
-        echo Skipping test since the settings file $SETTINGS does not exist.
-        exit
-    fi
-fi
-
-# check if binary exists
-if test ! -e $SCIPPATH/../$BINNAME
-then
-    echo Skipping test since the binary $BINNAME does not exist.
-    exit
-fi
-
-# check if queue has been defined
-if test "$QUEUE" = ""
-then
-    echo Skipping test since the queue name has not been defined.
-    exit
-fi
-
-# check if number of nodes has been defined
-if test "$PPN" = ""
-then
-    echo Skipping test since the number of nodes has not been defined.
-    exit
-fi
-
-#define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs
-CLUSTERQUEUE=$QUEUE
-
-NICE=""
-ACCOUNT="mip"
-
-if test $CLUSTERQUEUE = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test $CLUSTERQUEUE = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
-fi
-
-# check if the slurm blades should be used exclusively
-if test "$EXCLUSIVE" = "true"
-then
-    EXCLUSIVE=" --exclusive"
-    if test $CLUSTERQUEUE = "opt"
-    then
-        CLUSTERQUEUE="M610"
-    fi
+    TIMEFORMAT="format"
+    MEMFORMAT="MB"
 else
-    EXCLUSIVE=""
+    TIMEFORMAT="sec"
+    MEMFORMAT="B"
 fi
+# call routines for creating the result directory, checking for existence
+# of passed settings, etc
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
 
-# we add 10% to the hard memory limit and additional 100MB to the hard memory limit
-HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
-# check whether there is enough memory on the host system, otherwise we need to submit from the target system
-if test "$QUEUETYPE" = "srun"
-then
-    HOSTMEM=`ulimit -m`
-    if test "$HOSTMEM" != "unlimited"
-    then
-        if [ `expr $HARDMEMLIMIT \* 1024` -gt $HOSTMEM ]
-        then
-            echo "Not enough memory on host system - please submit from target system (e.g. ssh opt201)."
-            exit
-        fi
-    fi
-fi
-
-# in case of qsub queue the memory is measured in kB and in case of srun the time needs to be formatted
-if test  "$QUEUETYPE" = "qsub"
-then
-    HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
-fi
-
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
-echo > $EVALFILE
+# at the first time, some files need to be initialized. set to "" after the innermost loop
+# finished the first time
+INIT="true"
 
 # counter to define file names for a test set uniquely
 COUNT=0
-
-for j in `cat testset/$TSTNAME.ttest` DONE
+# loop over permutations
+# loop over testset
+for idx in ${!INSTANCELIST[@]}
 do
-  if test "$j" = "DONE"
-  then
-      break
-  fi
+    # retrieve instance and timelimits from arrays set in the configuration_set.sh script
+    INSTANCE=${INSTANCELIST[$idx]}
+    TIMELIMIT=${TIMELIMLIST[$idx]}
+    HARDTIMELIMIT=${HARDTIMELIMLIST[$idx]}
+    # increase the index for the instance tried to solve, even if the filename does not exist
+    COUNT=`expr $COUNT + 1`
 
-  if test "$instance" = ""
-  then
-      instance=$j
-      continue
-  fi
-
-  TIMELIMIT=`expr $j \* $TIMEFACTOR`
-  i=$instance
-  instance=""
-
-  COUNT=`expr $COUNT + 1`
-
-  echo timelimit $TIMELIMIT
-
-  # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-  # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
-  #       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
-  #       available
-  HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-  # in case of srun the time needs to be formatted
-  if test  "$QUEUETYPE" = "srun"
-  then
-    MYMINUTES=0
-    MYHOURS=0
-    MYDAYS=0
-
-    #calculate seconds, minutes, hours and days
-    MYSECONDS=`expr $HARDTIMELIMIT % 60`
-    TMP=`expr $HARDTIMELIMIT / 60`
-    if test "$TMP" != "0"
+    # we need the DONE keyword for the check.sh script to automatically run evalcheck, here it is not needed
+    if test "$INSTANCE" = "DONE"
     then
-	MYMINUTES=`expr $TMP % 60`
-	TMP=`expr $TMP / 60`
-	if test "$TMP" != "0"
-	then
-	    MYHOURS=`expr $TMP % 24`
-	    MYDAYS=`expr $TMP / 24`
-	fi
+        continue
     fi
-    #format seconds to have two characters
-    if test ${MYSECONDS} -lt 10
-    then
-	MYSECONDS=0${MYSECONDS}
-    fi
-    #format minutes to have two characters
-    if test ${MYMINUTES} -lt 10
-    then
-	MYMINUTES=0${MYMINUTES}
-    fi
-    #format hours to have two characters
-    if test ${MYHOURS} -lt 10
-    then
-	MYHOURS=0${MYHOURS}
-    fi
-    #format HARDTIMELIMT
-    if test ${MYDAYS} = "0"
-    then
-	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
-    else
-	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
-    fi
-  fi
 
-  # check if problem instance exists
-  if test -f $SCIPPATH/$i
-  then
+    # run different random seeds
+    for ((s = 0; $s <= $SEEDS; s++))
+    do
 
-      # the cluster queue has an upper bound of 2000 jobs; if this limit is
-      # reached the submitted jobs are dumped; to avoid that we check the total
-      # load of the cluster and wait until it is save (total load not more than
-      # 1600 jobs) to submit the next job.
-      if test "$NOWAITCLUSTER" != "1"
-      then
-	  if test  "$QUEUETYPE" != "qsub"
-	  then
-	      echo "waitcluster does not work on slurm cluster"
-	  fi
-	  ./waitcluster.sh 1600 $QUEUE 200
-      fi
+        # permute transformed problem
+	for ((p = 0; $p <= $PERMUTE; p++))
+	do
+	    # the cluster queue has an upper bound of 2000 jobs; if this limit is
+	    # reached the submitted jobs are dumped; to avoid that we check the total
+	    # load of the cluster and wait until it is save (total load not more than
+	    # 1600 jobs) to submit the next job.
+	    if test "${NOWAITCLUSTER}" -eq "0" && test "$QUEUETYPE" = "qsub"
+	    then
+		./waitcluster.sh 1600 $QUEUE 200
+	    elif test "${NOWAITCLUSTER}" -eq "0"
+	    then
+		echo "waitcluster does not work on slurm cluster"
+	    fi
+	    # loop over settings
+	    for SETNAME in ${SETTINGSLIST[@]}
+	    do
+		# infer the names of all involved files from the arguments
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s
 
-      SHORTPROBNAME=`basename $i .gz`
-      SHORTPROBNAME=`basename $SHORTPROBNAME .mps`
-      SHORTPROBNAME=`basename $SHORTPROBNAME .lp`
-      SHORTPROBNAME=`basename $SHORTPROBNAME .opb`
+		# skip instance if log file is present and we want to continue a previously launched test run
+		if test "$SKIPINSTANCE" = "true"
+		then
+		    continue
+		fi
 
-      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
-      BASENAME=$SCIPPATH/results/$FILENAME
+		# find out the solver that should be used
+		SOLVER=`stripversion $BINNAME`
 
-      TMPFILE=$BASENAME.tmp
-      SETFILE=$BASENAME.set
+		CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
-      echo $BASENAME >> $EVALFILE
+		# call tmp file configuration for the solver
+		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
 
-      # in case we want to continue we check if the job was already performed
-      if test "$CONTINUE" != "false"
-      then
-	  if test -e results/$FILENAME.out
-	  then
-	      echo skipping file $i due to existing output file $FILENAME.out
-	      continue
-	  fi
-      fi
 
-      echo > $TMPFILE
-      if test $SETNAME != "default"
-      then
-	  echo set load $SETTINGS            >>  $TMPFILE
-      fi
-      if test $FEASTOL != "default"
-      then
-	  echo set numerics feastol $FEASTOL >> $TMPFILE
-      fi
+		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
+		if test "$SOLVER" = "scip"
+		then
+		    export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+		else
+		    export EXECNAME=$BINNAME
+		fi
 
-      echo set limits time $TIMELIMIT        >> $TMPFILE
-      echo set limits nodes $NODELIMIT       >> $TMPFILE
-      echo set limits memory $MEMLIMIT       >> $TMPFILE
-      echo set lp advanced threads $THREADS  >> $TMPFILE
-      echo set timing clocktype 1            >> $TMPFILE
-      echo set display freq $DISPFREQ        >> $TMPFILE
-      echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-      if test "$LPS" = "none"
-      then
-          echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
-      fi
-      echo set save $SETFILE                 >> $TMPFILE
-      echo read $SCIPPATH/$i                 >> $TMPFILE
-#     echo presolve                          >> $TMPFILE
-      echo optimize                          >> $TMPFILE
-      echo display statistics                >> $TMPFILE
-#     echo display solution                  >> $TMPFILE
-      echo checksol                          >> $TMPFILE
-      echo quit                              >> $TMPFILE
+		# check queue type
+		if test  "$QUEUETYPE" = "srun"
+		then
+		# additional environment variables needed by run.sh
+		    export SOLVERPATH=$SCIPPATH
+		    export BASENAME=$FILENAME
+		    export FILENAME=$INSTANCE
+		    export CLIENTTMPDIR
+		    export HARDTIMELIMIT
+		    export HARDMEMLIMIT
+		    export CHECKERPATH=$SCIPPATH/solchecker
+		    export SETFILE
+		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT --exclude="optc-01-14" -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+		else
+		    # -V to copy all environment variables
+		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
+			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR \
+			-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+		fi
+	    done # end for SETNAME
+	done # end for PERMUTE
+    done #end for SEEDS
 
-      # check queue type
-      if test  "$QUEUETYPE" = "srun"
-      then
-          # additional environment variables needed by runcluster.sh
-	  export SOLVERPATH=$SCIPPATH
-	  export EXECNAME=$SCIPPATH/../$BINNAME
-	  export BASENAME=$FILENAME
-	  export FILENAME=$i
-	  export CLIENTTMPDIR=$CLIENTTMPDIR
-	  sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
-                export SETFILE
-      else
-          # -V to copy all environment variables
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null runcluster.sh
-      fi
-  else
-      echo "input file "$SCIPPATH/$i" not found!"
-  fi
-done
+    # after the first termination of the set loop, no file needs to be initialized anymore
+    INIT="false"
+done # end for TSTNAME

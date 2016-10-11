@@ -164,24 +164,24 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    }
 
    /* try lower bound solution */
-   SCIPdebugMessage("try lower bound solution\n");
+   SCIPdebugMsg(scip, "try lower bound solution\n");
    SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
-      SCIPdebugMessage("found feasible lower bound solution:\n");
+      SCIPdebugMsg(scip, "found feasible lower bound solution:\n");
       SCIPdebug( SCIP_CALL( SCIPprintSol(scip, lbsol, NULL, FALSE) ) );
 
       *result = SCIP_FOUNDSOL;
    }
 
    /* try upper bound solution */
-   SCIPdebugMessage("try upper bound solution\n");
+   SCIPdebugMsg(scip, "try upper bound solution\n");
    SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
-      SCIPdebugMessage("found feasible upper bound solution:\n");
+      SCIPdebugMsg(scip, "found feasible upper bound solution:\n");
       SCIPdebug( SCIP_CALL( SCIPprintSol(scip, ubsol, NULL, FALSE) ) );
 
       *result = SCIP_FOUNDSOL;
@@ -190,12 +190,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    /* try zero solution */
    if( zerovalid )
    {
-      SCIPdebugMessage("try zero solution\n");
+      SCIPdebugMsg(scip, "try zero solution\n");
       SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
       if( success )
       {
-         SCIPdebugMessage("found feasible zero solution:\n");
+         SCIPdebugMsg(scip, "found feasible zero solution:\n");
          SCIPdebug( SCIP_CALL( SCIPprintSol(scip, zerosol, NULL, FALSE) ) );
 
          *result = SCIP_FOUNDSOL;
@@ -203,12 +203,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    }
 
    /* try lock solution */
-   SCIPdebugMessage("try lock solution\n");
+   SCIPdebugMsg(scip, "try lock solution\n");
    SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
-      SCIPdebugMessage("found feasible lock solution:\n");
+      SCIPdebugMsg(scip, "found feasible lock solution:\n");
       SCIPdebug( SCIP_CALL( SCIPprintSol(scip, locksol, NULL, FALSE) ) );
 
       *result = SCIP_FOUNDSOL;

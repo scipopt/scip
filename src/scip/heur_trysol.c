@@ -84,7 +84,7 @@ SCIP_DECL_HEURFREE(heurFreeTrySol)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
 
-   SCIPdebugMessage("free method of trysol primal heuristic.\n");
+   SCIPdebugMsg(scip, "free method of trysol primal heuristic.\n");
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -106,7 +106,7 @@ SCIP_DECL_HEUREXITSOL(heurExitTrySol)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
 
-   SCIPdebugMessage("exit method of trysol primal heuristic.\n");
+   SCIPdebugMsg(scip, "exit method of trysol primal heuristic.\n");
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -151,7 +151,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
    if( heurdata->addsol == NULL && heurdata->trysol == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("exec method of trysol primal heuristic.\n");
+   SCIPdebugMsg(scip, "exec method of trysol primal heuristic.\n");
    *result = SCIP_DIDNOTFIND;
    heurdata->rec = TRUE;
 
@@ -167,7 +167,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("Found feasible solution of value %g.\n", obj);
+         SCIPdebugMsg(scip, "Found feasible solution of value %g.\n", obj);
 #endif
          *result = SCIP_FOUNDSOL;
       }
@@ -184,7 +184,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("Found feasible solution of value %g.\n", obj);
+         SCIPdebugMsg(scip, "Found feasible solution of value %g.\n", obj);
 #endif
          *result = SCIP_FOUNDSOL;
       }
@@ -263,7 +263,7 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->trysol) );
          }
 
-         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
+         SCIPdebugMsg(scip, "Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
          SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->trysol, sol) );
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->trysol) );
          SCIPsolSetHeur(heurdata->trysol, heur);
@@ -304,7 +304,7 @@ SCIP_RETCODE SCIPheurPassSolAddSol(
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->addsol) );
          }
 
-         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
+         SCIPdebugMsg(scip, "Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
          SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->addsol, sol) );
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->addsol) );
          SCIPsolSetHeur(heurdata->addsol, heur);

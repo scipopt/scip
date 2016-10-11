@@ -51,6 +51,7 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
+#include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
 /*
  * Default settings
@@ -152,7 +153,7 @@
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
-#define SCIP_DEFAULT_LIMIT_MEMORY         1e+20 /**< maximal memory usage in MB */
+#define SCIP_DEFAULT_LIMIT_MEMORY SCIP_MEM_NOLIMIT/**< maximal memory usage in MB */
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
@@ -744,7 +745,6 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
    return SCIP_OKAY;
 }
 
-
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -820,11 +820,11 @@ SCIP_RETCODE SCIPsetCopyPlugins(
             valid = FALSE;
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
             *allvalid = *allvalid && valid;
-            SCIPdebugMessage("Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
+            SCIPsetDebugMsg(sourceset, "Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
          }
          else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
-            SCIPdebugMessage("Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
+            SCIPsetDebugMsg(sourceset, "Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
             *allvalid = FALSE;
          }
       }
@@ -1074,7 +1074,6 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->visual_bakfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
-   (*set)->mem_externestim = 0;
    (*set)->sepa_primfeastol = SCIP_INVALID;
 
    /* the default time limit is infinite */
@@ -1393,7 +1392,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_MEM_NOLIMIT,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
@@ -2689,7 +2688,7 @@ SCIP_RETCODE SCIPsetChgBoolParam(
 
    assert(set != NULL);
 
-   retcode = SCIPparamSetBool(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetBool(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2742,7 +2741,7 @@ SCIP_RETCODE SCIPsetChgIntParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetInt(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetInt(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2794,7 +2793,7 @@ SCIP_RETCODE SCIPsetChgLongintParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetLongint(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetLongint(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2832,7 +2831,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetReal(param, set, messagehdlr,  value, TRUE);
+   retcode = SCIPparamSetReal(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2870,7 +2869,7 @@ SCIP_RETCODE SCIPsetChgCharParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetChar(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetChar(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -4732,14 +4731,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    return SCIP_OKAY;
 }
 
-/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
-SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   return set->mem_externestim;
-}
-
 /** calculate memory size for dynamically allocated arrays */
 int SCIPsetCalcMemGrowSize(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4801,7 +4792,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
     */
    if( SCIPsetFeastol(set) < SCIPsetLpfeastol(set) )
    {
-      SCIPdebugMessage("decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
+      SCIPsetDebugMsg(set, "decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
       SCIP_CALL( SCIPchgLpfeastol(set->scip, SCIPsetFeastol(set), TRUE) );
    }
 
@@ -6295,6 +6286,55 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
+}
+
+/** prints a debug message */
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   int subscipdepth = 0;
+   SCIP* scip;
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( set != NULL );
+
+   scip = set->scip;
+   assert( scip != NULL );
+
+   if ( scip->stat != NULL )
+      subscipdepth = scip->stat->subscipdepth;
+
+   if ( subscipdepth > 0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+void SCIPsetDebugMessagePrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( set != NULL );
+   assert( set->scip != NULL );
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(set->scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
 }
 
 /** modifies an initial seed value with the global shift of random seeds */

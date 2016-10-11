@@ -238,7 +238,7 @@ SCIP_DECL_EVENTEXEC(eventExecLocalbranching)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -410,7 +410,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("running localbranching heuristic ...\n");
+   SCIPdebugMsg(scip, "running localbranching heuristic ...\n");
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -434,7 +434,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
    for (i = 0; i < nvars; ++i)
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -576,7 +576,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    }
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
+   SCIPdebugMsg(scip, "solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
       heurdata->curneighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
 
@@ -603,7 +603,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMessage("local branching used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
+   SCIPdebugMsg(scip, "local branching used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* check, whether a solution was found */
@@ -624,7 +624,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       }
       if( success )
       {
-         SCIPdebugMessage("-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -635,7 +635,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_BESTSOLLIMIT:
       heurdata->callstatus = WAITFORNEWSOL; /* new solution will immediately be installed at next call */
-      SCIPdebugMessage(" -> found new solution\n");
+      SCIPdebugMsg(scip, " -> found new solution\n");
       break;
 
    case SCIP_STATUS_NODELIMIT:
@@ -644,12 +644,12 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       heurdata->callstatus = EXECUTE;
       heurdata->curneighborhoodsize = (heurdata->emptyneighborhoodsize + heurdata->curneighborhoodsize)/2;
       heurdata->curminnodes *= 2;
-      SCIPdebugMessage(" -> node limit reached: reduced neighborhood to %d, increased minnodes to %d\n",
+      SCIPdebugMsg(scip, " -> node limit reached: reduced neighborhood to %d, increased minnodes to %d\n",
          heurdata->curneighborhoodsize, heurdata->curminnodes);
       if( heurdata->curneighborhoodsize <= heurdata->emptyneighborhoodsize )
       {
          heurdata->callstatus = WAITFORNEWSOL;
-         SCIPdebugMessage(" -> new neighborhood was already proven to be empty: wait for new solution\n");
+         SCIPdebugMsg(scip, " -> new neighborhood was already proven to be empty: wait for new solution\n");
       }
       break;
 
@@ -659,7 +659,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       heurdata->curneighborhoodsize += heurdata->curneighborhoodsize/2;
       heurdata->curneighborhoodsize = MAX(heurdata->curneighborhoodsize, heurdata->emptyneighborhoodsize + 2);
       heurdata->callstatus = EXECUTE;
-      SCIPdebugMessage(" -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
+      SCIPdebugMsg(scip, " -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
       break;
 
    case SCIP_STATUS_UNKNOWN:
@@ -672,7 +672,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_UNBOUNDED:
    default:
       heurdata->callstatus = WAITFORNEWSOL;
-      SCIPdebugMessage(" -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
+      SCIPdebugMsg(scip, " -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
       break;
    }
 

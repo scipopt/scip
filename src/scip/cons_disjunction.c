@@ -252,7 +252,7 @@ SCIP_RETCODE branchCons(
       SCIP_CALL( SCIPdelConsNode(scip, child, cons) );
    }
 
-   SCIPdebugMessage("disjunction constraint <%s> branched %d childs\n", SCIPconsGetName(cons), nconss);
+   SCIPdebugMsg(scip, "disjunction constraint <%s> branched %d childs\n", SCIPconsGetName(cons), nconss);
 
    /* reset constraint age */
    SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -712,7 +712,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    assert(str != NULL);
    assert(name != NULL);
 
-   SCIPdebugMessage("parsing disjunction <%s>\n", name);
+   SCIPdebugMsg(scip, "parsing disjunction <%s>\n", name);
 
    *success = TRUE;
 
@@ -727,7 +727,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -772,7 +772,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 		  }
 		  else
 		  {
-		     SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+		     SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
 		     *success = FALSE;
 		     goto TERMINATE;
 		  }
@@ -803,7 +803,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	    SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
 	    token[saveptr - nexttokenstart] = '\0';
 
-	    SCIPdebugMessage("disjunctive parsing token(constraint): %s\n", token);
+	    SCIPdebugMsg(scip, "disjunctive parsing token(constraint): %s\n", token);
 
 	    /* parsing a constraint, part of the disjunction */
 	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
@@ -814,7 +814,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	       ++nconss;
 	    else
 	    {
-	       SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+	       SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
 	       goto TERMINATE;
 	    }
 	    /* skip ',' delimeter */
@@ -845,7 +845,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -865,7 +865,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
       token[saveptr - nexttokenstart] = '\0';
 
-      SCIPdebugMessage("disjunctive parsing token(constraint): %s\n", token);
+      SCIPdebugMsg(scip, "disjunctive parsing token(constraint): %s\n", token);
 
       /* parsing a constraint, part of the disjunction */
       SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
