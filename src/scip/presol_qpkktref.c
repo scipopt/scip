@@ -114,7 +114,7 @@ struct SCIP_PresolData
  */
 
 /** for a linear constraint \f$a^T x \leq b\f$, create the complementarity constraint \f$\mu \cdot s = 0\f$, where
- *  \f$s = b - a^T x\f$ and \f$\mu\f$ is the dual variable belonging to the constraint \f$a^T x \leq b\f$
+ *  \f$s = b - a^T x\f$ and \f$\mu\f$ is the dual variable associated to the constraint \f$a^T x \leq b\f$
  */
 static
 SCIP_RETCODE createKKTComplementarityLinear(
@@ -125,7 +125,7 @@ SCIP_RETCODE createKKTComplementarityLinear(
    SCIP_Real             lhs,                /**< left hand side of linear constraint */
    SCIP_Real             rhs,                /**< right hand side of linear constraint */
    int                   nvars,              /**< number of variables of linear constraint */
-   SCIP_VAR*             dualvar,            /**< dual variable belonging to linear constraint */
+   SCIP_VAR*             dualvar,            /**< dual variable associated to linear constraint */
    SCIP_Bool             takelhs,            /**< whether to consider the lhs or the rhs of the constraint */
    int*                  naddconss           /**< buffer to increase with number of created additional constraints */
    )
@@ -193,7 +193,7 @@ SCIP_RETCODE createKKTComplementarityLinear(
    return SCIP_OKAY;
 }
 
-/** create complementarity constraints of KKT conditions belonging to bounds of variables
+/** create complementarity constraints of KKT conditions associated to bounds of variables
  * - for an upper bound constraint \f$x_i \leq u_i\f$, create the complementarity constraint \f$\mu_i \cdot s_i = 0\f$,
  *   where \f$s_i = u_i - x_i\f$ and \f$\mu_i\f$ is the dual variable of the upper bound constraint
  * - for a lower bound constraint \f$x_i \geq l_i\f$, create the complementarity constraint \f$\lambda_i \cdot w_i = 0\f$,
@@ -204,7 +204,7 @@ static
 SCIP_RETCODE createKKTComplementarityBounds(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_VAR*             var,                /**< variable */
-   SCIP_VAR*             dualvar,            /**< dual variable belonging to bound of variable */
+   SCIP_VAR*             dualvar,            /**< dual variable associated to bound of variable */
    SCIP_Bool             takelb,             /**< whether to consider the lower or upper bound of variable */
    int*                  naddconss           /**< buffer to increase with number of created additional constraints */
    )
@@ -290,7 +290,7 @@ SCIP_RETCODE createKKTComplementarityBounds(
    return SCIP_OKAY;
 }
 
-/** create the complementarity constraints of the KKT-like conditions belonging to a binary variable \f$x_i\f$;
+/** create the complementarity constraints of the KKT-like conditions associated to a binary variable \f$x_i\f$;
  *  these are \f$(1 - x_i) \cdot z_i = 0\f$ and \f$x_i \cdot (z_i - \lambda_i) = 0\f$, where \f$z_i\f$ and
  *  \f$\lambda_i\f$ are dual variables
  */
@@ -298,8 +298,8 @@ static
 SCIP_RETCODE createKKTComplementarityBinary(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_VAR*             var,                /**< variable */
-   SCIP_VAR*             dualbin1,           /**< first dual variable belonging to binary variable */
-   SCIP_VAR*             dualbin2,           /**< second dual variable belonging to binary variable */
+   SCIP_VAR*             dualbin1,           /**< first dual variable associated to binary variable */
+   SCIP_VAR*             dualbin2,           /**< second dual variable associated to binary variable */
    int*                  naddconss           /**< buffer to increase with number of created additional constraints */
    )
 {
@@ -317,7 +317,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    assert( dualbin2 != NULL );
    assert( naddconss != NULL );
 
-   /* create first slack variable belonging to binary constraint; domain [-inf, inf] */
+   /* create first slack variable associated to binary constraint; domain [-inf, inf] */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_slackbin1", SCIPvarGetName(var));
    SCIP_CALL( SCIPcreateVarBasic(scip, &slackbin1, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
         SCIP_VARTYPE_CONTINUOUS) );
@@ -351,7 +351,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    SCIP_CALL( SCIPreleaseVar(scip, &slackbin1) );
 
 
-   /* create second slack variable belonging to binary constraint; domain [0, inf] */
+   /* create second slack variable associated to binary constraint; domain [0, inf] */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_slackbin2", SCIPvarGetName(var));
    SCIP_CALL( SCIPcreateVarBasic(scip, &slackbin2, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, slackbin2) );
@@ -385,7 +385,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    return SCIP_OKAY;
 }
 
-/** create/get dual constraint of KKT conditions belonging to primal variable @n@n
+/** create/get dual constraint of KKT conditions associated to primal variable @n@n
  * if variable does not already exist in hashmap then
  * 1. create dual constraint for variable
  * 2. create a dual variable \f$\mu_i\f$ for the upper bound constraint \f$x_i \leq u_i\f$
@@ -395,7 +395,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
  * 6. add objective coefficients of dual variables
  * 7. the treatment of binary variables needs special care see the documentation of createKKTComplementarityBinary()
  *
- * if variable exists in hasmap then the dual constraint belonging to the variable has already been created and is returned
+ * if variable exists in hasmap then the dual constraint associated to the variable has already been created and is returned
  */
 static
 SCIP_RETCODE createKKTDualCons(
@@ -405,14 +405,14 @@ SCIP_RETCODE createKKTDualCons(
    SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
    SCIP_CONS**           dualconss,          /**< array with dual constraints */
    int*                  ndualconss,         /**< pointer to store number of dual constraints */
-   SCIP_CONS**           dualcons,           /**< dual constraint belonging to variable */
+   SCIP_CONS**           dualcons,           /**< dual constraint associated to variable */
    int*                  naddconss           /**< buffer to increase with number of created additional constraints */
    )
 {
-   SCIP_VAR* dualub = NULL;     /* dual variable belonging to upper bound constraint */
-   SCIP_VAR* duallb = NULL;     /* dual variable belonging to lower bound constraint */
-   SCIP_VAR* dualbin1 = NULL;   /* first dual variable belonging to binary variable */
-   SCIP_VAR* dualbin2 = NULL;   /* second dual variable belonging to binary variable */
+   SCIP_VAR* dualub = NULL;     /* dual variable associated to upper bound constraint */
+   SCIP_VAR* duallb = NULL;     /* dual variable associated to lower bound constraint */
+   SCIP_VAR* dualbin1 = NULL;   /* first dual variable associated to binary variable */
+   SCIP_VAR* dualbin2 = NULL;   /* second dual variable associated to binary variable */
 
    assert( scip != NULL );
    assert( objcons != NULL );
@@ -442,7 +442,7 @@ SCIP_RETCODE createKKTDualCons(
        * different way */
       if ( SCIPvarIsBinary(var) )
       {
-         /* create first dual variable belonging to binary constraint; the domain of dualbin is [-inf,inf]; the objective
+         /* create first dual variable associated to binary constraint; the domain of dualbin is [-inf,inf]; the objective
           * coefficient is -0.5 */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_bin1", SCIPvarGetName(var));
          SCIP_CALL( SCIPcreateVarBasic(scip, &dualbin1, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
@@ -451,7 +451,7 @@ SCIP_RETCODE createKKTDualCons(
          assert( dualbin1 != NULL );
          SCIP_CALL( SCIPaddCoefLinear(scip, objcons, dualbin1, -0.5) );
 
-         /* create second variable belonging to binary constraint; the domain of dualbin2 is [-inf,inf]; the objective
+         /* create second variable associated to binary constraint; the domain of dualbin2 is [-inf,inf]; the objective
           * coefficient is zero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_bin2", SCIPvarGetName(var));
          SCIP_CALL( SCIPcreateVarBasic(scip, &dualbin2, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
@@ -463,7 +463,7 @@ SCIP_RETCODE createKKTDualCons(
       {
          if ( ! SCIPisInfinity(scip, -lb) )
          {
-            /* create dual variable belonging to lower bound; the domain of duallb is [0,inf] */
+            /* create dual variable associated to lower bound; the domain of duallb is [0,inf] */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_lb", SCIPvarGetName(var));
             SCIP_CALL( SCIPcreateVarBasic(scip, &duallb, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(scip, duallb) );
@@ -473,7 +473,7 @@ SCIP_RETCODE createKKTDualCons(
 
          if ( ! SCIPisInfinity(scip, ub) )
          {
-            /* create dual variable belonging to upper bound; the domain of dualub is [0,inf] */
+            /* create dual variable associated to upper bound; the domain of dualub is [0,inf] */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dual_%s_ub", SCIPvarGetName(var));
             SCIP_CALL( SCIPcreateVarBasic(scip, &dualub, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(scip, dualub) );
@@ -540,12 +540,12 @@ SCIP_RETCODE createKKTDualCons(
 }
 
 /** handle (a single) linear constraint for quadratic constraint update
- * 1. create the dual constraints (i.e., the two rows of \f$Q x + c + A^T \mu = 0\f$) belonging to the variables of the
+ * 1. create the dual constraints (i.e., the two rows of \f$Q x + c + A^T \mu = 0\f$) associated to the variables of the
  *    linear constraint, if not done already
  * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of the
  *    variables of the linear constraint, if not done already
- * 3. create the dual variable \f$\mu_i\f$ belonging to this linear constraint
- * 4. create the complementarity constraint \f$\mu_i \cdot (Ax - b)_i = 0\f$ belonging to this linear constraint
+ * 3. create the dual variable \f$\mu_i\f$ associated to this linear constraint
+ * 4. create the complementarity constraint \f$\mu_i \cdot (Ax - b)_i = 0\f$ associated to this linear constraint
  * 5. add objective coefficients of dual variables
  *
  * for steps 1 and 2 see the documentation of createKKTDualCons() for further information.@n
@@ -637,12 +637,12 @@ SCIP_RETCODE presolveAddKKTLinearCons(
       /* loop through variables of linear constraint */
       for (j = 0; j < nvars; ++j)
       {
-         SCIP_CONS* dualcons = NULL;  /* dual constraint belonging to variable */
+         SCIP_CONS* dualcons = NULL;  /* dual constraint associated to variable */
          SCIP_VAR* var;
 
          var = vars[j];
 
-         /* create/get dual constraint belonging to variable;
+         /* create/get dual constraint associated to variable;
           * if variable does not already exist in hashmap then create dual variables for its bounds */
          SCIP_CALL( createKKTDualCons(scip, objcons, var, varhash, dualconss, ndualconss, &dualcons, naddconss) );
          assert( dualcons != NULL );
@@ -1003,7 +1003,7 @@ SCIP_RETCODE presolveAddKKTAggregatedVars(
 /** handle bilinear terms of quadratic constraint for quadratic constraint update
  *
  * For the two variables of each bilinear term
- * 1. create the dual constraints (i.e., the two rows of \f$Q x + c + A^T \mu = 0\f$) belonging to these variables, if not
+ * 1. create the dual constraints (i.e., the two rows of \f$Q x + c + A^T \mu = 0\f$) associated to these variables, if not
  *    done already
  * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of the two
  *    variables of the bilinear term, if not done already
@@ -1045,7 +1045,7 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
       /* quadratic matrix has to be symmetric; therefore, split bilinear terms into two parts */
       for (i = 0; i < 2; ++i)
       {
-         SCIP_CONS* dualcons = NULL;  /* dual constraint belonging to variable */
+         SCIP_CONS* dualcons = NULL;  /* dual constraint associated to variable */
          SCIP_VAR* bilvar1;
          SCIP_VAR* bilvar2;
 
@@ -1060,7 +1060,7 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
             bilvar2 = bilinterms[j].var1;
          }
 
-         /* create/get dual constraint belonging to variable 'bilvar1';
+         /* create/get dual constraint associated to variable 'bilvar1';
           * if variable does not already exist in hashmap then create dual variables for its bounds */
          SCIP_CALL( createKKTDualCons(scip, objcons, bilvar1, varhash, dualconss, ndualconss, &dualcons, naddconss) );
          assert( dualcons != NULL );
@@ -1077,7 +1077,7 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
 /** handle quadratic terms of quadratic constraint for quadratic constraint update
  *
  * For each quadratic term variable
- * 1. create the dual constraint (i.e., a row of \f$Q x + c + A^T \mu = 0\f$) belonging to this variable, if not done
+ * 1. create the dual constraint (i.e., a row of \f$Q x + c + A^T \mu = 0\f$) associated to this variable, if not done
  *    already
  * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of this
  *    variable, if not done already
@@ -1114,12 +1114,12 @@ SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
    /* loop through quadratic terms */
    for (j = 0; j < nquadterms; ++j)
    {
-      SCIP_CONS* dualcons = NULL;  /* dual constraint belonging to variable */
+      SCIP_CONS* dualcons = NULL;  /* dual constraint associated to variable */
       SCIP_VAR* quadvar;
 
       quadvar = quadterms[j].var;
 
-      /* create/get dual constraint belonging to variable 'bilvar1';
+      /* create/get dual constraint associated to variable 'bilvar1';
        * if variable does not already exist in hashmap then create dual variables for its bounds */
       SCIP_CALL( createKKTDualCons(scip, objcons, quadvar, varhash, dualconss, ndualconss, &dualcons, naddconss) );
       assert( dualcons != NULL );
@@ -1135,7 +1135,7 @@ SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
 /** handle linear terms of quadratic constraint for quadratic constraint update
  *
  * For each linear term variable
- * 1. create the dual constraint (i.e., a row of \f$Q x + c + A^T \mu = 0\f$) belonging to this variable, if not done
+ * 1. create the dual constraint (i.e., a row of \f$Q x + c + A^T \mu = 0\f$) associated to this variable, if not done
  *    already
  * 2. create the dual variables and the complementarity constraints for the lower and upper bound constraints of this
  *    variable, if not done already
@@ -1184,10 +1184,10 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
 
          if ( var != objvar )
          {
-            SCIP_CONS* dualcons = NULL;  /* dual constraint belonging to variable */
+            SCIP_CONS* dualcons = NULL;  /* dual constraint associated to variable */
             SCIP_Real coef;
 
-            /* create/get dual constraint belonging to variable 'bilvar1';
+            /* create/get dual constraint associated to variable 'bilvar1';
              * if variable does not already exist in hashmap then create dual variables for its bounds */
             SCIP_CALL( createKKTDualCons(scip, objcons, var, varhash, dualconss, ndualconss, &dualcons, naddconss) );
             assert( dualcons != NULL );
@@ -1220,7 +1220,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
          coef = quadterms[j].lincoef;
          assert( var != objvar );
 
-         /* get dual constraint belonging to variable (has already been created in function
+         /* get dual constraint associated to variable (has already been created in function
           * presolveAddKKTQuadQuadraticTerms() */
          assert( SCIPhashmapExists(varhash, var) );
          ind = (int) (size_t) SCIPhashmapGetImage(varhash, var);
@@ -1489,7 +1489,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    int nknapsackconss = 0;
 
    SCIP_HASHMAP* varhash; /* hash map from variable to index of dual constraint */
-   SCIP_CONS** dualconss; /* constraints belonging to the Lagrangean function */
+   SCIP_CONS** dualconss; /* constraints associated to the Lagrangean function */
    int ndualconss = 0;
 
    SCIP_CONS* objcons;
@@ -1671,7 +1671,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
            naddconss) );
    }
 
-   /* handle linear constraints belonging to aggregations of variables */
+   /* handle linear constraints associated to aggregations of variables */
    if ( SCIPgetNFixedVars(scip) > 0 )
    {
       SCIP_CALL( presolveAddKKTAggregatedVars(scip, objcons, SCIPgetFixedVars(scip), SCIPgetNFixedVars(scip),
@@ -1696,7 +1696,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
    ++(*naddconss);
 
-   /* add/release dual constraints belonging to the KKT conditions */
+   /* add/release dual constraints associated to the KKT conditions */
    for (j = 0; j < ndualconss; ++j)
    {
       SCIP_CALL( SCIPaddCons(scip, dualconss[j]) );
