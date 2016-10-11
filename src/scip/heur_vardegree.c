@@ -27,6 +27,7 @@
 #include "scip/cons_linear.h"
 #include "scip/heur_vardegree.h"
 #include "scip/pub_misc.h"
+#include "scip/random.h"
 
 #define HEUR_NAME             "vardegree"
 #define HEUR_DESC             "vardegree works on k-neighborhood in a variable-constraint graph"
@@ -55,6 +56,7 @@
 #define DEFAULT_MAXDISTANCE     3           /**< maximum distance to selected variable to enter the subproblem, or -1 to
                                              *   select the distance that best approximates the minimum fixing rate from below */
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
+#define DEFAULT_RANDSEED       71
 /*
  * Data structures
  */
@@ -70,7 +72,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Vardegree should at least improve the incumbent */
    SCIP_Longint          usednodes;          /**< nodes already used by Vardegree in earlier calls */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDGEN*         randnumgen;         /**< random number generator                              */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
@@ -505,6 +507,7 @@ SCIP_Real getPotential(
    return potential;
 }
 
+#ifdef SCIP_STATISTIC
 /** gets the average neighborhood size of all selected variables */
 static
 SCIP_Real heurdataAvgNeighborhoodSize(
@@ -513,6 +516,7 @@ SCIP_Real heurdataAvgNeighborhoodSize(
 {
    return heurdata->sumneighborhoodvars / (MAX(1.0, (SCIP_Real)heurdata->nneighborhoods));
 }
+#endif
 
 /** gets the average size of a discrete neighborhood over all variables tested */
 static
@@ -662,7 +666,6 @@ SCIP_RETCODE createSubproblem(
    int*                  nfixings,           /**< pointer to store the number of fixed variables */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed */
-   unsigned int*         randseed,           /**< a seed value for the random number generator */
    SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked */
    )
@@ -748,7 +751,7 @@ SCIP_RETCODE createSubproblem(
       choosevar = NULL;
       do
       {
-         int index = SCIPgetRandomInt(0, nintegralvarsleft - 1, randseed);
+         int index = SCIPrandomGetInt(heurdata->randnumgen, 0, nintegralvarsleft - 1);
          choosevar = varscopy[index];
          /* sort inactive variables to the end */
          if( SCIPvarGetProbindex(choosevar) < 0 )
@@ -958,7 +961,7 @@ SCIP_DECL_HEURFREE(heurFreeVardegree)
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
@@ -979,10 +982,12 @@ SCIP_DECL_HEURINIT(heurInitVardegree)
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   assert(heurdata->randnumgen == NULL);
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->randseed = 0;
+   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
    heurdata->sumdiscneighborhoodvars = heurdata->sumneighborhoodvars = 0;
    heurdata->nneighborhoods = 0;
    heurdata->maxseendistance = 0;
@@ -994,6 +999,7 @@ SCIP_DECL_HEURINIT(heurInitVardegree)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_STATISTIC
 /** prints a histogram */
 static
 void printHistogram(
@@ -1009,6 +1015,7 @@ void printHistogram(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %d", histogram[i]);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
 }
+#endif
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -1030,6 +1037,9 @@ SCIP_DECL_HEUREXIT(heurExitVardegree)
       printHistogram(scip, heurdata->conscontvarshist, "Constraint continuous density histogram");
       printHistogram(scip, heurdata->consdiscvarshist, "Constraint discrete density histogram");
       )
+
+   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   heurdata->randnumgen = NULL;
 
    return SCIP_OKAY;
 }
@@ -1136,7 +1146,7 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nvars) );
 
    /* create a new problem, by fixing all variables except for a small neighborhood */
-   SCIP_CALL( createSubproblem(scip, fixedvars, fixedvals, &nfixedvars, heurdata, heurdata->minfixingrate, &heurdata->randseed,
+   SCIP_CALL( createSubproblem(scip, fixedvars, fixedvals, &nfixedvars, heurdata, heurdata->minfixingrate,
          heurdata->uselprows, &success) );
 
    /* terminate if it was not possible to create the subproblem */
@@ -1319,6 +1329,7 @@ SCIP_RETCODE SCIPincludeHeurVardegree(
 
    /* create Vardegree primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   heurdata->randnumgen = NULL;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
