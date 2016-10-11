@@ -13553,12 +13553,12 @@ SCIP_RETCODE singletonColumnStuffing(
                if( swapped[idx] )
                {
                   //printf("fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
-                  SCIP_CALL( SCIPtightenVarUb(scip, var, lb, FALSE, cutoff, &tightened) );
+                  SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
                }
                else
                {
                   //printf("fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
-                  SCIP_CALL( SCIPtightenVarLb(scip, var, ub, FALSE, cutoff, &tightened) );
+                  SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
                }
 
                if( *cutoff )
@@ -13595,12 +13595,12 @@ SCIP_RETCODE singletonColumnStuffing(
                if( swapped[idx] )
                {
                   //printf("fix3 <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
-                  SCIP_CALL( SCIPtightenVarLb(scip, var, ub, FALSE, cutoff, &tightened) );
+                  SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
                }
                else
                {
                   //printf("fix3 <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
-                  SCIP_CALL( SCIPtightenVarUb(scip, var, lb, FALSE, cutoff, &tightened) );
+                  SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
                }
 
                if( *cutoff )
@@ -13773,8 +13773,17 @@ SCIP_RETCODE singletonColumnStuffing(
             if( tryfixing )
             {
                assert(SCIPvarGetNLocksUp(var) == 0);
-               printf("tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
-               SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+
+               if( SCIPisEQ(scip, lb + bounddelta, ub) )
+               {
+                  printf("fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
+                  SCIP_CALL( SCIPfixVar(scip, var, lb + bounddelta, cutoff, &tightened) );
+               }
+               else
+               {
+                  printf("tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
+                  SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+               }
             }
          }
          else
@@ -13795,8 +13804,17 @@ SCIP_RETCODE singletonColumnStuffing(
             if( tryfixing )
             {
                assert(SCIPvarGetNLocksDown(var) == 0);
-               printf("tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
-               SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+
+               if( SCIPisEQ(scip, ub - bounddelta, lb) )
+               {
+                  printf("fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
+                  SCIP_CALL( SCIPfixVar(scip, var, ub - bounddelta, cutoff, &tightened) );
+               }
+               else
+               {
+                  printf("tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
+                  SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+               }
             }
          }
 
@@ -13827,13 +13845,13 @@ SCIP_RETCODE singletonColumnStuffing(
                {
                   assert(SCIPvarGetNLocksDown(vars[v]) == 1);
                   printf("fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
-                  SCIP_CALL( SCIPtightenVarUb(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), FALSE, cutoff, &tightened) );
+                  SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), cutoff, &tightened) );
                }
                else
                {
                   assert(SCIPvarGetNLocksUp(vars[v]) == 1);
                   printf("fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
-                  SCIP_CALL( SCIPtightenVarLb(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), FALSE, cutoff, &tightened) );
+                  SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), cutoff, &tightened) );
                }
 
                if( *cutoff )
