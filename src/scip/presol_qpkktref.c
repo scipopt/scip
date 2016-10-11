@@ -1515,11 +1515,14 @@ SCIP_RETCODE checkConsQuadraticProblem(
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** lintermvars;
    SCIP_Real* lintermcoefs;
-   int nlintermvars;
    int nconss = 0;
    SCIP_Real quadlhs;
    SCIP_Real quadrhs;
-   int j;
+   SCIP_Real coef;
+   SCIP_Real obj;
+   int mayincrease;
+   int maydecrease;
+   int objind = -1;
 
    *objrhs = 0.0;
    *scale = 0.0;
@@ -1576,7 +1579,6 @@ SCIP_RETCODE checkConsQuadraticProblem(
       return SCIP_OKAY;
 
    /* get variables that are in the linear term of the quadratic constraint */
-   nlintermvars = SCIPgetNLinearVarsQuadratic(scip, cons);
    lintermvars = SCIPgetLinearVarsQuadratic(scip, cons);
    lintermcoefs = SCIPgetCoefsLinearVarsQuadratic(scip, cons);
 
@@ -1597,40 +1599,42 @@ SCIP_RETCODE checkConsQuadraticProblem(
       *objrhs = quadrhs;
    assert( ! SCIPisInfinity(scip, REALABS(*objrhs)) );
 
-   /* search for the objective variable 'objvar' in linear term variables of quadratic constraint (it is already known that
-    * at most one variable has a nonzero objective value);
-    * additionally, check the sign of the objective variable */
-   for (j = 0; j < nlintermvars; ++j)
+   /* search for the objective variable 'objvar' in the linear term of quadratic constraint (it is already known that
+    * at most one variable has a nonzero objective value); additionally, check the sign of the objective variable */
+   maydecrease = SCIPgetLinvarMayDecrease(scip, cons);
+   mayincrease = SCIPgetLinvarMayIncrease(scip, cons);
+   if ( maydecrease < 0 && mayincrease < 0 )
+      return SCIP_OKAY;
+   else if ( maydecrease >= 0 )
    {
-      SCIP_Real coef;
-      SCIP_Real obj;
-
-      *objvar = lintermvars[j];
-      coef = lintermcoefs[j];
-      obj = SCIPvarGetObj(*objvar);
-
-      /* check sign of coefficient */
-      if ( ( SCIPisFeasPositive(scip, obj)
-            && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
-               || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
-               )
-            )
-         || ( SCIPisFeasNegative(scip, obj)
-            && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
-                  || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
-                  )
-            )
-         )
-      {
-         *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
-                              * has coefficient -1 */
-         break;
-      }
+      objind = maydecrease;
+      assert( mayincrease < 0 || mayincrease == objind );
    }
+   else
+      objind = mayincrease;
+   assert( objind < SCIPgetNLinearVarsQuadratic(scip, cons) );
 
-   /* if the objective variable is not in the linear term of the quadratic constraint or the objective coefficient has not
-    * the correct sign */
-   if ( j == nlintermvars )
+   *objvar = lintermvars[objind];
+   coef = lintermcoefs[objind];
+   obj = SCIPvarGetObj(*objvar);
+
+   /* check sign of coefficient */
+   if ( ( SCIPisFeasPositive(scip, obj)
+          && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
+               || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
+             )
+        )
+        || ( SCIPisFeasNegative(scip, obj)
+             && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
+                  || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
+                )
+           )
+      )
+   {
+      *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                           * has coefficient -1 */
+   }
+   else
       return SCIP_OKAY;
    assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
 
