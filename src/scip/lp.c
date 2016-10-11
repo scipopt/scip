@@ -8881,6 +8881,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipresolving = set->lp_presolving;
    (*lp)->lpilpinfo = set->disp_lpinfo;
    (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
+   (*lp)->lpisolutionpolishing = set->lp_solutionpolishing;
    (*lp)->lpiconditionlimit = set->lp_conditionlimit;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
