@@ -951,7 +951,7 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->spx;
 }
 
-//#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
+#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
 /** pass integrality information about variables to the solver */
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
@@ -964,7 +964,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 
    return SCIP_OKAY;
 }
-//#endif
+#endif
 
 /**@} */
 
