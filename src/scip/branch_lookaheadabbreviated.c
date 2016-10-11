@@ -95,7 +95,7 @@ SCIP_RETCODE allocCandidates(
    SCIP*                 scip,
    Candidates**          candidates,
    int                   initialsize
-)
+   )
 {
    SCIP_CALL( SCIPallocBuffer(scip, candidates) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*candidates)->vars, initialsize) );
@@ -113,7 +113,7 @@ SCIP_RETCODE addCandidate(
    SCIP_VAR*             var,
    SCIP_Real             val,
    Candidates*           candidates
-)
+   )
 {
    int emptyindex = candidates->ncandidates;
 
@@ -135,7 +135,7 @@ static
 void freeCandidates(
    SCIP*                 scip,
    Candidates**          candidates
-)
+   )
 {
    SCIPfreeBufferArray(scip, &(*candidates)->vals);
    SCIPfreeBufferArray(scip, &(*candidates)->vars);
@@ -147,7 +147,7 @@ SCIP_RETCODE allocBranchingResults(
    SCIP*                 scip,
    BranchingResults**    results,
    int                   nentries
-)
+   )
 {
    int i;
 
@@ -173,7 +173,7 @@ static
 void freeBranchingResults(
    SCIP*                 scip,
    BranchingResults**    results
-)
+   )
 {
    SCIPfreeBufferArray(scip, &(*results)->nscores);
    SCIPfreeBufferArray(scip, &(*results)->ncutoffs);
@@ -187,7 +187,7 @@ static
 SCIP_RETCODE allocLPResult(
    SCIP*                 scip,
    LPResult**            result
-)
+   )
 {
    SCIP_CALL( SCIPallocBuffer(scip, result) );
    (*result)->cutoff = FALSE;
@@ -198,7 +198,7 @@ static
 void freeLPResult(
    SCIP*                 scip,
    LPResult**            result
-)
+   )
 {
    SCIPfreeBuffer(scip, result);
 }
@@ -207,7 +207,7 @@ static
 SCIP_RETCODE allocStatus(
    SCIP*                 scip,
    Status**              status
-)
+   )
 {
    SCIP_CALL( SCIPallocBuffer(scip, status) );
    (*status)->lperror = FALSE;
@@ -218,7 +218,7 @@ static
 void freeStatus(
    SCIP*                 scip,
    Status**              status
-)
+   )
 {
    SCIPfreeBuffer(scip, status);
 }
@@ -234,7 +234,7 @@ static
 int getNumberOfCands(
    SCIP_BRANCHRULEDATA*  branchruledata,
    int                   nlpcands
-)
+   )
 {
    int minnumber;
    SCIP_Real candidatesshare;
@@ -256,7 +256,7 @@ SCIP_RETCODE getReducedNumberOfCandidates(
    SCIP_Real*            candssol,
    SCIP_Real*            candsfrac,
    int                   ncands
-)
+   )
 {
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
@@ -302,7 +302,7 @@ SCIP_RETCODE calculateStrongBranchingScores(
    int                   ncands,
    SCIP_RESULT*          result
 
-)
+   )
 {
    SCIP_Bool* skipup;
    SCIP_Bool* skipdown;
@@ -331,8 +331,8 @@ SCIP_RETCODE calculateStrongBranchingScores(
    }
 
    SCIP_CALL( SCIPselectVarStrongBranchingRanking(scip, cands, candssol, candsfrac, skipdown, skipup, scores, ncands,
-      npriolpcands, ncands, &lastcand, allowaddcons, maxproprounds, probingbounds, forcestrongbranch, &bestcand, &bestdown,
-      &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+         npriolpcands, ncands, &lastcand, allowaddcons, maxproprounds, probingbounds, forcestrongbranch, &bestcand, &bestdown,
+         &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    SCIPfreeBufferArray(scip, &skipup);
    SCIPfreeBufferArray(scip, &skipdown);
@@ -347,7 +347,7 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
    Candidates*           candidates,         /**<  */
    int                   ncanditatestoadd,
    SCIP_RESULT*          result
-)
+   )
 {
    SCIP_VAR** cands;
    SCIP_Real* candssol;
@@ -406,7 +406,7 @@ SCIP_RETCODE setUpperBound(
    SCIP*                 scip,
    SCIP_VAR*             var,
    SCIP_Real             val
-)
+   )
 {
    SCIP_Real varlowerbound;
    SCIP_Real varupperbound;
@@ -437,7 +437,7 @@ SCIP_RETCODE setLowerBound(
    SCIP*                 scip,
    SCIP_VAR*             var,
    SCIP_Real             val
-)
+   )
 {
    SCIP_Real varlowerbound;
    SCIP_Real varupperbound;
@@ -468,7 +468,7 @@ SCIP_RETCODE solveLP(
    SCIP*                 scip,
    SCIP_Bool*            lperror,
    LPResult*             result
-)
+   )
 {
    SCIP_LPSOLSTAT solstat;
 
@@ -498,7 +498,7 @@ static
 SCIP_Real getGain(
    SCIP_Real             baselpsol,
    LPResult*             result
-)
+   )
 {
    if( !result->cutoff )
    {
@@ -519,7 +519,7 @@ SCIP_Real calculateScores(
    LPResult*             ulresult,
    LPResult*             luresult,
    LPResult*             llresult
-)
+   )
 {
    SCIP_Real uscore;
    SCIP_Real uugain;
@@ -545,7 +545,7 @@ int countCutoffs(
    LPResult*             ulresult,
    LPResult*             luresult,
    LPResult*             llresult
-)
+   )
 {
    int count = 0;
    if( uuresult->cutoff )
@@ -580,7 +580,7 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
    SCIP_Real             baselpsol,
    SCIP_Real*            score,
    int*                  ncutoffs
-)
+   )
 {
    SCIP_Real firstvallowerbound;
    SCIP_Real firstvalupperbound;
@@ -698,7 +698,7 @@ void updateResult(
    int                   varindex,
    SCIP_Real             score,
    int                   ncutoffs
-)
+   )
 {
 
    results->ncutoffs[varindex] = results->ncutoffs[varindex] + ncutoffs;
@@ -715,7 +715,7 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranching(
    Status*               status,
    VALIDDOMREDDATA*      domainreductions,
    Candidates*           candidates
-)
+   )
 {
    BranchingResults* results;
    SCIP_Real baselpsol;
@@ -739,7 +739,7 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranching(
          SCIP_Real secondval = candidates->vals[j];
 
          SCIP_CALL( executeAbbreviatedLookaheadBranchingOnVars(scip, branchruledata, status, domainreductions, firstvar,
-            firstval, secondvar, secondval, baselpsol, &score, &ncutoffs) );
+               firstval, secondvar, secondval, baselpsol, &score, &ncutoffs) );
 
          if( !status->lperror )
          {
@@ -898,17 +898,17 @@ SCIP_RETCODE SCIPincludeBranchruleLookaheadAbbreviated(
 
    /* add LookaheadAbbreviated branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "branching/lookahead-abbreviated/nsbcandidates",
-      "share of candidates that should be given to the internal strong branching", &branchruledata->nsbcandidates, TRUE,
-      DEFAULT_NSBCANDIDATES, 0, 1, NULL, NULL) );
+         "share of candidates that should be given to the internal strong branching", &branchruledata->nsbcandidates, TRUE,
+         DEFAULT_NSBCANDIDATES, 0, 1, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead-abbreviated/nsblpiterations",
-      "number of iterations that are executed for each strong branching lp", &branchruledata->nsblpiterations, TRUE,
-      DEFAULT_NSBLPITERATION, 0, 1000, NULL, NULL) );
+         "number of iterations that are executed for each strong branching lp", &branchruledata->nsblpiterations, TRUE,
+         DEFAULT_NSBLPITERATION, 0, 1000, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead-abbreviated/sbcandidates",
-      "number of candidates that should be given to the lookahead branching branching", &branchruledata->nalabcandidates,
-      TRUE, DEFAULT_NALABCANDIDATES, 0, 1000, NULL, NULL) );
+         "number of candidates that should be given to the lookahead branching branching", &branchruledata->nalabcandidates,
+         TRUE, DEFAULT_NALABCANDIDATES, 0, 1000, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead-abbreviated/nlablpiterations",
-      "number of iterations that are executed for each lookahead branching lp", &branchruledata->nalablpiterations, TRUE,
-      DEFAULT_NSBLPITERATION, 0, 1000, NULL, NULL) );
+         "number of iterations that are executed for each lookahead branching lp", &branchruledata->nalablpiterations, TRUE,
+         DEFAULT_NSBLPITERATION, 0, 1000, NULL, NULL) );
 
    return SCIP_OKAY;
 }
