@@ -170,12 +170,12 @@ namespace polyscip {
     }
 
     RectangularBox::RectangularBox(const std::vector<Interval>& box)
-            : box_(box)
-    { assert (box_.size() == 3);}
+            : box_(begin(box), end(box))
+    {}
 
     RectangularBox::RectangularBox(std::vector<Interval>&& box)
-            : box_(box)
-    { assert (box_.size() == 3);}
+            : box_(begin(box), end(box))
+    {}
 
     RectangularBox::RectangularBox(vector<Interval>::const_iterator first_beg,
                                    vector<Interval>::const_iterator first_end,
@@ -194,22 +194,33 @@ namespace polyscip {
         return os;
     }
 
-    bool RectangularBox::isSuperSet(const RectangularBox& other) const {
+    bool RectangularBox::isSupersetOf(const RectangularBox &other) const {
         assert (other.box_.size() == this->box_.size());
-        for (size_t i=0; i!=box_.size(); ++i) {
-            if (box_[i].first < other.box_[i].first || box_[i].second < other.box_[i].second)
+        for (size_t i=0; i<box_.size(); ++i) {
+            if (box_[i].first > other.box_[i].first || box_[i].second < other.box_[i].second)
                 return false;
         }
         return true;
     }
 
-    bool RectangularBox::isSubSet(const RectangularBox& other) const {
+    bool RectangularBox::isSubsetOf(const RectangularBox &other) const {
         assert (this->box_.size() == other.box_.size());
-        for (size_t i=0; i!=box_.size(); ++i) {
-            if (box_[i].first > other.box_[i].first || box_[i].second > other.box_[i].second)
+        for (size_t i=0; i<box_.size(); ++i) {
+            if (box_[i].first < other.box_[i].first || box_[i].second > other.box_[i].second)
                 return false;
         }
         return true;
+    }
+
+    bool RectangularBox::isDisjointFrom(const RectangularBox &other) const {
+        assert (this->box_.size() == other.box_.size());
+        for (size_t i=0; i<box_.size(); ++i) {
+            auto int_beg = std::max(box_[i].first, other.box_[i].first);
+            auto int_end = std::min(box_[i].second, other.box_[i].second);
+            if (int_beg > int_end)
+                return true;
+        }
+        return false;
     }
 
     bool RectangularBox::isFeasible() const {
@@ -228,34 +239,37 @@ namespace polyscip {
         return {int_beg, int_end};
     }
 
-    bool RectangularBox::intervalsCoincide(const Interval& int1, const Interval& int2) {
+    /*bool RectangularBox::intervalsCoincide(const Interval& int1, const Interval& int2) {
         if (std::fabs(int1.first - int2.first) > epsilon)
             return false;
         else if (std::fabs(int2.second - int2.second) > epsilon)
             return false;
         else
             return true;
-    }
+    }*/
 
-    vector<RectangularBox> RectangularBox::getDisjointPartition(const RectangularBox& other) const {
+    vector<RectangularBox> RectangularBox::getDisjointPartitionTo(const RectangularBox &other) const {
         auto size = this->box_.size();
         assert (size == other.box_.size());
         auto disjoint_partitions = vector<RectangularBox>{};
         auto intersections = vector<Interval>{};
         for (size_t i=0; i<size; ++i) {
+            if (box_[i].first <= other.box_[i].first - epsilon) { // non-empty to the left
+                auto new_box = RectangularBox(begin(intersections), end(intersections),
+                                              {box_[i].first, other.box_[i].first-epsilon},
+                                              begin(box_)+(i+1), end(box_));
+                assert (new_box.isFeasible());
+                disjoint_partitions.push_back(std::move(new_box));
+
+            }
+            if (other.box_[i].second + epsilon <= box_[i].second) { // non-empty to the right
+                auto new_box = RectangularBox(begin(intersections), end(intersections),
+                                              {other.box_[i].second + epsilon, box_[i].second},
+                                              begin(box_)+(i+1), end(box_));
+                assert (new_box.isFeasible());
+                disjoint_partitions.push_back(std::move(new_box));
+            }
             intersections.push_back(getIntervalIntersection(i, other));
-            if (other.box_[i].first <= box_[i].first - epsilon) { // non-empty to the left
-                disjoint_partitions.push_back( RectangularBox(begin(intersections), begin(intersections)+i,
-                                                              {other.box_[i].first, box_[i].first-epsilon},
-                                                              begin(box_)+(i+1), end(box_)) );
-                assert (disjoint_partitions.back().box_.size() == other.box_.size());
-            }
-            if (box_[i].second + epsilon <= other.box_[i].second) { // non-empty to the right
-                disjoint_partitions.push_back( RectangularBox(begin(intersections), begin(intersections)+i,
-                                                              {box_[i].second + epsilon, other.box_[i].second},
-                                                              begin(box_)+(i+1), end(box_)) );
-                assert (disjoint_partitions.back().box_.size() == other.box_.size());
-            }
         }
         return disjoint_partitions;
     }
@@ -714,7 +728,7 @@ namespace polyscip {
         auto& nd_outcomes_12 = proj_nd_outcomes.at(ObjPair(1,2));
         assert (!nd_outcomes_12.empty());
 
-        auto non_disjoint_boxes = vector<RectangularBox>{};
+        auto feasible_boxes = list<RectangularBox>{};
         for (const auto& nd_01 : nd_outcomes_01) {
             for (const auto& nd_02 : nd_outcomes_02) {
                 for (const auto& nd_12 : nd_outcomes_12) {
@@ -722,33 +736,73 @@ namespace polyscip {
                                                {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getEpsilon()},
                                                {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getEpsilon()}});
                     if (box.isFeasible()) {
-                        non_disjoint_boxes.push_back(std::move(box));
+                        feasible_boxes.push_back(box);
                     }
                 }
             }
         }
-        // todo find dominated_boxes
-        assert (!non_disjoint_boxes.empty());
+        auto current = begin(feasible_boxes);
+        while (current != end(feasible_boxes)) {
+            auto increment_current = true;
+            auto it = begin(feasible_boxes);
+            while (it != end(feasible_boxes)) {
+                if (current != it) {
+                    if (current->isSupersetOf(*it)) {
+                        it = feasible_boxes.erase(it);
+                        continue;
+                    }
+                    else if (current->isSubsetOf(*it)) {
+                        current = feasible_boxes.erase(current);
+                        increment_current = false;
+                        break;
+                    }
+                }
+                ++it;
+            }
+            if (increment_current)
+                ++current;
+        }
+
+        assert (!feasible_boxes.empty());
         auto disjoint_boxes = vector<RectangularBox>{};
-        while (!non_disjoint_boxes.empty()) {
-            auto box_to_be_added = non_disjoint_boxes.back();
-            non_disjoint_boxes.pop_back();
+        while (!feasible_boxes.empty()) {
+            auto box_to_be_added = feasible_boxes.back();
+            feasible_boxes.pop_back();
+
             auto current_boxes = vector<RectangularBox>{};
             for (const auto& elem : disjoint_boxes) {
-                auto elem_disjoint = elem.getDisjointPartition(box_to_be_added);
-                std::move(begin(elem_disjoint), end(elem_disjoint), std::back_inserter(current_boxes));
+                assert (!box_to_be_added.isSubsetOf(elem));
+                if (box_to_be_added.isDisjointFrom(elem)) {
+                    current_boxes.push_back(elem);
+                }
+                else if (box_to_be_added.isSupersetOf(elem)) {
+                    continue;
+                }
+                else {
+                    auto elem_disjoint = elem.getDisjointPartitionTo(box_to_be_added);
+                    std::move(begin(elem_disjoint), end(elem_disjoint), std::back_inserter(current_boxes));
+                }
             }
             disjoint_boxes.clear();
             std::move(begin(current_boxes), end(current_boxes), std::back_inserter(disjoint_boxes));
             disjoint_boxes.push_back(std::move(box_to_be_added));
         }
-        std::cout << "NUMBER OF disjoint boxes: " << disjoint_boxes.size() << "\n";
-        for (const auto& box : disjoint_boxes)
-            std::cout << box << "\n";
+        assert (arePairWiseDisjoint(disjoint_boxes));
+        U
         // todo disjoint boxes
         return SCIP_OKAY;
     }
 
+    bool Polyscip::arePairWiseDisjoint(const std::vector<RectangularBox>& boxes) const {
+        for (auto it=begin(boxes); it!=end(boxes); ++it) {
+            for (auto it2=begin(boxes); it2!=end(boxes); ++it2) {
+                if (it!=it2 && !it->isDisjointFrom(*it2)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
     SCIP_CONS* Polyscip::createNewVarTransformCons(SCIP_VAR *new_var,
                                                    const vector<SCIP_VAR *> &orig_vars,

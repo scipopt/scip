@@ -86,14 +86,13 @@ namespace polyscip {
         explicit RectangularBox(const std::vector<Interval>& box);
         explicit RectangularBox(std::vector<Interval>&& box);
         friend std::ostream &operator<<(std::ostream& os, const RectangularBox& box);
-        bool isSuperSet(const RectangularBox& other) const;
-        bool isSubSet(const RectangularBox& other) const;
+        bool isSupersetOf(const RectangularBox &other) const;
+        bool isSubsetOf(const RectangularBox &other) const;
+        bool isDisjointFrom(const RectangularBox &other) const;
         bool isFeasible() const;
-        std::vector<RectangularBox> getDisjointPartition(const RectangularBox& other) const;
-
+        std::vector<RectangularBox> getDisjointPartitionTo(const RectangularBox &other) const;
 
     private:
-        static bool intervalsCoincide(const Interval& int1, const Interval& int2);
         Interval getIntervalIntersection(std::size_t index, const RectangularBox& other) const;
 
         RectangularBox(std::vector<Interval>::const_iterator first_beg, std::vector<Interval>::const_iterator first_end,
@@ -112,7 +111,7 @@ namespace polyscip {
 
         using ObjPair = std::pair<std::size_t, std::size_t>;
 
-        using Box = std::vector<std::pair<ValueType, ValueType>>;
+        //using Box = std::vector<std::pair<ValueType, ValueType>>;
 
         explicit Polyscip(int argc, const char *const *argv);
 
@@ -231,6 +230,8 @@ namespace polyscip {
                                               std::size_t obj_2,
                                               std::vector<OutcomeType> & proj_nondom_outcomes);
 
+        bool arePairWiseDisjoint(const std::vector<RectangularBox>& boxes) const;
+
         SCIP_RETCODE addLowerDimProbNondomPoints(std::size_t obj_1,
                                                  std::size_t obj_2,
                                                  const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
@@ -249,22 +250,22 @@ namespace polyscip {
                                                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
                                                 const std::vector<std::vector<ValueType>> &orig_vals);
 
-        SCIP_RETCODE addSubProbNondomPoints(const Box& box,
+        /*SCIP_RETCODE addSubProbNondomPoints(const Box& box,
                                             const std::vector<std::reference_wrapper<const OutcomeType>>& outcomes_for_constraints,
                                             const std::vector<std::vector<SCIP_VAR *>>& orig_vars,
-                                            const std::vector<std::vector<ValueType>>& orig_vals);
+                                            const std::vector<std::vector<ValueType>>& orig_vals);*/
 
-        void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;
+        /*void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;*/
 
         //bool boxIsFeasible(const Box& box) const;
 
-        void incorporateOutcomesToBox(Box &box,
+        /*void incorporateOutcomesToBox(Box &box,
                                       ResultContainer::const_iterator beg,
                                       ResultContainer::const_iterator end,
-                                      std::vector<std::reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const;
+                                      std::vector<std::reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const;*/
 
-        ObjPair outcomeValsLessEqAndGreater(const Box& box,
-                                            const OutcomeType& outcome) const;
+        /*ObjPair outcomeValsLessEqAndGreater(const Box& box,
+                                            const OutcomeType& outcome) const;*/
 
         /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
@@ -274,12 +275,12 @@ namespace polyscip {
                                              const ValueType &rhs,
                                              const ValueType &beta_i);
 
-        std::vector<SCIP_CONS*> createAndAddDisjunctiveCons(
+        /*std::vector<SCIP_CONS*> createAndAddDisjunctiveCons(
                 const std::vector<SCIP_VAR *> &disj_vars,
                 const OutcomeType &outcome,
                 const Box &box,
                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                const std::vector<std::vector<ValueType>> &orig_vals) const;
+                const std::vector<std::vector<ValueType>> &orig_vals) const;*/
 
         std::vector<SCIP_VAR*> createAndAddDisjunctiveVars(std::size_t) const;
 
