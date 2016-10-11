@@ -18,7 +18,12 @@
  * @brief  qpkktref presolver
  * @author Tobias Fischer
  *
- * This presolver tries to add the KKT conditions as additional (redundant) constraints to the (mixed-binary) quadratic program
+/**@file   presol_qpkktreformulation.c
+ * @brief  qpkktreformulation presolver
+ * @author Tobias Fischer
+ *
+ * This presolver tries to add the KKT conditions as additional (redundant) constraints to the (mixed-binary) quadratic
+ * program
  *  \f[
  *  \begin{array}{ll}
  *  \min         & x^T Q x + c^T x + d \\
@@ -27,10 +32,11 @@
  * \end{array}
  * \f]
  *
- * We first check if the structure of the program is like (QP), see the documentation of the function checkConsQuadraticProblem().
+ * We first check if the structure of the program is like (QP), see the documentation of the function
+ * checkConsQuadraticProblem().
  *
- * If the problem is known to be bounded (all variables have finite lower and upper bounds), then we add the KKT conditions. For a continuous QPs the KKT
- * conditions have the form
+ * If the problem is known to be bounded (all variables have finite lower and upper bounds), then we add the KKT
+ * conditions. For a continuous QPs the KKT conditions have the form
  * \f[
  *  \begin{array}{ll}
  *   Q x + c + A^T \mu = 0,\\
@@ -39,8 +45,8 @@
  *   \mu \geq 0.
  * \end{array}
  * \f]
- * where \f$\mu\f$ are the Lagrangian variables. Each of the complementarity constraints \f$\mu_i \cdot (Ax - b)_i = 0\f$ is enforced
- * via an SOS1 constraint for \f$\mu_i\f$ and an additional slack variable \f$s_i = (Ax - b)_i\f$.
+ * where \f$\mu\f$ are the Lagrangian variables. Each of the complementarity constraints \f$\mu_i \cdot (Ax - b)_i = 0\f$
+ * is enforced via an SOS1 constraint for \f$\mu_i\f$ and an additional slack variable \f$s_i = (Ax - b)_i\f$.
  *
  * For mixed-binary QPs, the KKT-like conditions are
  * \f[
@@ -54,15 +60,17 @@
  *   \mu \geq 0,
  * \end{array}
  * \f]
- * where \f$J = \{1,\dots, p\}\f$, \f$\mu\f$ and \f$\lambda\f$ are the Lagrangian variables, and \f$I_J\f$ is the submatrix of the
- * \f$n\times n\f$ identity matrix with columns indexed by \f$J\f$. For the derivation of the KKT-like conditions, see
+ * where \f$J = \{1,\dots, p\}\f$, \f$\mu\f$ and \f$\lambda\f$ are the Lagrangian variables, and \f$I_J\f$ is the
+ * submatrix of the \f$n\times n\f$ identity matrix with columns indexed by \f$J\f$. For the derivation of the KKT-like
+ * conditions, see
  *
  *  Branch-And-Cut for Complementarity and Cardinality Constrained Linear Programs,@n
  *  Tobias Fischer, PhD Thesis (2016)
  *
  * Algorithmically:
  *
- * - we handle the quadratic term variables of the quadratic constraint like in the method presolveAddKKTQuadQuadraticTerms()
+ * - we handle the quadratic term variables of the quadratic constraint like in the method
+ *   presolveAddKKTQuadQuadraticTerms()
  * - we handle the bilinear term variables of the quadratic constraint like in the method presolveAddKKTQuadBilinearTerms()
  * - we handle the linear term variables of the quadratic constraint like in the method presolveAddKKTQuadLinearTerms()
  * - we handle linear constraints in the method presolveAddKKTLinearConss()
