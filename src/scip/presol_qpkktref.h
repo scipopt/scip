@@ -13,13 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_qpkktref.h
- * @ingroup PRESOLVERS
+/**@file   presol_qpkktref.c
  * @brief  qpkktref presolver
- * @author Tobias Fischer
- *
-/**@file   presol_qpkktreformulation.c
- * @brief  qpkktreformulation presolver
  * @author Tobias Fischer
  *
  * This presolver tries to add the KKT conditions as additional (redundant) constraints to the (mixed-binary) quadratic

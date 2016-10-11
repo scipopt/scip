@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_qpkktreformulation.c
- * @brief  qpkktreformulation presolver
+/**@file   presol_qpkktref.c
+ * @brief  qpkktref presolver
  * @author Tobias Fischer
  *
  * This presolver tries to add the KKT conditions as additional (redundant) constraints to the (mixed-binary) quadratic
@@ -84,7 +84,9 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
+#include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/cons_varbound.h"
 #include "scip/cons_sos1.h"
 
 
@@ -677,7 +679,8 @@ SCIP_RETCODE presolveAddKKTLinearConss(
    SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
    SCIP_CONS**           dualconss,          /**< array with dual constraints */
    int*                  ndualconss,         /**< pointer to store number of dual constraints */
-   int*                  naddconss           /**< buffer to increase with number of created additional constraints */
+   int*                  naddconss,          /**< buffer to increase with number of created additional constraints */
+   int*                  ndelconss           /**< buffer to increase with number of deleted constraints */
    )
 {
    int c;
@@ -688,6 +691,7 @@ SCIP_RETCODE presolveAddKKTLinearConss(
    assert( dualconss != NULL );
    assert( ndualconss != NULL );
    assert( naddconss != NULL );
+   assert( ndelconss != NULL );
 
    /* loop through linear constraints */
    for (c = 0; c < nlinconss; ++c)
@@ -713,6 +717,22 @@ SCIP_RETCODE presolveAddKKTLinearConss(
             vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
    }
 
+   /* remove linear constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
+    * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
+   for (c = 0; c < nlinconss; ++c)
+   {
+      SCIP_CONS* lincons;
+
+      lincons = savelinconss[c];
+      assert( savelinconss[c] != NULL );
+
+      if ( ! SCIPisFeasEQ(scip, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons)) )
+      {
+         SCIP_CALL( SCIPdelCons(scip, savelinconss[c]) );
+         ++(*ndelconss);
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -723,14 +743,16 @@ static
 SCIP_RETCODE presolveAddKKTKnapsackConss(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            objcons,            /**< objective constraint */
-   SCIP_CONS**           conss,              /**< copy of array with knapsack constraints */
-   int                   nconss,             /**< number of knapsack constraints */
    SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
    SCIP_CONS**           dualconss,          /**< array with dual constraints */
    int*                  ndualconss,         /**< pointer to store number of dual constraints */
-   int*                  naddconss           /**< buffer to increase with number of created additional constraints */
+   int*                  naddconss,          /**< buffer to increase with number of created additional constraints */
+   int*                  ndelconss           /**< buffer to increase with number of deleted constraints */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
    int c;
 
    assert( scip != NULL );
@@ -739,6 +761,14 @@ SCIP_RETCODE presolveAddKKTKnapsackConss(
    assert( dualconss != NULL );
    assert( ndualconss != NULL );
    assert( naddconss != NULL );
+   assert( ndelconss != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   if ( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
 
    /* loop through knapsack constraints */
    for (c = 0; c < nconss; ++c)
@@ -764,6 +794,15 @@ SCIP_RETCODE presolveAddKKTKnapsackConss(
             vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
    }
 
+   /* remove knapsack constraints, since they are now redundant; their feasibility is already expressed
+    * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      assert( conss[c] != NULL );
+      SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+      ++(*ndelconss);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -774,14 +813,16 @@ static
 SCIP_RETCODE presolveAddKKTSetppcConss(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            objcons,            /**< objective constraint */
-   SCIP_CONS**           conss,              /**< copy of array with set packing constraints */
-   int                   nconss,             /**< number of set packing constraints */
    SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
    SCIP_CONS**           dualconss,          /**< array with dual constraints */
    int*                  ndualconss,         /**< pointer to store number of dual constraints */
-   int*                  naddconss           /**< buffer to increase with number of created additional constraints */
+   int*                  naddconss,          /**< buffer to increase with number of created additional constraints */
+   int*                  ndelconss           /**< buffer to increase with number of deleted constraints */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
    int c;
 
    assert( scip != NULL );
@@ -790,6 +831,14 @@ SCIP_RETCODE presolveAddKKTSetppcConss(
    assert( dualconss != NULL );
    assert( ndualconss != NULL );
    assert( naddconss != NULL );
+   assert( ndelconss != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
 
    /* loop through linear constraints */
    for (c = 0; c < nconss; ++c)
@@ -842,6 +891,191 @@ SCIP_RETCODE presolveAddKKTSetppcConss(
 
       /* free buffer array */
       SCIPfreeBufferArray(scip, &vals);
+   }
+
+   /* remove set packing constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
+    * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      assert( conss[c] != NULL );
+
+      if ( SCIPgetTypeSetppc(scip, conss[c]) != SCIP_SETPPCTYPE_PARTITIONING )
+      {
+         assert( SCIPgetTypeSetppc(scip, conss[c]) == SCIP_SETPPCTYPE_PACKING || SCIPgetTypeSetppc(scip, conss[c]) == SCIP_SETPPCTYPE_COVERING );
+
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         ++(*ndelconss);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** handle varbound constraints for quadratic constraint update, see the documentation of the function
+ *  presolveAddKKTLinearCons() for an explanation
+ */
+static
+SCIP_RETCODE presolveAddKKTVarboundConss(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            objcons,            /**< objective constraint */
+   SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
+   SCIP_CONS**           dualconss,          /**< array with dual constraints */
+   int*                  ndualconss,         /**< pointer to store number of dual constraints */
+   int*                  naddconss,          /**< buffer to increase with number of created additional constraints */
+   int*                  ndelconss           /**< buffer to increase with number of deleted constraints */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   assert( scip != NULL );
+   assert( objcons != NULL );
+   assert( varhash != NULL );
+   assert( dualconss != NULL );
+   assert( ndualconss != NULL );
+   assert( naddconss != NULL );
+   assert( ndelconss != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   if ( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
+
+   /* loop through linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      int nvars;
+
+      /* allocate buffer arrays */
+     SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
+     SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
+
+      /* get data of constraint */
+      cons = conss[c];
+      assert( cons != NULL );
+
+      lhs = SCIPgetLhsVarbound(scip, cons);
+      rhs = SCIPgetLhsVarbound(scip, cons);
+      vars[0] = SCIPgetVarVarbound(scip, cons);
+      vars[1] = SCIPgetVbdvarVarbound(scip, cons);
+      vals[0] = 0.0;
+      vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+      nvars = 2;
+
+      /* handle linear constraint for quadratic constraint update */
+      SCIP_CALL( presolveAddKKTLinearCons(scip, objcons, SCIPconsGetName(cons),
+            vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
+
+      /* free buffer array */
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+   }
+
+   /* remove varbound constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
+    * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONS* cons;
+
+      cons = conss[c];
+      assert( conss[c] != NULL );
+
+      if ( ! SCIPisFeasEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)) )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** handle logicor constraints for quadratic constraint update, see the documentation of the function
+ *  presolveAddKKTLinearCons() for an explanation
+ */
+static
+SCIP_RETCODE presolveAddKKTLogicorConss(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            objcons,            /**< objective constraint */
+   SCIP_HASHMAP*         varhash,            /**< hash map from variable to index of linear constraint */
+   SCIP_CONS**           dualconss,          /**< array with dual constraints */
+   int*                  ndualconss,         /**< pointer to store number of dual constraints */
+   int*                  naddconss,          /**< buffer to increase with number of created additional constraints */
+   int*                  ndelconss           /**< buffer to increase with number of deleted constraints */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   assert( scip != NULL );
+   assert( objcons != NULL );
+   assert( varhash != NULL );
+   assert( dualconss != NULL );
+   assert( ndualconss != NULL );
+   assert( naddconss != NULL );
+   assert( ndelconss != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   if ( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
+
+   /* loop through linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      int nvars;
+      int v;
+
+      /* get data of constraint */
+      cons = conss[c];
+      assert( cons != NULL );
+
+      /* get setppc type */
+      lhs = 1.0;
+      rhs = SCIPinfinity(scip);
+
+      nvars = SCIPgetNVarsLogicor(scip, cons);
+      vars = SCIPgetVarsLogicor(scip, cons);
+
+      /* set coefficients of variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+      for (v = 0; v < nvars; ++v)
+         vals[v] = 1.0;
+
+      /* handle linear constraint for quadratic constraint update */
+      SCIP_CALL( presolveAddKKTLinearCons(scip, objcons, SCIPconsGetName(cons),
+            vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
+
+      /* free buffer array */
+      SCIPfreeBufferArray(scip, &vals);
+   }
+
+   /* remove logicor constraints, since they are now redundant; their feasibility is already expressed
+    * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      assert( conss[c] != NULL );
+
+      SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+      ++(*ndelconss);
    }
 
    return SCIP_OKAY;
@@ -1267,7 +1501,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
 static
 SCIP_RETCODE checkConsQuadraticProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_CONSHDLR*        quadconshdlr,           /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< quadratic constraint */
    SCIP_Bool             allowbinary,        /**< if TRUE then allow binary variables in the problem, if FALSE then all
                                               *   variables have to be continuous */
@@ -1278,9 +1512,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
    SCIP_Bool*            isqp                /**< pointer to store whether the problem is a (mixed-binary) QP */
    )
 {
-   SCIP_CONSHDLR* linconshdlr;
-   SCIP_CONSHDLR* setppcconshdlr;
-   SCIP_CONSHDLR* knapsackconshdlr;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** lintermvars;
    SCIP_Real* lintermcoefs;
    int nlintermvars;
@@ -1304,7 +1536,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
       return SCIP_OKAY;
 
    /* desired structure: there exists only one quadratic constraint */
-   if ( SCIPconshdlrGetNConss(conshdlr) != 1 )
+   if ( SCIPconshdlrGetNConss(quadconshdlr) != 1 )
       return SCIP_OKAY;
 
    /* desired structure: the constraint has to take one of the three forms
@@ -1318,20 +1550,28 @@ SCIP_RETCODE checkConsQuadraticProblem(
    if ( ! SCIPisFeasEQ(scip, quadlhs, quadrhs) && ! SCIPisInfinity(scip, -quadlhs) && ! SCIPisInfinity(scip, quadrhs) )
       return SCIP_OKAY;
 
-   /* get constraint handler data of linear, knapsack and set packing constraints */
-   linconshdlr = SCIPfindConshdlr(scip, "linear");
-   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
-   knapsackconshdlr = SCIPfindConshdlr(scip, "knapsack");
+   /* get number of linear constraints (including special cases of linear constraints) */
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   if ( conshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(conshdlr);
 
-   /* get number of linear, knapsack and set packing constraints */
-   if ( linconshdlr != NULL )
-      nconss += SCIPconshdlrGetNConss(linconshdlr);
-   if ( setppcconshdlr != NULL )
-      nconss += SCIPconshdlrGetNConss(setppcconshdlr);
-   if ( knapsackconshdlr != NULL )
-      nconss += SCIPconshdlrGetNConss(knapsackconshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( conshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(conshdlr);
 
-   /* desired structure: all the nonquadratic constraints are linear, knapsack or set packing constraints */
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   if ( conshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(conshdlr);
+
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   if ( conshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(conshdlr);
+
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   if ( conshdlr != NULL )
+      nconss += SCIPconshdlrGetNConss(conshdlr);
+
+   /* desired structure: all the nonquadratic constraints are linear constraints */
    if ( nconss != SCIPgetNConss(scip) - 1 )
       return SCIP_OKAY;
 
@@ -1466,8 +1706,6 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIP_PRESOLDATA* presoldata;
    SCIP_CONSHDLR* linconshdlr;
    SCIP_CONSHDLR* quadconshdlr;
-   SCIP_CONSHDLR* setppcconshdlr;
-   SCIP_CONSHDLR* knapsackconshdlr;
    SCIP_CONS** conss;
    SCIP_CONS* cons;
 
@@ -1482,11 +1720,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    SCIP_CONS** savelinconss = NULL;
    SCIP_CONS** linconss = NULL;
-   SCIP_CONS** setppcconss = NULL;
-   SCIP_CONS** knapsackconss = NULL;
    int nlinconss = 0;
-   int nsetppcconss = 0;
-   int nknapsackconss = 0;
 
    SCIP_HASHMAP* varhash; /* hash map from variable to index of dual constraint */
    SCIP_CONS** dualconss; /* constraints associated to the Lagrangean function */
@@ -1497,7 +1731,6 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIP_Real scale;
    SCIP_Real objrhs;
    SCIP_Bool isqp;
-   int c;
    int j;
 
    assert( scip != NULL );
@@ -1648,28 +1881,20 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    if ( savelinconss != NULL )
    {
       SCIP_CALL( presolveAddKKTLinearConss(scip, objcons, savelinconss, nlinconss, varhash, dualconss, &ndualconss,
-           naddconss) );
+            naddconss, ndelconss) );
    }
 
    /* handle set packing constraints */
-   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
-   if ( setppcconshdlr != NULL )
-   {
-      nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
-      setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
-      SCIP_CALL( presolveAddKKTSetppcConss(scip, objcons, setppcconss, nsetppcconss, varhash, dualconss, &ndualconss,
-           naddconss) );
-   }
+   SCIP_CALL( presolveAddKKTSetppcConss(scip, objcons, varhash, dualconss, &ndualconss, naddconss, ndelconss) );
 
    /* handle knapsack constraints */
-   knapsackconshdlr = SCIPfindConshdlr(scip, "knapsack");
-   if ( knapsackconshdlr != NULL )
-   {
-      nknapsackconss = SCIPconshdlrGetNConss(knapsackconshdlr);
-      knapsackconss = SCIPconshdlrGetConss(knapsackconshdlr);
-      SCIP_CALL( presolveAddKKTKnapsackConss(scip, objcons, knapsackconss, nknapsackconss, varhash, dualconss, &ndualconss,
-           naddconss) );
-   }
+   SCIP_CALL( presolveAddKKTKnapsackConss(scip, objcons, varhash, dualconss, &ndualconss, naddconss, ndelconss) );
+
+   /* handle varbound constraints */
+   SCIP_CALL( presolveAddKKTVarboundConss(scip, objcons, varhash, dualconss, &ndualconss, naddconss, ndelconss) );
+
+   /* handle logicor constraints */
+   SCIP_CALL( presolveAddKKTLogicorConss(scip, objcons, varhash, dualconss, &ndualconss, naddconss, ndelconss) );
 
    /* handle linear constraints associated to aggregations of variables */
    if ( SCIPgetNFixedVars(scip) > 0 )
@@ -1704,56 +1929,8 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    }
    *naddconss = *naddconss + ndualconss;
 
-   /* remove linear constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
-    * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   if ( linconss != NULL )
-   {
-      assert( savelinconss != NULL );
-      for (c = 0; c < nlinconss; ++c)
-      {
-         SCIP_CONS* lincons;
-
-         lincons = savelinconss[c];
-         assert( savelinconss[c] != NULL );
-
-         if ( ! SCIPisFeasEQ(scip, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons)) )
-         {
-            SCIP_CALL( SCIPdelCons(scip, savelinconss[c]) );
-            ++(*ndelconss);
-         }
-      }
-
-      /* free buffer array */
-      SCIPfreeBufferArrayNull(scip, &savelinconss);
-   }
-
-   if ( setppcconss != NULL )
-   {
-      for (c = 0; c < nsetppcconss; ++c)
-      {
-         assert( setppcconss[c] != NULL );
-
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) != SCIP_SETPPCTYPE_PARTITIONING )
-         {
-            assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING || SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING );
-
-            SCIP_CALL( SCIPdelCons(scip, setppcconss[c]) );
-            ++(*ndelconss);
-         }
-      }
-   }
-
-   if ( knapsackconss != NULL )
-   {
-      for (c = 0; c < nknapsackconss; ++c)
-      {
-         assert( knapsackconss[c] != NULL );
-         SCIP_CALL( SCIPdelCons(scip, knapsackconss[c]) );
-         ++(*ndelconss);
-      }
-   }
-
    /* free buffer array */
+   SCIPfreeBufferArrayNull(scip, &savelinconss);
    SCIPfreeBufferArray(scip, &dualconss);
 
    /* free hash map */
