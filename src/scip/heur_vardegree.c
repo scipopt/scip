@@ -13,7 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define SCIP_STATISTIC
 /**@file   heur_vardegree.c
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
  * @author Gregor Hendel
