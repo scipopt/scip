@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   common_branch_Lookahead.c
  * @brief  LookaheadAbbreviated branching rule
  * @author Christoph Schubert
@@ -219,6 +219,131 @@ void addValidLowerBound(
       validbounds->boundedvars[nboundedvars] = varindex;
       validbounds->nboundedvars = nboundedvars + 1;
    }
+}
+
+/**
+ * Adds the domain reductions found throughout the execution of the branching rule.
+ * Domain reductions of a variable occur if:
+ * - one branch on the first level is cutoff (directly or because both branches of a second level variable were cutoff)
+ * - both second level branches in the same direction for the same first level variable are cutoff
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ * @see VALIDDOMREDDATA
+ */
+SCIP_RETCODE addDomainReductions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VALIDDOMREDDATA*      validbounds,        /**< The struct containing all bounds that should be added. */
+   SCIP_Bool*            domredcutoff,
+   SCIP_Bool*            domred
+   )
+{
+   int i;
+   int nboundedvars;
+   SCIP_VAR** probvars;
+   int nboundsadded = 0;
+
+   assert(scip != NULL);
+   assert(validbounds != NULL);
+
+   nboundedvars = validbounds->nboundedvars;
+   probvars = SCIPgetVars(scip);
+
+   /* Instead of iterating over all problem vars, we iterate only over those that have a new bound set. */
+   SCIPdebugMessage("Trying to add domain reductions for <%d> variables.\n", nboundedvars);
+   for( i = 0; i < nboundedvars; i++ )
+   {
+      int probvarindex;
+      BOUNDSTATUS boundstatus;
+      SCIP_VAR* branchvar;
+
+      /* The iteration index is only valid as an index for the boundedvars array. Every other array in validbounds is
+       * indexed by the probindex contained in boundedvars. */
+      probvarindex = validbounds->boundedvars[i];
+      boundstatus = validbounds->boundstatus[probvarindex];
+      branchvar = probvars[probvarindex];
+
+      /* Handle the new lower bound (if present) */
+      if( !*domredcutoff && (boundstatus == BOUNDSTATUS_LOWERBOUND || boundstatus == BOUNDSTATUS_BOTH) )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         SCIP_Real oldlowerbound;
+         SCIP_Real proposedlowerbound;
+         SCIP_Real newlowerbound;
+
+         /* get the old and the new lower bound */
+         oldlowerbound = SCIPvarGetLbLocal(branchvar);
+         proposedlowerbound = validbounds->lowerbounds[probvarindex];
+
+         /* add the new bound */
+         SCIP_CALL( SCIPtightenVarLb(scip, branchvar, proposedlowerbound, FALSE, &infeasible, &tightened) );
+
+         newlowerbound = SCIPvarGetLbLocal(branchvar);
+         SCIPdebugMessage("Variable <%s>, old lower bound <%g>, proposed lower bound <%g>, new lower bound <%g>\n",
+            SCIPvarGetName(branchvar), oldlowerbound, proposedlowerbound, newlowerbound);
+
+         if( infeasible )
+         {
+            /* the domain reduction may result in an empty model (ub < lb) */
+            *domredcutoff = TRUE;
+            SCIPdebugMessage("The domain reduction of variable <%s> resulted in an empty model.\n",
+               SCIPvarGetName(branchvar));
+         }
+         else if( tightened )
+         {
+            /* the lb is now strictly greater than before */
+            *domred = TRUE;
+            SCIPdebugMessage("The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(branchvar));
+            nboundsadded++;
+         }
+      }
+
+      /* Handle the new upper bound (if present) */
+      if( !*domredcutoff && (boundstatus == BOUNDSTATUS_UPPERBOUND || boundstatus == BOUNDSTATUS_BOTH) )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         SCIP_Real oldupperbound;
+         SCIP_Real proposedupperbound;
+         SCIP_Real newupperbound;
+
+         /* get the old and the new upper bound */
+         oldupperbound = SCIPvarGetUbLocal(branchvar);
+         proposedupperbound = validbounds->upperbounds[probvarindex];
+
+         /* add the new bound */
+         SCIP_CALL( SCIPtightenVarUb(scip, branchvar, proposedupperbound, FALSE, &infeasible, &tightened) );
+
+         newupperbound = SCIPvarGetUbLocal(branchvar);
+         SCIPdebugMessage("Variable <%s>, old upper bound <%g>, proposed upper bound <%g>, new upper bound <%g>\n",
+            SCIPvarGetName(branchvar), oldupperbound, proposedupperbound, newupperbound);
+
+         if( infeasible )
+         {
+            /* the domain reduction may result in an empty model (ub < lb) */
+            *domredcutoff = TRUE;
+            SCIPdebugMessage("The upper bound of variable <%s> could not be tightened.\n", SCIPvarGetName(branchvar));
+         }
+         else if( tightened )
+         {
+            /* the ub is now strictly smaller than before */
+            *domred = TRUE;
+            SCIPdebugMessage("The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(branchvar));
+            nboundsadded++;
+         }
+      }
+
+      if( boundstatus != BOUNDSTATUS_NONE )
+      {
+         /* Reset the array s.t. it only contains zero values. Necessary for the CleanBufferArray usage. */
+         validbounds->boundstatus[probvarindex] = BOUNDSTATUS_NONE;
+      }
+   }
+
+   SCIPdebugMessage("Added <%d> real domain reductions to the problem.\n", nboundsadded);
+
+   return SCIP_OKAY;
 }
 
 static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",

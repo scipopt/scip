@@ -82,6 +82,8 @@ typedef struct
 typedef struct
 {
    SCIP_Bool             lperror;
+   SCIP_Bool             domredcutoff;
+   SCIP_Bool             domred;
 } Status;
 
 /*
@@ -211,6 +213,8 @@ SCIP_RETCODE allocStatus(
 {
    SCIP_CALL( SCIPallocBuffer(scip, status) );
    (*status)->lperror = FALSE;
+   (*status)->domred = FALSE;
+   (*status)->domredcutoff = FALSE;
    return SCIP_OKAY;
 }
 
@@ -842,8 +846,27 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
       SCIP_CALL( executeAbbreviatedLookaheadBranching(scip, branchruledata, status, domainreductions, candidates) );
       if( !status->lperror )
       {
-         branchOnVar(scip, candidates->vars[0], candidates->vals[0]);
-         *result = SCIP_BRANCHED;
+         if( domainreductions->nboundedvars > 0 )
+         {
+            /* if we have no other result status set and found (potential) implied domain reductions, we add those here */
+            SCIP_CALL( addDomainReductions(scip, domainreductions, &status->domredcutoff, &status->domred) );
+         }
+
+         if( status->domredcutoff )
+         {
+            SCIPdebugMessage("Found a domain reduction that resulted in a cutoff of the base node\n");
+            *result = SCIP_CUTOFF;
+         }
+         else if( status->domred )
+         {
+            SCIPdebugMessage("Found a domain reduction\n");
+            *result = SCIP_REDUCEDDOM;
+         }
+         else
+         {
+            branchOnVar(scip, candidates->vars[0], candidates->vals[0]);
+            *result = SCIP_BRANCHED;
+         }
       }
       else
       {

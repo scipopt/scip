@@ -136,6 +136,24 @@ void addValidLowerBound(
    VALIDDOMREDDATA*      validbounds         /**< the container to a add the bound to */
 );
 
+/**
+ * Adds the domain reductions found throughout the execution of the branching rule.
+ * Domain reductions of a variable occur if:
+ * - one branch on the first level is cutoff (directly or because both branches of a second level variable were cutoff)
+ * - both second level branches in the same direction for the same first level variable are cutoff
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ * @see VALIDDOMREDDATA
+ */
+EXTERN
+SCIP_RETCODE addDomainReductions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VALIDDOMREDDATA*      validbounds,        /**< The struct containing all bounds that should be added. */
+   SCIP_Bool*            domredcutoff,
+   SCIP_Bool*            domred
+   );
+
 EXTERN
 const char* getStatusString(
    SCIP_RESULT           result
