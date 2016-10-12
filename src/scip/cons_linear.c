@@ -15658,7 +15658,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       }
 
       /* singleton column stuffing */
-      if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( !cutoff && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
       {
          SCIP_CALL( singletonColumnStuffing(scip, cons, &cutoff, nfixedvars, nchgbds, ndelconss) );
 
