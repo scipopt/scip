@@ -35,6 +35,9 @@
 #include <utility> //std::make_pair
 #include <vector>
 
+//#undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
+//#include "lemon/list_graph.h"
+
 #include "polytope_representation.h"
 #include "scip/scip.h"
 #include "objscip/objscipdefplugins.h"
@@ -64,6 +67,9 @@ using std::vector;
 namespace polyscip {
 
     using DDMethod = polytoperepresentation::DoubleDescriptionMethod;
+
+    /*using Graph = lemon::ListDigraph;
+    using Node = Graph::Node;*/
 
     TwoDProj::TwoDProj(const OutcomeType& outcome, std::size_t first, std::size_t second)
             : proj_(outcome.at(first), outcome.at(second))
@@ -187,6 +193,15 @@ namespace polyscip {
         std::copy(third_beg, third_end, std::back_inserter(box_));
     }
 
+    size_t RectangularBox::size() const {
+        return box_.size();
+    }
+
+    RectangularBox::Interval RectangularBox::getInterval(size_t index) const {
+        assert (index < size());
+        return box_[index];
+    }
+
     std::ostream &operator<<(std::ostream& os, const RectangularBox& box) {
         for (auto interval : box.box_)
             os << "[ " << interval.first << ", " << interval.second << " ] ";
@@ -248,7 +263,7 @@ namespace polyscip {
             return true;
     }*/
 
-    vector<RectangularBox> RectangularBox::getDisjointPartitionTo(const RectangularBox &other) const {
+    vector<RectangularBox> RectangularBox::getDisjointPartsFrom(const RectangularBox &other) const {
         auto size = this->box_.size();
         assert (size == other.box_.size());
         auto disjoint_partitions = vector<RectangularBox>{};
@@ -510,10 +525,17 @@ namespace polyscip {
         }
 
         if (no_objs_ == 3) {
-            std::cout << "TESTING validity: \n";
-            computeSubProbNondomPoints(proj_nondom_outcomes,
-                                       nonzero_obj_orig_vars,
-                                       nonzero_obj_orig_vals);
+            auto disjoint_boxes = computeDisjointBoxes(computeFeasibleBoxes(proj_nondom_outcomes,
+                                                                            nonzero_obj_orig_vars,
+                                                                            nonzero_obj_orig_vals));
+
+            for (const auto& box : disjoint_boxes) {
+                std::cout << "DISJONT BOX: " << box << "\n";
+                auto new_nondom_res = computeNondomPointsInBox(box,
+                                                               nonzero_obj_orig_vars,
+                                                               nonzero_obj_orig_vals);
+                std::move(begin(new_nondom_res), end(new_nondom_res), std::back_inserter(unsupported_));
+            }
         }
 
         /*// clean up
@@ -575,7 +597,7 @@ namespace polyscip {
         }
     }*/
 
-    vector<SCIP_VAR*> Polyscip::createAndAddDisjunctiveVars(size_t num) const {
+    /*vector<SCIP_VAR*> Polyscip::createAndAddDisjunctiveVars(size_t num) const {
         auto disj_vars = vector<SCIP_VAR*>{};
         for (size_t i=0; i<num; ++i) {
             SCIP_VAR* w = nullptr;
@@ -592,7 +614,7 @@ namespace polyscip {
             disj_vars.push_back(w);
         }
         return disj_vars;
-    }
+    }*/
 
     /*vector<SCIP_CONS*> Polyscip::createAndAddDisjunctiveCons(
             const vector<SCIP_VAR *> &disj_vars, // is not 'const vector<T>&' because of SCIP API
@@ -650,11 +672,122 @@ namespace polyscip {
         return all_cons;
     }*/
 
+    bool Polyscip::boxResultIsDominated(const OutcomeType& outcome,
+                                        const vector<vector<SCIP_VAR*>>& orig_vars,
+                                        const vector<vector<ValueType>>& orig_vals) {
 
-    /*SCIP_RETCODE Polyscip::addSubProbNondomPoints(const Box& box,
-                                                  const vector<reference_wrapper<const OutcomeType>>& outcomes_for_constraints,
-                                                  const vector<vector<SCIP_VAR *>>& orig_vars,
-                                                  const vector<vector<ValueType>>& orig_vals) {
+        auto is_dom = false;
+        auto size = outcome.size();
+        assert (size == orig_vars.size());
+        assert (size == orig_vals.size());
+        auto obj_val_cons = vector<SCIP_CONS *>{};
+        if (SCIPisTransformed(scip_)) {
+            auto ret = SCIPfreeTransform(scip_);
+            assert (ret == SCIP_OKAY);
+        }
+        for (size_t i=0; i<size; ++i) {
+            auto new_cons = createObjValCons(orig_vars[i],
+                                             orig_vals[i],
+                                             -SCIPinfinity(scip_),
+                                             outcome[i]-cmd_line_args_.getEpsilon());
+            auto ret = SCIPaddCons(scip_, new_cons);
+            assert (ret == SCIP_OKAY);
+            obj_val_cons.push_back(new_cons);
+        }
+        auto zero_weight = WeightType(no_objs_, 0.);
+        setWeightedObjective(zero_weight);
+        solve(); // compute with zero objective
+        auto scip_status = SCIPgetStatus(scip_);
+
+        // release and delete objective value constraints
+        if (SCIPisTransformed(scip_)) {
+            auto ret = SCIPfreeTransform(scip_);
+            assert (ret == SCIP_OKAY);
+        }
+        for (auto cons : obj_val_cons) {
+            auto ret = SCIPdelCons(scip_, cons);
+            assert (ret == SCIP_OKAY);
+            ret = SCIPreleaseCons(scip_, addressof(cons));
+            assert (ret == SCIP_OKAY);
+        }
+
+        // check solution status
+        if (scip_status == SCIP_STATUS_OPTIMAL) {
+            is_dom = true;
+        }
+        else if (scip_status == SCIP_STATUS_TIMELIMIT) {
+            polyscip_status_ = PolyscipStatus::TimeLimitReached;
+        }
+
+        return is_dom;
+    }
+
+    ResultContainer Polyscip::computeNondomPointsInBox(const RectangularBox& box,
+                                                       const vector<vector<SCIP_VAR *>>& orig_vars,
+                                                       const vector<vector<ValueType>>& orig_vals) {
+        assert (box.size() == orig_vars.size());
+        assert (box.size() == orig_vals.size());
+        // add constraints on objective values given by box
+        auto obj_val_cons = vector<SCIP_CONS *>{};
+        if (SCIPisTransformed(scip_)) {
+            auto ret = SCIPfreeTransform(scip_);
+            assert (ret == SCIP_OKAY);
+        }
+        for (size_t i=0; i<box.size(); ++i) {
+            auto interval = box.getInterval(i);
+            auto new_cons = createObjValCons(orig_vars[i],
+                                             orig_vals[i],
+                                             interval.first,
+                                             interval.second);
+            auto ret = SCIPaddCons(scip_, new_cons);
+            assert (ret == SCIP_OKAY);
+            obj_val_cons.push_back(new_cons);
+        }
+
+        std::unique_ptr<Polyscip> sub_poly(new Polyscip(cmd_line_args_,
+                                                        scip_,
+                                                        obj_sense_,
+                                                        no_objs_,
+                                                        clock_total_) );
+        sub_poly->computeNondomPoints();
+
+        // release and delete objective value constraints
+        if (SCIPisTransformed(scip_)) {
+            auto ret = SCIPfreeTransform(scip_);
+            assert (ret == SCIP_OKAY);
+        }
+        for (auto cons : obj_val_cons) {
+            auto ret = SCIPdelCons(scip_, cons);
+            assert (ret == SCIP_OKAY);
+            ret = SCIPreleaseCons(scip_, addressof(cons));
+            assert (ret == SCIP_OKAY);
+        }
+
+        // check computed subproblem results
+        assert (!sub_poly->unboundedResultsExist());
+        assert (sub_poly->getStatus() == PolyscipStatus::Finished);
+
+        auto new_nondom_res = ResultContainer{};
+        if (sub_poly->numberOfBoundedResults() > 0) {
+            for (auto it=sub_poly->supportedCBegin(); it!=sub_poly->supportedCEnd(); ++it) {
+                if (!boxResultIsDominated(it->second, orig_vars, orig_vals)) {
+                    new_nondom_res.push_back(std::move(*it));
+                }
+            }
+            for (auto it=sub_poly->unboundedCBegin(); it!=sub_poly->unboundedCEnd(); ++it) {
+                if (!boxResultIsDominated(it->second, orig_vars, orig_vals)) {
+                    new_nondom_res.push_back(std::move(*it));
+                }
+            }
+        }
+        sub_poly.reset();
+        return new_nondom_res;
+    }
+
+
+    /*ResultContainer Polyscip::computeNondomPointsInBox(const RectangularBox& box,
+                                                       const vector<vector<SCIP_VAR *>>& orig_vars,
+                                                       const vector<vector<ValueType>>& orig_vals) {
         assert (box.size() == orig_vars.size());
         assert (box.size() == orig_vals.size());
         auto all_cons = vector<SCIP_CONS *>{};
@@ -716,31 +849,8 @@ namespace polyscip {
     }*/
 
 
-
-    SCIP_RETCODE Polyscip::computeSubProbNondomPoints(const map<ObjPair, vector<OutcomeType>> &proj_nd_outcomes,
-                                                      const vector<vector<SCIP_VAR *>> &orig_vars,
-                                                      const vector<vector<ValueType>> &orig_vals) {
-
-        auto& nd_outcomes_01 = proj_nd_outcomes.at(ObjPair(0,1));
-        assert (!nd_outcomes_01.empty());
-        auto& nd_outcomes_02 = proj_nd_outcomes.at(ObjPair(0,2));
-        assert (!nd_outcomes_02.empty());
-        auto& nd_outcomes_12 = proj_nd_outcomes.at(ObjPair(1,2));
-        assert (!nd_outcomes_12.empty());
-
-        auto feasible_boxes = list<RectangularBox>{};
-        for (const auto& nd_01 : nd_outcomes_01) {
-            for (const auto& nd_02 : nd_outcomes_02) {
-                for (const auto& nd_12 : nd_outcomes_12) {
-                    auto box = RectangularBox({{max(nd_01[0], nd_02[0]), nd_12[0]-cmd_line_args_.getEpsilon()},
-                                               {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getEpsilon()},
-                                               {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getEpsilon()}});
-                    if (box.isFeasible()) {
-                        feasible_boxes.push_back(box);
-                    }
-                }
-            }
-        }
+    vector<RectangularBox> Polyscip::computeDisjointBoxes(list<RectangularBox>&& feasible_boxes) const {
+        // delete redundant boxes
         auto current = begin(feasible_boxes);
         while (current != end(feasible_boxes)) {
             auto increment_current = true;
@@ -762,8 +872,7 @@ namespace polyscip {
             if (increment_current)
                 ++current;
         }
-
-        assert (!feasible_boxes.empty());
+        // compute disjoint boxes
         auto disjoint_boxes = vector<RectangularBox>{};
         while (!feasible_boxes.empty()) {
             auto box_to_be_added = feasible_boxes.back();
@@ -779,7 +888,7 @@ namespace polyscip {
                     continue;
                 }
                 else {
-                    auto elem_disjoint = elem.getDisjointPartitionTo(box_to_be_added);
+                    auto elem_disjoint = elem.getDisjointPartsFrom(box_to_be_added);
                     std::move(begin(elem_disjoint), end(elem_disjoint), std::back_inserter(current_boxes));
                 }
             }
@@ -787,13 +896,39 @@ namespace polyscip {
             std::move(begin(current_boxes), end(current_boxes), std::back_inserter(disjoint_boxes));
             disjoint_boxes.push_back(std::move(box_to_be_added));
         }
-        assert (arePairWiseDisjoint(disjoint_boxes));
-        U
-        // todo disjoint boxes
-        return SCIP_OKAY;
+        assert (boxesArePairWiseDisjoint(disjoint_boxes));
+        return disjoint_boxes;
     }
 
-    bool Polyscip::arePairWiseDisjoint(const std::vector<RectangularBox>& boxes) const {
+
+    list<RectangularBox> Polyscip::computeFeasibleBoxes(const map<ObjPair, vector<OutcomeType>> &proj_nd_outcomes,
+                                                        const vector<vector<SCIP_VAR *>> &orig_vars,
+                                                        const vector<vector<ValueType>> &orig_vals) {
+
+        auto& nd_outcomes_01 = proj_nd_outcomes.at(ObjPair(0,1));
+        assert (!nd_outcomes_01.empty());
+        auto& nd_outcomes_02 = proj_nd_outcomes.at(ObjPair(0,2));
+        assert (!nd_outcomes_02.empty());
+        auto& nd_outcomes_12 = proj_nd_outcomes.at(ObjPair(1,2));
+        assert (!nd_outcomes_12.empty());
+
+        auto feasible_boxes = list<RectangularBox>{};
+        for (const auto& nd_01 : nd_outcomes_01) {
+            for (const auto& nd_02 : nd_outcomes_02) {
+                for (const auto& nd_12 : nd_outcomes_12) {
+                    auto box = RectangularBox({{max(nd_01[0], nd_02[0]), nd_12[0]-cmd_line_args_.getEpsilon()},
+                                               {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getEpsilon()},
+                                               {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getEpsilon()}});
+                    if (box.isFeasible()) {
+                        feasible_boxes.push_back(box);
+                    }
+                }
+            }
+        }
+        return feasible_boxes;
+    }
+
+    bool Polyscip::boxesArePairWiseDisjoint(const std::vector<RectangularBox> &boxes) const {
         for (auto it=begin(boxes); it!=end(boxes); ++it) {
             for (auto it2=begin(boxes); it2!=end(boxes); ++it2) {
                 if (it!=it2 && !it->isDisjointFrom(*it2)) {
@@ -951,6 +1086,7 @@ namespace polyscip {
                                               obj_2);
 
         auto last_proj = nondom_projs.getLastProj();
+        std::cout << "entering while loop...";
         while (!nondom_projs.finished() && polyscip_status_ == PolyscipStatus::CompUnsupportedPhase) {
             auto left_proj = nondom_projs.getLeftProj();
             auto right_proj = nondom_projs.getRightProj();
@@ -988,7 +1124,9 @@ namespace polyscip {
             for (auto c : cons) {
                 SCIP_CALL(SCIPaddCons(scip_, c));
             }
+            std::cout << "solving...";
             SCIP_CALL(solve());
+            std::cout << "...done\n";
             auto scip_status = SCIPgetStatus(scip_);
             if (scip_status == SCIP_STATUS_OPTIMAL) {
                 assert (SCIPisGE(scip_, SCIPgetPrimalbound(scip_), 0.));
@@ -1000,12 +1138,14 @@ namespace polyscip {
                     nondom_projs.update();
                 }
                 else {
+                    std::cout << "computing new nondom res...";
                     computeNondomResult(z,
                                         cons.front(),
                                         *std::next(begin(cons)),
                                         proj.getFirst(),
                                         proj.getSecond(),
                                         unsupported_);
+                    std::cout << "...done\n";
                     auto nd_proj = TwoDProj(unsupported_.back().second, obj_1, obj_2);
                     nondom_projs.update(std::move(nd_proj), unsupported_.back());
                 }
@@ -1027,6 +1167,7 @@ namespace polyscip {
                 SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
             }
         }
+        std::cout << "...exiting while loop.\n";
         // clean up
         SCIP_Bool var_deleted = FALSE;
         SCIP_CALL( SCIPdelVar(scip_, z, addressof(var_deleted)) );

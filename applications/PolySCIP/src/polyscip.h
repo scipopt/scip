@@ -90,7 +90,9 @@ namespace polyscip {
         bool isSubsetOf(const RectangularBox &other) const;
         bool isDisjointFrom(const RectangularBox &other) const;
         bool isFeasible() const;
-        std::vector<RectangularBox> getDisjointPartitionTo(const RectangularBox &other) const;
+        std::vector<RectangularBox> getDisjointPartsFrom(const RectangularBox &other) const;
+        std::size_t size() const;
+        Interval getInterval(std::size_t index) const;
 
     private:
         Interval getIntervalIntersection(std::size_t index, const RectangularBox& other) const;
@@ -99,7 +101,7 @@ namespace polyscip {
                        Interval second,
                        std::vector<Interval>::const_iterator third_beg, std::vector<Interval>::const_iterator third_end);
 
-        constexpr static double epsilon = 1e-5;
+        constexpr static double epsilon = 0.01;
         std::vector<Interval> box_;
     };
 
@@ -230,7 +232,9 @@ namespace polyscip {
                                               std::size_t obj_2,
                                               std::vector<OutcomeType> & proj_nondom_outcomes);
 
-        bool arePairWiseDisjoint(const std::vector<RectangularBox>& boxes) const;
+        std::vector<RectangularBox> computeDisjointBoxes(std::list<RectangularBox>&& feasible_boxes) const;
+
+        bool boxesArePairWiseDisjoint(const std::vector<RectangularBox> &boxes) const;
 
         SCIP_RETCODE addLowerDimProbNondomPoints(std::size_t obj_1,
                                                  std::size_t obj_2,
@@ -246,14 +250,18 @@ namespace polyscip {
                                               const std::pair<std::size_t, std::size_t>& considered_objs,
                                               ValPairMap nondom_projected_points);*/
 
-        SCIP_RETCODE computeSubProbNondomPoints(const std::map<ObjPair, std::vector<OutcomeType>> &proj_nondom_outcomes,
-                                                const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                                                const std::vector<std::vector<ValueType>> &orig_vals);
+        std::list<RectangularBox> computeFeasibleBoxes(
+                const std::map<ObjPair, std::vector<OutcomeType>> &proj_nondom_outcomes,
+                const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
+                const std::vector<std::vector<ValueType>> &orig_vals);
 
-        /*SCIP_RETCODE addSubProbNondomPoints(const Box& box,
-                                            const std::vector<std::reference_wrapper<const OutcomeType>>& outcomes_for_constraints,
-                                            const std::vector<std::vector<SCIP_VAR *>>& orig_vars,
-                                            const std::vector<std::vector<ValueType>>& orig_vals);*/
+        ResultContainer computeNondomPointsInBox(const RectangularBox& box,
+                                                 const std::vector<std::vector<SCIP_VAR *>>& orig_vars,
+                                                 const std::vector<std::vector<ValueType>>& orig_vals);
+
+        bool boxResultIsDominated(const OutcomeType& outcome,
+                                  const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                  const std::vector<std::vector<ValueType>>& orig_vals);
 
         /*void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;*/
 
@@ -282,7 +290,7 @@ namespace polyscip {
                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
                 const std::vector<std::vector<ValueType>> &orig_vals) const;*/
 
-        std::vector<SCIP_VAR*> createAndAddDisjunctiveVars(std::size_t) const;
+        //std::vector<SCIP_VAR*> createAndAddDisjunctiveVars(std::size_t) const;
 
         /** create constraint: lhs <= c_i^T x <= rhs*
          * @param new_var
