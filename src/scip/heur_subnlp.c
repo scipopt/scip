@@ -1068,6 +1068,7 @@ SCIP_RETCODE solveSubNLP(
          sol = NULL;
          SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
+         heurdata->lastsol = sol; /* remember just the pointer so we might recognize if this solution comes back as startingpoint */
          SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
          {
@@ -1078,7 +1079,6 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP stored solution from sub-SCIP root node\n");
             }
             *result = SCIP_FOUNDSOL;
-            heurdata->lastsol = sol;
             break;
          }
          else
@@ -1302,6 +1302,7 @@ SCIP_RETCODE solveSubNLP(
          sol = NULL;
          SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
+         heurdata->lastsol = sol; /* remember just the pointer so we might recognize if this solution comes back as startingpoint */
          if( heurdata->resolvefromscratch )
          {
 #ifdef SCIP_DEBUG
@@ -1331,7 +1332,6 @@ SCIP_RETCODE solveSubNLP(
             }
 
             *result = SCIP_FOUNDSOL;
-            heurdata->lastsol = sol;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
