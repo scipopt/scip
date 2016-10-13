@@ -3027,29 +3027,6 @@ SCIP_RETCODE solveNodeRelax(
       }
    }
 
-   /* copy best relaxation solution values to the variables; @todo remove this if we do not want to store the solution
-    * values in the variables
-    */
-   if( *bestrelaxval != -SCIPsetInfinity(set) && set->nrelaxs > 1 )
-   {
-      SCIP_Real val;
-      int i;
-
-      assert(bestrelaxsol != NULL);
-      assert(bestrelaxval != NULL);
-
-      for( i = 0; i < transprob->nvars; ++i )
-      {
-         assert(transprob->vars[i] != NULL);
-
-         val = SCIPsolGetVal(bestrelaxsol, set, stat, transprob->vars[i]);
-         SCIP_CALL( SCIPvarSetRelaxSol(transprob->vars[i], set, relaxation, val, TRUE) );
-      }
-
-      /* we have found at least one valid relaxation solution -> validate values stored in the variables */
-      SCIPrelaxationSetSolValid(relaxation, TRUE);
-   }
-
    return SCIP_OKAY;
 }
 
@@ -4300,6 +4277,27 @@ SCIP_RETCODE solveNode(
    /* check whether the final enforcement round was called for the relaxation solution */
    *enforcedrelaxsol = (bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, transprob))));
+   
+   /* reset relaxation solution to bestrelaxsol (might have been overwritten by relax-calls in heuristics) */
+   if( bestrelaxval != -SCIPsetInfinity(set) )
+   {
+      SCIP_Real val;
+      int i;
+
+      assert(bestrelaxsol != NULL);
+
+      for( i = 0; i < transprob->nvars; ++i )
+      {
+         assert(transprob->vars[i] != NULL);
+
+         val = SCIPsolGetVal(bestrelaxsol, set, stat, transprob->vars[i]);
+         SCIP_CALL( SCIPvarSetRelaxSol(transprob->vars[i], set, relaxation, val, TRUE) );
+      }
+
+      /* we have found at least one valid relaxation solution -> validate values stored in the variables */
+      SCIPrelaxationSetSolValid(relaxation, TRUE);
+   }
+   
 
    /* free solution used to save the best relaxation solution */
    SCIP_CALL( SCIPsolFree(&bestrelaxsol, blkmem, primal) );
