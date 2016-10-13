@@ -296,6 +296,11 @@ struct SCIP_ConshdlrData
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
                                               *   removed afterwards? */
+   SCIP_CLOCK*           stuffingclock;
+   int stufffixes;
+   int stuffbdchgs;
+   int newstufffixes;
+   int newstuffbdchgs;
 };
 
 /** linear constraint update method */
@@ -13303,6 +13308,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 static
 SCIP_RETCODE singletonColumnStuffing(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count the total number of fixed variables */
@@ -13554,11 +13560,14 @@ SCIP_RETCODE singletonColumnStuffing(
                {
                   //printf("fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
+                  ++conshdlrdata->stufffixes;
+
                }
                else
                {
                   //printf("fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
+                  ++conshdlrdata->stufffixes;
                }
 
                if( *cutoff )
@@ -13576,11 +13585,13 @@ SCIP_RETCODE singletonColumnStuffing(
                {
                   //printf("tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+                  ++conshdlrdata->stuffbdchgs;
                }
                else
                {
                   //printf("tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
                   SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+                  ++conshdlrdata->stuffbdchgs;
                }
 
                if( *cutoff )
@@ -13596,11 +13607,13 @@ SCIP_RETCODE singletonColumnStuffing(
                {
                   //printf("fix3 <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
+                  ++conshdlrdata->stufffixes;
                }
                else
                {
                   //printf("fix3 <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
+                  ++conshdlrdata->stufffixes;
                }
 
                if( *cutoff )
@@ -13780,11 +13793,13 @@ SCIP_RETCODE singletonColumnStuffing(
                {
                   SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
                   SCIP_CALL( SCIPfixVar(scip, var, lb + bounddelta, cutoff, &tightened) );
+                  ++conshdlrdata->newstufffixes;
                }
                else
                {
                   SCIPinfoMessage(scip, NULL, "tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
                   SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+                  ++conshdlrdata->newstuffbdchgs;
                }
             }
          }
@@ -13811,11 +13826,13 @@ SCIP_RETCODE singletonColumnStuffing(
                {
                   SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
                   SCIP_CALL( SCIPfixVar(scip, var, ub - bounddelta, cutoff, &tightened) );
+                  ++conshdlrdata->newstufffixes;
                }
                else
                {
                   SCIPinfoMessage(scip, NULL, "tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+                  ++conshdlrdata->newstuffbdchgs;
                }
             }
          }
@@ -13848,12 +13865,14 @@ SCIP_RETCODE singletonColumnStuffing(
                   assert(SCIPvarGetNLocksDown(vars[v]) == 1);
                   SCIPinfoMessage(scip, NULL, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), cutoff, &tightened) );
+                  ++conshdlrdata->newstufffixes;
                }
                else
                {
                   assert(SCIPvarGetNLocksUp(vars[v]) == 1);
                   SCIPinfoMessage(scip, NULL, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), cutoff, &tightened) );
+                  ++conshdlrdata->newstufffixes;
                }
 
                if( *cutoff )
@@ -14398,6 +14417,12 @@ SCIP_DECL_CONSINIT(consInitLinear)
       SCIP_CALL( consCatchAllEvents(scip, conss[c], conshdlrdata->eventhdlr) );
    }
 
+   SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->stuffingclock) );
+   conshdlrdata->stufffixes = 0;
+   conshdlrdata->stuffbdchgs = 0;
+   conshdlrdata->newstufffixes = 0;
+   conshdlrdata->newstuffbdchgs = 0;
+
    return SCIP_OKAY;
 }
 
@@ -14431,6 +14456,14 @@ SCIP_DECL_CONSEXIT(consExitLinear)
          assert(consdata->eventdata == NULL);
       }
    }
+
+   printf("### stuffingtime: %.1f\n", SCIPgetClockTime(scip, conshdlrdata->stuffingclock));
+   printf("### stufffixes: %d\n", conshdlrdata->stufffixes);
+   printf("### stuffbdchgs: %d\n", conshdlrdata->stuffbdchgs);
+   printf("### newstufffixes: %d\n", conshdlrdata->newstufffixes);
+   printf("### newstuffbdchgs: %d\n", conshdlrdata->newstuffbdchgs);
+
+   SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->stuffingclock) );
 
    return SCIP_OKAY;
 
@@ -15658,9 +15691,11 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       }
 
       /* singleton column stuffing */
-      if( !cutoff && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
       {
-         SCIP_CALL( singletonColumnStuffing(scip, cons, &cutoff, nfixedvars, nchgbds, ndelconss) );
+         SCIP_CALL( SCIPstartClock(scip, conshdlrdata->stuffingclock) );
+         SCIP_CALL( singletonColumnStuffing(scip, conshdlrdata, cons, &cutoff, nfixedvars, nchgbds, ndelconss) );
+         SCIP_CALL( SCIPstopClock(scip, conshdlrdata->stuffingclock) );
 
          /* handle empty constraint */
          if( consdata->nvars == 0 )
