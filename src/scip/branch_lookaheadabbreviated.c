@@ -62,7 +62,7 @@ typedef struct
    SCIP_Real*            vals;
    int                   ncandidates;
    int                   memsize;
-} Candidates;
+} CANDIDATES;
 
 typedef struct
 {
@@ -71,7 +71,7 @@ typedef struct
    SCIP_Real*            maxscore;
    SCIP_Real*            minscore;
    int*                  ncutoffs;
-} BranchingResults;
+} BRANCHINGRESULTS;
 
 typedef struct
 {
@@ -84,7 +84,7 @@ typedef struct
    SCIP_Bool             lperror;
    SCIP_Bool             domredcutoff;
    SCIP_Bool             domred;
-} Status;
+} STATUS;
 
 /*
  * Local methods
@@ -95,7 +95,7 @@ typedef struct
 static
 SCIP_RETCODE allocCandidates(
    SCIP*                 scip,
-   Candidates**          candidates,
+   CANDIDATES**          candidates,
    int                   initialsize
    )
 {
@@ -114,7 +114,7 @@ SCIP_RETCODE addCandidate(
    SCIP*                 scip,
    SCIP_VAR*             var,
    SCIP_Real             val,
-   Candidates*           candidates
+   CANDIDATES*           candidates
    )
 {
    int emptyindex = candidates->ncandidates;
@@ -136,7 +136,7 @@ SCIP_RETCODE addCandidate(
 static
 void freeCandidates(
    SCIP*                 scip,
-   Candidates**          candidates
+   CANDIDATES**          candidates
    )
 {
    SCIPfreeBufferArray(scip, &(*candidates)->vals);
@@ -147,7 +147,7 @@ void freeCandidates(
 static
 SCIP_RETCODE allocBranchingResults(
    SCIP*                 scip,
-   BranchingResults**    results,
+   BRANCHINGRESULTS**    results,
    int                   nentries
    )
 {
@@ -174,7 +174,7 @@ SCIP_RETCODE allocBranchingResults(
 static
 void freeBranchingResults(
    SCIP*                 scip,
-   BranchingResults**    results
+   BRANCHINGRESULTS**    results
    )
 {
    SCIPfreeBufferArray(scip, &(*results)->nscores);
@@ -208,7 +208,7 @@ void freeLPResult(
 static
 SCIP_RETCODE allocStatus(
    SCIP*                 scip,
-   Status**              status
+   STATUS**              status
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, status) );
@@ -221,7 +221,7 @@ SCIP_RETCODE allocStatus(
 static
 void freeStatus(
    SCIP*                 scip,
-   Status**              status
+   STATUS**              status
    )
 {
    SCIPfreeBuffer(scip, status);
@@ -348,7 +348,7 @@ static
 SCIP_RETCODE getLookaheadBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,
-   Candidates*           candidates,         /**<  */
+   CANDIDATES*           candidates,         /**<  */
    int                   ncanditatestoadd,
    SCIP_RESULT*          result
    )
@@ -575,7 +575,7 @@ static
 SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
-   Status*               status,
+   STATUS*               status,
    VALIDDOMREDDATA*      domainreductions,
    SCIP_VAR*             firstvar,
    SCIP_Real             firstval,
@@ -698,7 +698,7 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
 
 static
 void updateResult(
-   BranchingResults*     results,
+   BRANCHINGRESULTS*     results,
    int                   varindex,
    SCIP_Real             score,
    int                   ncutoffs
@@ -716,12 +716,12 @@ static
 SCIP_RETCODE executeAbbreviatedLookaheadBranching(
    SCIP*                 scip,
    SCIP_BRANCHRULEDATA*  branchruledata,
-   Status*               status,
+   STATUS*               status,
    VALIDDOMREDDATA*      domainreductions,
-   Candidates*           candidates
+   CANDIDATES*           candidates
    )
 {
-   BranchingResults* results;
+   BRANCHINGRESULTS* results;
    SCIP_Real baselpsol;
    int i;
    int j;
@@ -813,8 +813,8 @@ static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
-   Candidates* candidates;
-   Status* status;
+   CANDIDATES* candidates;
+   STATUS* status;
    int nlookaheadcandidates;
 
    assert( scip != NULL );

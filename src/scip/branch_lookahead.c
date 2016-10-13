@@ -96,7 +96,7 @@ typedef struct
    SCIP_Bool             domredcutoff;       /**<  */
    SCIP_Bool             domred;             /**<  */
    SCIP_Bool             propagationdomred;  /**<  */
-} Status;
+} STATUS;
 
 /**
  * A container to hold the data needed to calculate the weight of branch after a first level node.
@@ -107,7 +107,7 @@ typedef struct
    SCIP_Real             sumofweights;       /**< the sum of the weights of all second level nodes */
    int                   numberofweights;    /**< the number of all weights that could be calculated (in case of an
                                               *   infeasible second level node we cannot calculate a weight) */
-} WeightData;
+} WEIGHTDATA;
 
 /**
  * A container to hold the data needed to calculate the weight of a first level node.
@@ -115,9 +115,9 @@ typedef struct
 typedef struct
 {
    int                   ncutoffs;           /**< counter for the the number of second level cutoffs */
-   WeightData*           upperbounddata;     /**< the WeightData of the down branch (branched on upper bound) */
-   WeightData*           lowerbounddata;     /**< the WeightData of the up branch (branched on lower bound) */
-} ScoreData;
+   WEIGHTDATA*           upperbounddata;     /**< the WeightData of the down branch (branched on upper bound) */
+   WEIGHTDATA*           lowerbounddata;     /**< the WeightData of the up branch (branched on lower bound) */
+} SCOREDATA;
 
 /**
  * A container to hold the result of a branching.
@@ -130,7 +130,7 @@ typedef struct
    SCIP_Bool             lperror;            /**< Indicates whether the solving of the lp resulted in an error. */
    SCIP_Bool             nobranch;           /**< Indicates whether the lp wasn't solved, as domain reduction for the
                                               *   branching didn't change the domain. Currently unused. */
-} BranchingResultData;
+} BRANCHINGRESULTDATA;
 
 /**
  * This struct collects the bounds, that are given implicitly on the second branching level.
@@ -153,7 +153,7 @@ typedef struct
    int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
                                               *   may be used to only iterate over the relevant variables. */
    int                   nboundedvars;       /**< The length of the boundedvars array. */
-} SupposedDomRedData;
+} SUPPOSEDDOMREDDATA;
 
 /**
  * A container to hold the implied binary bounds found, as these are added after the main loop of the branching rule. The
@@ -170,7 +170,7 @@ typedef struct
    int                   nentries;           /**< The number of entries in both arrays. */
    int                   memsize;            /**< The number of entries that currently fit in the arrays. Only for internal
                                               *   usage! */
-} BinaryBoundData;
+} BINARYBOUNDDATA;
 
 
 /*
@@ -180,7 +180,7 @@ typedef struct
 static
 SCIP_RETCODE allocateStatus(
    SCIP*                 scip,               /**< SCIP data structure */
-   Status**              status              /**< the status to be allocated */
+   STATUS**              status              /**< the status to be allocated */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, status) );
@@ -189,7 +189,7 @@ SCIP_RETCODE allocateStatus(
 
 static
 void initStatus(
-   Status*               status              /**< the status to be initialized */
+   STATUS*               status              /**< the status to be initialized */
    )
 {
    status->addimpbinconst = FALSE;
@@ -204,7 +204,7 @@ void initStatus(
 static
 void freeStatus(
    SCIP*                 scip,               /**< SCIP data structure */
-   Status**              status              /**< the status to be freed */
+   STATUS**              status              /**< the status to be freed */
    )
 {
    SCIPfreeBuffer(scip, status);
@@ -215,7 +215,7 @@ void freeStatus(
  */
 static
 void initWeightData(
-   WeightData*           weightdata          /**< The struct to be initiated. */
+   WEIGHTDATA*           weightdata          /**< The struct to be initiated. */
    )
 {
    weightdata->highestweight = 0;
@@ -228,7 +228,7 @@ void initWeightData(
  */
 static
 void initScoreData(
-   ScoreData*            scoredata           /**< The struct to be initiated. */
+   SCOREDATA*            scoredata           /**< The struct to be initiated. */
    )
 {
    scoredata->ncutoffs = 0;
@@ -242,7 +242,7 @@ void initScoreData(
 static
 void initBranchingResultData(
    SCIP*                 scip,               /**< SCIP data structure */
-   BranchingResultData*  resultdata          /**< The struct to be initiated. */
+   BRANCHINGRESULTDATA*  resultdata          /**< The struct to be initiated. */
    )
 {
    resultdata->objval = SCIPinfinity(scip);
@@ -257,7 +257,7 @@ void initBranchingResultData(
 static
 SCIP_RETCODE allocSupposedBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedDomRedData**  supposedbounddata   /**< The struct to be allocated. */
+   SUPPOSEDDOMREDDATA**  supposedbounddata   /**< The struct to be allocated. */
    )
 {
    int ntotalvars;
@@ -282,7 +282,7 @@ SCIP_RETCODE allocSupposedBoundData(
  */
 static
 void initSupposedBoundData(
-   SupposedDomRedData*    supposedbounddata   /*< The struct that should get reset.*/
+   SUPPOSEDDOMREDDATA*    supposedbounddata   /*< The struct that should get reset.*/
    )
 {
    supposedbounddata->nboundedvars = 0;
@@ -290,7 +290,7 @@ void initSupposedBoundData(
 
 static
 void resetSupposedBoundData(
-   SupposedDomRedData*    supposedbounddata
+   SUPPOSEDDOMREDDATA*    supposedbounddata
    )
 {
    int i;
@@ -309,7 +309,7 @@ void resetSupposedBoundData(
 static
 void freeSupposedBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedDomRedData**  supposedbounddata   /**< The struct that should be freed. */
+   SUPPOSEDDOMREDDATA**  supposedbounddata   /**< The struct that should be freed. */
    )
 {
    SCIPfreeBufferArray(scip, &(*supposedbounddata)->boundedvars);
@@ -327,7 +327,7 @@ void freeSupposedBoundData(
 static
 SCIP_RETCODE allocBinaryBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   BinaryBoundData**     binarybounddata,    /**< The struct to be allocated. */
+   BINARYBOUNDDATA**     binarybounddata,    /**< The struct to be allocated. */
    int                   nentries            /**< The number of entries the contained arrays should support. */
    )
 {
@@ -343,7 +343,7 @@ SCIP_RETCODE allocBinaryBoundData(
  */
 static
 void initBinaryBoundData(
-   BinaryBoundData*      binarybounddata     /**< The struct to be reset. */
+   BINARYBOUNDDATA*      binarybounddata     /**< The struct to be reset. */
    )
 {
    binarybounddata->nentries = 0;
@@ -355,7 +355,7 @@ void initBinaryBoundData(
 static
 SCIP_RETCODE addBinaryBoundEntry(
    SCIP*                 scip,               /**< SCIP data structure */
-   BinaryBoundData*      container,          /**< The container for the implied binary constraints. */
+   BINARYBOUNDDATA*      container,          /**< The container for the implied binary constraints. */
    SCIP_VAR*             eithervar,          /**< One of both vars for the constraint. */
    SCIP_VAR*             othervar            /**< The other one of the vars for the constraint. */
    )
@@ -390,7 +390,7 @@ SCIP_RETCODE addBinaryBoundEntry(
  */
 static
 SCIP_Bool isBinaryBoundDataEmpty(
-   BinaryBoundData*      container           /**< The container to be checked. */
+   BINARYBOUNDDATA*      container           /**< The container to be checked. */
    )
 {
    assert(container != NULL);
@@ -404,7 +404,7 @@ SCIP_Bool isBinaryBoundDataEmpty(
 static
 void freeBinaryBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   BinaryBoundData**     binarybounddata     /**< The container to be freed. */
+   BINARYBOUNDDATA**     binarybounddata     /**< The container to be freed. */
    )
 {
    SCIPfreeBufferArray(scip, &(*binarybounddata)->othervars);
@@ -428,7 +428,7 @@ SCIP_RETCODE executeDownBranching(
    SCIP_VAR*             branchvar,          /**< variable to branch on */
    SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
                                               *   rounded down will be the upper bound of the new node. */
-   BranchingResultData*  resultdata          /**< pointer to the result data which gets filled with the status */
+   BRANCHINGRESULTDATA*  resultdata          /**< pointer to the result data which gets filled with the status */
    )
 {
    SCIP_Real oldupperbound;
@@ -504,7 +504,7 @@ SCIP_RETCODE executeUpBranching(
    SCIP_VAR*             branchvar,          /**< variable to branch on */
    SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
                                               *   rounded up will be the lower bound of the new node. */
-   BranchingResultData*  resultdata          /**< pointer to the result data which gets filled with the status */
+   BRANCHINGRESULTDATA*  resultdata          /**< pointer to the result data which gets filled with the status */
    )
 {
    SCIP_Real oldlowerbound;
@@ -618,7 +618,7 @@ void addSupposedUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
    SCIP_Real             newupperbound,      /**< the (possibly) new upper bound */
-   SupposedDomRedData*   supposedbounds      /**< the container to add the upper bound to */
+   SUPPOSEDDOMREDDATA*   supposedbounds      /**< the container to add the upper bound to */
    )
 {
    int varindex;
@@ -676,7 +676,7 @@ void addSupposedLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
    SCIP_Real             newlowerbound,      /**< the (possibly) new lower bound */
-   SupposedDomRedData*   supposedbounds      /**< the container to add the lower bound to */
+   SUPPOSEDDOMREDDATA*   supposedbounds      /**< the container to add the lower bound to */
    )
 {
    int varindex;
@@ -779,7 +779,7 @@ static
 SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
-   Status*               status,             /**< the status container */
+   STATUS*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
@@ -788,15 +788,15 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP_VAR*             deepbranchvar,      /**< variable to branch up and down on */
    SCIP_Real             deepbranchvarsolval,/**< (fractional) solution value of the branching variable */
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
-   WeightData*           weightdata,         /**< container to be filled with the weight relevant data */
+   WEIGHTDATA*           weightdata,         /**< container to be filled with the weight relevant data */
    int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
-   SupposedDomRedData*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
+   SUPPOSEDDOMREDDATA*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
                                               *   second level */
-   BinaryBoundData*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
+   BINARYBOUNDDATA*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
    )
 {
-   BranchingResultData* downresultdata;
-   BranchingResultData* upresultdata;
+   BRANCHINGRESULTDATA* downresultdata;
+   BRANCHINGRESULTDATA* upresultdata;
    SCIP_Real currentweight;
 
    assert(scip != NULL);
@@ -956,7 +956,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
 static
 SCIP_Bool isExecuteDeepBranchingLoop(
-   Status*               status,
+   STATUS*               status,
    SCIP_Bool             fullcutoff
    )
 {
@@ -985,18 +985,18 @@ static
 SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
-   Status*               status,             /**< the status container */
+   STATUS*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary
                                               *   bounds. Can be NULL.*/
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
-   WeightData*           weightdata,         /**< pointer which gets filled with the relevant weight data */
+   WEIGHTDATA*           weightdata,         /**< pointer which gets filled with the relevant weight data */
    int*                  ncutoffs,           /**< pointer which gets filled with the number of second level cutoffs */
-   SupposedDomRedData*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
+   SUPPOSEDDOMREDDATA*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
                                               *   second level */
-   BinaryBoundData*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
+   BINARYBOUNDDATA*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
    )
 {
    SCIP_VAR**  lpcands;
@@ -1036,7 +1036,7 @@ SCIP_RETCODE executeDeepBranching(
 static
 SCIP_Real calculateAverageWeight(
    SCIP*                 scip,               /**< SCIP data structure */
-   WeightData*           weightdata          /**< calculation data for the average weight */
+   WEIGHTDATA*           weightdata          /**< calculation data for the average weight */
    )
 {
    SCIP_Real averageweight;
@@ -1064,7 +1064,7 @@ SCIP_Real calculateAverageWeight(
 static
 void calculateCurrentWeight(
    SCIP*                 scip,               /**< SCIP data structure */
-   ScoreData*            scoredata,          /**< the information to calculate the new weight on */
+   SCOREDATA*            scoredata,          /**< the information to calculate the new weight on */
    SCIP_Real*            currentweight       /**< pointer to the current highest weight; gets updated with the new highest
                                               *   weight */
    )
@@ -1104,7 +1104,7 @@ SCIP_RETCODE handleImpliedBinaryBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< the lookahead branchruledata */
    SCIP_NODE*            basenode,           /**< the base node to which the bounds should be added */
-   BinaryBoundData*      binarybounddata     /**< the container with the bounds to be added */
+   BINARYBOUNDDATA*      binarybounddata     /**< the container with the bounds to be added */
    )
 {
    int i;
@@ -1160,7 +1160,7 @@ SCIP_RETCODE handleImpliedBinaryBounds(
 static
 void transferBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SupposedDomRedData*   supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
+   SUPPOSEDDOMREDDATA*   supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
    VALIDDOMREDDATA*      validbounds         /**< Bound data from the first level branches. Target for the transfer. */
    )
 {
@@ -1217,7 +1217,7 @@ void transferBoundData(
 
 static
 SCIP_Bool isExecuteFirstLevelBranching(
-   Status*               status
+   STATUS*               status
    )
 {
    return !status->lperror && !status->firstlvlfullcutoff;
@@ -1250,7 +1250,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
    int                   nlpcands,           /**< number of fractional variables/solution values */
-   Status*               status,
+   STATUS*               status,
    int*                  bestcand            /**< calculated index of the branching variable */
    )
 {
@@ -1275,9 +1275,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
    else if( nlpcands > 1 )
    {
       /* declare all variables */
-      BranchingResultData* downbranchingresult;
-      BranchingResultData* upbranchingresult;
-      ScoreData* scoredata;
+      BRANCHINGRESULTDATA* downbranchingresult;
+      BRANCHINGRESULTDATA* upbranchingresult;
+      SCOREDATA* scoredata;
 
       SCIP_NODE* basenode;
       SCIP_Real lpobjval;
@@ -1288,8 +1288,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       int i;
 
       VALIDDOMREDDATA* validbounds = NULL;
-      SupposedDomRedData* supposedbounds = NULL;
-      BinaryBoundData* binarybounddata = NULL;
+      SUPPOSEDDOMREDDATA* supposedbounds = NULL;
+      BINARYBOUNDDATA* binarybounddata = NULL;
 
       /* allocate all structs */
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
@@ -1686,7 +1686,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    /* TODO CS: handle the allowaddcons flag! */
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_SOL* baselpsol = NULL;
-   Status* status;
+   STATUS* status;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
