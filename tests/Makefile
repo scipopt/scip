@@ -20,6 +20,8 @@
 #-----------------------------------------------------------------------------
 # Probably nothing below here should be changed
 # TODO: use the $ORIGIN variable
+# NOTE: currently, compilation with SHARED=false is not supported.
+# One would need to add more flags (eg $(LDFLAGS)) when linking
 #-----------------------------------------------------------------------------
 
 UNITTESTSSRC	=	$(shell find src/ -name *.c)
@@ -34,24 +36,59 @@ TESTDIRS 	= $(sort $(dir $(patsubst src/%,%,$(UNITTESTSSRC))))
 #$(warning testdirs: $(TESTDIRS))
 
 #-----------------------------------------------------------------------------
-# OPTIONS
-#-----------------------------------------------------------------------------
-
-override OPT	=	dbg
-override SHARED	=	true
-
-#-----------------------------------------------------------------------------
 # paths
 #-----------------------------------------------------------------------------
 
 SCIPDIR		=	..
 
 #-----------------------------------------------------------------------------
+# SET OPTIONS FROM SCIP BINARY
+#-----------------------------------------------------------------------------
+
+ifneq ("$(wildcard $(SCIPDIR)/bin/scip)","")
+override ARCH		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*ARCH=\(.*\)/\1/p')
+override COMP		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*COMP=\(.*\)/\1/p')
+override EXPRINT	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*EXPRINT=\(.*\)/\1/p')
+override GAMS		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*GAMS=\(.*\)/\1/p')
+override GMP		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*GMP=\(.*\)/\1/p')
+override IPOPT		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*IPOPT=\(.*\)/\1/p')
+override IPOPTOPT	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*IPOPTOPT=\(.*\)/\1/p')
+override LPS		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*LPS=\(.*\)/\1/p')
+override LPSCHECK	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*LPSCHECK=\(.*\)/\1/p')
+override LPSOPT 	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*LPSOPT=\(.*\)/\1/p')
+override NOBLKBUFMEM	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*NOBLKBUFMEM=\(.*\)/\1/p')
+override NOBLKMEM	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*NOBLKMEM=\(.*\)/\1/p')
+override NOBUFMEM	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*NOBUFMEM=\(.*\)/\1/p')
+override OPT		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*OPT=\(.*\)/\1/p')
+override OSTYPE		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*OSTYPE=\(.*\)/\1/p')
+override PARASCIP	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*PARASCIP=\(.*\)/\1/p')
+override READLINE	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*READLINE=\(.*\)/\1/p')
+override SHARED		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*SHARED=\(.*\)/\1/p')
+override USRARFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USRARFLAGS=\(.*\)/\1/p')
+override USRCFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USRCFLAGS=\(.*\)/\1/p')
+override USRCXXFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USRCXXFLAGS=\(.*\)/\1/p')
+override USRDFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USRDFLAGS=\(.*\)/\1/p')
+override USRFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USRFLAGS=\(.*\)/\1/p')
+override USRLDFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USRLDFLAGS=\(.*\)/\1/p')
+override USROFLAGS	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*USROFLAGS=\(.*\)/\1/p')
+override VERSION	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*VERSION=\(.*\)/\1/p')
+override ZIMPL		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*ZIMPL=\(.*\)/\1/p')
+override ZIMPLOPT	:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*ZIMPLOPT=\(.*\)/\1/p')
+override ZLIB		:=$(shell $(SCIPDIR)/bin/scip -v | sed -n 's/^\s*ZLIB=\(.*\)/\1/p')
+ifeq ($(SHARED), false)
+$(error Please compile SCIP with SHARED=true)
+endif
+else
+# TODO: send error message? the scip binary is not present!
+override OPT	=	dbg
+override SHARED	=	true
+endif
+
+#-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
 
 include $(SCIPDIR)/make/make.project
-#$(warning OPT=$(OPT))
 
 BASESUFFIX	=	.$(BASE).$(LPS)$(EXEEXTENSION)
 
