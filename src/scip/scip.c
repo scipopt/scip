@@ -645,7 +645,7 @@ void SCIPprintBuildOptions(
 #elif defined(__clang__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "clang %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif defined(_MSC_VER)
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c++ %d\n", _MSC_FULL_VER);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c %d\n", _MSC_FULL_VER);
 #elif defined(__GNUC__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
