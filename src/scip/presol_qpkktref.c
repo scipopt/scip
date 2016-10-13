@@ -1601,8 +1601,8 @@ SCIP_RETCODE checkConsQuadraticProblem(
 
    /* search for the objective variable 'objvar' in the linear term of quadratic constraint (it is already known that
     * at most one variable has a nonzero objective value); additionally, check the sign of the objective variable */
-   maydecrease = SCIPgetLinvarMayDecrease(scip, cons);
-   mayincrease = SCIPgetLinvarMayIncrease(scip, cons);
+   maydecrease = SCIPgetLinvarMayDecreaseQuadratic(scip, cons);
+   mayincrease = SCIPgetLinvarMayIncreaseQuadratic(scip, cons);
    if ( maydecrease < 0 && mayincrease < 0 )
       return SCIP_OKAY;
    else if ( maydecrease >= 0 )
