@@ -1095,6 +1095,7 @@ SCIP_RETCODE solveSubNLP(
       {
          SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
+         heurdata->lastsol = resultsol;
          SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
          {
@@ -1105,7 +1106,6 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is feasible\n");
             }
             *result = SCIP_FOUNDSOL;
-            heurdata->lastsol = resultsol;
             break;
          }
          else
@@ -1371,6 +1371,7 @@ SCIP_RETCODE solveSubNLP(
 
          SCIP_CALL( createSolFromNLP(scip, heur, &resultsol, authorheur) );
 
+         heurdata->lastsol = resultsol;
 #ifdef SCIP_DEBUG
          /* print the infeasibilities to stdout */
          SCIP_CALL( SCIPcheckSol(scip, resultsol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
@@ -1387,7 +1388,6 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
             }
             *result = SCIP_FOUNDSOL;
-            heurdata->lastsol = resultsol;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
