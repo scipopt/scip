@@ -79,7 +79,6 @@ ifeq ($(SHARED), false)
 $(error Please compile SCIP with SHARED=true)
 endif
 else
-# TODO: send error message? the scip binary is not present!
 override OPT	=	dbg
 override SHARED	=	true
 endif
