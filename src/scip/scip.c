@@ -43187,17 +43187,6 @@ SCIP_Real SCIPinfinity(
    return SCIPsetInfinity(scip->set);
 }
 
-/** returns value treated as -infinity */
-SCIP_Real SCIPnegativeInfinity(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetNegativeInfinity(scip->set);
-}
-
 /** checks, if value is (positive) infinite */
 SCIP_Bool SCIPisInfinity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -43208,18 +43197,6 @@ SCIP_Bool SCIPisInfinity(
    assert(scip->set != NULL);
 
    return SCIPsetIsInfinity(scip->set, val);
-}
-
-/** checks, if value is (negative) infinite */
-SCIP_Bool SCIPisNegativeInfinity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val                 /**< value to be compared against negative infinity */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetIsNegativeInfinity(scip->set, val);
 }
 
 /** checks, if value is huge and should be handled separately (e.g., in activity computation) */

@@ -20405,12 +20405,6 @@ SCIP_Real SCIPinfinity(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns value treated as infinity */
-EXTERN
-SCIP_Real SCIPnegativeInfinity(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity
  *  computation)
  */
@@ -20464,13 +20458,6 @@ EXTERN
 SCIP_Bool SCIPisInfinity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to be compared against infinity */
-   );
-
-/** checks, if value is (negative) infinite */
-EXTERN
-SCIP_Bool SCIPisNegativeInfinity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val                 /**< value to be compared against negative infinity */
    );
 
 /** checks, if value is huge and should be handled separately (e.g., in activity computation) */

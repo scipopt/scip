@@ -375,7 +375,7 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncands) );
    for( i = 0; i < ncands; i++ )
    {
-      scores[i] = SCIPnegativeInfinity(scip);
+      scores[i] = -SCIPinfinity(scip);
    }
 
    SCIP_CALL( calculateStrongBranchingScores(scip, cands, candssol, candsfrac, scores, ncands, result) );
@@ -388,7 +388,7 @@ SCIP_RETCODE getLookaheadBranchingCandidates(
    SCIPdebugMessage("Considering (at most) the <%i> candidates with the best (non-infinite) score\n", ncanditatestoadd);
    for( i = 0; i < ncands && candidates->ncandidates < ncanditatestoadd; i++ )
    {
-      if( !SCIPisNegativeInfinity(scip, scores[i]) )
+      if( !SCIPisInfinity(scip, -scores[i]) )
       {
          addCandidate(scip, cands[i], candssol[i], candidates);
 
