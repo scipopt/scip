@@ -44,7 +44,8 @@ namespace polyscip {
         ValueType getFirst() const {return proj_.first;}
         ValueType getSecond() const {return proj_.second;}
         bool operator<(TwoDProj other) const;
-        bool dominates(double epsilon, const TwoDProj& other) const;
+        bool epsilonDominates(double epsilon, const TwoDProj &other) const;
+        //bool coincidesWith(const TwoDProj& other, double epsilon) const;
         friend std::ostream &operator<<(std::ostream& os, const TwoDProj& proj);
     private:
         std::pair<ValueType, ValueType> proj_;
@@ -168,7 +169,7 @@ namespace polyscip {
 
         void deleteWeaklyNondomSupportedResults();
 
-        /* Return true if other element exists which dominates 'it' or has objective values coinciding with 'it
+        /* Return true if other element exists which epsilonDominates 'it' or has objective values coinciding with 'it
          */
         bool isDominatedOrEqual(ResultContainer::const_iterator it,
                                 ResultContainer::const_iterator beg,

@@ -80,10 +80,15 @@ namespace polyscip {
                 (this->getFirst() == other.getFirst() && this->getSecond() < other.getSecond()));
     }
 
-    bool TwoDProj::dominates(double eps, const TwoDProj& other) const {
+    bool TwoDProj::epsilonDominates(double eps, const TwoDProj &other) const {
         assert (eps >= 0);
-        return (this->getFirst()-eps < other.getFirst() && this->getSecond()-eps < other.getSecond());
+        return (this->getFirst()-eps <= other.getFirst() && this->getSecond()-eps <= other.getSecond());
     }
+
+    /*bool TwoDProj::coincidesWith(const TwoDProj& other, double epsilon) const {
+        return std::max(std::fabs(this->getFirst() - other.getFirst()),
+                        std::fabs(this->getSecond() - other.getSecond())) < epsilon;
+    }*/
 
     std::ostream& operator<<(std::ostream& os, const TwoDProj& p) {
         os << "Proj = [" << p.proj_.first << ", " << p.proj_.second << "]";
@@ -129,7 +134,7 @@ namespace polyscip {
         auto it = begin(nondom_projections_);
         while (it!=std::prev(end(nondom_projections_))) {
             auto next = std::next(it);
-            if (it->first.dominates(epsilon_, next->first)) {
+            if (it->first.epsilonDominates(epsilon_, next->first)) {
                 nondom_projections_.erase(next);
             }
             else {
@@ -147,18 +152,18 @@ namespace polyscip {
 
     void NondomProjections::update(TwoDProj proj, Result res) {
         assert (current_ != std::prev(end(nondom_projections_)) && current_ != end(nondom_projections_));
-        if (proj.dominates(epsilon_, current_->first)) {
+        if (proj.epsilonDominates(epsilon_, current_->first)) {
             auto end_del = std::next(current_);
-            while (proj.dominates(epsilon_, end_del->first)) {
+            while (proj.epsilonDominates(epsilon_, end_del->first)) {
                 ++end_del;
             }
             nondom_projections_.erase(current_, end_del);
             current_ = this->add(std::move(proj), std::move(res));
         }
-        else if (proj.dominates(epsilon_, std::next(current_)->first)) {
+        else if (proj.epsilonDominates(epsilon_, std::next(current_)->first)) {
             auto end_del = current_;
             std::advance(end_del, 2);
-            while (proj.dominates(epsilon_, end_del->first)) {
+            while (proj.epsilonDominates(epsilon_, end_del->first)) {
                 ++end_del;
             }
             nondom_projections_.erase(std::next(current_), end_del);
@@ -269,7 +274,7 @@ namespace polyscip {
         auto disjoint_partitions = vector<RectangularBox>{};
         auto intersections = vector<Interval>{};
         for (size_t i=0; i<size; ++i) {
-            if (box_[i].first <= other.box_[i].first - epsilon) { // non-empty to the left
+            if (box_[i].first < other.box_[i].first - epsilon) { // non-empty to the left
                 auto new_box = RectangularBox(begin(intersections), end(intersections),
                                               {box_[i].first, other.box_[i].first - epsilon},
                                               begin(box_)+(i+1), end(box_));
@@ -277,7 +282,7 @@ namespace polyscip {
                 disjoint_partitions.push_back(std::move(new_box));
 
             }
-            if (other.box_[i].second + epsilon <= box_[i].second) { // non-empty to the right
+            if (other.box_[i].second + epsilon < box_[i].second) { // non-empty to the right
                 auto new_box = RectangularBox(begin(intersections), end(intersections),
                                               {other.box_[i].second + epsilon, box_[i].second},
                                               begin(box_)+(i+1), end(box_));
@@ -530,10 +535,11 @@ namespace polyscip {
                                                        nonzero_obj_orig_vals);
 
             auto disjoint_boxes = computeDisjointBoxes(std::move(feasible_boxes));
-
-            std::cout << "DISJOINT BOXES: \n";
+            //assert (boxesArePairWiseDisjoint(disjoint_boxes));
+            std::cout << "DISJOINT BOXES: " << disjoint_boxes.size() << "\n";
+            size_t counter = 0;
             for (const auto& box : disjoint_boxes) {
-                std::cout << "Box = " << box << "\n";
+                std::cout << "Box = " << box << " - " << ++counter << "\n";
                 auto new_nondom_res = computeNondomPointsInBox(box,
                                                                nonzero_obj_orig_vars,
                                                                nonzero_obj_orig_vals);
@@ -650,7 +656,7 @@ namespace polyscip {
             auto vars_in_cons = vector<SCIP_VAR*>(begin(orig_vars[i]), end(orig_vars[i]));
             vars_in_cons.push_back(disj_vars[i]);
             auto vals_in_cons = vector<ValueType>(begin(orig_vals[i]), end(orig_vals[i]));
-            vals_in_cons.push_back(1e+6);
+            vals_in_cons.push_back(10*outcome[i]);
             SCIP_CONS* disj_cons = nullptr;
             SCIPcreateConsBasicLinear(scip_,
                                       addressof(disj_cons),
@@ -659,7 +665,7 @@ namespace polyscip {
                                       vars_in_cons.data(),
                                       vals_in_cons.data(),
                                       -SCIPinfinity(scip_),
-                                      outcome[i] - cmd_line_args_.getEpsilon() + 1e+6);
+                                      outcome[i] - cmd_line_args_.getEpsilon() + 10*outcome[i]);
             assert (disj_cons != nullptr);
             cons.push_back(disj_cons);
         }
@@ -921,7 +927,6 @@ namespace polyscip {
             std::move(begin(current_boxes), end(current_boxes), std::back_inserter(disjoint_boxes));
             disjoint_boxes.push_back(std::move(box_to_be_added));
         }
-        assert (boxesArePairWiseDisjoint(disjoint_boxes));
         return disjoint_boxes;
     }
 
@@ -1158,8 +1163,8 @@ namespace polyscip {
                 auto res = getOptimalResult();
                 auto proj = TwoDProj(res.second, obj_1, obj_2);
 
-                if (left_proj.dominates(cmd_line_args_.getEpsilon(), proj) ||
-                    right_proj.dominates(cmd_line_args_.getEpsilon(), proj)) {
+                if (left_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj) ||
+                        right_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj)) {
                     nondom_projs.update();
                 }
                 else {
@@ -1419,7 +1424,7 @@ namespace polyscip {
                 auto proj = TwoDProj(res.second, obj_1, obj_2);
 
                 if (left_proj.dominates(cmd_line_args_.getEpsilon(), proj) ||
-                    right_proj.dominates(cmd_line_args_.getEpsilon(), proj)) {
+                    right_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj)) {
                     nondom_projs.update();
                 }
                 else {

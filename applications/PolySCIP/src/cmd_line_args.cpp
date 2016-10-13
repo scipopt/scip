@@ -47,11 +47,11 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
-        ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.01",
-                                     false, 0.01, "double");
+        ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.05",
+                                     false, 0.05, "double");
         cmd.add(delta_arg);
-        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-5",
-                                     false, 1e-5, "double");
+        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-4",
+                                     false, 1e-4, "double");
         cmd.add(epsilon_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
                                              "PATH for -w",
