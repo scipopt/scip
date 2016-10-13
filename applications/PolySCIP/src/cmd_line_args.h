@@ -40,6 +40,7 @@ namespace polyscip {
         bool hasTimeLimit() const {return time_limit_ != kTimeLimitInf;}
         bool hasParameterFile() const {return !param_file_.empty();};
         TimeLimitType getTimeLimit() const {return time_limit_;};
+        double getDelta() const {return delta_;};
         double getEpsilon() const {return epsilon_;};
         std::string getParameterFile() const {return param_file_;};
         std::string getProblemFile() const {return prob_file_;};
@@ -56,6 +57,7 @@ namespace polyscip {
         bool output_solutions_;
         bool output_outcomes_;
         TimeLimitType time_limit_;
+        double delta_;
         double epsilon_;
         std::string param_file_;
         std::string prob_file_;

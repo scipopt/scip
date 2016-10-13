@@ -283,14 +283,13 @@ namespace polyscip {
                                              const ValueType &rhs,
                                              const ValueType &beta_i);
 
-        /*std::vector<SCIP_CONS*> createAndAddDisjunctiveCons(
+        std::vector<SCIP_CONS*> createDisjunctiveCons(
                 const std::vector<SCIP_VAR *> &disj_vars,
                 const OutcomeType &outcome,
-                const Box &box,
                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                const std::vector<std::vector<ValueType>> &orig_vals) const;*/
+                const std::vector<std::vector<ValueType>> &orig_vals) const;
 
-        //std::vector<SCIP_VAR*> createAndAddDisjunctiveVars(std::size_t) const;
+        std::vector<SCIP_VAR*> createDisjunctiveVars(std::size_t) const;
 
         /** create constraint: lhs <= c_i^T x <= rhs*
          * @param new_var

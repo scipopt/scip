@@ -47,6 +47,9 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
+        ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.01",
+                                     false, 0.01, "double");
+        cmd.add(delta_arg);
         ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-5",
                                      false, 1e-5, "double");
         cmd.add(epsilon_arg);
@@ -68,6 +71,7 @@ namespace polyscip {
         output_solutions_ = output_sols_arg.getValue();
         output_outcomes_ = output_outcomes_arg.getValue();
         time_limit_ = time_limit_arg.getValue();
+        delta_ = delta_arg.getValue();
         epsilon_ = epsilon_arg.getValue();
         write_results_path_ = write_sols_path_arg.getValue();
         param_file_ = param_file_arg.getValue();
