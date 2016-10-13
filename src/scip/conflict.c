@@ -5860,6 +5860,14 @@ SCIP_RETCODE runBoundHeuristic(
             /* undo additional bound changes */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
+               SCIP_Bool stopped = FALSE;
+
+               /* the original LP exceeds the current cutoff bound, thus, we have not constructed the farkas proof */
+               SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, farkaslhs, farkasactivity,
+                     curvarlbs, curvarubs, &stopped) );
+
+               /* TODO analyse the dual ray */
+
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
                      lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, valid, &resolve,
                      farkascoefs, farkaslhs, farkasactivity) );
