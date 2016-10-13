@@ -457,7 +457,8 @@ SCIP_RETCODE createNlRow(
                0.0,
                0, NULL, NULL,
                0, NULL, 0, NULL,
-               exprtree, -SCIPinfinity(scip), 1.0) );
+               exprtree, -SCIPinfinity(scip), 1.0,
+               SCIP_EXPRCURV_UNKNOWN) );
 
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -528,7 +529,8 @@ SCIP_RETCODE createNlRow(
             -consdata->rhscoeff * consdata->rhsoffset,
             1, &consdata->rhsvar, &lincoef,
             0, NULL, 0, NULL,
-            exprtree, -SCIPinfinity(scip), 0.0) );
+            exprtree, -SCIPinfinity(scip), 0.0,
+            SCIP_EXPRCURV_UNKNOWN) );
 
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -546,7 +548,8 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             0, NULL, NULL,
             consdata->nvars, consdata->vars, 0, NULL,
-            NULL, -SCIPinfinity(scip), 0.0) );
+            NULL, -SCIPinfinity(scip), 0.0,
+            SCIP_EXPRCURV_UNKNOWN) );
 
       /* add gamma + sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
       rhs = -consdata->constant;
@@ -652,7 +655,8 @@ SCIP_RETCODE createNlRow(
             -consdata->rhscoeff * consdata->rhsoffset,
             1, &consdata->rhsvar, &lincoef,
             0, NULL, 0, NULL,
-            exprtree, -SCIPinfinity(scip), 0.0) );
+            exprtree, -SCIPinfinity(scip), 0.0,
+            SCIP_EXPRCURV_UNKNOWN) );
 
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
