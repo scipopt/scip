@@ -200,6 +200,7 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
    SCIP_Longint          lastsepalpcount;    /**< last LP number, where the separations was called */
    SCIP_Longint          lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
+   SCIP_Longint          lastenforelaxrelaxcount; /**< last relax number, where the relax enforcement was called */
    int                   sepapriority;       /**< priority of the constraint handler for separation */
    int                   enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int                   checkpriority;      /**< priority of the constraint handler for checking infeasibility */

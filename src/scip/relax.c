@@ -344,6 +344,7 @@ SCIP_RETCODE SCIPrelaxExec(
       if( *result != SCIP_DIDNOTRUN )
       {
          relax->ncalls++;
+         stat->relaxcount++;
          if( *result == SCIP_SUSPENDED )
             SCIPrelaxMarkUnsolved(relax);
       }

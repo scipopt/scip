@@ -156,6 +156,7 @@ struct SCIP_Stat
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    SCIP_LPSOLSTAT        lastsblpsolstats[2];/**< last LP solving statuses for variable strong branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
+   SCIP_Longint          relaxcount;         /**< internal counter, where all relax calls are counted */
    SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */
    SCIP_Longint          nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
    SCIP_Longint          nprimallps;         /**< number of primal LPs solved with at least 1 iteration */

@@ -455,6 +455,7 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
             conshdlr->lastenfolpdomchgcount = -1;
             conshdlr->lastenfopsdomchgcount = -1;
             conshdlr->lastenforelaxdomchgcount = -1;
+            conshdlr->lastenforelaxrelaxcount = -1;
             conshdlr->lastenfolpnode = -1;
             conshdlr->lastenfopsnode = -1;
          }
@@ -1004,6 +1005,7 @@ SCIP_RETCODE conshdlrAddEnfocons(
       conshdlr->lastenfolpdomchgcount = -1;
       conshdlr->lastenfopsdomchgcount = -1;
       conshdlr->lastenforelaxdomchgcount = -1;
+      conshdlr->lastenforelaxrelaxcount = -1;
       conshdlr->lastenfolpnode = -1;
       conshdlr->lastenfopsnode = -1;
    }
@@ -2171,6 +2173,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastenfolpdomchgcount = -1;
    (*conshdlr)->lastenfopsdomchgcount = -1;
    (*conshdlr)->lastenforelaxdomchgcount = -1;
+   (*conshdlr)->lastenforelaxrelaxcount = -1;
    (*conshdlr)->lastenfolpnode = -1;
    (*conshdlr)->lastenfopsnode = -1;
    (*conshdlr)->lastenfolpresult = SCIP_DIDNOTRUN;
@@ -2348,6 +2351,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->lastenfolpdomchgcount = -1;
       conshdlr->lastenfopsdomchgcount = -1;
       conshdlr->lastenforelaxdomchgcount = -1;
+      conshdlr->lastenforelaxrelaxcount = -1;
       conshdlr->lastenfolpnode = -1;
       conshdlr->lastenfopsnode = -1;
       conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
@@ -2477,6 +2481,7 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    conshdlr->lastenfolpdomchgcount = -1;
    conshdlr->lastenfopsdomchgcount = -1;
    conshdlr->lastenforelaxdomchgcount = -1;
+   conshdlr->lastenforelaxrelaxcount = -1;
    conshdlr->lastenfolpnode = -1;
    conshdlr->lastenfopsnode = -1;
    conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
@@ -3118,7 +3123,8 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
     * the integrality constraint handler always needs to be enforced for all constraints since external branching
     * candidates are cleared before each resolve
     */
-   if( conshdlr->lastenforelaxdomchgcount == stat->domchgcount
+   if( conshdlr->lastenforelaxrelaxcount == stat->relaxcount
+      && conshdlr->lastenforelaxdomchgcount == stat->domchgcount
       && conshdlr->lastenforelaxnode == stat->nnodes
       && conshdlr->lastenforelaxresult != SCIP_CONSADDED
       && conshdlr->lastenforelaxresult != SCIP_SOLVELP
@@ -3174,6 +3180,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
          firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, relaxchanged ? "new" : "old");
 
       /* remember the number of processed constraints on the current relaxation solution */
+      conshdlr->lastenforelaxrelaxcount = stat->relaxcount;
       conshdlr->lastenforelaxdomchgcount = stat->domchgcount;
       conshdlr->lastenforelaxnode = stat->nnodes;
       conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
