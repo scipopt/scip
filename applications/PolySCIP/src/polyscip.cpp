@@ -358,7 +358,7 @@ namespace polyscip {
             : cmd_line_args_{cmd_line_args},
               polyscip_status_{PolyscipStatus::ProblemRead},
               scip_{scip},
-              obj_sense_{obj_sense},//obj_sense_{SCIP_OBJSENSE_MINIMIZE}
+              obj_sense_{obj_sense},//obj_sense_{SCIP_OBJSENSE_MINIMIZE},
               no_objs_{no_objs},
               clock_total_{clock_total},
               only_weight_space_phase_{false},
@@ -410,9 +410,13 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::computeNondomPoints() {
         if (polyscip_status_ == PolyscipStatus::ProblemRead) {
             SCIP_CALL(SCIPstartClock(scip_, clock_total_));
-            SCIP_CALL(computeUnitWeightOutcomes());
+            SCIP_CALL(computeUnitWeightNondomResults());
             if (polyscip_status_ == PolyscipStatus::UnitWeightPhase) {
-                if (only_weight_space_phase_) {
+                if (no_objs_ > 4) {
+                    cout << "Number of objectives > 4: only computing SNDE Points\n";
+                    SCIP_CALL(computeWeightSpaceResults());
+                }
+                else if (only_weight_space_phase_) {
                     SCIP_CALL(computeWeightSpaceResults());
                 }
                 else {
@@ -420,14 +424,15 @@ namespace polyscip {
                 }
             }
             deleteWeaklyNondomSupportedResults();
-            assert (!dominatedPointsFound());
+            //assert (!dominatedPointsFound());
             SCIP_CALL(SCIPstopClock(scip_, clock_total_));
         }
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::computeUnitWeightOutcomes() {
+    SCIP_RETCODE Polyscip::computeUnitWeightNondomResults() {
         polyscip_status_ = PolyscipStatus::UnitWeightPhase;
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
         auto cur_opt_vals = OutcomeType(no_objs_, std::numeric_limits<ValueType>::max());
         auto weight = WeightType(no_objs_, 0.);
         for (size_t unit_weight_index=0; unit_weight_index!=no_objs_; ++unit_weight_index) {
@@ -443,7 +448,32 @@ namespace polyscip {
                 scip_status = separateINFORUNBD(weight);
 
             if (scip_status == SCIP_STATUS_OPTIMAL) {
-                SCIP_CALL( handleOptimalStatus(weight, cur_opt_vals[unit_weight_index]) );
+                // recompute with c_i^Tx <= opt_val and objective weighted with ones vector
+                auto non_zero_obj_orig_vars = obj_probdata->getNonZeroCoeffVars(unit_weight_index);
+                auto non_zero_obj_orig_vals = vector<ValueType>{};
+                std::transform(non_zero_obj_orig_vars.cbegin(),
+                               non_zero_obj_orig_vars.cend(),
+                               std::back_inserter(non_zero_obj_orig_vals),
+                               [unit_weight_index, obj_probdata](SCIP_VAR *var) {
+                                   return obj_probdata->getObjCoeff(var, unit_weight_index);
+                               });
+                auto opt_value = SCIPgetPrimalbound(scip_);
+                SCIP_CALL(SCIPfreeTransform(scip_));
+                auto obj_val_cons = createObjValCons(non_zero_obj_orig_vars,
+                                                     non_zero_obj_orig_vals,
+                                                     -SCIPinfinity(scip_),
+                                                     opt_value);
+                SCIP_CALL(SCIPaddCons(scip_, obj_val_cons));
+                SCIP_CALL(setWeightedObjective(WeightType(no_objs_, 1.)));
+                SCIP_CALL(solve());
+                assert (SCIPgetStatus(scip_) == SCIP_STATUS_OPTIMAL);
+
+                SCIP_CALL(handleOptimalStatus(weight, cur_opt_vals[unit_weight_index]));
+
+                // release and delete added constraints
+                SCIP_CALL(SCIPfreeTransform(scip_));
+                SCIP_CALL(SCIPdelCons(scip_, obj_val_cons));
+                SCIP_CALL(SCIPreleaseCons(scip_, addressof(obj_val_cons)));
             }
             else if (scip_status == SCIP_STATUS_UNBOUNDED) {
                 SCIP_CALL( handleUnboundedStatus(true) );
@@ -452,7 +482,7 @@ namespace polyscip {
                 SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) );
             }
 
-            if (supported_size_before < bounded_.size()) {
+            cif (supported_size_before < bounded_.size()) {
                 std::transform(begin(cur_opt_vals),
                                end(cur_opt_vals),
                                begin(bounded_.back().second),
@@ -1340,239 +1370,6 @@ namespace polyscip {
         return bounded_.size() + unsupported_.size();
     }
 
-    /*SCIP_RETCODE Polyscip::solveWeightedTchebycheff(SCIP_VAR* new_var,
-                                                    const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                                    const std::vector<std::vector<ValueType>>& orig_vals,
-                                                    std::size_t obj_1,
-                                                    std::size_t obj_2) {
-
-        assert (orig_vars.size() == orig_vals.size());
-        assert (orig_vals.size() == no_objs_);
-        assert (obj_1 < no_objs_ && obj_2 < no_objs_);
-
-        auto nondom_projs = NondomProjections(cmd_line_args_.getEpsilon(),
-                                              bounded_,
-                                              unsupported_,
-                                              obj_1,
-                                              obj_2);
-
-        auto new_results = ResultContainer{};
-        auto last_proj = nondom_projs.getLastProj();
-        while (!nondom_projs.finished() && polyscip_status_ == PolyscipStatus::TwoProjPhase) {
-            auto left_proj = nondom_projs.getLeftProj();
-            auto right_proj = nondom_projs.getRightProj();
-            assert (left_proj.getFirst() < right_proj.getFirst());
-            assert (left_proj.getSecond() > last_proj.getSecond());
-
-            auto cons = vector<SCIP_CONS*>{};
-            // create constraint pred.first <= c_{objs.first} \cdot x <= succ.first
-            cons.push_back(createObjValCons(orig_vars[obj_1],
-                                            orig_vals[obj_1],
-                                            left_proj.getFirst(),
-                                            right_proj.getFirst()));
-            // create constraint optimal_val_objs.second <= c_{objs.second} \cdot x <= pred.second
-            cons.push_back(createObjValCons(orig_vars[obj_2],
-                                            orig_vals[obj_2],
-                                            last_proj.getSecond(),
-                                            left_proj.getSecond()));
-
-            auto ref_point = std::make_pair(left_proj.getFirst() - 1., last_proj.getSecond() - 1.);
-            // set beta = (beta_1,beta_2) s.t. pred and succ are both on the norm rectangle defined by beta
-            auto beta_1 = 1.0;
-            auto beta_2 = (right_proj.getFirst() - ref_point.first) / (left_proj.getSecond() - ref_point.second);
-            // create constraint with respect to beta_1
-            cons.push_back(createNewVarTransformCons(new_var,
-                                                     orig_vars[obj_1],
-                                                     orig_vals[obj_1],
-                                                     ref_point.first,
-                                                     beta_1));
-            // create constraint with respect to beta_2
-            cons.push_back(createNewVarTransformCons(new_var,
-                                                     orig_vars[obj_2],
-                                                     orig_vals[obj_2],
-                                                     ref_point.second,
-                                                     beta_2));
-            for (auto c : cons) {
-                SCIP_CALL(SCIPaddCons(scip_, c));
-            }
-            SCIP_CALL(solve());
-            auto scip_status = SCIPgetStatus(scip_);
-            if (scip_status == SCIP_STATUS_OPTIMAL) {
-                assert (SCIPisGE(scip_, SCIPgetPrimalbound(scip_), 0.));
-                auto res = getOptimalResult();
-                auto proj = TwoDProj(res.second, obj_1, obj_2);
-
-                if (left_proj.dominates(cmd_line_args_.getEpsilon(), proj) ||
-                    right_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj)) {
-                    nondom_projs.update();
-                }
-                else {
-                    computeNondomResult(new_var,
-                                        cons.front(),
-                                        *std::next(begin(cons)),
-                                        proj.getFirst(),
-                                        proj.getSecond(),
-                                        new_results);
-                    auto nd_proj = TwoDProj(new_results.back().second, obj_1, obj_2);
-                    nondom_projs.update(std::move(nd_proj), new_results.back().second);
-                }
-            }
-            else if (scip_status == SCIP_STATUS_TIMELIMIT) {
-                polyscip_status_ = PolyscipStatus::TimeLimitReached;
-            }
-            else {
-                std::cout << "unexpected SCIP status in solveWeightedTchebycheff: " +
-                             std::to_string(SCIPgetStatus(scip_)) + "\n";
-                polyscip_status_ = PolyscipStatus::Error;
-            }
-
-            // release and delete constraints
-            if (SCIPisTransformed(scip_))
-                SCIP_CALL(SCIPfreeTransform(scip_));
-            for (auto c : cons) {
-                SCIP_CALL(SCIPdelCons(scip_, c));
-                SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
-            }
-        }
-        if (no_objs_ > 3) {
-            for (auto nd_it=nondom_projs.cbegin(); nd_it!=nondom_projs.cend(); ++nd_it) {
-                auto res = addLowerDimProbNondomPoints(obj_1, obj_2, orig_vars, orig_vals,
-                                                         nd_it->first, nd_it->second);
-
-            }
-        }
-        for (const auto& res : new_results)
-            unsupported_.push_back(res);
-        return SCIP_OKAY;
-
-    }*/
-
-
-
-    /*SCIP_RETCODE Polyscip::solveWeightedTchebycheff(SCIP_VAR* new_var,
-                                                    const vector<vector<SCIP_VAR*>>& orig_vars,
-                                                    const vector<vector<ValueType>>& orig_vals,
-                                                    const pair<size_t, size_t>& objs,
-                                                    ValPairMap nondom_proj) {
-        assert (!nondom_proj.empty());
-        assert (orig_vars.size() == orig_vals.size());
-        assert (orig_vals.size() == no_objs_);
-
-        if (nondom_proj.size() > 1) {
-
-            auto new_results = ResultContainer{};
-            auto pred_it = nondom_proj.begin();
-
-            std::cout << "SIZE = " << nondom_proj.size() << "\n";
-
-            while (pred_it != std::prev(end(nondom_proj)) && polyscip_status_==PolyscipStatus::TwoProjPhase) {
-
-                auto pred = pred_it->first;
-                auto succ_it = std::next(pred_it);
-                auto succ = succ_it->first;
-                auto last = std::prev(end(nondom_proj))->first;
-
-                assert (pred.first < succ.first);
-                assert (pred.second > last.second);
-
-                auto cons = vector<SCIP_CONS *>{};
-                // create constraint pred.first <= c_{objs.first} \cdot x <= succ.first
-                cons.push_back(createObjValCons(orig_vars[objs.first],
-                                                        orig_vals[objs.first],
-                                                        pred.first,
-                                                        succ.first));
-                // create constraint optimal_val_objs.second <= c_{objs.second} \cdot x <= pred.second
-                cons.push_back(createObjValCons(orig_vars[objs.second],
-                                                        orig_vals[objs.second],
-                                                        last.second,
-                                                        pred.second));
-
-                auto ref_point = std::make_pair(pred.first - 1., last.second - 1.);
-                // set beta = (beta_1,beta_2) s.t. pred and succ are both on the norm rectangle defined by beta
-                auto beta_1 = 1.0;
-                auto beta_2 = (succ.first - ref_point.first) / (pred.second - ref_point.second);
-                // create constraint with respect to beta_1
-                cons.push_back(createNewVarTransformCons(new_var,
-                                                         orig_vars[objs.first],
-                                                         orig_vals[objs.first],
-                                                         ref_point.first,
-                                                         beta_1));
-                // create constraint with respect to beta_2
-                cons.push_back(createNewVarTransformCons(new_var,
-                                                         orig_vars[objs.second],
-                                                         orig_vals[objs.second],
-                                                         ref_point.second,
-                                                         beta_2));
-                for (auto c : cons) {
-                    SCIP_CALL(SCIPaddCons(scip_, c));
-                }
-
-                SCIP_CALL(solve());
-                auto scip_status = SCIPgetStatus(scip_);
-                if (scip_status == SCIP_STATUS_OPTIMAL) {
-                    assert (SCIPisGE(scip_, SCIPgetPrimalbound(scip_), 0.));
-                    auto res = getOptimalResult();
-                    auto proj = std::make_pair(res.second[objs.first], res.second[objs.second]);
-
-
-                    if (lhsLessEqualrhs(pred, proj) || lhsLessEqualrhs(succ, proj)) {
-                        ++pred_it;
-                    }
-                    else {
-                        computeNondomResult(new_var,
-                                         cons.front(),
-                                         *std::next(begin(cons)),
-                                         proj.first,
-                                         proj.second,
-                                         new_results);
-                        auto new_projection = std::make_pair(new_results.back().second[objs.first],
-                                                             new_results.back().second[objs.second]);
-
-                        std::cout << "NEW PROJ = " << new_projection.first << ", " << new_projection.second << "\n";
-
-                        auto new_elem_it = nondom_proj.insert({new_projection, vector<OutcomeType>{new_results.back().second}});
-                        assert (new_elem_it.second);
-                        assert (new_elem_it.first != begin(nondom_proj)); // begin(nondom_proj) should never be dominated
-                        // delete projections which are dominated by new_projection
-                        if (lhsLessEqualrhs(new_projection, pred)) {
-                            auto del_end_it = pred_it;
-                            while (lhsLessEqualrhs(new_projection, del_end_it->first))
-                                        ++del_end_it;
-                            assert (del_end_it != std::prev(end(nondom_proj))); // --end(nondom_proj) should never be dominated
-                            nondom_proj.erase(pred_it, del_end_it);
-                            pred_it = new_elem_it.first;
-                        }
-                        else if (lhsLessEqualrhs(new_projection, succ)) {
-                            auto del_end_it = succ_it;
-                            while (lhsLessEqualrhs(new_projection, del_end_it->first))
-                                ++del_end_it;
-                            assert (del_end_it != std::prev(end(nondom_proj))); // --end(nondom_proj) should never be dominated
-                            nondom_proj.erase(succ_it, del_end_it);
-                        }
-                    }
-                }
-                else if (scip_status == SCIP_STATUS_TIMELIMIT) {
-                    polyscip_status_ = PolyscipStatus::TimeLimitReached;
-                }
-                else {
-                    std::cout << "unexpected SCIP status in solveWeightedTchebycheff: " +
-                                 std::to_string(SCIPgetStatus(scip_)) + "\n";
-                    polyscip_status_ = PolyscipStatus::Error;
-                }
-
-                // release and delete constraints
-                if (SCIPisTransformed(scip_))
-                    SCIP_CALL(SCIPfreeTransform(scip_));
-                for (auto c : cons) {
-                    SCIP_CALL(SCIPdelCons(scip_, c));
-                    SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
-                }
-            }
-            for (const auto& res : new_results)
-                unsupported_.push_back(res);
-        }
-        return SCIP_OKAY;
-    }*/
 
 
     void Polyscip::deleteVarNameFromResult(SCIP_VAR* var, Result& res) const {
@@ -1584,9 +1381,6 @@ namespace polyscip {
             res.first.erase(pos);
         }
     }
-
-
-
 
 
     SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight, bool with_presolving) {
@@ -1685,12 +1479,6 @@ namespace polyscip {
 
         if (SCIPisLT(scip_, weighted_outcome, current_opt_val)) {
             bounded_.push_back(std::move(result));
-        }
-        else {
-            if (cmd_line_args_.beVerbose()) {
-                global::print(result.second, "Outcome: [", "]");
-                cout << "not added to results.\n";
-            }
         }
 
         SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));

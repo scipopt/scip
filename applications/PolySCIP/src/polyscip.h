@@ -163,7 +163,7 @@ namespace polyscip {
          */
         //SCIP_RETCODE initWeightSpace();
 
-        SCIP_RETCODE computeUnitWeightOutcomes();
+        SCIP_RETCODE computeUnitWeightNondomResults();
 
         void deleteWeaklyNondomSupportedResults();
 
@@ -218,14 +218,6 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points */
         SCIP_RETCODE computeTwoProjResults();
 
-        /*ValPairMap getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const;*/
-
-        /*SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
-                                              const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                              const std::vector<std::vector<ValueType>>& orig_vals,
-                                              std::size_t obj_1,
-                                              std::size_t obj_2);*/
-
         SCIP_RETCODE solveWeightedTchebycheff(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
                                               std::size_t obj_1,
@@ -244,11 +236,6 @@ namespace polyscip {
                                                  const ResultContainer &known_results,
                                                  ResultContainer &new_results_to_be_added);
 
-        /*SCIP_RETCODE solveWeightedTchebycheff(SCIP_VAR* new_var,
-                                              const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                              const std::vector<std::vector<ValueType>>& orig_vals,
-                                              const std::pair<std::size_t, std::size_t>& considered_objs,
-                                              ValPairMap nondom_projected_points);*/
 
         std::list<RectangularBox> computeFeasibleBoxes(
                 const std::map<ObjPair, std::vector<OutcomeType>> &proj_nondom_outcomes,
@@ -262,18 +249,6 @@ namespace polyscip {
         bool boxResultIsDominated(const OutcomeType& outcome,
                                   const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                   const std::vector<std::vector<ValueType>>& orig_vals);
-
-        /*void adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const;*/
-
-        //bool boxIsFeasible(const Box& box) const;
-
-        /*void incorporateOutcomesToBox(Box &box,
-                                      ResultContainer::const_iterator beg,
-                                      ResultContainer::const_iterator end,
-                                      std::vector<std::reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const;*/
-
-        /*ObjPair outcomeValsLessEqAndGreater(const Box& box,
-                                            const OutcomeType& outcome) const;*/
 
         /** create contraint: new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
          */
