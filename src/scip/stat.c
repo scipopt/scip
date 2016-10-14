@@ -299,6 +299,7 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+   stat->ninitialrootrows = 0;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;

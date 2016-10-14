@@ -1145,6 +1145,10 @@ SCIP_RETCODE initLP(
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
 
+   /* store the number of initial LP rows in the root node */
+   if( root )
+      stat->ninitialrootrows = lp->nrows;
+
    return SCIP_OKAY;
 }
 
