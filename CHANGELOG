@@ -22,6 +22,9 @@ features:
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 - use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
 - new random number gerator in pub_misc.h
+- the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
+  as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
+  though the solutions required an addition NLP solve
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -74,6 +77,7 @@ interface:
 - methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 
 fixed bugs:
 
