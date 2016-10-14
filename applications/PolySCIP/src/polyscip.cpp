@@ -482,7 +482,7 @@ namespace polyscip {
                 SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) );
             }
 
-            cif (supported_size_before < bounded_.size()) {
+            if (supported_size_before < bounded_.size()) {
                 std::transform(begin(cur_opt_vals),
                                end(cur_opt_vals),
                                begin(bounded_.back().second),
