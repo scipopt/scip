@@ -21,7 +21,7 @@ features:
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 - use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
-- new random number gerator in random.{c,h}
+- new random number gerator in pub_misc.h
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters

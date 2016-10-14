@@ -86,7 +86,6 @@
 #include "scip/heur.h"
 #include "scip/compr.h"
 #include "scip/nodesel.h"
-#include "scip/random.h"
 #include "scip/reader.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
@@ -10019,7 +10018,7 @@ SCIP_RETCODE SCIPpermuteProb(
 {
    SCIP_VAR** vars;
    SCIP_CONSHDLR** conshdlrs;
-   SCIP_RANDGEN* randnumgen;
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Bool permuted;
    int nconshdlrs;
    int nbinvars;
@@ -10167,7 +10166,7 @@ SCIP_RETCODE SCIPpermuteProb(
    }
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen, scip->mem->probmem);
+   SCIPrandomFree(&randnumgen);
 
    return SCIP_OKAY;
 }
@@ -24023,69 +24022,6 @@ unsigned int SCIPinitializeRandomSeed(
    assert(scip != NULL);
 
    return (unsigned int)SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
-}
-
-/** creates a random number generator
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *
- */
-SCIP_RETCODE SCIPcreateRandomNumberGenerator(
-   SCIP*                 scip,
-   SCIP_RANDGEN**        randnumgen,
-   int                   initialseed
-   )
-{
-   assert(scip != NULL);
-   assert(randnumgen != NULL);
-
-   SCIP_CALL( SCIPrandomCreate(randnumgen, scip->mem->probmem, initialseed) );
-
-   return SCIP_OKAY;
-}
-
-/** frees a random number generator
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *
- */
-SCIP_RETCODE SCIPfreeRandomNumberGenerator(
-   SCIP*                 scip,
-   SCIP_RANDGEN**        randnumgen
-   )
-{
-   assert(scip != NULL);
-   assert(randnumgen != NULL);
-
-   SCIPrandomFree(randnumgen, scip->mem->probmem);
-
-   return SCIP_OKAY;
 }
 
 /** marks the variable that it must not be multi-aggregated

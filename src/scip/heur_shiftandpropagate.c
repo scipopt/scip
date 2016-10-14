@@ -23,7 +23,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 #include "scip/heur_shiftandpropagate.h"
 
 #define HEUR_NAME             "shiftandpropagate"
@@ -74,7 +74,7 @@
 struct SCIP_HeurData
 {
    SCIP_COL**            lpcols;             /**< stores lp columns with discrete variables before cont. variables */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generation */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    int*                  rowweights;         /**< row weight storage */
    SCIP_Bool             relax;              /**< should continuous variables be relaxed from the problem */
    SCIP_Bool             probing;            /**< should probing be executed? */
@@ -1305,7 +1305,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
@@ -1339,7 +1339,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    SCIPstatistic(
