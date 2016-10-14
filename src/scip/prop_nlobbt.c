@@ -88,7 +88,10 @@ SCIP_RETCODE propdataFree(
    return SCIP_OKAY;
 }
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem; note that the objective is not copied */
+/** creates a convex NLP relaxation and stores it in a given NLPI problem
+ *
+ *  @note function does not copy the objective
+ **/
 static
 SCIP_RETCODE createNlpRelax(
    SCIP*                 scip,               /**< SCIP data structure */
