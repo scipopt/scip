@@ -18,7 +18,6 @@
  */
 
 #include <iostream>
-#include <stdexcept>
 
 #include "polyscip.h"
 #include "scip/def.h"
@@ -34,21 +33,20 @@ int main(int argc, char** argv) {
         SCIP_CALL( polyscip.computeNondomPoints() );
         polyscip.printStatus();
 
-        if (polyscip.writeResults())
-            polyscip.writeResultsToFile();
-        else
-            polyscip.printResults();
-
+        if (polyscip.getStatus() == Polyscip::PolyscipStatus::Finished) {
+            if (polyscip.writeResults())
+                polyscip.writeResultsToFile();
+            else
+                polyscip.printResults();
+        }
         assert (!polyscip.dominatedPointsFound());
         //polyscip.writeFileForVertexEnumeration();
     }
     catch (TCLAP::ArgException& e) {
         std::cerr << "ERROR: " << e.error() << " " << e.argId() << "\n";
     }
-    catch (std::exception& e) {
-        std::cerr << "ERROR: " << e.what() << "\n";
-    }
     catch (TCLAP::ExitException& e) {
+        std::cerr << "ERROR: " << e.getExitStatus() << "\n";
     }
     return 0;
 }

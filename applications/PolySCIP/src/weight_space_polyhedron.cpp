@@ -63,7 +63,7 @@ namespace polyscip {
 
     /*void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepC h_rep) {
         for (auto& h : h_rep) {
-            facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeSupported...
+            facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeWeightSpaceResults...
         }
     }*/
 
@@ -72,7 +72,7 @@ namespace polyscip {
                                                                  V_RepC v_rep) {
         auto initial_facets = FacetContainer {};
         for (auto& h : h_rep) {
-            initial_facets.emplace_back(make_shared<WeightSpaceFacet>(std::move(h.first), std::move(h.second)));  //todo check for std::move in computeSupported...
+            initial_facets.emplace_back(make_shared<WeightSpaceFacet>(std::move(h.first), std::move(h.second)));  //todo check for std::move in computeWeightSpaceResults...
         }
         for (auto& v : v_rep) {
             //if (v->hasNonZeroWeight()) { // do not consider (0,0,...,0 | -1)

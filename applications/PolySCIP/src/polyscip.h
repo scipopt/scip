@@ -109,12 +109,17 @@ namespace polyscip {
     class Polyscip {
     public:
         enum class PolyscipStatus {
-            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached, Error
+            Unsolved, // initial status after calling public constructor
+            ProblemRead, // status after problem instance was read successfully
+            UnitWeightPhase, // status after optimal results for unit weights were computed
+            WeightSpacePhase, // status while results of weight space polyhedron are computed
+            TwoProjPhase, // status while computing 2-projection non-dominated results
+            Finished, // status if problem was solved successfully
+            TimeLimitReached, // status if given time limit was reached
+            Error // status if an error occured
         };
 
         using ObjPair = std::pair<std::size_t, std::size_t>;
-
-        //using Box = std::vector<std::pair<ValueType, ValueType>>;
 
         explicit Polyscip(int argc, const char *const *argv);
 
@@ -140,8 +145,8 @@ namespace polyscip {
 
         bool dominatedPointsFound() const;
 
-        ResultContainer::const_iterator supportedCBegin() {return supported_.cbegin();};
-        ResultContainer::const_iterator supportedCEnd() {return supported_.cend();};
+        ResultContainer::const_iterator supportedCBegin() {return bounded_.cbegin();};
+        ResultContainer::const_iterator supportedCEnd() {return bounded_.cend();};
         ResultContainer::const_iterator unsupportedCBegin() {return unsupported_.cbegin();};
         ResultContainer::const_iterator unsupportedCEnd() {return unsupported_.cend();};
         ResultContainer::const_iterator unboundedCBegin() {return unbounded_.cbegin();};
@@ -149,21 +154,14 @@ namespace polyscip {
 
     private:
 
-        /*using ValPair = std::pair<ValueType, ValueType>;
-        using ValPairMap = std::map<ValPair, std::vector<OutcomeType>>;*/
-
-
-
         bool filenameIsOkay(const std::string &filename);
-
-        /*bool ValPairCmp(Polyscip::ValPair p1, Polyscip::ValPair p2);*/
 
         /** Computes first non-dominated point and initializes
          * the weight space polyhedron or finds out that there is no non-dominated point
          * @return true if first non-dom point was found and weight space polyhedron initialized;
          * false otherwise
          */
-        SCIP_RETCODE initWeightSpace();
+        //SCIP_RETCODE initWeightSpace();
 
         SCIP_RETCODE computeUnitWeightOutcomes();
 
@@ -175,6 +173,7 @@ namespace polyscip {
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator end) const;
 
+        //bool instanceHasOnlyContVars() const;
 
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
@@ -214,10 +213,10 @@ namespace polyscip {
                             std::size_t index) const;
 
         /** Computes the supported solutions/rays and corresponding non-dominated points */
-        SCIP_RETCODE computeSupported();
+        SCIP_RETCODE computeWeightSpaceResults();
 
         /** Computes the unsupported solutions and corresponding non-dominated points */
-        SCIP_RETCODE computeUnsupported();
+        SCIP_RETCODE computeTwoProjResults();
 
         /*ValPairMap getProjectedNondomPoints(std::size_t obj_1, std::size_t obj_2) const;*/
 
@@ -351,11 +350,12 @@ namespace polyscip {
         /**< clock measuring the time needed for the entire program */
         SCIP_CLOCK* clock_total_;
 
+        bool only_weight_space_phase_;
         bool is_lower_dim_prob_;
         bool is_sub_prob_;
 
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
-        ResultContainer supported_;
+        ResultContainer bounded_;
         ResultContainer unsupported_;
         ResultContainer unbounded_;
     };
