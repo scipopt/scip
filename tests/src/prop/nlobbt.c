@@ -90,6 +90,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_Real lincoefs[2];
    SCIP_Real objcoefs[2];
    int objinds[2];
+   int nlcount[2];
    SCIP_Real* primal;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_NLPIORACLE* oracle;
@@ -97,8 +98,6 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_EXPR* xexpr;
    SCIP_EXPR* expexpr;
    int i;
-
-   nlpiprob = NULL;
 
    /* test the following (nonconvex) optimization problem
     *
@@ -151,7 +150,9 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[4], "nlrow_4", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, exprtree, 1.0, 10.0, SCIP_EXPRCURV_CONVEX) );
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
-   SCIP_CALL( createNlpRelax(scip, nlpi, nlrows, 5, &nlpiprob, var2idx) );
+   /* create convex NLP relaxation */
+   SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
+   SCIP_CALL( createNlpRelax(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlcount) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);
@@ -160,6 +161,9 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
 
    cr_assert(SCIPnlpiOracleGetNConstraints(oracle) == 4);
    cr_assert(SCIPnlpiOracleGetNVars(oracle) == 2);
+
+   cr_assert(nlcount[0] == 3);
+   cr_assert(nlcount[1] == 2);
 
    cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarLbs(oracle)[0], SCIPvarGetLbLocal(x)));
    cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarUbs(oracle)[0], SCIPvarGetUbLocal(x)));
@@ -178,11 +182,6 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    /* set tolerances */
    SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * 0.01);
    SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * 0.01);
-
-   /* solve original problem (OPT = -4.43035216153803e+00) */
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
-   cr_assert(SCIPisFeasEQ(scip, SCIPvarGetObj(x) * primal[0] + SCIPvarGetObj(y) * primal[1], -4.43035216153803));
 
    /* min x (OPT = -2.60064056606068e-01) */
    objcoefs[0] = 1.0;
