@@ -43,12 +43,13 @@ namespace polyscip {
         explicit TwoDProj(const OutcomeType& outcome, std::size_t first, std::size_t second);
         ValueType getFirst() const {return proj_.first;}
         ValueType getSecond() const {return proj_.second;}
-        bool operator<(TwoDProj other) const;
+        bool operator<(const TwoDProj& other) const;
         bool epsilonDominates(double epsilon, const TwoDProj &other) const;
-        //bool coincidesWith(const TwoDProj& other, double epsilon) const;
         friend std::ostream &operator<<(std::ostream& os, const TwoDProj& proj);
     private:
+        constexpr static double epsilon = 0.01;
         std::pair<ValueType, ValueType> proj_;
+
     };
 
     class NondomProjections {

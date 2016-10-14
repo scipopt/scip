@@ -32,7 +32,6 @@ int main(int argc, char** argv) {
         SCIP_CALL( polyscip.readProblem() );
         SCIP_CALL( polyscip.computeNondomPoints() );
         polyscip.printStatus();
-
         if (polyscip.getStatus() == Polyscip::PolyscipStatus::Finished) {
             if (polyscip.writeResults())
                 polyscip.writeResultsToFile();

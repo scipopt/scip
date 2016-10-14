@@ -74,14 +74,18 @@ namespace polyscip {
             : proj_(outcome.at(first), outcome.at(second))
     {}
 
-    bool TwoDProj::operator<(TwoDProj other) const {
-        return ((this->getFirst() < other.getFirst()) ||
-                (this->getFirst() == other.getFirst() && this->getSecond() < other.getSecond()));
+    bool TwoDProj::operator<(const TwoDProj& other) const {
+        if (this->getFirst() + 0.0001 < other.getFirst())
+            return true;
+        else if (other.getFirst() + 0.0001 < this->getFirst())
+            return false;
+        else
+            return this->getSecond() < other.getSecond();
     }
 
     bool TwoDProj::epsilonDominates(double eps, const TwoDProj &other) const {
         assert (eps >= 0);
-        return (this->getFirst()-eps <= other.getFirst() && this->getSecond()-eps <= other.getSecond());
+        return ((this->getFirst()-eps <= other.getFirst()) && (this->getSecond()-eps <= other.getSecond()));
     }
 
     /*bool TwoDProj::coincidesWith(const TwoDProj& other, double epsilon) const {
@@ -118,8 +122,8 @@ namespace polyscip {
     NondomProjections::NondomProjections(double eps,
                                          const ResultContainer &supported,
                                          const ResultContainer &unsupported,
-                                         std::size_t first,
-                                         std::size_t second)
+                                         size_t first,
+                                         size_t second)
             : epsilon_(eps)
     {
         assert (first < second);
@@ -411,6 +415,7 @@ namespace polyscip {
         if (polyscip_status_ == PolyscipStatus::ProblemRead) {
             SCIP_CALL(SCIPstartClock(scip_, clock_total_));
             SCIP_CALL(computeUnitWeightNondomResults());
+
             if (polyscip_status_ == PolyscipStatus::UnitWeightPhase) {
                 if (no_objs_ > 4) {
                     cout << "Number of objectives > 4: only computing SNDE Points\n";
@@ -448,7 +453,7 @@ namespace polyscip {
                 scip_status = separateINFORUNBD(weight);
 
             if (scip_status == SCIP_STATUS_OPTIMAL) {
-                // recompute with c_i^Tx <= opt_val and objective weighted with ones vector
+                // recompute with c_i^Tx <= opt_val and objective weighted with all ones vector
                 auto non_zero_obj_orig_vars = obj_probdata->getNonZeroCoeffVars(unit_weight_index);
                 auto non_zero_obj_orig_vals = vector<ValueType>{};
                 std::transform(non_zero_obj_orig_vars.cbegin(),
@@ -563,50 +568,6 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    /*Polyscip::ObjPair Polyscip::outcomeValsLessEqAndGreater(const Box& box, const OutcomeType& outcome) const {
-        assert (box.size() == outcome.size());
-        size_t less_eq_count = 0,
-                greater_count = 0;
-        for (size_t i=0; i<box.size(); ++i) {
-            if (outcome[i] <= box[i].first) {
-                ++less_eq_count;
-            }
-            else if (box[i].second < outcome[i]) {
-                ++greater_count;
-            }
-        }
-        return {less_eq_count, greater_count};
-    }*/
-
-
-    /*void Polyscip::adjustBoxUpperBounds(Box &box, const OutcomeType &outcome) const {
-        assert (box.size() == outcome.size());
-        for (size_t i=0; i<box.size(); ++i) {
-            if (outcome[i] <= box[i].second) {
-                box[i].second = outcome[i] - cmd_line_args_.getEpsilon();
-            }
-        }
-    }*/
-
-    /*void Polyscip::incorporateOutcomesToBox(Box &box,
-                                            ResultContainer::const_iterator beg_it,
-                                            ResultContainer::const_iterator end_it,
-                                            vector<reference_wrapper<const OutcomeType>> &outcomes_to_incorporate) const {
-        auto it = beg_it;
-        while (boxIsFeasible(box) && it != end_it) {
-            auto bounds = outcomeValsLessEqAndGreater(box, it->second);
-            auto num_inner_elems = box.size() - bounds.first - bounds.second;
-            if (bounds.second == 0) {
-                if (num_inner_elems == 0 || num_inner_elems == 1) {
-                    adjustBoxUpperBounds(box, it->second);
-                }
-                else { // box would be cut into several boxes
-                    outcomes_to_incorporate.push_back(std::cref(it->second));
-                }
-            }
-            ++it;
-        }
-    }*/
 
     vector<SCIP_VAR*> Polyscip::createDisjunctiveVars(size_t num) const {
         auto disj_vars = vector<SCIP_VAR*>{};
@@ -653,7 +614,7 @@ namespace polyscip {
         assert (sum_cons != nullptr);
         cons.push_back(sum_cons);
 
-        // create cons: c_i(x) <= (outcome[i] - epsilon) + M * (1 - disj_vars[i]) where M = 10^6
+        // create cons: c_i(x) <= (outcome[i] - epsilon) + M * (1 - disj_vars[i]) where M = 10*outcome[i]
         for (size_t i=0; i<size; ++i) {
             auto vars_in_cons = vector<SCIP_VAR*>(begin(orig_vars[i]), end(orig_vars[i]));
             vars_in_cons.push_back(disj_vars[i]);
@@ -1064,22 +1025,6 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    /*bool Polyscip::lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const {
-        if (lhs.first - cmd_line_args_.getEpsilon() < rhs.first && lhs.second - cmd_line_args_.getEpsilon() < rhs.second)
-            return true;
-        else
-            return false;
-    }*/
-
-    /*bool Polyscip::boxIsFeasible(const Box& box) const {
-        for (const auto& bound : box) {
-            if (bound.first > bound.second) {
-                return false;
-            }
-        }
-        return true;
-    }*/
-
 
 
     SCIP_RETCODE Polyscip::solveWeightedTchebycheff(const vector<vector<SCIP_VAR*>>& orig_vars,
@@ -1124,6 +1069,7 @@ namespace polyscip {
         while (!nondom_projs.finished() && polyscip_status_ == PolyscipStatus::TwoProjPhase) {
             auto left_proj = nondom_projs.getLeftProj();
             auto right_proj = nondom_projs.getRightProj();
+
             assert (left_proj.getFirst() < right_proj.getFirst());
             assert (left_proj.getSecond() > last_proj.getSecond());
 
