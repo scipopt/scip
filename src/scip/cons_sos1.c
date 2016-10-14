@@ -2816,7 +2816,11 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
          if ( trafolinvals[v] < 0.0 )
          {
-            SCIPswapPointers((void**)&lb, (void**)&ub);
+            SCIP_Real temp;
+
+            temp = lb;
+            lb = ub;
+            ub = temp;
          }
 
          if ( SCIPisInfinity(scip, REALABS(lb)) )
