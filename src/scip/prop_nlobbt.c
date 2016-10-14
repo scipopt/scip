@@ -36,6 +36,7 @@
 #define DEFAULT_MINLINEARFRAC      0.02      /**< default minimum (nconvex nlrows)/(linear nlrows) threshold to apply NLOBBT */
 #define DEFAULT_FEASTOLFAC         0.01      /**< default factor for NLP feasibility tolerance */
 #define DEFAULT_RELOBJTOLFAC       0.01      /**< default factor for NLP relative objective tolerance */
+#define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
 
 /*
  * Data structures
@@ -45,12 +46,11 @@
 struct SCIP_PropData
 {
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
-
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
-
    SCIP_Real             minnonconvexfrac;   /**< minimum (nconvex nlrows)/(nonconvex nlrows) threshold to apply NLOBBT */
    SCIP_Real             minlinearfrac;      /**< minimum (nconvex nlrows)/(linear nlrows) threshold to apply NLOBBT */
+   SCIP_Bool             addlprows;          /**< should (non-initial) LP rows be used? */
 };
 
 /*
@@ -88,7 +88,71 @@ SCIP_RETCODE propdataFree(
    return SCIP_OKAY;
 }
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem
+/** adds LP rows to a given NLPI problem */
+static
+SCIP_RETCODE addLpRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_ROW**            rows,               /**< rows to add */
+   int                   nrows               /**< total number of rows to add */
+   )
+{
+   int* lininds;
+   int i;
+
+   assert(nlpi != NULL);
+   assert(nlpiprob != NULL);
+   assert(var2idx != NULL);
+   assert(rows != NULL || nrows == 0);
+
+   if( nrows <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, SCIPgetNVars(scip)) );
+
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIP_Real* linvals;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      const char* name;
+      int nlininds;
+      int k;
+
+      assert(rows[i] != NULL);
+      assert(SCIProwGetNNonz(rows[i]) <= SCIPgetNVars(scip));
+
+      for( k = 0; k < SCIProwGetNNonz(rows[i]); ++k )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPcolGetVar(SCIProwGetCols(rows[i])[k]);
+         assert(var != NULL);
+         assert(SCIPhashmapExists(var2idx, (void*)var));
+
+         lininds[k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+         assert(lininds[k] >= 0 && lininds[k] < SCIPgetNVars(scip));
+      }
+
+      linvals = SCIProwGetVals(rows[i]);
+      nlininds = SCIProwGetNNonz(rows[i]);
+      lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      rhs = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      name = SCIProwGetName(rows[i]);
+
+      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1, &lhs, &rhs, &nlininds, &lininds, &linvals, NULL,
+            NULL, NULL, NULL, &name) );
+   }
+
+   SCIPfreeBufferArray(scip, &lininds);
+
+   return SCIP_OKAY;
+}
+
+/** creates a convex NLP relaxation and stores it in a given NLPI problem;
  *
  *  @note function does not copy the objective
  **/
@@ -521,7 +585,6 @@ SCIP_RETCODE solveNlp(
          SCIP_CALL( SCIPtightenVarUb(scip, var, primal[varidx], FALSE, &infeasible, &tightened) );
       }
 
-      /* update result */
       if( infeasible )
       {
          SCIPdebugMessage("detect infeasibility after propagating %s\n", SCIPvarGetName(var));
@@ -552,7 +615,15 @@ SCIP_RETCODE solveNlp(
    return SCIP_OKAY;
 }
 
-/** main method of the propagator */
+/** main method of the propagator
+ *
+ *  creates a convex NLP relaxation and solves the OBBT-NLPs for each possible candidate;
+ *  binary and variables with a small domain will be ignored to reduce the computational cost of the propagator; after
+ *  solving each NLP we filter out all variable candidates which are on their lower or upper bound; candidates with a
+ *  larger number of occurrences are preferred
+ *
+ *  @note propagor will be disabled if it did not find any reductions
+ */
 static
 SCIP_RETCODE applyNlobbt(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -566,6 +637,7 @@ SCIP_RETCODE applyNlobbt(
    SCIP_NLPI* nlpi;
    int* status;
    int* nlcount;
+   int nlprows;
    int i;
 
    assert(result != NULL);
@@ -598,6 +670,14 @@ SCIP_RETCODE applyNlobbt(
    SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
    SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * propdata->relobjtolfac);
 
+   /* add rows which have been found after creating the initial root LP */
+   nlprows = SCIPgetNLPRows(scip) - SCIPgetNLPInitialRows(scip);
+   if( nlprows > 0 )
+   {
+      SCIPdebugMessage("add %d (%d) LP rows\n", nlprows, SCIPgetNLPRows(scip));
+      SCIP_CALL( addLpRows(scip, nlpi, nlpiprob, var2idx, &SCIPgetLPRows(scip)[SCIPgetNLPInitialRows(scip)], nlprows) );
+   }
+
    /* use nlcount to decide on candidates */
    SCIPsortDownIntPtr(nlcount, (void*)cands, SCIPgetNVars(scip));
 
@@ -606,20 +686,23 @@ SCIP_RETCODE applyNlobbt(
    {
       int varidx;
 
-      if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(cands[i]), SCIPvarGetUbLocal(cands[i])) )
+      /* skip binary or almost fixed variables */
+      if( SCIPvarGetType(cands[i]) == SCIP_VARTYPE_BINARY
+         || SCIPisRelEQ(scip, SCIPvarGetLbLocal(cands[i]), SCIPvarGetUbLocal(cands[i])) )
          continue;
 
+      /* get index of var in the nlpi */
       assert(SCIPhashmapExists(var2idx, (void*)cands[i]) );
       varidx = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)cands[i]);
       assert(cands[i] == SCIPgetVars(scip)[varidx]);
 
-      /* minimize variable */
+      /* case: minimize var */
       if( status[i] != 1 && status[i] != 3 )
       {
          SCIP_CALL( solveNlp(scip, nlpi, nlpiprob, cands[i], varidx, SCIP_BOUNDTYPE_LOWER, var2idx, nlcount, status, cands, i, result) );
       }
 
-      /* maximize variable */
+      /* case: maximize var */
       if( *result != SCIP_CUTOFF && status[i] != 2 && status[i] != 3 )
       {
          SCIP_CALL( solveNlp(scip, nlpi, nlpiprob, cands[i], varidx, SCIP_BOUNDTYPE_UPPER, var2idx, nlcount, status, cands, i, result) );
@@ -705,6 +788,15 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    return SCIP_OKAY;
 }
 
+/** propagation conflict resolving method of propagator */
+static
+SCIP_DECL_PROPRESPROP(propRespropNlobbt)
+{  /*lint --e{715}*/
+   *result = SCIP_DIDNOTFIND;
+
+   return SCIP_OKAY;
+}
+
 /*
  * propagator specific interface methods
  */
@@ -730,6 +822,7 @@ SCIP_RETCODE SCIPincludePropNlobbt(
 
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeNlobbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolNlobbt) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropNlobbt) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/feastolfac",
          "factor for NLP feasibility tolerance",
@@ -746,6 +839,10 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/minlinearfrac",
          "minimum (nconvex nlrows)/(linear nlrows) threshold to apply propagator",
          &propdata->minlinearfrac, TRUE, DEFAULT_MINLINEARFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/addlprows",
+         "should non-initial LP rows be used?",
+         &propdata->addlprows, FALSE, DEFAULT_ADDLPROWS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
