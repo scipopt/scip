@@ -5328,9 +5328,9 @@ SCIP_RETCODE SCIPconssetchgUndo(
          assert(cons->addarraypos >= 0);
          assert(!cons->deleted); /* deleted constraints must not be active! */
          SCIP_CALL( SCIPconsEnable(cons, set, stat) );
+         assert(!cons->update);
+         assert(!cons->active || cons->enabled);
       }
-      assert(!cons->update);
-      assert(!cons->active || cons->enabled);
    }
 
    /* undo constraint additions */

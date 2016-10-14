@@ -1610,22 +1610,6 @@ SCIP_RETCODE SCIPsolCheck(
    if( !printreason )
       completely = FALSE;
 
-   /* check whether the solution fulfills all constraints */
-   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
-   {
-      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
-            checkintegrality, checklprows, printreason, completely, &result) );
-      *feasible = *feasible && (result == SCIP_FEASIBLE);
-
-#ifdef SCIP_DEBUG
-      if( !(*feasible) )
-      {
-         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
-            SCIPconshdlrGetName(set->conshdlrs[h]));
-      }
-#endif
-   }
-
    /* check whether the solution respects the global bounds of the variables */
    if( checkbounds || sol->hasinfval )
    {
@@ -1700,6 +1684,23 @@ SCIP_RETCODE SCIPsolCheck(
          }
       }
    }
+
+   /* check whether the solution fulfills all constraints */
+   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
+   {
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+            checkintegrality, checklprows, printreason, completely, &result) );
+      *feasible = *feasible && (result == SCIP_FEASIBLE);
+
+#ifdef SCIP_DEBUG
+      if( !(*feasible) )
+      {
+         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
+            SCIPconshdlrGetName(set->conshdlrs[h]));
+      }
+#endif
+   }
+
 
    return SCIP_OKAY;
 }

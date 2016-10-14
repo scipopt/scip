@@ -284,7 +284,7 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
 #define BITARRAY                             BITARRAYBASETYPE*
 
 /** get the bit mask where the pos-th bit is set */
-#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))
+#define BITMASK(pos)                         ((unsigned int)(1u << (pos)))
 
 /** set the pos-th bit of var */
 #define BITSET(var, pos)                     (var) |= BITMASK(pos)
@@ -3413,7 +3413,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
       for( r = firstrowsind ; r < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r)
       {
          if( r < lastrowsind - firstrowsind )
-            while( removerow[r2] && r2 < mod2data->nrowsind )
+            while( r2 < mod2data->nrowsind && removerow[r2] )
                r2++;
          if( r < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r] = mod2data->rowsind[r2];
@@ -3546,7 +3546,7 @@ SCIP_RETCODE preprocessRows(
       for( r1 = firstrowsind ; r1 < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r1)
       {
          if( r1 < lastrowsind - firstrowsind )
-            while( removerow[r2] && r2 < mod2data->nrowsind )
+            while( r2 < mod2data->nrowsind && removerow[r2] )
                r2++;
          if( r1 < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r1] = mod2data->rowsind[r2];
@@ -3729,7 +3729,7 @@ SCIP_RETCODE preprocessColumns(
          for( c = firstcolsind ; c < mod2data->ncolsind && j < mod2data->ncolsind; ++c)
          {
             if( c < nconsideredcols )
-               while( removecol[j] && j < mod2data->ncolsind )
+               while( j < mod2data->ncolsind && removecol[j] )
                   j++;
             if( c < j && j < mod2data->ncolsind )
                mod2data->colsind[c] = mod2data->colsind[j];
@@ -4497,7 +4497,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
          for( i = 0 ; i < mod2data->nrowsind && j < mod2data->nrowsind; ++i)
          {
             if( i < mod2data->nrowsind )
-               while( removerow[j] && j < mod2data->nrowsind )
+               while( j < mod2data->nrowsind && removerow[j] )
                   j++;
             if( i < j && j < mod2data->nrowsind )
                mod2data->rowsind[i] = mod2data->rowsind[j];
