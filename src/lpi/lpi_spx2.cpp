@@ -959,8 +959,8 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
 {
-   assert(ncols == lpi->spx->numColsReal());
-   lpi->spx->setIntegralityInformation(intInfo);
+   assert(ncols == lpi->spx->numColsReal() || (ncols == 0 && intInfo == NULL));
+   lpi->spx->setIntegralityInformation(ncols, intInfo);
 
    return SCIP_OKAY;
 }

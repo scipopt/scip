@@ -8348,6 +8348,7 @@ SCIP_RETCODE lpCopyIntegrality(
    )
 {
    int i;
+   int nintegers;
    int* integerInfo;
    SCIP_VAR* var;
 
@@ -8355,17 +8356,30 @@ SCIP_RETCODE lpCopyIntegrality(
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &integerInfo, lp->ncols) );
 
+   /* count total number of integralities */
+   nintegers = 0;
+
    for( i = 0; i < lp->ncols; ++i )
    {
       var = SCIPcolGetVar(lp->cols[i]);
       if( SCIPvarIsIntegral(var) || SCIPvarIsBinary(var) )
+      {
          integerInfo[i] = 1;
+         ++nintegers;
+      }
       else
          integerInfo[i] = 0;
    }
 
-   SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo);
+   /* only pass integrality information if integer variables are present */
+   if( nintegers > 0 )
+      SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo);
+   else
+      SCIPlpiSetIntegralityInformation(lp->lpi, 0, NULL);
+
    SCIPsetFreeBufferArray(set, &integerInfo);
+
+   /* mark integralities to be updated */
    lp->updateintegrality = FALSE;
 
    return SCIP_OKAY;
