@@ -22,6 +22,9 @@ features:
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 - use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
 - new random number gerator in random.{c,h}
+- the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
+  as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
+  though the solutions required an addition NLP solve
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -34,6 +37,8 @@ parameters:
 - moved permutationseed from misc to randomization
 - new parameter randomization/lpseed to set the initial seed of the LP solver
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
+- parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
+  "randomization/permuteconss", and "randomization/permutevars"
 
 performance improvements:
 - improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
@@ -72,6 +77,7 @@ interface:
 - methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 
 fixed bugs:
 

@@ -651,7 +651,7 @@ void SCIPprintBuildOptions(
 #elif defined(__clang__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "clang %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif defined(_MSC_VER)
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c++ %d\n", _MSC_FULL_VER);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c %d\n", _MSC_FULL_VER);
 #elif defined(__GNUC__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
@@ -9696,8 +9696,8 @@ SCIP_RETCODE SCIPreadProb(
             SCIP_Bool permutevars;
             int       permutationseed;
 
-            permuteconss = scip->set->misc_permuteconss;
-            permutevars = scip->set->misc_permutevars;
+            permuteconss = scip->set->random_permuteconss;
+            permutevars = scip->set->random_permutevars;
             permutationseed = scip->set->random_permutationseed;
 
             SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
@@ -13240,8 +13240,8 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_Bool permutevars;
       int permutationseed;
 
-      permuteconss = scip->set->misc_permuteconss;
-      permutevars = scip->set->misc_permutevars;
+      permuteconss = scip->set->random_permuteconss;
+      permutevars = scip->set->random_permutevars;
       permutationseed = scip->set->random_permutationseed;
 
       SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
