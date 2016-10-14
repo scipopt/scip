@@ -9688,8 +9688,8 @@ SCIP_RETCODE SCIPreadProb(
             SCIPfreeMemoryArray(scip, &nconss);
          }
 
-         /* in case the permutation seed is different to -1, permute the original problem */
-         if( scip->set->random_permutationseed > -1 )
+         /* in case the permutation seed is different to 0, permute the original problem */
+         if( scip->set->random_permutationseed > 0 )
          {
             SCIP_Bool permuteconss;
             SCIP_Bool permutevars;
@@ -13232,8 +13232,8 @@ SCIP_RETCODE SCIPtransformProb(
    /* call initialization methods of plugins */
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
-   /* in case the permutation seed is different to -1, permute the transformed problem */
-   if( scip->set->random_permutationseed > -1 )
+   /* in case the permutation seed is different to 0, permute the transformed problem */
+   if( scip->set->random_permutationseed > 0 )
    {
       SCIP_Bool permuteconss;
       SCIP_Bool permutevars;

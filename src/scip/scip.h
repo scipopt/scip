@@ -46,7 +46,6 @@
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
-#include "scip/type_random.h"
 #include "scip/type_scip.h"
 
 #include "scip/type_branch.h"
