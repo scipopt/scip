@@ -539,7 +539,9 @@ SCIP_RETCODE solveNlp(
          ub = SCIPvarGetUbLocal(var);
          SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, 1, &varidx, &lb, &ub) );
 
+#ifdef SCIP_DEBUG
          SCIPdebugMessage("tightened bounds of %s from [%g,%g] to [%g,%g]\n", SCIPvarGetName(var), oldlb, oldub, lb, ub);
+#endif
       }
    }
 
