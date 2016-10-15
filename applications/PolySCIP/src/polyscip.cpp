@@ -246,9 +246,9 @@ namespace polyscip {
         return false;
     }
 
-    bool RectangularBox::isFeasible() const {
+    bool RectangularBox::isFeasible(double epsilon) const {
         for (const auto& elem : box_) {
-            if (elem.first > elem.second)
+            if (elem.first + epsilon > elem.second)
                 return false;
         }
         return true;
@@ -271,7 +271,7 @@ namespace polyscip {
             return true;
     }*/
 
-    vector<RectangularBox> RectangularBox::getDisjointPartsFrom(const RectangularBox &other) const {
+    vector<RectangularBox> RectangularBox::getDisjointPartsFrom(double delta, const RectangularBox &other) const {
         auto size = this->box_.size();
         assert (size == other.box_.size());
         auto disjoint_partitions = vector<RectangularBox>{};
@@ -281,16 +281,16 @@ namespace polyscip {
                 auto new_box = RectangularBox(begin(intersections), end(intersections),
                                               {box_[i].first, other.box_[i].first - epsilon},
                                               begin(box_)+(i+1), end(box_));
-                assert (new_box.isFeasible());
-                disjoint_partitions.push_back(std::move(new_box));
+                if (new_box.isFeasible(delta))
+                    disjoint_partitions.push_back(std::move(new_box));
 
             }
             if (other.box_[i].second + epsilon < box_[i].second) { // non-empty to the right
                 auto new_box = RectangularBox(begin(intersections), end(intersections),
                                               {other.box_[i].second + epsilon, box_[i].second},
                                               begin(box_)+(i+1), end(box_));
-                assert (new_box.isFeasible());
-                disjoint_partitions.push_back(std::move(new_box));
+                if (new_box.isFeasible(delta))
+                    disjoint_partitions.push_back(std::move(new_box));
             }
             intersections.push_back(getIntervalIntersection(i, other));
         }
@@ -726,7 +726,7 @@ namespace polyscip {
             auto new_cons = createObjValCons(orig_vars[i],
                                              orig_vals[i],
                                              interval.first,
-                                             interval.second);
+                                             interval.second - cmd_line_args_.getDelta());
             auto ret = SCIPaddCons(scip_, new_cons);
             assert (ret == SCIP_OKAY);
             obj_val_cons.push_back(new_cons);
@@ -884,7 +884,7 @@ namespace polyscip {
                     continue;
                 }
                 else {
-                    auto elem_disjoint = elem.getDisjointPartsFrom(box_to_be_added);
+                    auto elem_disjoint = elem.getDisjointPartsFrom(cmd_line_args_.getDelta(), box_to_be_added);
                     std::move(begin(elem_disjoint), end(elem_disjoint), std::back_inserter(current_boxes));
                 }
             }
@@ -911,10 +911,10 @@ namespace polyscip {
         for (const auto& nd_01 : nd_outcomes_01) {
             for (const auto& nd_02 : nd_outcomes_02) {
                 for (const auto& nd_12 : nd_outcomes_12) {
-                    auto box = RectangularBox({{max(nd_01[0], nd_02[0]), nd_12[0]-cmd_line_args_.getDelta()},
-                                               {max(nd_01[1], nd_12[1]), nd_02[1]-cmd_line_args_.getDelta()},
-                                               {max(nd_02[2], nd_12[2]), nd_01[2]-cmd_line_args_.getDelta()}});
-                    if (box.isFeasible()) {
+                    auto box = RectangularBox({{max(nd_01[0], nd_02[0]), nd_12[0]/*-cmd_line_args_.getDelta()*/},
+                                               {max(nd_01[1], nd_12[1]), nd_02[1]/*-cmd_line_args_.getDelta()*/},
+                                               {max(nd_02[2], nd_12[2]), nd_01[2]/*-cmd_line_args_.getDelta()*/}});
+                    if (box.isFeasible(cmd_line_args_.getDelta())) {
                         feasible_boxes.push_back(box);
                     }
                 }

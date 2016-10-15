@@ -91,8 +91,8 @@ namespace polyscip {
         bool isSupersetOf(const RectangularBox &other) const;
         bool isSubsetOf(const RectangularBox &other) const;
         bool isDisjointFrom(const RectangularBox &other) const;
-        bool isFeasible() const;
-        std::vector<RectangularBox> getDisjointPartsFrom(const RectangularBox &other) const;
+        bool isFeasible(double epsilon) const;
+        std::vector<RectangularBox> getDisjointPartsFrom(double delta, const RectangularBox &other) const;
         std::size_t size() const;
         Interval getInterval(std::size_t index) const;
 
