@@ -176,7 +176,7 @@ SCIP_RETCODE checkVariable(
       if( infeasible )
       {
          assert( SCIPvarGetLbLocal(var) > 0.5 );
-         SCIPdebugMessage("-> cutoff\n");
+         SCIPdebugMsg(scip, "-> cutoff\n");
          (*cutoff) = TRUE;
       }
       else
@@ -206,14 +206,14 @@ SCIP_RETCODE consdataFixVariables(
    nfixedvars = 0;
    cutoff = FALSE;
 
-   SCIPdebugMessage("check variables %d to %d\n", consdata->npropagatedvars, nvars);
+   SCIPdebugMsg(scip, "check variables %d to %d\n", consdata->npropagatedvars, nvars);
 
    for( v = consdata->npropagatedvars; v < nvars && !cutoff; ++v )
    {
       SCIP_CALL( checkVariable(scip, consdata, vars[v], &nfixedvars, &cutoff) );
    }
 
-   SCIPdebugMessage("fixed %d variables locally\n", nfixedvars);
+   SCIPdebugMsg(scip, "fixed %d variables locally\n", nfixedvars);
 
    if( cutoff )
       *result = SCIP_CUTOFF;
@@ -377,7 +377,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("propagation constraints of constraint handler <"CONSHDLR_NAME">\n");
+   SCIPdebugMsg(scip, "propagation constraints of constraint handler <"CONSHDLR_NAME">\n");
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
@@ -412,7 +412,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
 
       if( !consdata->propagated )
       {
-         SCIPdebugMessage("propagate constraint <%s> ", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "propagate constraint <%s> ", SCIPconsGetName(conss[c]));
          SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
          SCIP_CALL( consdataFixVariables(scip, consdata, vars, nvars, result) );
@@ -455,13 +455,13 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
    assert(consdata != NULL);
    assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(probdata));
 
-   SCIPdebugMessage("activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
+   SCIPdebugMsg(scip, "activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
    if( consdata->npropagatedvars != SCIPprobdataGetNVars(probdata) )
    {
-      SCIPdebugMessage("-> mark constraint to be repropagated\n");
+      SCIPdebugMsg(scip, "-> mark constraint to be repropagated\n");
       consdata->propagated = FALSE;
       SCIP_CALL( SCIPrepropagateNode(scip, consdata->node) );
    }
@@ -490,7 +490,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   SCIPdebugMessage("deactivate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
+   SCIPdebugMsg(scip, "deactivate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
@@ -577,7 +577,7 @@ SCIP_RETCODE SCIPcreateConsSamediff(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, FALSE, FALSE, TRUE,
          local, FALSE, FALSE, FALSE, TRUE) );
 
-   SCIPdebugMessage("created constraint: ");
+   SCIPdebugMsg(scip, "created constraint: ");
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
    return SCIP_OKAY;

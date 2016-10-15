@@ -51,6 +51,7 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
+#include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
 /*
  * Default settings
@@ -152,7 +153,7 @@
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
-#define SCIP_DEFAULT_LIMIT_MEMORY         1e+20 /**< maximal memory usage in MB */
+#define SCIP_DEFAULT_LIMIT_MEMORY SCIP_MEM_NOLIMIT/**< maximal memory usage in MB */
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
@@ -212,7 +213,6 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
-#define SCIP_DEFAULT_LP_RANDOMSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 
 /* NLP */
 
@@ -235,7 +235,6 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_PERMUTECONSS     TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_PERMUTEVARS     FALSE /**< should order of variables be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
@@ -255,6 +254,11 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+
+/* Randomization */
+#define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
+#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED  -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
+#define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 
 /* Node Selection */
 
@@ -741,7 +745,6 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
    return SCIP_OKAY;
 }
 
-
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -817,11 +820,11 @@ SCIP_RETCODE SCIPsetCopyPlugins(
             valid = FALSE;
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
             *allvalid = *allvalid && valid;
-            SCIPdebugMessage("Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
+            SCIPsetDebugMsg(sourceset, "Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
          }
          else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
-            SCIPdebugMessage("Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
+            SCIPsetDebugMsg(sourceset, "Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
             *allvalid = FALSE;
          }
       }
@@ -1071,7 +1074,6 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->visual_bakfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
-   (*set)->mem_externestim = 0;
    (*set)->sepa_primfeastol = SCIP_INVALID;
 
    /* the default time limit is infinite */
@@ -1345,7 +1347,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "display/allviols",
-         "display all violations of the best solution after the solving process finished?",
+         "display all violations for a given start solution / the best solution after the solving process?",
          &(*set)->disp_allviols, FALSE, SCIP_DEFAULT_DISP_ALLVIOLS,
          NULL, NULL) );
 
@@ -1390,7 +1392,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_MEM_NOLIMIT,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
@@ -1600,11 +1602,6 @@ SCIP_RETCODE SCIPsetCreate(
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "lp/randomseed",
-         "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
-         &(*set)->lp_randomseed, TRUE, SCIP_DEFAULT_LP_RANDOMSEED, 0, INT_MAX,
-         NULL, NULL) );
 
    /* NLP parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -1685,12 +1682,6 @@ SCIP_RETCODE SCIPsetCreate(
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
 #endif
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "misc/permutationseed",
-         "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
-         &(*set)->misc_permutationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
-         NULL, NULL) );
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/permuteconss",
          "should order of constraints be permuted (depends on permutationseed)?",
@@ -1764,6 +1755,25 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/referencevalue",
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
+
+   /* randomization parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/randomseedshift",
+         "global shift of all random seeds in the plugins and the LP random seed",
+         &(*set)->random_randomseedshift, FALSE, SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT, 0, INT_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/permutationseed",
+         "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
+         &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, -1, INT_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/lpseed",
+         "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
+         &(*set)->random_randomseed, FALSE, SCIP_DEFAULT_RANDOM_LPSEED, 0, INT_MAX,
          NULL, NULL) );
 
    /* node selection */
@@ -2678,7 +2688,7 @@ SCIP_RETCODE SCIPsetChgBoolParam(
 
    assert(set != NULL);
 
-   retcode = SCIPparamSetBool(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetBool(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2731,7 +2741,7 @@ SCIP_RETCODE SCIPsetChgIntParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetInt(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetInt(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2783,7 +2793,7 @@ SCIP_RETCODE SCIPsetChgLongintParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetLongint(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetLongint(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2821,7 +2831,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetReal(param, set, messagehdlr,  value, TRUE);
+   retcode = SCIPparamSetReal(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -2859,7 +2869,7 @@ SCIP_RETCODE SCIPsetChgCharParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetChar(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetChar(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {
@@ -4721,14 +4731,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    return SCIP_OKAY;
 }
 
-/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
-SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   return set->mem_externestim;
-}
-
 /** calculate memory size for dynamically allocated arrays */
 int SCIPsetCalcMemGrowSize(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4790,7 +4792,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
     */
    if( SCIPsetFeastol(set) < SCIPsetLpfeastol(set) )
    {
-      SCIPdebugMessage("decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
+      SCIPsetDebugMsg(set, "decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
       SCIP_CALL( SCIPchgLpfeastol(set->scip, SCIPsetFeastol(set), TRUE) );
    }
 
@@ -5013,6 +5015,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetIsSumRelGT
 #undef SCIPsetIsSumRelGE
 #undef SCIPsetIsUpdateUnreliable
+#undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
 
@@ -5713,9 +5716,7 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    )
 {
    assert(set != NULL);
-   /* TODO: maybe we should compare with REALABS(val) to handle
-      numerical issues, e.g., if val < 0 */
-   assert(SCIPsetIsGE(set, val, -set->num_feastol));
+   assert(SCIPsetIsGE(set, val, -2*set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
 
    return (val <= set->num_feastol);
@@ -6285,4 +6286,64 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon);
 
    return quotient >= set->num_recompfac;
+}
+
+/** prints a debug message */
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   int subscipdepth = 0;
+   SCIP* scip;
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( set != NULL );
+
+   scip = set->scip;
+   assert( scip != NULL );
+
+   if ( scip->stat != NULL )
+      subscipdepth = scip->stat->subscipdepth;
+
+   if ( subscipdepth > 0 )
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+void SCIPsetDebugMessagePrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( set != NULL );
+   assert( set->scip != NULL );
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(set->scip->messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+}
+
+/** modifies an initial seed value with the global shift of random seeds */
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
+   )
+{
+   assert(set != NULL);
+
+   return (initialseedvalue + set->random_randomseedshift);
 }

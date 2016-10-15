@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPdispCopyInclude(
 
    if( disp->dispcopy != NULL )
    {
-      SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
       SCIP_CALL( disp->dispcopy(set->scip, disp) );
    }
    return SCIP_OKAY;

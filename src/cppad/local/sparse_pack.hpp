@@ -1,12 +1,12 @@
-// $Id: sparse_pack.hpp 2910 2013-10-07 13:27:58Z bradbell $
-# ifndef CPPAD_SPARSE_PACK_INCLUDED
-# define CPPAD_SPARSE_PACK_INCLUDED
+// $Id$
+# ifndef CPPAD_SPARSE_PACK_HPP
+# define CPPAD_SPARSE_PACK_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -17,8 +17,6 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup sparse_pack_hpp sparse_pack.hpp
-\{
 \file sparse_pack.hpp
 Vector of sets of positive integers stored as a packed array of bools.
 */
@@ -34,7 +32,7 @@ private:
 	typedef size_t Pack;
 	/// Number of bits per Pack value
 	static const size_t n_bit_ = std::numeric_limits<Pack>::digits;
-	/// Number of sets that we are representing 
+	/// Number of sets that we are representing
 	/// (set by constructor and resize).
 	size_t n_set_;
 	/// Possible elements in each set are 0, 1, ..., end_ - 1
@@ -48,40 +46,40 @@ private:
 	/// index for which we were retrieving next_element
 	/// (use n_set_ if no such index exists).
 	size_t next_index_;
-	/// Next element to start search at 
+	/// Next element to start search at
 	/// (use end_ for no such element exists; i.e., past end of the set).
 	size_t next_element_;
 public:
 	// -----------------------------------------------------------------
 	/*! Default constructor (no sets)
 	*/
-	sparse_pack(void) : 
-	n_set_(0)                     , 
-	end_(0)                       , 
+	sparse_pack(void) :
+	n_set_(0)                     ,
+	end_(0)                       ,
 	n_pack_(0)                    ,
 	next_index_(0)                ,
 	next_element_(0)
 	{ }
 	// -----------------------------------------------------------------
 	/*! Make use of copy constructor an error
- 
+
 	\param v
 	vector that we are attempting to make a copy of.
- 	*/
+	*/
 	sparse_pack(const sparse_pack& v)
-	{	// Error: 
+	{	// Error:
 		// Probably a sparse_pack argument has been passed by value
-		CPPAD_ASSERT_UNKNOWN(0); 
+		CPPAD_ASSERT_UNKNOWN(0);
 	}
 	// -----------------------------------------------------------------
-	/*! Destructor 
+	/*! Destructor
 	*/
 	~sparse_pack(void)
 	{ }
 	// -----------------------------------------------------------------
 	/*! Change number of sets, set end, and initialize all sets as empty
 
-	If \c n_set_in is zero, any memory currently allocated for this object 
+	If \c n_set_in is zero, any memory currently allocated for this object
 	is freed. Otherwise, new memory may be allocated for the sets (if needed).
 
 	\param n_set_in
@@ -90,7 +88,7 @@ public:
 	\param end_in
 	is the maximum element plus one (the minimum element is 0).
 	*/
-	void resize(size_t n_set_in, size_t end_in) 
+	void resize(size_t n_set_in, size_t end_in)
 	{
 		n_set_          = n_set_in;
 		end_            = end_in;
@@ -162,7 +160,7 @@ public:
 	}
 	// -----------------------------------------------------------------
 	/*! Begin retrieving elements from one of the sets.
-	
+
 	\param index
 	is the index for the set that is going to be retrieved.
 	The elements of the set are retrieved in increasing order.
@@ -174,10 +172,10 @@ public:
 	{	// initialize element to search for in this set
 		CPPAD_ASSERT_UNKNOWN( index < n_set_ );
 		next_index_   = index;
-		next_element_ = 0; 
+		next_element_ = 0;
 	}
 	/*! Get the next element from the current retrieval set.
-	
+
 	\return
 	is the next element in the set with index
 	specified by the previous call to \c begin.
@@ -208,7 +206,7 @@ public:
 			// check if no more elements in the set
 			if( next_element_ == end_ )
 				return end_;
-			// increment bit index in Pack value so corresponds to 
+			// increment bit index in Pack value so corresponds to
 			// next element
 			k++;
 			CPPAD_ASSERT_UNKNOWN( k <= n_bit_ );
@@ -250,7 +248,7 @@ public:
 	is the index (in this \c sparse_pack object) of the set being assinged.
 
 	\param other_value
-	is the index (in the other \c sparse_pack object) of the 
+	is the index (in the other \c sparse_pack object) of the
 	that we are using as the value to assign to the target set.
 
 	\param other
@@ -260,11 +258,11 @@ public:
 	\par Checked Assertions
 	\li this_target  < n_set_
 	\li other_value  < other.n_set_
-	\li n_pack_     == other.n_pack_ 
+	\li n_pack_     == other.n_pack_
 	*/
 	void assignment(
-		size_t               this_target  , 
-		size_t               other_value  , 
+		size_t               this_target  ,
+		size_t               other_value  ,
 		const sparse_pack&   other        )
 	{	CPPAD_ASSERT_UNKNOWN( this_target  <   n_set_        );
 		CPPAD_ASSERT_UNKNOWN( other_value  <   other.n_set_  );
@@ -284,12 +282,12 @@ public:
 	is the index (in this \c sparse_pack object) of the set being assinged.
 
 	\param this_left
-	is the index (in this \c sparse_pack object) of the 
+	is the index (in this \c sparse_pack object) of the
 	left operand for the union operation.
 	It is OK for \a this_target and \a this_left to be the same value.
 
 	\param other_right
-	is the index (in the other \c sparse_pack object) of the 
+	is the index (in the other \c sparse_pack object) of the
 	right operand for the union operation.
 	It is OK for \a this_target and \a other_right to be the same value.
 
@@ -301,12 +299,12 @@ public:
 	\li this_target <  n_set_
 	\li this_left   <  n_set_
 	\li other_right <  other.n_set_
-	\li n_pack_     == other.n_pack_ 
+	\li n_pack_     == other.n_pack_
 	*/
 	void binary_union(
-		size_t                  this_target  , 
-		size_t                  this_left    , 
-		size_t                  other_right  , 
+		size_t                  this_target  ,
+		size_t                  this_left    ,
+		size_t                  other_right  ,
 		const sparse_pack&      other        )
 	{	CPPAD_ASSERT_UNKNOWN( this_target < n_set_         );
 		CPPAD_ASSERT_UNKNOWN( this_left   < n_set_         );
@@ -323,24 +321,24 @@ public:
 	}
 	// -----------------------------------------------------------------
 	/*! Amount of memory used by this vector of sets
- 
+
 	\return
 	The amount of memory in units of type unsigned char memory.
- 	*/
+	*/
 	size_t memory(void) const
 	{	return n_set_ * n_pack_ * sizeof(Pack);
 	}
 	// -----------------------------------------------------------------
 	/*! Fetch n_set for vector of sets object.
-	
+
 	\return
 	Number of from sets for this vector of sets object
 	*/
 	size_t n_set(void) const
 	{	return n_set_; }
 	// -----------------------------------------------------------------
-	/*! Fetch end for this vector of sets object. 
-	
+	/*! Fetch end for this vector of sets object.
+
 	\return
 	is the maximum element value plus one (the minimum element value is 0).
 	*/
@@ -348,7 +346,7 @@ public:
 	{	return end_; }
 };
 
-/*! 
+/*!
 Copy a user vector of bools sparsity pattern to an internal sparse_pack object.
 
 \tparam VectorBool
@@ -372,23 +370,23 @@ number of columns in the sparsity pattern in \c user
 
 \param transpose
 if true, the sparsity pattern in \c internal is the transpose
-of the one in \c user. 
+of the one in \c user.
 Otherwise it is the same sparsity pattern.
 */
 template<class VectorBool>
 void sparsity_user2internal(
-	sparse_pack&       internal  , 
+	sparse_pack&       internal  ,
 	const VectorBool&  user      ,
 	size_t             n_row     ,
 	size_t             n_col     ,
 	bool               transpose )
-{	CPPAD_ASSERT_UNKNOWN( n_row * n_col == size_t(user.size()) );
+{
 	size_t i, j;
 
 	CPPAD_ASSERT_KNOWN(
 		size_t( user.size() ) == n_row * n_col,
-		"Size of this vector of bools sparsity pattern is not equal product "
-		"of the domain and range dimensions for corresponding function."
+		"Size of this vector of bools sparsity pattern is not equal\n"
+		"product of domain and range dimensions for corresponding function."
 	);
 
 	// transposed pattern case
@@ -414,6 +412,5 @@ void sparsity_user2internal(
 	return;
 }
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

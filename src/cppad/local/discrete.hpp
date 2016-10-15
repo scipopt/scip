@@ -1,12 +1,12 @@
-/* $Id: discrete.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_DISCRETE_INCLUDED
-# define CPPAD_DISCRETE_INCLUDED
+// $Id$
+# ifndef CPPAD_DISCRETE_HPP
+# define CPPAD_DISCRETE_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -27,9 +27,8 @@ $spell
 $$
 
 $section Discrete AD Functions$$
+$mindex CPPAD_DISCRETE_FUNCTION$$
 
-$index discrete, AD function$$
-$index function, discrete AD$$
 
 $head Syntax$$
 $codei%CPPAD_DISCRETE_FUNCTION(%Base%, %name%)
@@ -47,12 +46,12 @@ $cref/operation sequence/glossary/Operation/Sequence/$$.
 The value of a discrete function can depend on the
 $cref/independent variables/glossary/Tape/Independent Variable/$$,
 but its derivative is identically zero.
-For example, suppose that the integer part of 
-a $cref/variable/glossary/Variable/$$ $icode x$$ is the 
-index into an array of values. 
+For example, suppose that the integer part of
+a $cref/variable/glossary/Variable/$$ $icode x$$ is the
+index into an array of values.
 
 $head Base$$
-This is the 
+This is the
 $cref/base type/base_require/$$
 corresponding to the operations sequence;
 i.e., use of the $icode name$$ with arguments of type
@@ -97,13 +96,12 @@ It is the return value for the CppAD provided version of $icode name$$.
 
 
 $head Create AD Version$$
-$index CPPAD_DISCRETE_FUNCTION$$
 The preprocessor macro invocation
 $codei%
 	CPPAD_DISCRETE_FUNCTION(%Base%, %name%)
-%$$ 
+%$$
 defines the $codei%AD<%Base%>%$$ version of $icode name$$.
-This can be with in a namespace (not the $code CppAD$$ namespace) 
+This can be with in a namespace (not the $code CppAD$$ namespace)
 but must be outside of any routine.
 
 $head Operation Sequence$$
@@ -120,14 +118,12 @@ using the user provided $icode Base$$ version of this routine.
 All the derivatives of $icode name$$ will be evaluated as zero.
 
 $head Parallel Mode$$
-$index discrete, parallel$$
-$index parallel, discrete$$
-The first call to 
+The first call to
 $codei%
 	%ay% = %name%(%ax%)
 %$$
 must not be in $cref/parallel/ta_in_parallel/$$ execution mode.
-	
+
 
 $head Example$$
 $children%
@@ -137,7 +133,7 @@ $children%
 %$$
 The file
 $cref tape_index.cpp$$
-contains an example and test that uses a discrete function 
+contains an example and test that uses a discrete function
 to vary an array index during $cref Forward$$ mode calculations.
 The file
 $cref interp_onetape.cpp$$
@@ -147,9 +143,7 @@ functions to avoid retaping a calculation that requires interpolation.
 $cref interp_retape.cpp$$
 shows how interpolation can be done with retaping.)
 
-$head Deprecated$$
-$index CppADCreateDiscrete, deprecated$$
-$index deprecated, CppADCreateDiscrete$$
+$head CppADCreateDiscrete Deprecated 2007-07-28$$
 The preprocessor symbol $code CppADCreateDiscrete$$
 is defined to be the same as $code CPPAD_DISCRETE_FUNCTION$$
 but its use is deprecated.
@@ -161,25 +155,23 @@ $end
 # include <cppad/local/cppad_assert.hpp>
 
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
-# include <cppad/thread_alloc.hpp>
+# include <cppad/utility/thread_alloc.hpp>
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup discrete_hpp discrete.hpp
-\{
 \file discrete.hpp
 user define discrete functions
 */
 
 /*!
 \def CPPAD_DISCRETE_FUNCTION(Base, name)
-Defines the function <code>name(ax, ay)</code>  
+Defines the function <code>name(ax, ay)</code>
 where \c ax and \c ay are vectors with <code>AD<Base></code> elements.
 
 \par Base
 is the base type for the discrete function.
 
-\par name 
+\par name
 is the name of the user defined function that corresponding to this operation.
 */
 
@@ -189,7 +181,7 @@ inline CppAD::AD<Base> name (const CppAD::AD<Base>& ax) \
      static CppAD::discrete<Base> fun(#name, name);     \
                                                         \
      return fun.ad(ax);                                 \
-}                                      
+}
 # define CppADCreateDiscrete CPPAD_DISCRETE_FUNCTION
 
 
@@ -218,7 +210,7 @@ private:
 	/*!
 	List of all objects in this class.
 
-	If we use CppAD::vector for this vector, it will appear that 
+	If we use CppAD::vector for this vector, it will appear that
 	there is a memory leak because this list is not distroyed before
 	thread_alloc::free_available(thread) is called by the testing routines.
 	*/
@@ -231,7 +223,7 @@ public:
 	/*!
 	Constructor called for each invocation of CPPAD_DISCRETE_FUNCTION.
 
-	Put this objec in the list of all objects for this class and set
+	Put this object in the list of all objects for this class and set
 	the constant private data name_, f_, and index_.
 
 	\param Name
@@ -244,11 +236,11 @@ public:
 	This constructor can ont be used in parallel mode because it changes
 	the static object \c List.
 	*/
-	discrete(const char* Name, F f) : 
+	discrete(const char* Name, F f) :
 	name_(Name)
-	, f_(f) 
+	, f_(f)
 	, index_( List().size() )
-	{	
+	{
 		CPPAD_ASSERT_KNOWN(
 			! thread_alloc::in_parallel() ,
 			"discrete: First call the function *Name is in parallel mode."
@@ -257,7 +249,7 @@ public:
 	}
 
 	/*!
- 	Implement the user call to <code>ay = name(ax)</code>.
+	Implement the user call to <code>ay = name(ax)</code>.
 
 	\param ax
 	is the argument for this call.
@@ -282,7 +274,7 @@ public:
 			ay.tape_id_    = tape->id_;
 
 			CPPAD_ASSERT_UNKNOWN( Variable(ay) );
-		} 
+		}
 		return ay;
 	}
 
@@ -291,10 +283,10 @@ public:
 	{	return List()[index]->name_.c_str(); }
 
 	/*!
- 	Link from forward mode sweep to users routine
+	Link from forward mode sweep to users routine
 
 	\param index
-	index for this function in the list of all discrete object 
+	index for this function in the list of all discrete object
 
 	\param x
 	argument value at which to evaluate this function
@@ -307,6 +299,5 @@ public:
 	}
 };
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

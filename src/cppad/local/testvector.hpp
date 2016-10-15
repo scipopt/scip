@@ -1,12 +1,12 @@
-/* $Id: testvector.hpp 2576 2012-11-17 13:44:48Z bradbell $ */
-# ifndef CPPAD_TESTVECTOR_INCLUDED
-# define CPPAD_TESTVECTOR_INCLUDED
+// $Id$
+# ifndef CPPAD_TESTVECTOR_HPP
+# define CPPAD_TESTVECTOR_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -28,18 +28,16 @@ $spell
 	ublas
 $$
 
-$index CPPAD_TESTVECTOR$$
-$index vector, test$$
-$index test, vector$$
 
 $section Using The CppAD Test Vector Template Class$$
+$mindex CPPAD_TESTVECTOR$$
 
 $head Syntax$$
 $codei%CPPAD_TESTVECTOR(%Scalar%)
 %$$
 
 $head Introduction$$
-Many of the CppAD $cref/examples/example/$$ and tests use 
+Many of the CppAD $cref/examples/example/$$ and tests use
 the $code CPPAD_TESTVECTOR$$ template class to pass information to CppAD.
 This is not a true template class because it's syntax uses
 $codei%(%Scalar%)%$$ instead of $codei%<%Scalar%>%$$.
@@ -60,7 +58,7 @@ $codep */
 # define CPPAD_TESTVECTOR(Scalar) CppAD::vector< Scalar >
 # endif
 /* $$
-In this case CppAD will use its own vector for 
+In this case CppAD will use its own vector for
 many of its examples and tests.
 
 $head std::vector$$
@@ -75,7 +73,7 @@ $codep */
 # define CPPAD_TESTVECTOR(Scalar) std::vector< Scalar >
 # endif
 /* $$
-In this case CppAD will use standard vector for 
+In this case CppAD will use standard vector for
 many of its examples and tests.
 
 $head boost::numeric::ublas::vector$$
@@ -90,7 +88,7 @@ $codep */
 # define CPPAD_TESTVECTOR(Scalar) boost::numeric::ublas::vector< Scalar >
 # endif
 /* $$
-In this case CppAD will use this boost vector for 
+In this case CppAD will use this boost vector for
 many of its examples and tests.
 
 $head Eigen Vectors$$
@@ -105,11 +103,11 @@ $codep */
 # define CPPAD_TESTVECTOR(Scalar) Eigen::Matrix< Scalar , Eigen::Dynamic, 1>
 # endif
 /* $$
-In this case CppAD will use the Eigen vector 
+In this case CppAD will use the Eigen vector
 for many of its examples and tests.
 
 $end
------------------------------------------------------------------------- 
+------------------------------------------------------------------------
 */
 
 # endif

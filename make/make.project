@@ -46,6 +46,8 @@ NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
 PERMUTE         =       0
+SEEDS           =       0
+GLBSEEDSHIFT    =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -163,14 +165,14 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
 
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
@@ -264,7 +266,7 @@ endif
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 ifneq ($(LINKRPATH),)
-LDFLAGS                +=      $(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/xprsinc/../lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
 endif
 endif
 
@@ -349,7 +351,8 @@ ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
 endif
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+ZIMPLLIB	=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX)
+LDFLAGS		+=	$(ZIMPLLIB) $(ZIMPL_LDFLAGS)
 endif
 
 ifeq ($(GMP),true)
@@ -372,9 +375,10 @@ LINKER		=	CPP
 # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # - shared libraries are installed into the lib directory, so add this to the rpath
 FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
-LDFLAGS		+=	$(shell cat $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -397,8 +401,10 @@ FLAGS		+=	-fPIC
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
+LIBBUILD_L	=	$(LINKCXX_L)
 else
 LIBBUILD	=	$(LINKCC)
+LIBBUILD_L	=	$(LINKCC_L)
 endif
 
 ifeq ($(COMP),msvc)
@@ -413,7 +419,7 @@ RANLIB		=
 endif
 
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)
 endif
 
 

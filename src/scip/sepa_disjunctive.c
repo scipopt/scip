@@ -384,33 +384,19 @@ SCIP_RETCODE generateDisjCutSOS1(
     */
    if ( scale )
    {
-      int maxdepth;
-      int depth;
       SCIP_Longint maxdnom;
       SCIP_Real maxscale;
 
-      depth = SCIPgetDepth(scip);
-      assert( depth >= 0 );
-      maxdepth = SCIPgetMaxDepth(scip);
-      if ( depth == 0 )
+      assert( SCIPgetDepth(scip) >= 0 );
+      if( SCIPgetDepth(scip) == 0 )
       {
-         maxdnom = 1000;
-         maxscale = 1000.0;
-      }
-      else if ( depth <= maxdepth/4 )
-      {
-         maxdnom = 1000;
-         maxscale = 1000.0;
-      }
-      else if ( depth <= maxdepth/2 )
-      {
-         maxdnom = 100;
-         maxscale = 100.0;
+	 maxdnom = 100;
+	 maxscale = 100.0;
       }
       else
       {
-         maxdnom = 10;
-         maxscale = 10.0;
+	 maxdnom = 10;
+	 maxscale = 10.0;
       }
 
       SCIP_CALL( SCIPmakeRowIntegral(scip, *row, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom, maxscale, TRUE, madeintegral) );
@@ -838,7 +824,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          *result = SCIP_DIDNOTFIND;
    }
 
-   SCIPdebugMessage("Number of found disjunctive cuts: %d.\n", ndisjcuts);
+   SCIPdebugMsg(scip, "Number of found disjunctive cuts: %d.\n", ndisjcuts);
 
    /* free buffer arrays */
    SCIPfreeBufferArrayNull(scip, &cutcoefs);

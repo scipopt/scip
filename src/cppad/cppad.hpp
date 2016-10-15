@@ -1,8 +1,8 @@
-/* $Id: cppad.hpp 2625 2012-12-23 14:34:12Z bradbell $ */
-# ifndef CPPAD_CPPAD_INCLUDED
-# define CPPAD_CPPAD_INCLUDED
+// $Id$
+# ifndef CPPAD_CPPAD_HPP
+# define CPPAD_CPPAD_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the
@@ -12,8 +12,6 @@ A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 /*!
-\defgroup cppad_hpp cppad.hpp
-\{
 \file cppad.hpp
 \brief includes the entire CppAD package in the necessary order.
 
@@ -24,32 +22,9 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 # include <cppad/base_require.hpp> // all base type requirements
 // ---------------------------------------------------------------------------
 // CppAD general purpose library routines (can be included separately)
-
-# include <cppad/check_numeric_type.hpp>
-# include <cppad/check_simple_vector.hpp>
-# include <cppad/index_sort.hpp>
-# include <cppad/local/cppad_assert.hpp>
-# include <cppad/lu_solve.hpp>
-# include <cppad/memory_leak.hpp>
-# include <cppad/near_equal.hpp>
-# include <cppad/ode_err_control.hpp>
-# include <cppad/ode_gear.hpp>
-# include <cppad/ode_gear_control.hpp>
-# include <cppad/omp_alloc.hpp>
-# include <cppad/poly.hpp>
-# include <cppad/pow_int.hpp>
-# include <cppad/romberg_mul.hpp>
-# include <cppad/romberg_one.hpp>
-# include <cppad/rosen_34.hpp>
-# include <cppad/runge_45.hpp>
-# include <cppad/speed_test.hpp>
-# include <cppad/time_test.hpp>
-# include <cppad/track_new_del.hpp>
-# include <cppad/thread_alloc.hpp>
-# include <cppad/vector.hpp>
-
+# include <cppad/utility.hpp>
 // --------------------------------------------------------------------------
-// System routines that can be used by rest of CppAD with out including 
+// System routines that can be used by rest of CppAD with out including
 
 # include <cstddef>
 # include <iostream>
@@ -94,7 +69,6 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 # include <cppad/local/opt_val_hes.hpp>
 
 // undo definitions in Define.h
-# include <cppad/local/undef.hpp>   
+# include <cppad/local/undef.hpp>
 
-/*! \} */
 # endif
