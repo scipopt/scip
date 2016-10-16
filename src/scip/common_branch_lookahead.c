@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+/*#define SCIP_DEBUG*/
 /**@file   common_branch_Lookahead.c
  * @brief  LookaheadAbbreviated branching rule
  * @author Christoph Schubert
