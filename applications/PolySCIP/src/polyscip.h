@@ -43,8 +43,8 @@ namespace polyscip {
         explicit TwoDProj(const OutcomeType& outcome, std::size_t first, std::size_t second);
         ValueType getFirst() const {return proj_.first;}
         ValueType getSecond() const {return proj_.second;}
-        bool operator<(const TwoDProj& other) const;
-        bool epsilonDominates(double epsilon, const TwoDProj &other) const;
+        //bool operator<(const TwoDProj& other) const;
+        //bool epsilonDominates(double epsilon, const TwoDProj &other) const;
         friend std::ostream &operator<<(std::ostream& os, const TwoDProj& proj);
     private:
         constexpr static double epsilon = 0.01;
@@ -54,25 +54,27 @@ namespace polyscip {
 
     class NondomProjections {
     public:
-        using ProjMap = std::map<TwoDProj, ResultContainer>;
-        using const_iterator = ProjMap::const_iterator;
-
+        //using const_iterator = ProjMap::const_iterator;
+        using ProjMap = std::map<TwoDProj, ResultContainer, std::function<bool(const TwoDProj&, const TwoDProj&)>>;
         explicit NondomProjections(double epsilon,
                                    const ResultContainer& supported,
                                    const ResultContainer& unsupported,
                                    std::size_t first,
                                    std::size_t second);
 
-        const_iterator cbegin() {return nondom_projections_.cbegin();};
-        const_iterator cend() {return nondom_projections_.cend();};
+        //const_iterator cbegin() {return nondom_projections_.cbegin();};
+        //const_iterator cend() {return nondom_projections_.cend();};
 
         friend std::ostream &operator<<(std::ostream& os, const NondomProjections& nd_proj);
+        bool epsilonDominates(const TwoDProj& lhs, const TwoDProj& rhs) const;
         bool finished() const;
         void update();
         void update(TwoDProj proj, Result res);
+        std::vector<OutcomeType> getNondomProjOutcomes() const;
         TwoDProj getLeftProj() const {return current_->first;};
         TwoDProj getRightProj() const {return std::next(current_)->first;};
         TwoDProj getLastProj() const {return std::prev(end(nondom_projections_))->first;};
+
 
     private:
         ProjMap::iterator add(TwoDProj proj, Result res);
@@ -227,13 +229,14 @@ namespace polyscip {
         SCIP_RETCODE computeWeightSpaceResults();
 
         /** Computes the unsupported solutions and corresponding non-dominated points */
-        SCIP_RETCODE computeTwoProjResults();
+        SCIP_RETCODE computeTwoProjResults(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                           const std::vector<std::vector<ValueType>>& orig_vals);
 
-        SCIP_RETCODE solveWeightedTchebycheff(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+        // return proj nondominated outcomes
+        std::vector<OutcomeType> solveWeightedTchebycheff(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                               const std::vector<std::vector<ValueType>>& orig_vals,
                                               std::size_t obj_1,
-                                              std::size_t obj_2,
-                                              std::vector<OutcomeType> & proj_nondom_outcomes);
+                                              std::size_t obj_2);
 
         std::vector<RectangularBox> computeDisjointBoxes(std::list<RectangularBox>&& feasible_boxes) const;
 
