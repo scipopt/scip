@@ -441,7 +441,7 @@ SCIP_Bool isNlobbtApplicable(
       }
    }
 
-   SCIPdebugMessage("nconvex=%d nnonconvex=%d nlinear=%d\n", nconvexnlrows, nnonconvexnlrows, nlinearnlrows);
+   SCIPdebugMsg(scip, "nconvex=%d nnonconvex=%d nlinear=%d\n", nconvexnlrows, nnonconvexnlrows, nlinearnlrows);
 
    return nconvexnlrows > 0
       && (SCIPisGE(scip, nconvexnlrows, nnonconvexnlrows * propdata->minnonconvexfrac))
@@ -502,14 +502,14 @@ SCIP_RETCODE filterCands(
 
       if( status[i] != 1 && !SCIPisInfinity(scip, -val) && SCIPisRelLE(scip, val, SCIPvarGetLbLocal(var)) )
       {
-         SCIPdebugMessage("filter LB of %s in [%g,%g] with %g \n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+         SCIPdebugMsg(scip, "filter LB of %s in [%g,%g] with %g \n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
          status[i] = status[i] == 0 ? 1 : 3;
       }
 
       if( status[i] != 2 && !SCIPisInfinity(scip, val) && SCIPisRelGE(scip, val, SCIPvarGetUbLocal(var)) )
       {
-         SCIPdebugMessage("filter UB of %s in [%g,%g] with %g \n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+         SCIPdebugMsg(scip, "filter UB of %s in [%g,%g] with %g \n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
          status[i] = status[i] == 0 ? 2 : 3;
       }
@@ -587,7 +587,7 @@ SCIP_RETCODE solveNlp(
 
       if( infeasible )
       {
-         SCIPdebugMessage("detect infeasibility after propagating %s\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "detect infeasibility after propagating %s\n", SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
       }
       else if( tightened )
@@ -603,7 +603,7 @@ SCIP_RETCODE solveNlp(
          SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, 1, &varidx, &lb, &ub) );
 
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("tightened bounds of %s from [%g,%g] to [%g,%g]\n", SCIPvarGetName(var), oldlb, oldub, lb, ub);
+         SCIPdebugMsg(scip, "tightened bounds of %s from [%g,%g] to [%g,%g]\n", SCIPvarGetName(var), oldlb, oldub, lb, ub);
 #endif
       }
    }
@@ -649,7 +649,7 @@ SCIP_RETCODE applyNlobbt(
    if( !isNlobbtApplicable(scip, propdata) )
    {
       /* do not call the propagator anymore (excepted after a restart) */
-      SCIPdebugMessage("nlobbt propagator is not applicable\n");
+      SCIPdebugMsg(scip, "nlobbt propagator is not applicable\n");
       propdata->skipprop = TRUE;
       return SCIP_OKAY;
    }
@@ -674,7 +674,7 @@ SCIP_RETCODE applyNlobbt(
    nlprows = SCIPgetNLPRows(scip) - SCIPgetNLPInitialRows(scip);
    if( nlprows > 0 )
    {
-      SCIPdebugMessage("add %d (%d) LP rows\n", nlprows, SCIPgetNLPRows(scip));
+      SCIPdebugMsg(scip, "add %d (%d) LP rows\n", nlprows, SCIPgetNLPRows(scip));
       SCIP_CALL( addLpRows(scip, nlpi, nlpiprob, var2idx, &SCIPgetLPRows(scip)[SCIPgetNLPInitialRows(scip)], nlprows) );
    }
 
@@ -712,7 +712,7 @@ SCIP_RETCODE applyNlobbt(
    /* stop calling propagator if it did not find a reduction */
    if( *result == SCIP_DIDNOTFIND )
    {
-      SCIPdebugMessage("no reductions found -> stop calling nlobbt propagator\n");
+      SCIPdebugMsg(scip, "no reductions found -> stop calling nlobbt propagator\n");
       propdata->skipprop = TRUE;
    }
 
@@ -771,14 +771,14 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    if( propdata->skipprop || SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip)
       || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowObjProp(scip) || SCIPgetNNlpis(scip) == 0 )
    {
-      SCIPdebugMessage("skip nlobbt propagator\n");
+      SCIPdebugMsg(scip, "skip nlobbt propagator\n");
       return SCIP_OKAY;
    }
 
    /* do not run if SCIP does not have constructed an NLP */
    if( !SCIPisNLPConstructed(scip) )
    {
-      SCIPdebugMessage("NLP not constructed, skipping nlobbt\n");
+      SCIPdebugMsg(scip, "NLP not constructed, skipping nlobbt\n");
       return SCIP_OKAY;
    }
 
