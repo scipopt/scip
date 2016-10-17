@@ -688,8 +688,10 @@ namespace polyscip {
 
                 std::cout << "New results: ";
                 for (auto &&res : new_res) {
-                    if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
-                        global::print(res.second, "new outcome: ", "\n");
+                    if (is_sub_prob_) {
+                        unsupported_.push_back(res);
+                    }
+                    else if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
                         unsupported_.push_back(res);
                     }
                 }
