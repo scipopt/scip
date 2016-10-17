@@ -393,8 +393,8 @@ namespace polyscip {
             case PolyscipStatus::Finished:
                 os << "PolySCIP Status: Successfully finished\n";
                 break;
-            case PolyscipStatus::UnitWeightPhase:
-                os << "PolySCIP Status: UnitWeightPhase\n";
+            case PolyscipStatus::LexOptPhase:
+                os << "PolySCIP Status: LexOptPhase\n";
                 break;
             case PolyscipStatus::ProblemRead:
                 os << "PolySCIP Status: ProblemRead\n";
@@ -414,9 +414,25 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::computeNondomPoints() {
         if (polyscip_status_ == PolyscipStatus::ProblemRead) {
             SCIP_CALL(SCIPstartClock(scip_, clock_total_));
-            SCIP_CALL(computeUnitWeightNondomResults());
 
-            if (polyscip_status_ == PolyscipStatus::UnitWeightPhase) {
+            auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+            auto nonzero_orig_vars = vector<vector<SCIP_VAR*>>{};
+            auto nonzero_orig_vals = vector<vector<ValueType>>{};
+            for (size_t obj=0; obj < no_objs_; ++obj) {
+                nonzero_orig_vars.push_back(obj_probdata->getNonZeroCoeffVars(obj));
+                assert (!nonzero_orig_vars.empty());
+                auto nonzero_obj_vals = vector<ValueType>{};
+                std::transform(nonzero_orig_vars.back().cbegin(),
+                               nonzero_orig_vars.back().cend(),
+                               std::back_inserter(nonzero_obj_vals),
+                               [obj, obj_probdata](SCIP_VAR *var) { return obj_probdata->getObjCoeff(var, obj); });
+                nonzero_orig_vals.push_back(std::move(nonzero_obj_vals));
+            }
+
+            SCIP_CALL( computeLexicographicOptResults(nonzero_orig_vars, nonzero_orig_vals) );
+
+            //SCIP_CALL(computeUnitWeightNondomResults());
+            if (polyscip_status_ == PolyscipStatus::LexOptPhase) {
                 if (no_objs_ > 4) {
                     cout << "Number of objectives > 4: only computing SNDE Points\n";
                     SCIP_CALL(computeWeightSpaceResults());
@@ -435,13 +451,93 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    SCIP_RETCODE Polyscip::computeLexicographicOptResults(vector<vector<SCIP_VAR*>>& orig_vars,
+                                                          vector<vector<ValueType>>& orig_vals) {
+        polyscip_status_ = PolyscipStatus::LexOptPhase;
+        for (size_t obj=0; obj<no_objs_; ++obj) {
+            if (polyscip_status_ == PolyscipStatus::LexOptPhase)
+                SCIP_CALL(computeLexicographicOptResult(obj, orig_vars, orig_vals));
+            else
+                break;
+        }
+        return SCIP_OKAY;
+    }
+
+    SCIP_RETCODE Polyscip::computeLexicographicOptResult(size_t considered_obj,
+                                                          vector<vector<SCIP_VAR*>>& orig_vars,
+                                                          vector<vector<ValueType>>& orig_vals) {
+        assert (considered_obj < no_objs_);
+        auto current_obj = considered_obj;
+        auto obj_val_cons = vector<SCIP_CONS*>{};
+        auto weight = WeightType(no_objs_, 0.);
+        auto scip_status = SCIP_STATUS_UNKNOWN;
+        for (size_t counter = 0; counter<no_objs_; ++counter) {
+            weight[current_obj] = 1;
+            SCIP_CALL( setWeightedObjective(weight) );
+            SCIP_CALL( solve() );
+            scip_status = SCIPgetStatus(scip_);
+            if (scip_status == SCIP_STATUS_INFORUNBD)
+                scip_status = separateINFORUNBD(weight);
+
+            if (scip_status == SCIP_STATUS_OPTIMAL) {
+                if (counter < no_objs_-1) {
+                    auto opt_value = SCIPgetPrimalbound(scip_);
+
+                    SCIP_CALL(SCIPfreeTransform(scip_));
+                    auto cons = createObjValCons(orig_vars[current_obj],
+                                                 orig_vals[current_obj],
+                                                 opt_value,
+                                                 opt_value);
+                    SCIP_CALL (SCIPaddCons(scip_, cons));
+                    obj_val_cons.push_back(cons);
+                }
+            }
+            else if (scip_status == SCIP_STATUS_UNBOUNDED) {
+                assert (current_obj == considered_obj);
+                SCIP_CALL( handleUnboundedStatus(true) );
+                break;
+            }
+            else if (scip_status == SCIP_STATUS_TIMELIMIT) {
+                polyscip_status_ = PolyscipStatus::TimeLimitReached;
+                break;
+            }
+            else if (scip_status == SCIP_STATUS_INFEASIBLE) {
+                assert (current_obj == 0);
+                polyscip_status_ = PolyscipStatus::Finished;
+                break;
+            }
+            else {
+                polyscip_status_ = PolyscipStatus::Error;
+                break;
+            }
+            weight[current_obj] = 0;
+            current_obj = (current_obj+1) % no_objs_;
+        }
+
+        if (scip_status == SCIP_STATUS_OPTIMAL) {
+            auto lex_opt_result = getOptimalResult();
+            if (outcomeIsNew(lex_opt_result.second, begin(bounded_), end(bounded_))) {
+                bounded_.push_back(std::move(lex_opt_result));
+            }
+        }
+
+        // release and delete added constraints
+        for (auto cons : obj_val_cons) {
+            SCIP_CALL( SCIPfreeTransform(scip_) );
+            SCIP_CALL( SCIPdelCons(scip_, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
+        }
+        return SCIP_OKAY;
+    }
+
+
     SCIP_RETCODE Polyscip::computeUnitWeightNondomResults() {
-        polyscip_status_ = PolyscipStatus::UnitWeightPhase;
+        polyscip_status_ = PolyscipStatus::LexOptPhase;
         auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
         auto cur_opt_vals = OutcomeType(no_objs_, std::numeric_limits<ValueType>::max());
         auto weight = WeightType(no_objs_, 0.);
         for (size_t unit_weight_index=0; unit_weight_index!=no_objs_; ++unit_weight_index) {
-            if (polyscip_status_ != PolyscipStatus::UnitWeightPhase) {
+            if (polyscip_status_ != PolyscipStatus::LexOptPhase) {
                 return SCIP_OKAY;
             }
             auto supported_size_before = bounded_.size();
@@ -543,22 +639,33 @@ namespace polyscip {
             }
         }
 
+        //todo delete again
+        assert (!dominatedPointsFound());
+
         if (no_objs_ == 3) {
             auto feasible_boxes = computeFeasibleBoxes(proj_nondom_outcomes,
                                                        nonzero_obj_orig_vars,
                                                        nonzero_obj_orig_vals);
 
             auto disjoint_boxes = computeDisjointBoxes(std::move(feasible_boxes));
+
             assert (feasible_boxes.size() <= disjoint_boxes.size());
-            //assert (boxesArePairWiseDisjoint(disjoint_boxes));
+            assert (boxesArePairWiseDisjoint(disjoint_boxes));
             std::cout << "DISJOINT BOXES: " << disjoint_boxes.size() << "\n";
             size_t counter = 0;
             for (const auto& box : disjoint_boxes) {
                 std::cout << "Box = " << box << " - " << ++counter << "\n";
+
                 auto new_nondom_res = computeNondomPointsInBox(box,
                                                                nonzero_obj_orig_vars,
                                                                nonzero_obj_orig_vals);
+                std::cout << "New results: ";
+                for (const auto& res : new_nondom_res)
+                    global::print(res.second, "new outcome: ", "\n");
+                std::cout << "\n";
                 std::move(begin(new_nondom_res), end(new_nondom_res), std::back_inserter(unsupported_));
+                //todo delete again
+                assert (!dominatedPointsFound());
             }
         }
 
@@ -737,7 +844,6 @@ namespace polyscip {
                                                         obj_sense_,
                                                         no_objs_,
                                                         clock_total_) );
-        sub_poly->printStatus();
         sub_poly->computeNondomPoints();
 
         // release and delete objective value constraints
@@ -763,16 +869,10 @@ namespace polyscip {
                 if (!boxResultIsDominated(it->second, orig_vars, orig_vals)) {
                     new_nondom_res.push_back(std::move(*it));
                 }
-                else {
-                    global::print(it->second, "OUTCOME ", " is DOMINATED\n");
-                }
             }
             for (auto it=sub_poly->unboundedCBegin(); it!=sub_poly->unboundedCEnd(); ++it) {
                 if (!boxResultIsDominated(it->second, orig_vars, orig_vals)) {
                     new_nondom_res.push_back(std::move(*it));
-                }
-                else {
-                    global::print(it->second, "OUTCOME ", " is DOMINATED\n");
                 }
             }
         }
@@ -989,26 +1089,44 @@ namespace polyscip {
         return cons;
     }
 
-    SCIP_RETCODE Polyscip::computeNondomResult(SCIP_VAR *var_z,
-                                               SCIP_CONS *cons1,
-                                               SCIP_CONS *cons2,
-                                               const ValueType &rhs_cons1,
-                                               const ValueType &rhs_cons2,
-                                               ResultContainer &results) {
+    SCIP_RETCODE Polyscip::computeNondomProjResult(SCIP_VAR *var_z,
+                                                   SCIP_CONS *cons1,
+                                                   SCIP_CONS *cons2,
+                                                   const ValueType &rhs_cons1,
+                                                   const ValueType &rhs_cons2,
+                                                   size_t obj_1,
+                                                   size_t obj_2,
+                                                   ResultContainer &results) {
         // set new objective value constraints
         SCIP_CALL( SCIPchgRhsLinear(scip_, cons1, rhs_cons1) );
         SCIP_CALL( SCIPchgRhsLinear(scip_, cons2, rhs_cons2) );
         // set new objective function
-        SCIP_CALL( setWeightedObjective(WeightType(no_objs_, 1.)) );
+        auto intermed_obj = WeightType(no_objs_, 0.);
+        intermed_obj[obj_1] = 1.;
+        intermed_obj[obj_2] = 1.;
+        SCIP_CALL( setWeightedObjective(intermed_obj) );
         assert( SCIPvarGetObj(var_z) == 0. );
 
         // solve auxiliary problem
         SCIP_CALL( solve() );
         auto scip_status = SCIPgetStatus(scip_);
         if (scip_status == SCIP_STATUS_OPTIMAL) {
-            auto nondom_result = getOptimalResult();
-            deleteVarNameFromResult(var_z, nondom_result);
-            results.push_back(std::move(nondom_result));
+            auto intermed_result = getOptimalResult();
+            SCIP_CALL( SCIPchgLhsLinear(scip_, cons1, intermed_result.second[obj_1]) );
+            SCIP_CALL( SCIPchgRhsLinear(scip_, cons1, intermed_result.second[obj_1]) );
+            SCIP_CALL( SCIPchgLhsLinear(scip_, cons2, intermed_result.second[obj_2]) );
+            SCIP_CALL( SCIPchgRhsLinear(scip_, cons2, intermed_result.second[obj_2]) );
+            SCIP_CALL( setWeightedObjective(WeightType(no_objs_, 1.)) );
+            SCIP_CALL( solve() );
+            if (scip_status == SCIP_STATUS_TIMELIMIT) {
+                polyscip_status_ = PolyscipStatus::TimeLimitReached;
+            }
+            else {
+                assert (scip_status == SCIP_STATUS_OPTIMAL);
+                auto nondom_result = getOptimalResult();
+                deleteVarNameFromResult(var_z, nondom_result);
+                results.push_back(std::move(nondom_result));
+            }
         }
         else if (scip_status == SCIP_STATUS_TIMELIMIT) {
             polyscip_status_ = PolyscipStatus::TimeLimitReached;
@@ -1065,7 +1183,8 @@ namespace polyscip {
                                               obj_2);
 
         auto last_proj = nondom_projs.getLastProj();
-        std::cout << "entering while loop...";
+        std::cout << "initial nd_projections: ";
+        std::cout << nondom_projs << "\n";
         while (!nondom_projs.finished() && polyscip_status_ == PolyscipStatus::TwoProjPhase) {
             auto left_proj = nondom_projs.getLeftProj();
             auto right_proj = nondom_projs.getRightProj();
@@ -1104,9 +1223,7 @@ namespace polyscip {
             for (auto c : cons) {
                 SCIP_CALL(SCIPaddCons(scip_, c));
             }
-            std::cout << "solving...";
             SCIP_CALL(solve());
-            std::cout << "...done\n";
             auto scip_status = SCIPgetStatus(scip_);
             if (scip_status == SCIP_STATUS_OPTIMAL) {
                 assert (SCIPisGE(scip_, SCIPgetPrimalbound(scip_), 0.));
@@ -1119,16 +1236,18 @@ namespace polyscip {
                 }
                 else {
                     std::cout << "computing new nondom res...";
-                    computeNondomResult(z,
-                                        cons.front(),
-                                        *std::next(begin(cons)),
-                                        proj.getFirst(),
-                                        proj.getSecond(),
-                                        unsupported_);
-                    std::cout << "...done\n";
+                    computeNondomProjResult(z,
+                                            cons.front(),
+                                            *std::next(begin(cons)),
+                                            proj.getFirst(),
+                                            proj.getSecond(),
+                                            obj_1,
+                                            obj_2,
+                                            unsupported_);
                     auto nd_proj = TwoDProj(unsupported_.back().second, obj_1, obj_2);
                     assert (nd_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj));
                     nondom_projs.update(std::move(nd_proj), unsupported_.back());
+                    global::print(unsupported_.back().second, "...new outcome: ", "\n");
                 }
             }
             else if (scip_status == SCIP_STATUS_TIMELIMIT) {
@@ -1148,16 +1267,14 @@ namespace polyscip {
                 SCIP_CALL(SCIPreleaseCons(scip_, addressof(c)));
             }
         }
-        std::cout << "...exiting while loop.\n";
+        std::cout << "final nd_projections: ";
+        std::cout << nondom_projs << "\n";
+
         // clean up
         SCIP_Bool var_deleted = FALSE;
         SCIP_CALL( SCIPdelVar(scip_, z, addressof(var_deleted)) );
         assert (var_deleted);
         SCIP_CALL( SCIPreleaseVar(scip_, addressof(z)) );
-
-        std::cout << "ND PROJECTIONS: \n";
-        std::cout << nondom_projs << "\n";
-        std::cout << "\n";
 
         auto new_nondom_results = ResultContainer{};
         for (auto it = nondom_projs.cbegin(); it!=nondom_projs.cend(); ++it) {
@@ -1492,7 +1609,6 @@ namespace polyscip {
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator last) const {
         auto eps = cmd_line_args_.getEpsilon();
-        assert (beg != last);
         return std::none_of(beg, last, [eps, &outcome](const Result& res)
         {
             return outcomesCoincide(outcome, res.second, eps);

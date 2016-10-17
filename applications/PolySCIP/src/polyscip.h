@@ -112,7 +112,7 @@ namespace polyscip {
         enum class PolyscipStatus {
             Unsolved, // initial status after calling public constructor
             ProblemRead, // status after problem instance was read successfully
-            UnitWeightPhase, // status after optimal results for unit weights were computed
+            LexOptPhase, // status after lexicographic optimal results were computed
             WeightSpacePhase, // status while results of weight space polyhedron are computed
             TwoProjPhase, // status while computing 2-projection non-dominated results
             Finished, // status if problem was solved successfully
@@ -165,6 +165,16 @@ namespace polyscip {
         //SCIP_RETCODE initWeightSpace();
 
         SCIP_RETCODE computeUnitWeightNondomResults();
+        // computes lexicographic optimal results
+
+        SCIP_RETCODE computeLexicographicOptResults(std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                                    std::vector<std::vector<ValueType>>& orig_vals);
+
+        SCIP_RETCODE computeLexicographicOptResult(std::size_t obj,
+                                              std::vector<std::vector<SCIP_VAR*>>& orig_vars,
+                                              std::vector<std::vector<ValueType>>& orig_vals);
+
+
 
         void deleteWeaklyNondomSupportedResults();
 
@@ -280,12 +290,14 @@ namespace polyscip {
                                     const ValueType& lhs,
                                     const ValueType& rhs);
 
-        SCIP_RETCODE computeNondomResult(SCIP_VAR *new_var,
-                                         SCIP_CONS *cons1,
-                                         SCIP_CONS *cons2,
-                                         const ValueType &rhs_cons1,
-                                         const ValueType &rhs_cons2,
-                                         ResultContainer &results);
+        SCIP_RETCODE computeNondomProjResult(SCIP_VAR *new_var,
+                                             SCIP_CONS *cons1,
+                                             SCIP_CONS *cons2,
+                                             const ValueType &rhs_cons1,
+                                             const ValueType &rhs_cons2,
+                                             std::size_t obj_1,
+                                             std::size_t obj_2,
+                                             ResultContainer &results);
 
         void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
 
