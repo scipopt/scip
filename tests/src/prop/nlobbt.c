@@ -90,7 +90,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_Real lincoefs[2];
    SCIP_Real objcoefs[2];
    int objinds[2];
-   int nlcount[2];
+   SCIP_Real nlscore[2];
    SCIP_Real* primal;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_NLPIORACLE* oracle;
@@ -154,7 +154,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
 
    /* create convex NLP relaxation */
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( createNlpRelax(scip, nlpi, nlrows, 5, nlpiprob, -1.5, var2idx, nlcount) );
+   SCIP_CALL( nlpRelaxCreate(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);
@@ -164,8 +164,8 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    cr_assert(SCIPnlpiOracleGetNConstraints(oracle) == 5);
    cr_assert(SCIPnlpiOracleGetNVars(oracle) == 2);
 
-   cr_assert(nlcount[0] == 3);
-   cr_assert(nlcount[1] == 2);
+   cr_assert(nlscore[0] == 3);
+   cr_assert(nlscore[1] == 2);
 
    cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarLbs(oracle)[0], SCIPvarGetLbLocal(x)));
    cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarUbs(oracle)[0], SCIPvarGetUbLocal(x)));
