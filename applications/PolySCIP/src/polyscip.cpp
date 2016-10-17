@@ -489,7 +489,6 @@ namespace polyscip {
                 }
             }
             //deleteWeaklyNondomSupportedResults();
-            assert (!dominatedPointsFound());
             SCIP_CALL(SCIPstopClock(scip_, clock_total_));
         }
         return SCIP_OKAY;
@@ -1277,7 +1276,6 @@ namespace polyscip {
                                             obj_1,
                                             obj_2,
                                             unsupported_);
-                    assert (!dominatedPointsFound());
                     auto nd_proj = TwoDProj(unsupported_.back().second, obj_1, obj_2);
                     //assert (nd_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj));
                     nondom_projs.update(std::move(nd_proj), unsupported_.back());
