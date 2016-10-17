@@ -23,6 +23,7 @@
 #include <assert.h>
 
 #include "scip/prop_nlobbt.h"
+#include "scip/prop_genvbounds.h"
 #include "nlpi/nlpi.h"
 
 #define PROP_NAME              "nlobbt"
@@ -45,6 +46,7 @@
 /** propagator data */
 struct SCIP_PropData
 {
+   SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
@@ -550,6 +552,88 @@ SCIP_RETCODE filterCands(
    return SCIP_OKAY;
 }
 
+/** tries to add a generalized variable bound by exploiting the dual solution of the last NLP solve */
+static
+SCIP_RETCODE addGenVBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_VAR**            vars,               /**< variables */
+   int                   nvars,              /**< total number of variables */
+   int                   varidx,             /**< index of the variable in the var array which has been used for propagation */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound provided by the genvbound */
+   SCIP_Real             cutoffbound         /**< cutoff bound */
+   )
+{
+   SCIP_VAR** lvbvars;
+   SCIP_Real* lvbcoefs;
+   SCIP_Real* primal;
+   SCIP_Real* dual;
+   SCIP_Real* alpha;
+   SCIP_Real* beta;
+   SCIP_Real constant;
+   SCIP_Real gamma;
+   int nlvbvars;
+   int i;
+
+   assert(genvboundprop != NULL);
+   assert(vars != NULL);
+   assert(nvars > 0);
+   assert(varidx >= 0 && varidx < nvars);
+
+   if( SCIPnlpiGetSolstat(nlpi, nlpiprob) > SCIP_NLPSOLSTAT_LOCOPT )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dual, &alpha, &beta) );
+
+   /* not possible to generate genvbound if the duals for the propagated variable do not disappear */
+   if( !SCIPisFeasZero(scip, alpha[varidx] + beta[varidx]) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lvbcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lvbvars, nvars) );
+   constant = boundtype == SCIP_BOUNDTYPE_LOWER ? primal[varidx] : -primal[varidx];
+   gamma = 0.0;
+   nlvbvars = 0;
+
+   /* collect coefficients of genvbound */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPisZero(scip, beta[i] - alpha[i]) )
+      {
+         lvbvars[nlvbvars] = vars[i];
+         lvbcoefs[nlvbvars] = beta[i] - alpha[i];
+         ++nlvbvars;
+
+         constant += (alpha[i] - beta[i]) * primal[i];
+         printf("WTF %e\n", beta[i] - alpha[i]);
+      }
+   }
+
+   /* first dual multiplier corresponds to the cutoff row if cutoffbound < SCIPinfinity() */
+   if( !SCIPisInfinity(scip, cutoffbound) )
+   {
+      assert(SCIPisFeasGE(scip, dual[0], 0.0));
+
+      gamma = dual[0];
+      constant += gamma * cutoffbound;
+   }
+
+   /* add genvbound to genvbounds propagator */
+   if( !SCIPisInfinity(scip, REALABS(constant)) && (nlvbvars > 0 || SCIPisFeasGT(scip, gamma, 0.0)) )
+   {
+      SCIP_CALL( SCIPgenVBoundAdd(scip, genvboundprop, lvbvars, vars[varidx], lvbcoefs, nlvbvars, -gamma, constant,
+            boundtype) );
+      SCIPdebugMsg(scip, "add genvbound for %s\n", SCIPvarGetName(vars[varidx]));
+   }
+
+   SCIPfreeBufferArray(scip, &lvbvars);
+   SCIPfreeBufferArray(scip, &lvbcoefs);
+
+   return SCIP_OKAY;
+}
+
 /** sets the objective function, solves the NLP, and tightens the given variable; after calling this function, the
  *  objective function is set to zero
  *
@@ -558,6 +642,7 @@ SCIP_RETCODE filterCands(
 static
 SCIP_RETCODE solveNlp(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
    SCIP_VAR*             var,                /**< variable to propagate */
@@ -596,6 +681,13 @@ SCIP_RETCODE solveNlp(
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
    SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
+
+   /* try to add a genvbound in the root node */
+   if( genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
+   {
+      SCIP_CALL( addGenVBound(scip, genvboundprop, nlpi, nlpiprob, SCIPgetVars(scip), SCIPgetNVars(scip), varidx,
+            boundtype, SCIPgetCutoffbound(scip)) );
+   }
 
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
    SCIP_CALL( filterCands(scip, nlpi, nlpiprob, var2idx, nlcount, status, cands, pos, SCIPnlpiGetSolstat(nlpi, nlpiprob)) );
@@ -733,13 +825,15 @@ SCIP_RETCODE applyNlobbt(
       /* case: minimize var */
       if( status[i] != 1 && status[i] != 3 )
       {
-         SCIP_CALL( solveNlp(scip, nlpi, nlpiprob, cands[i], varidx, SCIP_BOUNDTYPE_LOWER, var2idx, nlcount, status, cands, i, result) );
+         SCIP_CALL( solveNlp(scip, propdata->genvboundprop, nlpi, nlpiprob, cands[i], varidx, SCIP_BOUNDTYPE_LOWER,
+               var2idx, nlcount, status, cands, i, result) );
       }
 
       /* case: maximize var */
       if( *result != SCIP_CUTOFF && status[i] != 2 && status[i] != 3 )
       {
-         SCIP_CALL( solveNlp(scip, nlpi, nlpiprob, cands[i], varidx, SCIP_BOUNDTYPE_UPPER, var2idx, nlcount, status, cands, i, result) );
+         SCIP_CALL( solveNlp(scip, propdata->genvboundprop, nlpi, nlpiprob, cands[i], varidx, SCIP_BOUNDTYPE_UPPER,
+               var2idx, nlcount, status, cands, i, result) );
       }
    }
 
@@ -779,6 +873,24 @@ SCIP_DECL_PROPFREE(propFreeNlobbt)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* if genvbounds propagator is not available, we cannot create genvbounds */
+   propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
 SCIP_DECL_PROPEXITSOL(propExitsolNlobbt)
@@ -806,6 +918,15 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
       || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowObjProp(scip) || SCIPgetNNlpis(scip) == 0 )
    {
       SCIPdebugMsg(scip, "skip nlobbt propagator\n");
+      return SCIP_OKAY;
+   }
+
+   /* only run if LP all columns are in the LP, i.e., the LP is a relaxation; e.g., do not run if pricers are active
+    * since pricing is not performed in probing mode
+    */
+   if( !SCIPallColsInLP(scip) )
+   {
+      SCIPdebugMsg(scip, "not all columns in LP, skipping obbt\n");
       return SCIP_OKAY;
    }
 
@@ -855,6 +976,7 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    assert(prop != NULL);
 
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeNlobbt) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolNlobbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolNlobbt) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropNlobbt) );
 
