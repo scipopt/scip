@@ -607,15 +607,12 @@ SCIP_RETCODE addGenVBound(
          ++nlvbvars;
 
          constant += (alpha[i] - beta[i]) * primal[i];
-         printf("WTF %e\n", beta[i] - alpha[i]);
       }
    }
 
    /* first dual multiplier corresponds to the cutoff row if cutoffbound < SCIPinfinity() */
-   if( !SCIPisInfinity(scip, cutoffbound) )
+   if( !SCIPisInfinity(scip, cutoffbound) && SCIPisGT(scip, dual[0], 0.0) )
    {
-      assert(SCIPisFeasGE(scip, dual[0], 0.0));
-
       gamma = dual[0];
       constant += gamma * cutoffbound;
    }
@@ -677,10 +674,14 @@ SCIP_RETCODE solveNlp(
    assert(varidx >= 0 && varidx < SCIPgetNVars(scip));
    assert(result != NULL && *result != SCIP_CUTOFF);
 
+
    /* set corresponding objective coefficient and solve NLP */
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
    SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
+
+   SCIPdebugMsg(scip, "solve convex NLP relaxation for %s and nlcout %d\n", SCIPvarGetName(var), nlcount[pos]);
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
+   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(nlpi, nlpiprob));
 
    /* try to add a genvbound in the root node */
    if( genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
