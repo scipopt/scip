@@ -162,15 +162,6 @@ namespace polyscip {
                 ++it;
             }
         }
-        /*while (it!=std::prev(end(nondom_projections_))) {
-            auto next = std::next(it);
-            if (it->first.epsilonDominates(epsilon_, next->first)) {
-                nondom_projections_.erase(next);
-            }
-            else {
-                ++it;
-            }
-        }*/
         assert (!nondom_projections_.empty());
         current_ = begin(nondom_projections_);
     }
@@ -216,7 +207,7 @@ namespace polyscip {
             nondom_projections_.erase(current_);
             current_ = it;
         }
-        
+
         while (std::next(it) != end(nondom_projections_) && epsilonDominates(proj, std::next(it)->first)) {
             nondom_projections_.erase(std::next(it));
         }
@@ -677,9 +668,6 @@ namespace polyscip {
             }
         }
 
-        //todo delete again
-        assert (!dominatedPointsFound());
-
         if (no_objs_ == 3) {
             auto feasible_boxes = computeFeasibleBoxes(proj_nondom_outcomes_map,
                                                        orig_vars,
@@ -694,16 +682,17 @@ namespace polyscip {
             for (const auto& box : disjoint_boxes) {
                 std::cout << "Box = " << box << " - " << ++counter << "\n";
 
-                auto new_nondom_res = computeNondomPointsInBox(box,
-                                                               orig_vars,
-                                                               orig_vals);
+                auto new_res = computeNondomPointsInBox(box,
+                                                        orig_vars,
+                                                        orig_vals);
+
                 std::cout << "New results: ";
-                for (const auto& res : new_nondom_res)
-                    global::print(res.second, "new outcome: ", "\n");
-                std::cout << "\n";
-                std::move(begin(new_nondom_res), end(new_nondom_res), std::back_inserter(unsupported_));
-                //todo delete again
-                assert (!dominatedPointsFound());
+                for (auto &&res : new_res) {
+                    if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
+                        global::print(res.second, "new outcome: ", "\n");
+                        unsupported_.push_back(res);
+                    }
+                }
             }
         }
 
@@ -898,20 +887,15 @@ namespace polyscip {
 
         // check computed subproblem results
         assert (!sub_poly->unboundedResultsExist());
-        sub_poly->printStatus();
         assert (sub_poly->getStatus() == PolyscipStatus::Finished);
 
         auto new_nondom_res = ResultContainer{};
         if (sub_poly->numberOfBoundedResults() > 0) {
-            for (auto it=sub_poly->supportedCBegin(); it!=sub_poly->supportedCEnd(); ++it) {
-                if (!boxResultIsDominated(it->second, orig_vars, orig_vals)) {
-                    new_nondom_res.push_back(std::move(*it));
-                }
+            for (auto it = sub_poly->supportedCBegin(); it != sub_poly->supportedCEnd(); ++it) {
+                new_nondom_res.push_back(std::move(*it));
             }
-            for (auto it=sub_poly->unboundedCBegin(); it!=sub_poly->unboundedCEnd(); ++it) {
-                if (!boxResultIsDominated(it->second, orig_vars, orig_vals)) {
-                    new_nondom_res.push_back(std::move(*it));
-                }
+            for (auto it = sub_poly->unboundedCBegin(); it != sub_poly->unboundedCEnd(); ++it) {
+                new_nondom_res.push_back(std::move(*it));
             }
         }
         sub_poly.reset();
@@ -1291,6 +1275,7 @@ namespace polyscip {
                                             obj_1,
                                             obj_2,
                                             unsupported_);
+                    assert (!dominatedPointsFound());
                     auto nd_proj = TwoDProj(unsupported_.back().second, obj_1, obj_2);
                     //assert (nd_proj.epsilonDominates(cmd_line_args_.getEpsilon(), proj));
                     nondom_projs.update(std::move(nd_proj), unsupported_.back());
