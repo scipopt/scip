@@ -33,8 +33,8 @@
 #define PROP_DELAY                 TRUE
 #define PROP_TIMING            SCIP_PROPTIMING_AFTERLPLOOP
 
-#define DEFAULT_MINNONCONVEXFRAC   0.20      /**< default minimum (nconvex nlrows)/(nonconvex nlrows) threshold to apply NLOBBT */
-#define DEFAULT_MINLINEARFRAC      0.02      /**< default minimum (nconvex nlrows)/(linear nlrows) threshold to apply NLOBBT */
+#define DEFAULT_MINNONCONVEXFRAC   0.20      /**< default minimum (#convex nlrows)/(#nonconvex nlrows) threshold to apply propagator */
+#define DEFAULT_MINLINEARFRAC      0.02      /**< default minimum (#convex nlrows)/(#linear nlrows) threshold to apply propagator */
 #define DEFAULT_FEASTOLFAC         0.01      /**< default factor for NLP feasibility tolerance */
 #define DEFAULT_RELOBJTOLFAC       0.01      /**< default factor for NLP relative objective tolerance */
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
@@ -54,13 +54,13 @@ struct SCIP_PropData
    int*                  status;             /**< status of each nonlinear variable (0: not filtered 1: filtered lower
                                               *   bound 2: filtered upper bound 3: filtered both bounds)
                                               */
-
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
+
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
-   SCIP_Real             minnonconvexfrac;   /**< minimum (nconvex nlrows)/(nonconvex nlrows) threshold to apply NLOBBT */
-   SCIP_Real             minlinearfrac;      /**< minimum (nconvex nlrows)/(linear nlrows) threshold to apply NLOBBT */
+   SCIP_Real             minnonconvexfrac;   /**< minimum (#convex nlrows)/(#nonconvex nlrows) threshold to apply NLOBBT */
+   SCIP_Real             minlinearfrac;      /**< minimum (#convex nlrows)/(#linear nlrows) threshold to apply NLOBBT */
    SCIP_Bool             addlprows;          /**< should (non-initial) LP rows be used? */
 };
 
@@ -1043,11 +1043,11 @@ SCIP_RETCODE SCIPincludePropNlobbt(
          &propdata->relobjtolfac, TRUE, DEFAULT_RELOBJTOLFAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/minnonconvexfrac",
-         "(nconvex nlrows)/(nonconvex nlrows) threshold to apply propagator",
+         "(#convex nlrows)/(#nonconvex nlrows) threshold to apply propagator",
          &propdata->minnonconvexfrac, TRUE, DEFAULT_MINNONCONVEXFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/minlinearfrac",
-         "minimum (nconvex nlrows)/(linear nlrows) threshold to apply propagator",
+         "minimum (#convex nlrows)/(#linear nlrows) threshold to apply propagator",
          &propdata->minlinearfrac, TRUE, DEFAULT_MINLINEARFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/addlprows",
