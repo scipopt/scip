@@ -155,6 +155,8 @@ SCIP_RETCODE addLpRows(
 /** creates a convex NLP relaxation and stores it in a given NLPI problem;
  *
  *  @note function does not copy the objective
+ *
+ *  @note the first row corresponds to the cutoff row if cutoffbound < SCIPinfinity(scip)
  **/
 static
 SCIP_RETCODE createNlpRelax(
@@ -163,6 +165,7 @@ SCIP_RETCODE createNlpRelax(
    SCIP_NLROW**          nlrows,             /**< nonlinear rows */
    int                   nnlrows,            /**< total number of nonlinear rows */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
+   SCIP_Real             cutoffbound,        /**< objective cutoff bound */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
                                               *   problem */
    int*                  nlcount             /**< array to store the number of occurrences of variables in convex and
@@ -199,16 +202,16 @@ SCIP_RETCODE createNlpRelax(
    nvars = SCIPgetNVars(scip);
    nconss = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &exprtrees, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &names, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nnlrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprtrees, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nnlrows + 1) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
@@ -230,6 +233,35 @@ SCIP_RETCODE createNlpRelax(
    SCIPfreeBufferArray(scip, &varnames);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
+
+   /* add row for cutoff bound */
+   if( !SCIPisInfinity(scip, cutoffbound) )
+   {
+      lhss[nconss] = -SCIPinfinity(scip);
+      rhss[nconss] = cutoffbound;
+      names[nconss] = "objcutoff";
+      lininds[nconss] = NULL;
+      linvals[nconss] = NULL;
+      nlininds[nconss] = 0;
+      nquadelems[nconss] = 0;
+      quadelems[nconss] = NULL;
+      exprtrees[nconss] = NULL;
+      exprvaridxs[nconss] = NULL;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) );
+
+      for( i = 0; i < nvars; ++i )
+      {
+         if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+         {
+            linvals[nconss][nlininds[nconss]] = SCIPvarGetObj(vars[i]);
+            lininds[nconss][nlininds[nconss]] = i;
+            ++nlininds[nconss];
+         }
+      }
+      ++nconss;
+   }
 
    /* add convex nonlinear rows to NLPI problem */
    for( i = 0; i < nnlrows; ++i )
@@ -371,7 +403,7 @@ SCIP_RETCODE createNlpRelax(
          SCIPfreeBufferArray(scip, &quadelems[i]);
       }
 
-      if( nlininds[i] > 0 )
+      if( linvals[i] != NULL )
       {
          assert(linvals[i] != NULL);
          assert(lininds[i] != NULL);
@@ -666,7 +698,9 @@ SCIP_RETCODE applyNlobbt(
    BMSclearMemoryArray(status, SCIPgetNVars(scip));
 
    /* compute convex NLP relaxation */
-   SCIP_CALL( createNlpRelax(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2idx, nlcount) );
+   SCIP_CALL( createNlpRelax(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob,
+         SCIPgetCutoffbound(scip), var2idx, nlcount) );
+
    SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
    SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * propdata->relobjtolfac);
 
