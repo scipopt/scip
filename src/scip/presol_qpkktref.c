@@ -1619,28 +1619,23 @@ SCIP_RETCODE checkConsQuadraticProblem(
    obj = SCIPvarGetObj(*objvar);
 
    /* check sign of coefficient */
-   if ( ( SCIPisFeasPositive(scip, obj)
+   if ( SCIPisFeasPositive(scip, obj)
           && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
                || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
              )
-        )
-        || ( SCIPisFeasNegative(scip, obj)
+      )
+      *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                           * has coefficient -1 */
+   else if ( SCIPisFeasNegative(scip, obj)
              && ( ( SCIPisFeasNegative(scip, coef) && SCIPisFeasEQ(scip, quadlhs, *objrhs) )
                   || ( SCIPisFeasPositive(scip, coef) && SCIPisFeasEQ(scip, quadrhs, *objrhs) )
                 )
            )
-      )
-   {
-      *scale = -1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
-                           * has coefficient -1 */
-   }
+      *scale = 1.0/coef; /* value by which we have to scale the quadratic constraint such that the objective variable
+                          * has coefficient 1 */
    else
       return SCIP_OKAY;
    assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
-
-   /* check objective sense of problem */
-   if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
-      *scale *= -1.0;
    assert( ! SCIPisFeasZero(scip, *scale) );
 
    /* scale the right hand side of the objective constraint */
@@ -1872,7 +1867,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    /* create new objective constraint */
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, objrhs, objrhs) );
-   if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+   if ( SCIPisFeasNegative(scip, SCIPvarGetObj(objvar)) )
    {
       SCIP_CALL( SCIPaddCoefLinear(scip, objcons, objvar, 1.0) );
    }
