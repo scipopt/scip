@@ -33,6 +33,7 @@ interface:
 - removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
 - removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
 - removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
+- new function SCIPswapReals() to swap two real values
 - new command line parameter -v to print detailed build options
 
 Makefile:

@@ -5515,8 +5515,15 @@ SCIP_Longint SCIPcalcBinomCoef(
 EXTERN
 void SCIPswapInts(
    int*                  value1,             /**< pointer to first integer */
-   int*                  value2              /**< pointer ti second integer */
+   int*                  value2              /**< pointer to second integer */
    );
+
+/** swaps two real values */
+EXTERN
+void SCIPswapReals(
+   SCIP_Real*            value1,             /**< pointer to first real value */
+   SCIP_Real*            value2              /**< pointer to second real value */
+);
 
 /** swaps the addresses of two pointers */
 EXTERN
