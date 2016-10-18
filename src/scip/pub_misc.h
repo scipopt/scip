@@ -5564,7 +5564,7 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_Real             maxrandval          /**< maximal value to return */
    );
 
-/** creates and initialzes a random number generator */
+/** creates and initializes a random number generator */
 extern
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
@@ -5640,7 +5640,7 @@ void SCIPpermuteIntArray(
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
 extern
 void SCIPrandomPermuteIntArray(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end                 /**< last index that should be subject to shuffling (array size for whole
@@ -5667,7 +5667,7 @@ void SCIPpermuteArray(
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 extern
 void SCIPrandomPermuteArray(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end                 /**< last index that should be subject to shuffling (array size for whole
@@ -5696,7 +5696,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
  */
 extern
 SCIP_RETCODE SCIPrandomGetSubset(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    void**                set,                /**< original set, from which elements should be drawn */
    int                   nelems,             /**< number of elements in original set */
    void**                subset,             /**< subset in which drawn elements should be stored */

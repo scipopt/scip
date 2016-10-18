@@ -7961,7 +7961,7 @@ SCIP_Real SCIPgetRandomReal(
 
 /** initialize the random number generator with a given start seed */
 static
-void randomInitialze(
+void randomInitialize(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    unsigned int          initseed            /**< initial random seed (> 0) */
    )
@@ -8037,7 +8037,7 @@ int randomGetRand(
    return (int)((randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed) % INT_MAX);
 }
 
-/** creates and initialzes a random number generator */
+/** creates and initializes a random number generator */
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -8049,7 +8049,7 @@ SCIP_RETCODE SCIPrandomCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, randnumgen) );
    (*randnumgen)->blkmem = blkmem;
 
-   randomInitialze((*randnumgen), initialseed);
+   randomInitialize((*randnumgen), initialseed);
 
    return SCIP_OKAY;
 }
@@ -8107,7 +8107,7 @@ SCIP_Real SCIPrandomGetReal(
 
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
 void SCIPrandomPermuteIntArray(
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end                 /**< last index that should be subject to shuffling (array size for whole
@@ -8135,7 +8135,7 @@ void SCIPrandomPermuteIntArray(
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 void SCIPrandomPermuteArray(
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end                 /**< last index that should be subject to shuffling (array size for whole
@@ -8165,7 +8165,7 @@ void SCIPrandomPermuteArray(
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
  */
 SCIP_RETCODE SCIPrandomGetSubset(
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    void**                set,                /**< original set, from which elements should be drawn */
    int                   nelems,             /**< number of elements in original set */
    void**                subset,             /**< subset in which drawn elements should be stored */
