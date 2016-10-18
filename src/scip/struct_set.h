@@ -331,7 +331,7 @@ struct SCIP_Set
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
    int                   random_permutationseed;/**< seed value for permuting the problem after the problem was tranformed
-                                                 *   (-1: no permutation) */
+                                                 *   (0: no permutation) */
    int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
    SCIP_Bool             random_permuteconss;   /**< should order of constraints be permuted (depends on permutationseed)? */
    SCIP_Bool             random_permutevars;    /**< should order of variables be permuted (depends on permutationseed)? */

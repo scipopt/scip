@@ -5535,6 +5535,15 @@ int SCIPgetRandomInt(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
+
+/** returns a random integer between minrandval and maxrandval */
+extern
+int SCIPrandomGetInt(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval          /**< maximal value to return */
+   );
+
 /** returns a random real between minrandval and maxrandval
  *
  *  @deprecated Please use SCIPrandomGetReal() to request a random real.
@@ -5547,8 +5556,27 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/**@} */
+/** returns a random real between minrandval and maxrandval */
+extern
+SCIP_Real SCIPrandomGetReal(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval          /**< maximal value to return */
+   );
 
+/** creates and initializes a random number generator */
+extern
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed (> 0) */
+   );
+
+/** frees a random number generator */
+extern
+void SCIPrandomFree(
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   );
 
 /*
  * Additional math functions
@@ -5609,6 +5637,17 @@ void SCIPpermuteIntArray(
    unsigned int*         randseed            /**< seed value for the random generator */
    );
 
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+extern
+void SCIPrandomPermuteIntArray(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole
+                                               *   array)
+                                               */
+   );
+
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm
  *
  *  @deprecated Please use SCIPrandomPermuteArray()
@@ -5622,6 +5661,18 @@ void SCIPpermuteArray(
                                               *   array)
                                               */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
+   );
+
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+extern
+void SCIPrandomPermuteArray(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole
+                                              *   array)
+                                              */
    );
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
@@ -5640,6 +5691,17 @@ SCIP_RETCODE SCIPgetRandomSubset(
    );
 
 
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+extern
+SCIP_RETCODE SCIPrandomGetSubset(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems           /**< number of elements that should be drawn and stored */
+   );
 
 /**@} */
 
