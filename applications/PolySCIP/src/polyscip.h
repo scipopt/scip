@@ -153,8 +153,8 @@ namespace polyscip {
         ResultContainer::const_iterator supportedCEnd() {return bounded_.cend();};
         ResultContainer::const_iterator unsupportedCBegin() {return unsupported_.cbegin();};
         ResultContainer::const_iterator unsupportedCEnd() {return unsupported_.cend();};
-        ResultContainer::const_iterator unboundedCBegin() {return unbounded_.cbegin();};
-        ResultContainer::const_iterator unboundedCEnd() {return unbounded_.cend();};
+        //ResultContainer::const_iterator unboundedCBegin() {return unbounded_.cbegin();};
+        //ResultContainer::const_iterator unboundedCEnd() {return unbounded_.cend();};
 
     private:
 

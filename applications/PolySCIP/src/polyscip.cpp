@@ -687,15 +687,14 @@ namespace polyscip {
                                                         orig_vars,
                                                         orig_vals);
                 for (const auto& res : new_res) {
-                    unsupported_.push_back(res);
-                    /*if (is_sub_prob_) {
+                    if (is_sub_prob_) {
                         unsupported_.push_back(res);
                     }
                     else {
                         if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
-                            unsupported_.push_back(res);
+                            unsupported_.push_back(std::move(res));
                         }
-                    }*/
+                    }
                 }
             }
         }
@@ -907,7 +906,7 @@ namespace polyscip {
             for (auto it = sub_poly->supportedCBegin(); it != sub_poly->supportedCEnd(); ++it) {
                 new_nondom_res.push_back(std::move(*it));
             }
-            for (auto it = sub_poly->unboundedCBegin(); it != sub_poly->unboundedCEnd(); ++it) {
+            for (auto it = sub_poly->unsupportedCBegin(); it != sub_poly->unsupportedCEnd(); ++it) {
                 new_nondom_res.push_back(std::move(*it));
             }
         }
