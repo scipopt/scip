@@ -8029,7 +8029,7 @@ int randomGetRand(
    randnumgen->xor_seed ^= (randnumgen->xor_seed >> 17);
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 5);
 
-   /* Multiple-with-carry */
+   /* Multiply-with-carry */
    t = 698769069ULL * randnumgen->mwc_seed + randnumgen->cst_seed;
    randnumgen->cst_seed = t >> 32;
    randnumgen->mwc_seed = (unsigned int) t;
