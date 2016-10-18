@@ -9510,11 +9510,6 @@ SCIP_RETCODE propagateBoundsCons(
 
    SCIPdebugMsg(scip, "start domain propagation for constraint <%s>\n", SCIPconsGetName(cons));
 
-   consdata->ispropagated = TRUE;
-
-   /* unmark constraint for propagation */
-   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
-
    /* make sure we have activity of linear term and that they are consistent */
    consdataUpdateLinearActivity(scip, consdata, intervalinfty);
    assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
@@ -10005,7 +10000,6 @@ SCIP_RETCODE propagateBounds(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool   redundant;
    int         c;
@@ -10044,11 +10038,11 @@ SCIP_RETCODE propagateBounds(
          if( !SCIPconsIsEnabled(conss[c]) )
             continue;
 
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
-         if( !consdata->ispropagated )
+         if( SCIPconsIsMarkedPropagate(conss[c]) )
          {
+            /* unmark constraint for propagation */
+            SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
+
             SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
             if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
             {
@@ -10709,6 +10703,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 
       /* mark constraint for propagation */
       SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      consdata->ispropagated = FALSE;
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
@@ -11735,6 +11730,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
             if( !consdata->ispropagated )
             {
+               consdata->ispropagated = TRUE;
+
                SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
 
                if( propresult == SCIP_CUTOFF )
