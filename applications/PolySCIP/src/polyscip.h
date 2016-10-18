@@ -97,6 +97,7 @@ namespace polyscip {
         std::vector<RectangularBox> getDisjointPartsFrom(double delta, const RectangularBox &other) const;
         std::size_t size() const;
         Interval getInterval(std::size_t index) const;
+        bool contains(const OutcomeType& outcome) const;
 
     private:
         Interval getIntervalIntersection(std::size_t index, const RectangularBox& other) const;
@@ -242,13 +243,13 @@ namespace polyscip {
 
         bool boxesArePairWiseDisjoint(const std::vector<RectangularBox> &boxes) const;
 
-        SCIP_RETCODE addLowerDimProbNondomPoints(std::size_t obj_1,
+        /*SCIP_RETCODE addLowerDimProbNondomPoints(std::size_t obj_1,
                                                  std::size_t obj_2,
                                                  const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
                                                  const std::vector<std::vector<ValueType>> &orig_vals,
                                                  const TwoDProj &proj,
                                                  const ResultContainer &known_results,
-                                                 ResultContainer &new_results_to_be_added);
+                                                 ResultContainer &new_results_to_be_added);*/
 
 
         std::list<RectangularBox> computeFeasibleBoxes(
@@ -319,11 +320,11 @@ namespace polyscip {
 
         /*bool lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const;*/
 
-        explicit Polyscip(const CmdLineArgs& cmd_line_args,
+        /*explicit Polyscip(const CmdLineArgs& cmd_line_args,
                           SCIP* scip,
                           SCIP_Objsense obj_sense,
                           std::pair<std::size_t, std::size_t> objs_to_be_ignored,
-                          SCIP_CLOCK* clock_total);
+                          SCIP_CLOCK* clock_total);*/
 
         explicit Polyscip(const CmdLineArgs& cmd_line_args,
                           SCIP *scip,

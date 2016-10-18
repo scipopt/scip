@@ -279,6 +279,15 @@ namespace polyscip {
         return true;
     }
 
+    bool RectangularBox::contains(const OutcomeType& outcome) const {
+        assert (outcome.size() == box_.size());
+        for (size_t i=0; i<box_.size(); ++i) {
+            if (outcome[i] < box_[i].first || outcome[i] > box_[i].second)
+                return false;
+        }
+        return true;
+    }
+
     bool RectangularBox::isDisjointFrom(const RectangularBox &other) const {
         assert (this->box_.size() == other.box_.size());
         for (size_t i=0; i<box_.size(); ++i) {
@@ -379,7 +388,7 @@ namespace polyscip {
         }
     }
 
-    Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
+    /*Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
                        SCIP *scip,
                        SCIP_Objsense obj_sense,
                        pair<size_t, size_t> objs_to_be_ignored,
@@ -396,7 +405,7 @@ namespace polyscip {
         auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
         obj_probdata->ignoreObjectives(objs_to_be_ignored.first, objs_to_be_ignored.second);
         no_objs_ = obj_probdata->getNoObjs();
-    }
+    }*/
 
     Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
                        SCIP *scip,
@@ -406,7 +415,7 @@ namespace polyscip {
             : cmd_line_args_{cmd_line_args},
               polyscip_status_{PolyscipStatus::ProblemRead},
               scip_{scip},
-              obj_sense_{obj_sense},//obj_sense_{SCIP_OBJSENSE_MINIMIZE},
+              obj_sense_{SCIP_OBJSENSE_MINIMIZE},// obj_sense_{obj_sense},
               no_objs_{no_objs},
               clock_total_{clock_total},
               only_weight_space_phase_{false},
@@ -676,27 +685,18 @@ namespace polyscip {
 
             assert (feasible_boxes.size() <= disjoint_boxes.size());
             //assert (boxesArePairWiseDisjoint(disjoint_boxes));
-            std::cout << "DISJOINT BOXES: " << disjoint_boxes.size() << "\n";
-            size_t counter = 0;
-            for (const auto& box : disjoint_boxes) {
-                std::cout << "Box = " << box << " - " << ++counter << "\n";
 
+            for (const auto& box : disjoint_boxes) {
                 auto new_res = computeNondomPointsInBox(box,
                                                         orig_vars,
                                                         orig_vals);
-
-                std::cout << "New results: ";
                 for (auto &&res : new_res) {
-                    global::print(res.second, "TESTING outcome: ", "\n");
                     if (is_sub_prob_) {
                         unsupported_.push_back(res);
                     }
                     else {
                         if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
                             unsupported_.push_back(res);
-                        }
-                        else {
-                            std::cout << "OUTCOME is dominated\n";
                         }
                     }
                 }
@@ -1353,7 +1353,7 @@ namespace polyscip {
 
     }
 
-    SCIP_RETCODE Polyscip::addLowerDimProbNondomPoints(size_t obj_1,
+    /*SCIP_RETCODE Polyscip::addLowerDimProbNondomPoints(size_t obj_1,
                                                        size_t obj_2,
                                                        const vector<vector<SCIP_VAR *>> &orig_vars,
                                                        const vector<vector<ValueType>> &orig_vals,
@@ -1456,7 +1456,7 @@ namespace polyscip {
         }
         low_dim_poly.reset();
         return SCIP_OKAY;
-    }
+    }*/
 
     OutcomeType Polyscip::extendOutcome(OutcomeType subproblem_outcome,
                                         size_t obj_1,
