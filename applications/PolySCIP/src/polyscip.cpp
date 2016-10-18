@@ -687,11 +687,17 @@ namespace polyscip {
 
                 std::cout << "New results: ";
                 for (auto &&res : new_res) {
+                    global::print(res.second, "TESTING outcome: ", "\n");
                     if (is_sub_prob_) {
                         unsupported_.push_back(res);
                     }
-                    else if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
-                        unsupported_.push_back(res);
+                    else {
+                        if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
+                            unsupported_.push_back(res);
+                        }
+                        else {
+                            std::cout << "OUTCOME is dominated\n";
+                        }
                     }
                 }
             }
@@ -774,21 +780,19 @@ namespace polyscip {
                                         const vector<vector<SCIP_VAR*>>& orig_vars,
                                         const vector<vector<ValueType>>& orig_vals) {
 
-        auto is_dom = false;
         auto size = outcome.size();
         assert (size == orig_vars.size());
         assert (size == orig_vals.size());
+        auto is_dominated = false;
 
-        if (SCIPisTransformed(scip_)) {
-            auto ret = SCIPfreeTransform(scip_);
-            assert (ret == SCIP_OKAY);
-        }
+        auto ret = SCIPfreeTransform(scip_);
+        assert (ret == SCIP_OKAY);
         // add disjunctive variables
-        auto disj_vars = createDisjunctiveVars(size);
+        /*auto disj_vars = createDisjunctiveVars(size);
         for (auto var : disj_vars) {
             auto ret =  SCIPaddVar(scip_, var);
             assert (ret == SCIP_OKAY);
-        }
+        }*/
         auto new_cons = vector<SCIP_CONS*>{};
         // add objective value constraints
         for (size_t i=0; i<size; ++i) {
@@ -796,9 +800,11 @@ namespace polyscip {
                                          orig_vals[i],
                                          -SCIPinfinity(scip_),
                                          outcome[i]);
+            ret =  SCIPaddCons(scip_, cons);
+            assert (ret == SCIP_OKAY);
             new_cons.push_back(cons);
         }
-        // add disjunctive constraints
+        /*// add disjunctive constraints
         auto disj_cons = createDisjunctiveCons(disj_vars,
                                                outcome,
                                                orig_vars,
@@ -807,25 +813,15 @@ namespace polyscip {
         for (auto cons : new_cons) {
             auto ret =  SCIPaddCons(scip_, cons);
             assert (ret == SCIP_OKAY);
-        }
+        }*/
 
-        auto zero_weight = WeightType(no_objs_, 0.);
-        setWeightedObjective(zero_weight);
+        //auto zeroweight = WeightType(no_objs_, 0.);
+        auto weight = WeightType(no_objs_, 1.);
+        setWeightedObjective(weight/*zero_weight*/);
         solve(); // compute with zero objective
         auto scip_status = SCIPgetStatus(scip_);
 
-        if (SCIPisTransformed(scip_)) {
-            auto ret = SCIPfreeTransform(scip_);
-            assert (ret == SCIP_OKAY);
-        }
-        // release and delete added constraints
-        for (auto cons : new_cons) {
-            auto ret = SCIPdelCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
-            ret = SCIPreleaseCons(scip_, addressof(cons));
-            assert (ret == SCIP_OKAY);
-        }
-        // release and delete added disjunctive variables
+        /*// release and delete added disjunctive variables
         for (auto var : disj_vars) {
             SCIP_Bool var_deleted = FALSE;
             auto ret = SCIPdelVar(scip_, var, addressof(var_deleted));
@@ -833,16 +829,36 @@ namespace polyscip {
             assert (var_deleted);
             ret = SCIPreleaseVar(scip_, addressof(var));
             assert (ret == SCIP_OKAY);
-        }
+        }*/
 
         // check solution status
         if (scip_status == SCIP_STATUS_OPTIMAL) {
-            is_dom = true;
+            assert (weight.size() == outcome.size());
+            if (SCIPgetPrimalbound(scip_) + cmd_line_args_.getEpsilon() < std::inner_product(begin(weight),
+                                                                                             end(weight),
+                                                                                             begin(outcome),
+                                                                                             0.)) {
+                is_dominated = true;
+            b}
         }
         else if (scip_status == SCIP_STATUS_TIMELIMIT) {
             polyscip_status_ = PolyscipStatus::TimeLimitReached;
         }
-        return is_dom;
+        else {
+            polyscip_status_ = PolyscipStatus::Error;
+        }
+
+        ret = SCIPfreeTransform(scip_);
+        assert (ret == SCIP_OKAY);
+        // release and delete added constraints
+        for (auto cons : new_cons) {
+            ret = SCIPdelCons(scip_, cons);
+            assert (ret == SCIP_OKAY);
+            ret = SCIPreleaseCons(scip_, addressof(cons));
+            assert (ret == SCIP_OKAY);
+        }
+
+        return is_dominated;
     }
 
     ResultContainer Polyscip::computeNondomPointsInBox(const RectangularBox& box,
