@@ -328,7 +328,6 @@ namespace polyscip {
 
         explicit Polyscip(const CmdLineArgs& cmd_line_args,
                           SCIP *scip,
-                          SCIP_Objsense obj_sense,
                           std::size_t no_objs,
                           SCIP_CLOCK *clock_total);
 

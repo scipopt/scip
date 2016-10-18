@@ -409,7 +409,6 @@ namespace polyscip {
 
     Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
                        SCIP *scip,
-                       SCIP_Objsense obj_sense,
                        size_t no_objs,
                        SCIP_CLOCK *clock_total)
             : cmd_line_args_{cmd_line_args},
@@ -664,9 +663,6 @@ namespace polyscip {
         for (size_t obj_1=0; obj_1!=no_objs_-1; ++obj_1) {
             for (auto obj_2=obj_1+1; obj_2!=no_objs_; ++obj_2) {
                 if (polyscip_status_ == PolyscipStatus::TwoProjPhase) {
-                    if (cmd_line_args_.beVerbose()) {
-                        std::cout << "Considered objective projection: obj_1=" << obj_1 << ", obj_2=" << obj_2 << "\n";
-                    }
                     auto proj_nondom_outcomes = solveWeightedTchebycheff(orig_vars,
                                                                          orig_vals,
                                                                          obj_1, obj_2);
@@ -690,15 +686,16 @@ namespace polyscip {
                 auto new_res = computeNondomPointsInBox(box,
                                                         orig_vars,
                                                         orig_vals);
-                for (auto &&res : new_res) {
-                    if (is_sub_prob_) {
+                for (const auto& res : new_res) {
+                    unsupported_.push_back(res);
+                    /*if (is_sub_prob_) {
                         unsupported_.push_back(res);
                     }
                     else {
                         if (!boxResultIsDominated(res.second, orig_vars, orig_vals)) {
                             unsupported_.push_back(res);
                         }
-                    }
+                    }*/
                 }
             }
         }
@@ -885,7 +882,6 @@ namespace polyscip {
 
         std::unique_ptr<Polyscip> sub_poly(new Polyscip(cmd_line_args_,
                                                         scip_,
-                                                        obj_sense_,
                                                         no_objs_,
                                                         clock_total_) );
         sub_poly->computeNondomPoints();
@@ -1225,8 +1221,6 @@ namespace polyscip {
 
         auto last_proj = nondom_projs.getLastProj();
 
-        std::cout << "initial nd_projections: ";
-        std::cout << nondom_projs << "\n";
         while (!nondom_projs.finished() && polyscip_status_ == PolyscipStatus::TwoProjPhase) {
             auto left_proj = nondom_projs.getLeftProj();
             auto right_proj = nondom_projs.getRightProj();
@@ -1317,8 +1311,6 @@ namespace polyscip {
                 assert (ret == SCIP_OKAY);
             }
         }
-        std::cout << "final nd_projections: ";
-        std::cout << nondom_projs << "\n";
 
         // clean up
         SCIP_Bool var_deleted = FALSE;
