@@ -47,7 +47,7 @@ namespace polyscip {
         //bool epsilonDominates(double epsilon, const TwoDProj &other) const;
         friend std::ostream &operator<<(std::ostream& os, const TwoDProj& proj);
     private:
-        constexpr static double epsilon = 0.01;
+        //constexpr static double epsilon = 0.01;
         std::pair<ValueType, ValueType> proj_;
 
     };
@@ -105,7 +105,7 @@ namespace polyscip {
                        Interval second,
                        std::vector<Interval>::const_iterator third_beg, std::vector<Interval>::const_iterator third_end);
 
-        constexpr static double epsilon = 0.01;
+        constexpr static double epsilon = 0;
         std::vector<Interval> box_;
     };
 

@@ -675,7 +675,7 @@ namespace polyscip {
             auto disjoint_boxes = computeDisjointBoxes(std::move(feasible_boxes));
 
             assert (feasible_boxes.size() <= disjoint_boxes.size());
-            assert (boxesArePairWiseDisjoint(disjoint_boxes));
+            //assert (boxesArePairWiseDisjoint(disjoint_boxes));
             std::cout << "DISJOINT BOXES: " << disjoint_boxes.size() << "\n";
             size_t counter = 0;
             for (const auto& box : disjoint_boxes) {

@@ -47,8 +47,8 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
-        ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.2",
-                                     false, 0.1, "double");
+        ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.1",
+                                     false, 0.001, "double");
         cmd.add(delta_arg);
         ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-3",
                                      false, 1e-3, "double");
