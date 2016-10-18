@@ -839,7 +839,7 @@ namespace polyscip {
                                                                                              begin(outcome),
                                                                                              0.)) {
                 is_dominated = true;
-            b}
+            }
         }
         else if (scip_status == SCIP_STATUS_TIMELIMIT) {
             polyscip_status_ = PolyscipStatus::TimeLimitReached;
