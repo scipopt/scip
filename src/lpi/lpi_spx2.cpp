@@ -433,7 +433,7 @@ public:
 
       try
       {
-         (void) solve();
+         (void) optimize();
       }
       catch(const SPxException& x)
       {
@@ -2310,7 +2310,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
-         status = spx->solve();
+         status = spx->optimize();
          SCIPdebugMessage(" --> Terminate with status %d\n", status);
          switch( status )
          {
@@ -2389,7 +2389,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
-            status = spx->solve();
+            status = spx->optimize();
             SCIPdebugMessage(" --> Terminate with status %d\n", status);
             switch( status )
             {

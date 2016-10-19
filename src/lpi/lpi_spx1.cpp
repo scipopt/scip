@@ -273,7 +273,7 @@ public:
 #endif
       m_sense = sense();
       setSense(SPxLP::MINIMIZE);
-      setSolver(&m_slu); /*lint !e1506*/
+      setBasisSolver(&m_slu); /*lint !e1506*/
       setTester(&m_ratio); /*lint !e1506*/
       setPricer(&m_price_steep); /*lint !e1506*/
       /* no starter */
