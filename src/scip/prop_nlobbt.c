@@ -74,8 +74,8 @@ struct SCIP_PropData
 
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
-   SCIP_Real             minnonconvexfrac;   /**< minimum (#convex nlrows)/(#nonconvex nlrows) threshold to apply NLOBBT */
-   SCIP_Real             minlinearfrac;      /**< minimum (#convex nlrows)/(#linear nlrows) threshold to apply NLOBBT */
+   SCIP_Real             minnonconvexfrac;   /**< minimum (#convex nlrows)/(#nonconvex nlrows) threshold to apply propagator */
+   SCIP_Real             minlinearfrac;      /**< minimum (#convex nlrows)/(#linear nlrows) threshold to apply propagator */
    SCIP_Bool             addlprows;          /**< should (non-initial) LP rows be used? */
 };
 
@@ -147,6 +147,8 @@ SCIP_RETCODE nlpRelaxAddLpRows(
    assert(nlpiprob != NULL);
    assert(var2idx != NULL);
    assert(rows != NULL || nrows == 0);
+
+   SCIPdebugMsg(scip, "call nlpRelaxAddLpRows() with %d LP rows\n", nrows);
 
    if( nrows <= 0 )
       return SCIP_OKAY;
@@ -236,6 +238,8 @@ SCIP_RETCODE nlpRelaxCreate(
    assert(nlpi != NULL);
    assert(nlscore != NULL);
 
+   SCIPdebugMsg(scip, "call nlpRelaxCreate() with cutoffbound %g\n", cutoffbound);
+
    BMSclearMemoryArray(nlscore, SCIPgetNVars(scip));
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -267,7 +271,7 @@ SCIP_RETCODE nlpRelaxCreate(
       varnames[i] = SCIPvarGetName(vars[i]);
   }
 
-   /** add variables */
+   /* add variables */
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
    SCIPfreeBufferArray(scip, &varnames);
    SCIPfreeBufferArray(scip, &ubs);
@@ -478,6 +482,8 @@ SCIP_RETCODE nlpRelaxUpdate(
    int i;
 
    assert(nlpi != NULL);
+
+   SCIPdebugMsg(scip, "call nlpRelaxUpdate()\n");
 
    /* update variable bounds */
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, propdata->nlpinvars) );
@@ -855,10 +861,8 @@ SCIP_RETCODE applyNlobbt(
    /* recompute NLP relaxation if the variable set changed */
    if( propdata->nlpiprob != NULL && SCIPgetNVars(scip) != propdata->nlpinvars )
    {
-      /* @todo free NLP */
       SCIP_CALL( propdataClear(scip, propdata) );
-
-      assert(propdata->nlpiprob != NULL);
+      assert(propdata->nlpiprob == NULL);
    }
 
    /* create or update NLP relaxation */
@@ -890,8 +894,6 @@ SCIP_RETCODE applyNlobbt(
    }
    else
    {
-      SCIPdebugMsg(scip, "update NLP relaxation\n");
-
       SCIP_CALL( nlpRelaxUpdate(scip, propdata, nlpi) );
    }
 
