@@ -189,7 +189,6 @@ struct SCIP_Stat
    int                   nvaridx;            /**< number of used variable indices */
    int                   ncolidx;            /**< number of used column indices */
    int                   nrowidx;            /**< number of used row indices */
-   int                   ninitialrootrows;   /**< number of initial root LP rows */
    int                   marked_nvaridx;     /**< number of used variable indices before solving started */
    int                   marked_ncolidx;     /**< number of used column indices before solving started */
    int                   marked_nrowidx;     /**< number of used row indices before solving started */

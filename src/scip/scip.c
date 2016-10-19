@@ -27741,27 +27741,6 @@ int SCIPgetNLPRows(
       return 0;
 }
 
-/** gets number of initial root LP rows
- *
- *  @return the number of initial root LP rows.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-int SCIPgetNLPInitialRows(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
-      return scip->stat->ninitialrootrows;
-   else
-      return 0;
-}
-
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
  *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
  *

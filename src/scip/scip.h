@@ -12036,20 +12036,6 @@ int SCIPgetNLPRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of initial LP rows
- *
- *  @return the current number of LP rows.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-EXTERN
-int SCIPgetNLPInitialRows(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
  *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
  *
