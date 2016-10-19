@@ -40,6 +40,7 @@
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
 #define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for off */
 #define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for off */
+#define DEFAULT_NLPVERLEVEL           0      /**< verbosity level of NLP solver */
 #define DEFAULT_RANDSEED             79      /**< initial random seed */
 
 /*
@@ -72,6 +73,7 @@ struct SCIP_PropData
 
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for off */
+   int                   nlpverblevel;       /**< verbosity level of NLP solver */
 
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
@@ -907,9 +909,10 @@ SCIP_RETCODE applyNlobbt(
    SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void*)propdata->nlpivars, propdata->nlpinvars);
 
    /* set parameters of NLP solver */
-   SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
-   SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
-   SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * propdata->relobjtolfac);
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * propdata->relobjtolfac) );
+   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
 
    /* main propagation loop */
    for( i = 0; i < propdata->nlpinvars
@@ -1107,6 +1110,10 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/nlptimelimit",
          "time limit of NLP solver; 0.0 for off",
          &propdata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpverblevel",
+         "verbosity level of NLP solver",
+         &propdata->nlpverblevel, TRUE, DEFAULT_NLPVERLEVEL, 0, 5, NULL, NULL) );
 
    return SCIP_OKAY;
 }
