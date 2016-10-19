@@ -45,6 +45,16 @@
  * Data structures
  */
 
+/** status of bound candidates */
+enum BoundStatus
+{
+   UNSOLVED = 1,                             /**< did not solve LB or UB problem */
+   SOLVEDLB = 2,                             /**< solved LB problem */
+   SOLVEDUB = 4,                             /**< solved UB problem */
+   SOLVED   = SOLVEDLB | SOLVEDUB            /**< solved LB and UB problem */
+};
+typedef enum BoundStatus BOUNDSTATUS;
+
 /** propagator data */
 struct SCIP_PropData
 {
@@ -53,9 +63,8 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   int*                  status;             /**< status of each nonlinear variable (0: not filtered 1: filtered lower
-                                              *   bound 2: filtered upper bound 3: filtered both bounds)
-                                              */
+   BOUNDSTATUS*          status;             /**< array containing a bound status for each candidate */
+
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
 
@@ -593,18 +602,20 @@ SCIP_RETCODE filterCands(
       assert(SCIPgetVars(scip)[varidx] == var);
       val = primal[varidx];
 
-      if( propdata->status[pos] != 1 && !SCIPisInfinity(scip, -val) && SCIPisFeasLE(scip, val, SCIPvarGetLbLocal(var)) )
+      if( (propdata->status[pos] & SOLVEDLB) == 0 && !SCIPisInfinity(scip, -val) && SCIPisFeasLE(scip, val, SCIPvarGetLbLocal(var)) )
       {
          SCIPdebugMsg(scip, "filter LB of %s in [%g,%g] with %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
-         propdata->status[pos] = propdata->status[pos] == 0 ? 1 : 3;
+         propdata->status[pos] |= SOLVEDLB;
+         assert((propdata->status[pos] & SOLVEDLB) != 0);
       }
 
-      if( propdata->status[pos] != 2 && !SCIPisInfinity(scip, val) && SCIPisFeasGE(scip, val, SCIPvarGetUbLocal(var)) )
+      if( (propdata->status[pos] & SOLVEDUB) == 0 && !SCIPisInfinity(scip, val) && SCIPisFeasGE(scip, val, SCIPvarGetUbLocal(var)) )
       {
          SCIPdebugMsg(scip, "filter UB of %s in [%g,%g] with %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
-         propdata->status[pos] = propdata->status[pos] == 0 ? 2 : 3;
+         propdata->status[pos] |= SOLVEDUB;
+         assert((propdata->status[pos] & SOLVEDUB) != 0);
       }
    }
 
@@ -743,7 +754,8 @@ SCIP_RETCODE solveNlp(
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
    SCIP_CALL( SCIPnlpiSetObjective(nlpi, propdata->nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
 
-   SCIPdebugMsg(scip, "solve convex NLP relaxation for %s and nlscore %g\n", SCIPvarGetName(var), propdata->nlscore[pos]);
+   SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
+      propdata->nlscore[pos]);
    SCIP_CALL( SCIPnlpiSolve(nlpi, propdata->nlpiprob) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob));
 
@@ -754,7 +766,7 @@ SCIP_RETCODE solveNlp(
    }
 
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
-   SCIP_CALL( filterCands(scip, propdata, nlpi, pos, SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob)) );
+   SCIP_CALL( filterCands(scip, propdata, nlpi, pos+1, SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob)) );
 
    /* try to tighten variable bound */
    if( SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
@@ -863,7 +875,9 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
-      BMSclearMemoryArray(propdata->status, propdata->nlpinvars);
+
+      for( i = 0; i < propdata->nlpinvars; ++i )
+         propdata->status[i] = UNSOLVED;
 
       SCIP_CALL( nlpRelaxCreate(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), propdata->nlpiprob,
             propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip)) );
@@ -917,13 +931,13 @@ SCIP_RETCODE applyNlobbt(
       assert(var == SCIPgetVars(scip)[varidx]);
 
       /* case: minimize var */
-      if( propdata->status[i] != 1 && propdata->status[i] != 3 )
+      if( (propdata->status[i] & SOLVEDLB) == 0 )
       {
          SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_LOWER, i, result) );
       }
 
       /* case: maximize var */
-      if( *result != SCIP_CUTOFF && propdata->status[i] != 2 && propdata->status[i] != 3 )
+      if( *result != SCIP_CUTOFF && (propdata->status[i] & SOLVEDUB) == 0 )
       {
          SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_UPPER, i, result) );
       }
