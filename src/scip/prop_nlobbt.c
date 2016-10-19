@@ -74,6 +74,7 @@ struct SCIP_PropData
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for off */
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
+   SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
 
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
@@ -769,6 +770,12 @@ SCIP_RETCODE solveNlp(
    SCIP_CALL( SCIPnlpiSolve(nlpi, propdata->nlpiprob) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob));
 
+   /* collect NLP statistics */
+   assert(propdata->nlpstatistics != NULL);
+   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
+   SCIPdebugMsg(scip, "iterations %d time %g\n", SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics),
+      SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
+
    /* try to add a genvbound in the root node */
    if( propdata->genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
    {
@@ -990,8 +997,8 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
-   /* create randum number generator */
    SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip), DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(&propdata->nlpstatistics) );
 
    return SCIP_OKAY;
 }
@@ -1005,7 +1012,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolNlobbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   SCIPnlpStatisticsFree(&propdata->nlpstatistics);
    SCIPrandomFree(&propdata->randnumgen);
+
    SCIP_CALL( propdataClear(scip, propdata) );
 
    return SCIP_OKAY;
