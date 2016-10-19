@@ -3513,14 +3513,14 @@ SCIP_RETCODE propAndSolve(
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          lp->resolvelperror = FALSE;
       }
-   }
 
-   if( *propagateagain )
-   {
-      *solvelpagain = solvelp;
-      *solverelaxagain = solverelax;
+      if( *propagateagain )
+      {
+         *solvelpagain = solvelp;
+         *solverelaxagain = solverelax;
 
-      return SCIP_OKAY;
+         return SCIP_OKAY;
+      }
    }
 
    /* solve external relaxations with non-negative priority */
@@ -3839,7 +3839,7 @@ SCIP_RETCODE solveNode(
       if( *stopped )
          return SCIP_OKAY;
 
-      if( !(*cutoff) && !propagateagain )
+      if( !(*cutoff) && lpsolved )
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
@@ -3854,7 +3854,6 @@ SCIP_RETCODE solveNode(
                propagate, solvelp, solverelax, forcedlpsolve, initiallpsolved, &heurtiming, &nlperrors, &fullpropagation, &propagateagain,
                &lpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, stopped, &lperror, &pricingaborted,
                &forcedenforcement) );
-         initiallpsolved |= lpsolved;
 
          assert(!(*stopped));
       }

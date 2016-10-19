@@ -44,7 +44,7 @@
 
 #define PROP_NAME              "rootredcost"
 #define PROP_DESC              "reduced cost strengthening using root node reduced costs and the cutoff bound"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY         +10000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */

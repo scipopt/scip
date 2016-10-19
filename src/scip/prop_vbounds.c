@@ -79,7 +79,7 @@
 
 #define PROP_NAME              "vbounds"
 #define PROP_DESC              "propagates variable upper and lower bounds"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY           3000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
