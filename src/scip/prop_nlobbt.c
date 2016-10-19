@@ -871,10 +871,6 @@ SCIP_RETCODE applyNlobbt(
    /* create or update NLP relaxation */
    if( propdata->nlpiprob == NULL )
    {
-      int nlprows;
-
-      SCIPdebugMsg(scip, "create NLP relaxation\n");
-
       propdata->nlpinvars = SCIPgetNVars(scip);
 
       SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
@@ -893,6 +889,13 @@ SCIP_RETCODE applyNlobbt(
       {
          propdata->status[i] = UNSOLVED;
          propdata->nlscore[i] *= 1.0 + SCIPrandomGetReal(propdata->randnumgen, SCIPfeastol(scip), 2.0 * SCIPfeastol(scip));
+      }
+
+      /* add root LP rows */
+      if( SCIPgetDepth(scip) == 0 )
+      {
+         SCIP_CALL( nlpRelaxAddLpRows(scip, nlpi, propdata->nlpiprob, propdata->var2nlpiidx, SCIPgetLPRows(scip),
+               SCIPgetNLPRows(scip)) );
       }
    }
    else
