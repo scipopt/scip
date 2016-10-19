@@ -8310,10 +8310,23 @@ SCIP_Real SCIPnegateReal(
 /** swaps two ints */
 void SCIPswapInts(
    int*                  value1,             /**< pointer to first integer */
-   int*                  value2              /**< pointer ti second integer */
+   int*                  value2              /**< pointer to second integer */
    )
 {
    int tmp;
+
+   tmp = *value1;
+   *value1 = *value2;
+   *value2 = tmp;
+}
+
+/** swaps two real values */
+void SCIPswapReals(
+   SCIP_Real*            value1,             /**< pointer to first real value */
+   SCIP_Real*            value2              /**< pointer to second real value */
+   )
+{
+   SCIP_Real tmp;
 
    tmp = *value1;
    *value1 = *value2;

@@ -59,6 +59,8 @@
 #define DEFAULT_MAXINVCUTSROOT      250 /**< maximal number of cuts investigated per iteration in the root node */
 #define DEFAULT_MAXCONFSDELAY    100000 /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
 
+#define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
+
 
 /** separator data */
 struct SCIP_SepaData
@@ -578,6 +580,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          return SCIP_OKAY;
    }
 
+   /* check accuracy of rows */
+   for (j = 0; j < nrows; ++j)
+   {
+      SCIP_ROW* row;
+
+      row = rows[j];
+
+      if ( ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER  && ! SCIPisEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) )
+           || ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER && ! SCIPisEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) ) )
+         return SCIP_OKAY;
+   }
+
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
@@ -776,7 +790,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          bound2 = SCIPcolGetLb(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
       if ( row == NULL )
          continue;
 
