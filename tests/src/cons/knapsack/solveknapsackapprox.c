@@ -37,11 +37,13 @@ static SCIP_Real profit;
 static int nitems;
 static SCIP* scip;
 static SCIP_Longint capacity;
+static SCIP_RANDNUMGEN* randnumgen;
+#define INITIALSEED 83
 
 /** randomly initialize weights, profits, and set capacity to be the sum of the weights */
 static
 void randomDataInit(
-   unsigned int*        randseed,           /**< pseudo random seed */
+   SCIP_RANDNUMGEN*     randgen,            /**< random number generator */
    SCIP_Longint         minweight           /**< minimum weight */
    )
 {
@@ -51,8 +53,8 @@ void randomDataInit(
    /* initialize random weights and profits */
    for( i = 0; i < nitems; ++i )
    {
-      weights[i] = (SCIP_Longint)SCIPgetRandomInt(minweight, 100, randseed);
-      profits[i] = (SCIP_Real)(SCIPgetRandomInt(1, 30, randseed));
+      weights[i] = (SCIP_Longint)SCIPrandomGetInt(randgen, minweight, 100);
+      profits[i] = (SCIP_Real)(SCIPrandomGetInt(randgen, 1, 30));
 
       capacity += weights[i];
    }
@@ -77,6 +79,7 @@ void setup(void)
    SCIP_CALL( SCIPallocMemoryArray(scip, &profits, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &solitems, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &nonsolitems, MEMSIZE) );
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), INITIALSEED) );
    cr_assert_not_null(items);
    cr_assert_not_null(weights);
    cr_assert_not_null(profits);
@@ -146,6 +149,7 @@ void teardown(void)
    SCIPfreeMemoryArray(scip, &profits);
    SCIPfreeMemoryArray(scip, &solitems);
    SCIPfreeMemoryArray(scip, &nonsolitems);
+   SCIPrandomFree(&randnumgen);
 
    SCIPfree(&scip);
 
@@ -162,10 +166,9 @@ Test(knapprox, create_and_free)
 
 Test(knapprox, single_call, .description = "tests single call of approximation algorithm")
 {
-   unsigned int randseed = 83;
    nitems = 30; /* more than 25 items to call Balas Zemel algorithm */
 
-   randomDataInit(&randseed, 1);
+   randomDataInit(randnumgen, 1);
    /* half the items should fit into the knapsack */
    capacity /= 2;
 
@@ -174,11 +177,9 @@ Test(knapprox, single_call, .description = "tests single call of approximation a
 
 Test(knapprox, trivialrandom, .description = "tests random data where all items fit")
 {
-   unsigned int randseed = 91;
    nitems = 30; /* more than 25 items to call Balas Zemel algorithm */
 
-
-   randomDataInit(&randseed, 1);
+   randomDataInit(randnumgen, 1);
 
    callAndTestSolveKnapsackApproximately();
    cr_assert_eq(nsolitems, nitems, "Not all items were selected from trivial random data\n");
@@ -188,11 +189,10 @@ Test(knapprox, trivialrandom, .description = "tests random data where all items 
 Test(knapprox, noitemfits, .description = "tests corner case where no single item fits")
 {
    int i;
-   unsigned int randseed = 89;
    nitems = 30; /* more than 25 items to call Balas Zemel algorithm */
 
    /* don't use a minimum weight of 1 because we might end up with a zero capacity */
-   randomDataInit(&randseed, 5);
+   randomDataInit(randnumgen, 5);
 
    /* find the minimum weight as capacity */
    for( i = 0; i < nitems; ++i )
@@ -210,11 +210,10 @@ Test(knapprox, noitemfits, .description = "tests corner case where no single ite
 
 Test(knapprox, biginstance, .description = "tests big random data")
 {
-   unsigned int randseed = 97;
    nitems = 999999; /* more than 25 items to call Balas Zemel algorithm */
 
    /* don't use a minimum weight of 1 because we might end up with a zero capacity */
-   randomDataInit(&randseed, 5);
+   randomDataInit(randnumgen, 5);
 
    capacity /= 100;
 
@@ -224,7 +223,6 @@ Test(knapprox, biginstance, .description = "tests big random data")
 Test(knapprox, equalratios, .description = "tests small instance with all ratios being equal")
 {
    int i;
-   SCIP_Real expectedprofit;
    nitems = 100; /* more than 25 items to call Balas Zemel algorithm */
 
    /* initialize decreasing profits and weights, such that all ratios profits/weight are equal to 1 */
@@ -265,14 +263,13 @@ Test(knapprox, bigandbad, .description = "tests big instance that is already sor
 
 Test(knapprox, manybiginstances, .description = "tests many big instances for timing")
 {
-   unsigned int randseed = 113;
    int ntries = 20;
    int trial = 1;
    nitems = 999999; /* more than 25 items to call Balas Zemel algorithm */
 
    do
    {
-      randomDataInit(&randseed, 10);
+      randomDataInit(randnumgen, 10);
 
       capacity/= 3;
 
@@ -283,22 +280,19 @@ Test(knapprox, manybiginstances, .description = "tests many big instances for ti
 
 Test(knapprox, shuffledata, .description = "tests consistent result when shuffling data")
 {
-   unsigned int randseed = 121;
-
    int npermutations = 20;
    int permutation = 1;
    SCIP_Real lastprofit;
    nitems = 999;
 
-   randomDataInit(&randseed, 2);
+   randomDataInit(randnumgen, 2);
    capacity /= 4;
 
    lastprofit = -1.0;
    do
    {
       /* by permuting and sorting, the items costs and weights are shuffled; the profit of the greedy solution, however, must not change */
-      SCIPpermuteIntArray(items, 0, nitems, &randseed);
-
+      SCIPrandomPermuteIntArray(randnumgen, items, 0, nitems);
       SCIPsortIntRealLong(items, profits, weights, nitems);
 
       callAndTestSolveKnapsackApproximately();
@@ -309,6 +303,4 @@ Test(knapprox, shuffledata, .description = "tests consistent result when shuffli
       lastprofit = profit;
 
    } while( permutation++ <= npermutations );
-
-
 }
