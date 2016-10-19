@@ -475,7 +475,7 @@ SCIP_RETCODE nlpRelaxUpdate(
       assert(SCIPhashmapExists(propdata->var2nlpiidx, (void*)propdata->nlpivars[i]));
 
       lbs[i] = SCIPvarGetLbLocal(propdata->nlpivars[i]);
-      ubs[i] = SCIPvarGetLbLocal(propdata->nlpivars[i]);
+      ubs[i] = SCIPvarGetUbLocal(propdata->nlpivars[i]);
       inds[i] = (int)(size_t)SCIPhashmapGetImage(propdata->var2nlpiidx, (void*)propdata->nlpivars[i]);
       assert(inds[i] >= 0 && inds[i] < propdata->nlpinvars);
    }
