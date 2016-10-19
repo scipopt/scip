@@ -24,16 +24,23 @@
 #include "include/scip_test.h"
 
 /** GLOBAL VARIABLES **/
+static SCIP_RANDNUMGEN* randgen;
+static SCIP* scip;
+static unsigned int randomseed = 42;
 
 /* TEST SUITE */
 static
 void setup(void)
 {
+   SCIPcreate(&scip);
+   SCIPrandomCreate(&randgen, SCIPblkmem(scip), randomseed);
 }
 
 static
 void teardown(void)
 {
+   SCIPrandomFree(&randgen);
+   SCIPfree(&scip);
 }
 
 TestSuite(select, .init = setup, .fini = teardown);
@@ -49,7 +56,6 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
 {
    int len = ARRAYMEMSIZE;
    int key[ARRAYMEMSIZE];
-   unsigned int randomseed = 42;
    int i;
    int j;
    /* initialize key */
@@ -62,8 +68,7 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
    {
       int inputkey[ARRAYMEMSIZE];
 
-      SCIPpermuteIntArray(key, 0, len, &randomseed);
-
+      SCIPrandomPermuteIntArray(randgen, key, 0, len);
       /* save input permutation for debugging */
       BMScopyMemoryArray(inputkey, key, len);
       SCIPselectInt(key, i, len);
