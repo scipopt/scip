@@ -40,6 +40,7 @@
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
 #define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for off */
 #define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for off */
+#define DEFAULT_RANDSEED             79      /**< initial random seed */
 
 /*
  * Data structures
@@ -65,8 +66,8 @@ struct SCIP_PropData
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
    int*                  status;             /**< array containing a bound status for each candidate (type int* is
                                               *   necessary to use sort functions) */
-
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
 
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
@@ -881,16 +882,16 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
-      for( i = 0; i < propdata->nlpinvars; ++i )
-         propdata->status[i] = UNSOLVED;
-
       SCIP_CALL( nlpRelaxCreate(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), propdata->nlpiprob,
             propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip)) );
 
-      /* add rows which have been found after creating the initial root LP */
-      nlprows = SCIPgetNLPRows(scip) - SCIPgetNLPInitialRows(scip);
-      SCIP_CALL( nlpRelaxAddLpRows(scip, nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
-            &SCIPgetLPRows(scip)[SCIPgetNLPInitialRows(scip)], nlprows) );
+      /* initialize bound status; perturb nlscores by a factor which ensures sure that zero scores remain zero */
+      assert(propdata->randnumgen != NULL);
+      for( i = 0; i < propdata->nlpinvars; ++i )
+      {
+         propdata->status[i] = UNSOLVED;
+         propdata->nlscore[i] *= 1.0 + SCIPrandomGetReal(propdata->randnumgen, SCIPfeastol(scip), 2.0 * SCIPfeastol(scip));
+      }
    }
    else
    {
@@ -983,6 +984,9 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
+   /* create randum number generator */
+   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip), DEFAULT_RANDSEED) );
+
    return SCIP_OKAY;
 }
 
@@ -995,6 +999,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolNlobbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   SCIPrandomFree(&propdata->randnumgen);
    SCIP_CALL( propdataClear(scip, propdata) );
 
    return SCIP_OKAY;
