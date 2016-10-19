@@ -63,7 +63,8 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   BOUNDSTATUS*          status;             /**< array containing a bound status for each candidate */
+   int*                  status;             /**< array containing a bound status for each candidate (type int* is
+                                              *   necessary to use sort functions) */
 
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
@@ -900,7 +901,7 @@ SCIP_RETCODE applyNlobbt(
    assert(propdata->nlscore != NULL);
 
    /* sort variables w.r.t. their nlscores */
-   SCIPsortDownRealPtr(propdata->nlscore, (void*)propdata->nlpivars, propdata->nlpinvars);
+   SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void*)propdata->nlpivars, propdata->nlpinvars);
 
    /* set parameters of NLP solver */
    SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
