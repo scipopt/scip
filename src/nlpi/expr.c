@@ -35,12 +35,9 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 
-#ifndef NDEBUG
-#include "scip/random.h"
-#endif
-
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
+#define DEFAULT_RANDSEED            73       /**< initial random seed */
 
 /** sign of a value (-1 or +1)
  *
@@ -8794,7 +8791,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    )
 {
 #ifndef NDEBUG
-   SCIP_RANDGEN* randnumgen;
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real* testx;
    SCIP_Real testval_before;
    SCIP_Real testval_after;
@@ -8811,7 +8808,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
       testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
 
-   SCIPrandomFree(&randnumgen, tree->blkmem);
+   SCIPrandomFree(&randnumgen);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -15770,7 +15767,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_Real* testx;
    SCIP_HASHMAP* testvalidx;
    SCIP_Real* testvals;
-   SCIP_RANDGEN* randnumgen;
+   SCIP_RANDNUMGEN* randnumgen;
    int testvalssize;
    int ntestvals;
 #endif
@@ -15781,7 +15778,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, 42) );
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, DEFAULT_RANDSEED) );
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;
@@ -15807,7 +15804,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          }
       }
 
-   SCIPrandomFree(&randnumgen, exprgraph->blkmem);
+   SCIPrandomFree(&randnumgen);
 #endif
 
 #ifdef SCIP_OUTPUT
