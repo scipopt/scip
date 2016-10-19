@@ -38,6 +38,8 @@
 #define DEFAULT_FEASTOLFAC         0.01      /**< default factor for NLP feasibility tolerance */
 #define DEFAULT_RELOBJTOLFAC       0.01      /**< default factor for NLP relative objective tolerance */
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
+#define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for off */
+#define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for off */
 
 /*
  * Data structures
@@ -56,6 +58,9 @@ struct SCIP_PropData
                                               */
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
+
+   int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
+   SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for off */
 
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
@@ -699,8 +704,10 @@ SCIP_RETCODE solveNlp(
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
+   SCIP_Real timelimit;
    SCIP_Real* primal;
    SCIP_Real obj;
+   int iterlimit;
 
 #ifdef SCIP_DEBUG
    SCIP_Real oldlb;
@@ -715,6 +722,22 @@ SCIP_RETCODE solveNlp(
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
    assert(result != NULL && *result != SCIP_CUTOFF);
 
+   /* set time and iteration limit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+   {
+      timelimit -= SCIPgetSolvingTime(scip);
+      if( timelimit <= 0.0 )
+      {
+         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
+         return SCIP_OKAY;
+      }
+   }
+   if( propdata->nlptimelimit > 0.0 )
+      timelimit = MIN(propdata->nlptimelimit, timelimit);
+   iterlimit = propdata->nlpiterlimit > 0 ? propdata->nlpiterlimit : INT_MAX;
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
 
    /* set corresponding objective coefficient and solve NLP */
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
@@ -865,7 +888,8 @@ SCIP_RETCODE applyNlobbt(
    /* sort variables w.r.t. their nlscores */
    SCIPsortDownRealPtr(propdata->nlscore, (void*)propdata->nlpivars, propdata->nlpinvars);
 
-   /* set working limits for NLP solver */
+   /* set parameters of NLP solver */
+   SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
    SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac);
    SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * propdata->relobjtolfac);
 
@@ -1053,6 +1077,14 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/addlprows",
          "should non-initial LP rows be used?",
          &propdata->addlprows, FALSE, DEFAULT_ADDLPROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpiterlimit",
+         "iteration limit of NLP solver; 0 for off",
+         &propdata->nlpiterlimit, TRUE, DEFAULT_NLPTIMELIMIT, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/nlptimelimit",
+         "time limit of NLP solver; 0.0 for off",
+         &propdata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
