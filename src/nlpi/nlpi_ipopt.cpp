@@ -35,7 +35,7 @@
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
@@ -71,6 +71,8 @@ using namespace Ipopt;
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 #define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
+
+#define DEFAULT_RANDSEED   71                /**< initial random seed */
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
@@ -162,7 +164,7 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
-   SCIP_NLPIDATA*        nlpidata;           /**< NLPI data */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -175,13 +177,20 @@ public:
    /** constructor */
    ScipNLP(
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
-      SCIP_NLPIDATA*     nlpidata_ = NULL    /**< NLPI data */
+      BMS_BLKMEM*        blkmem = NULL       /**< block memory */
       )
-      : nlpiproblem(nlpiproblem_), nlpidata(nlpidata_), approxhessian(false)
-   { }
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), approxhessian(false)
+   {
+      assert(blkmem != NULL);
+      SCIP_CALL_ABORT_QUIET( SCIPrandomCreate(&randnumgen, blkmem, DEFAULT_RANDSEED) );
+   }
 
    /** destructor */
-   ~ScipNLP() { }
+   ~ScipNLP()
+   {
+      assert(randnumgen != NULL);
+      SCIPrandomFree(&randnumgen);
+   }
 
    /** sets NLPI data structure */
    void setNLPIPROBLEM(SCIP_NLPIPROBLEM* nlpiproblem_)
@@ -566,7 +575,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       }
 
       /* initialize Ipopt/SCIP NLP interface */
-      (*problem)->nlp = new ScipNLP(*problem, data);
+      (*problem)->nlp = new ScipNLP(*problem, data->blkmem);
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
@@ -2147,13 +2156,9 @@ bool ScipNLP::get_starting_point(
       }
       else
       {
-         SCIP_RANDGEN* randnumgen;
          SCIP_Real lb, ub;
 
          SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
-
-         /* @todo check whether the random number generator should be a class member */
-         SCIP_CALL_ABORT( SCIPrandomCreate(&randnumgen, nlpidata->blkmem, 123456) );
 
          for( int i = 0; i < n; ++i )
          {
@@ -2166,7 +2171,6 @@ bool ScipNLP::get_starting_point(
             else
                x[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
          }
-         SCIPrandomFree(&randnumgen, nlpidata->blkmem);
       }
    }
    if( init_z || init_lambda )

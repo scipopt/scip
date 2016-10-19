@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "scip/branch_pscost.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define BRANCHRULE_NAME          "pscost"
 #define BRANCHRULE_DESC          "branching on pseudo cost values"
@@ -51,7 +51,7 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
    char                  strategy;           /**< strategy for computing score of external candidates */
    SCIP_Real             scoreminweight;     /**< weight for minimum of scores of a branching candidate */
@@ -577,7 +577,7 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    assert(branchruledata != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &branchruledata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT)) );
 
    return SCIP_OKAY;
@@ -594,7 +594,7 @@ SCIP_DECL_BRANCHEXIT(branchExitPscost)
    assert(branchruledata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
+   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }

@@ -311,8 +311,6 @@ struct SCIP_Set
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
-   SCIP_Bool             misc_permuteconss;  /**< should order of constraints be permuted (depends on permutationseed)? */
-   SCIP_Bool             misc_permutevars;   /**< should order of variables be permuted (depends on permutationseed)? */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
@@ -333,8 +331,10 @@ struct SCIP_Set
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
    int                   random_permutationseed;/**< seed value for permuting the problem after the problem was tranformed
-                                                 *   (-1: no permutation) */
+                                                 *   (0: no permutation) */
    int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
+   SCIP_Bool             random_permuteconss;   /**< should order of constraints be permuted (depends on permutationseed)? */
+   SCIP_Bool             random_permutevars;    /**< should order of variables be permuted (depends on permutationseed)? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
