@@ -559,11 +559,12 @@ SCIP_RETCODE consdataCreate(
 
    if( nvars > 0 )
    {
+      int v;
+
       /* @todo the setppc constraint handler does not remove fixed variables from its var array; removing those
        * variables is only possible if we consider the values of nfixedones and nfixedzeros in all propagation methods
        */
 #ifdef SCIP_DISABLED_CODE
-      int v;
 
       if( SCIPisConsCompressionEnabled(scip) )
       {
