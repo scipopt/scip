@@ -12,8 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define SCIP_DEBUG
-#define SCIP_STATISTICS*/
+/*
+#define SCIP_DEBUG
+#define SCIP_STATISTICS
+*/
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -128,8 +130,6 @@ typedef struct
    SCIP_Real             objval;             /**< The objective value of the solved lp. Only contains meaningful data, if
                                               *   cutoff == TRUE. */
    SCIP_Bool             cutoff;             /**< Indicates whether the node was infeasible and was cutoff. */
-   SCIP_Bool             nobranch;           /**< Indicates whether the lp wasn't solved, as domain reduction for the
-                                              *   branching didn't change the domain. Currently unused. */
 } BRANCHINGRESULTDATA;
 
 /**
@@ -192,6 +192,7 @@ SCIP_RETCODE allocateStatus(
    (*status)->domred = FALSE;
    (*status)->domredcutoff = FALSE;
    (*status)->propagationdomred = FALSE;
+   (*status)->limitreached = FALSE;
 
    return SCIP_OKAY;
 }
@@ -242,7 +243,6 @@ void initBranchingResultData(
 {
    resultdata->objval = SCIPinfinity(scip);
    resultdata->cutoff = FALSE;
-   resultdata->nobranch = FALSE;
 }
 
 /**
@@ -452,13 +452,7 @@ SCIP_RETCODE executeDownBranching(
    else
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
-      if( SCIPisEQ(scip, oldupperbound, oldlowerbound) )
-      {
-         /*nothing has changed, so we cannot change any bound*/
-         resultdata->nobranch = TRUE;
-         /* TODO: do smth with this info. */
-      }
-      else if( SCIPisFeasLT(scip, newupperbound, oldupperbound) )
+      if( SCIPisFeasLT(scip, newupperbound, oldupperbound) )
       {
          /* if the new upper bound is lesser than the old upper bound and also
           * greater than (or equal to) the old lower bound we set the new upper bound.
@@ -481,7 +475,7 @@ SCIP_RETCODE executeDownBranching(
          /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
          resultdata->objval = SCIPgetLPObjval(scip);
          resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
-         assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || resultdata->cutoff);
+         assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
       }
    }
 
@@ -530,13 +524,7 @@ SCIP_RETCODE executeUpBranching(
    else
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
-      if( SCIPisEQ(scip, oldupperbound, oldlowerbound) )
-      {
-         /*nothing has changed, so we cannot change any bound*/
-         resultdata->nobranch = TRUE;
-         /* TODO: do smth with this info. */
-      }
-      else if( SCIPisFeasGT(scip, newlowerbound, oldlowerbound) )
+      if( SCIPisFeasGT(scip, newlowerbound, oldlowerbound) )
       {
          /* if the new lower bound is greater than the old lower bound and also
           * lesser than (or equal to) the old upper bound we set the new lower bound.
@@ -560,7 +548,7 @@ SCIP_RETCODE executeUpBranching(
          /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
          resultdata->objval = SCIPgetLPObjval(scip);
          resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
-         assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || resultdata->cutoff);
+         assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
       }
    }
 
@@ -1204,7 +1192,7 @@ SCIP_Bool isExecuteFirstLevelBranching(
    STATUS*               status
    )
 {
-   return !status->lperror && !status->firstlvlfullcutoff;
+   return !status->lperror && !status->firstlvlfullcutoff && !status->limitreached;
 }
 
 static
@@ -1431,7 +1419,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   branchruledata->nfirstlvlcutoffs++;
                )
             }
-            else
+            else if( !status->limitreached )
             {
                /* if neither of both branches was cutoff we can calculate the weight for the current variable */
                SCIP_Real currentScore;
@@ -1449,8 +1437,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
             }
          }
 
-         if( highestscoreindex != -1 && areBoundsChanged(scip, lpcands[highestscoreindex], highestscorelowerbound, highestscoreupperbound) )
+         if( highestscoreindex != -1 && areBoundsChanged(scip, lpcands[highestscoreindex], highestscorelowerbound,
+            highestscoreupperbound) )
          {
+            /* in case the bounds of the current highest scored solution have changed due to domain propagation during the
+             * lookahead branching we can/should not branch on this variable but instead return the SCIP_REDUCEDDOM result */
             status->propagationdomred = TRUE;
          }
       }
@@ -1458,8 +1449,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPdebugMessage("End Probing Mode\n");
       SCIP_CALL( SCIPendProbing(scip) );
 
-      if( !status->lperror && !status->depthtoosmall && !status->firstlvlfullcutoff && branchruledata->useimpliedbincons
-         && !isBinaryBoundDataEmpty(binarybounddata) && highestscoreindex != -1 )
+      if( !status->lperror && !status->depthtoosmall && !status->firstlvlfullcutoff
+         && branchruledata->useimpliedbincons && !isBinaryBoundDataEmpty(binarybounddata) && highestscoreindex != -1 )
       {
          /* if we have no other result status set and found implied non violating binary bounds, we add those bounds and
           * save the branching variable together with its current value and the current solution. We do this, because we may
@@ -1764,15 +1755,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       {
          *result = SCIP_CUTOFF;
       }
-      else if( status->propagationdomred )
-      {
-         *result = SCIP_REDUCEDDOM;
-      }
       else if( status->addimpbinconst )
       {
          *result = SCIP_CONSADDED;
       }
-      else if( status->domred )
+      else if( status->domred || status->propagationdomred )
       {
          *result = SCIP_REDUCEDDOM;
       }
