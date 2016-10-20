@@ -66,23 +66,24 @@ struct SCIP_HeurData
    SCIP_Bool             useslackvars;       /**< should slack variables be used in repair subproblem? */
 
 
-   int                   subnodes;           /** number of nodes which were necessary to solve the subscip */
-   int                   subiters;           /** contains total number of iterations used in primal and dual simplex and barrier algorithm to solve the subscip */
-   SCIP_Real             subpresoltime;      /** time for presolving the subscip */
-   int                   runs;               /** number of branch and bound runs performed to solve the subscip */
+   int                   subnodes;           /**< number of nodes which were necessary to solve the subscip */
+   int                   subiters;           /**< contains total number of iterations used in primal and dual simplex and barrier algorithm to solve the subscip */
+   SCIP_Real             subpresoltime;      /**< time for presolving the subscip */
+   int                   runs;               /**< number of branch and bound runs performed to solve the subscip */
 
-   int                   nviolatedvars;      /** number of violated vars in the given solution */
-   int                   norvars;            /** number of all vars in the given problem */
-   SCIP_Real             relviolatedvars;    /** relative number of violated vars */
-   int                   nviolatedcons;      /** number of violated cons in the given solution */
-   int                   norcons;            /** number of all cons in the given problem */
-   SCIP_Real             relviolatedcons;    /** relative number of violated cons */
+   int                   nviolatedvars;      /**< number of violated vars in the given solution */
+   int                   norvars;            /**< number of all vars in the given problem */
+   SCIP_Real             relviolatedvars;    /**< relative number of violated vars */
+   int                   nviolatedcons;      /**< number of violated cons in the given solution */
+   int                   norcons;            /**< number of all cons in the given problem */
+   SCIP_Real             relviolatedcons;    /**< relative number of violated cons */
 
-   int                   nvarfixed;          /** number of all variables fixed in the sub problem */
-   SCIP_Real             relvarfixed;        /** relative number of fixed vars */
+   int                   nvarfixed;          /**< number of all variables fixed in the sub problem */
+   SCIP_Real             relvarfixed;        /**< relative number of fixed vars */
 
-   SCIP_Real             orsolval;           /** value of the solution find by repair, in the original Problem*/
-   SCIP_Real             improovedoldsol;    /** value of the given sol sfter beeing improoved by SCIP*/
+   SCIP_Real             orsolval;           /**< value of the solution find by repair, in the original Problem*/
+   SCIP_Real             improovedoldsol;    /**< value of the given sol sfter beeing improoved by SCIP*/
+   SCIP_SOL*             infSol;             /**< infeasible solution to start with*/
 };
 
 
@@ -113,6 +114,13 @@ SCIP_RETCODE readSol(
    {
       SCIPerrorMessage("Cannot read solution file if vartable is disabled. Make sure parameter 'misc/usevartable' is set to TRUE.\n");
       return SCIP_READERROR;
+   }
+
+   if( strcmp(fname, DEFAULT_FILENAME) == 0 )
+   {
+      SCIPfreeSol(scip, &sol);
+      SCIPlinkLPSol(scip, sol);
+      return SCIP_OKAY;
    }
 
    /* open input file */
@@ -506,63 +514,11 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    int nintvars;
    int nvars;
    int nrows;
-   SCIP_Bool cutoff;
    SCIP_Bool success;
 
-   /* if repair allready run, stop*/
-   if(0 < SCIPheurGetNCalls(heur)){
-      *result = SCIP_DIDNOTFIND;
-      return SCIP_OKAY;
-   }
-
-   /* checks the result pointer*/
-   assert(result != NULL);
-   *result = SCIP_DIDNOTRUN;
-
-   if( !SCIPhasCurrentNodeLP(scip) )
-      return SCIP_OKAY;
-
-   if( !SCIPisLPConstructed(scip) )
-   {
-      SCIP_CALL(SCIPconstructLP(scip, &cutoff));
-
-      if( cutoff )
-         return SCIP_OKAY;
-   }
-
-   /* create zero solution */
-   SCIP_CALL( SCIPcreateOrigSol(scip, &sol, heur) );
-
    heurdata = SCIPheurGetData(heur);
+   sol = heurdata->infSol;
 
-   /* use read method to enter solution from a file */
-   retcode = readSol(scip, sol, heurdata->filename);
-
-   if( SCIP_NOFILE == retcode )
-   {
-      if( strcmp(heurdata->filename, DEFAULT_FILENAME) != 0 )
-         SCIPwarningMessage(scip, "cannot open file <%s> for reading\n",
-               heurdata->filename);
-
-      goto TERMINATE;
-   }
-   else if( retcode != SCIP_OKAY )
-   {
-      goto TERMINATE;
-   }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-         "Repair: Solution file read.\n");
-
-   /* checks the integrality of all discrete variable */
-   SCIP_CALL( checkCands(scip, sol, heurdata->roundit, &success) );
-   if( !success )
-   {
-      SCIPdebugMessage("Hello Termination\n");
-      goto TERMINATE;
-   }
-   *result = SCIP_DIDNOTFIND;
-
-   SCIPdebugMessage("Hello World\n");
    /* initializes the subscip */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
@@ -951,63 +907,11 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    int nintvars;
    int nvars;
    int nrows;
-   SCIP_Bool cutoff;
    SCIP_Bool success;
 
-   /* if repair allready run, stop*/
-   if(0 < SCIPheurGetNCalls(heur)){
-      *result = SCIP_DIDNOTFIND;
-      return SCIP_OKAY;
-   }
-
-   /* checks the result pointer*/
-   assert(result != NULL);
-   *result = SCIP_DIDNOTRUN;
-
-   if( !SCIPhasCurrentNodeLP(scip) )
-      return SCIP_OKAY;
-
-   if( !SCIPisLPConstructed(scip) )
-   {
-      SCIP_CALL(SCIPconstructLP(scip, &cutoff));
-
-      if( cutoff )
-         return SCIP_OKAY;
-   }
-
-   /* create zero solution */
-   SCIP_CALL( SCIPcreateOrigSol(scip, &sol, heur) );
-
    heurdata = SCIPheurGetData(heur);
+   sol = heurdata->infSol;
 
-   /* use read method to enter solution from a file */
-   retcode = readSol(scip, sol, heurdata->filename);
-
-   if( SCIP_NOFILE == retcode )
-   {
-      if( strcmp(heurdata->filename, DEFAULT_FILENAME) != 0 )
-         SCIPwarningMessage(scip, "cannot open file <%s> for reading\n",
-               heurdata->filename);
-
-      /* todo clean up goto TERMINATE;*/
-      SCIPfreeSol(scip, &sol);
-      return SCIP_OKAY;
-   }
-   else if( retcode != SCIP_OKAY )
-   {
-      goto TERMINATE;
-   }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-         "Repair: Solution file read.\n");
-
-   /* checks the integrality of all discrete variable */
-   SCIP_CALL( checkCands(scip, sol, heurdata->roundit, &success) );
-   if( !success )
-   {
-      SCIPdebugMessage("Hello Termination\n");
-      goto TERMINATE;
-   }
-   *result = SCIP_DIDNOTFIND;
    /* initializes the subscip */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
@@ -1715,10 +1619,69 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 { /*lint --e{715}*/
    SCIP_HEURDATA* heurdata = NULL;
    SCIP_RETCODE retcode;
+   SCIP_Bool success;
 
    retcode = SCIP_OKAY;
    heurdata = SCIPheurGetData(heur);
    printf("%s\n",heurdata->filename);
+
+   /* if repair allready run, stop*/
+   if(0 < SCIPheurGetNCalls(heur)){
+      *result = SCIP_DIDNOTFIND;
+      return SCIP_OKAY;
+   }
+
+   /* checks the result pointer*/
+   assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_CALL(SCIPconstructLP(scip, &success));
+
+      if( success )
+         return SCIP_OKAY;
+   }
+
+   /* create zero solution */
+   SCIP_CALL( SCIPcreateOrigSol(scip, &(heurdata->infSol), heur) );
+
+   heurdata = SCIPheurGetData(heur);
+
+   /* use read method to enter solution from a file */
+   retcode = readSol(scip, heurdata->infSol, heurdata->filename);
+
+   if( SCIP_NOFILE == retcode )
+   {
+      if( strcmp(heurdata->filename, DEFAULT_FILENAME) != 0 )
+         SCIPwarningMessage(scip, "cannot open file <%s> for reading\n",
+               heurdata->filename);
+
+      SCIPfreeSol(scip, &(heurdata->infSol));
+      return SCIP_OKAY;
+   }
+   else if( retcode != SCIP_OKAY )
+   {
+      SCIPfreeSol(scip, &(heurdata->infSol));
+      return SCIP_OKAY;
+   }
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+         "Repair: Solution file read.\n");
+
+   /* checks the integrality of all discrete variable */
+   SCIP_CALL( checkCands(scip, heurdata->infSol, heurdata->roundit, &success) );
+   if( !success )
+   {
+      SCIPdebugMessage("Hello Termination\n");
+      SCIPfreeSol(scip, &(heurdata->infSol));
+      return SCIP_OKAY;
+   }
+   *result = SCIP_DIDNOTFIND;
+
+
    if(heurdata->usevarfix)
    {
       retcode = varFixings(scip, heur, result);
