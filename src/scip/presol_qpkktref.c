@@ -775,10 +775,12 @@ SCIP_RETCODE presolveAddKKTKnapsackConss(
    {
       SCIP_CONS* cons;
       SCIP_VAR** vars;
+      SCIP_Longint* weights;
       SCIP_Real* vals;
       SCIP_Real lhs;
       SCIP_Real rhs;
       int nvars;
+      int v;
 
       /* get data of constraint */
       cons = conss[c];
@@ -787,11 +789,19 @@ SCIP_RETCODE presolveAddKKTKnapsackConss(
       rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons);
       nvars = SCIPgetNVarsKnapsack(scip, cons);
       vars = SCIPgetVarsKnapsack(scip, cons);
-      vals = (SCIP_Real*) SCIPgetWeightsKnapsack(scip, cons);
+      weights = SCIPgetWeightsKnapsack(scip, cons);
+
+      /* set coefficients of variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+      for (v = 0; v < nvars; ++v)
+         vals[v] = (SCIP_Real) weights[v];
 
       /* handle linear constraint for quadratic constraint update */
       SCIP_CALL( presolveAddKKTLinearCons(scip, objcons, SCIPconsGetName(cons),
             vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
+
+      /* free buffer array */
+      SCIPfreeBufferArray(scip, &vals);
    }
 
    /* remove knapsack constraints, since they are now redundant; their feasibility is already expressed
