@@ -1421,7 +1421,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
             SCIP_CONS* dualcons = NULL;  /* dual constraint associated to variable */
             SCIP_Real coef;
 
-            /* create/get dual constraint associated to variable 'bilvar1';
+            /* create/get dual constraint associated to variable;
              * if variable does not already exist in hashmap then create dual variables for its bounds */
             SCIP_CALL( createKKTDualCons(scip, objcons, var, varhash, dualconss, ndualconss, &dualcons, naddconss) );
             assert( dualcons != NULL );
@@ -1431,8 +1431,8 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
 
             /* change lhs and rhs of dual constraint */
             assert( ! SCIPisFeasZero(scip, scale) );
-            SCIP_CALL( SCIPchgLhsLinear(scip, dualcons, -coef / scale) );
-            SCIP_CALL( SCIPchgRhsLinear(scip, dualcons, -coef / scale) );
+            SCIP_CALL( SCIPchgLhsLinear(scip, dualcons, SCIPgetLhsLinear(scip, dualcons) - coef / scale) );
+            SCIP_CALL( SCIPchgRhsLinear(scip, dualcons, SCIPgetRhsLinear(scip, dualcons) - coef / scale) );
 
             /* add variable to objective constraint */
             SCIP_CALL( SCIPaddCoefLinear(scip, objcons, var, coef / (scale * 2)) );
@@ -1459,11 +1459,12 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
          assert( SCIPhashmapExists(varhash, var) );
          ind = (int) (size_t) SCIPhashmapGetImage(varhash, var);
          dualcons = dualconss[ind];
+         assert( dualcons != NULL );
 
          /* change lhs and rhs of dual constraint */
          assert( ! SCIPisFeasZero(scip, scale) );
-         SCIP_CALL( SCIPchgLhsLinear(scip, dualcons, -coef / scale) );
-         SCIP_CALL( SCIPchgRhsLinear(scip, dualcons, -coef / scale) );
+         SCIP_CALL( SCIPchgLhsLinear(scip, dualcons, SCIPgetLhsLinear(scip, dualcons) -coef / scale) );
+         SCIP_CALL( SCIPchgRhsLinear(scip, dualcons, SCIPgetRhsLinear(scip, dualcons) -coef / scale) );
 
          /* add variable to objective constraint */
          SCIP_CALL( SCIPaddCoefLinear(scip, objcons, var, coef / (scale * 2)) );
@@ -1971,14 +1972,14 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeQPKKTref) );
 
    /* add qpkktref presolver parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" PRESOL_NAME "/addkktbinary",
+   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/addkktbinary",
          "if TRUE then allow binary variables for KKT update",
          &presoldata->addkktbinary, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" PRESOL_NAME "/updatequadbounded",
+   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadbounded",
          "if TRUE then only apply the update to QPs with bounded variables; if the variables are not bounded then a \
          finite optimal solution might not exist and the KKT conditions would then be invalid",
-         &presoldata->addkktbinary, TRUE, TRUE, NULL, NULL) );
+         &presoldata->updatequadbounded, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
