@@ -997,7 +997,8 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
-   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip), DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
    SCIP_CALL( SCIPnlpStatisticsCreate(&propdata->nlpstatistics) );
 
    return SCIP_OKAY;
