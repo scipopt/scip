@@ -31,7 +31,7 @@
 #include <string.h>
 
 #include "scip/heur_randrounding.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "randrounding"
@@ -55,7 +55,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generation */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
    int                   maxproprounds;      /**< limit of rounds for each propagation call */
    SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
@@ -378,7 +378,7 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    heurdata->lastlp = -1;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -398,7 +398,7 @@ SCIP_DECL_HEUREXIT(heurExitRandrounding) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

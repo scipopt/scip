@@ -246,11 +246,13 @@ $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
+# TODO: checkout v2.3.0 when it becomes available
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"
 	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone -b v2.2.2 https://github.com/Snaipe/Criterion
+	git clone https://github.com/Snaipe/Criterion; \
 	cd Criterion; \
+	git reset --hard 3bad3c6aaa779d9ac580ae74cfcaa245aee0ee65; \
 	mkdir build; \
 	cd build; \
 	cmake ..; \
