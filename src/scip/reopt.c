@@ -30,7 +30,6 @@
 #include "scip/sol.h"
 #include "scip/var.h"
 #include "scip/misc.h"
-#include "scip/random.h"
 #include "scip/reopt.h"
 #include "scip/tree.h"
 #include "scip/primal.h"
@@ -3780,7 +3779,7 @@ SCIP_RETCODE reoptSaveNewObj(
 /** permute the variable and bound array randomly */
 static
 void permuteRandom(
-   SCIP_RANDGEN*         randnumgen,         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_VAR**            vars,               /**< variable array to permute */
    SCIP_Real*            vals,               /**< bound array to permute in the same order */
    int                   nvars               /**< number of variables */
@@ -4141,7 +4140,7 @@ SCIP_RETCODE SCIPreoptFree(
    SCIPclockFree(&(*reopt)->savingtime);
 
    /* free random number generator */
-   SCIPrandomFree(&(*reopt)->randnumgen, blkmem);
+   SCIPrandomFree(&(*reopt)->randnumgen);
 
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
    BMSfreeMemoryArray(&(*reopt)->objs);

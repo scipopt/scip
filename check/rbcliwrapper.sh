@@ -4,5 +4,4 @@
 # check/results should only contain results from one run
 
 cd check/
-./evalcheck_cluster.sh results/check.*.eval
-rbcli up results/check.*.{err,out,set}
+./evalcheck_cluster.sh -R results/check.*.eval

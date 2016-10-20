@@ -33,6 +33,7 @@ static SCIP_HEUR* heurmultistart;
 static SCIP_HASHMAP* varindex;
 static SCIP_EXPRINT* exprint;
 static SCIP_SOL* sol;
+static SCIP_RANDNUMGEN* randumgen;
 
 #define EPS    1e-5
 
@@ -76,11 +77,15 @@ void setup(void)
    heursubnlp = SCIPfindHeur(scip, "subnlp");
    cr_assert( heurmultistart != NULL );
    cr_assert( heursubnlp != NULL );
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randumgen, SCIPblkmem(scip), 777) );
 }
 
 static
 void teardown(void)
 {
+   SCIPrandomFree(&randumgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIPhashmapFree(&varindex);
@@ -93,15 +98,12 @@ Test(heuristic, sampleRandomPoints, .init = setup, .fini = teardown,
    )
 {
    SCIP_SOL** rndpoints;
-   unsigned int rndseed;
-
-   rndseed = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rndpoints, 1) );
 
    /* compute a single random point */
    rndpoints[0] = NULL;
-   SCIP_CALL( sampleRandomPoints(scip, rndpoints, 1, &rndseed, 1.0) );
+   SCIP_CALL( sampleRandomPoints(scip, rndpoints, 1, 1.0, randumgen) );
 
    cr_assert( rndpoints[0] != NULL );
    cr_assert( SCIPgetSolVal(scip, rndpoints[0], x) <= SCIPvarGetUbLocal(x) );
@@ -287,18 +289,16 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
    SCIP_Real maxreldist;
    int clusteridx[NPOINTS];
    int nclusters;
-   unsigned int seed;
    int i;
 
    maxreldist = 0.05;
-   seed = 5;
 
    /* create solutions with random values */
    for( i = 0; i < NPOINTS; ++i )
    {
       SCIP_CALL( SCIPcreateSol(scip, &points[i], NULL) );
-      SCIP_CALL( SCIPsetSolVal(scip, points[i], x, SCIPgetRandomReal(-1.0, 1.0, &seed)) );
-      SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPgetRandomReal(-10.0, 10.0, &seed)) );
+      SCIP_CALL( SCIPsetSolVal(scip, points[i], x, SCIPrandomGetReal(randumgen, -1.0, 1.0)) );
+      SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPrandomGetReal(randumgen, -10.0, 10.0)) );
    }
 
    SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, maxreldist, INT_MAX) );

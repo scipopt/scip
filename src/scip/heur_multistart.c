@@ -27,7 +27,6 @@
 #include "scip/heur_subnlp.h"
 
 #include "nlpi/exprinterpret.h"
-#include "scip/random.h"
 
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
@@ -62,6 +61,7 @@ struct SCIP_HeurData
    int                   nrndpoints;         /**< number of random points generated per execution call */
    unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_Real             maxboundsize;       /**< maximum variable domain size for unbounded variables */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
    int                   nmaxiter;           /**< number of iterations to reduce the maximum violation of a point */
    SCIP_Real             minimprfac;         /**< minimum required improving factor to proceed in the improvement of a single point */
@@ -103,11 +103,10 @@ SCIP_RETCODE sampleRandomPoints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            rndpoints,          /**< array to store all random points */
    int                   nrndpoints,         /**< total number of random points to compute */
-   unsigned int          rndseed,            /**< random seed */
-   SCIP_Real             maxboundsize        /**< maximum variable domain size for unbounded variables */
+   SCIP_Real             maxboundsize,       /**< maximum variable domain size for unbounded variables */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
-   SCIP_RANDGEN* rgen;
    SCIP_VAR** vars;
    SCIP_Real val;
    SCIP_Real lb;
@@ -119,10 +118,9 @@ SCIP_RETCODE sampleRandomPoints(
    assert(scip != NULL);
    assert(rndpoints != NULL);
    assert(nrndpoints > 0);
-   assert(rndseed != NULL);
    assert(maxboundsize > 0.0);
+   assert(randnumgen != NULL);
 
-   SCIP_CALL( SCIPrandomCreate(&rgen, SCIPblkmem(scip), rndseed) );
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
@@ -139,15 +137,15 @@ SCIP_RETCODE sampleRandomPoints(
             val = (lb + ub) / 2.0;
          /* use a smaller domain for unbounded variables */
          else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
-            val = SCIPrandomGetReal(rgen, lb, ub);
+            val = SCIPrandomGetReal(randnumgen, lb, ub);
          else if( !SCIPisInfinity(scip, -lb) )
-            val = SCIPrandomGetReal(rgen, lb, lb + maxboundsize);
+            val = SCIPrandomGetReal(randnumgen, lb, lb + maxboundsize);
          else if( !SCIPisInfinity(scip, ub) )
-            val = SCIPrandomGetReal(rgen, ub - maxboundsize, ub);
+            val = SCIPrandomGetReal(randnumgen, ub - maxboundsize, ub);
          else
          {
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
-            val = SCIPrandomGetReal(rgen, -0.5*maxboundsize, 0.5*maxboundsize);
+            val = SCIPrandomGetReal(randnumgen, -0.5*maxboundsize, 0.5*maxboundsize);
          }
          assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
 
@@ -157,8 +155,6 @@ SCIP_RETCODE sampleRandomPoints(
 
       assert(rndpoints[k] != NULL);
    }
-
-   SCIPrandomFree(&rgen, SCIPblkmem(scip));
 
    return SCIP_OKAY;
 }
@@ -725,7 +721,7 @@ SCIP_RETCODE applyHeur(
    /*
     * 1. sample random points; note that the solutions need to be freed again
     */
-   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->randseed, heurdata->maxboundsize) );
+   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->maxboundsize, heurdata->randnumgen) );
 
    /*
     * 2. improve points via consensus vectors
@@ -856,30 +852,32 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
 
    assert( heur != NULL );
 
-   /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
-   /* initialize data */
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_HEUREXIT(heurExitMultistart)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of multistart primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( heur != NULL );
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   assert(heurdata->randnumgen != NULL);
+
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
-#else
-#define heurExitMultistart NULL
-#endif
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */

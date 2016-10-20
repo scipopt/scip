@@ -30,7 +30,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define CONSHDLR_NAME          "setppc"
@@ -119,7 +119,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             addvariablesascliques;/**< should we try to generate extra clique constraint out of all binary
                                                 *   variables to hopefully fasten the detection of redundant clique
                                                 *   constraints */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
@@ -366,7 +366,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nsetpart = 0;
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&(*conshdlrdata)->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -387,7 +387,7 @@ SCIP_RETCODE conshdlrdataFree(
 #endif
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen) );
+   SCIPrandomFree(&(*conshdlrdata)->randnumgen);
 
    SCIPfreeMemory(scip, conshdlrdata);
 

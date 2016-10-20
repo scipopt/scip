@@ -235,8 +235,6 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_PERMUTECONSS     TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
-#define SCIP_DEFAULT_MISC_PERMUTEVARS     FALSE /**< should order of variables be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
@@ -257,8 +255,11 @@
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
-#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED  -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
+#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after the problem was transformed (0: no permutation) */
 #define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
+#define SCIP_DEFAULT_RANDOM_PERMUTECONSS   TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
+#define SCIP_DEFAULT_RANDOM_PERMUTEVARS   FALSE /**< should order of variables be permuted (depends on permutationseed)? */
+
 
 /* Node Selection */
 
@@ -1682,17 +1683,6 @@ SCIP_RETCODE SCIPsetCreate(
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
 #endif
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/permuteconss",
-         "should order of constraints be permuted (depends on permutationseed)?",
-         &(*set)->misc_permuteconss, TRUE, SCIP_DEFAULT_MISC_PERMUTECONSS,
-         NULL, NULL) );
-
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/permutevars",
-         "should order of variables be permuted (depends on permutationseed)?",
-         &(*set)->misc_permutevars, TRUE, SCIP_DEFAULT_MISC_PERMUTEVARS,
-         NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
@@ -1766,9 +1756,22 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/permutationseed",
-         "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
-         &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, -1, INT_MAX,
+         "seed value for permuting the problem after the problem was transformed (0: no permutation)",
+         &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, 0, INT_MAX,
          NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "randomization/permuteconss",
+         "should order of constraints be permuted (depends on permutationseed)?",
+         &(*set)->random_permuteconss, TRUE, SCIP_DEFAULT_RANDOM_PERMUTECONSS,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "randomization/permutevars",
+         "should order of variables be permuted (depends on permutationseed)?",
+         &(*set)->random_permutevars, TRUE, SCIP_DEFAULT_RANDOM_PERMUTEVARS,
+         NULL, NULL) );
+
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/lpseed",
