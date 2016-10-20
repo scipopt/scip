@@ -38,6 +38,8 @@
 #define DEFAULT_FEASTOLFAC         0.01      /**< default factor for NLP feasibility tolerance */
 #define DEFAULT_RELOBJTOLFAC       0.01      /**< default factor for NLP relative objective tolerance */
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
+#define DEFAULT_ITLIMITFACTOR       2.0      /**< multiple of root node LP iterations used as total LP iteration
+                                              *   limit for nlobbt (<= 0: no limit ) */
 #define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for off */
 #define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for off */
 #define DEFAULT_NLPVERLEVEL           0      /**< verbosity level of NLP solver */
@@ -70,6 +72,8 @@ struct SCIP_PropData
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
+   SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
+   int                   lastidx;            /**< index to store the last undone and unfiltered bound */
 
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for off */
@@ -81,6 +85,8 @@ struct SCIP_PropData
    SCIP_Real             minnonconvexfrac;   /**< minimum (#convex nlrows)/(#nonconvex nlrows) threshold to apply propagator */
    SCIP_Real             minlinearfrac;      /**< minimum (#convex nlrows)/(#linear nlrows) threshold to apply propagator */
    SCIP_Bool             addlprows;          /**< should (non-initial) LP rows be used? */
+   SCIP_Real             itlimitfactor;      /**< LP iteration limit for nlobbt will be this factor times total LP
+                                              *   iterations in root node */
 };
 
 /*
@@ -111,6 +117,8 @@ SCIP_RETCODE propdataClear(
    assert(propdata->nlpinvars == 0);
 
    propdata->skipprop = FALSE;
+   propdata->lastidx = 0;
+   propdata->lastnode = -1;
 
    return SCIP_OKAY;
 }
@@ -723,6 +731,7 @@ SCIP_RETCODE solveNlp(
    int                   varidx,             /**< variable index in the propdata->nlpivars array */
    SCIP_BOUNDTYPE        boundtype,          /**< minimize or maximize var? */
    int                   pos,                /**< current position in propdata->nlpivars array */
+   int*                  nlpiter,            /**< buffer to store the total number of nlp iterations */
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
@@ -743,6 +752,8 @@ SCIP_RETCODE solveNlp(
    assert(var != NULL);
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
    assert(result != NULL && *result != SCIP_CUTOFF);
+
+   *nlpiter = 0;
 
    /* set time and iteration limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -773,8 +784,8 @@ SCIP_RETCODE solveNlp(
    /* collect NLP statistics */
    assert(propdata->nlpstatistics != NULL);
    SCIP_CALL( SCIPnlpiGetStatistics(nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
-   SCIPdebugMsg(scip, "iterations %d time %g\n", SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics),
-      SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
+   *nlpiter = SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics);
+   SCIPdebugMsg(scip, "iterations %d time %g\n", *nlpiter, SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
 
    /* try to add a genvbound in the root node */
    if( propdata->genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
@@ -838,8 +849,6 @@ SCIP_RETCODE solveNlp(
  *  binary and variables with a small domain will be ignored to reduce the computational cost of the propagator; after
  *  solving each NLP we filter out all variable candidates which are on their lower or upper bound; candidates with a
  *  larger number of occurrences are preferred
- *
- *  @note propagor will be disabled if it did not find any reductions
  */
 static
 SCIP_RETCODE applyNlobbt(
@@ -849,6 +858,7 @@ SCIP_RETCODE applyNlobbt(
    )
 {
    SCIP_NLPI* nlpi;
+   int nlpiterleft;
    int i;
 
    assert(result != NULL);
@@ -867,6 +877,12 @@ SCIP_RETCODE applyNlobbt(
 
    nlpi = SCIPgetNlpis(scip)[0];
    *result = SCIP_DIDNOTFIND;
+
+   /* compute NLP iteration limit */
+   if( propdata->itlimitfactor > 0.0 )
+      nlpiterleft = propdata->itlimitfactor * SCIPgetNRootLPIterations(scip);
+   else
+      nlpiterleft = INT_MAX;
 
    /* recompute NLP relaxation if the variable set changed */
    if( propdata->nlpiprob != NULL && SCIPgetNVars(scip) != propdata->nlpinvars )
@@ -915,8 +931,11 @@ SCIP_RETCODE applyNlobbt(
    assert(propdata->nlpivars != NULL);
    assert(propdata->nlscore != NULL);
 
-   /* sort variables w.r.t. their nlscores */
-   SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void*)propdata->nlpivars, propdata->nlpinvars);
+   /* sort variables w.r.t. their nlscores if we did not solve any NLP for this node */
+   if( propdata->lastidx == 0 )
+   {
+      SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void*)propdata->nlpivars, propdata->nlpinvars);
+   }
 
    /* set parameters of NLP solver */
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac) );
@@ -925,7 +944,8 @@ SCIP_RETCODE applyNlobbt(
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
 
    /* main propagation loop */
-   for( i = 0; i < propdata->nlpinvars
+   for( i = propdata->lastidx; i < propdata->nlpinvars
+           && nlpiterleft > 0
            && SCIPisGT(scip, propdata->nlscore[i], 0.0)
            && *result != SCIP_CUTOFF
            && !SCIPisStopped(scip);
@@ -933,6 +953,7 @@ SCIP_RETCODE applyNlobbt(
    {
       SCIP_VAR* var;
       int varidx;
+      int iters;
 
       var = propdata->nlpivars[i];
       assert(var != NULL);
@@ -942,6 +963,8 @@ SCIP_RETCODE applyNlobbt(
          || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          continue;
 
+      SCIPdebugMsg(scip, "iterations left %d\n", nlpiterleft);
+
       /* get index of var in the nlpi */
       assert(SCIPhashmapExists(propdata->var2nlpiidx, (void*)var) );
       varidx = (int)(size_t)SCIPhashmapGetImage(propdata->var2nlpiidx, (void*)var);
@@ -950,15 +973,20 @@ SCIP_RETCODE applyNlobbt(
       /* case: minimize var */
       if( (propdata->status[i] & SOLVEDLB) == 0 )
       {
-         SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_LOWER, i, result) );
+         SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_LOWER, i, &iters, result) );
+         nlpiterleft -= iters;
       }
 
       /* case: maximize var */
       if( *result != SCIP_CUTOFF && (propdata->status[i] & SOLVEDUB) == 0 )
       {
-         SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_UPPER, i, result) );
+         SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_UPPER, i, &iters, result) );
+         nlpiterleft -= iters;
       }
    }
+
+   /* remember last position */
+   propdata->lastidx = i;
 
    return SCIP_OKAY;
 }
@@ -1000,6 +1028,7 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
    SCIP_CALL( SCIPnlpStatisticsCreate(&propdata->nlpstatistics) );
+   propdata->lastnode = -1;
 
    return SCIP_OKAY;
 }
@@ -1051,6 +1080,12 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    {
       SCIPdebugMsg(scip, "NLP not constructed, skipping nlobbt\n");
       return SCIP_OKAY;
+   }
+
+   if( SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) != propdata->lastnode )
+   {
+      propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+      propdata->lastidx = 0;
    }
 
    /* call main procedure of nonlinear OBBT propagator */
@@ -1127,6 +1162,10 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpverblevel",
          "verbosity level of NLP solver",
          &propdata->nlpverblevel, TRUE, DEFAULT_NLPVERLEVEL, 0, 5, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/itlimitfactor",
+         "LP iteration limit for nlobbt will be this factor times total LP iterations in root node",
+         &propdata->itlimitfactor, TRUE, DEFAULT_ITLIMITFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
