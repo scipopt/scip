@@ -976,7 +976,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
          assert(SCIPvarIsActive(vars[v]));
 
          /* skip continuous variables if they should ignored */
-         if( SCIPvarIsIntegral(vars[v]) && heurdata->ignorecont )
+         if( !SCIPvarIsIntegral(vars[v]) && heurdata->ignorecont )
             continue;
 
          solval = SCIPgetSolVal(scip, sol, vars[v]);
