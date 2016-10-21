@@ -2910,7 +2910,7 @@ SCIP_RETCODE solveNodeRelax(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_RELAXATION*      relaxation,         /**< @ENFORELAX */
+   SCIP_RELAXATION*      relaxation,         /**< relaxators */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
@@ -2921,8 +2921,8 @@ SCIP_RETCODE solveNodeRelax(
    SCIP_Bool*            solvelpagain,       /**< pointer to store TRUE, if the node's LP has to be solved again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called
                                               *   again */
-   SCIP_SOL*             bestrelaxsol,       /**< @ENFORELAX */
-   SCIP_Real*            bestrelaxval        /**< @ENFORELAX */
+   SCIP_SOL*             bestrelaxsol,       /**< pointer to store the best solution found by a relaxator which includes the LP */
+   SCIP_Real*            bestrelaxval        /**< pointer to store the best lower bound found by a relaxator which includes the LP */
    )
 {
    SCIP_RESULT result;
@@ -3068,8 +3068,8 @@ SCIP_RETCODE enforceConstraints(
    SCIP_Bool*            solvelpagain,       /**< pointer to store TRUE, if the node's LP has to be solved again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called again */
    SCIP_Bool             forced,             /**< should enforcement of pseudo solution be forced? */
-   SCIP_SOL*             bestrelaxsol,
-   SCIP_Real             bestrelaxval
+   SCIP_SOL*             bestrelaxsol,       /**< best solution found by a relaxator which includes the LP */
+   SCIP_Real             bestrelaxval        /**< best lower bound found by a relaxator which includes the LP */
    )
 {
    SCIP_RESULT result;
@@ -3440,8 +3440,8 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occured */
    SCIP_Bool*            pricingaborted,     /**< pointer to store TRUE, if the pricing was aborted and the lower bound must not be used */
    SCIP_Bool*            forcedenforcement,  /**< pointer to store whether the enforcement of pseudo solution should be forced */
-   SCIP_SOL*             bestrelaxsol,       /**< @ENFORELAX */
-   SCIP_Real*            bestrelaxval        /**< @ENFORELAX */
+   SCIP_SOL*             bestrelaxsol,       /**< pointer to store the best solution found by a relaxator which includes the LP */
+   SCIP_Real*            bestrelaxval        /**< pointer to store the best lower bound found by a relaxator which includes the LP */
    )
 {
    SCIP_Bool newinitconss;
