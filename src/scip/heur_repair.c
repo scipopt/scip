@@ -14,8 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   heur_repair.c
  * @brief  repair primal heuristic
- * @author Gregor Hendel, Thomas Nagel
+ * @author Gregor Hendel
+ * @author Thomas Nagel
+ *
  */
+
+/* author bzfhende: TODO write a short description of what the heuristic does (modify heur_repair.h accordingly) */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -45,7 +49,7 @@
 
 #define DEFAULT_FILENAME      "-" /**< file name of a solution to be used as infeasible starting point */
 #define DEFAULT_ROUNDIT       TRUE /**< if it is True : fractional variables which are not fractional in the given
-                                    *    solution are rounded, if it is FALSE : solvingprocess of this heuristic is stoped*/
+                                    *    solution are rounded, if it is FALSE : solving process of this heuristic is stopped */
 #define DEFAULT_USEOBJFACTOR  FALSE /**< should a scaled objective function for original variables be used in repair subproblem? */
 #define DEFAULT_USEVARFIX     TRUE  /**< should variable fixings be used in repair subproblem? */
 #define DEFAULT_USESLACKVARS  FALSE /**< should slack variables be used in repair subproblem? */
@@ -82,9 +86,22 @@ struct SCIP_HeurData
    SCIP_Real             relvarfixed;        /**< relative number of fixed vars */
 
    SCIP_Real             orsolval;           /**< value of the solution find by repair, in the original Problem*/
-   SCIP_Real             improovedoldsol;    /**< value of the given sol sfter beeing improoved by SCIP*/
-   SCIP_SOL*             infSol;             /**< infeasible solution to start with*/
+   SCIP_Real             improovedoldsol;    /**< value of the given sol sfter beeing improoved by SCIP */
+   /* author bzfhende: TODO don't use camel case in release code */
+   SCIP_SOL*             infSol;             /**< infeasible solution to start with */
 };
+
+
+/** TODO GENERAL TODOS:
+ *  - check potential definition in the code (seems wrong when used in tryFixVar)
+ *  - let the heuristic use reasonable node limits similar to other LNS's
+ *  - implement a minfixingrate-parameter
+ *  - concentrate on the binary and integer variables for the fixing.
+ *
+ *  - fold the methods extendedProgram and variableFixings into one that does both (and calls subroutines where necessary)
+ */
+
+/*
 
 
 /*
@@ -92,6 +109,7 @@ struct SCIP_HeurData
  */
 
 /** reads a given SCIP solution file, problem has to be transformed in advance */
+/* author bzfhende: TODO this is okay, but in the meantime when you merge master back in, there is a new function SCIPreadSol() */
 static
 SCIP_RETCODE readSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -239,7 +257,7 @@ SCIP_RETCODE readSol(
       return SCIP_OKAY;
 }
 
-
+/* author bzfhende: TODO method documentation is missing */
 static
 SCIP_RETCODE getObjectiveFactor(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -291,6 +309,9 @@ SCIP_RETCODE getObjectiveFactor(
          {
             continue;
          }
+         /* author bzfhende: TODO I think you should treat infinite bounds explicitly. By the way, it seems that you should
+          * exchange the use of lower and upper bounds for obtaining an "antipseudo"-solution-like upperbound */
+
          else if( SCIPisGT(scip, 0.0, upperbound) )
          {
             *factor += upperbound * SCIPvarGetLbGlobal(vars[i]);
@@ -308,14 +329,15 @@ SCIP_RETCODE getObjectiveFactor(
    {
       *factor = 1 / *factor;
    }
-   objoffset = (-1)* *factor * lprelaxobj;
+
+   /* author bzfhende: TODO please comment on the offset */
+   objoffset = -lprelaxobj * (*factor);
    SCIP_CALL( SCIPaddOrigObjoffset(subscip, -objoffset) );
 
    return SCIP_OKAY;
 }
 
-
-
+/* author bzfhende: TODO missing method documentation */
 static
 SCIP_Bool tryFixVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -328,6 +350,7 @@ SCIP_Bool tryFixVar(
    SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
+   /* author bzfhende: TODO alpha should be a parameter of the heuristic */
    SCIP_Real alpha = 2.0;
    int nrows;
    int i;
@@ -349,27 +372,34 @@ SCIP_Bool tryFixVar(
    vals = SCIPcolGetVals(col);
 
    /*todo iterate over nonzero rows*/
-   for(i=0; i<nrows; ++i)
+   for( i = 0; i < nrows; ++i)
    {
-      /*rowindex = SCIProwGetIndex(rows[i]);*/
+      /* author bzfhende: TODO what happens if the rowindex (which should be renamed rowpos) is -1? */
       rowindex = SCIProwGetLPPos(rows[i]);
+      assert(rowindex >= 0);
       sgn = 1;
       if( 0 > slack[rowindex])
       {
          sgn = -1;
       }
 
+      /* author bzfhende: TODO I think this needs to be a -sign because fixing this variable reduces the potential */
       if( 0 > sgn * vals[i] )
       {
-         potential[rowindex] += vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetLbGlobal(var));
+         assert(!SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)));
+         potential[rowindex] += vals[i] * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
       }
-      else{
-         potential[rowindex] += vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
+      else
+      {
+         assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
+         potential[rowindex] += vals[i] * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
       }
-      /*todo comment*/
+      /* todo comment negative slack means violated right hand side, but in this case, the potential is always positive because of the single contributions you compute */
       if( potential[rowindex] < alpha * slack[rowindex] )
       {
-         for( ; i>=0; --i)
+         /* author bzfhende: TODO this is hard to read here */
+
+         for( ; i >= 0; --i )
          {
             sgn = 1;
             /*rowindex = SCIProwGetIndex(rows[i]);*/
@@ -383,7 +413,8 @@ SCIP_Bool tryFixVar(
             {
                potential[rowindex] -= vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetLbGlobal(var));
             }
-            else{
+            else
+            {
                potential[rowindex] -= vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
             }
          }
@@ -392,13 +423,12 @@ SCIP_Bool tryFixVar(
    }
 
    return TRUE;
-   /*return FALSE;*/
 }
 /** checks if all integral variables in the given solution are integral. */
 static
 SCIP_RETCODE checkCands(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,
+   SCIP_SOL*             sol,                /* author bzfhende: TODO missing documentation */
    SCIP_Bool             roundit,
    SCIP_Bool*            success
    )
@@ -416,14 +446,15 @@ SCIP_RETCODE checkCands(
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
-   /* proofs if the candidates are fractional */
+   /* test if the candidates are fractional */
    nfracvars = nbinvars + nintvars;
-   for (i = 0; i < nfracvars; ++i)
+   for( i = 0; i < nfracvars; ++i)
    {
       SCIP_Real value;
       value = SCIPgetSolVal(scip, sol, vars[i]);
       if( !SCIPisFeasIntegral(scip, value) )
       {
+         /* author bzfhende: TODO use more sophisticated rounding that involves SCIPvarGetNLocksUp/Down() */
          if( roundit )
          {
             SCIP_Real roundedvalue;
@@ -492,10 +523,14 @@ SCIP_RETCODE createNewSol(
 
    return SCIP_OKAY;
 }
-/* put your local methods here, and declare them static */
+
 /** reads a given SCIP solution file, problem has to be transformed in advance */
 static
-SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
+SCIP_RETCODE extendedProgramm(
+   SCIP*                 scip,             /* author bzfhende: TODO missing documentation */
+   SCIP_HEUR*            heur,
+   SCIP_RESULT*          result
+   )
 {
    SCIP* subscip = NULL;
    SCIP_VAR** vars;
@@ -538,10 +573,11 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 
    SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
 
-   /* Gets all original variables */
+   /* gets all original variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
+   /* author bzfhende: TODO use new debug message function SCIPdebugMsg(scip, ...) */
    SCIPdebugMessage("\n\n Calling objective factor calculation \n\n");
    if( heurdata->useobjfactor )
    {
@@ -564,8 +600,8 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CONS* cons;
-      SCIP_Real orlb;
-      SCIP_Real orub;
+      SCIP_Real lborig;
+      SCIP_Real uborig;
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real objval;
@@ -573,44 +609,42 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       SCIP_Real slack;
       SCIP_VARTYPE vartype;
       char varname[1024];
-      char slackvarname[1024];
-      char consvarname[1024];
 
       heurdata->norvars++;
       slack = 0.0;
-      orlb = SCIPvarGetLbGlobal(vars[i]);
-      orub = SCIPvarGetUbGlobal(vars[i]);
+      lborig = SCIPvarGetLbGlobal(vars[i]);
+      uborig = SCIPvarGetUbGlobal(vars[i]);
       value = SCIPgetSolVal(scip, sol, vars[i]);
       vartype = SCIPvarGetType(vars[i]);
       objval = SCIPvarGetObj(vars[i])*factor;
 
-      if(SCIPisZero(scip, objval))
+      if( SCIPisZero(scip, objval) )
       {
          objval = 0.0;
       }
 
       sprintf(varname, "sub_%s", SCIPvarGetName(vars[i]));
 
-      /* if the value of x is lower than the lower bound, sets the slack to an correcting value*/
-      if( SCIPisFeasLT(scip, value, orlb) )
+      /* if the value of x is lower than the lower bound, sets the slack to an correcting value */
+      if( SCIPisFeasLT(scip, value, lborig) )
       {
          lb = value;
-         slack = orlb - value;
+         slack = lborig - value;
       }
       else
       {
-         lb = orlb;
+         lb = lborig;
       }
 
       /* if the value of x is bigger than the upper bound, sets the slack to an correcting value*/
-      if( SCIPisFeasGT(scip, value, orub) )
+      if( SCIPisFeasGT(scip, value, uborig) )
       {
          ub = value;
-         slack = orub - value;
+         slack = uborig - value;
       }
       else
       {
-         ub = orub;
+         ub = uborig;
       }
 
       /* if an binary variable is out of bound, generalize it to an integer variable */
@@ -626,18 +660,22 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       if( !SCIPisFeasEQ(scip, slack, 0.0) )
       {
          SCIP_VAR* newvar;
+         char consvarname[1024];
+         char slackvarname[1024];
+
          sprintf(slackvarname, "artificialslack_%s", SCIPvarGetName(vars[i]));
          sprintf(consvarname, "boundcons_%s", SCIPvarGetName(vars[i]));
 
          /* initialize and add an artificial slack variable */
+         /* author bzfhende: TODO didn't we want to change the variable type to continuous? */
          SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, slackvarname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY));
          SCIP_CALL(SCIPaddVar(subscip, newvar));
 
-         /* set the value of the slack variable to 1 to punish the use of it. */
+         /* set the value of the slack variable to 1 to make subsolution feasible */
          SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
 
          /* adds a linear constraint to represent the old bounds */
-         SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, slack, orlb, orub) );
+         SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, slack, lborig, uborig) );
          SCIP_CALL( SCIPaddCons(subscip, cons) );
          SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
          SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -652,7 +690,7 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    nrows = SCIPgetNLPRows(scip);
 
    /* Adds all original constraints and adapts their bounds */
-   for (i = 0; i < nrows; ++i)
+   for( i = 0; i < nrows; ++i )
    {
       SCIP_COL** cols;
       SCIP_VAR** consvars;
@@ -660,7 +698,6 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       SCIP_VAR* newvar;
       SCIP_Real* vals;
       SCIP_Real slack;
-      char varname[1024];
       int nnonz;
       SCIP_Real constant;
       SCIP_Real lhs;
@@ -683,13 +720,13 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 
       nnonz = SCIProwGetNNonz(rows[i]);
       cols = SCIProwGetCols(rows[i]);
-      SCIP_CALL(SCIPallocBufferArray(scip, &consvars, nnonz));
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
 
       /* translate all variables from the original scip to the subscip with subscip variables. */
-      for (j = 0; j < nnonz; ++j)
+      for( j = 0; j < nnonz; ++j )
       {
          int pos;
-
+         /* author bzfhende: TODO here, you should avoid columns with position -1 */
          pos = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
          consvars[j] = subvars[pos];
       }
@@ -698,7 +735,7 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &cons, SCIProwGetName(rows[i]),
                nnonz, consvars, vals, lhs, rhs) );
 
-      /* Sets the slack if its necessary */
+      /* sets the slack if its necessary: negative slack for right hand side violation, positive slack for left hand side violation */
       if( SCIPisFeasLT(scip, rowsolact, lhs) )
       {
          slack = lhs - rowsolact;
@@ -715,7 +752,9 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       /*if necessary adds an new artificial slack variable*/
       if( !SCIPisFeasEQ(subscip, slack, 0.0) )
       {
+         char varname[1024];
          sprintf(varname, "artificialslack_%s", SCIProwGetName(rows[i]));
+         /* author bzfhende: TODO vartype should be continuous, right? */
          SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(subscip, newvar) );
          SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
@@ -748,6 +787,8 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, subsol);
    SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
 
+   /* author bzfhende: TODO make this a meaningful debug(!) message, currently, it states 'repair was not good enough' where it should
+    * say something like 'subsolution could not be added' */
    if( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Repair was not good enough.\n");
@@ -839,7 +880,10 @@ SCIP_RETCODE extendedProgramm(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    assert(SCIPgetNSols(subscip) > 0);
-   if( SCIPisLT(scip, SCIPgetPrimalbound(subscip),1.0) )
+   /* author bzfhende: TODO in the case of continuous slack variables, you would need to check the feasibility of the
+    * returned solution by checking all slack variables
+    */
+   if( SCIPisLT(scip, SCIPgetPrimalbound(subscip), 1.0) )
    {
       SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
 
@@ -872,7 +916,7 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &subvars);
    if( NULL != subscip )
    {
-      SCIPfree(&subscip);
+      SCIP_CALL( SCIPfree(&subscip) );
    }
 
    return SCIP_OKAY;
@@ -881,6 +925,7 @@ TERMINATE:
 /**
  *
  */
+/* author bzfhende: TODO adapt method head according to the SCIP style guidelines */
 
 static
 SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
@@ -891,11 +936,11 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIP_ROW** rows = NULL;
    SCIP_CONS** subcons = NULL;
    int* nviolatedrows = NULL;
-   int* permutaion = NULL;
+   int* permutation = NULL;
    SCIP_SOL* sol = NULL;
    SCIP_SOL* subsol = NULL;
    SCIP_HEURDATA* heurdata = NULL;
-   SCIP_Real* potential= NULL;
+   SCIP_Real* potential = NULL;
    SCIP_Real* slack = NULL;
    SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real timelimit;
@@ -939,7 +984,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedrows, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &permutaion, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permutation, nvars) );
 
    SCIPdebugMessage("\n\n Calling objective factor calculation \n\n");
       if( heurdata->useobjfactor )
@@ -977,6 +1022,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
 
+      /* author bzfhende: TODO whenever this happens, you do not need to add the solution because it violates a bound */
       if( SCIPisFeasLT(scip, value, lb) || SCIPisFeasGT(scip,value,ub) )
       {
          heurdata->nviolatedvars++;
@@ -1021,7 +1067,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       cols = SCIProwGetCols(rows[i]);
       SCIP_CALL(SCIPallocBufferArray(subscip, &consvars, nnonz));
 
-      /* Sets the slack if its necessary */
+      /* sets the slack if its necessary */
       if( SCIPisFeasLT(scip, rowsolact, lhs) )
       {
          slack[i] = lhs - rowsolact;
@@ -1038,13 +1084,15 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       }
 
       /* translate all variables from the original scip to the subscip with subscip variables. */
-      for (j = 0; j < nnonz; ++j)
+      for( j = 0; j < nnonz; ++j )
       {
          int pos;
          int sgn = 1;
 
-         if( 0 > slack[i])
+         /* negative slack represents a right hand side violation */
+         if( 0 > slack[i] )
          {
+            assert(!SCIPisInfinity(scip, rhs));
             sgn = -1;
          }
 
@@ -1055,10 +1103,12 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          assert(!SCIPisZero(scip,vals[j]));
          if( 0 > sgn * vals[j] )
          {
+            assert(!SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[pos])));
             potential[i] += vals[j] * (SCIPgetSolVal(scip, sol, vars[pos]) - SCIPvarGetLbGlobal(vars[pos]));
          }
          else
          {
+            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[pos])));
             potential[i] += vals[j] * (SCIPgetSolVal(scip, sol, vars[pos]) - SCIPvarGetUbGlobal(vars[pos]));
          }
          if( !SCIPisZero(scip, slack[i]) )
@@ -1078,6 +1128,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       SCIPfreeBufferArray(subscip, &consvars);
    }
 
+   /* author bzfhende: TODO don't you need an #ifdef here? */
    {
       FILE* probfile;
       char* bfilename;
@@ -1105,20 +1156,21 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    /* get the greedy order */
    for( i = 0; i < nvars; ++i )
    {
-      permutaion[i] = i;
+      permutation[i] = i;
    }
-   SCIPsortIntInt(nviolatedrows, permutaion, nvars);
+   SCIPsortIntInt(nviolatedrows, permutation, nvars);
 
-   /* loops over variables and fix all which appear in no violated row */
+   /* loops over variables and greedily fix variables, but preserve the cover property that enough slack is given to violated rows */
    heurdata->nvarfixed = 0;
    for( i = 0; i < nvars; ++i )
    {
-      printf("Try to fix %s",SCIPvarGetName(vars[permutaion[i]]));
-      if(tryFixVar(scip, sol, potential, slack, vars[permutaion[i]] ))
+      /* author bzfhende: TODO get rid of the printf's */
+      printf("Try to fix %s",SCIPvarGetName(vars[permutation[i]]));
+      if( tryFixVar(scip, sol, potential, slack, vars[permutation[i]]) )
       {
          SCIP_Bool infeasible = FALSE;
          SCIP_Bool fixed = TRUE;
-         SCIP_CALL( SCIPfixVar(subscip, subvars[permutaion[i]], SCIPgetSolVal(scip, sol, vars[permutaion[i]]), &infeasible, &fixed) );
+         SCIP_CALL( SCIPfixVar(subscip, subvars[permutation[i]], SCIPgetSolVal(scip, sol, vars[permutation[i]]), &infeasible, &fixed) );
          assert(!infeasible && fixed);
          heurdata->nvarfixed++;
          printf("  fixed!!!");
@@ -1131,7 +1183,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
     }
    printf("fixings finished\n\n");
 
-   /*todo delete all redudant code, especially all addings of original variables and constraints !!!*/
+   /*todo delete all redundant code, especially all addings of original variables and constraints !!!*/
    if( heurdata->useslackvars )
    {
       /*SCIP_VAR** tmpvars = NULL;*/
@@ -1146,8 +1198,8 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       for( i = 0; i < nvars; ++i )
       {
          SCIP_CONS* cons;
-         SCIP_Real orlb;
-         SCIP_Real orub;
+         SCIP_Real lborig;
+         SCIP_Real uborig;
          SCIP_Real lb;
          SCIP_Real ub;
          SCIP_Real objval;
@@ -1159,37 +1211,37 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          char consvarname[1024];
 
          sla = 0.0;
-         orlb = SCIPvarGetLbGlobal(subvars[i]);
-         orub = SCIPvarGetUbGlobal(subvars[i]);
+         lborig = SCIPvarGetLbGlobal(subvars[i]);
+         uborig = SCIPvarGetUbGlobal(subvars[i]);
          value = SCIPgetSolVal(scip, sol, subvars[i]);
          vartype = SCIPvarGetType(subvars[i]);
 
-         nviolatedrows[i]=0;
+         nviolatedrows[i] = 0;
 
          sprintf(varname, "sub_%s", SCIPvarGetName(subvars[i]));
 
-         /* if the value of x is lower than the lower bound, sets the slack to an correcting value*/
-         if( SCIPisFeasLT(scip, value, orlb) )
+         /* if the value of x is lower than the lower bound, sets the slack to an correcting value */
+         if( SCIPisFeasLT(scip, value, lborig) )
          {
             lb = value;
-            sla = orlb - value;
+            sla = lborig - value;
             SCIPchgVarLbGlobal(subscip,subvars[i],lb);
          }
          else
          {
-            lb = orlb;
+            lb = lborig;
          }
 
          /* if the value of x is bigger than the upper bound, sets the slack to an correcting value*/
-         if( SCIPisFeasGT(scip, value, orub) )
+         if( SCIPisFeasGT(scip, value, uborig) )
          {
             ub = value;
-            sla = orub - value;
+            sla = uborig - value;
             SCIPchgVarUbGlobal(subscip,subvars[i],ub);
          }
          else
          {
-            ub = orub;
+            ub = uborig;
          }
 
          objval = SCIPvarGetObj(vars[i])*factor;
@@ -1227,7 +1279,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
             SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
 
             /* adds a linear constraint to represent the old bounds */
-            SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, sla, orlb, orub) );
+            SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, sla, lborig, uborig) );
             SCIP_CALL( SCIPaddCons(subscip, cons) );
             SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
             SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -1347,6 +1399,8 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    }
 
    success = FALSE;
+
+   /* author bzfhende: TODO comment this */
    if( SCIPgetBestSol(subscip) != NULL )
    {
       heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
@@ -1378,8 +1432,10 @@ TERMINATE:
    {
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
    }
+
+   /* author bzfhende: TODO buffer arrays must be freed in reverse order of allocation */
    SCIPfreeBufferArrayNull(scip, &subvars);
-   SCIPfreeBufferArrayNull(scip, &permutaion);
+   SCIPfreeBufferArrayNull(scip, &permutation);
    SCIPfreeBufferArrayNull(scip, &potential);
    SCIPfreeBufferArrayNull(scip, &slack);
    SCIPfreeBufferArrayNull(scip, &subcons);
@@ -1517,7 +1573,7 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    sprintf(message, "%s  \n\n\t fixed variables: %d\n\t relative fixed varibales: %.2f%%\n", message, heurdata->nvarfixed, 100* relfixed);
    sprintf(message, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
    sprintf(message, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
-   /* Prints all statistic data for an user*/
+   /* prints all statistic data for a user*/
    SCIPstatistic(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
    )
@@ -1753,7 +1809,7 @@ SCIP_RETCODE SCIPincludeHeurRepair(
          "should a scaled objective function for original variables be used in repair subproblem?",
          &heurdata->useobjfactor, FALSE, DEFAULT_USEOBJFACTOR, NULL, NULL));
 
-   /* add bool parameter for decision if variable fixings should be used*/
+   /* add bool parameter for decision if variable fixings should be used */
       SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usevarfix",
             "should variable fixings be used in repair subproblem?",
             &heurdata->usevarfix, FALSE, DEFAULT_USEVARFIX, NULL, NULL));
