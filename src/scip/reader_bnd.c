@@ -47,6 +47,17 @@
 #define READER_DESC             "file reader for variable bounds"
 #define READER_EXTENSION        "bnd"
 
+#define DEFAULT_BND_USEBRACKETS FALSE     /**< Should variable names be enclosed in <> (allows for spaces in varnames) */
+#define DEFAULT_BND_IMPROVEONLY FALSE     /**< Should bounds only be updated if they are improvements of current bounds */
+
+
+/** BND reading data */
+struct SCIP_ReaderData
+{
+   SCIP_Bool             usebrackets;     /**< Should variable names be enclosed in <> (allows for spaces in varnames) */
+   SCIP_Bool             improveonly;     /**< Should bounds only be updated if they are improvements of current bounds */
+};
+
 
 /*
  * Local methods of reader
@@ -56,7 +67,8 @@
 static
 SCIP_RETCODE readBounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           fname               /**< name of the input file */
+   const char*           fname,              /**< name of the input file */
+   SCIP_READERDATA*      readerdata          /**< pointer to the data of the reader */
    )
 {
    SCIP_FILE* file;
@@ -100,6 +112,7 @@ SCIP_RETCODE readBounds(
       SCIP_Real lb;
       SCIP_Real ub;
       int nread;
+      char* endptr;
 
       /* get next line */
       if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
@@ -109,24 +122,53 @@ SCIP_RETCODE readBounds(
       /* parse the line */
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
       nread = sscanf(buffer, format, varname, lbstring, ubstring);
-      if( nread < 2 )
-      {
-         SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
-         error = TRUE;
-         break;
-      }
 
-      /* find the variable */
-      var = SCIPfindVar(scip, varname);
-      if( var == NULL )
+      if( readerdata->usebrackets == TRUE)
       {
-         if( !unknownvariablemessage )
+         SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
+
+         nread = sscanf(endptr, "%s %s\n", lbstring, ubstring);
+         if( nread < 1 )
          {
-            SCIPwarningMessage(scip, "unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
-            SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
-            unknownvariablemessage = TRUE;
+            SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
+            error = TRUE;
+            break;
          }
-         continue;
+
+         if( var == NULL )
+         {
+            if( !unknownvariablemessage )
+            {
+               SCIPwarningMessage(scip, "unable to parse variable name in line %d of bounds file <%s>:\n", lineno, fname);
+               SCIPwarningMessage(scip, "line is: %s", buffer);
+               SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
+               unknownvariablemessage = TRUE;
+            }
+            continue;
+         }
+      }
+      else
+      {
+
+         if( nread < 2 )
+         {
+            SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
+            error = TRUE;
+            break;
+         }
+
+         /* find the variable */
+         var = SCIPfindVar(scip, varname);
+         if( var == NULL )
+         {
+            if( !unknownvariablemessage )
+            {
+               SCIPwarningMessage(scip, "unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
+               SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
+               unknownvariablemessage = TRUE;
+            }
+            continue;
+         }
       }
 
       /* cast the lower bound value */
@@ -168,15 +210,42 @@ SCIP_RETCODE readBounds(
       }
 
       /* set the bounds of the variable */
-      if( lb <= SCIPvarGetUbGlobal(var) )
+      if( readerdata->improveonly )
       {
-         SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
-         SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+         if( SCIPisGE(scip, lb, SCIPvarGetLbGlobal(var)))
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "not applying lower bound value %s for variable <%s> in line %d of bounds file %s, "
+               "because it does not improve existing bound of %f\n",
+               lbstring, SCIPvarGetName(var), lineno, fname, SCIPvarGetLbGlobal(var));
+         }
+
+         if( SCIPisLE(scip, ub, SCIPvarGetUbGlobal(var)))
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "not applying upper bound value %s for variable <%s> in line %d of bounds file %s, "
+               "because it does not improve existing bound of %f\n",
+               ubstring, SCIPvarGetName(var), lineno, fname, SCIPvarGetUbGlobal(var));
+         }
       }
       else
       {
-         SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
-         SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+         if( lb <= SCIPvarGetUbGlobal(var) )
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+            SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+            SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+         }
       }
    }
 
@@ -237,7 +306,7 @@ SCIP_DECL_READERREAD(readerReadBnd)
    }
 
    /* read bounds file */
-   SCIP_CALL( readBounds(scip, filename) );
+   SCIP_CALL( readBounds(scip, filename, SCIPreaderGetData(reader)) );
 
    *result = SCIP_SUCCESS;
 
@@ -278,7 +347,8 @@ SCIP_RETCODE SCIPwriteBnd(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
-   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the file writing call */
+   SCIP_READERDATA*      readerdata          /**< pointer to the data of the reader */
    )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
@@ -311,7 +381,14 @@ SCIP_RETCODE SCIPwriteBnd(
       {
          varname = varname + 2;
       }
-      SCIPinfoMessage(scip, file, "%s ", varname);
+      if( readerdata->usebrackets == TRUE)
+      {
+         SCIPinfoMessage(scip, file, "<%s> ", varname);
+      }
+      else
+      {
+         SCIPinfoMessage(scip, file, "%s ", varname);
+      }
 
       /* print global bounds for transformed variables, original bounds for original variables */
       if( !SCIPvarIsTransformed(var) )
@@ -340,7 +417,21 @@ SCIP_DECL_READERWRITE(readerWriteBnd)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
-   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result) );
+   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result, SCIPreaderGetData(reader)) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of reader to free reader data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeBnd)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   SCIPfreeMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -358,7 +449,7 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP_READER* reader;
 
    /* create reader data */
-   readerdata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
@@ -367,6 +458,18 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyBnd) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBnd) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteBnd) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeBnd) );
+
+
+   /* add bnd reader parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/bndreader/usebrackets", "should variable names be enclosed in <> (allows for spaces in varnames)",
+         &readerdata->usebrackets, FALSE, DEFAULT_BND_USEBRACKETS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/bndreader/improveonly", "should bounds only be updated if they are improvements of current bounds",
+         &readerdata->improveonly, FALSE, DEFAULT_BND_IMPROVEONLY, NULL, NULL) );
 
    return SCIP_OKAY;
 }
+
