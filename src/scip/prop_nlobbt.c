@@ -141,9 +141,9 @@ SCIP_RETCODE propdataFree(
    return SCIP_OKAY;
 }
 
-/** adds LP rows to the convex NLP relaxation */
+/** adds linear rows to the convex NLP relaxation */
 static
-SCIP_RETCODE nlpRelaxAddLpRows(
+SCIP_RETCODE nlpRelaxAddRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
@@ -161,7 +161,7 @@ SCIP_RETCODE nlpRelaxAddLpRows(
    assert(var2idx != NULL);
    assert(rows != NULL || nrows == 0);
 
-   SCIPdebugMsg(scip, "call nlpRelaxAddLpRows() with %d LP rows\n", nrows);
+   SCIPdebugMsg(scip, "call nlpRelaxAddRows() with %d rows\n", nrows);
 
    if( nrows <= 0 )
       return SCIP_OKAY;
@@ -908,10 +908,10 @@ SCIP_RETCODE applyNlobbt(
          propdata->nlscore[i] *= 1.0 + SCIPrandomGetReal(propdata->randnumgen, SCIPfeastol(scip), 2.0 * SCIPfeastol(scip));
       }
 
-      /* add root LP rows */
+      /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( nlpRelaxAddLpRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx, SCIPgetLPRows(scip),
+         SCIP_CALL( nlpRelaxAddRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx, SCIPgetLPRows(scip),
                SCIPgetNLPRows(scip)) );
       }
    }
