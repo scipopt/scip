@@ -656,25 +656,16 @@ SCIP_RETCODE solveNLP(
    return SCIP_OKAY;
 }
 
-/** main function of the multi-start heuristic; the algorithm contains the following steps
+/** main function of the multi-start heuristic (see @ref heur_multistart.h for more details); it consists of the
+ *  following four steps:
  *
- *  1. sample random points in the box defined by the variable bounds; shrink the domain of unbounded variables
+ *  1. sampling points in the current domain; for unbounded variables we use a bounded box
  *
- *  2. improve all points by using constraint consensus vectors
- *     a. s^i_{k+1} = x_k + -g(x_k) / ||grad g(x_k)||^2 grad g(x_k) for all violated constraints i = 1,..,m
- *     b. x_k{+1} = (1 / nviols) sum_{i=1,..,m} s^i_{k+1} where nviols is the number of violated constraints for x_k
+ *  2. reduce infeasibility by using a gradient descent method
  *
- *  3. filter points which have a too large violation; let v_p the maximum violation of point p
- *     a. compute the mean violation v_mean (use shifted geometric mean)
- *     b. filter points p with v_p < scalar * v_mean
+ *  3. cluster points; filter points with a too large maximum infeasibility
  *
- *  4. compute disjoint cluster C_1,..,C_K for the filtered points
- *
- *  5. solve sub-problem by using cluster information; cluster are used either as
- *     a. solve NLP with reference point x = 1/|C_k| sum{p in C_k} p
- *     b. solve sub-SCIP with reduced domains [lb_i,ub_i] = [min_{p in C_k} p_i, max_{p in C_k} p_i]
- *     c. solve linear relaxation with additional variables lambda_p >=0 for each p in C_k and an additional constraint
- *        x = sum_{p in C_k} lambda_p * p
+ *  4. compute start point for each cluster and use it in the sub-NLP heuristic (@ref heur_subnlp.h)
  */
 static
 SCIP_RETCODE applyHeur(
@@ -719,7 +710,7 @@ SCIP_RETCODE applyHeur(
    }
 
    /*
-    * 1. sample random points; note that the solutions need to be freed again
+    * 1. sampling points in the current domain; for unbounded variables we use a bounded box
     */
    SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->maxboundsize, heurdata->randnumgen) );
 
@@ -733,7 +724,7 @@ SCIP_RETCODE applyHeur(
    }
 
    /*
-    * 3. filter points with a too large violation
+    * 3. cluster points; filter points with a too large maximum infeasibility
     */
    SCIP_CALL( filterPoints(scip, points, violations, heurdata->nrndpoints, &nusefulpoints) );
    assert(nusefulpoints >= 0);
@@ -742,9 +733,6 @@ SCIP_RETCODE applyHeur(
    if( nusefulpoints == 0 )
       goto TERMINATE;
 
-   /*
-    * 4. compute clusters
-    */
    SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxreldist,
          heurdata->maxncluster) );
    assert(ncluster >= 0 && ncluster <= heurdata->maxncluster);
@@ -753,7 +741,7 @@ SCIP_RETCODE applyHeur(
    SCIPsortIntPtr(clusteridx, (void**)points, nusefulpoints);
 
    /*
-    * 5. solve for each cluster a corresponding sub-problem
+    * 4. compute start point for each cluster and use it in the sub-NLP heuristic (@ref heur_subnlp.h)
     */
    start = 0;
    while( start < nusefulpoints && clusteridx[start] != INT_MAX && !SCIPisStopped(scip) )
