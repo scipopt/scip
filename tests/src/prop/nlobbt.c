@@ -106,7 +106,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
     *   s.t.  2 <= x^2 + y^2 + 3x -2y <=  4
     *        -4 <= -0.5 x^2 - 2 y^2   <= -2
     *       -10 <= xy                 <= 10
-    *         1 <= x + y - 1          <=  3
+    *         1 <= 3x + -2y - 1       <=  3
     *         1 <= e^x  + x -y        <= 10
     *              x in [-5,5]
     *              y in [-10,10]
