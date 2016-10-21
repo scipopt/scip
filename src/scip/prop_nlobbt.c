@@ -40,8 +40,8 @@
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
 #define DEFAULT_ITLIMITFACTOR       2.0      /**< multiple of root node LP iterations used as total LP iteration
                                               *   limit for nlobbt (<= 0: no limit ) */
-#define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for off */
-#define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for off */
+#define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for no limit */
+#define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for no limit */
 #define DEFAULT_NLPVERLEVEL           0      /**< verbosity level of NLP solver */
 #define DEFAULT_RANDSEED             79      /**< initial random seed */
 
@@ -75,8 +75,8 @@ struct SCIP_PropData
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
    int                   lastidx;            /**< index to store the last undone and unfiltered bound */
 
-   int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
-   SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for off */
+   int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
+   SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for no limit */
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
 
@@ -1152,11 +1152,11 @@ SCIP_RETCODE SCIPincludePropNlobbt(
          &propdata->addlprows, FALSE, DEFAULT_ADDLPROWS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpiterlimit",
-         "iteration limit of NLP solver; 0 for off",
+         "iteration limit of NLP solver; 0 for no limit",
          &propdata->nlpiterlimit, TRUE, DEFAULT_NLPTIMELIMIT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/nlptimelimit",
-         "time limit of NLP solver; 0.0 for off",
+         "time limit of NLP solver; 0.0 for no limit",
          &propdata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpverblevel",
