@@ -41,7 +41,7 @@
 #define DEFAULT_RANDSEED      59             /**< initial random seed */
 #define DEFAULT_NRNDPOINTS    100            /**< default number of generated random points per call */
 #define DEFAULT_MAXBOUNDSIZE  2e+4           /**< default maximum variable domain size for unbounded variables */
-#define DEFAULT_NMAXITER      300            /**< default number of iterations to reduce the maximum violation of a point */
+#define DEFAULT_MAXITER       300            /**< default number of iterations to reduce the maximum violation of a point */
 #define DEFAULT_MINIMPRFAC    0.05           /**< default minimum required improving factor to proceed in improvement of a point */
 #define DEFAULT_MINIMPRITER   10             /**< default number of iteration when checking the minimum improvement */
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
@@ -63,7 +63,7 @@ struct SCIP_HeurData
    SCIP_Real             maxboundsize;       /**< maximum variable domain size for unbounded variables */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
-   int                   nmaxiter;           /**< number of iterations to reduce the maximum violation of a point */
+   int                   maxiter;            /**< number of iterations to reduce the maximum violation of a point */
    SCIP_Real             minimprfac;         /**< minimum required improving factor to proceed in the improvement of a single point */
    int                   minimpriter;        /**< number of iteration when checking the minimum improvement */
 
@@ -300,7 +300,7 @@ SCIP_RETCODE improvePoint(
    SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 */
    SCIP_EXPRINT*         exprinterpreter,    /**< expression interpreter */
    SCIP_SOL*             point,              /**< random generated point */
-   int                   nmaxiter,           /**< maximum number of iterations */
+   int                   maxiter,            /**< maximum number of iterations */
    SCIP_Real             minimprfac,         /**< minimum required improving factor to proceed in the improvement of a single point */
    int                   minimpriter,        /**< number of iteration when checking the minimum improvement */
    SCIP_Real*            maxviol             /**< pointer to store the maximum violation */
@@ -317,7 +317,7 @@ SCIP_RETCODE improvePoint(
    assert(varindex != NULL);
    assert(exprinterpreter != NULL);
    assert(point != NULL);
-   assert(nmaxiter > 0);
+   assert(maxiter > 0);
    assert(maxviol != NULL);
    assert(nlrows != NULL);
    assert(nnlrows > 0);
@@ -344,7 +344,7 @@ SCIP_RETCODE improvePoint(
    SCIP_CALL( SCIPallocBufferArray(scip, &updatevec, nvars) );
 
    /* main loop */
-   for( r = 0; r < nmaxiter && SCIPisFeasLT(scip, *maxviol, 0.0); ++r )
+   for( r = 0; r < maxiter && SCIPisFeasLT(scip, *maxviol, 0.0); ++r )
    {
       SCIP_Real feasibility;
       SCIP_Real activity;
@@ -374,7 +374,7 @@ SCIP_RETCODE improvePoint(
          /* stop if the gradient disappears at the current point */
          if( SCIPisZero(scip, nlrownorm) )
          {
-            r = nmaxiter - 1;
+            r = maxiter - 1;
 #ifdef SCIP_DEBUG_IMPROVEPOINT
             SCIPdebugMessage("gradient vanished at current point -> stop\n");
 #endif
@@ -729,7 +729,7 @@ SCIP_RETCODE applyHeur(
    for( i = 0; i < heurdata->nrndpoints; ++i )
    {
       SCIP_CALL( improvePoint(scip, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), varindex, heurdata->exprinterpreter, points[i],
-         heurdata->nmaxiter, heurdata->minimprfac, heurdata->minimpriter, &violations[i]) );
+         heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &violations[i]) );
    }
 
    /*
@@ -968,9 +968,9 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
          "maximum variable domain size for unbounded variables",
          &heurdata->maxboundsize, FALSE, DEFAULT_MAXBOUNDSIZE, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nmaxiter",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiter",
          "number of iterations to reduce the maximum violation of a point",
-         &heurdata->nmaxiter, FALSE, DEFAULT_NMAXITER, 0, INT_MAX, NULL, NULL) );
+         &heurdata->maxiter, FALSE, DEFAULT_MAXITER, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprfac",
          "minimum required improving factor to proceed in improvement of a single point",
