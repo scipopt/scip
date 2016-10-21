@@ -62,6 +62,7 @@ typedef enum BoundStatus BOUNDSTATUS;
 /** propagator data */
 struct SCIP_PropData
 {
+   SCIP_NLPI*            nlpi;               /**< nlpi used to create the nlpi problem */
    SCIP_NLPIPROBLEM*     nlpiprob;           /**< nlpi problem representing the convex NLP relaxation */
    SCIP_HASHMAP*         var2nlpiidx;        /**< mapping between variables and nlpi indices */
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
@@ -104,13 +105,13 @@ SCIP_RETCODE propdataClear(
 
    if( propdata->nlpiprob != NULL )
    {
-      assert(SCIPgetNNlpis(scip) > 0);
+      assert(propdata->nlpi != NULL);
 
       SCIPfreeMemoryArray(scip, &propdata->status);
       SCIPfreeMemoryArray(scip, &propdata->nlscore);
       SCIPfreeMemoryArray(scip, &propdata->nlpivars);
       SCIPhashmapFree(&propdata->var2nlpiidx);
-      SCIPnlpiFreeProblem(SCIPgetNlpis(scip)[0], &propdata->nlpiprob);
+      SCIPnlpiFreeProblem(propdata->nlpi, &propdata->nlpiprob);
 
       propdata->nlpinvars = 0;
    }
@@ -482,8 +483,7 @@ SCIP_RETCODE nlpRelaxCreate(
 static
 SCIP_RETCODE nlpRelaxUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_NLPI*            nlpi                /**< interface to NLP solver */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
    SCIP_Real* lbs;
@@ -492,8 +492,6 @@ SCIP_RETCODE nlpRelaxUpdate(
    SCIP_Real rhs;
    int* inds;
    int i;
-
-   assert(nlpi != NULL);
 
    SCIPdebugMsg(scip, "call nlpRelaxUpdate()\n");
 
@@ -513,7 +511,7 @@ SCIP_RETCODE nlpRelaxUpdate(
       assert(inds[i] >= 0 && inds[i] < propdata->nlpinvars);
    }
 
-   SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, propdata->nlpiprob, propdata->nlpinvars, inds, lbs, ubs) );
+   SCIP_CALL( SCIPnlpiChgVarBounds(propdata->nlpi, propdata->nlpiprob, propdata->nlpinvars, inds, lbs, ubs) );
 
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &ubs);
@@ -524,7 +522,7 @@ SCIP_RETCODE nlpRelaxUpdate(
    rhs = SCIPgetCutoffbound(scip);
    i = 0;
 
-   SCIP_CALL( SCIPnlpiChgConsSides(nlpi, propdata->nlpiprob, 1, &i, &lhs, &rhs) );
+   SCIP_CALL( SCIPnlpiChgConsSides(propdata->nlpi, propdata->nlpiprob, 1, &i, &lhs, &rhs) );
 
    return SCIP_OKAY;
 }
@@ -588,7 +586,6 @@ static
 SCIP_RETCODE filterCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    int                   pos,                /**< current position in the propdata->nlpivars array */
    SCIP_NLPSOLSTAT       nlpsolstat          /**< NLP solution status */
    )
@@ -601,7 +598,7 @@ SCIP_RETCODE filterCands(
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
    assert(primal != NULL);
 
    for( ; pos < propdata->nlpinvars; ++pos )
@@ -646,7 +643,6 @@ static
 SCIP_RETCODE addGenVBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_VAR*             var,                /**< variable used in last NLP solve */
    int                   varidx,             /**< variable index in the propdata->nlpivars array */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound provided by the genvbound */
@@ -668,10 +664,10 @@ SCIP_RETCODE addGenVBound(
    assert(var != NULL);
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
 
-   if( SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob) > SCIP_NLPSOLSTAT_LOCOPT )
+   if( SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) > SCIP_NLPSOLSTAT_LOCOPT )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta) );
+   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta) );
 
    /* not possible to generate genvbound if the duals for the propagated variable do not disappear */
    if( !SCIPisFeasZero(scip, alpha[varidx] + beta[varidx]) )
@@ -726,7 +722,6 @@ static
 SCIP_RETCODE solveNlp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_VAR*             var,                /**< variable to propagate */
    int                   varidx,             /**< variable index in the propdata->nlpivars array */
    SCIP_BOUNDTYPE        boundtype,          /**< minimize or maximize var? */
@@ -748,7 +743,6 @@ SCIP_RETCODE solveNlp(
    oldub = SCIPvarGetUbLocal(var);
 #endif
 
-   assert(nlpi != NULL);
    assert(var != NULL);
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
    assert(result != NULL && *result != SCIP_CUTOFF);
@@ -769,40 +763,40 @@ SCIP_RETCODE solveNlp(
    if( propdata->nlptimelimit > 0.0 )
       timelimit = MIN(propdata->nlptimelimit, timelimit);
    iterlimit = propdata->nlpiterlimit > 0 ? propdata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
+   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPnlpiSetIntPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
 
    /* set corresponding objective coefficient and solve NLP */
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, propdata->nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
 
    SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
       propdata->nlscore[pos]);
-   SCIP_CALL( SCIPnlpiSolve(nlpi, propdata->nlpiprob) );
-   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob));
+   SCIP_CALL( SCIPnlpiSolve(propdata->nlpi, propdata->nlpiprob) );
+   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob));
 
    /* collect NLP statistics */
    assert(propdata->nlpstatistics != NULL);
-   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
+   SCIP_CALL( SCIPnlpiGetStatistics(propdata->nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
    *nlpiter = SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics);
    SCIPdebugMsg(scip, "iterations %d time %g\n", *nlpiter, SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
 
    /* try to add a genvbound in the root node */
    if( propdata->genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
    {
-      SCIP_CALL( addGenVBound(scip, propdata, nlpi, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
+      SCIP_CALL( addGenVBound(scip, propdata, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
    }
 
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
-   SCIP_CALL( filterCands(scip, propdata, nlpi, pos+1, SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob)) );
+   SCIP_CALL( filterCands(scip, propdata, pos+1, SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob)) );
 
    /* try to tighten variable bound */
-   if( SCIPnlpiGetSolstat(nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
+   if( SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
    {
       SCIP_Bool tightened;
       SCIP_Bool infeasible;
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
 
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -828,7 +822,7 @@ SCIP_RETCODE solveNlp(
          /* update bounds in NLP */
          lb = SCIPvarGetLbLocal(var);
          ub = SCIPvarGetUbLocal(var);
-         SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, propdata->nlpiprob, 1, &varidx, &lb, &ub) );
+         SCIP_CALL( SCIPnlpiChgVarBounds(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &lb, &ub) );
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "tightened bounds of %s from [%g,%g] to [%g,%g]\n", SCIPvarGetName(var), oldlb, oldub, lb, ub);
@@ -838,7 +832,7 @@ SCIP_RETCODE solveNlp(
 
    /* reset objective function */
    obj = 0.0;
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, propdata->nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
 
    return SCIP_OKAY;
 }
@@ -857,7 +851,6 @@ SCIP_RETCODE applyNlobbt(
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
-   SCIP_NLPI* nlpi;
    int nlpiterleft;
    int i;
 
@@ -875,7 +868,6 @@ SCIP_RETCODE applyNlobbt(
       return SCIP_OKAY;
    }
 
-   nlpi = SCIPgetNlpis(scip)[0];
    *result = SCIP_DIDNOTFIND;
 
    /* compute NLP iteration limit */
@@ -895,15 +887,17 @@ SCIP_RETCODE applyNlobbt(
    if( propdata->nlpiprob == NULL )
    {
       propdata->nlpinvars = SCIPgetNVars(scip);
+      propdata->nlpi = SCIPgetNlpis(scip)[0];
+      assert(propdata->nlpi != NULL);
 
-      SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
+      SCIP_CALL( SCIPnlpiCreateProblem(propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip),
             SCIPcalcHashtableSize(propdata->nlpinvars)) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
-      SCIP_CALL( nlpRelaxCreate(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), propdata->nlpiprob,
+      SCIP_CALL( nlpRelaxCreate(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), propdata->nlpiprob,
             propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip)) );
 
       /* initialize bound status; perturb nlscores by a factor which ensures sure that zero scores remain zero */
@@ -917,13 +911,13 @@ SCIP_RETCODE applyNlobbt(
       /* add root LP rows */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( nlpRelaxAddLpRows(scip, nlpi, propdata->nlpiprob, propdata->var2nlpiidx, SCIPgetLPRows(scip),
+         SCIP_CALL( nlpRelaxAddLpRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx, SCIPgetLPRows(scip),
                SCIPgetNLPRows(scip)) );
       }
    }
    else
    {
-      SCIP_CALL( nlpRelaxUpdate(scip, propdata, nlpi) );
+      SCIP_CALL( nlpRelaxUpdate(scip, propdata) );
    }
 
    assert(propdata->nlpiprob != NULL);
@@ -938,10 +932,13 @@ SCIP_RETCODE applyNlobbt(
    }
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * propdata->feastolfac) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * propdata->relobjtolfac) );
-   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
+   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
+         SCIPfeastol(scip) * propdata->feastolfac) );
+   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
+         SCIPfeastol(scip) * propdata->feastolfac) );
+   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
+         SCIPfeastol(scip) * propdata->relobjtolfac) );
+   SCIP_CALL( SCIPnlpiSetIntPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
 
    /* main propagation loop */
    for( i = propdata->lastidx; i < propdata->nlpinvars
@@ -973,14 +970,14 @@ SCIP_RETCODE applyNlobbt(
       /* case: minimize var */
       if( (propdata->status[i] & SOLVEDLB) == 0 )
       {
-         SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_LOWER, i, &iters, result) );
+         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_LOWER, i, &iters, result) );
          nlpiterleft -= iters;
       }
 
       /* case: maximize var */
       if( *result != SCIP_CUTOFF && (propdata->status[i] & SOLVEDUB) == 0 )
       {
-         SCIP_CALL( solveNlp(scip, propdata, nlpi, var, varidx, SCIP_BOUNDTYPE_UPPER, i, &iters, result) );
+         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_UPPER, i, &iters, result) );
          nlpiterleft -= iters;
       }
    }
