@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_shifting.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "shifting"
@@ -46,7 +46,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
 };
 
@@ -580,7 +580,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
    heurdata->lastlp = -1;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    SCIPheurSetData(heur, heurdata);
@@ -602,7 +602,7 @@ SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);

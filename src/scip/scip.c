@@ -86,7 +86,6 @@
 #include "scip/heur.h"
 #include "scip/compr.h"
 #include "scip/nodesel.h"
-#include "scip/random.h"
 #include "scip/reader.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
@@ -651,10 +650,10 @@ void SCIPprintBuildOptions(
 #elif defined(__clang__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "clang %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif defined(_MSC_VER)
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c++ %d\n", _MSC_FULL_VER);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c %d\n", _MSC_FULL_VER);
 #elif defined(__GNUC__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-#elif
+#else
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
 #endif
 
@@ -1882,7 +1881,7 @@ SCIP_Bool SCIPisConsCompressionEnabled(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisProblemCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    /* is problem compression enabled */
-   return SCIPprobIsConsCompressionEnabled(scip->origprob);
+   return SCIPprobIsConsCompressionEnabled(scip->origprob) && SCIPgetStage(scip) == SCIP_STAGE_PROBLEM;
 }
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
@@ -9683,15 +9682,15 @@ SCIP_RETCODE SCIPreadProb(
             SCIPfreeMemoryArray(scip, &nconss);
          }
 
-         /* in case the permutation seed is different to -1, permute the original problem */
-         if( scip->set->random_permutationseed > -1 )
+         /* in case the permutation seed is different to 0, permute the original problem */
+         if( scip->set->random_permutationseed > 0 )
          {
             SCIP_Bool permuteconss;
             SCIP_Bool permutevars;
             int       permutationseed;
 
-            permuteconss = scip->set->misc_permuteconss;
-            permutevars = scip->set->misc_permutevars;
+            permuteconss = scip->set->random_permuteconss;
+            permutevars = scip->set->random_permutevars;
             permutationseed = scip->set->random_permutationseed;
 
             SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
@@ -10013,7 +10012,7 @@ SCIP_RETCODE SCIPpermuteProb(
 {
    SCIP_VAR** vars;
    SCIP_CONSHDLR** conshdlrs;
-   SCIP_RANDGEN* randnumgen;
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Bool permuted;
    int nconshdlrs;
    int nbinvars;
@@ -10161,7 +10160,7 @@ SCIP_RETCODE SCIPpermuteProb(
    }
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen, scip->mem->probmem);
+   SCIPrandomFree(&randnumgen);
 
    return SCIP_OKAY;
 }
@@ -12849,24 +12848,6 @@ SCIP_RETCODE checkSolOrig(
    if( !printreason )
       completely = FALSE;
 
-   /* call constraint handlers that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-   {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
    /* check bounds */
    if( checkbounds )
    {
@@ -12891,6 +12872,24 @@ SCIP_RETCODE checkSolOrig(
                SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
                   SCIPvarGetName(var), lb, ub, solval);
             }
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
 
             if( !completely )
                return SCIP_OKAY;
@@ -13227,15 +13226,15 @@ SCIP_RETCODE SCIPtransformProb(
    /* call initialization methods of plugins */
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
-   /* in case the permutation seed is different to -1, permute the transformed problem */
-   if( scip->set->random_permutationseed > -1 )
+   /* in case the permutation seed is different to 0, permute the transformed problem */
+   if( scip->set->random_permutationseed > 0 )
    {
       SCIP_Bool permuteconss;
       SCIP_Bool permutevars;
       int permutationseed;
 
-      permuteconss = scip->set->misc_permuteconss;
-      permutevars = scip->set->misc_permutevars;
+      permuteconss = scip->set->random_permuteconss;
+      permutevars = scip->set->random_permutevars;
       permutationseed = scip->set->random_permutationseed;
 
       SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
@@ -20522,6 +20521,16 @@ SCIP_RETCODE SCIPchgVarLb(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -20602,6 +20611,16 @@ SCIP_RETCODE SCIPchgVarUb(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -20678,6 +20697,17 @@ SCIP_RETCODE SCIPchgVarLbNode(
    else
    {
       SCIPvarAdjustLb(var, scip->set, &newbound);
+
+      /* ignore tightenings of lower bounds to +infinity during solving process */
+      if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+#ifndef NDEBUG
+         SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+            SCIPvarGetLbLocal(var));
+#endif
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
             scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
             SCIP_BOUNDTYPE_LOWER, FALSE) );
@@ -20711,6 +20741,17 @@ SCIP_RETCODE SCIPchgVarUbNode(
    else
    {
       SCIPvarAdjustUb(var, scip->set, &newbound);
+
+      /* ignore tightenings of upper bounds to -infinity during solving process */
+      if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+#ifndef NDEBUG
+         SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+            SCIPvarGetUbLocal(var));
+#endif
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
             scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
             SCIP_BOUNDTYPE_UPPER, FALSE) );
@@ -20745,6 +20786,16 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
    SCIP_CALL( checkStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    switch( scip->set->stage )
    {
@@ -20822,6 +20873,16 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP_CALL( checkStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    switch( scip->set->stage )
    {
@@ -20981,6 +21042,16 @@ SCIP_RETCODE SCIPtightenVarLb(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPcomputeVarLbLocal(scip, var);
    ub = SCIPcomputeVarUbLocal(scip, var);
@@ -21086,6 +21157,16 @@ SCIP_RETCODE SCIPtightenVarUb(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPcomputeVarLbLocal(scip, var);
@@ -21257,6 +21338,16 @@ SCIP_RETCODE SCIPinferVarLbCons(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound)  && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -21359,6 +21450,16 @@ SCIP_RETCODE SCIPinferVarUbCons(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
@@ -21629,6 +21730,16 @@ SCIP_RETCODE SCIPinferVarLbProp(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound)  && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -21731,6 +21842,16 @@ SCIP_RETCODE SCIPinferVarUbProp(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
@@ -21936,6 +22057,16 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -22045,6 +22176,16 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
       *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    /* get current bounds */
    lb = SCIPvarGetLbGlobal(var);
@@ -23875,69 +24016,6 @@ unsigned int SCIPinitializeRandomSeed(
    assert(scip != NULL);
 
    return (unsigned int)SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
-}
-
-/** creates a random number generator
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *
- */
-SCIP_RETCODE SCIPcreateRandomNumberGenerator(
-   SCIP*                 scip,
-   SCIP_RANDGEN**        randnumgen,
-   int                   initialseed
-   )
-{
-   assert(scip != NULL);
-   assert(randnumgen != NULL);
-
-   SCIP_CALL( SCIPrandomCreate(randnumgen, scip->mem->probmem, initialseed) );
-
-   return SCIP_OKAY;
-}
-
-/** frees a random number generator
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
- *
- */
-SCIP_RETCODE SCIPfreeRandomNumberGenerator(
-   SCIP*                 scip,
-   SCIP_RANDGEN**        randnumgen
-   )
-{
-   assert(scip != NULL);
-   assert(randnumgen != NULL);
-
-   SCIPrandomFree(randnumgen, scip->mem->probmem);
-
-   return SCIP_OKAY;
 }
 
 /** marks the variable that it must not be multi-aggregated
@@ -33181,6 +33259,16 @@ SCIP_RETCODE SCIPchgVarLbProbing(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( SCIPisInfinity(scip, newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
          scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
          var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
@@ -33214,6 +33302,16 @@ SCIP_RETCODE SCIPchgVarUbProbing(
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(scip->tree)) == SCIP_NODETYPE_PROBINGNODE);
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
          scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
