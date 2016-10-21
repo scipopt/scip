@@ -27,7 +27,6 @@
 #include "scip/cons_linear.h"
 #include "scip/heur_vardegree.h"
 #include "scip/pub_misc.h"
-#include "scip/random.h"
 
 #define HEUR_NAME             "vardegree"
 #define HEUR_DESC             "vardegree works on k-neighborhood in a variable-constraint graph"
@@ -72,7 +71,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Vardegree should at least improve the incumbent */
    SCIP_Longint          usednodes;          /**< nodes already used by Vardegree in earlier calls */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator                              */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                              */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
@@ -986,7 +985,7 @@ SCIP_DECL_HEURINIT(heurInitVardegree)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
    heurdata->sumdiscneighborhoodvars = heurdata->sumneighborhoodvars = 0;
    heurdata->nneighborhoods = 0;
@@ -1038,7 +1037,7 @@ SCIP_DECL_HEUREXIT(heurExitVardegree)
       printHistogram(scip, heurdata->consdiscvarshist, "Constraint discrete density histogram");
       )
 
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
    heurdata->randnumgen = NULL;
 
    return SCIP_OKAY;
