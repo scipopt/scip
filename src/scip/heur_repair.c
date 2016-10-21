@@ -118,7 +118,7 @@ SCIP_RETCODE readSol(
 
    if( strcmp(fname, DEFAULT_FILENAME) == 0 )
    {
-      SCIPfreeSol(scip, &sol);
+      /*SCIPfreeSol(scip, &sol);*/
       SCIPlinkLPSol(scip, sol);
       return SCIP_OKAY;
    }

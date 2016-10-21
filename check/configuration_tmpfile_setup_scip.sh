@@ -103,7 +103,7 @@ then
         echo "datei da"
 #         echo -e "\n\n\n Datei :${datei} \n\n\n"
 #         echo -e $datei
-        echo set heuristics repair filename "${DIR}/${datei}"  >> $TMPFILE
+#        echo set heuristics repair filename "${DIR}/${datei}"  >> $TMPFILE
 #         echo set heuristic repair freq  0   >> $TMPFILE
     fi
 
