@@ -777,11 +777,13 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    STATUS*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
-   SCIP_Real             lpobjval,           /**< objective value of the base lp */
+   SCIP_Real             globallpobjval,       /**< objective value of the base lp */
+   SCIP_Real             localpobjval,
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary cons.
                                               *   Can be NULL.*/
    SCIP_VAR*             deepbranchvar,      /**< variable to branch up and down on */
    SCIP_Real             deepbranchvarsolval,/**< (fractional) solution value of the branching variable */
+   SCIP_Real             deepbranchvarfrac,
    SCIP_Real*            dualbound,
    SCIP_Bool*            fullcutoff,         /**< resulting decision whether this branch is cutoff */
    WEIGHTDATA*           weightdata,         /**< container to be filled with the weight relevant data */
@@ -835,33 +837,37 @@ SCIP_RETCODE executeDeepBranchingOnVar(
          if( !downresultdata->cutoff && !upresultdata->cutoff )
          {
             /* if both branches are not cutoff we can calculate the weight for the current first level branching node */
-            SCIP_Real downgain;
-            SCIP_Real upgain;
+            SCIP_Real globaldowngain;
+            SCIP_Real globalupgain;
+            SCIP_Real localdowngain;
+            SCIP_Real localupgain;
 
             /* in SCIP we minimize, so the (non-negative) gain is difference between the new obj value and the base lp one */
-            downgain = downresultdata->objval - lpobjval;
-            upgain = upresultdata->objval - lpobjval;
+            globaldowngain = downresultdata->objval - globallpobjval;
+            globalupgain = upresultdata->objval - globallpobjval;
+            localdowngain = downresultdata->objval - localpobjval;
+            localupgain = upresultdata->objval - localpobjval;
 
             SCIPdebugMessage("The difference between the objective values of the base lp and the upper bounded lp is <%g>\n",
-               downgain);
-            if( SCIPisNegative(scip, downgain) )
+               globaldowngain);
+            if( SCIPisNegative(scip, globaldowngain) )
             {
                SCIPdebugMessage("The difference is negative. To work on we overwrite it with 0.\n");
-               downgain = 0;
+               globaldowngain = 0;
             }
 
             SCIPdebugMessage("The difference between the objective values of the base lp and the lower bounded lp is <%g>\n",
-               upgain);
-            if( SCIPisNegative(scip, upgain) )
+               globalupgain);
+            if( SCIPisNegative(scip, globalupgain) )
             {
                SCIPdebugMessage("The difference is negative. To work on we overwrite it with 0.\n");
-               upgain = 0;
+               globalupgain = 0;
             }
-            assert(!SCIPisFeasNegative(scip, downgain));
-            assert(!SCIPisFeasNegative(scip, upgain));
+            assert(!SCIPisFeasNegative(scip, globaldowngain));
+            assert(!SCIPisFeasNegative(scip, globalupgain));
 
             /* calculate the weight of both gains */
-            currentweight = SCIPgetBranchScore(scip, NULL, downgain, upgain);
+            currentweight = SCIPgetBranchScore(scip, NULL, globaldowngain, globalupgain);
 
             /* add the new weight to the weight data */
             weightdata->highestweight = MAX(weightdata->highestweight, currentweight);
@@ -870,6 +876,9 @@ SCIP_RETCODE executeDeepBranchingOnVar(
 
             SCIPdebugMessage("The sum of weights is <%g>.\n", weightdata->sumofweights);
             SCIPdebugMessage("The number of weights is <%i>.\n", weightdata->numberofweights);
+
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, deepbranchvar, 0.0-deepbranchvarfrac, localdowngain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, deepbranchvar, 1.0-deepbranchvarfrac, localupgain, 1.0) );
 
             *dualbound = MAX(*dualbound, MIN(downresultdata->objval, upresultdata->objval));
             *fullcutoff = FALSE;
@@ -892,6 +901,11 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             )
             if( upresultdata->cutoff )
             {
+               SCIP_Real localdowngain;
+
+               localdowngain = downresultdata->objval - localpobjval;
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, deepbranchvar, 0.0-deepbranchvarfrac, localdowngain, 1.0) );
+
                *dualbound = MAX(*dualbound, downresultdata->objval);
 
                if( basevarforbound != NULL && branchruledata->useimpliedbincons && SCIPvarIsBinary(deepbranchvar) )
@@ -909,6 +923,11 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             }
             if( downresultdata->cutoff )
             {
+               SCIP_Real localupgain;
+
+               localupgain = upresultdata->objval - localpobjval;
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, deepbranchvar, 1.0-deepbranchvarfrac, localupgain, 1.0) );
+
                *dualbound = MAX(*dualbound, upresultdata->objval);
 
                if( basevarforbound != NULL && branchruledata->useimpliedbincons && SCIPvarIsBinary(deepbranchvar) )
@@ -977,6 +996,7 @@ SCIP_RETCODE executeDeepBranching(
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
    SCIP_Real             lpobjval,           /**< objective value of the base lp */
+   SCIP_Real             locallpobjval,
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary
                                               *   bounds. Can be NULL.*/
    SCIP_Real*            dualbound,
@@ -988,16 +1008,17 @@ SCIP_RETCODE executeDeepBranching(
    BINARYBOUNDDATA*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
    )
 {
-   SCIP_VAR**  lpcands;
-   SCIP_Real*  lpcandssol;
-   int         nlpcands;
-   int         j;
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
+   int nlpcands;
+   int j;
 
    assert(scip != NULL);
    assert(ncutoffs != NULL);
 
    /* get the branching candidates for the current probing node */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
    SCIPdebugMessage("The deeper lp has <%i> variables with fractional value.\n", nlpcands);
 
@@ -1006,14 +1027,16 @@ SCIP_RETCODE executeDeepBranching(
       /* get the current variable and solution value */
       SCIP_VAR* deepbranchvar = lpcands[j];
       SCIP_Real deepbranchvarsolval = lpcandssol[j];
+      SCIP_Real deepbranchvarfrac = lpcandsfrac[j];
 
       SCIPdebugMessage("Start deeper branching on variable <%s> with solution value <%g> in [<%g>..<%g>].\n",
          SCIPvarGetName(deepbranchvar), deepbranchvarsolval, SCIPvarGetLbLocal(deepbranchvar),
          SCIPvarGetUbLocal(deepbranchvar));
 
       /* execute the second level branching for a variable */
-      SCIP_CALL( executeDeepBranchingOnVar(scip, branchruledata, status, baselpsol, basenode, lpobjval, basevarforbound,
-            deepbranchvar, deepbranchvarsolval, dualbound, fullcutoff, weightdata, ncutoffs, supposedbounds, binarybounddata) );
+      SCIP_CALL( executeDeepBranchingOnVar(scip, branchruledata, status, baselpsol, basenode, lpobjval, locallpobjval,
+         basevarforbound, deepbranchvar, deepbranchvarsolval, deepbranchvarfrac, dualbound, fullcutoff, weightdata,
+         ncutoffs, supposedbounds, binarybounddata) );
    }
 
    return SCIP_OKAY;
@@ -1238,6 +1261,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP_SOL*             baselpsol,          /**< the lp solution of the base node */
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
+   SCIP_Real*            lpcandsfrac,
    int                   nlpcands,           /**< number of fractional variables/solution values */
    STATUS*               status,             /**< a container to store the algo status in */
    int*                  bestcand,           /**< calculated index of the branching variable */
@@ -1325,6 +1349,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          SCIP_VAR* branchvar;
          SCIP_Real branchval;
+         SCIP_Real branchfrac;
          SCIP_Real downdualbound;
          SCIP_Real updualbound;
 
@@ -1339,6 +1364,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
          branchvar = lpcands[i];
          branchval = lpcandssol[i];
+         branchfrac = lpcandsfrac[i];
 
          SCIPdebugMessage("Start branching on variable <%s>\n", SCIPvarGetName(branchvar));
 
@@ -1355,6 +1381,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
             if( !status->limitreached && !status->lperror && !downbranchingresult->cutoff )
             {
                SCIP_VAR* basevarforbound = NULL;
+               SCIP_Real locallpobjval;
+               SCIP_Real gain;
+
                if( SCIPvarIsBinary(branchvar) )
                {
                   /* To (possibly) create an implied binary bound later, we need the negated var (1-x) for this down branching
@@ -1365,11 +1394,15 @@ SCIP_RETCODE selectVarLookaheadBranching(
                }
 
                downdualbound = downbranchingresult->objval;
+               locallpobjval = downbranchingresult->objval;
+
+               gain = MAX(0, locallpobjval - lpobjval);
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0-branchfrac, gain, 1.0) );
 
                /* execute the branchings on the second level after the down branching on the first level */
-               SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, basevarforbound,
-                     &downdualbound, &downbranchingresult->cutoff, scoredata->upperbounddata, &scoredata->ncutoffs,
-                     supposedbounds, binarybounddata) );
+               SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, locallpobjval,
+                     basevarforbound, &downdualbound, &downbranchingresult->cutoff, scoredata->upperbounddata,
+                     &scoredata->ncutoffs, supposedbounds, binarybounddata) );
             }
 
             /* reset the probing model */
@@ -1389,6 +1422,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
             if( !status->limitreached && !status->lperror && !upbranchingresult->cutoff )
             {
                SCIP_VAR* basevarforbound = NULL;
+               SCIP_Real locallpobjval;
+               SCIP_Real gain;
+
                if( SCIPvarIsBinary(branchvar) )
                {
                   /* To (possibly) create an implied binary bound later, we need the var (x) for this up branching case.
@@ -1398,11 +1434,15 @@ SCIP_RETCODE selectVarLookaheadBranching(
                }
 
                updualbound = upbranchingresult->objval;
+               locallpobjval = upbranchingresult->objval;
+
+               gain = MAX(0, locallpobjval - lpobjval);
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1-branchfrac, gain, 1.0) );
 
                /* execute the branchings on the second level after the up branching on the first level */
-               SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, basevarforbound,
-                     &updualbound, &upbranchingresult->cutoff, scoredata->lowerbounddata, &scoredata->ncutoffs,
-                     supposedbounds, binarybounddata) );
+               SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, locallpobjval,
+                     basevarforbound, &updualbound, &upbranchingresult->cutoff, scoredata->lowerbounddata,
+                     &scoredata->ncutoffs, supposedbounds, binarybounddata) );
             }
 
             /* reset the probing model */
@@ -1718,20 +1758,23 @@ SCIP_RETCODE getLPBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           lpcands,            /**< a pointer to store the variables */
    SCIP_Real**           lpcandssol,         /**< a pointer to store the solution values of the vars */
+   SCIP_Real**           lpcandsfrac,
    int*                  nlpcands            /**< a pointer to store the number of candidates */
    )
 {
    SCIP_VAR** tmplpcands;
    SCIP_Real* tmplpcandssol;
+   SCIP_Real* tmplpcandsfrac;
 
    /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, NULL, nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, nlpcands, NULL, NULL) );
    assert(*nlpcands > 0);
 
    /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
     * solution during the second level branchings */
    SCIP_CALL( SCIPduplicateBufferArray(scip, lpcands, tmplpcands, *nlpcands) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandssol, tmplpcandssol, *nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandsfrac, tmplpcandsfrac, *nlpcands) );
 
    return SCIP_OKAY;
 }
@@ -1771,6 +1814,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    {
       SCIP_VAR** lpcands;
       SCIP_Real* lpcandssol;
+      SCIP_Real* lpcandsfrac;
       int nlpcands;
       int bestcand = 0;
       /* TODO: maybe add a struct for the resulting branching data below? */
@@ -1782,7 +1826,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       STATUS* status;
 
       /* get all fractional candidates we can branch on */
-      SCIP_CALL( getLPBranchCands(scip, &lpcands, &lpcandssol, &nlpcands) );
+      SCIP_CALL( getLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
       SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", nlpcands);
 
@@ -1790,7 +1834,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_CALL( allocateStatus(scip, &status) );
 
       /* execute the main logic */
-      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata, baselpsol, lpcands, lpcandssol, nlpcands,
+      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata, baselpsol, lpcands, lpcandssol, lpcandsfrac, nlpcands,
             status, &bestcand, &bestdown, &bestdownvalid, &bestup, &bestupvalid, &provedbound) );
       SCIPdebugMessage("Result is <%i>\n", *result);
 
@@ -1864,6 +1908,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
       )
 
+      SCIPfreeBufferArray(scip, &lpcandsfrac);
       SCIPfreeBufferArray(scip, &lpcandssol);
       SCIPfreeBufferArray(scip, &lpcands);
 
