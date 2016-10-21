@@ -2014,6 +2014,23 @@
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
  * calling CONSSEPASOL.
  *
+ * @subsection CONSENFORELAX
+ *
+ * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
+ *
+ * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
+ * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
+ * solutions that satisfy all active LP-constraints.
+ *
+ * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
+ * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
+ * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
+ * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
+ *
+ * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
+ * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
+ * via user-plugins.
+ *
  * @subsection CONSPROP
  *
  * The CONSPROP callback is called during the subproblem processing.
@@ -4305,6 +4322,13 @@
  * For example, a frequency of 7 means, that the relaxation solving callback is executed for subproblems that are in depth
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e.,
  * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
+ *
+ * \par RELAX_FULLLPINFO: whether the whole lp is included in the relaxation.
+ * This flag should be set to TRUE if all active LP-rows are included in the relaxation and every feasible solution produced
+ * by the relaxator will satisfy all these LP-constraints. Only if this is set to TRUE, the solutions of this relaxator can
+ * be enforced using the \ref CONSENFORELAX callback, meaning that they will be used as primal solutions if feasible and can
+ * be separated or branched on. If this flag is set to FALSE, only the lowerbound computed by the relaxator will be used in
+ * the solving process.
  *
  *
  * @section RELAX_DATA Relaxation Handler Data
