@@ -38,6 +38,10 @@ static SCIP_HASHMAP* var2idx;
 static
 void setup(void)
 {
+   /* skip the test if IPOPT is not available */
+   if( !SCIPisIpoptAvailableIpopt() )
+      cr_skip_test();
+
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* create a problem */
@@ -45,10 +49,7 @@ void setup(void)
 
    /* include NLPI's */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
-
-   /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
-      return;
+   cr_assert(nlpi != NULL);
 
    SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
