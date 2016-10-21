@@ -1887,7 +1887,7 @@ SCIP_Bool SCIPisConsCompressionEnabled(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisProblemCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    /* is problem compression enabled */
-   return SCIPprobIsConsCompressionEnabled(scip->origprob);
+   return SCIPprobIsConsCompressionEnabled(scip->origprob) && SCIPgetStage(scip) == SCIP_STAGE_PROBLEM;
 }
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
