@@ -66,7 +66,12 @@ void freeValidBoundData(
 SCIP_RETCODE branchOnVar(
    SCIP*                 scip                /**< SCIP data structure */,
    SCIP_VAR*             var,                /**< the variable to branch on */
-   SCIP_Real             val                 /**< the value to branch on */
+   SCIP_Real             val,                /**< the value to branch on */
+   SCIP_Real             bestdown,
+   SCIP_Bool             bestdownvalid,
+   SCIP_Real             bestup,
+   SCIP_Real             bestupvalid,
+   SCIP_Real             provedbound
 )
 {
    SCIP_NODE* downchild = NULL;
@@ -79,6 +84,17 @@ SCIP_RETCODE branchOnVar(
 
    assert(downchild != NULL);
    assert(upchild != NULL);
+
+   /* update the lower bounds in the children; we must not do this if columns are missing in the LP
+    * (e.g., because we are doing branch-and-price) or the problem should be solved exactly
+    */
+   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
+      SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+   }
+   SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+   SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
    return SCIP_OKAY;
 }

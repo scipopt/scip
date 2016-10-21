@@ -88,7 +88,12 @@ EXTERN
 SCIP_RETCODE branchOnVar(
    SCIP*                 scip                /**< SCIP data structure */,
    SCIP_VAR*             var,                /**< the variable to branch on */
-   SCIP_Real             val                 /**< the value to branch on */
+   SCIP_Real             val,                /**< the value to branch on */
+   SCIP_Real             bestdown,
+   SCIP_Bool             bestdownvalid,
+   SCIP_Real             bestup,
+   SCIP_Real             bestupvalid,
+   SCIP_Real             provedbound
 );
 
 /**

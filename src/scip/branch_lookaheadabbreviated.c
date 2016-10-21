@@ -864,8 +864,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
          }
          else
          {
-            branchOnVar(scip, candidates->vars[0], candidates->vals[0]);
-            *result = SCIP_BRANCHED;
+            SCIPerrorMessage("The branching has to be reimplemented, due to the update of the dualbounds.\n");
+            SCIPABORT();
+            /*branchOnVar(scip, candidates->vars[0], candidates->vals[0]);
+            *result = SCIP_BRANCHED;*/
          }
       }
       else
