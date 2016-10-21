@@ -102,7 +102,7 @@ void* SCIPlpiGetSolverPointer(
 EXTERN
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
-   int                   nvars,              /**< length of integrality array */
+   int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    );
 

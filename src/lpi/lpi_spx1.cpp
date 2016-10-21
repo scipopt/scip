@@ -1641,11 +1641,11 @@ void* SCIPlpiGetSolverPointer(
 /** pass integrality information about variables to the solver */
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
-   int                   nvars,              /**< length of integrality array */
+   int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
 {
-   assert(nvars == lpi->spx->nCols());
+   assert(ncols == lpi->spx->nCols());
    lpi->spx->setIntegralityInformation(intInfo);
 
    return SCIP_OKAY;
