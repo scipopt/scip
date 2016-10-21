@@ -4035,17 +4035,26 @@ SCIP_RETCODE solveNode(
        * but the pricing was aborted and the current feasible solution does not have to be the
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
-       * @todo: changes needed for @ENFORELAX ?
        */
       if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
          SCIP_Bool stored;
-
-         SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         
+         /* in case the relaxation was enforced add this solution, otherwise decide between LP and pseudosol */
+         if( bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+               || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, transprob))) )
+         {
+            SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+                  eventqueue, eventfilter, bestrelaxsol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
+            SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+                  eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         }
 
          if( stored )
          {
