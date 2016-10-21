@@ -3015,6 +3015,11 @@ SCIP_RETCODE solveNodeRelax(
             assert(bestrelaxval != NULL);
 
             *bestrelaxval = lowerbound;
+            
+            /* We first reset the old solution because SCIPsolSetVal will only change the solution if the values differ by more than
+             * epsilon, but we need the exact solution since it will later be used in an exact > check between lowerbound and cutoffbound.
+             */
+            SCIP_CALL( SCIPsolSetUnknown(bestrelaxsol, stat, tree) );
 
             for( i = 0; i < transprob->nvars; ++i )
             {
