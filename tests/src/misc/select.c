@@ -51,7 +51,8 @@ Test(select, create_and_free)
    /* calls setup and teardown */
 }
 
-#define ARRAYMEMSIZE 700
+/* this number could be higher (700), but we use a smaller number due to a problem with cr_assert* being too slow */
+#define ARRAYMEMSIZE 70
 Test(select, random_permutation, .description = "tests selection on a bunch of random permutations of the integers 1...n")
 {
    int len = ARRAYMEMSIZE;
