@@ -65,7 +65,7 @@ override OPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OPT=\([^@]*\).*/\1/
 override OSTYPE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OSTYPE=\([^@]*\).*/\1/')
 override PARASCIP	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* PARASCIP=\([^@]*\).*/\1/')
 override READLINE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* READLINE=\([^@]*\).*/\1/')
-override SANITIZE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SANITIZE=\([^@]*\).*/\1/')
+override SANITIZE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SANITIZE=\([^@]*\).*/\1/')
 override SHARED		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SHARED=\([^@]*\).*/\1/')
 override USRARFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRARFLAGS=\([^@]*\).*/\1/')
 override USRCFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRCFLAGS=\([^@]*\).*/\1/')
@@ -80,6 +80,9 @@ override ZIMPLOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPLOPT=\([^@]
 override ZLIB		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZLIB=\([^@]*\).*/\1/')
 ifeq ($(SHARED), false)
 $(error Please compile SCIP with SHARED=true)
+endif
+ifneq ($(OPT), dbg)
+$(error Please compile SCIP with OPT=dbg)
 endif
 else
 override OPT	=	dbg
@@ -130,10 +133,12 @@ UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
 #-----------------------------------------------------------------------------
 # Flags
-# To make criterion compile without warnings
+# filter out some flags to make criterion compile without warnings with gcc
+# and make the tests run with clang.
+# TODO: in newer version, check if we still need this
 #-----------------------------------------------------------------------------
 
-CFLAGS 		:=	$(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
+CFLAGS 		:=	$(filter-out -Werror -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
 CFLAGS 		+=	-std=c99
 # DFLAGS (flags for make depend) uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
 DFLAGS 		+= 	-MT
@@ -253,9 +258,8 @@ $(OBJDIR)/%.o:	%.cpp
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"
 	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone https://github.com/Snaipe/Criterion; \
+	git clone --depth 1 -b v2.2.2 https://github.com/Snaipe/Criterion
 	cd Criterion; \
-	git reset --hard 3bad3c6aaa779d9ac580ae74cfcaa245aee0ee65; \
 	mkdir build; \
 	cd build; \
 	cmake ..; \
