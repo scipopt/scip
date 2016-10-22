@@ -862,7 +862,7 @@ SCIP_RETCODE applyNlobbt(
 
    if( propdata->nlpiprob == NULL && !isNlobbtApplicable(scip, propdata) )
    {
-      /* do not call the propagator anymore (excepted after a restart) */
+      /* do not call the propagator anymore (except after a restart) */
       SCIPdebugMsg(scip, "nlobbt propagator is not applicable\n");
       propdata->skipprop = TRUE;
       return SCIP_OKAY;
