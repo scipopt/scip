@@ -65,6 +65,7 @@ override OPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OPT=\([^@]*\).*/\1/
 override OSTYPE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OSTYPE=\([^@]*\).*/\1/')
 override PARASCIP	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* PARASCIP=\([^@]*\).*/\1/')
 override READLINE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* READLINE=\([^@]*\).*/\1/')
+override SANITIZE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SANITIZE=\([^@]*\).*/\1/')
 override SHARED		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SHARED=\([^@]*\).*/\1/')
 override USRARFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRARFLAGS=\([^@]*\).*/\1/')
 override USRCFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRCFLAGS=\([^@]*\).*/\1/')
