@@ -138,7 +138,10 @@ UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 # TODO: in newer version, check if we still need this
 #-----------------------------------------------------------------------------
 
-CFLAGS 		:=	$(filter-out -Werror -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
+CFLAGS 		:=	$(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
+ifeq ($(COMP), clang)
+CFLAGS 		:=	$(filter-out -Wcast-align, $(CFLAGS))
+endif
 CFLAGS 		+=	-std=c99
 # DFLAGS (flags for make depend) uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
 DFLAGS 		+= 	-MT
