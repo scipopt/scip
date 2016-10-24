@@ -2777,7 +2777,6 @@ SCIP_RETCODE reformulate(
          {
             SCIP_EXPRGRAPHNODE* child;
             SCIP_Bool needupdate;
-            int c;
 
             /* ensure all children are linear, so next simplifier run makes sure all children will be variables (by distributing the product)
              * however, that will not work for user-expressions, so we should also ensure that they are none (@todo as they are linear, they could actually be replaced by a regular linear expression)
@@ -3045,7 +3044,6 @@ SCIP_RETCODE reformulate(
             SCIP_INTERVAL childbounds;
             SCIP_EXPRCURV childcurv;
             SCIP_Bool modified;
-            int c;
 
             monomials  = SCIPexprgraphGetNodePolynomialMonomials(node);
             nmonomials = SCIPexprgraphGetNodePolynomialNMonomials(node);
