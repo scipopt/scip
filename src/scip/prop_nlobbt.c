@@ -262,7 +262,7 @@ SCIP_RETCODE nlpRelaxCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, nvars) );
 
-   /* create an unique mapping between variables and {0,..,nvars-1} */
+   /* create a unique mapping between variables and {0,..,nvars-1} */
    for( i = 0; i < nvars; ++i )
    {
       assert(vars[i] != NULL);
