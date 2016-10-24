@@ -115,6 +115,7 @@ fixed bugs:
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
 - SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
 - ignore lower and upper bound tightenigs beyond +/-infinity during solving
+- fix wrong NLP representation of logic or constraints in the dual value heuristic
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
