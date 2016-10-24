@@ -20,11 +20,10 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "nlpi/nlpi_ipopt.h"
-
-#include "scip/prop_nlobbt.c"
+#include "scip/prop_nlobbt.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpioracle.h"
+#include "nlpi/nlpi.h"
 
 #include "include/scip_test.h"
 
@@ -124,7 +123,8 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    quadelems[1].idx1 = 1;
    quadelems[1].idx2 = 1;
    quadelems[1].coef = 1.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow_0", 0.0, 2, vars, lincoefs, 2, vars, 2, quadelems, NULL, 2.0, 4.0, SCIP_EXPRCURV_CONVEX) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow_0", 0.0, 2, vars, lincoefs, 2, vars, 2, quadelems, NULL, 2.0, 4.0,
+         SCIP_EXPRCURV_CONVEX) );
 
    quadelems[0].idx1 = 0;
    quadelems[0].idx2 = 0;
@@ -132,16 +132,19 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    quadelems[1].idx1 = 1;
    quadelems[1].idx2 = 1;
    quadelems[1].coef = -2.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow_1", 0.0, 0, NULL, NULL, 2, vars, 2, quadelems, NULL, -4.0, -2.0, SCIP_EXPRCURV_CONCAVE) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow_1", 0.0, 0, NULL, NULL, 2, vars, 2, quadelems, NULL, -4.0, -2.0,
+         SCIP_EXPRCURV_CONCAVE) );
 
    quadelems[0].idx1 = 0;
    quadelems[0].idx2 = 1;
    quadelems[0].coef = 1.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[2], "nlrow_2", 0.0, 0, NULL, NULL, 2, vars, 1, quadelems, NULL, -10.0, 10.0, SCIP_EXPRCURV_UNKNOWN) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[2], "nlrow_2", 0.0, 0, NULL, NULL, 2, vars, 1, quadelems, NULL, -10.0, 10.0,
+         SCIP_EXPRCURV_UNKNOWN) );
 
    lincoefs[0] = 3.0;
    lincoefs[1] = -2.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[3], "nlrow_3", -1.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 3.0, SCIP_EXPRCURV_LINEAR) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[3], "nlrow_3", -1.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 3.0,
+         SCIP_EXPRCURV_LINEAR) );
 
    lincoefs[0] = 1.0;
    lincoefs[1] = -1.0;
@@ -150,12 +153,13 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expexpr, SCIP_EXPR_EXP, xexpr) );
    SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expexpr, 1, 0, NULL) );
    SCIP_CALL( SCIPexprtreeSetVars(exprtree, 1, vars) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[4], "nlrow_4", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, exprtree, 1.0, 10.0, SCIP_EXPRCURV_CONVEX) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[4], "nlrow_4", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, exprtree, 1.0,
+         10.0, SCIP_EXPRCURV_CONVEX) );
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
    /* create convex NLP relaxation */
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( nlpRelaxCreate(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5) );
+   SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);
