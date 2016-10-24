@@ -190,11 +190,14 @@ SCIP_RETCODE nlpRelaxAddRows(
    return SCIP_OKAY;
 }
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem;
+/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which
+ *  the number of non-linearly occurrences and stores it in the nlscore array; the values are used to sort all variables
+ *  in applyNlobbt() and process the 'best' candidates first; to reduce performance variability we store the scores as
+ *  floating points to perturb them later
  *
  *  @note function does not copy the objective
  *
- *  @note the first row corresponds to the cutoff row if cutoffbound < SCIPinfinity(scip)
+ *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
 static
 SCIP_RETCODE nlpRelaxCreate(
@@ -205,7 +208,8 @@ SCIP_RETCODE nlpRelaxCreate(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
                                               *   problem */
-   SCIP_Real*            nlscore,            /**< array to store the store of each nonlinear variable */
+   SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
+                                              *   needed) */
    SCIP_Real             cutoffbound         /**< cutoff bound */
    )
 {
@@ -232,11 +236,13 @@ SCIP_RETCODE nlpRelaxCreate(
    assert(nlrows != NULL);
    assert(nnlrows > 0);
    assert(nlpi != NULL);
-   assert(nlscore != NULL);
 
    SCIPdebugMsg(scip, "call nlpRelaxCreate() with cutoffbound %g\n", cutoffbound);
 
-   BMSclearMemoryArray(nlscore, SCIPgetNVars(scip));
+   if( nlscore != NULL )
+   {
+      BMSclearMemoryArray(nlscore, SCIPgetNVars(scip));
+   }
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    nconss = 0;
@@ -385,9 +391,12 @@ SCIP_RETCODE nlpRelaxCreate(
             quadelems[nconss][k].idx2 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var2);
 
             /* update nlscore */
-            ++nlscore[quadelems[nconss][k].idx1];
-            if( quadelems[nconss][k].idx1 != quadelems[nconss][k].idx2 )
-               ++nlscore[quadelems[nconss][k].idx2];
+            if( nlscore != NULL )
+            {
+               ++nlscore[quadelems[nconss][k].idx1];
+               if( quadelems[nconss][k].idx1 != quadelems[nconss][k].idx2 )
+                  ++nlscore[quadelems[nconss][k].idx2];
+            }
          }
       }
 
@@ -412,7 +421,8 @@ SCIP_RETCODE nlpRelaxCreate(
             exprvaridxs[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
 
             /* update nlscore */
-            ++nlscore[exprvaridxs[nconss][k]];
+            if( nlscore != NULL )
+               ++nlscore[exprvaridxs[nconss][k]];
          }
       }
 
