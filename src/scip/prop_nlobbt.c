@@ -468,7 +468,7 @@ SCIP_RETCODE nlpRelaxCreate(
          SCIPfreeBufferArray(scip, &quadelems[i]);
       }
 
-      if( linvals[i] != NULL )
+      if( nlininds[i] > 0 )
       {
          assert(linvals[i] != NULL);
          assert(lininds[i] != NULL);
