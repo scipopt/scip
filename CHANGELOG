@@ -26,6 +26,7 @@ features:
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
