@@ -56,7 +56,7 @@
  * conditions
  *
  * \f[
- *      +/- e_i + \nabla g(x^*) + c + \alpha - \beta = 0
+ *      e_i + \nabla g(x^*) + c + \alpha - \beta = 0
  * \f]
  * \f[
  *      \lambda_j g_j(x) = 0
