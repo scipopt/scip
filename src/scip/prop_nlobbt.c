@@ -667,9 +667,7 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
       return SCIP_OKAY;
    }
 
-   /* only run if LP all columns are in the LP, i.e., the LP is a relaxation; e.g., do not run if pricers are active
-    * since pricing is not performed in probing mode
-    */
+   /* only run if LP all columns are in the LP, e.g., do not run if pricers are active */
    if( !SCIPallColsInLP(scip) )
    {
       SCIPdebugMsg(scip, "not all columns in LP, skipping obbt\n");
