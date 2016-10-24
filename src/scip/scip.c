@@ -14042,7 +14042,7 @@ SCIP_RETCODE freeSolve(
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
    /* deinitialize conflict storage */
-   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->eventfilter) );
+   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->set, scip->eventfilter, scip->mem->probmem) );
 
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, restart) );
@@ -39752,25 +39752,34 @@ void printConflictStatistics(
    FILE*                 file                /**< output file */
    )
 {
-   char poolsize[SCIP_MAXSTRLEN];
+   char initstoresize[SCIP_MAXSTRLEN];
+   char maxstoresize[SCIP_MAXSTRLEN];
 
    if( scip->set->conf_maxstoresize == 0 )
    {
-      (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "inf");
+      (void)SCIPsnprintf(initstoresize, SCIP_MAXSTRLEN, "inf");
+      (void)SCIPsnprintf(maxstoresize, SCIP_MAXSTRLEN, "inf");
    }
    else
    {
-      int psize = SCIPconflictstoreGetMaxPoolSize(scip->conflictstore);
+      int initsize = SCIPconflictstoreGetInitPoolSize(scip->conflictstore);
+      int maxsize = SCIPconflictstoreGetMaxPoolSize(scip->conflictstore);
 
-      if( psize == -1 && scip->set->conf_maxstoresize == -1 )
-         (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "auto");
+      if( maxsize == -1 )
+      {
+         (void)SCIPsnprintf(initstoresize, SCIP_MAXSTRLEN, "--");
+         (void)SCIPsnprintf(maxstoresize, SCIP_MAXSTRLEN, "--");
+      }
       else
       {
-         psize = MAX(psize, scip->set->conf_maxstoresize);
-         (void)SCIPsnprintf(poolsize, SCIP_MAXSTRLEN, "%d", psize);
+         assert(initsize >= 0);
+         assert(maxsize >= 0);
+
+         (void)SCIPsnprintf(initstoresize, SCIP_MAXSTRLEN, "%d", initsize);
+         (void)SCIPsnprintf(maxstoresize, SCIP_MAXSTRLEN, "%d", maxsize);
       }
    }
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success    DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters   (maximal pool size: %s)\n", poolsize);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success    DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters   (pool size: [%s,%s])\n", initstoresize, maxstoresize);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),

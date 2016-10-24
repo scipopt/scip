@@ -51,6 +51,8 @@ struct SCIP_ConflictStore
    int                   nconflictsfound;    /**< total number of conflicts found so far */
    int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */
    int                   nswitches;          /**< number of path switches */
+   int                   initstoresize;      /**< initial size of the storage (different to maxstoresize iff dynamic) */
+   int                   storesize;          /**< current size of the storage (different to maxstoresize iff dynamic) */
    int                   maxstoresize;       /**< maximal size of the storage */
 };
 

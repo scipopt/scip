@@ -4215,24 +4215,6 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 
-   /* check whether we want to clean the conflict storage */
-   if( tree->focusnode != NULL && *node != NULL && fork != NULL )
-   {
-      int switchinglength = 0;
-
-      /* difference between */
-      switchinglength = SCIPnodeGetDepth(tree->focusnode) - SCIPnodeGetDepth(fork);
-      assert(switchinglength >= 0);
-
-      switchinglength += SCIPnodeGetDepth(*node) - SCIPnodeGetDepth(fork);
-      assert(switchinglength >= 0);
-
-      SCIP_CALL( SCIPconflictstoreCleanSwitching(conflictstore, set, stat, blkmem, transprob, switchinglength) );
-
-      /* clean the fork */
-//      fork = NULL;
-   }
-
    /* remember the depth of the common fork node for LP updates */
    SCIPdebugMessage("focus node: old correctlpdepth=%d\n", tree->correctlpdepth);
    if( subroot == tree->focussubroot && fork != NULL && lpfork != NULL )

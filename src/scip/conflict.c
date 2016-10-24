@@ -20,6 +20,7 @@
  * @author Stefan Heinz
  * @author Marc Pfetsch
  * @author Michael Winkler
+ * @author Jakob Witzig
  *
  * This file implements a conflict analysis method like the one used in modern
  * SAT solvers like zchaff. The algorithm works as follows:
@@ -6679,14 +6680,6 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       if( stopped )
          goto TERMINATE;
-
-//      if( SCIPsetIsFeasLE(set, farkaslhs/10.0, farkasactivity/10.0) )
-//      {
-//         SCIPdebugMessage("the farkas-proof is numerical unstable: farkaslhs=%g minact=%g -> we stop here\n",
-//               farkaslhs, farkasactivity);
-//         stopped = TRUE;
-//         goto TERMINATE;
-//      }
 
       /* start dual ray analysis */
       if( SCIPlpiIsPrimalInfeasible(lpi) && set->conf_enabledualray

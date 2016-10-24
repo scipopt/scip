@@ -51,9 +51,9 @@ SCIP_RETCODE SCIPconflictstoreCreate(
 extern
 SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
-   BMS_BLKMEM*           blkmem,
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTFILTER*     eventfilter
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** adds a constraint to the pool of dual rays */
@@ -86,17 +86,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    );
 
-/** delete all conflicts arises from infeasible LP analysis */
-extern
-SCIP_RETCODE SCIPconflictstoreCleanSwitching(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_PROB*            transprob,          /**< transformed problem*/
-   int                   switchinglength     /**< number of bound changes between focusnode - fork - new focusnode */
-   );
-
 /** delete all conflicts depending a cutoff bound larger than the given bound */
 extern
 SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
@@ -111,6 +100,12 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
 /* return the maximal size of the conflict pool */
 extern
 int SCIPconflictstoreGetMaxPoolSize(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   );
+
+/* return the initial size of the conflict pool */
+extern
+int SCIPconflictstoreGetInitPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
    );
 

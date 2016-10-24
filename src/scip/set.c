@@ -107,10 +107,6 @@
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS FALSE /**< should conflicts based on an old cutoff bound removed? */
-#define SCIP_DEFAULT_CONF_CLEANAFTERSWITCHING FALSE /**< should conflicts not depending on a cutoffbound be removed after
-                                                     *   switching the focusnode with a switching length of than maxswitchinglength?
-                                                     */
-#define SCIP_DEFAULT_CONF_MAXSWITCHINGLENGTH  0 /** maximal switching length to not clean the storage (only when cleanafterswitching=TRUE), 0: auto */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCONSS         -1 /**< maximal number of intermediate conflict constraints generated in
@@ -1176,16 +1172,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/graph/cleanboundexceedings",
          "should conflicts based on an old cutoff bound removed?",
          &(*set)->conf_cleanboundexeedings, TRUE, SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/cleanafterswitching",
-         "should conflicts not depending on a cutoffbound be removed after switching the focusnode with a switching length of than maxswitchinglength?",
-         &(*set)->conf_cleanafterswitching, TRUE, SCIP_DEFAULT_CONF_CLEANAFTERSWITCHING,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/maxswitchinglength",
-         "maximal switching length to not clean the storage (only when cleanafterswitching=TRUE), 0: auto",
-         &(*set)->conf_maxswitchinglength, TRUE, SCIP_DEFAULT_CONF_MAXSWITCHINGLENGTH, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/useprop",
