@@ -28,6 +28,7 @@
 #include "scip/pub_reopt.h"
 #include "scip/type_primal.h"
 #include "scip/type_retcode.h"
+#include "scip/type_misc.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
 

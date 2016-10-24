@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -93,11 +93,15 @@ $(OBJDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
+# include local targets (for cluster runs)
+-include $(SCIPDIR)/make/local/make.targets
+
+# rule to link to reqired check scripts
+check/% : $(SCIPDIR)/check/%
+	@-(cd check && ln -fs ../$^);
+
 .PHONY: test
-test:           $(MAINFILE)
-	@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-	@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-	@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+test: $(MAINFILE) check/evalcheck.sh check/check.awk check/getlastprob.awk
 	cd check; \
 	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "interface" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 

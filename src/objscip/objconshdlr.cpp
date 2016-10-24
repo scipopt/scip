@@ -247,7 +247,7 @@ SCIP_DECL_CONSINITLP(consInitlpObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -334,7 +334,7 @@ SCIP_DECL_CONSCHECK(consCheckObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol,
-         checkintegrality, checklprows, printreason, result) );
+         checkintegrality, checklprows, printreason, completely, result) );
 
    return SCIP_OKAY;
 }

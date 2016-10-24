@@ -49,6 +49,7 @@
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem             */
 #define DEFAULT_ADDALLSOLS    FALSE     /* should all subproblem solutions be added to the original SCIP?            */
 #define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< should heuristic only be executed if no primal solution was found, yet? */
+#define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -66,6 +67,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
    SCIP_Bool             onlywithoutsol;     /**< should heuristic only be executed if no primal solution was found, yet? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -112,7 +114,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -235,14 +237,14 @@ SCIP_DECL_HEUREXEC(heurExecZeroobj)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping zeroobj: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping zeroobj: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
    /* do not run zeroobj, if the problem does not have an objective function anyway */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      SCIPdebugMessage("skipping zeroobj: pure feasibility problem anyway\n");
+      SCIPdebugMsg(scip, "skipping zeroobj: pure feasibility problem anyway\n");
       return SCIP_OKAY;
    }
 
@@ -346,8 +348,8 @@ SCIP_RETCODE SCIPapplyZeroobj(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, TRUE, &valid) );
-   SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj",  TRUE, FALSE, TRUE, &valid) );
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
    eventhdlr = NULL;
@@ -428,12 +430,17 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
    }
 
-   /* use dfs node selection */
+   /* use restart dfs node selection */
    if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
    }
 
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
+   }
    /* use least infeasible branching */
    if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
    {
@@ -520,7 +527,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
-   SCIPdebugMessage("solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
+   SCIPdebugMsg(scip, "solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
@@ -617,6 +624,9 @@ SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlywithoutsol",
          "should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
    return SCIP_OKAY;
 }

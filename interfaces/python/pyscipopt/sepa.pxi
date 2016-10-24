@@ -6,6 +6,7 @@ cdef SCIP_RETCODE PySepaFree (SCIP* scip, SCIP_SEPA* sepa):
     sepadata = SCIPsepaGetData(sepa)
     PySepa = <Sepa>sepadata
     PySepa.sepafree()
+    Py_DECREF(PySepa)
     return SCIP_OKAY
 
 cdef SCIP_RETCODE PySepaInit (SCIP* scip, SCIP_SEPA* sepa):
@@ -49,7 +50,7 @@ cdef SCIP_RETCODE PySepaExecsol (SCIP* scip, SCIP_SEPA* sepa, SCIP_SOL* sol, SCI
     cdef SCIP_SEPADATA* sepadata
     sepadata = SCIPsepaGetData(sepa)
     solution = Solution()
-    solution._solution = sol
+    solution.sol = sol
     PySepa = <Sepa>sepadata
     result_dict = PySepa.sepaexecsol(solution)
     result[0] = result_dict.get("result", <SCIP_RESULT>result[0])

@@ -446,13 +446,17 @@ SCIP_RETCODE SCIPsetResetParams(
    );
 
 /** sets parameters to
- *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
- *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
- *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
- *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast
- *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
- *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ *
+ *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPsetResetParams())
+ *  - \ref SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
+ *  - \ref SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - \ref SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
+ *  - \ref SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast
+ *  - \ref SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
+ *  - \ref SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
  */
 extern
 SCIP_RETCODE SCIPsetSetEmphasis(
@@ -964,12 +968,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
-/** returns the estimated number of bytes used by external software, e.g., the LP solver */
-extern
-SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
 /** calculate memory size for dynamically allocated arrays */
 extern
 int SCIPsetCalcMemGrowSize(
@@ -1047,6 +1045,12 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
+/** returns user defined objective value (in original space) for reference purposes */
+extern
+SCIP_Real SCIPsetGetReferencevalue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns debug solution data */
 extern
 SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
@@ -1069,6 +1073,13 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newvalue,           /**< new value after update */
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   );
+
+/** modifies an initial seed value with the global shift of random seeds */
+extern
+int SCIPsetInitializeRandomSeed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** returns value treated as infinity */
@@ -1572,7 +1583,10 @@ SCIP_Real SCIPsetDualfeasFrac(
    SCIP_Real             val                 /**< value to return fractional part for */
    );
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1581,7 +1595,10 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1780,6 +1797,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
+#define SCIPsetInitializeRandomSeed(set, val) ( (val + (set)->random_randomseedshift) )
 
 #endif
 
@@ -1800,6 +1818,52 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFreeCleanBuffer(set,ptr)              BMSfreeBufferMemory((set)->cleanbuffer, (ptr))
 #define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
 #define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
+
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(scip, ...) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
+#else
+#define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(scip, ...) while ( FALSE ) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPsetDebugMsg                 printf("debug: "), SCIPsetDebugMessagePrint
+#define SCIPsetDebugMsgPrint            printf("debug: "), SCIPsetDebugMessagePrint
+#else
+#define SCIPsetDebugMsg                 while ( FALSE ) SCIPsetDebugMsgPrint
+#define SCIPsetDebugMsgPrint            while ( FALSE ) SCIPsetDebugMessagePrint
+#endif
+
+#endif
+
+
+/** prints a debug message */
+EXTERN
+void SCIPsetPrintDebugMessage(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPsetDebugMessagePrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
 
 #ifdef __cplusplus
 }

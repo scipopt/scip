@@ -53,7 +53,7 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
 
    if( eventhdlr->eventcopy != NULL )
    {
-      SCIPdebugMessage("including event handler %s in subscip %p\n", SCIPeventhdlrGetName(eventhdlr), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including event handler %s in subscip %p\n", SCIPeventhdlrGetName(eventhdlr), (void*)set->scip);
       SCIP_CALL( eventhdlr->eventcopy(set->scip, eventhdlr) );
    }
 
@@ -257,7 +257,7 @@ SCIP_RETCODE SCIPeventhdlrExec(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPdebugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
+   SCIPsetDebugMsg(set, "execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
 
 #ifdef TIMEEVENTEXEC
    /* start timing */
@@ -1458,7 +1458,7 @@ SCIP_RETCODE SCIPeventProcess(
    assert((event->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
    assert((event->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
 
-   SCIPdebugMessage("processing event of type 0x%x\n", event->eventtype);
+   SCIPsetDebugMsg(set, "processing event of type 0x%x\n", event->eventtype);
 
    switch( event->eventtype )
    {
@@ -1951,7 +1951,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPdebugMessage("processing event filter %p (len %d, mask 0x%x) with event type 0x%x\n",
+   SCIPsetDebugMsg(set, "processing event filter %p (len %d, mask 0x%x) with event type 0x%x\n",
       (void*)eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
 
    eventtype = event->eventtype;
@@ -1984,7 +1984,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    if( !processed )
    {
       eventfilter->eventmask &= ~event->eventtype;
-      SCIPdebugMessage(" -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
+      SCIPsetDebugMsg(set, " -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
          event->eventtype, (void*)eventfilter, eventfilter->eventmask);
    }
 
@@ -2080,7 +2080,7 @@ SCIP_RETCODE eventqueueAppend(
    assert(event != NULL);
    assert(*event != NULL);
 
-   SCIPdebugMessage("appending event %p of type 0x%x to event queue %p at position %d\n",
+   SCIPsetDebugMsg(set, "appending event %p of type 0x%x to event queue %p at position %d\n",
       (void*)*event, (*event)->eventtype, (void*)eventqueue, eventqueue->nevents);
 
    SCIP_CALL( eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1) );
@@ -2124,7 +2124,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    else
    {
       /* delay processing of event by appending it to the event queue */
-      SCIPdebugMessage("adding event %p of type 0x%x to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
+      SCIPsetDebugMsg(set, "adding event %p of type 0x%x to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
 
       switch( (*event)->eventtype )
       {
@@ -2177,7 +2177,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             assert(qevent->data.eventobjchg.var == var);
             assert(SCIPsetIsEQ(set, (*event)->data.eventobjchg.oldobj, qevent->data.eventobjchg.newobj));
 
-            SCIPdebugMessage(" -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
+            SCIPsetDebugMsg(set, " -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventobjchg.var), (*event)->data.eventobjchg.oldobj,
                (*event)->data.eventobjchg.newobj,
                pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj, 
@@ -2189,7 +2189,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
                /* the queued objective value change was reversed -> disable the event in the queue */
                eventDisable(qevent);
                var->eventqueueindexobj = -1;
-               SCIPdebugMessage(" -> event disabled\n");
+               SCIPsetDebugMsg(set, " -> event disabled\n");
             }
 
             /* free the event that is of no use any longer */
@@ -2219,7 +2219,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             assert(qevent->data.eventbdchg.var == var);
             assert(SCIPsetIsEQ(set, (*event)->data.eventbdchg.oldbound, qevent->data.eventbdchg.newbound));
 
-            SCIPdebugMessage(" -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
+            SCIPsetDebugMsg(set, " -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
                pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound, 
@@ -2238,7 +2238,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
                assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound); /*lint !e777*/
                eventDisable(qevent);
                var->eventqueueindexlb = -1;
-               SCIPdebugMessage(" -> event disabled\n");
+               SCIPsetDebugMsg(set, " -> event disabled\n");
             }
 
             /* free the event that is of no use any longer */
@@ -2268,7 +2268,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             assert(qevent->data.eventbdchg.var == var);
             assert(SCIPsetIsEQ(set, (*event)->data.eventbdchg.oldbound, qevent->data.eventbdchg.newbound));
 
-            SCIPdebugMessage(" -> merging UB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
+            SCIPsetDebugMsg(set, " -> merging UB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
                pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound,
@@ -2287,7 +2287,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
                assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound); /*lint !e777*/
                eventDisable(qevent);
                var->eventqueueindexub = -1;
-               SCIPdebugMessage(" -> event disabled\n");
+               SCIPsetDebugMsg(set, " -> event disabled\n");
             }
 
             /* free the event that is of no use any longer */
@@ -2359,7 +2359,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    assert(eventqueue != NULL);
    assert(eventqueue->delayevents);
 
-   SCIPdebugMessage("processing %d queued events\n", eventqueue->nevents);
+   SCIPsetDebugMsg(set, "processing %d queued events\n", eventqueue->nevents);
 
    /* pass events to the responsible event filters
     * During event processing, new events may be raised. We have to loop to the mutable eventqueue->nevents.
@@ -2372,7 +2372,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
       event = eventqueue->events[i];
       assert(event != NULL);
 
-      SCIPdebugMessage("processing event %d of %d events in queue: eventtype=0x%x\n", i, eventqueue->nevents, event->eventtype);
+      SCIPsetDebugMsg(set, "processing event %d of %d events in queue: eventtype=0x%x\n", i, eventqueue->nevents, event->eventtype);
 
       /* unmark the event queue index of a variable with changed objective value or bounds, and unmark the event queue
        * member flag of a variable with added implication

@@ -1757,7 +1757,7 @@ SCIP_RETCODE colAddCoef(
 
    coefChanged(row, col, lp);
 
-   SCIPdebugMessage("added coefficient %g * <%s> at position %d (%d/%d) to column <%s> (nunlinked=%d)\n",
+   SCIPsetDebugMsg(set, "added coefficient %g * <%s> at position %d (%d/%d) to column <%s> (nunlinked=%d)\n",
       val, row->name, pos, col->nlprows, col->len, SCIPvarGetName(col->var), col->nunlinked);
 
    return SCIP_OKAY;
@@ -1785,7 +1785,7 @@ SCIP_RETCODE colDelCoefPos(
    row = col->rows[pos];
    assert((row->lppos >= 0) == (pos < col->nlprows));
 
-   /*debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", 
+   /*SCIPsetDebugMsg(set, "deleting coefficient %g * <%s> at position %d from column <%s>\n",
      col->vals[pos], row->name, pos, SCIPvarGetName(col->var));*/
 
    if( col->linkpos[pos] == -1 )
@@ -1824,7 +1824,7 @@ SCIP_RETCODE colChgCoefPos(
    assert(col->rows[pos] != NULL);
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
 
-   /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
+   /*debugMsg(scip, "changing coefficient %g * <%s> at position %d of column <%s> to %g\n",
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
@@ -2111,7 +2111,7 @@ SCIP_RETCODE rowAddCoef(
 
    coefChanged(row, col, lp);
 
-   SCIPdebugMessage("added coefficient %g * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
+   SCIPsetDebugMsg(set, "added coefficient %g * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
       val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->name, row->nunlinked);
 
    /* issue row coefficient changed event */
@@ -2144,7 +2144,7 @@ SCIP_RETCODE rowDelCoefPos(
    val = row->vals[pos];
    assert((pos < row->nlpcols) == (col->lppos >= 0 && row->linkpos[pos] >= 0));
 
-   /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n",
+   /*SCIPsetDebugMsg(set, "deleting coefficient %g * <%s> at position %d from row <%s>\n",
      val, SCIPvarGetName(col->var), pos, row->name);*/
 
    if( row->nlocks > 0 )
@@ -2197,7 +2197,7 @@ SCIP_RETCODE rowChgCoefPos(
    assert(row != NULL);
    assert(0 <= pos && pos < row->len);
 
-   /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
+   /*SCIPsetDebugMsg(set, "changing coefficient %g * <%s> at position %d of row <%s> to %g\n",
      row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
 
    if( row->nlocks > 0 )
@@ -2309,7 +2309,7 @@ SCIP_RETCODE colLink(
 
    if( col->nunlinked > 0 )
    {
-      SCIPdebugMessage("linking column <%s>\n", SCIPvarGetName(col->var));
+      SCIPsetDebugMsg(set, "linking column <%s>\n", SCIPvarGetName(col->var));
 
       /* unlinked rows can only be in the non-LP/unlinked rows part of the rows array */
       for( i = col->nlprows; i < col->len; ++i )
@@ -2353,7 +2353,7 @@ SCIP_RETCODE colUnlink(
 
    if( col->nunlinked < col->len )
    {
-      SCIPdebugMessage("unlinking column <%s>\n", SCIPvarGetName(col->var));
+      SCIPsetDebugMsg(set, "unlinking column <%s>\n", SCIPvarGetName(col->var));
       for( i = 0; i < col->len; ++i )
       {
          if( col->linkpos[i] >= 0 )
@@ -2391,7 +2391,7 @@ SCIP_RETCODE rowLink(
 
    if( row->nunlinked > 0 )
    {
-      SCIPdebugMessage("linking row <%s>\n", row->name);
+      SCIPsetDebugMsg(set, "linking row <%s>\n", row->name);
 
       /* unlinked columns can only be in the non-LP/unlinked columns part of the cols array */
       for( i = row->nlpcols; i < row->len; ++i )
@@ -2431,7 +2431,7 @@ SCIP_RETCODE rowUnlink(
 
    if( row->nunlinked < row->len )
    {
-      SCIPdebugMessage("unlinking row <%s>\n", row->name);
+      SCIPsetDebugMsg(set, "unlinking row <%s>\n", row->name);
       for( i = 0; i < row->len; ++i )
       {
          if( row->linkpos[i] >= 0 )
@@ -3075,6 +3075,36 @@ SCIP_RETCODE lpSetTiming(
    return SCIP_OKAY;
 }
 
+/** sets the initial random seed of the LP solver */
+static
+SCIP_RETCODE lpSetRandomseed(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   randomseed,         /**< new initial random seed */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   /* we don't check this parameter because SoPlex will always return its current random seed, not the initial one */
+
+   if( randomseed == 0 )
+   {
+      lp->lpirandomseed = randomseed;
+      *success = TRUE;
+   }
+   else if( randomseed != lp->lpirandomseed )  /*lint !e777*/
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_RANDOMSEED, randomseed, success) );
+      if( *success )
+         lp->lpirandomseed = randomseed;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Column methods
@@ -3512,7 +3542,7 @@ SCIP_RETCODE SCIPcolChgObj(
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
 
-   SCIPdebugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
+   SCIPsetDebugMsg(set, "changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
 
    /* only add actual changes */
    if( !SCIPsetIsEQ(set, col->obj, newobj) )
@@ -3571,7 +3601,7 @@ SCIP_RETCODE SCIPcolChgLb(
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
 
-   SCIPdebugMessage("changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
+   SCIPsetDebugMsg(set, "changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
    /* only add actual changes */
    if( !SCIPsetIsEQ(set, col->lb, newlb) )
@@ -3616,7 +3646,7 @@ SCIP_RETCODE SCIPcolChgUb(
    assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
 
-   SCIPdebugMessage("changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
+   SCIPsetDebugMsg(set, "changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
    /* only add actual changes */
    if( !SCIPsetIsEQ(set, col->ub, newub) )
@@ -4169,7 +4199,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
          SCIP_Bool sbupvalid;
          int iter;
 
-         SCIPdebugMessage("performing strong branching on variable <%s>(%g) with %d iterations\n",
+         SCIPsetDebugMsg(set, "performing strong branching on variable <%s>(%g) with %d iterations\n",
             SCIPvarGetName(col->var), col->primsol, itlim);
 
          /* start timing */
@@ -4384,7 +4414,7 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
       }
    }
 
-   SCIPdebugMessage("performing strong branching on %d variables with %d iterations\n", ncols, itlim);
+   SCIPsetDebugMsg(set, "performing strong branching on %d variables with %d iterations\n", ncols, itlim);
 
    /* call LPI strong branching */
    if ( integral )
@@ -4754,7 +4784,7 @@ SCIP_RETCODE rowScale(
    assert(-1.0 < minrounddelta && minrounddelta <= 0.0);
    assert(0.0 <= maxrounddelta && maxrounddelta < 1.0);
 
-   SCIPdebugMessage("scale row <%s> with %g (tolerance=[%g,%g])\n", row->name, scaleval, minrounddelta, maxrounddelta);
+   SCIPsetDebugMsg(set, "scale row <%s> with %g (tolerance=[%g,%g])\n", row->name, scaleval, minrounddelta, maxrounddelta);
 
    mindelta = 0.0;
    maxdelta = 0.0;
@@ -4872,7 +4902,7 @@ SCIP_RETCODE rowScale(
    /* clear the row constant */
    SCIP_CALL( SCIProwChgConstant(row, blkmem, set, stat, eventqueue, lp, 0.0) );
 
-   SCIPdebugMessage("scaled row <%s> (integral: %u)\n", row->name, row->integral);
+   SCIPsetDebugMsg(set, "scaled row <%s> (integral: %u)\n", row->name, row->integral);
    debugRowPrint(row);
 
 #ifdef SCIP_DEBUG
@@ -5126,7 +5156,7 @@ SCIP_RETCODE SCIProwRelease(
    assert((*row)->nuses >= 1);
    assert((*row)->nlocks < (unsigned int)((*row)->nuses)); /*lint !e574*/
 
-   SCIPdebugMessage("release row <%s> with nuses=%d and nlocks=%u\n", (*row)->name, (*row)->nuses, (*row)->nlocks);
+   SCIPsetDebugMsg(set, "release row <%s> with nuses=%d and nlocks=%u\n", (*row)->name, (*row)->nuses, (*row)->nlocks);
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
@@ -5545,7 +5575,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
    assert(maxdelta > 0.0);
    assert(success != NULL);
 
-   SCIPdebugMessage("trying to find rational representation for row <%s> (contvars: %u)\n", SCIProwGetName(row), usecontvars);
+   SCIPsetDebugMsg(set, "trying to find rational representation for row <%s> (contvars: %u)\n", SCIProwGetName(row), usecontvars);
    SCIPdebug( val = 0; ); /* avoid warning "val might be used uninitialized; see SCIPdebugMessage lastval=%g below */
 
    if( intscalar != NULL )
@@ -5578,7 +5608,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = 1.0;
       *success = TRUE;
-      SCIPdebugMessage(" -> all values are zero (inside tolerances)\n");
+      SCIPsetDebugMsg(set, " -> all values are zero (inside tolerances)\n");
 
       return SCIP_OKAY;
    }
@@ -5615,8 +5645,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
             scaleval *= 2.0;
       }
       scalable = (scaleval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", 
-         val, scaleval, val*scaleval, scalable);
+      SCIPsetDebugMsg(set, " -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", val, scaleval, val*scaleval, scalable);
    }
    if( scalable )
    {
@@ -5627,7 +5656,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = scaleval;
       *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
+      SCIPsetDebugMsg(set, " -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
 
       return SCIP_OKAY;
    }
@@ -5659,7 +5688,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
             twomultval *= 2.0;
       }
       twomult = (twomultval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
+      SCIPsetDebugMsg(set, " -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
          val, twomultval, val*twomultval, twomult);
    }
    if( twomult )
@@ -5669,7 +5698,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = twomultval;
       *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
+      SCIPsetDebugMsg(set, " -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
 
       return SCIP_OKAY;
    }
@@ -5694,7 +5723,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
             gcd = ABS(nominator);
             scm = denominator;
             rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-            SCIPdebugMessage(" -> first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
+            SCIPsetDebugMsg(set, " -> first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
                val, nominator, denominator, gcd, scm, rational);
             break;
          }
@@ -5714,7 +5743,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
             gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
             scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
             rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-            SCIPdebugMessage(" -> next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
+            SCIPsetDebugMsg(set, " -> next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
                val, nominator, denominator, gcd, scm, rational);
          }
       }
@@ -5727,13 +5756,13 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
       *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
+      SCIPsetDebugMsg(set, " -> integrality can be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
    }
    else
    {
       assert(!(*success));
-      SCIPdebugMessage(" -> rationalizing failed: gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", lastval=%g\n", gcd, scm, val); /*lint !e771*/
+      SCIPsetDebugMsg(set, " -> rationalizing failed: gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", lastval=%g\n", gcd, scm, val); /*lint !e771*/
    }
 
    return SCIP_OKAY;
@@ -5818,7 +5847,7 @@ void rowMerge(
    assert(row->nunlinked == row->len);
    assert(row->nlpcols == 0);
 
-   SCIPdebugMessage("merging row <%s>\n", row->name);
+   SCIPsetDebugMsg(set, "merging row <%s>\n", row->name);
 
    /* do nothing on empty rows; if row is sorted, nothing has to be done */
    if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
@@ -7522,7 +7551,7 @@ SCIP_RETCODE SCIProwCatchEvent(
    assert((eventtype & ~SCIP_EVENTTYPE_ROWCHANGED) == 0);
    assert((eventtype &  SCIP_EVENTTYPE_ROWCHANGED) != 0);
 
-   SCIPdebugMessage("catch event of type 0x%x of row <%s> with handler %p and data %p\n", 
+   SCIPsetDebugMsg(set, "catch event of type 0x%x of row <%s> with handler %p and data %p\n",
       eventtype, row->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
@@ -7544,7 +7573,7 @@ SCIP_RETCODE SCIProwDropEvent(
    assert(row != NULL);
    assert(row->eventfilter != NULL);
 
-   SCIPdebugMessage("drop event of row <%s> with handler %p and data %p\n", row->name, (void*)eventhdlr, (void*)eventdata);
+   SCIPsetDebugMsg(set, "drop event of row <%s> with handler %p and data %p\n", row->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterDel(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
@@ -7746,7 +7775,7 @@ SCIP_RETCODE lpFlushAddCols(
       assert(col->lppos == c);
       assert(nnonz + col->nlprows <= naddcoefs);
 
-      SCIPdebugMessage("flushing added column <%s>: ", SCIPvarGetName(col->var));
+      SCIPsetDebugMsg(set, "flushing added column <%s>: ", SCIPvarGetName(col->var));
       debugColPrint(col);
 
       /* Because the column becomes a member of the LP solver, it now can take values
@@ -7806,7 +7835,7 @@ SCIP_RETCODE lpFlushAddCols(
    }
 
    /* call LP interface */
-   SCIPdebugMessage("flushing col additions: enlarge LP from %d to %d columns\n", lp->nlpicols, lp->ncols);
+   SCIPsetDebugMsg(set, "flushing col additions: enlarge LP from %d to %d columns\n", lp->nlpicols, lp->ncols);
    SCIP_CALL( SCIPlpiAddCols(lp->lpi, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;
@@ -7874,7 +7903,7 @@ SCIP_RETCODE lpFlushDelRows(
    {
       int i;
 
-      SCIPdebugMessage("flushing row deletions: shrink LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
+      SCIPsetDebugMsg(set, "flushing row deletions: shrink LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
       SCIP_CALL( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
       {
@@ -7959,7 +7988,7 @@ SCIP_RETCODE lpFlushAddRows(
       assert(row->lppos == r);
       assert(nnonz + row->nlpcols <= naddcoefs);
 
-      SCIPdebugMessage("flushing added row <%s>: ", row->name);
+      SCIPsetDebugMsg(set, "flushing added row <%s>: ", row->name);
       debugRowPrint(row);
 
       /* Because the row becomes a member of the LP solver, its dual variable now can take values
@@ -7992,7 +8021,7 @@ SCIP_RETCODE lpFlushAddRows(
       row->flushedlhs = lhs[pos];
       row->flushedrhs = rhs[pos];
 
-      SCIPdebugMessage("flushing added row (SCIP_LPI): %+g <=", lhs[pos]);
+      SCIPsetDebugMsg(set, "flushing added row (SCIP_LPI): %+g <=", lhs[pos]);
       for( i = 0; i < row->nlpcols; ++i )
       {
          assert(row->cols[i] != NULL);
@@ -8001,13 +8030,13 @@ SCIP_RETCODE lpFlushAddRows(
          {
             assert(lpipos < lp->ncols);
             assert(nnonz < naddcoefs);
-            SCIPdebugPrintf(" %+gx%d(<%s>)", row->vals[i], lpipos+1, SCIPvarGetName(row->cols[i]->var));
+            SCIPsetDebugMsgPrint(set, " %+gx%d(<%s>)", row->vals[i], lpipos+1, SCIPvarGetName(row->cols[i]->var));
             ind[nnonz] = lpipos;
             val[nnonz] = row->vals[i];
             nnonz++;
          }
       }
-      SCIPdebugPrintf(" <= %+g\n", rhs[pos]);
+      SCIPsetDebugMsgPrint(set, " <= %+g\n", rhs[pos]);
 #ifndef NDEBUG
       for( i = row->nlpcols; i < row->len; ++i )
       {
@@ -8018,7 +8047,7 @@ SCIP_RETCODE lpFlushAddRows(
    }
 
    /* call LP interface */
-   SCIPdebugMessage("flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
+   SCIPsetDebugMsg(set, "flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
    SCIP_CALL( SCIPlpiAddRows(lp->lpi, naddrows, lhs, rhs, name, nnonz, beg, ind, val) );
    lp->nlpirows = lp->nrows;
    lp->lpifirstchgrow = lp->nlpirows;
@@ -8151,7 +8180,7 @@ SCIP_RETCODE lpFlushChgCols(
    /* change objective values in LP */
    if( nobjchg > 0 )
    {
-      SCIPdebugMessage("flushing objective changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
+      SCIPsetDebugMsg(set, "flushing objective changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
       SCIP_CALL( SCIPlpiChgObj(lp->lpi, nobjchg, objind, obj) );
 
       /* mark the LP unsolved */
@@ -8164,7 +8193,7 @@ SCIP_RETCODE lpFlushChgCols(
    /* change bounds in LP */
    if( nbdchg > 0 )
    {
-      SCIPdebugMessage("flushing bound changes: change %d bounds of %d changed columns\n", nbdchg, lp->nchgcols);
+      SCIPsetDebugMsg(set, "flushing bound changes: change %d bounds of %d changed columns\n", nbdchg, lp->nchgcols);
       SCIP_CALL( SCIPlpiChgBounds(lp->lpi, nbdchg, bdind, lb, ub) );
 
       /* mark the LP unsolved */
@@ -8264,7 +8293,7 @@ SCIP_RETCODE lpFlushChgRows(
    /* change left and right hand sides in LP */
    if( nchg > 0 )
    {
-      SCIPdebugMessage("flushing side changes: change %d sides of %d rows\n", nchg, lp->nchgrows);
+      SCIPsetDebugMsg(set, "flushing side changes: change %d sides of %d rows\n", nchg, lp->nchgrows);
       SCIP_CALL( SCIPlpiChgSides(lp->lpi, nchg, ind, lhs, rhs) );
 
       /* mark the LP unsolved */
@@ -8295,9 +8324,8 @@ SCIP_RETCODE SCIPlpFlush(
    assert(lp != NULL);
    assert(blkmem != NULL);
 
-   SCIPdebugMessage("flushing LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%u\n",
-      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, 
-      lp->ncols, lp->nrows, lp->flushed);
+   SCIPsetDebugMsg(set, "flushing LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%u\n",
+      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
 
    if( !lp->flushed )
    {
@@ -8800,6 +8828,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->lpitiming = (int) set->time_clocktype;
+   (*lp)->lpirandomseed = set->random_randomseed;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -8912,6 +8941,17 @@ SCIP_RETCODE SCIPlpCreate(
          "LP Solver <%s>: number of threads settings not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
+   /* keep the default LP random seed if this parameter is set to 0 (current default) */
+   if( (*lp)->lpirandomseed != 0 )
+   {
+      SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_RANDOMSEED, (*lp)->lpirandomseed, &success) );
+      if( !success )
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "LP Solver <%s>: random seed parameter not available -- SCIP parameter has no effect\n",
+            SCIPlpiGetSolverName());
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -9007,14 +9047,14 @@ SCIP_RETCODE SCIPlpAddCol(
    assert(SCIPvarGetCol(col->var) == col);
    assert(SCIPvarIsIntegral(col->var) == col->integral);
 
-   SCIPdebugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
+   SCIPsetDebugMsg(set, "adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
    {
       int i;
-      SCIPdebugPrintf("  (obj: %g) [%g,%g]", col->obj, col->lb, col->ub);
+      SCIPsetDebugMsgPrint(set, "  (obj: %g) [%g,%g]", col->obj, col->lb, col->ub);
       for( i = 0; i < col->len; ++i )
-         SCIPdebugPrintf(" %+g<%s>", col->vals[i], col->rows[i]->name);
-      SCIPdebugPrintf("\n");
+         SCIPsetDebugMsgPrint(set, " %+g<%s>", col->vals[i], col->rows[i]->name);
+      SCIPsetDebugMsgPrint(set, "\n");
    }
 #endif
 
@@ -9067,16 +9107,16 @@ SCIP_RETCODE SCIPlpAddRow(
    SCIProwCapture(row);
    SCIProwLock(row);
 
-   SCIPdebugMessage("adding row <%s> to LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
+   SCIPsetDebugMsg(set, "adding row <%s> to LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
    {
       int i;
-      SCIPdebugPrintf("  %g <=", row->lhs);
+      SCIPsetDebugMsgPrint(set, "  %g <=", row->lhs);
       for( i = 0; i < row->len; ++i )
-         SCIPdebugPrintf(" %+g<%s>", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+         SCIPsetDebugMsgPrint(set, " %+g<%s>", row->vals[i], SCIPvarGetName(row->cols[i]->var));
       if( !SCIPsetIsZero(set, row->constant) )
-         SCIPdebugPrintf(" %+g", row->constant);
-      SCIPdebugPrintf(" <= %g\n", row->rhs);
+         SCIPsetDebugMsgPrint(set, " %+g", row->constant);
+      SCIPsetDebugMsgPrint(set, " <= %g\n", row->rhs);
    }
 #endif
 
@@ -9183,7 +9223,8 @@ SCIP_RETCODE SCIPlpShrinkCols(
    int c;
 
    assert(lp != NULL);
-   SCIPdebugMessage("shrinking LP from %d to %d columns\n", lp->ncols, newncols);
+
+   SCIPsetDebugMsg(set, "shrinking LP from %d to %d columns\n", lp->ncols, newncols);
    assert(0 <= newncols);
    assert(newncols <= lp->ncols);
 
@@ -9259,7 +9300,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
    assert(lp != NULL);
    assert(0 <= newnrows && newnrows <= lp->nrows);
 
-   SCIPdebugMessage("shrinking LP from %d to %d rows\n", lp->nrows, newnrows);
+   SCIPsetDebugMsg(set, "shrinking LP from %d to %d rows\n", lp->nrows, newnrows);
    if( newnrows < lp->nrows )
    {
       for( r = lp->nrows-1; r >= newnrows; --r )
@@ -9321,7 +9362,7 @@ SCIP_RETCODE SCIPlpClear(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   SCIPdebugMessage("clearing LP\n");
+   SCIPsetDebugMsg(set, "clearing LP\n");
    SCIP_CALL( SCIPlpShrinkCols(lp, set, 0) );
    SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, 0) );
 
@@ -9718,7 +9759,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
 {
    assert(lp != NULL);
 
-   SCIPdebugMessage("setting LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
+   SCIPsetDebugMsg(set, "setting LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
 
    /* if the objective function was changed in diving, the cutoff bound has no meaning (it will be set correctly
     * in SCIPendDive())
@@ -9797,7 +9838,7 @@ SCIP_RETCODE lpPrimalSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with primal simplex (diving=%d, nprimallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with primal simplex (diving=%d, nprimallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nprimallps, stat->ndivinglps);
 
    *lperror = FALSE;
@@ -9835,7 +9876,7 @@ SCIP_RETCODE lpPrimalSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") primal simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+      SCIPsetDebugMsg(set, "(node %" SCIP_LONGINT_FORMAT ") primal simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -9911,7 +9952,7 @@ SCIP_RETCODE lpPrimalSimplex(
       }
    }
 
-   SCIPdebugMessage("solved LP %" SCIP_LONGINT_FORMAT " with primal simplex (diving=%d, nprimallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solved LP %" SCIP_LONGINT_FORMAT " with primal simplex (diving=%d, nprimallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount, lp->diving || lp->probing, stat->nprimallps, stat->ndivinglps);
 
    return SCIP_OKAY;
@@ -9938,7 +9979,7 @@ SCIP_RETCODE lpDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
 
    *lperror = FALSE;
@@ -9976,7 +10017,7 @@ SCIP_RETCODE lpDualSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") dual simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+      SCIPsetDebugMsg(set, "(node %" SCIP_LONGINT_FORMAT ") dual simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -10052,7 +10093,7 @@ SCIP_RETCODE lpDualSimplex(
       }
    }
 
-   SCIPdebugMessage("solved LP %" SCIP_LONGINT_FORMAT " with dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solved LP %" SCIP_LONGINT_FORMAT " with dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
 
    return SCIP_OKAY;
@@ -10115,7 +10156,7 @@ SCIP_RETCODE lpLexDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with lex dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with lex dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount+1, lp->ncols, lp->nrows, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
 
    *lperror = FALSE;
@@ -10141,7 +10182,7 @@ SCIP_RETCODE lpLexDualSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") dual simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+      SCIPsetDebugMsg(set, "(node %" SCIP_LONGINT_FORMAT ") dual simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -10322,7 +10363,7 @@ SCIP_RETCODE lpLexDualSimplex(
          {
             if( fixedc[j] )
             {
-               SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
+               SCIPsetDebugMsg(set, "%f (%d) [f] ", primsol[j], j);
             }
             else
             {
@@ -10346,10 +10387,10 @@ SCIP_RETCODE lpLexDualSimplex(
                   SCIPerrorMessage("unknown base stat %d\n", cstat[j]);
                   SCIPABORT();
                }
-               SCIPdebugMessage("%f (%d) [%c] ", primsol[j], j, type);
+               SCIPsetDebugMsg(set, "%f (%d) [%c] ", primsol[j], j, type);
             }
          }
-         SCIPdebugMessage("\n\n");
+         SCIPsetDebugMsg(set, "\n\n");
 
          if( !chooseBasic )
          {
@@ -10512,7 +10553,7 @@ SCIP_RETCODE lpLexDualSimplex(
             if( retcode == SCIP_LPERROR )
             {
                *lperror = TRUE;
-               SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") in lex-dual: primal simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+               SCIPsetDebugMsg(set, "(node %" SCIP_LONGINT_FORMAT ") in lex-dual: primal simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
             }
             else
             {
@@ -10538,7 +10579,7 @@ SCIP_RETCODE lpLexDualSimplex(
                {
                   if( fixedc[j] )
                   {
-                     SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
+                     SCIPsetDebugMsg(set, "%f (%d) [f] ", primsol[j], j);
                   }
                   else
                   {
@@ -10571,10 +10612,10 @@ SCIP_RETCODE lpLexDualSimplex(
                         SCIPerrorMessage("unknown base state %d\n", cstat[j]);
                         SCIPABORT();
                      }
-                     SCIPdebugMessage("%f (%d) %c%c%c ", primsol[j], j, cstart, type, cend);
+                     SCIPsetDebugMsg(set, "%f (%d) %c%c%c ", primsol[j], j, cstart, type, cend);
                   }
                }
-               SCIPdebugMessage("\n\n");
+               SCIPsetDebugMsg(set, "\n\n");
 
                if( !chooseBasic )
                {
@@ -10602,7 +10643,7 @@ SCIP_RETCODE lpLexDualSimplex(
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
-         SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") dual simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+         SCIPsetDebugMsg(set, "(node %" SCIP_LONGINT_FORMAT ") dual simplex solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
       }
       else
       {
@@ -10666,7 +10707,7 @@ SCIP_RETCODE lpLexDualSimplex(
       /* stop timing */
       SCIPclockStop(stat->lexduallptime, set);
 
-      SCIPdebugMessage("solved LP %" SCIP_LONGINT_FORMAT " with lex dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+      SCIPsetDebugMsg(set, "solved LP %" SCIP_LONGINT_FORMAT " with lex dual simplex (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
          stat->lpcount, lp->diving || lp->probing, stat->nduallps, stat->ndivinglps);
    }
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
@@ -10710,7 +10751,7 @@ SCIP_RETCODE lpBarrier(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with barrier%s (diving=%d, nbarrierlps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solving LP %" SCIP_LONGINT_FORMAT " (%d cols, %d rows) with barrier%s (diving=%d, nbarrierlps=%" SCIP_LONGINT_FORMAT ", ndivinglps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount+1, lp->ncols, lp->nrows, crossover ? "/crossover" : "", lp->diving || lp->probing,
       stat->nbarrierlps, stat->ndivinglps);
 
@@ -10749,7 +10790,7 @@ SCIP_RETCODE lpBarrier(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") barrier solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+      SCIPsetDebugMsg(set, "(node %" SCIP_LONGINT_FORMAT ") barrier solving error in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -10820,7 +10861,7 @@ SCIP_RETCODE lpBarrier(
       }
    }
 
-   SCIPdebugMessage("solved LP %" SCIP_LONGINT_FORMAT " with barrier%s (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", nbarrierlps=%" SCIP_LONGINT_FORMAT ")\n",
+   SCIPsetDebugMsg(set, "solved LP %" SCIP_LONGINT_FORMAT " with barrier%s (diving=%d, nduallps=%" SCIP_LONGINT_FORMAT ", nbarrierlps=%" SCIP_LONGINT_FORMAT ")\n",
       stat->lpcount, crossover ? "/crossover" : "", lp->diving || lp->probing, stat->nbarrierlps, stat->ndivinglps);
 
    return SCIP_OKAY;
@@ -10857,12 +10898,12 @@ SCIP_RETCODE lpAlgorithm(
 
    if( lptimelimit <= 0.0 || !success )
    {
-      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
+      SCIPsetDebugMsg(set, "time limit of %f seconds could not be set\n", lptimelimit);
       *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
       *timelimit = TRUE;
       return SCIP_OKAY;
    }
-   SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
+   SCIPsetDebugMsg(set, "calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
@@ -10901,7 +10942,7 @@ SCIP_RETCODE lpAlgorithm(
       /* check for primal and dual feasibility */
       SCIP_CALL( SCIPlpiGetSolFeasibility(lp->lpi, &lp->primalfeasible, &lp->dualfeasible) );
 
-      SCIPdebugMessage("LP feasibility: primalfeasible=%u, dualfeasible=%u\n", lp->primalfeasible, lp->dualfeasible);
+      SCIPsetDebugMsg(set, "LP feasibility: primalfeasible=%u, dualfeasible=%u\n", lp->primalfeasible, lp->dualfeasible);
    }
 
    return SCIP_OKAY;
@@ -10986,6 +11027,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
+   SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
@@ -11426,7 +11468,7 @@ SCIP_RETCODE lpSolve(
    /* check, if an error occurred */
    if( *lperror )
    {
-      SCIPdebugMessage("unresolved error while solving LP with %s\n", lpalgoName(lp->lastlpalgo));
+      SCIPsetDebugMsg(set, "unresolved error while solving LP with %s\n", lpalgoName(lp->lastlpalgo));
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       return SCIP_OKAY;
@@ -11435,7 +11477,7 @@ SCIP_RETCODE lpSolve(
    /* check, if a time limit was exceeded */
    if( timelimit )
    {
-      SCIPdebugMessage("time limit exceeded before solving LP\n");
+      SCIPsetDebugMsg(set, "time limit exceeded before solving LP\n");
       lp->solved = TRUE;
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
@@ -11458,7 +11500,7 @@ SCIP_RETCODE lpSolve(
       if( !SCIPsetIsInfinity(set, lp->lpiuobjlim) && SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
-         SCIPdebugMessage("optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, "optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiuobjlim);
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = SCIPsetInfinity(set);
       }
@@ -11537,7 +11579,7 @@ SCIP_RETCODE lpSolve(
 
    lp->solved = TRUE;
 
-   SCIPdebugMessage("solving LP with %s returned solstat=%d (internal status: %d, primalfeasible=%u, dualfeasible=%u)\n",
+   SCIPsetDebugMsg(set, "solving LP with %s returned solstat=%d (internal status: %d, primalfeasible=%u, dualfeasible=%u)\n",
       lpalgoName(lp->lastlpalgo), lp->lpsolstat, SCIPlpiGetInternalStatus(lp->lpi),
       SCIPlpiIsPrimalFeasible(lp->lpi), SCIPlpiIsDualFeasible(lp->lpi));
 
@@ -11587,38 +11629,38 @@ SCIP_RETCODE lpFlushAndSolve(
       /* select simplex method */
       if( lp->dualfeasible || !lp->primalfeasible )
       {
-         SCIPdebugMessage("solving dual LP\n");
+         SCIPsetDebugMsg(set, "solving dual LP\n");
          SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
                needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       }
       else
       {
-         SCIPdebugMessage("solving primal LP\n");
+         SCIPsetDebugMsg(set, "solving primal LP\n");
          SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
                needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       }
       break;
 
    case 'p':
-      SCIPdebugMessage("solving primal LP\n");
+      SCIPsetDebugMsg(set, "solving primal LP\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_PRIMALSIMPLEX, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'd':
-      SCIPdebugMessage("solving dual LP\n");
+      SCIPsetDebugMsg(set, "solving dual LP\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'b':
-      SCIPdebugMessage("solving barrier LP\n");
+      SCIPsetDebugMsg(set, "solving barrier LP\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_BARRIER, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'c':
-      SCIPdebugMessage("solving barrier LP with crossover\n");
+      SCIPsetDebugMsg(set, "solving barrier LP with crossover\n");
       SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_BARRIERCROSSOVER, resolveitlim, harditlim, needprimalray,
             needdualray, resolve, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       break;
@@ -11678,7 +11720,7 @@ SCIP_RETCODE updateLazyBounds(
    if( lp->diving == lp->divinglazyapplied )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("mark all lazy columns as changed in order to reload bounds (diving=%u, applied=%u)\n",
+   SCIPsetDebugMsg(set, "mark all lazy columns as changed in order to reload bounds (diving=%u, applied=%u)\n",
       lp->diving, lp->divinglazyapplied);
 
    for( c = 0; c < lp->nlazycols; ++c )
@@ -11772,7 +11814,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    assert(prob->nvars >= lp->ncols);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving LP: %d rows, %d cols, primalfeasible=%u, dualfeasible=%u, solved=%u, diving=%u, probing=%u, cutoffbnd=%g\n", 
+   SCIPsetDebugMsg(set, "solving LP: %d rows, %d cols, primalfeasible=%u, dualfeasible=%u, solved=%u, diving=%u, probing=%u, cutoffbnd=%g\n",
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->probing, lp->cutoffbound);
 
    retcode = SCIP_OKAY;
@@ -11835,7 +11877,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       oldnlps = stat->nlps;
       SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, harditlim, needprimalray,
             needdualray, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
-      SCIPdebugMessage("lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
+      SCIPsetDebugMsg(set, "lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
 
       /* check for error */
@@ -11884,7 +11926,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             if( !lp->solved )
             {
                /* resolve LP after removing obsolete columns and rows */
-               SCIPdebugMessage("removed obsoletes - resolve LP again: %d rows, %d cols\n", lp->nrows, lp->ncols);
+               SCIPsetDebugMsg(set, "removed obsoletes - resolve LP again: %d rows, %d cols\n", lp->nrows, lp->ncols);
                aging = FALSE; /* to prevent infinite loops */
                goto SOLVEAGAIN;
             }
@@ -11932,13 +11974,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                *lperror = TRUE;
             }
          }
-         SCIPdebugMessage(" -> LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",
+         SCIPsetDebugMsg(set, " -> LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",
             lp->lpobjval, getFiniteLooseObjval(lp, set, prob), lp->lpobjval + getFiniteLooseObjval(lp, set, prob),
             lp->lpsolstat, lp->cutoffbound);
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         SCIPdebugMessage(" -> LP infeasible\n");
+         SCIPsetDebugMsg(set, " -> LP infeasible\n");
          if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             if( SCIPlpiHasDualRay(lp->lpi) )
@@ -11977,7 +12019,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
 
-         SCIPdebugMessage(" -> LP has unbounded primal ray (primalfeas=%u, rayfeas=%u)\n",
+         SCIPsetDebugMsg(set, " -> LP has unbounded primal ray (primalfeas=%u, rayfeas=%u)\n",
             primalfeasible, rayfeasible);
 
          if( !primalfeasible || !rayfeasible )
@@ -12059,7 +12101,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                char tmppricingchar;
                SCIP_LPSOLSTAT solstat;
 
-               SCIPdebugMessage("objval = %f < %f = lp->lpiuobjlim, but status objlimit\n", objval, lp->lpiuobjlim);
+               SCIPsetDebugMsg(set, "objval = %f < %f = lp->lpiuobjlim, but status objlimit\n", objval, lp->lpiuobjlim);
 
                /* we want to resolve from the current basis (also if the LP had to be solved from scratch) */
                fromscratch = FALSE;
@@ -12089,7 +12131,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                if( !(*lperror) && solstat != SCIP_LPSOLSTAT_ERROR && solstat != SCIP_LPSOLSTAT_NOTSOLVED )
                {
-                  SCIPdebugMessage(" ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
+                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
                }
 
                /* disable fastmip for subsequent LP calls (if objective limit is not yet exceeded or LP solution is infeasible) */
@@ -12112,13 +12154,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   /* get solution status for the lp */
                   solstat = SCIPlpGetSolstat(lp);
 
-                  SCIPdebugMessage(" ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
+                  SCIPsetDebugMsg(set, " ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
                }
 
                /* check for lp errors */
                if( *lperror || solstat == SCIP_LPSOLSTAT_ERROR || solstat == SCIP_LPSOLSTAT_NOTSOLVED )
                {
-                  SCIPdebugMessage("unresolved error while resolving LP in order to exceed the objlimit\n");
+                  SCIPsetDebugMsg(set, "unresolved error while resolving LP in order to exceed the objlimit\n");
                   lp->solved = FALSE;
                   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -12183,7 +12225,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      *lperror = TRUE;
                   }
 
-                  SCIPdebugMessage(" -> LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",
+                  SCIPsetDebugMsg(set, " -> LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",
                      lp->lpobjval, getFiniteLooseObjval(lp, set, prob), lp->lpobjval + getFiniteLooseObjval(lp, set, prob),
                      lp->lpsolstat, lp->cutoffbound);
                }
@@ -12191,7 +12233,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                else if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
                {
                   SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
-                  SCIPdebugMessage(" -> LP infeasible\n");
+                  SCIPsetDebugMsg(set, " -> LP infeasible\n");
                }
                /* unbounded solution */
                else if( solstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -12210,7 +12252,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      rayfeasible = TRUE;
                   }
 
-                  SCIPdebugMessage(" -> LP has unbounded primal ray\n");
+                  SCIPsetDebugMsg(set, " -> LP has unbounded primal ray\n");
 
                   /* in debug mode, check that lazy bounds (if present) are not violated */
                   checkLazyBounds(lp, set);
@@ -12245,15 +12287,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
          }
-         SCIPdebugMessage(" -> LP objective limit reached\n");
+         SCIPsetDebugMsg(set, " -> LP objective limit reached\n");
          break;
 
       case SCIP_LPSOLSTAT_ITERLIMIT:
-         SCIPdebugMessage(" -> LP iteration limit exceeded\n");
+         SCIPsetDebugMsg(set, " -> LP iteration limit exceeded\n");
          break;
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
-         SCIPdebugMessage(" -> LP time limit exceeded\n");
+         SCIPsetDebugMsg(set, " -> LP time limit exceeded\n");
 
          /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
          stat->nclockskipsleft = 0;
@@ -12286,7 +12328,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    {
       SCIP_Bool success;
       (void) lpSetFromscratch(lp, FALSE, &success);
-      SCIPdebugMessage("resetting parameter SCIP_LPPARAM_FROMSCRATCH to FALSE %s\n", success ? "" : "failed");
+      SCIPsetDebugMsg(set, "resetting parameter SCIP_LPPARAM_FROMSCRATCH to FALSE %s\n", success ? "" : "failed");
    }
 
    return retcode;
@@ -13590,7 +13632,7 @@ SCIP_RETCODE SCIPlpGetSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new LP solution %" SCIP_LONGINT_FORMAT " for solstat %d\n",
+   SCIPsetDebugMsg(set, "getting new LP solution %" SCIP_LONGINT_FORMAT " for solstat %d\n",
       stat->lpcount, SCIPlpGetSolstat(lp));
 
    lpicols = lp->lpicols;
@@ -13657,7 +13699,7 @@ SCIP_RETCODE SCIPlpGetSol(
             stilldualfeasible = !SCIPsetIsDualfeasNegative(set, compslack);
          }
 
-         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         SCIPsetDebugMsg(set, " col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
             SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
             SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
@@ -13685,7 +13727,7 @@ SCIP_RETCODE SCIPlpGetSol(
             && (SCIPsetIsInfinity(set, lpicols[c]->ub) || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub)) )
             stilldualfeasible = !SCIPsetIsDualfeasNegative(set, lpicols[c]->redcost);
 
-         SCIPdebugMessage(" col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         SCIPsetDebugMsg(set, " col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
             SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
             SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
@@ -13741,7 +13783,7 @@ SCIP_RETCODE SCIPlpGetSol(
             stilldualfeasible = !SCIPsetIsDualfeasNegative(set, compslack);
          }
 
-         SCIPdebugMessage(" row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         SCIPsetDebugMsg(set, " row <%s> [%.9g,%.9g]: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->activity, lpirows[r]->dualsol,
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
@@ -13763,7 +13805,7 @@ SCIP_RETCODE SCIPlpGetSol(
                (SCIPsetIsInfinity(set,lpirows[r]->rhs) || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->rhs)) )
             stilldualfeasible = !SCIPsetIsDualfeasNegative(set, lpirows[r]->dualsol);
 
-         SCIPdebugMessage(" row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         SCIPsetDebugMsg(set, " row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
             lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, lpirows[r]->activity, lpirows[r]->dualsol,
             SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
             SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
@@ -13795,7 +13837,7 @@ SCIP_RETCODE SCIPlpGetSol(
       && !(SCIPsetIsInfinity(set, -primalbound) && SCIPsetIsInfinity(set, -lp->lpobjval)) )
    {
       stillprimalfeasible = SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
-      SCIPdebugMessage(" primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
+      SCIPsetDebugMsg(set, " primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
          SCIPsetIsFeasLE(set, primalbound, lp->lpobjval), primalfeasible != NULL ? stillprimalfeasible : TRUE);
    }
 
@@ -13807,7 +13849,7 @@ SCIP_RETCODE SCIPlpGetSol(
       && !(SCIPsetIsInfinity(set, -dualbound) && SCIPsetIsInfinity(set, -lp->lpobjval)) )
    {
       stilldualfeasible =  SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
-      SCIPdebugMessage(" dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
+      SCIPsetDebugMsg(set, " dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
          SCIPsetIsFeasGE(set, dualbound, lp->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
    }
 
@@ -13876,7 +13918,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
 
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new unbounded LP solution %" SCIP_LONGINT_FORMAT "\n", stat->lpcount);
+   SCIPsetDebugMsg(set, "getting new unbounded LP solution %" SCIP_LONGINT_FORMAT "\n", stat->lpcount);
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -13963,7 +14005,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       }
    }
 
-   SCIPdebugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
+   SCIPsetDebugMsg(set, "unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
    for( c = 0; c < nlpicols; ++c )
@@ -14030,7 +14072,7 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lpiray, lp->nlpicols) );
 
-   SCIPdebugMessage("getting primal ray values\n");
+   SCIPsetDebugMsg(set, "getting primal ray values\n");
 
    /* get primal unbounded ray */
    SCIP_CALL( SCIPlpiGetPrimalRay(lp->lpi, lpiray) );
@@ -14094,10 +14136,10 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    nlpirows = lp->nlpirows;
 
    /* store infeasibility proof in rows */
-   SCIPdebugMessage("LP is infeasible:\n");
+   SCIPsetDebugMsg(set, "LP is infeasible:\n");
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIPdebugMessage(" row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
+      SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
       lpirows[r]->dualfarkas = dualfarkas[r];
       lpirows[r]->dualsol = SCIP_INVALID;
       lpirows[r]->activity = 0.0;
@@ -14170,7 +14212,7 @@ SCIP_RETCODE SCIPlpUpdateAges(
          lpicols[c]->age++;
       else
          lpicols[c]->age = 0;
-      /*debugMessage(" -> col <%s>: primsol=%f, age=%d\n", 
+      /*SCIPstatDebugMsg(stat, " -> col <%s>: primsol=%f, age=%d\n",
         SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->age);*/
    }
 
@@ -14180,13 +14222,15 @@ SCIP_RETCODE SCIPlpUpdateAges(
       assert(lpirows[r] == lp->rows[r]);
 
       if( lpirows[r]->dualsol == 0.0 ) /* basic rows to remove are exactly at 0.0 */
+      {
          lpirows[r]->age++;
+      }
       else
       {
          lpirows[r]->activeinlpcounter++;
          lpirows[r]->age = 0;
       }
-      /*debugMessage(" -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);*/
+      /*debugMsg(scip, " -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);*/
    }
 
    return SCIP_OKAY;
@@ -14443,12 +14487,12 @@ SCIP_RETCODE lpRemoveObsoleteCols(
          coldstat[c] = 1;
          ndelcols++;
          cols[c]->obsoletenode = stat->nnodes;
-         SCIPdebugMessage("removing obsolete col <%s>: primsol=%f, bounds=[%g,%g]\n", 
+         SCIPsetDebugMsg(set, "removing obsolete col <%s>: primsol=%f, bounds=[%g,%g]\n",
             SCIPvarGetName(cols[c]->var), cols[c]->primsol, cols[c]->lb, cols[c]->ub);
       }
    }
 
-   SCIPdebugMessage("removing %d/%d obsolete columns from LP\n", ndelcols, ncols);
+   SCIPsetDebugMsg(set, "removing %d/%d obsolete columns from LP\n", ndelcols, ncols);
 
    /* delete the marked columns in the LP solver interface, update the LP respectively */
    if( ndelcols > 0 )
@@ -14520,12 +14564,12 @@ SCIP_RETCODE lpRemoveObsoleteRows(
          rowdstat[r] = 1;
          ndelrows++;
          rows[r]->obsoletenode = stat->nnodes;
-         SCIPdebugMessage("removing obsolete row <%s>: activity=%f, sides=[%g,%g]\n", 
+         SCIPsetDebugMsg(set, "removing obsolete row <%s>: activity=%f, sides=[%g,%g]\n",
             rows[r]->name, rows[r]->activity, rows[r]->lhs, rows[r]->rhs);
       }
    }
 
-   SCIPdebugMessage("removing %d/%d obsolete rows from LP\n", ndelrows, nrows);
+   SCIPsetDebugMsg(set, "removing %d/%d obsolete rows from LP\n", ndelrows, nrows);
 
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
@@ -14556,7 +14600,7 @@ SCIP_RETCODE SCIPlpRemoveNewObsoletes(
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(set != NULL);
 
-   SCIPdebugMessage("removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
+   SCIPsetDebugMsg(set, "removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
       lp->firstnewcol, lp->ncols, lp->firstnewrow, lp->nrows);
 
    if( lp->firstnewcol < lp->ncols )
@@ -14587,7 +14631,7 @@ SCIP_RETCODE SCIPlpRemoveAllObsoletes(
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(set != NULL);
 
-   SCIPdebugMessage("removing all obsolete columns and rows\n");
+   SCIPsetDebugMsg(set, "removing all obsolete columns and rows\n");
 
    if( 0 < lp->ncols )
    {
@@ -14653,7 +14697,7 @@ SCIP_RETCODE lpCleanupCols(
       }
    }
 
-   SCIPdebugMessage("removing %d/%d unused columns from LP\n", ndelcols, ncols);
+   SCIPsetDebugMsg(set, "removing %d/%d unused columns from LP\n", ndelcols, ncols);
 
    /* delete the marked columns in the LP solver interface, update the LP respectively */
    if( ndelcols > 0 )
@@ -14725,7 +14769,7 @@ SCIP_RETCODE lpCleanupRows(
       }
    }
 
-   SCIPdebugMessage("removing %d/%d unused rows from LP\n", ndelrows, nrows);
+   SCIPsetDebugMsg(set, "removing %d/%d unused rows from LP\n", ndelrows, nrows);
 
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
@@ -14764,7 +14808,7 @@ SCIP_RETCODE SCIPlpCleanupNew(
    cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
    cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   SCIPdebugMessage("removing unused columns starting with %d/%d (%u), unused rows starting with %d/%d (%u), LP algo: %d, basic sol: %u\n",
+   SCIPsetDebugMsg(set, "removing unused columns starting with %d/%d (%u), unused rows starting with %d/%d (%u), LP algo: %d, basic sol: %u\n",
       lp->firstnewcol, lp->ncols, cleanupcols, lp->firstnewrow, lp->nrows, cleanuprows, lp->lastlpalgo, lp->solisbasic);
 
    if( cleanupcols && lp->firstnewcol < lp->ncols )
@@ -14803,7 +14847,7 @@ SCIP_RETCODE SCIPlpCleanupAll(
    cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
    cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   SCIPdebugMessage("removing all unused columns (%u) and rows (%u), LP algo: %d, basic sol: %u\n", 
+   SCIPsetDebugMsg(set, "removing all unused columns (%u) and rows (%u), LP algo: %d, basic sol: %u\n",
       cleanupcols, cleanuprows, lp->lastlpalgo, lp->solisbasic);
 
    if( cleanupcols && 0 < lp->ncols )
@@ -14869,7 +14913,7 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
       if( (!lp->solisbasic || (SCIP_BASESTAT)lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC)
          && SCIProwIsRedundant(lpirows[r], set, stat) )
       {
-         SCIPdebugMessage("basic row <%s> is redundant: sides=[%g,%g], act=[%g,%g]\n",
+         SCIPsetDebugMsg(set, "basic row <%s> is redundant: sides=[%g,%g], act=[%g,%g]\n",
             SCIProwGetName(lpirows[r]), SCIProwGetLhs(lpirows[r]), SCIProwGetRhs(lpirows[r]),
             SCIProwGetMinActivity(lpirows[r], set, stat), SCIProwGetMaxActivity(lpirows[r], set, stat));
          rowdstat[r] = 1;
@@ -14877,7 +14921,7 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
       }
    }
 
-   SCIPdebugMessage("removing %d/%d redundant basic rows from LP\n", ndelrows, nrows);
+   SCIPsetDebugMsg(set, "removing %d/%d redundant basic rows from LP\n", ndelrows, nrows);
 
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
@@ -14915,7 +14959,7 @@ SCIP_RETCODE SCIPlpStartDive(
    assert(set != NULL);
    assert(lp->ndivechgsides == 0);
 
-   SCIPdebugMessage("diving started (LP flushed: %u, LP solved: %u, solstat: %d)\n",
+   SCIPsetDebugMsg(set, "diving started (LP flushed: %u, LP solved: %u, solstat: %d)\n",
       lp->flushed, lp->solved, SCIPlpGetSolstat(lp));
 
 #ifndef NDEBUG
@@ -15015,8 +15059,7 @@ SCIP_RETCODE SCIPlpEndDive(
    assert(blkmem != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   SCIPdebugMessage("diving ended (LP flushed: %u, solstat: %d)\n",
-      lp->flushed, SCIPlpGetSolstat(lp));
+   SCIPsetDebugMsg(set, "diving ended (LP flushed: %u, solstat: %d)\n", lp->flushed, SCIPlpGetSolstat(lp));
 
    /* reset all columns' objective values and bounds to its original values */
    for( v = 0; v < nvars; ++v )
@@ -15384,7 +15427,7 @@ SCIP_RETCODE SCIPlpGetProvedLowerbound(
 {
    SCIP_CALL( provedBound(lp, set, FALSE, bound) );
 
-   SCIPdebugMessage("proved lower bound of LP: %.15g\n", *bound);
+   SCIPsetDebugMsg(set, "proved lower bound of LP: %.15g\n", *bound);
 
    return SCIP_OKAY;
 }
@@ -15404,7 +15447,7 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
 
    *proved = (bound > 0.0);
 
-   SCIPdebugMessage("proved Farkas value of LP: %g -> infeasibility %sproved\n", bound, *proved ? "" : "not ");
+   SCIPsetDebugMsg(set, "proved Farkas value of LP: %g -> infeasibility %sproved\n", bound, *proved ? "" : "not ");
 
    return SCIP_OKAY;
 }
@@ -15451,7 +15494,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    assert(lp->flushed);
    assert(fname != NULL);
 
-   SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
+   SCIPsetDebugMsg(set, "Start to write MIP to file <%s>\n", fname);
    file = fopen(fname, "w");
    if( file == NULL )
    {
@@ -16779,7 +16822,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) ) /*lint !e777 */
       inclobjcutoff = FALSE;
 
-   SCIPdebugMessage("Computing relative interior point to current LP.\n");
+   SCIPsetDebugMsg(set, "Computing relative interior point to current LP.\n");
 
    /* if there are no rows, we return the zero point */
    if( lp->nrows == 0 && !inclobjcutoff )
@@ -17190,7 +17233,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       alpha = primal[lp->ncols];
       assert( SCIPsetIsFeasGE(set, alpha, 1.0) );
 
-      SCIPdebugMessage("Solved relative interior lp with objective %g.\n", objval);
+      SCIPsetDebugMsg(set, "Solved relative interior lp with objective %g.\n", objval);
 
       /* construct relative interior point */
       for( j = 0; j < lp->ncols; ++j )

@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "scip/heur_intshifting.h"
-
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "intshifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
@@ -39,14 +39,14 @@
 
 #define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
-
+#define DEFAULT_RANDSEED      17
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -62,6 +62,8 @@ void updateViolations(
    SCIP_ROW**            violrows,           /**< array with currently violated rows */
    int*                  violrowpos,         /**< position of LP rows in violrows array */
    int*                  nviolrows,          /**< pointer to the number of currently violated rows */
+   int*                  nviolfracrows,      /**< pointer to the number of violated rows with fractional candidates */
+   int*                  nfracsinrow,        /**< array with number of fractional variables for every row */
    SCIP_Real             oldminactivity,     /**< old minimal activity value of LP row */
    SCIP_Real             oldmaxactivity,     /**< old maximal activity value of LP row */
    SCIP_Real             newminactivity,     /**< new minimal activity value of LP row */
@@ -96,9 +98,28 @@ void updateViolations(
          assert(0 <= violpos && violpos < *nviolrows);
          assert(violrows[violpos] == row);
          violrowpos[rowpos] = -1;
-         if( violpos != *nviolrows-1 )
+         /* first, move the row to the end of the subset of violated rows with fractional variables */
+         if( nfracsinrow[rowpos] > 0 )
          {
             violrows[violpos] = violrows[*nviolrows-1];
+            assert(violpos < *nviolfracrows);
+
+            /* replace with last violated row containing fractional variables */
+            if( violpos != *nviolfracrows - 1 )
+            {
+               violrows[violpos] = violrows[*nviolfracrows - 1];
+               violrowpos[SCIProwGetLPPos(violrows[violpos])] = violpos;
+               violpos = *nviolfracrows - 1;
+            }
+            (*nviolfracrows)--;
+         }
+
+         assert(violpos >= *nviolfracrows);
+
+         /* swap row at the end of the violated array to the position of this row and decrease the counter */
+         if( violpos != *nviolrows - 1 )
+         {
+            violrows[violpos] = violrows[*nviolrows - 1];
             violrowpos[SCIProwGetLPPos(violrows[violpos])] = violpos;
          }
          (*nviolrows)--;
@@ -110,6 +131,24 @@ void updateViolations(
          violrows[*nviolrows] = row;
          violrowpos[rowpos] = *nviolrows;
          (*nviolrows)++;
+
+         /* if the row contains fractional variables, swap with the last violated row that has no fractional variables
+          * at position *nviolfracrows
+          */
+         if( nfracsinrow[rowpos] > 0 )
+         {
+            if( *nviolfracrows < *nviolrows - 1 )
+            {
+               assert(nfracsinrow[SCIProwGetLPPos(violrows[*nviolfracrows])] == 0);
+
+               violrows[*nviolrows - 1] = violrows[*nviolfracrows];
+               violrowpos[SCIProwGetLPPos(violrows[*nviolrows - 1])] = *nviolrows - 1;
+
+               violrows[*nviolfracrows] = row;
+               violrowpos[rowpos] = *nviolfracrows;
+            }
+            (*nviolfracrows)++;
+         }
       }
    }
 }
@@ -123,6 +162,8 @@ SCIP_RETCODE updateActivities(
    SCIP_ROW**            violrows,           /**< array with currently violated rows */
    int*                  violrowpos,         /**< position of LP rows in violrows array */
    int*                  nviolrows,          /**< pointer to the number of currently violated rows */
+   int*                  nviolfracrows,      /**< pointer to the number of violated rows with fractional candidates */
+   int*                  nfracsinrow,        /**< array with number of fractional variables for every row */
    int                   nlprows,            /**< number of rows in current LP */
    SCIP_VAR*             var,                /**< variable that has been changed */
    SCIP_Real             oldsolval,          /**< old solution value of variable */
@@ -187,7 +228,7 @@ SCIP_RETCODE updateActivities(
             newmaxactivity = SCIPinfinity(scip);
 
          /* update row violation arrays */
-         updateViolations(scip, row, violrows, violrowpos, nviolrows, oldminactivity, oldmaxactivity,
+         updateViolations(scip, row, violrows, violrowpos, nviolrows, nviolfracrows, nfracsinrow, oldminactivity, oldmaxactivity,
             newminactivity, newmaxactivity);
       }
    }
@@ -432,6 +473,10 @@ SCIP_RETCODE selectEssentialRounding(
 static
 void addFracCounter(
    int*                  nfracsinrow,        /**< array to store number of fractional variables per row */
+   SCIP_ROW**            violrows,           /**< array with currently violated rows */
+   int*                  violrowpos,         /**< position of LP rows in violrows array */
+   int*                  nviolfracrows,      /**< pointer to store the number of violated rows with fractional variables */
+   int                   nviolrows,          /**< the number of currently violated rows (stays unchanged in this method) */
    int                   nlprows,            /**< number of rows in LP */
    SCIP_VAR*             var,                /**< variable for which the counting should be updated */
    int                   incval              /**< value that should be added to the corresponding array entries */
@@ -442,17 +487,75 @@ void addFracCounter(
    int nrows;
    int r;
 
+   assert(incval != 0);
+   assert(nviolrows >= *nviolfracrows);
+
    col = SCIPvarGetCol(var);
    rows = SCIPcolGetRows(col);
    nrows = SCIPcolGetNLPNonz(col);
    for( r = 0; r < nrows; ++r )
    {
-      int rowidx;
+      int rowlppos;
+      int theviolrowpos;
+      SCIP_ROW* row;
 
-      rowidx = SCIProwGetLPPos(rows[r]);
-      assert(0 <= rowidx && rowidx < nlprows);
-      nfracsinrow[rowidx] += incval;
-      assert(nfracsinrow[rowidx] >= 0);
+      row = rows[r];
+      assert(NULL != row);
+      rowlppos = SCIProwGetLPPos(row);
+      assert(0 <= rowlppos && rowlppos < nlprows);
+      assert(!SCIProwIsLocal(row) || violrowpos[rowlppos] == -1);
+
+      if( SCIProwIsLocal(row) )
+         continue;
+
+      nfracsinrow[rowlppos] += incval;
+      assert(nfracsinrow[rowlppos] >= 0);
+
+      theviolrowpos = violrowpos[rowlppos];
+
+      /* swap positions in violrows array if fractionality has changed to 0 */
+      if( theviolrowpos >= 0 )
+      {
+         /* first case: the number of fractional variables has become zero: swap row in violrows array to the
+          * second part, containing only violated rows without fractional variables
+          */
+         if( nfracsinrow[rowlppos] == 0 )
+         {
+            assert(theviolrowpos <= *nviolfracrows - 1);
+
+            /* nothing to do if row is already at the end of the first part, otherwise, swap it to the last position
+             * and decrease the counter */
+            if( theviolrowpos < *nviolfracrows - 1 )
+            {
+               violrows[theviolrowpos] = violrows[*nviolfracrows - 1];
+               violrows[*nviolfracrows - 1] = row;
+
+
+               violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
+               violrowpos[rowlppos] = *nviolfracrows - 1;
+            }
+            (*nviolfracrows)--;
+         }
+         /* second interesting case: the number of fractional variables was zero before, swap it with the first
+          * violated row without fractional variables
+          */
+         else if( nfracsinrow[rowlppos] == incval )
+         {
+            assert(theviolrowpos >= *nviolfracrows);
+
+            /* nothing to do if the row is exactly located at index *nviolfracrows */
+            if( theviolrowpos > *nviolfracrows )
+            {
+               violrows[theviolrowpos] = violrows[*nviolfracrows];
+               violrows[*nviolfracrows] = row;
+
+
+               violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
+               violrowpos[rowlppos] = *nviolfracrows;
+            }
+            (*nviolfracrows)++;
+         }
+      }
    }
 }
 
@@ -489,8 +592,11 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = 0;
    SCIPheurSetData(heur, heurdata);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -507,6 +613,10 @@ SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -554,6 +664,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    int nvars;
    int nfrac;
    int nviolrows;
+   int nviolfracrows;
    int nprevviolrows;
    int minnviolrows;
    int nnonimprovingshifts;
@@ -620,7 +731,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMessage("executing intshifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing intshifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
    nvars = SCIPgetNVars(scip);
@@ -724,11 +835,15 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          else
             violrowpos[r] = -1;
       }
+      else
+         /* if row is a local row */
+         violrowpos[r] = -1;
    }
 
+   nviolfracrows = 0;
    /* calc the current number of fractional variables in rows */
    for( c = 0; c < nlpcands; ++c )
-      addFracCounter(nfracsinrow, nlprows, lpcands[c], +1);
+      addFracCounter(nfracsinrow, violrows, violrowpos, &nviolfracrows, nviolrows, nlprows, lpcands[c], +1);
 
    /* get the working solution from heuristic's local data */
    sol = heurdata->sol;
@@ -759,7 +874,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_Bool oldsolvalisfrac;
       int probindex;
 
-      SCIPdebugMessage("intshifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
+      SCIPdebugMsg(scip, "intshifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj),
          SCIPretransformObj(scip, SCIPgetCutoffbound(scip)));
 
@@ -779,32 +894,23 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          int rowpos;
          int direction;
 
-         rowidx = -1;
-         rowpos = -1;
-         row = NULL;
-         if( nfrac > 0 )
-         {
-            for( rowidx = nviolrows-1; rowidx >= 0; --rowidx )
-            {
-               row = violrows[rowidx];
-               rowpos = SCIProwGetLPPos(row);
-               assert(violrowpos[rowpos] == rowidx);
-               if( nfracsinrow[rowpos] > 0 )
-                  break;
-            }
-         }
-         if( rowidx == -1 )
-         {
-            rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
-            row = violrows[rowidx];
-            rowpos = SCIProwGetLPPos(row);
-            assert(0 <= rowpos && rowpos < nlprows);
-            assert(violrowpos[rowpos] == rowidx);
-            assert(nfracsinrow[rowpos] == 0);
-         }
-         assert(violrowpos[rowpos] == rowidx);
+         assert(nviolfracrows == 0 || nfrac > 0);
+         /* violated rows containing fractional variables are preferred; if such a row exists, choose the last one from the list
+          * (at position nviolfracrows - 1) because removing this row will cause one swapping operation less than other rows
+          */
+         if( nviolfracrows > 0 )
+            rowidx = nviolfracrows - 1;
+         else
+            rowidx = SCIPrandomGetInt(heurdata->randnumgen, 0, nviolrows-1);
 
-         SCIPdebugMessage("intshifting heuristic: try to fix violated row <%s>: %g <= [%g,%g] <= %g\n",
+         assert(0 <= rowidx && rowidx < nviolrows);
+         row = violrows[rowidx];
+         rowpos = SCIProwGetLPPos(row);
+         assert(0 <= rowpos && rowpos < nlprows);
+         assert(violrowpos[rowpos] == rowidx);
+         assert(nfracsinrow[rowpos] == 0 || rowidx == nviolfracrows - 1);
+
+         SCIPdebugMsg(scip, "intshifting heuristic: try to fix violated row <%s>: %g <= [%g,%g] <= %g\n",
             SCIProwGetName(row), SCIProwGetLhs(row), minactivities[rowpos], maxactivities[rowpos], SCIProwGetRhs(row));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
@@ -820,26 +926,27 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 
       if( shiftvar == NULL && nfrac > 0 )
       {
-         SCIPdebugMessage("intshifting heuristic: search rounding variable and try to stay feasible\n");
+         SCIPdebugMsg(scip, "intshifting heuristic: search rounding variable and try to stay feasible\n");
          SCIP_CALL( selectEssentialRounding(scip, sol, minobj, lpcands, nlpcands, &shiftvar, &oldsolval, &newsolval) );
       }
 
       /* check, whether shifting was possible */
       if( shiftvar == NULL || SCIPisEQ(scip, oldsolval, newsolval) )
       {
-         SCIPdebugMessage("intshifting heuristic:  -> didn't find a shifting variable\n");
+         SCIPdebugMsg(scip, "intshifting heuristic:  -> didn't find a shifting variable\n");
          break;
       }
 
       assert(SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
 
-      SCIPdebugMessage("intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
+      SCIPdebugMsg(scip, "intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
          oldsolval, newsolval, SCIPvarGetObj(shiftvar));
 
       /* update row activities of globally valid rows */
-      SCIP_CALL( updateActivities(scip, minactivities, maxactivities, violrows, violrowpos, &nviolrows, nlprows,
-            shiftvar, oldsolval, newsolval) );
+      SCIP_CALL( updateActivities(scip, minactivities, maxactivities, violrows, violrowpos, &nviolrows, &nviolfracrows,
+            nfracsinrow, nlprows, shiftvar, oldsolval, newsolval) );
+
       if( nviolrows >= nprevviolrows )
          nnonimprovingshifts++;
       else if( nviolrows < minnviolrows )
@@ -860,7 +967,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          nfrac--;
          nnonimprovingshifts = 0;
          minnviolrows = INT_MAX;
-         addFracCounter(nfracsinrow, nlprows, shiftvar, -1);
+         addFracCounter(nfracsinrow, violrows, violrowpos, &nviolfracrows, nviolrows, nlprows, shiftvar, -1);
 
          /* the rounding was already calculated into the minobj -> update only if rounding in "wrong" direction */
          if( obj > 0.0 && newsolval > oldsolval )
@@ -897,7 +1004,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          }
       }
 
-      SCIPdebugMessage("intshifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+      SCIPdebugMsg(scip, "intshifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
    }
 
@@ -914,7 +1021,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_RETCODE retstat;
 #endif
 
-      SCIPdebugMessage("shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
+      SCIPdebugMsg(scip, "shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
 
       /* start diving to calculate the LP relaxation */
       SCIP_CALL( SCIPstartDive(scip) );
@@ -942,7 +1049,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       }
 
       /* solve LP */
-      SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -957,8 +1064,8 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -972,11 +1079,11 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
           * neither integrality nor feasibility of LP rows has to be checked, because this is already
           * done in the intshifting heuristic itself and due to the LP resolve
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
          if( stored )
          {
-            SCIPdebugMessage("found feasible shifted solution:\n");
+            SCIPdebugMsg(scip, "found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
          }

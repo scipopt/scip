@@ -772,7 +772,7 @@ SCIP_RETCODE createSolFromSubScipSol(
          subvar = (SCIP_VAR*) SCIPhashmapGetImage(heurdata->varsciptosubscip, (void*)var);
          if( subvar == NULL )
          {
-            SCIPdebugMessage("return14 : abort building solution since a variable was not in our list\n");
+            SCIPdebugMsg(scip, "return14 : abort building solution since a variable was not in our list\n");
 
             SCIP_CALL( SCIPfreeSol(scip, sol) );
             return SCIP_OKAY;
@@ -866,12 +866,12 @@ SCIP_RETCODE createSubSCIP(
    SCIP_Bool    feasible;
    SCIP_Bool    success;
 
+   assert( heurdata != NULL );
+   assert( heurdata->subscip == NULL );
+
    heurdata->usedcalls = 0;
    heurdata->solfound = FALSE;
    heurdata->nonimprovingRounds = 0;
-
-   assert( heurdata != NULL );
-   assert( heurdata->subscip == NULL );
 
    /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
@@ -938,7 +938,7 @@ SCIP_RETCODE createSubSCIP(
 
    if( success == FALSE )
    {
-      SCIPdebugMessage("In heur_dualval: failed to copy some plugins to sub-SCIP, continue anyway\n");
+      SCIPdebugMsg(scip, "In heur_dualval: failed to copy some plugins to sub-SCIP, continue anyway\n");
    }
 
    /* copy parameter settings */
@@ -953,7 +953,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPincludeEventHdlrLPsol(heurdata->subscip, heurdata) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, TRUE) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
    SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
@@ -981,7 +981,7 @@ SCIP_RETCODE createSubSCIP(
 
    if( !heurdata->subscipisvalid )
    {
-      SCIPdebugMessage("In heur_dualval: failed to copy some constraints to sub-SCIP, continue anyway\n");
+      SCIPdebugMsg(scip, "In heur_dualval: failed to copy some constraints to sub-SCIP, continue anyway\n");
    }
 
    SCIP_CALL( SCIPgetVarsData(heurdata->subscip, &subvars, &heurdata->nsubvars, NULL, NULL, NULL, NULL) );
@@ -1916,7 +1916,7 @@ SCIP_RETCODE storeSolution(
        * (normally then this happens in most ipopt runs that may follow)       */
       SCIPheurSetFreq(heur, -1);
 
-      SCIPdebugMessage("return10 : turn off heuristic, ipopt error\n");
+      SCIPdebugMsg(scip, "return10 : turn off heuristic, ipopt error\n");
 
       if( heurdata->heurverblevel > 1 )
       {
@@ -1933,9 +1933,14 @@ SCIP_RETCODE storeSolution(
    {
       primalobj = SCIPsolGetOrigObj(sol);
 
-      /* why do we have to check first? */
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &stored, heurdata->heurverblevel > 0 ? TRUE : FALSE, TRUE) );
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, FALSE, TRUE, &stored) );
+      if( heurdata->heurverblevel > 0 )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, FALSE, TRUE, &stored) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
+      }
    }
    else
       stored = FALSE;
@@ -2025,7 +2030,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* don't use the heuristic, if the gap is small so we don't expect to get better solutions than already found */
    if( SCIPgetGap(scip) * 100 < heurdata->mingap )
    {
-      SCIPdebugMessage("return13 : gap is less than mingap\n");
+      SCIPdebugMsg(scip, "return13 : gap is less than mingap\n");
       return SCIP_OKAY;
    }
 
@@ -2042,7 +2047,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* quit the recursion if we have found a solution */
    if( heurdata->solfound )
    {
-      SCIPdebugMessage("return1 : already found solution \n");
+      SCIPdebugMsg(scip, "return1 : already found solution \n");
       return SCIP_OKAY;
    }
 
@@ -2051,7 +2056,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* not initialized */
    if( heurdata->subscip == NULL )
    {
-      SCIPdebugMessage("return2 : subscip is NULL\n");
+      SCIPdebugMsg(scip, "return2 : subscip is NULL\n");
       return SCIP_OKAY;
    }
 
@@ -2075,7 +2080,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
 
    if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPdebugMessage("return 4 : subscip is infeasible\n");
+      SCIPdebugMsg(scip, "return 4 : subscip is infeasible\n");
 
       *result = SCIP_DIDNOTFIND;
       heurdata->prevInfeasible = TRUE;
@@ -2210,7 +2215,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* if we are infeasible, we can't do anything*/
    if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPdebugMessage("return4 : the subscip is infeasible\n");
+      SCIPdebugMsg(scip, "return4 : the subscip is infeasible\n");
 
       SCIP_CALL( freeMemory(scip, heurdata, transsol, NULL, NULL, NULL, TRUE, TRUE) );
 
@@ -2218,7 +2223,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    }
 
    maxslack = maximalslack(scip, heurdata);
-   SCIPdebugMessage("origObj: %f\n", SCIPgetSolOrigObj(heurdata->subscip, bestsol));
+   SCIPdebugMsg(scip, "origObj: %f\n", SCIPgetSolOrigObj(heurdata->subscip, bestsol));
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, &nsubbinvars, &nsubintvars, NULL, NULL) );
    objvalue = 0.0;
    assert(bestsol != NULL);
@@ -2238,7 +2243,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       if( SCIPisGE(scip, SCIPgetSolOrigObj(heurdata->subscip, bestsol) - objvalue, heurdata->prevobjective) && maxslack > 0 )
       {
          heurdata->nonimprovingRounds++;
-         SCIPdebugMessage("nonimpr rounds %d prevobj %f \n", heurdata->nonimprovingRounds, heurdata->prevobjective);
+         SCIPdebugMsg(scip, "nonimpr rounds %d prevobj %f \n", heurdata->nonimprovingRounds, heurdata->prevobjective);
 
          /* leave, if we have not improved some iterations*/
          if( heurdata->nonimprovingRounds > heurdata->maxcalls/8 )
@@ -2255,7 +2260,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
             heurdata->solfound = TRUE;
             heurdata->switchdifferent = TRUE;
 
-            SCIPdebugMessage("return11 : solution did not improve\n");
+            SCIPdebugMsg(scip, "return11 : solution did not improve\n");
 
             return SCIP_OKAY;
          }
@@ -2300,7 +2305,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    {
       *result = SCIP_DIDNOTFIND;
 
-      SCIPdebugMessage("return12 : equal maxranks\n");
+      SCIPdebugMsg(scip, "return12 : equal maxranks\n");
 
       SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, TRUE, TRUE ) );
       return SCIP_OKAY;
@@ -2407,7 +2412,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* if we have exceeded our iterations limit give up without any solution */
       if( heurdata->usedcalls >= heurdata->maxcalls )
       {
-         SCIPdebugMessage("return5 : reached iteration limit\n");
+         SCIPdebugMsg(scip, "return5 : reached iteration limit\n");
 
          SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, FALSE, TRUE) );
          *result = SCIP_DIDNOTFIND;
@@ -2425,7 +2430,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* just to go up in the recursion */
       if( *result == SCIP_DIDNOTFIND || heurdata->solfound || heurdata->prevInfeasible )
       {
-         SCIPdebugMessage("return6 : go up\n");
+         SCIPdebugMsg(scip, "return6 : go up\n");
 
          /* here we only go up one step and try another switch (switch the same variables again is forbidden
           * since they are contained in switchedvars) */
@@ -2454,14 +2459,14 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    {
       /* something horrible must have happened that we decided to give up completely on this heuristic */
       *result = SCIP_DIDNOTFIND;
-      SCIPdebugMessage("return7 : subscip was set NULL\n");
+      SCIPdebugMsg(scip, "return7 : subscip was set NULL\n");
 
       SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, FALSE, TRUE) );
       return SCIP_OKAY;
    }
    assert(!SCIPisTransformed(heurdata->subscip));
 
-   SCIPdebugMessage("return8 : cannot switch any variable\n");
+   SCIPdebugMsg(scip, "return8 : cannot switch any variable\n");
 
    SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, FALSE, TRUE) );
 
@@ -2657,7 +2662,6 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
    heurdata->solfound = FALSE;
    heurdata->prevInfeasible = FALSE;
 
-   assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
    assert(heurdata->varsubsciptoscip == NULL);
    assert(heurdata->varsciptosubscip == NULL);

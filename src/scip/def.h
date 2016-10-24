@@ -46,6 +46,13 @@
 #endif
 
 /*
+ * define whether compiler allows variadic macros
+ */
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#define SCIP_HAVE_VARIADIC_MACROS 1
+#endif
+
+/*
  * Boolean values
  */
 
@@ -87,8 +94,8 @@ extern "C" {
 
 
 #define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -219,6 +226,8 @@ extern "C" {
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+
 /*
  * Global debugging settings
  */
@@ -310,9 +319,9 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
-#elif defined(__GNUC__) && defined(__linux__)
+#elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED

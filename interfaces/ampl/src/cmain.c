@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,11 +38,15 @@ SCIP_RETCODE run(
    SCIP* scip;
    char buffer[SCIP_MAXSTRLEN];
    SCIP_Bool printstat;
+   char* logfile = NULL;
 
    assert(nlfile != NULL);
 
    /* setup SCIP and print version information */
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /* we explicitly have to enable the use of a debug solution for this main SCIP instance */
+   SCIPenableDebugSol(scip);
 
    SCIPprintVersion(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
@@ -52,7 +56,12 @@ SCIP_RETCODE run(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
       "whether to print statistics on a solve",
-      NULL, FALSE, FALSE, NULL, NULL) );
+      &printstat, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "display/logfile",
+      "name of file to write SCIP log to (additionally to writing to stdout)",
+      &logfile, FALSE, "", NULL, NULL) );
+   assert(logfile != NULL);
 
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
@@ -63,7 +72,9 @@ SCIP_RETCODE run(
       SCIP_CALL( SCIPreadParams(scip, setfile) );
    }
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "display/statistics", &printstat) );
+   /* set logfile, if not default empty string */
+   if( *logfile )
+      SCIPsetMessagehdlrLogfile(scip, logfile);
 
    /* setup commands to be executed by SCIP */
 

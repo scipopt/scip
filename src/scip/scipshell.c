@@ -158,6 +158,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool quiet;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
+   SCIP_Bool onlyversion;
    int i;
 
    /********************
@@ -167,6 +168,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    quiet = FALSE;
    paramerror = FALSE;
    interactive = FALSE;
+   onlyversion = FALSE;
    for( i = 1; i < argc; ++i )
    {
       if( strcmp(argv[i], "-l") == 0 )
@@ -182,6 +184,10 @@ SCIP_RETCODE SCIPprocessShellArguments(
       }
       else if( strcmp(argv[i], "-q") == 0 )
          quiet = TRUE;
+      else if( strcmp(argv[i], "-v") == 0 )
+         onlyversion = TRUE;
+      else if( strcmp(argv[i], "--version") == 0 )
+         onlyversion = TRUE;
       else if( strcmp(argv[i], "-s") == 0 )
       {
          i++;
@@ -292,6 +298,13 @@ SCIP_RETCODE SCIPprocessShellArguments(
       SCIPprintExternalCodes(scip, NULL);
       SCIPinfoMessage(scip, NULL, "\n");
 
+      if( onlyversion )
+      {
+         SCIPprintBuildOptions(scip, NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
+         return SCIP_OKAY;
+      }
+
       /*****************
        * Load settings *
        *****************/
@@ -322,6 +335,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    else
    {
       printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+         "  -v, --version : print version and build options\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"

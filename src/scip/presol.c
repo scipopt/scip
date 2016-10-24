@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPpresolCopyInclude(
 
    if( presol->presolcopy != NULL )
    {
-      SCIPdebugMessage("including presolver %s in subscip %p\n", SCIPpresolGetName(presol), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including presolver %s in subscip %p\n", SCIPpresolGetName(presol), (void*)set->scip);
       SCIP_CALL( presol->presolcopy(set->scip, presol) );
    }
    return SCIP_OKAY;
@@ -416,7 +416,7 @@ SCIP_RETCODE SCIPpresolExec(
    /* check, if presolver should be called with the current timing */
    if( timing & presol->timing )
    {
-      SCIPdebugMessage("calling presolver <%s> with timing %u\n", presol->name, timing);
+      SCIPsetDebugMsg(set, "calling presolver <%s> with timing %u\n", presol->name, timing);
 
       /* start timing */
       SCIPclockStart(presol->presolclock, set);

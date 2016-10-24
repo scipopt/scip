@@ -45,6 +45,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
@@ -77,7 +79,9 @@ void SCIPstatMark(
 extern
 void SCIPstatReset(
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    );
 
 /** reset implication counter */
@@ -89,7 +93,10 @@ void SCIPstatResetImplications(
 /** reset presolving and current run specific statistics */
 extern
 void SCIPstatResetPresolving(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    );
 
 /* reset primal-dual integral */
@@ -118,6 +125,9 @@ void SCIPstatUpdatePrimalDualIntegral(
 extern
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_Bool             solved              /**< is problem already solved? */
    );
 
@@ -142,6 +152,12 @@ void SCIPstatUpdateMemsaveMode(
    SCIP_MEM*             mem                 /**< block memory pools */
    );
 
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPstatGetMemExternEstim(
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   );
+
 /** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
  *
  *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
@@ -153,6 +169,71 @@ extern
 void SCIPstatEnableOrDisableStatClocks(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_Bool             enable              /**< should the LP clocks be enabled? */
+   );
+
+/** recompute root LP best-estimate from scratch */
+extern
+void SCIPstatComputeRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootlpobjval,       /**< root LP objective value */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of variables */
+   );
+
+/** update root LP best-estimate with changed variable pseudo-costs */
+extern
+SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed pseudo costs */
+   SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
+   );
+
+
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPstatDebugMsg(set, ...)      SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPstatDebugMsgPrint(set, ...) SCIPstatPrintDebugMessagePrint(stat, __VA_ARGS__)
+#else
+#define SCIPstatDebugMsg(set, ...)      while ( FALSE ) SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPstatDebugMsgPrint(set, ...) while ( FALSE ) SCIPstatPrintDebugMessagePrint(stat, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPstatDebugMsg                printf("debug: "), SCIPstatDebugMessagePrint
+#define SCIPstatDebugMsgPrint           SCIPstatDebugMessagePrint
+#else
+#define SCIPstatDebugMsg                while ( FALSE ) SCIPstatDebugMessagePrint
+#define SCIPstatDebugMsgPrint           while ( FALSE ) SCIPstatDebugMessagePrint
+#endif
+
+#endif
+
+
+/** prints a debug message */
+EXTERN
+void SCIPstatPrintDebugMessage(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMessagePrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    );
 
 #ifdef __cplusplus

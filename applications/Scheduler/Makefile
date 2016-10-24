@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -95,10 +95,10 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) scheduler.dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
@@ -128,7 +128,7 @@ test:		$(MAINFILE) $(CHECKDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+		$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE);
 
 # include local targets
 -include $(SCIPDIR)/make/local/make.targets

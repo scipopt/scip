@@ -39,6 +39,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_undercover.h"
+#include "scip/pub_misc.h"
 #include "nlpi/exprinterpret.h"
 
 #define HEUR_NAME               "undercover"
@@ -86,6 +87,7 @@
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
+#define DEFAULT_RANDSEED        43           /* initial random seed */
 
 /* local defines */
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
@@ -105,6 +107,7 @@ struct SCIP_HeurData
 {
    SCIP_CONSHDLR**       nlconshdlrs;        /**< array of nonlinear constraint handlers */
    SCIP_HEUR*            nlpheur;            /**< pointer to NLP local search heuristics */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    char*                 fixingalts;         /**< sequence of fixing values used: 'l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
@@ -343,7 +346,7 @@ SCIP_RETCODE processNlRow(
                probidx1 = SCIPvarGetProbindex(exprtreevars[idx1]);
                if( probidx1 == -1 )
                {
-                  SCIPdebugMessage("strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
+                  SCIPdebugMsg(scip, "strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
                   return SCIP_OKAY;
                }
 
@@ -358,7 +361,7 @@ SCIP_RETCODE processNlRow(
                   /* update counters */
                   incCounters(termcounter, conscounter, consmarker, probidx1);
 
-                  SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
+                  SCIPdebugMsg(scip, "fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
 
                   /* if covering variable is fixed, then no need to still check non-diagonal elements */
                   continue;
@@ -382,7 +385,7 @@ SCIP_RETCODE processNlRow(
                   probidx2 = SCIPvarGetProbindex(exprtreevars[idx2]);
                   if( probidx2 == -1 )
                   {
-                     SCIPdebugMessage("strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
+                     SCIPdebugMsg(scip, "strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
                      return SCIP_OKAY;
                   }
 
@@ -400,7 +403,7 @@ SCIP_RETCODE processNlRow(
 
                   if( coveringcons == NULL )
                   {
-                     SCIPdebugMessage("failed to create set covering constraint <%s>\n", name);
+                     SCIPdebugMsg(scip, "failed to create set covering constraint <%s>\n", name);
                      return SCIP_OKAY;
                   }
 
@@ -408,7 +411,7 @@ SCIP_RETCODE processNlRow(
                   SCIP_CALL( SCIPaddCons(coveringscip, coveringcons) );
                   SCIP_CALL( SCIPreleaseCons(coveringscip, &coveringcons) );
 
-                  SCIPdebugMessage("added covering constraint for vars <%s> and <%s> in covering problem\n", SCIPvarGetName(coveringvars[probidx1]), SCIPvarGetName(coveringvars[probidx2]));
+                  SCIPdebugMsg(scip, "added covering constraint for vars <%s> and <%s> in covering problem\n", SCIPvarGetName(coveringvars[probidx1]), SCIPvarGetName(coveringvars[probidx2]));
 
                   /* update counters for both variables */
                   incCounters(termcounter, conscounter, consmarker, probidx1);
@@ -427,7 +430,7 @@ SCIP_RETCODE processNlRow(
                probidx1 = SCIPvarGetProbindex(exprtreevars[i]);
                if( probidx1 == -1 )
                {
-                  SCIPdebugMessage("strange: inactive variable <%s> detected in nonlinear row <%s>\n",
+                  SCIPdebugMsg(scip, "strange: inactive variable <%s> detected in nonlinear row <%s>\n",
                      SCIPvarGetName(exprtreevars[i]), SCIPnlrowGetName(nlrow));
                   return SCIP_OKAY;
                }
@@ -444,7 +447,7 @@ SCIP_RETCODE processNlRow(
                /* update counters */
                incCounters(termcounter, conscounter, consmarker, probidx1);
 
-               SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
+               SCIPdebugMsg(scip, "fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
             }
          }
       }
@@ -473,7 +476,7 @@ SCIP_RETCODE processNlRow(
       probidx2 = SCIPvarGetProbindex(bilinvar2);
       if( probidx1 == -1 || probidx2 == -1 )
       {
-         SCIPdebugMessage("inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
+         SCIPdebugMsg(scip, "inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
          return SCIP_OKAY;
       }
 
@@ -496,7 +499,7 @@ SCIP_RETCODE processNlRow(
          /* update counters */
          incCounters(termcounter, conscounter, consmarker, probidx1);
 
-         SCIPdebugMessage("fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
+         SCIPdebugMsg(scip, "fixing var <%s> in covering problem to 1\n", SCIPvarGetName(coveringvars[probidx1]));
       }
       /* we have a bilinear term */
       else
@@ -518,7 +521,7 @@ SCIP_RETCODE processNlRow(
 
          if( coveringcons == NULL )
          {
-            SCIPdebugMessage("failed to create set covering constraint <%s>\n", name);
+            SCIPdebugMsg(scip, "failed to create set covering constraint <%s>\n", name);
             return SCIP_OKAY;
          }
 
@@ -704,8 +707,8 @@ SCIP_RETCODE createCoveringProblem(
 
                if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
                {
-                  SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(andvars[v]));
-                  SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
+                  SCIPdebugMsg(scip, "strange: multiaggregated variable found <%s>\n", SCIPvarGetName(andvars[v]));
+                  SCIPdebugMsg(scip, "inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
                   SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                   SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                   goto TERMINATE;
@@ -764,8 +767,8 @@ SCIP_RETCODE createCoveringProblem(
 
             if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
             {
-               SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(SCIPgetResultantAnd(scip, andcons)));
-               SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
+               SCIPdebugMsg(scip, "strange: multiaggregated variable found <%s>\n", SCIPvarGetName(SCIPgetResultantAnd(scip, andcons)));
+               SCIPdebugMsg(scip, "inactive variables detected in constraint <%s>\n", SCIPconsGetName(andcons));
                SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
@@ -820,7 +823,7 @@ SCIP_RETCODE createCoveringProblem(
 
             if( coveringcons == NULL )
             {
-               SCIPdebugMessage("failed to create linear constraint <%s>\n", name);
+               SCIPdebugMsg(scip, "failed to create linear constraint <%s>\n", name);
                SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
@@ -905,8 +908,8 @@ SCIP_RETCODE createCoveringProblem(
 
                if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
                {
-                  SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(bdvars[v]));
-                  SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(bdcons));
+                  SCIPdebugMsg(scip, "strange: multiaggregated variable found <%s>\n", SCIPvarGetName(bdvars[v]));
+                  SCIPdebugMsg(scip, "inactive variables detected in constraint <%s>\n", SCIPconsGetName(bdcons));
                   SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                   SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                   goto TERMINATE;
@@ -951,7 +954,7 @@ SCIP_RETCODE createCoveringProblem(
 
             if( coveringcons == NULL )
             {
-               SCIPdebugMessage("failed to create linear constraint <%s>\n", name);
+               SCIPdebugMsg(scip, "failed to create linear constraint <%s>\n", name);
                SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
@@ -1016,8 +1019,8 @@ SCIP_RETCODE createCoveringProblem(
 
             if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
             {
-               SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(binvar));
-               SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(indcons));
+               SCIPdebugMsg(scip, "strange: multiaggregated variable found <%s>\n", SCIPvarGetName(binvar));
+               SCIPdebugMsg(scip, "inactive variables detected in constraint <%s>\n", SCIPconsGetName(indcons));
                goto TERMINATE;
             }
 
@@ -1132,7 +1135,7 @@ SCIP_RETCODE createCoveringProblem(
          probindex = SCIPvarGetProbindex(socrhsvar);
          if( probindex == -1 )
          {
-            SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(soccons));
+            SCIPdebugMsg(scip, "inactive variables detected in constraint <%s>\n", SCIPconsGetName(soccons));
             SCIPfreeBufferArray(coveringscip, &coveringconsvars);
             goto TERMINATE;
          }
@@ -1153,7 +1156,7 @@ SCIP_RETCODE createCoveringProblem(
             probindex = SCIPvarGetProbindex(soclhsvars[v]);
             if( probindex == -1 )
             {
-               SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(soccons));
+               SCIPdebugMsg(scip, "inactive variables detected in constraint <%s>\n", SCIPconsGetName(soccons));
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
             }
@@ -1175,7 +1178,7 @@ SCIP_RETCODE createCoveringProblem(
 
             if( coveringcons == NULL )
             {
-               SCIPdebugMessage("failed to create set packing constraint <%s>\n", name);
+               SCIPdebugMsg(scip, "failed to create set packing constraint <%s>\n", name);
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
             }
@@ -1598,7 +1601,7 @@ SCIP_RETCODE solveCoveringProblem(
    /* only solve root */
    SCIP_CALL( SCIPsetLongintParam(coveringscip, "limits/nodes", 1LL) );
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g\n", timelimit, memorylimit);
+   SCIPdebugMsg(coveringscip, "timelimit = %g, memlimit = %g\n", timelimit, memorylimit);
 
    /* set time, memory, and objective limit */
    SCIP_CALL( SCIPsetRealParam(coveringscip, "limits/time", timelimit) );
@@ -1654,10 +1657,10 @@ SCIP_RETCODE solveCoveringProblem(
 
    /* print solution if we are in SCIP's debug mode */
    assert(SCIPgetBestSol(coveringscip) != NULL);
-   SCIPdebugMessage("found a feasible cover: %d/%d variables fixed, normalized penalty=%g\n\n",
+   SCIPdebugMsg(coveringscip, "found a feasible cover: %d/%d variables fixed, normalized penalty=%g\n\n",
       *coversize, SCIPgetNOrigVars(coveringscip), SCIPgetSolOrigObj(coveringscip, SCIPgetBestSol(coveringscip))/(totalpenalty+SCIPsumepsilon(coveringscip)));
    SCIPdebug( SCIP_CALL( SCIPprintSol(coveringscip, SCIPgetBestSol(coveringscip), NULL, FALSE) ) );
-   SCIPdebugMessage("\r                                                  \n");
+   SCIPdebugMsg(coveringscip, "\r                                                  \n");
 
    *success = TRUE;
 
@@ -1720,8 +1723,12 @@ SCIP_RETCODE computeFixingOrder(
       var = vars[cover[i]];
 
       if( heurdata->fixingorder == 'C' || heurdata->fixingorder == 'c' )
+      {
+         /* add a small pertubation value to the score to reduce performance variability */
          scores[i] = heurdata->conflictweight * SCIPgetVarConflictScore(scip, var)
-            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight);
+            + heurdata->inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, var, heurdata->cutoffweight)
+            + SCIPrandomGetReal(heurdata->randnumgen, 0.0, SCIPepsilon(scip));
+      }
       else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
          scores[i] = cover[i];
       else
@@ -1881,7 +1888,7 @@ SCIP_RETCODE getFixingValue(
          stat = SCIPgetNLPSolstat(scip);
          *success = stat == SCIP_NLPSOLSTAT_GLOBOPT || stat == SCIP_NLPSOLSTAT_LOCOPT || stat == SCIP_NLPSOLSTAT_FEASIBLE;
 
-         SCIPdebugMessage("solving NLP relaxation to obtain fixing values %s (stat=%d)\n", *success ? "successful" : "failed", stat);
+         SCIPdebugMsg(scip, "solving NLP relaxation to obtain fixing values %s (stat=%d)\n", *success ? "successful" : "failed", stat);
 
          if( *success )
          {
@@ -1899,7 +1906,7 @@ SCIP_RETCODE getFixingValue(
             heurdata->nlpfailed = TRUE;
             heurdata->nlpsolved = FALSE;
 
-            SCIPdebugMessage("solving NLP relaxation failed (%d time%s%s)\n",
+            SCIPdebugMsg(scip, "solving NLP relaxation failed (%d time%s%s)\n",
                heurdata->nnlpfails, heurdata->nnlpfails > 1 ? "s" : "", heurdata->nnlpfails >= MAXNLPFAILS ? ", will not be called again" : "");
          }
       }
@@ -2097,7 +2104,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    int                   coversize,          /**< size of the cover */
    int*                  cover,              /**< problem indices of the variables in the cover */
-   SCIP_Real*            fixingvals,         /**< fixing values for the variables in the cover */
+   SCIP_Real*            fixedvals,         /**< fixing values for the variables in the cover */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Longint          nodelimit,          /**< node limit */
@@ -2112,6 +2119,8 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** subvars;
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
+   SCIP_VAR** fixedvars;
+   int nfixedvars;
 
    SCIP_RETCODE retcode;
 
@@ -2121,7 +2130,7 @@ SCIP_RETCODE solveSubproblem(
    assert(scip != NULL);
    assert(heur != NULL);
    assert(cover != NULL);
-   assert(fixingvals != NULL);
+   assert(fixedvals != NULL);
    assert(coversize >= 1);
    assert(timelimit > 0.0);
    assert(memorylimit > 0.0);
@@ -2142,6 +2151,18 @@ SCIP_RETCODE solveSubproblem(
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, coversize) );
+   nfixedvars = coversize;
+   /* fix subproblem variables in the cover */
+   SCIPdebugMsg(scip, "fixing variables\n");
+   for( i = coversize-1; i >= 0; i-- )
+   {
+      assert(cover[i] >= 0);
+      assert(cover[i] < nvars);
+
+      fixedvars[i] = vars[cover[i]];
+   }
+
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -2150,7 +2171,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, TRUE, validsolved) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
@@ -2158,7 +2179,7 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, heurdata->globalbounds, NULL) );
    }
 
-   SCIPdebugMessage("problem copied, copy %svalid\n", *validsolved ? "" : "in");
+   SCIPdebugMsg(scip, "problem copied, copy %svalid\n", *validsolved ? "" : "in");
 
    /* store subproblem variables */
    for( i = nvars-1; i >= 0; i-- )
@@ -2167,19 +2188,11 @@ SCIP_RETCODE solveSubproblem(
       assert(subvars[i] != NULL);
    }
 
-   /* fix subproblem variables in the cover */
-   SCIPdebugMessage("fixing variables\n");
-   for( i = coversize-1; i >= 0; i-- )
-   {
-      assert(cover[i] >= 0);
-      assert(cover[i] < nvars);
-
-      SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[cover[i]], fixingvals[i]) );
-      SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[cover[i]], fixingvals[i]) );
-   }
+   /* free variable mapping hash map */
+   SCIPhashmapFree(&varmap);
 
    /* set the parameters such that good solutions are found fast */
-   SCIPdebugMessage("setting subproblem parameters\n");
+   SCIPdebugMsg(scip, "setting subproblem parameters\n");
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
@@ -2199,9 +2212,9 @@ SCIP_RETCODE solveSubproblem(
    }
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/" HEUR_NAME "/freq", -1) );
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
+   SCIPdebugMsg(scip, "timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
+   SCIPdebugMsg(scip, "timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
@@ -2241,11 +2254,11 @@ SCIP_RETCODE solveSubproblem(
       cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
-      SCIPdebugMessage("adding objective cutoff=%g (minimprove=%g)\n", cutoff, heurdata->minimprove);
+      SCIPdebugMsg(scip, "adding objective cutoff=%g (minimprove=%g)\n", cutoff, heurdata->minimprove);
    }
 
    /* solve subproblem */
-   SCIPdebugMessage("solving subproblem started\n");
+   SCIPdebugMsg(scip, "solving subproblem started\n");
    retcode = SCIPsolve(subscip);
 
    /* Errors in solving the subproblem should not kill the overall solving process
@@ -2257,6 +2270,10 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( retcode );
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      /* free array of subproblem variables, and subproblem */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIPfreeBufferArray(scip, &fixedvars);
+      SCIP_CALL( SCIPfree(&subscip) );
       return SCIP_OKAY;
    }
 
@@ -2292,13 +2309,13 @@ SCIP_RETCODE solveSubproblem(
          SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], sol) );
 
          /* try to add new solution to scip */
-         SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       }
 
       if( success )
       {
          assert(i >= 1);
-         SCIPdebugMessage("heuristic found %d solutions in subproblem; solution %d feasible in original problem\n", nsubsols, i);
+         SCIPdebugMsg(scip, "heuristic found %d solutions in subproblem; solution %d feasible in original problem\n", nsubsols, i);
       }
       else
       {
@@ -2316,9 +2333,9 @@ SCIP_RETCODE solveSubproblem(
       SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
    }
 
-   /* free variable mapping hash map, array of subproblem variables, and subproblem */
-   SCIPhashmapFree(&varmap);
+   /* free array of subproblem variables, and subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+   SCIPfreeBufferArray(scip, &fixedvars);
    SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
@@ -2377,7 +2394,7 @@ SCIP_RETCODE performFixing(
       }
       SCIP_CALL( SCIPchgVarUbProbing(scip, var, val) );
 
-      SCIPdebugMessage("tentatively decreasing upper bound of variable <%s> to %g for probing\n",
+      SCIPdebugMsg(scip, "tentatively decreasing upper bound of variable <%s> to %g for probing\n",
          SCIPvarGetName(var), val);
 
       /* store bound disjunction information */
@@ -2389,7 +2406,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change; conflict analysis is performed automatically */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
+      SCIPdebugMsg(scip, "  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -2422,7 +2439,7 @@ SCIP_RETCODE performFixing(
       }
       SCIP_CALL( SCIPchgVarLbProbing(scip, var, val) );
 
-      SCIPdebugMessage("tentatively increasing lower bound of variable <%s> to %g for probing\n",
+      SCIPdebugMsg(scip, "tentatively increasing lower bound of variable <%s> to %g for probing\n",
          SCIPvarGetName(var), val);
 
       /* store bound disjunction information */
@@ -2433,7 +2450,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
+      SCIPdebugMsg(scip, "  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -2540,7 +2557,7 @@ SCIP_RETCODE fixAndPropagate(
 
             if( !success )
             {
-               SCIPdebugMessage("retrieving fixing value '%c' for variable <%s> failed, trying next in the list\n",
+               SCIPdebugMsg(scip, "retrieving fixing value '%c' for variable <%s> failed, trying next in the list\n",
                   heurdata->fixingalts[nbacktracks], SCIPvarGetName(vars[idx]));
                nfailedvals++;
                continue;
@@ -2603,7 +2620,7 @@ SCIP_RETCODE fixAndPropagate(
          /* if infeasible, backtrack and try alternative fixing value */
          if( *infeas )
          {
-            SCIPdebugMessage("  --> cutoff detected - backtracking\n");
+            SCIPdebugMsg(scip, "  --> cutoff detected - backtracking\n");
             SCIP_CALL( SCIPbacktrackProbing(scip, probingdepth) );
          }
       }
@@ -2616,7 +2633,7 @@ SCIP_RETCODE fixAndPropagate(
       /* backtracking loop unsuccessful */
       if( *infeas )
       {
-         SCIPdebugMessage("no feasible fixing value found for variable <%s> in fixing order\n",
+         SCIPdebugMsg(scip, "no feasible fixing value found for variable <%s> in fixing order\n",
             SCIPvarGetName(vars[idx]));
          break;
       }
@@ -2724,7 +2741,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* run only if problem is sufficiently nonlinear */
    if( nnlconss < (SCIP_Real) SCIPgetNConss(scip) * heurdata->mincoveredrel || nnlconss < heurdata->mincoveredabs )
    {
-      SCIPdebugMessage("too few nonlinear constraints present, not running\n");
+      SCIPdebugMsg(scip, "too few nonlinear constraints present, not running\n");
 
       /* free clock */
       SCIP_CALL( SCIPfreeClock(scip, &clock) );
@@ -2751,12 +2768,12 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    if( !success )
    {
-      SCIPdebugMessage("creating covering problem failed, terminating\n");
+      SCIPdebugMsg(scip, "creating covering problem failed, terminating\n");
       goto TERMINATE;
    }
    else
    {
-      SCIPdebugMessage("covering problem created successfully\n");
+      SCIPdebugMsg(scip, "covering problem created successfully\n");
    }
 
    /* count number of unfixed covering variables */
@@ -2772,7 +2789,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    if( timelimit <= MINTIMELEFT )
    {
-      SCIPdebugMessage("time limit hit, terminating\n");
+      SCIPdebugMsg(scip, "time limit hit, terminating\n");
       goto TERMINATE;
    }
 
@@ -2807,7 +2824,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
       SCIP_Bool conflictcreated;
 
-      SCIPdebugMessage("solving covering problem\n\n");
+      SCIPdebugMsg(scip, "solving covering problem\n\n");
       success = FALSE;
       bdlen = 0;
       conflictcreated = FALSE;
@@ -2833,21 +2850,21 @@ SCIP_RETCODE SCIPapplyUndercover(
          /* terminate if no feasible cover was found */
          if( !success )
          {
-            SCIPdebugMessage("no feasible cover found in covering problem %d, terminating\n", ncovers);
+            SCIPdebugMsg(scip, "no feasible cover found in covering problem %d, terminating\n", ncovers);
             goto TERMINATE;
          }
 
          /* terminate, if cover is empty or too large */
          if( coversize == 0 || coversize > maxcoversize )
          {
-            SCIPdebugMessage("terminating due to coversize=%d\n", coversize);
+            SCIPdebugMsg(scip, "terminating due to coversize=%d\n", coversize);
             goto TERMINATE;
          }
 
          /* terminate, if cover too large for the ratio of nonlinear constraints */
          if( heurdata->maxcoversizeconss < SCIP_REAL_MAX && coversize > heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) )
          {
-            SCIPdebugMessage("terminating due to coversize=%d\n", coversize);
+            SCIPdebugMsg(scip, "terminating due to coversize=%d\n", coversize);
             goto TERMINATE;
          }
       }
@@ -2868,7 +2885,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          /* compute fixing order */
          SCIP_CALL( computeFixingOrder(scip, heurdata, nvars, vars, coversize, cover, lastfailed, &reordered) );
          reordered = reordered || ndives == 0;
-         SCIPdebugMessage("%sordering variables in cover %s\n", ndives == 0 ? "" : "re", reordered ? "" : "failed");
+         SCIPdebugMsg(scip, "%sordering variables in cover %s\n", ndives == 0 ? "" : "re", reordered ? "" : "failed");
 
          /* stop if order has not changed */
          if( !reordered )
@@ -2882,19 +2899,19 @@ SCIP_RETCODE SCIPapplyUndercover(
       }
 
       /* update time limit */
-      SCIPdebugMessage("%d dive%s of fix-and-propagate for cover %d took %.1f seconds\n", ndives, ndives > 1 ? "s" : "", ncovers, SCIPgetClockTime(scip, clock));
+      SCIPdebugMsg(scip, "%d dive%s of fix-and-propagate for cover %d took %.1f seconds\n", ndives, ndives > 1 ? "s" : "", ncovers, SCIPgetClockTime(scip, clock));
       SCIP_CALL( updateTimelimit(scip, clock, &timelimit) );
 
       if( timelimit <= MINTIMELEFT )
       {
-         SCIPdebugMessage("time limit hit, terminating\n");
+         SCIPdebugMsg(scip, "time limit hit, terminating\n");
          goto TERMINATE;
       }
 
       /* no feasible fixing could be found for the current cover */
       if( !success )
       {
-         SCIPdebugMessage("no feasible fixing values found for cover %d\n", ncovers);
+         SCIPdebugMsg(scip, "no feasible fixing values found for cover %d\n", ncovers);
       }
       else
       {
@@ -2902,7 +2919,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          SCIP_Longint nsubnodes;
          SCIP_Bool validsolved;
 
-         SCIPdebugMessage("heuristic successfully fixed %d variables (%d integral, %d continuous) during probing\n",
+         SCIPdebugMsg(scip, "heuristic successfully fixed %d variables (%d integral, %d continuous) during probing\n",
             nfixedints+nfixedconts, nfixedints, nfixedconts); /*lint !e771*/
 
          /* solve sub-CIP and pass feasible solutions to original problem */
@@ -2938,7 +2955,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                conflictcreated = success;
             }
 
-            SCIPdebugMessage("subproblem solved (%s), forbidding assignment in original problem %s, %sconflict length=%d\n",
+            SCIPdebugMsg(scip, "subproblem solved (%s), forbidding assignment in original problem %s, %sconflict length=%d\n",
                sol == NULL ? "infeasible" : "optimal",
                success ? "successful" : "failed", useconf ? "" : "skipped due to ", bdlen);
          }
@@ -2958,22 +2975,22 @@ SCIP_RETCODE SCIPapplyUndercover(
             {
                if( nfixedconts == 0 && validsolved )
                {
-                  SCIPdebugMessage("subproblem solved to optimality while all covering variables are integral, hence skipping NLP local search\n");
+                  SCIPdebugMsg(scip, "subproblem solved to optimality while all covering variables are integral, hence skipping NLP local search\n");
                }
                else if( timelimit <= MINTIMELEFT )
                {
-                  SCIPdebugMessage("time limit hit, skipping NLP local search\n");
+                  SCIPdebugMsg(scip, "time limit hit, skipping NLP local search\n");
                }
                else if( heurdata->nlpheur == NULL )
                {
-                  SCIPdebugMessage("NLP heuristic not found, skipping NLP local search\n");
+                  SCIPdebugMsg(scip, "NLP heuristic not found, skipping NLP local search\n");
                }
                else
                {
                   SCIP_RESULT nlpresult;
 
-                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL) );
-                  SCIPdebugMessage("NLP local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL, NULL) );
+                  SCIPdebugMsg(scip, "NLP local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
 
                   if( nlpresult == SCIP_FOUNDSOL )
                      heurdata->npostnlpfails = 0;
@@ -3002,17 +3019,17 @@ SCIP_RETCODE SCIPapplyUndercover(
 
          if( infeas )
          {
-            SCIPdebugMessage("recovering problem infeasible (diversification=%d), terminating\n", diversification);
+            SCIPdebugMsg(scip, "recovering problem infeasible (diversification=%d), terminating\n", diversification);
             goto TERMINATE;
          }
          else if( !success )
          {
-            SCIPdebugMessage("failed to forbid current cover in the covering problem, terminating\n");
+            SCIPdebugMsg(scip, "failed to forbid current cover in the covering problem, terminating\n");
             goto TERMINATE;
          }
          else
          {
-            SCIPdebugMessage("added constraint to the covering problem in order to forbid current cover\n");
+            SCIPdebugMsg(scip, "added constraint to the covering problem in order to forbid current cover\n");
             success = FALSE;
          }
       }
@@ -3027,7 +3044,7 @@ SCIP_RETCODE SCIPapplyUndercover(
  TERMINATE:
    if( *result != SCIP_FOUNDSOL && *result != SCIP_DELAYED )
    {
-      SCIPdebugMessage("heuristic terminating unsuccessfully\n");
+      SCIPdebugMsg(scip, "heuristic terminating unsuccessfully\n");
    }
 
    /* we must remain in NLP diving mode until here to be able to retrieve NLP solution values easily */
@@ -3102,6 +3119,44 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    return SCIP_OKAY;
 }
 
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitUndercover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitUndercover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
+   return SCIP_OKAY;
+}
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
@@ -3230,7 +3285,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* if we want to use NLP fixing values exclusively and no NLP solver is available, we cannot run */
    if( strcmp(heurdata->fixingalts, "n") == 0 && SCIPgetNNlpis(scip) == 0 )
    {
-      SCIPdebugMessage("skipping undercover heuristic: want to use NLP fixing values exclusively, but no NLP solver available\n");
+      SCIPdebugMsg(scip, "skipping undercover heuristic: want to use NLP fixing values exclusively, but no NLP solver available\n");
       return SCIP_OKAY;
    }
 
@@ -3250,7 +3305,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* only call heuristics if we have enough nodes left to call sub-CIP solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping undercover heuristic: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping undercover heuristic: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -3260,7 +3315,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       timelimit -= SCIPgetSolvingTime(scip);
    if( timelimit <= 2*MINTIMELEFT )
    {
-      SCIPdebugMessage("skipping undercover heuristic: time left=%g\n", timelimit);
+      SCIPdebugMsg(scip, "skipping undercover heuristic: time left=%g\n", timelimit);
       return SCIP_OKAY;
    }
 
@@ -3274,7 +3329,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
-      SCIPdebugMessage("skipping undercover heuristic: too little memory\n");
+      SCIPdebugMsg(scip, "skipping undercover heuristic: too little memory\n");
       return SCIP_OKAY;
    }
 
@@ -3308,7 +3363,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    if( !run )
    {
-      SCIPdebugMessage("skipping undercover heuristic: no nonlinear constraints found\n");
+      SCIPdebugMsg(scip, "skipping undercover heuristic: no nonlinear constraints found\n");
       return SCIP_OKAY;
    }
 
@@ -3322,7 +3377,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    /* call heuristic */
    *result = SCIP_DIDNOTFIND;
-   SCIPdebugMessage("calling undercover heuristic for <%s> at depth %d\n", SCIPgetProbName(scip), SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "calling undercover heuristic for <%s> at depth %d\n", SCIPgetProbName(scip), SCIPgetDepth(scip));
 
    SCIP_CALL( SCIPapplyUndercover(scip, heur, result, timelimit, memorylimit, nstallnodes) );
 
@@ -3358,6 +3413,8 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitUndercover) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 
@@ -3524,7 +3581,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    if( *success )
    {
       /* solve covering problem */
-      SCIPdebugMessage("solving covering problem\n\n");
+      SCIPdebugMsg(scip, "solving covering problem\n\n");
 
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
             timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, objlimit, success) );
@@ -3545,7 +3602,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    }
    else
    {
-      SCIPdebugMessage("failure: covering problem could not be created\n");
+      SCIPdebugMsg(scip, "failure: covering problem could not be created\n");
    }
 
    /* free covering problem */

@@ -1213,19 +1213,19 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
                valpnt = SCIPmatrixGetRowValPtr(matrix, row);
                cnt = 0;
-               SCIPdebugMessage("constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
+               SCIPdebugMsg(scip, "constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(multiaggcons), SCIPvarGetName(multiaggvar));
                for( ; rowpnt < rowend; rowpnt++, valpnt++ )
                {
                   if( *rowpnt == v )
                      continue;
 
                   scalars[cnt] = -(*valpnt) / multiaggcoef; /*lint !e414*/
-                  SCIPdebugPrintf(" %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
+                  SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
 
                   cnt++;
                }
 
-               SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
+               SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g]\n",
                   aggrconst, SCIPvarGetName(multiaggvar), SCIPvarGetLbGlobal(multiaggvar), SCIPvarGetUbGlobal(multiaggvar));
 
                /* perform multi-aggregation */
@@ -1238,7 +1238,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                /* check for infeasible aggregation */
                if( infeasible )
                {
-                  SCIPdebugMessage("constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
+                  SCIPdebugMsg(scip, "constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(multiaggcons));
                   return SCIP_OKAY;
                }
 

@@ -16,6 +16,8 @@
 /**@file   reader_bnd.c
  * @brief  file reader for variable bounds
  * @author Ambros Gleixner
+ * @author Ingmar Vierhaus
+ * @author Benjamin Mueller
  *
  * This reader allows to read a file containing new bounds for variables of the current problem.  Each line of the file
  * should have format
@@ -23,15 +25,23 @@
  *    \<variable name\> \<lower bound\> \<upper bound\>
  *
  * where infinite bounds can be written as inf, +inf or -inf.  Note that only a subset of the variables may appear in
- * the file.  Lines with unknown variable names are ignored.  The writing functionality is currently not supported.
+ * the file.  Lines with unknown variable names are ignored.
+ * The writing functionality can be used in problem and transformed stages. Note that in transformed stage,
+ * the leading "t_" in the name of a transformed variable will not appear in the output. This way, bounds written in transformed stage
+ * can be read again in problem stage.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/reader_bnd.h"
+#include "scip/pub_misc.h"
 
 #define READER_NAME             "bndreader"
 #define READER_DESC             "file reader for variable bounds"
@@ -85,6 +95,7 @@ SCIP_RETCODE readBounds(
       char varname[SCIP_MAXSTRLEN];
       char lbstring[SCIP_MAXSTRLEN];
       char ubstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -96,7 +107,8 @@ SCIP_RETCODE readBounds(
       lineno++;
 
       /* parse the line */
-      nread = sscanf(buffer, "%s %s %s\n", varname, lbstring, ubstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, lbstring, ubstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
@@ -232,6 +244,106 @@ SCIP_DECL_READERREAD(readerReadBnd)
    return SCIP_OKAY;
 }
 
+/** outputs given bounds into a file stream */
+static
+void printBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   SCIP_Real             lb,                 /**< lower bound */
+   SCIP_Real             ub                  /**< upper bound */
+   )
+{
+   /* print lower bound */
+   if( SCIPisInfinity(scip, lb) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf ");
+   else if( SCIPisInfinity(scip, -lb) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf ");
+   else
+      SCIPmessageFPrintInfo(messagehdlr, file, "%.15" SCIP_REAL_FORMAT " ", lb);
+
+   /* print upper bound */
+   if( SCIPisInfinity(scip, ub) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
+   else if( SCIPisInfinity(scip, -ub) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
+   else
+      SCIPmessageFPrintInfo(messagehdlr, file, "%.15" SCIP_REAL_FORMAT, ub);
+}
+
+/** writes problem to file */
+static
+SCIP_RETCODE SCIPwriteBnd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of active variables in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   )
+{
+   SCIP_MESSAGEHDLR* messagehdlr;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   int i;
+
+   assert(result != NULL);
+
+   messagehdlr = SCIPgetMessagehdlr(scip);
+   *result = SCIP_SUCCESS;
+
+   if( nvars == 0 )
+   {
+      SCIPwarningMessage(scip, "Problem has no variables, no bounds written.\n");
+      return SCIP_OKAY;
+   }
+
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_VAR* var;
+      const char* varname;
+
+      var = vars[i];
+      assert( var != NULL );
+      varname = SCIPvarGetName(var);
+
+      /* strip 't_' from varname */
+      if( SCIPvarIsTransformedOrigvar(var) && strncmp(SCIPvarGetName(var), "t_", 2) == 0)
+      {
+         varname = varname + 2;
+      }
+      SCIPinfoMessage(scip, file, "%s ", varname);
+
+      /* print global bounds for transformed variables, original bounds for original variables */
+      if( !SCIPvarIsTransformed(var) )
+      {
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+      }
+      else
+      {
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+      }
+
+      /* print bounds into the file */
+      printBounds(scip, messagehdlr, file, lb, ub);
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+   }
+
+   return SCIP_OKAY;
+}
+
+/** problem writing method of reader */
+static
+SCIP_DECL_READERWRITE(readerWriteBnd)
+{  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * bnd file reader specific interface methods
@@ -254,6 +366,7 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyBnd) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBnd) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteBnd) );
 
    return SCIP_OKAY;
 }
