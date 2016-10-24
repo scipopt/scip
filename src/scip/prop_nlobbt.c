@@ -405,8 +405,8 @@ SCIP_RETCODE nlpRelaxCreate(
       {
          SCIP_VAR* var;
 
-         /* note that we don't need to copy the expression trees since they are copied internally when adding a
-          * nonlinear constraint to the NLP solver through the NLPI
+         /* note that we don't need to copy the expression tree here since only the mapping between variables in the
+          * tree and the corresponding indices change; this mapping is stored in the exprvaridxs array
           */
          exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
 
