@@ -132,8 +132,8 @@ SCIP_RETCODE nlpRelaxAddRows(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
                                               *   problem */
-   SCIP_ROW**            rows,               /**< LP rows to add */
-   int                   nrows               /**< total number of LP rows to add */
+   SCIP_ROW**            rows,               /**< rows to add */
+   int                   nrows               /**< total number of rows to add */
    )
 {
    int* lininds;
