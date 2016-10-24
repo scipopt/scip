@@ -74,7 +74,7 @@ struct SCIP_PropData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
-   int                   lastidx;            /**< index to store the last undone and unfiltered bound */
+   int                   currpos;            /**< current position in the nlpivars array */
 
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for no limit */
@@ -118,7 +118,7 @@ SCIP_RETCODE propdataClear(
    assert(propdata->nlpinvars == 0);
 
    propdata->skipprop = FALSE;
-   propdata->lastidx = 0;
+   propdata->currpos = 0;
    propdata->lastnode = -1;
 
    return SCIP_OKAY;
@@ -598,13 +598,13 @@ static
 SCIP_RETCODE filterCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
-   int                   pos,                /**< current position in the propdata->nlpivars array */
    SCIP_NLPSOLSTAT       nlpsolstat          /**< NLP solution status */
    )
 {
    SCIP_Real* primal;
+   int i;
 
-   assert(pos >= 0 && pos < propdata->nlpinvars);
+   assert(propdata->currpos >= 0 && propdata->currpos < propdata->nlpinvars);
 
    /* at least a feasible solution is needed */
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
@@ -613,37 +613,40 @@ SCIP_RETCODE filterCands(
    SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
    assert(primal != NULL);
 
-   for( ; pos < propdata->nlpinvars; ++pos )
+   /* we skip all candidates which have been processed already, i.e., starting at propdata->currpos + 1 */
+   for( i = propdata->currpos + 1; i < propdata->nlpinvars; ++i )
    {
       SCIP_VAR* var;
       SCIP_Real val;
       int varidx;
 
       /* only uninteresting variables left -> stop filtering */
-      if( SCIPisLE(scip, propdata->nlscore[pos], 0.0) )
+      if( SCIPisLE(scip, propdata->nlscore[i], 0.0) )
          break;
 
-      var = propdata->nlpivars[pos];
+      var = propdata->nlpivars[i];
       assert(var != NULL && SCIPhashmapExists(propdata->var2nlpiidx, (void*)var));
 
       varidx = (int)(size_t)SCIPhashmapGetImage(propdata->var2nlpiidx, (void*)var);
       assert(SCIPgetVars(scip)[varidx] == var);
       val = primal[varidx];
 
-      if( (propdata->status[pos] & SOLVEDLB) == 0 && !SCIPisInfinity(scip, -val) && SCIPisFeasLE(scip, val, SCIPvarGetLbLocal(var)) )
+      if( (propdata->status[i] & SOLVEDLB) == 0 && !SCIPisInfinity(scip, -val)
+         && SCIPisFeasLE(scip, val, SCIPvarGetLbLocal(var)) )
       {
          SCIPdebugMsg(scip, "filter LB of %s in [%g,%g] with %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
-         propdata->status[pos] |= SOLVEDLB;
-         assert((propdata->status[pos] & SOLVEDLB) != 0);
+         propdata->status[i] |= SOLVEDLB;
+         assert((propdata->status[i] & SOLVEDLB) != 0);
       }
 
-      if( (propdata->status[pos] & SOLVEDUB) == 0 && !SCIPisInfinity(scip, val) && SCIPisFeasGE(scip, val, SCIPvarGetUbLocal(var)) )
+      if( (propdata->status[i] & SOLVEDUB) == 0 && !SCIPisInfinity(scip, val)
+         && SCIPisFeasGE(scip, val, SCIPvarGetUbLocal(var)) )
       {
          SCIPdebugMsg(scip, "filter UB of %s in [%g,%g] with %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
-         propdata->status[pos] |= SOLVEDUB;
-         assert((propdata->status[pos] & SOLVEDUB) != 0);
+         propdata->status[i] |= SOLVEDUB;
+         assert((propdata->status[i] & SOLVEDUB) != 0);
       }
    }
 
@@ -737,7 +740,6 @@ SCIP_RETCODE solveNlp(
    SCIP_VAR*             var,                /**< variable to propagate */
    int                   varidx,             /**< variable index in the propdata->nlpivars array */
    SCIP_BOUNDTYPE        boundtype,          /**< minimize or maximize var? */
-   int                   pos,                /**< current position in propdata->nlpivars array */
    int*                  nlpiter,            /**< buffer to store the total number of nlp iterations */
    SCIP_RESULT*          result              /**< pointer to store result */
    )
@@ -783,7 +785,7 @@ SCIP_RETCODE solveNlp(
    SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, 0, NULL, NULL, NULL, 0.0) );
 
    SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
-      propdata->nlscore[pos]);
+      propdata->nlscore[propdata->currpos]);
    SCIP_CALL( SCIPnlpiSolve(propdata->nlpi, propdata->nlpiprob) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob));
 
@@ -800,7 +802,7 @@ SCIP_RETCODE solveNlp(
    }
 
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
-   SCIP_CALL( filterCands(scip, propdata, pos+1, SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob)) );
+   SCIP_CALL( filterCands(scip, propdata, SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob)) );
 
    /* try to tighten variable bound */
    if( SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
@@ -864,7 +866,6 @@ SCIP_RETCODE applyNlobbt(
    )
 {
    int nlpiterleft;
-   int i;
 
    assert(result != NULL);
    assert(!propdata->skipprop);
@@ -898,6 +899,8 @@ SCIP_RETCODE applyNlobbt(
    /* create or update NLP relaxation */
    if( propdata->nlpiprob == NULL )
    {
+      int i;
+
       propdata->nlpinvars = SCIPgetNVars(scip);
       propdata->nlpi = SCIPgetNlpis(scip)[0];
       assert(propdata->nlpi != NULL);
@@ -938,7 +941,7 @@ SCIP_RETCODE applyNlobbt(
    assert(propdata->nlscore != NULL);
 
    /* sort variables w.r.t. their nlscores if we did not solve any NLP for this node */
-   if( propdata->lastidx == 0 )
+   if( propdata->currpos == 0 )
    {
       SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void*)propdata->nlpivars, propdata->nlpinvars);
    }
@@ -953,18 +956,17 @@ SCIP_RETCODE applyNlobbt(
    SCIP_CALL( SCIPnlpiSetIntPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
 
    /* main propagation loop */
-   for( i = propdata->lastidx; i < propdata->nlpinvars
-           && nlpiterleft > 0
-           && SCIPisGT(scip, propdata->nlscore[i], 0.0)
-           && *result != SCIP_CUTOFF
-           && !SCIPisStopped(scip);
-        ++i )
+   while( propdata->currpos < propdata->nlpinvars
+      && nlpiterleft > 0
+      && SCIPisGT(scip, propdata->nlscore[propdata->currpos], 0.0)
+      && *result != SCIP_CUTOFF
+      && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
       int varidx;
       int iters;
 
-      var = propdata->nlpivars[i];
+      var = propdata->nlpivars[propdata->currpos];
       assert(var != NULL);
 
       /* skip binary or almost fixed variables */
@@ -980,22 +982,22 @@ SCIP_RETCODE applyNlobbt(
       assert(var == SCIPgetVars(scip)[varidx]);
 
       /* case: minimize var */
-      if( (propdata->status[i] & SOLVEDLB) == 0 )
+      if( (propdata->status[propdata->currpos] & SOLVEDLB) == 0 )
       {
-         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_LOWER, i, &iters, result) );
+         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_LOWER, &iters, result) );
          nlpiterleft -= iters;
       }
 
       /* case: maximize var */
-      if( *result != SCIP_CUTOFF && (propdata->status[i] & SOLVEDUB) == 0 )
+      if( *result != SCIP_CUTOFF && (propdata->status[propdata->currpos] & SOLVEDUB) == 0 )
       {
-         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_UPPER, i, &iters, result) );
+         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_UPPER, &iters, result) );
          nlpiterleft -= iters;
       }
-   }
 
-   /* remember last position */
-   propdata->lastidx = i;
+      /* update the current position */
+      ++propdata->currpos;
+   }
 
    return SCIP_OKAY;
 }
@@ -1092,10 +1094,11 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
       return SCIP_OKAY;
    }
 
+   /* consider all variables again if we process a new node */
    if( SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) != propdata->lastnode )
    {
       propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-      propdata->lastidx = 0;
+      propdata->currpos = 0;
    }
 
    /* call main procedure of nonlinear OBBT propagator */
