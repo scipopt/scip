@@ -124,23 +124,6 @@ SCIP_RETCODE propdataClear(
    return SCIP_OKAY;
 }
 
-/** clears and frees propagator data */
-static
-SCIP_RETCODE propdataFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA**       propdata            /**< propagator data */
-   )
-{
-   assert(propdata != NULL);
-   assert(*propdata != NULL);
-
-   SCIP_CALL( propdataClear(scip, *propdata) );
-   SCIPfreeBlockMemory(scip, propdata);
-   *propdata = NULL;
-
-   return SCIP_OKAY;
-}
-
 /** adds linear rows to the convex NLP relaxation */
 static
 SCIP_RETCODE nlpRelaxAddRows(
@@ -1001,7 +984,8 @@ SCIP_DECL_PROPFREE(propFreeNlobbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIP_CALL( propdataFree(scip, &propdata) );
+   SCIP_CALL( propdataClear(scip, propdata) );
+   SCIPfreeBlockMemory(scip, propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
