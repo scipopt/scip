@@ -299,27 +299,27 @@ SCIP_RETCODE nlpRelaxCreate(
    SCIPfreeBufferArray(scip, &lbs);
 
    /* add row for cutoff bound even if cutoffbound == SCIPinfinity() */
-   lhss[0] = -SCIPinfinity(scip);
-   rhss[0] = cutoffbound;
-   names[0] = "objcutoff";
-   lininds[0] = NULL;
-   linvals[0] = NULL;
-   nlininds[0] = 0;
-   nquadelems[0] = 0;
-   quadelems[0] = NULL;
-   exprtrees[0] = NULL;
-   exprvaridxs[0] = NULL;
+   lhss[nconss] = -SCIPinfinity(scip);
+   rhss[nconss] = cutoffbound;
+   names[nconss] = "objcutoff";
+   lininds[nconss] = NULL;
+   linvals[nconss] = NULL;
+   nlininds[nconss] = 0;
+   nquadelems[nconss] = 0;
+   quadelems[nconss] = NULL;
+   exprtrees[nconss] = NULL;
+   exprvaridxs[nconss] = NULL;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[0], nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[0], nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) );
 
    for( i = 0; i < nvars; ++i )
    {
       if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
       {
-         linvals[nconss][nlininds[0]] = SCIPvarGetObj(vars[i]);
-         lininds[nconss][nlininds[0]] = i;
-         ++nlininds[0];
+         linvals[nconss][nlininds[nconss]] = SCIPvarGetObj(vars[i]);
+         lininds[nconss][nlininds[nconss]] = i;
+         ++nlininds[nconss];
       }
    }
    ++nconss;
