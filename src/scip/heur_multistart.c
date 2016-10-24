@@ -48,7 +48,8 @@
 #define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_MAXNCLUSTER   10             /**< default maximum number of considered clusters per heuristic call */
 
-#define MAXVIOL               -1e+4          /**< maximum violation when improving the feasibility of a point */
+#define MINFEAS               -1e+4          /**< minimum feasibility for a point; used for filtering and improving
+                                              *   feasibility */
 
 /*
  * Data structures
@@ -159,14 +160,14 @@ SCIP_RETCODE sampleRandomPoints(
    return SCIP_OKAY;
 }
 
-/** computes the maximum violation of a given point; a negative value means that there is a violation */
+/** computes the minimum feasibility of a given point; a negative value means that there is an infeasibility */
 static
-SCIP_RETCODE getMaxViol(
+SCIP_RETCODE getMinFeas(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrows,             /**< array containing all nlrows */
    int                   nnlrows,            /**< total number of nlrows */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Real*            maxviol             /**< buffer to store the maximum violation */
+   SCIP_Real*            minfeas             /**< buffer to store the minimum feasibility */
    )
 {
    SCIP_Real tmp;
@@ -174,18 +175,18 @@ SCIP_RETCODE getMaxViol(
 
    assert(scip != NULL);
    assert(sol != NULL);
-   assert(maxviol != NULL);
+   assert(minfeas != NULL);
    assert(nlrows != NULL);
    assert(nnlrows > 0);
 
-   *maxviol = SCIPinfinity(scip);
+   *minfeas = SCIPinfinity(scip);
 
    for( i = 0; i < nnlrows; ++i )
    {
       assert(nlrows[i] != NULL);
 
       SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrows[i], sol, &tmp) );
-      *maxviol = MIN(*maxviol, tmp);
+      *minfeas = MIN(*minfeas, tmp);
    }
 
    return SCIP_OKAY;
@@ -303,13 +304,13 @@ SCIP_RETCODE improvePoint(
    int                   maxiter,            /**< maximum number of iterations */
    SCIP_Real             minimprfac,         /**< minimum required improving factor to proceed in the improvement of a single point */
    int                   minimpriter,        /**< number of iteration when checking the minimum improvement */
-   SCIP_Real*            maxviol             /**< pointer to store the maximum violation */
+   SCIP_Real*            minfeas             /**< pointer to store the minimum feasibility */
    )
 {
    SCIP_VAR** vars;
    SCIP_Real* grad;
    SCIP_Real* updatevec;
-   SCIP_Real lastmaxviol;
+   SCIP_Real lastminfeas;
    int nvars;
    int r;
    int i;
@@ -318,17 +319,17 @@ SCIP_RETCODE improvePoint(
    assert(exprinterpreter != NULL);
    assert(point != NULL);
    assert(maxiter > 0);
-   assert(maxviol != NULL);
+   assert(minfeas != NULL);
    assert(nlrows != NULL);
    assert(nnlrows > 0);
 
-   SCIP_CALL( getMaxViol(scip, nlrows, nnlrows, point, maxviol) );
+   SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMessage("start maxviol = %e\n", *maxviol);
+   SCIPdebugMessage("start minfeas = %e\n", *minfeas);
 #endif
 
    /* stop since start point is feasible */
-   if( !SCIPisFeasLT(scip, *maxviol, 0.0) )
+   if( !SCIPisFeasLT(scip, *minfeas, 0.0) )
    {
 #ifdef SCIP_DEBUG_IMPROVEPOINT
       SCIPdebugMessage("start point is feasible");
@@ -336,7 +337,7 @@ SCIP_RETCODE improvePoint(
       return SCIP_OKAY;
    }
 
-   lastmaxviol = *maxviol;
+   lastminfeas = *minfeas;
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
@@ -344,7 +345,7 @@ SCIP_RETCODE improvePoint(
    SCIP_CALL( SCIPallocBufferArray(scip, &updatevec, nvars) );
 
    /* main loop */
-   for( r = 0; r < maxiter && SCIPisFeasLT(scip, *maxviol, 0.0); ++r )
+   for( r = 0; r < maxiter && SCIPisFeasLT(scip, *minfeas, 0.0); ++r )
    {
       SCIP_Real feasibility;
       SCIP_Real activity;
@@ -405,20 +406,20 @@ SCIP_RETCODE improvePoint(
          SCIP_CALL( SCIPsetSolVal(scip, point, vars[i], updatevec[i]) );
       }
 
-      /* update violations */
-      SCIP_CALL( getMaxViol(scip, nlrows, nnlrows, point, maxviol) );
+      /* update feasibility */
+      SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 
       /* check stopping criterion */
       if( r % 5 == 0 && r > 0 )
       {
-         if( *maxviol <= MAXVIOL || (*maxviol - lastmaxviol) / MAX(REALABS(*maxviol), REALABS(lastmaxviol)) < minimprfac )
+         if( *minfeas <= MINFEAS || (*minfeas - lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac )
             break;
-         lastmaxviol = *maxviol;
+         lastminfeas = *minfeas;
       }
    }
 
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMessage("niter=%d maxviol=%e\n", r, *maxviol);
+   SCIPdebugMessage("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
    SCIPfreeBufferArray(scip, &grad);
@@ -427,31 +428,31 @@ SCIP_RETCODE improvePoint(
    return SCIP_OKAY;
 }
 
-/** sort points w.r.t their violations; filters out points with too large violation */
+/** sort points w.r.t their violations; filters out points with too large infeasibility */
 static
 SCIP_RETCODE filterPoints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            points,             /**< array containing improved points */
-   SCIP_Real*            violations,         /**< array containing violations (sorted) */
+   SCIP_Real*            feasibilities,      /**< array containing feasibility for each point (sorted) */
    int                   npoints,            /**< total number of points */
    int*                  nusefulpoints       /**< pointer to store the total number of useful points */
    )
 {
-   SCIP_Real maxviolation;
-   SCIP_Real meanviol;
+   SCIP_Real minfeas;
+   SCIP_Real meanfeas;
    int i;
 
    assert(points != NULL);
-   assert(violations != NULL);
+   assert(feasibilities != NULL);
    assert(npoints > 0);
    assert(nusefulpoints != NULL);
 
    /* sort points w.r.t their violations; non-negative violations correspond to feasible points for the NLP */
-   SCIPsortDownRealPtr(violations, (void**)points, npoints);
-   maxviolation = violations[npoints - 1];
+   SCIPsortDownRealPtr(feasibilities, (void**)points, npoints);
+   minfeas = feasibilities[npoints - 1];
 
    /* check if all points are feasible */
-   if( SCIPisFeasGE(scip, maxviolation, 0.0) )
+   if( SCIPisFeasGE(scip, minfeas, 0.0) )
    {
       *nusefulpoints = npoints;
       return SCIP_OKAY;
@@ -459,19 +460,20 @@ SCIP_RETCODE filterPoints(
 
    *nusefulpoints = 0;
 
-   /* compute shifted geometric mean of violations (shift value = maxviolation + 1) */
-   meanviol = 1.0;
+   /* compute shifted geometric mean of feasibilities (shift value = minfeas + 1) */
+   meanfeas = 1.0;
    for( i = 0; i < npoints; ++i )
    {
-      assert(violations[i] - maxviolation + 1.0 >= 0.0);
-      meanviol *= pow(violations[i] - maxviolation + 1.0, 1.0 / npoints);
+      assert(feasibilities[i] - minfeas + 1.0 >= 0.0);
+      meanfeas *= pow(feasibilities[i] - minfeas + 1.0, 1.0 / npoints);
    }
-   meanviol += maxviolation - 1.0;
-   SCIPdebugMessage("meanviol = %e\n", meanviol);
+   meanfeas += minfeas - 1.0;
+   SCIPdebugMessage("meanfeas = %e\n", meanfeas);
 
    for( i = 0; i < npoints; ++i )
    {
-      if( SCIPisFeasLT(scip, violations[i], 0.0) && (violations[i] <= 1.05 * meanviol || SCIPisLE(scip, violations[i], MAXVIOL)) )
+      if( SCIPisFeasLT(scip, feasibilities[i], 0.0)
+         && (feasibilities[i] <= 1.05 * meanfeas || SCIPisLE(scip, feasibilities[i], MINFEAS)) )
          break;
 
       ++(*nusefulpoints);
@@ -663,7 +665,7 @@ SCIP_RETCODE solveNLP(
  *
  *  2. reduce infeasibility by using a gradient descent method
  *
- *  3. cluster points; filter points with a too large maximum infeasibility
+ *  3. cluster points; filter points with a too large infeasibility
  *
  *  4. compute start point for each cluster and use it in the sub-NLP heuristic (@ref heur_subnlp.h)
  */
@@ -724,7 +726,7 @@ SCIP_RETCODE applyHeur(
    }
 
    /*
-    * 3. cluster points; filter points with a too large maximum infeasibility
+    * 3. filter and cluster points
     */
    SCIP_CALL( filterPoints(scip, points, violations, heurdata->nrndpoints, &nusefulpoints) );
    assert(nusefulpoints >= 0);

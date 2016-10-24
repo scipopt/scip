@@ -208,7 +208,7 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_Real lincoefs[2];
    SCIP_QUADELEM quadelems[2];
    SCIP_NLROW* nlrows[2];
-   SCIP_Real maxviol;
+   SCIP_Real minfeas;
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
@@ -222,8 +222,8 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    lincoefs[0] = 5.0;
    lincoefs[1] = 1.0;
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &maxviol) );
-   cr_expect(SCIPisFeasEQ(scip, maxviol, 0.0));
+   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas) );
+   cr_expect(SCIPisFeasEQ(scip, minfeas, 0.0));
 
    /* consider one quadratic constraint of the form sqrt(x^2 + y^2) = 0.5 */
    quadelems[0].idx1 = 0;
@@ -237,20 +237,20 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    /* start inside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.2) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, INT_MAX, &maxviol) );
-   cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, INT_MAX, &minfeas) );
+   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
 
    /* start outside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, INT_MAX, &maxviol) );
-   cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas) );
+   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
 
    /* consider linear and quadratic constraint */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -10.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, INT_MAX, &maxviol) );
-   cr_expect(SCIPisFeasGE(scip, maxviol, -EPS));
+   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas) );
+   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
 
    /* free nlrows */
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[1]) );
@@ -262,22 +262,22 @@ Test(heuristic, filterPoints, .init = setup, .fini = teardown,
    )
 {
    SCIP_SOL* points[10];
-   SCIP_Real violations[10];
+   SCIP_Real feasibilities[10];
    int nusefulpoints;
    int i;
 
    for( i = 0; i < 10; ++i )
-      violations[i] = i - 10;
+      feasibilities[i] = i - 10;
 
    /* mean violation of the points should be -6.47 which means that the points with a violation of -7, -8. -9, or -10
     * are excluded
     */
-   SCIP_CALL( filterPoints(scip, points, violations, 10, &nusefulpoints) );
+   SCIP_CALL( filterPoints(scip, points, feasibilities, 10, &nusefulpoints) );
    cr_assert(nusefulpoints == 6);
 
-   /* check is points are ordered decreasingly w.r.t their violations */
+   /* check is points are ordered decreasingly w.r.t their feasibilities */
    for( i = 0; i < 9; ++i )
-      cr_assert(violations[i] >= violations[i+1]);
+      cr_assert(feasibilities[i] >= feasibilities[i+1]);
 }
 
 #define NPOINTS 100
