@@ -136,7 +136,12 @@ SCIP_RETCODE nlpRelaxAddRows(
    int                   nrows               /**< total number of rows to add */
    )
 {
-   int* lininds;
+   const char** names;
+   SCIP_Real* lhss;
+   SCIP_Real* rhss;
+   SCIP_Real** linvals;
+   int** lininds;
+   int* nlininds;
    int i;
 
    assert(nlpi != NULL);
@@ -149,19 +154,28 @@ SCIP_RETCODE nlpRelaxAddRows(
    if( nrows <= 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nrows) );
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIP_Real* linvals;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      const char* name;
-      int nlininds;
       int k;
 
       assert(rows[i] != NULL);
       assert(SCIProwGetNNonz(rows[i]) <= SCIPgetNVars(scip));
+
+      names[i] = SCIProwGetName(rows[i]);
+      lhss[i] = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      rhss[i] = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      nlininds[i] = SCIProwGetNNonz(rows[i]);
+      linvals[i] = SCIProwGetVals(rows[i]);
+      lininds[i] = NULL;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) );
 
       for( k = 0; k < SCIProwGetNNonz(rows[i]); ++k )
       {
@@ -171,21 +185,26 @@ SCIP_RETCODE nlpRelaxAddRows(
          assert(var != NULL);
          assert(SCIPhashmapExists(var2idx, (void*)var));
 
-         lininds[k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
-         assert(lininds[k] >= 0 && lininds[k] < SCIPgetNVars(scip));
+         lininds[i][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+         assert(lininds[i][k] >= 0 && lininds[i][k] < SCIPgetNVars(scip));
       }
-
-      linvals = SCIProwGetVals(rows[i]);
-      nlininds = SCIProwGetNNonz(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      rhs = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      name = SCIProwGetName(rows[i]);
-
-      SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1, &lhs, &rhs, &nlininds, &lininds, &linvals, NULL,
-            NULL, NULL, NULL, &name) );
    }
 
+   /* pass all linear rows to the nlpi */
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals, NULL,
+         NULL, NULL, NULL, names) );
+
+   /* free memory */
+   for( i = nrows - 1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &lininds[i]);
+   }
+   SCIPfreeBufferArray(scip, &nlininds);
    SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &rhss);
+   SCIPfreeBufferArray(scip, &lhss);
+   SCIPfreeBufferArray(scip, &names);
 
    return SCIP_OKAY;
 }
