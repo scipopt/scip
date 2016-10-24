@@ -386,7 +386,7 @@ SCIP_RETCODE improvePoint(
          if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) && SCIPisGT(scip, activity, SCIPnlrowGetRhs(nlrows[i])) )
             scale *= -1.0;
 
-         /* skip nonliner row of the scaler is too small or too large */
+         /* skip nonliner row if the scaler is too small or too large */
          if( SCIPisEQ(scip, scale, 0.0) || SCIPisHugeValue(scip, REALABS(scale)) )
             continue;
 
