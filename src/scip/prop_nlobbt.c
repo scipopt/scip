@@ -33,8 +33,8 @@
 #define PROP_DELAY                 TRUE
 #define PROP_TIMING            SCIP_PROPTIMING_AFTERLPLOOP
 
-#define DEFAULT_MINNONCONVEXFRAC   0.20      /**< default minimum (#convex nlrows)/(#nonconvex nlrows) threshold to apply propagator */
-#define DEFAULT_MINLINEARFRAC      0.02      /**< default minimum (#convex nlrows)/(#linear nlrows) threshold to apply propagator */
+#define DEFAULT_MINNONCONVEXFRAC   0.20      /**< default minimum (# convex nlrows)/(# nonconvex nlrows) threshold to apply propagator */
+#define DEFAULT_MINLINEARFRAC      0.02      /**< default minimum (# convex nlrows)/(# linear nlrows) threshold to apply propagator */
 #define DEFAULT_FEASTOLFAC         0.01      /**< default factor for NLP feasibility tolerance */
 #define DEFAULT_RELOBJTOLFAC       0.01      /**< default factor for NLP relative objective tolerance */
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
@@ -653,7 +653,9 @@ SCIP_RETCODE filterCands(
    return SCIP_OKAY;
 }
 
-/** tries to add a generalized variable bound by exploiting the dual solution of the last NLP solve */
+/** tries to add a generalized variable bound by exploiting the dual solution of the last NLP solve (see @ref
+ *  prop_nlobbt.h for more information)
+ */
 static
 SCIP_RETCODE addGenVBound(
    SCIP*                 scip,               /**< SCIP data structure */
