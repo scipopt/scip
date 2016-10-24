@@ -995,7 +995,7 @@ SCIP_DECL_PROPFREE(propFreeNlobbt)
    assert(propdata != NULL);
 
    SCIP_CALL( propdataClear(scip, propdata) );
-   SCIPfreeBlockMemory(scip, propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
