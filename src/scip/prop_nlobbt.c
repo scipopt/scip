@@ -503,7 +503,7 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             propdata->nlpiprob, propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip)) );
 
-      /* initialize bound status; perturb nlscores by a factor which ensures sure that zero scores remain zero */
+      /* initialize bound status; perturb nlscores by a factor which ensures that zero scores remain zero */
       assert(propdata->randnumgen != NULL);
       for( i = 0; i < propdata->nlpinvars; ++i )
       {
