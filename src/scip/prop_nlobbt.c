@@ -1104,15 +1104,6 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    return SCIP_OKAY;
 }
 
-/** propagation conflict resolving method of propagator */
-static
-SCIP_DECL_PROPRESPROP(propRespropNlobbt)
-{  /*lint --e{715}*/
-   *result = SCIP_DIDNOTFIND;
-
-   return SCIP_OKAY;
-}
-
 /*
  * propagator specific interface methods
  */
@@ -1139,7 +1130,6 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeNlobbt) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolNlobbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolNlobbt) );
-   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropNlobbt) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/feastolfac",
          "factor for NLP feasibility tolerance",
