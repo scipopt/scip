@@ -1343,9 +1343,12 @@ void consdataCalcMinAbsval(
    assert(consdata->minabsval >= SCIP_INVALID);
 
    consdata->validminabsval = TRUE;
-   absval = consdata->vals[0];
-   absval = REALABS(absval);
-   consdata->minabsval = absval;
+
+   if( consdata->nvars > 0 )
+      consdata->minabsval = REALABS(consdata->vals[0]);
+   else
+      consdata->minabsval = 0.0;
+
    for( i = 1; i < consdata->nvars; ++i )
    {
       absval = consdata->vals[i];
@@ -1517,8 +1520,6 @@ void consdataUpdateActivities(
    SCIP_Real newcontribution;
    SCIP_Real delta;
    SCIP_Bool validact;
-   SCIP_Bool finiteoldbound;
-   SCIP_Bool hugevaloldcont;
    SCIP_Bool finitenewbound;
    SCIP_Bool hugevalnewcont;
 
@@ -1667,14 +1668,11 @@ void consdataUpdateActivities(
    }
 
    oldcontribution = val * oldbound;
-   hugevaloldcont = SCIPisHugeValue(scip, REALABS(oldcontribution));
-   finiteoldbound = !SCIPisInfinity(scip, REALABS(oldbound));
-
    newcontribution = val * newbound;
    hugevalnewcont = SCIPisHugeValue(scip, REALABS(newcontribution));
    finitenewbound = !SCIPisInfinity(scip, REALABS(newbound));
 
-   if( !finiteoldbound )
+   if( SCIPisInfinity(scip, REALABS(oldbound)) )
    {
       /* old bound was +infinity */
       if( oldbound > 0.0 )
@@ -1732,7 +1730,7 @@ void consdataUpdateActivities(
          }
       }
    }
-   else if( hugevaloldcont )
+   else if( SCIPisHugeValue(scip, REALABS(oldcontribution)) )
    {
       /* old contribution was too large and positive */
       if( oldcontribution > 0.0 )
@@ -6867,7 +6865,9 @@ SCIP_RETCODE tightenBounds(
    int nrounds;
    int lastchange;
    int oldnchgbds;
-   int oldnchgbdsround;
+#ifndef SCIP_DEBUG
+   int oldnchgbdstotal;
+#endif
    int v;
    SCIP_Bool force;
    SCIP_Bool easycase;
@@ -6948,7 +6948,11 @@ SCIP_RETCODE tightenBounds(
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
    oldnchgbds = 0;
-   oldnchgbdsround = *nchgbds;
+
+#ifndef SCIP_DEBUG
+   oldnchgbdstotal = *nchgbds;
+#endif
+
    for( nrounds = 0; (force || !consdata->boundstightened) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
    {
 
@@ -6986,8 +6990,11 @@ SCIP_RETCODE tightenBounds(
          else
             ++v;
       }
-      SCIPdebugMessage("linear constraint <%s> found %d bound changes in round %d\n", SCIPconsGetName(cons), *nchgbds - oldnchgbdsround, nrounds);
-      oldnchgbdsround += oldnchgbds;
+
+#ifndef SCIP_DEBUG
+      SCIPdebugMessage("linear constraint <%s> found %d bound changes in round %d\n", SCIPconsGetName(cons), *nchgbds - oldnchgbdstotal, nrounds);
+      oldnchgbdstotal += oldnchgbds;
+#endif
    }
 
 #ifndef NDEBUG
@@ -8663,7 +8670,7 @@ SCIP_RETCODE tightenSides(
 }
 
 #define MAXVALRECOMP  1e+06
-#define MINVALRECOMP -1e+05
+#define MINVALRECOMP  1e-05
 
 /** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
  *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continuous variable  li <= xi <= ui
