@@ -6044,7 +6044,6 @@ SCIP_RETCODE tightenDualray(
    int* wc_varinds;
    SCIP_Real wc_rhs;
    SCIP_Real minact;
-   SCIP_Real violation;
    SCIP_Real newviolation;
    SCIP_Bool islocal;
    SCIP_Bool tightened;
