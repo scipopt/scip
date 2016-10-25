@@ -12372,7 +12372,9 @@ SCIP_RETCODE SCIPaddConflict(
          validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, conftype, cutoffinvolved,
          primalbound) );
 
-//   SCIPconsMarkConflict(cons);
+   /* mark constraint to be a conflict */
+   SCIPconsMarkConflict(cons);
+
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;

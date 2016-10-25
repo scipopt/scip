@@ -6197,6 +6197,9 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, nvars, vars, vals, lhs, rhs,
          FALSE, separate, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
+   /* mark constraint to be a conflict */
+   SCIPconsMarkConflict(cons);
+
    /* add constraint based on dual ray to storage */
    SCIP_CALL( SCIPconflictstoreAddDualray(conflictstore, cons, blkmem, set, stat, prob) );
 
