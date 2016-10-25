@@ -4287,8 +4287,8 @@ SCIP_RETCODE solveNode(
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || SCIPconflictGetNConflicts(conflict) == 0);
    
-   /* check whether the final enforcement round was called for the relaxation solution */
-   if( bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+   /* check whether the final enforcement round was called for the relaxation solution (unless the node is cut off anyways) */
+   if( !(*cutoff) && bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, transprob))) )
    {
       SCIP_CALL( SCIPsolCopy(relaxsol, blkmem, set, stat, primal, bestrelaxsol) );
