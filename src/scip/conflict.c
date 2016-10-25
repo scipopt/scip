@@ -6044,11 +6044,10 @@ SCIP_RETCODE tightenDualray(
    int* wc_varinds;
    SCIP_Real wc_rhs;
    SCIP_Real minact;
-   SCIP_Real newviolation;
+   SCIP_Real violation;
    SCIP_Bool islocal;
-   SCIP_Bool tightened;
+   SCIP_Bool separoot;
    int wc_nvars;
-   int round;
    int nvars;
 
    nvars = transprob->nvars;
@@ -6062,16 +6061,13 @@ SCIP_RETCODE tightenDualray(
 
    SCIPdebugMessage("start dualray tightening:\n");
 
-   violation = SCIP_UNKNOWN;
-   newviolation = SCIP_UNKNOWN;
-
    /* get minimal activity */
    minact = getMinActivity(set, transprob, wc_vals, wc_varinds, wc_nvars, curvarlbs, curvarubs);
 
    /* calculate the violation */
    violation = minact-wc_rhs;
 
-   SCIPdebugMessage("round %d: constraint has nvars=%d minact=%g rhs=%g violation=%g\n", round, wc_nvars, minact, wc_rhs, newviolation);
+   SCIPdebugMessage("-> tighten dual ray: nvars=%d minact=%g rhs=%g violation=%g\n", wc_nvars, minact, wc_rhs, violation);
 
    islocal = FALSE;
    minact = 0.0;
@@ -6090,30 +6086,32 @@ SCIP_RETCODE tightenDualray(
          /* check whether we still have a proof */
          if( SCIPsetIsLE(set, minact, wc_rhs) )
          {
-            tightened = FALSE;
+            separoot = FALSE;
             *success = FALSE;
          }
          else
          {
             /* check whether the new constraint cuts off the root LP solution */
             if( cutoffRootSol(set, transprob, transprob->vars, wc_vals, wc_rhs, transprob->nvars, FALSE) )
-               tightened = TRUE;
+               separoot = TRUE;
             else
-               tightened = FALSE;
+               separoot = FALSE;
          }
 
          /* calculate the violation */
-         newviolation = minact-wc_rhs;
+         violation = minact-wc_rhs;
+
+         SCIPdebugMessage("->        after MIR: nvars=%d minact=%g rhs=%g violation=%g separoot=%u\n",
+               wc_nvars, minact, wc_rhs, violation, separoot);
 
          /* the new constraint is tighter and we keep it */
-         if( *success && tightened )
+         if( *success && separoot )
          {
             BMScopyMemoryArray(vals, wc_vals, nvars);
             BMScopyMemoryArray(varused, wc_varused, nvars);
             BMScopyMemoryArray(varinds, wc_varinds, nvars);
             (*rhs) = wc_rhs;
             (*nvarinds) = wc_nvars;
-            violation = newviolation;
          }
       }
    }
@@ -6153,7 +6151,6 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_Real normcons;
    SCIP_Real normobj;
    char name[SCIP_MAXSTRLEN];
-   SCIP_Bool success;
    int nnonzeros;
    int i;
 

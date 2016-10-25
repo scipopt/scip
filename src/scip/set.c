@@ -145,7 +145,7 @@
 #define SCIP_DEFAULT_CONF_ENABLEDUALRAY   FALSE /**< enable dual ray analyzes */
 #define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR in dual rays */
 #define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefere the ray after applying the MIR function if the proof is still
-                                                  *  valid, use both rays otherwise
+                                                  *   valid, use both rays otherwise
                                                   */
 
 /* Constraints */
