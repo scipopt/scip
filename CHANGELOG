@@ -82,6 +82,7 @@ interface:
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
+- bound reader uses angle bracket around variable names
 
 fixed bugs:
 
