@@ -1999,10 +1999,7 @@ SCIP_RETCODE analyzeConflictZero(
       || consdata->setppctype == SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -2038,10 +2035,7 @@ SCIP_RETCODE analyzeConflictOne(
       || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
    /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    n = 0;
    for( v = 0; v < consdata->nvars && n < 2; ++v )

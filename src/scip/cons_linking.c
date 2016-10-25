@@ -641,10 +641,7 @@ SCIP_RETCODE analyzeConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    if( lbintvar )
    {
@@ -1084,10 +1081,7 @@ SCIP_RETCODE tightenedIntvar(
          SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b= %d; coef = %d \n",
             SCIPvarGetName(intvar), SCIPvarGetLbLocal(intvar), SCIPvarGetUbLocal(intvar), b, vals[b]);
 
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* change the conflict type */
-         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          /* ??????????? use resolve method and only add binvars which are needed to exceed the upper bound */
 
@@ -1135,10 +1129,7 @@ SCIP_RETCODE tightenedIntvar(
          SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b = %d; coef = %d,\n",
             SCIPvarGetName(intvar), SCIPvarGetLbLocal(intvar), SCIPvarGetUbLocal(intvar), b, vals[b]);
 
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* change the conflict type */
-         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          /* ??????????? use resolve method and only add binvars which are needed to fall below the lower bound */
 
@@ -1291,10 +1282,7 @@ SCIP_RETCODE processBinvarFixings(
          nvars = consdata->nbinvars;
 
          /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* change the conflict type */
-         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          n = 0;
 
@@ -1342,10 +1330,7 @@ SCIP_RETCODE processBinvarFixings(
             nvars = consdata->nbinvars;
 
             /* initialize conflict analysis, add all variables of infeasible constraint to conflict candidate queue */
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-            /* change the conflict type */
-            SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+            SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
             for( v = 0; v < nvars; ++v )
             {

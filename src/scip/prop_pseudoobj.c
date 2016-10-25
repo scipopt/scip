@@ -2383,10 +2383,7 @@ SCIP_RETCODE propagateCutoffboundBinvar(
          assert(SCIPgetDepth(scip) > 0);
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* change the conflict type */
-         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, TRUE) );
 
          /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
          SCIP_CALL( resolvePropagation(scip, propdata, pseudoobjval, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );
@@ -2791,13 +2788,7 @@ SCIP_RETCODE propagateCutoffbound(
          assert(SCIPgetDepth(scip) > 0);
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* change the conflict type */
-         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
-
-         /* mark the conflict to depend on the cutoff bound */
-         SCIP_CALL( SCIPmarkConflictCutoffInvolved(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, TRUE) );
 
          /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
          SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );

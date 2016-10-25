@@ -2706,7 +2706,9 @@ SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             usescutoffbound     /**< depends the conflict on a cutoff bound? */
    )
 {
    assert(conflict != NULL);
@@ -2718,6 +2720,14 @@ SCIP_RETCODE SCIPconflictInit(
 
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
+
+   /* set conflict type */
+   assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
+       || conftype == SCIP_CONFTYPE_PROPAGATION);
+   conflict->conflictset->conflicttype = (unsigned int)conftype;
+
+   /* set whether a cutoff bound is involved */
+   conflict->conflictset->usescutoffbound = usescutoffbound;
 
    /* increase the conflict counter, such that binary variables of new conflict set and new conflict queue are labeled
     * with this new counter
@@ -3839,7 +3849,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          SCIPbdchginfoGetNewbound(uip), SCIPbdchginfoGetDepth(uip), SCIPbdchginfoGetPos(uip));
 
       /* initialize conflict data */
-      SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob) );
+      SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob, conftype, usescutoffbound) );
 
       conflict->conflictset->conflicttype = (unsigned int) conftype;
       conflict->conflictset->usescutoffbound = usescutoffbound;
@@ -5401,7 +5411,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    conftype = (SCIP_CONFTYPE) conflict->conflictset->conflicttype;
    cutoffinvolved = conflict->conflictset->usescutoffbound;
 
-   SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob) );
+   SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob, conftype, cutoffinvolved) );
 
    conflict->conflictset->conflicttype = (unsigned int) conftype;
    conflict->conflictset->usescutoffbound = cutoffinvolved;

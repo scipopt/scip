@@ -976,10 +976,7 @@ SCIP_RETCODE analyzeConflict(
    assert(consdata != NULL);
 
    /* initialize conflict analysis, and add all bounds of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    for( v = 0; v < consdata->nvars; ++v )
    {

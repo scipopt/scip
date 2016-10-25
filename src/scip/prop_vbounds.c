@@ -1054,10 +1054,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
       SCIPdebugMsg(scip, "try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-      /* change the conflict type */
-      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* adjust lower bound */
       inferlb = SCIPadjustedVarLb(scip, infervar, inferlb);
@@ -1092,10 +1089,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    else
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-      /* change the conflict type */
-      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* add upper bound of the variable for which we tried to change the lower bound */
       SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
@@ -1169,10 +1163,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
       SCIPdebugMsg(scip, "try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-      /* change the conflict type */
-      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* adjust upper bound */
       inferub = SCIPadjustedVarUb(scip, infervar, inferub);
@@ -1207,10 +1198,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
    else
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-      /* change the conflict type */
-      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* add lower bound of the variable for which we tried to change the upper bound */
       SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );

@@ -213,7 +213,9 @@ SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             usescutoffbound     /**< depends the conflict on a cutoff bound? */
    );
 
 /** adds variable's bound to conflict candidate queue */

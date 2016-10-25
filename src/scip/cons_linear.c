@@ -5119,10 +5119,7 @@ SCIP_RETCODE analyzeConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add the conflicting bound for each variable of infeasible constraint to conflict candidate queue */
    SCIP_CALL( addConflictBounds(scip, cons, NULL, NULL, -1, reasonisrhs) );
@@ -5587,10 +5584,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
       return SCIP_OKAY;
 
    /* initialize conflict analysis */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add the conflicting fixed variables of this ranged row constraint to conflict candidate queue */
    SCIP_CALL( addConflictFixedVars(scip, cons, NULL, NULL, -1) );

@@ -25363,12 +25363,14 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
  *  @note SCIP stage does not get changed
  */
 SCIP_RETCODE SCIPinitConflictAnalysis(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFTYPE         conftype,           /**< type of conflict */
+   SCIP_Bool             usescutoffbound     /**< is the current cutoff bound involved? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPinitConflictAnalysis", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictInit(scip->conflict, scip->set, scip->stat, scip->transprob) );
+   SCIP_CALL( SCIPconflictInit(scip->conflict, scip->set, scip->stat, scip->transprob, conftype, usescutoffbound) );
 
    return SCIP_OKAY;
 }
@@ -25762,50 +25764,6 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    return SCIP_OKAY;
 }
 
-/** mark the constraint to depend on the current cutoff bound
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPmarkConflictCutoffInvolved(
-   SCIP*                 scip
-   )
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPmarkConflictCutoffInvolved", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIPconflictsetSetCutoffInvolved(scip->conflict);
-
-   return SCIP_OKAY;
-}
-
-/** change the type of the conflict
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPchgConflictType(
-   SCIP*                 scip,
-   SCIP_CONFTYPE         conftype
-   )
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPchgConflictType", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIPconflictSetType(scip->conflict, conftype);
-
-   return SCIP_OKAY;
-}
 
 /*
  * constraint methods
@@ -32063,7 +32021,7 @@ SCIP_RETCODE SCIPaddCut(
       int j;
 
       /* initialize conflict analysis */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       if ( ! SCIPisInfinity(scip, -cut->lhs) )
       {

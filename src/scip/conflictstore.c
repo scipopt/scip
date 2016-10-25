@@ -570,8 +570,6 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
    SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
-   SCIP_CONS* olddualray;
-
    assert(conflictstore != NULL);
 
    /* mark the constraint to be a conflict */

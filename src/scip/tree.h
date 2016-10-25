@@ -40,6 +40,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_prop.h"
 #include "scip/type_implics.h"
+#include "scip/type_history.h"
 #include "scip/type_conflictstore.h"
 #include "scip/pub_tree.h"
 

@@ -839,13 +839,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-   /* change the conflict type */
-   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
-
-   /* we mark the conflict as depending on the current cutoff bound because the genvbounds already depend on the cutoff */
-   SCIP_CALL( SCIPmarkConflictCutoffInvolved(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, !SCIPisInfinity(scip, REALABS(SCIPgetCutoffbound(scip)))) );
 
    /* left-hand side variable >= ... */
    if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
