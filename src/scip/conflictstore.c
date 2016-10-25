@@ -129,7 +129,7 @@ SCIP_RETCODE initConflictstore(
    return SCIP_OKAY;
 }
 
-/** resizes cuts and score arrays to be able to store at least num entries */
+/** resizes conflict and primal bound arrays to be able to store at least num entries */
 static
 SCIP_RETCODE conflictstoreEnsureMem(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
