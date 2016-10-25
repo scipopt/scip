@@ -47,14 +47,12 @@
 #define READER_DESC             "file reader for variable bounds"
 #define READER_EXTENSION        "bnd"
 
-#define DEFAULT_BND_USEBRACKETS FALSE     /**< Should variable names be enclosed in <> (allows for spaces in varnames) */
 #define DEFAULT_BND_IMPROVEONLY FALSE     /**< Should bounds only be updated if they are improvements of current bounds */
 
 
 /** BND reading data */
 struct SCIP_ReaderData
 {
-   SCIP_Bool             usebrackets;     /**< Should variable names be enclosed in <> (allows for spaces in varnames) */
    SCIP_Bool             improveonly;     /**< Should bounds only be updated if they are improvements of current bounds */
 };
 
@@ -123,53 +121,28 @@ SCIP_RETCODE readBounds(
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
       nread = sscanf(buffer, format, varname, lbstring, ubstring);
 
-      if( readerdata->usebrackets == TRUE)
+      SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
+
+      nread = sscanf(endptr, "%s %s\n", lbstring, ubstring);
+      if( nread < 1 )
       {
-         SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
-
-         nread = sscanf(endptr, "%s %s\n", lbstring, ubstring);
-         if( nread < 1 )
-         {
-            SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
-            error = TRUE;
-            break;
-         }
-
-         if( var == NULL )
-         {
-            if( !unknownvariablemessage )
-            {
-               SCIPwarningMessage(scip, "unable to parse variable name in line %d of bounds file <%s>:\n", lineno, fname);
-               SCIPwarningMessage(scip, "line is: %s", buffer);
-               SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
-               unknownvariablemessage = TRUE;
-            }
-            continue;
-         }
+         SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
+         error = TRUE;
+         break;
       }
-      else
+
+      if( var == NULL )
       {
-
-         if( nread < 2 )
+         if( !unknownvariablemessage )
          {
-            SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);
-            error = TRUE;
-            break;
+            SCIPwarningMessage(scip, "unable to parse variable name in line %d of bounds file <%s>:\n", lineno, fname);
+            SCIPwarningMessage(scip, "line is: %s", buffer);
+            SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
+            unknownvariablemessage = TRUE;
          }
-
-         /* find the variable */
-         var = SCIPfindVar(scip, varname);
-         if( var == NULL )
-         {
-            if( !unknownvariablemessage )
-            {
-               SCIPwarningMessage(scip, "unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
-               SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
-               unknownvariablemessage = TRUE;
-            }
-            continue;
-         }
+         continue;
       }
+
 
       /* cast the lower bound value */
       if( strncasecmp(lbstring, "inv", 3) == 0 )
@@ -381,14 +354,8 @@ SCIP_RETCODE SCIPwriteBnd(
       {
          varname = varname + 2;
       }
-      if( readerdata->usebrackets == TRUE)
-      {
-         SCIPinfoMessage(scip, file, "<%s> ", varname);
-      }
-      else
-      {
-         SCIPinfoMessage(scip, file, "%s ", varname);
-      }
+
+      SCIPinfoMessage(scip, file, "<%s> ", varname);
 
       /* print global bounds for transformed variables, original bounds for original variables */
       if( !SCIPvarIsTransformed(var) )
@@ -462,10 +429,6 @@ SCIP_RETCODE SCIPincludeReaderBnd(
 
 
    /* add bnd reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/bndreader/usebrackets", "should variable names be enclosed in <> (allows for spaces in varnames)",
-         &readerdata->usebrackets, FALSE, DEFAULT_BND_USEBRACKETS, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/bndreader/improveonly", "should bounds only be updated if they are improvements of current bounds",
          &readerdata->improveonly, FALSE, DEFAULT_BND_IMPROVEONLY, NULL, NULL) );
