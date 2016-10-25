@@ -582,261 +582,193 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    *result = SCIP_DIDNOTFIND;
 
-   nchgbound = 0;
-
-   /* initialize data */
-   nshiftcands = 0;
-   shiftcandssize = 8;
-   heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
-   SCIP_CALL( SCIPcreateSolCopy(scip, &worksol, bestsol) );
-   SCIPsolSetHeur(worksol,heur);
-
-   SCIPdebugMsg(scip, "Starting bound adjustment in 1-opt heuristic\n");
-
-   /* maybe change solution values due to global bound changes first */
-   for( i = nvars - 1; i >= 0; --i )
+   do
    {
-      SCIP_VAR* var;
-      SCIP_Real solval;
+      nchgbound = 0;
 
-      var = vars[i];
-      lb = SCIPvarGetLbGlobal(var);
-      ub = SCIPvarGetUbGlobal(var);
+      /* initialize data */
+      nshiftcands = 0;
+      shiftcandssize = 8;
+      heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
+      SCIP_CALL( SCIPcreateSolCopy(scip, &worksol, bestsol) );
+      SCIPsolSetHeur(worksol,heur);
 
-      solval = SCIPgetSolVal(scip, bestsol,var);
-      /* old solution value is smaller than the actual lower bound */
-      if( SCIPisFeasLT(scip, solval, lb) )
+      SCIPdebugMsg(scip, "Starting bound adjustment in 1-opt heuristic\n");
+
+      /* maybe change solution values due to global bound changes first */
+      for( i = nvars - 1; i >= 0; --i )
       {
-         /* set the solution value to the global lower bound */
-         SCIP_CALL( SCIPsetSolVal(scip, worksol, var, lb) );
-         ++nchgbound;
-         SCIPdebugMsg(scip, "var <%s> type %d, old solval %g now fixed to lb %g\n", SCIPvarGetName(var), SCIPvarGetType(var), solval, lb);
-      }
-      /* old solution value is greater than the actual upper bound */
-      else if( SCIPisFeasGT(scip, solval, SCIPvarGetUbGlobal(var)) )
-      {
-         /* set the solution value to the global upper bound */
-         SCIP_CALL( SCIPsetSolVal(scip, worksol, var, ub) );
-         ++nchgbound;
-         SCIPdebugMsg(scip, "var <%s> type %d, old solval %g now fixed to ub %g\n", SCIPvarGetName(var), SCIPvarGetType(var), solval, ub);
-      }
-   }
+         SCIP_VAR* var;
+         SCIP_Real solval;
 
-   SCIPdebugMsg(scip, "number of bound changes (due to global bounds) = %d\n", nchgbound);
-   SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
+         var = vars[i];
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
 
-   localrows = FALSE;
-   valid = TRUE;
-
-   /* initialize activities */
-   for( i = 0; i < nlprows; ++i )
-   {
-      SCIP_ROW* row;
-
-      row = lprows[i];
-      assert(SCIProwGetLPPos(row) == i);
-
-      if( !SCIProwIsLocal(row) )
-      {
-         activities[i] = SCIPgetRowSolActivity(scip, row, worksol);
-         SCIPdebugMsg(scip, "Row <%s> has activity %g\n", SCIProwGetName(row), activities[i]);
-         if( SCIPisFeasLT(scip, activities[i], SCIProwGetLhs(row)) || SCIPisFeasGT(scip, activities[i], SCIProwGetRhs(row)) )
+         solval = SCIPgetSolVal(scip, bestsol,var);
+         /* old solution value is smaller than the actual lower bound */
+         if( SCIPisFeasLT(scip, solval, lb) )
          {
-            valid = FALSE;
-            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIPdebugMsg(scip, "row <%s> activity %g violates bounds, lhs = %g, rhs = %g\n", SCIProwGetName(row), activities[i], SCIProwGetLhs(row), SCIProwGetRhs(row));
-            break;
+            /* set the solution value to the global lower bound */
+            SCIP_CALL( SCIPsetSolVal(scip, worksol, var, lb) );
+            ++nchgbound;
+            SCIPdebugMsg(scip, "var <%s> type %d, old solval %g now fixed to lb %g\n", SCIPvarGetName(var), SCIPvarGetType(var), solval, lb);
+         }
+         /* old solution value is greater than the actual upper bound */
+         else if( SCIPisFeasGT(scip, solval, SCIPvarGetUbGlobal(var)) )
+         {
+            /* set the solution value to the global upper bound */
+            SCIP_CALL( SCIPsetSolVal(scip, worksol, var, ub) );
+            ++nchgbound;
+            SCIPdebugMsg(scip, "var <%s> type %d, old solval %g now fixed to ub %g\n", SCIPvarGetName(var), SCIPvarGetType(var), solval, ub);
          }
       }
-      else
-         localrows = TRUE;
-   }
 
-   if( !valid )
-   {
-      /** @todo try to correct lp rows */
-      SCIPdebugMsg(scip, "Some global bound changes were not valid in lp rows.\n");
-      goto TERMINATE;
-   }
+      SCIPdebugMsg(scip, "number of bound changes (due to global bounds) = %d\n", nchgbound);
+      SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &shiftvals, shiftcandssize) );
+      localrows = FALSE;
+      valid = TRUE;
+
+      /* initialize activities */
+      for( i = 0; i < nlprows; ++i )
+      {
+         SCIP_ROW* row;
+
+         row = lprows[i];
+         assert(SCIProwGetLPPos(row) == i);
+
+         if( !SCIProwIsLocal(row) )
+         {
+            activities[i] = SCIPgetRowSolActivity(scip, row, worksol);
+            SCIPdebugMsg(scip, "Row <%s> has activity %g\n", SCIProwGetName(row), activities[i]);
+            if( SCIPisFeasLT(scip, activities[i], SCIProwGetLhs(row)) || SCIPisFeasGT(scip, activities[i], SCIProwGetRhs(row)) )
+            {
+               valid = FALSE;
+               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+               SCIPdebugMsg(scip, "row <%s> activity %g violates bounds, lhs = %g, rhs = %g\n", SCIProwGetName(row), activities[i], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               break;
+            }
+         }
+         else
+            localrows = TRUE;
+      }
+
+      if( !valid )
+      {
+         /** @todo try to correct lp rows */
+         SCIPdebugMsg(scip, "Some global bound changes were not valid in lp rows.\n");
+         goto TERMINATE;
+      }
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &shiftvals, shiftcandssize) );
 
 
-   SCIPdebugMsg(scip, "Starting 1-opt heuristic\n");
+      SCIPdebugMsg(scip, "Starting 1-opt heuristic\n");
 
-   /* enumerate all integer variables and find out which of them are shiftable */
-   for( i = 0; i < nintvars; i++ )
-   {
-      if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+      /* enumerate all integer variables and find out which of them are shiftable */
+      for( i = 0; i < nintvars; i++ )
+      {
+         if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+         {
+            SCIP_Real shiftval;
+            SCIP_Real solval;
+
+            /* find out whether the variable can be shifted */
+            solval = SCIPgetSolVal(scip, worksol, vars[i]);
+            shiftval = calcShiftVal(scip, vars[i], solval, activities);
+
+            /* insert the variable into the list of shifting candidates */
+            if( !SCIPisFeasZero(scip, shiftval) )
+            {
+               SCIPdebugMsg(scip, " -> Variable <%s> can be shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
+
+               if( nshiftcands == shiftcandssize)
+               {
+                  shiftcandssize *= 8;
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &shiftcands, shiftcandssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &shiftvals, shiftcandssize) );
+               }
+               shiftcands[nshiftcands] = vars[i];
+               shiftvals[nshiftcands] = shiftval;
+               nshiftcands++;
+            }
+         }
+      }
+
+      /* if at least one variable can be shifted, shift variables sorted by their objective */
+      if( nshiftcands > 0 )
       {
          SCIP_Real shiftval;
          SCIP_Real solval;
+         SCIP_VAR* var;
 
-         /* find out whether the variable can be shifted */
-         solval = SCIPgetSolVal(scip, worksol, vars[i]);
-         shiftval = calcShiftVal(scip, vars[i], solval, activities);
-
-         /* insert the variable into the list of shifting candidates */
-         if( !SCIPisFeasZero(scip, shiftval) )
+         /* the case that exactly one variable can be shifted is slightly easier */
+         if( nshiftcands == 1 )
          {
-            SCIPdebugMsg(scip, " -> Variable <%s> can be shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
-
-            if( nshiftcands == shiftcandssize)
-            {
-               shiftcandssize *= 8;
-               SCIP_CALL( SCIPreallocBufferArray(scip, &shiftcands, shiftcandssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &shiftvals, shiftcandssize) );
-            }
-            shiftcands[nshiftcands] = vars[i];
-            shiftvals[nshiftcands] = shiftval;
-            nshiftcands++;
-         }
-      }
-   }
-
-   /* if at least one variable can be shifted, shift variables sorted by their objective */
-   if( nshiftcands > 0 )
-   {
-      SCIP_Real shiftval;
-      SCIP_Real solval;
-      SCIP_VAR* var;
-
-      /* the case that exactly one variable can be shifted is slightly easier */
-      if( nshiftcands == 1 )
-      {
-         var = shiftcands[0];
-         assert(var != NULL);
-         solval = SCIPgetSolVal(scip, worksol, var);
-         shiftval = shiftvals[0];
-         assert(!SCIPisFeasZero(scip,shiftval));
-         SCIPdebugMsg(scip, " Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n",
-            SCIPvarGetName(var), shiftval);
-         SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
-      }
-      else
-      {
-         SCIP_Real* objcoeffs;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nshiftcands) );
-
-         SCIPdebugMsg(scip, " %d shiftcands found \n", nshiftcands);
-
-         /* sort the variables by their objective, optionally weighted with the shiftval */
-         if( heurdata->weightedobj )
-         {
-            for( i = 0; i < nshiftcands; ++i )
-               objcoeffs[i] = SCIPvarGetObj(shiftcands[i])*shiftvals[i];
+            var = shiftcands[0];
+            assert(var != NULL);
+            solval = SCIPgetSolVal(scip, worksol, var);
+            shiftval = shiftvals[0];
+            assert(!SCIPisFeasZero(scip,shiftval));
+            SCIPdebugMsg(scip, " Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n",
+               SCIPvarGetName(var), shiftval);
+            SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
          }
          else
          {
+            SCIP_Real* objcoeffs;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nshiftcands) );
+
+            SCIPdebugMsg(scip, " %d shiftcands found \n", nshiftcands);
+
+            /* sort the variables by their objective, optionally weighted with the shiftval */
+            if( heurdata->weightedobj )
+            {
+               for( i = 0; i < nshiftcands; ++i )
+                  objcoeffs[i] = SCIPvarGetObj(shiftcands[i])*shiftvals[i];
+            }
+            else
+            {
+               for( i = 0; i < nshiftcands; ++i )
+                  objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);
+            }
+
+            /* sort arrays with respect to the first one */
+            SCIPsortRealPtr(objcoeffs, (void**)shiftcands, nshiftcands);
+
+            /* try to shift each variable -> Activities have to be updated */
             for( i = 0; i < nshiftcands; ++i )
-               objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);
-         }
-
-         /* sort arrays with respect to the first one */
-         SCIPsortRealPtr(objcoeffs, (void**)shiftcands, nshiftcands);
-
-         /* try to shift each variable -> Activities have to be updated */
-         for( i = 0; i < nshiftcands; ++i )
-         {
-            var = shiftcands[i];
-            assert(var != NULL);
-            solval = SCIPgetSolVal(scip, worksol, var);
-            shiftval = calcShiftVal(scip, var, solval, activities);
-            SCIPdebugMsg(scip, " -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
-            assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
-            assert(SCIPisFeasGE(scip, solval+shiftval, SCIPvarGetLbGlobal(var)) && SCIPisFeasLE(scip, solval+shiftval, SCIPvarGetUbGlobal(var)));
-            SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
-            SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
-         }
-
-         SCIPfreeBufferArray(scip, &objcoeffs);
-      }
-
-      /* if the problem is a pure IP, try to install the solution, if it is a MIP, solve LP again to set the continuous
-       * variables to the best possible value
-       */
-      if( nvars == nintvars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         SCIP_Bool success;
-
-         /* since we ignore local rows, we cannot guarantee their feasibility and have to set the checklprows flag to
-          * TRUE if local rows are present
-          */
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, localrows, &success) );
-
-         if( success )
-         {
-            SCIPdebugMsg(scip, "found feasible shifted solution:\n");
-            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
-            heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
-            *result = SCIP_FOUNDSOL;
-         }
-      }
-      else
-      {
-         SCIP_Bool lperror;
-#ifdef NDEBUG
-         SCIP_RETCODE retstat;
-#endif
-
-         SCIPdebugMsg(scip, "shifted solution should be feasible -> solve LP to fix continuous variables to best values\n");
-
-         /* start diving to calculate the LP relaxation */
-         SCIP_CALL( SCIPstartDive(scip) );
-
-         /* set the bounds of the variables: fixed for integers, global bounds for continuous */
-         for( i = 0; i < nvars; ++i )
-         {
-            if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
             {
-               SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
-               SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+               var = shiftcands[i];
+               assert(var != NULL);
+               solval = SCIPgetSolVal(scip, worksol, var);
+               shiftval = calcShiftVal(scip, var, solval, activities);
+               SCIPdebugMsg(scip, " -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
+               assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
+               assert(SCIPisFeasGE(scip, solval+shiftval, SCIPvarGetLbGlobal(var)) && SCIPisFeasLE(scip, solval+shiftval, SCIPvarGetUbGlobal(var)));
+               SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
+               SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
             }
-         }
-         /* apply this after global bounds to not cause an error with intermediate empty domains */
-         for( i = 0; i < nintvars; ++i )
-         {
-            if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
-            {
-               solval = SCIPgetSolVal(scip, worksol, vars[i]);
-               SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
-               SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
-            }
+
+            SCIPfreeBufferArray(scip, &objcoeffs);
          }
 
-         /* solve LP */
-         SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-
-         /**@todo in case of an MINLP, if SCIPisNLPConstructed() is TRUE, say, rather solve the NLP instead of the LP */
-         /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-          * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+         /* if the problem is a pure IP, try to install the solution, if it is a MIP, solve LP again to set the continuous
+          * variables to the best possible value
           */
-#ifdef NDEBUG
-         retstat = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
-         if( retstat != SCIP_OKAY )
-         { 
-            SCIPwarningMessage(scip, "Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
-         }
-#else
-         SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
-#endif
-
-         SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-         SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
-
-         /* check if this is a feasible solution */
-         if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         if( nvars == nintvars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool success;
 
-            /* copy the current LP solution to the working solution */
-            SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+            /* since we ignore local rows, we cannot guarantee their feasibility and have to set the checklprows flag to
+             * TRUE if local rows are present
+             */
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, localrows, &success) );
 
-            /* check solution for feasibility */
             if( success )
             {
                SCIPdebugMsg(scip, "found feasible shifted solution:\n");
@@ -845,15 +777,87 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
                *result = SCIP_FOUNDSOL;
             }
          }
+         else
+         {
+            SCIP_Bool lperror;
+#ifdef NDEBUG
+            SCIP_RETCODE retstat;
+#endif
 
-         /* terminate the diving */
-         SCIP_CALL( SCIPendDive(scip) );
+            SCIPdebugMsg(scip, "shifted solution should be feasible -> solve LP to fix continuous variables to best values\n");
+
+            /* start diving to calculate the LP relaxation */
+            SCIP_CALL( SCIPstartDive(scip) );
+
+            /* set the bounds of the variables: fixed for integers, global bounds for continuous */
+            for( i = 0; i < nvars; ++i )
+            {
+               if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+               {
+                  SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+                  SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+               }
+            }
+            /* apply this after global bounds to not cause an error with intermediate empty domains */
+            for( i = 0; i < nintvars; ++i )
+            {
+               if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+               {
+                  solval = SCIPgetSolVal(scip, worksol, vars[i]);
+                  SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
+                  SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
+               }
+            }
+
+            /* solve LP */
+            SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+
+            /**@todo in case of an MINLP, if SCIPisNLPConstructed() is TRUE, say, rather solve the NLP instead of the LP */
+            /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+             * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+             */
+#ifdef NDEBUG
+            retstat = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
+            if( retstat != SCIP_OKAY )
+            {
+               SCIPwarningMessage(scip, "Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
+            }
+#else
+            SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
+#endif
+
+            SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+            SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+
+            /* check if this is a feasible solution */
+            if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIP_Bool success;
+
+               /* copy the current LP solution to the working solution */
+               SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+               SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+
+               /* check solution for feasibility */
+               if( success )
+               {
+                  SCIPdebugMsg(scip, "found feasible shifted solution:\n");
+                  SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
+                  heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
+                  *result = SCIP_FOUNDSOL;
+               }
+            }
+
+            /* terminate the diving */
+            SCIP_CALL( SCIPendDive(scip) );
+         }
       }
-   }
-   SCIPdebugMsg(scip, "Finished 1-opt heuristic\n");
+      SCIPdebugMsg(scip, "Finished 1-opt heuristic\n");
 
-   SCIPfreeBufferArray(scip, &shiftvals);
-   SCIPfreeBufferArray(scip, &shiftcands);
+      SCIPfreeBufferArray(scip, &shiftvals);
+      SCIPfreeBufferArray(scip, &shiftcands);
+      bestsol = SCIPgetBestSol(scip);
+   } while( heurdata->lastsolindex != SCIPsolGetIndex(bestsol) );
 
  TERMINATE:
    SCIPfreeBufferArray(scip, &activities);
