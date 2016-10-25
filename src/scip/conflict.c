@@ -6405,7 +6405,7 @@ SCIP_RETCODE performDualRayAnalysis(
                   mirvals, -SCIPsetInfinity(set), mirrhs, set->conf_seperate) );
          }
 
-         if( !success || (success && !set->conf_onlybest) )
+         if( !success || (success && !set->conf_prefermir) )
          {
             /* create and add the original proof */
             SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, blkmem, ndualrayvars, mirvars,

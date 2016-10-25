@@ -144,8 +144,9 @@
 
 #define SCIP_DEFAULT_CONF_ENABLEDUALRAY   FALSE /**< enable dual ray analyzes */
 #define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR in dual rays */
-#define SCIP_DEFAULT_CONF_ONLYBEST        TRUE  /**< use either the initial dual ray or after appling the MIR fucntion */
-
+#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefere the ray after applying the MIR function if the proof is still
+                                                  *  valid, use both rays otherwise
+                                                  */
 
 /* Constraints */
 
@@ -1357,14 +1358,14 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_enablegraph, TRUE, SCIP_DEFAULT_CONF_ENABLECONFGRAPH,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/dualray/useMIR",
+         "conflict/dualray/usemir",
          "apply MIR function to dual rays",
          &(*set)->conf_applymir, FALSE, SCIP_DEFAULT_CONF_APPLYMIR,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/dualray/onlybest",
-         "use either initial dual ray or after applying MIR function",
-         &(*set)->conf_onlybest, FALSE, SCIP_DEFAULT_CONF_ONLYBEST,
+         "conflict/dualray/prefermir",
+         "prefere the ray after applying the MIR function if the proof is still valid, use both rays otherwise",
+         &(*set)->conf_prefermir, FALSE, SCIP_DEFAULT_CONF_PREFERMIR,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/graph/weightsize",

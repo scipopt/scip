@@ -211,13 +211,15 @@ struct SCIP_Set
    SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
                                                     *   variable if it is part of a conflict graph
                                                     */
-   SCIP_Real             conf_weightsize;
-   SCIP_Real             conf_weightrepropdepth;
-   SCIP_Real             conf_weightvaliddepth;
+   SCIP_Real             conf_weightsize;    /**<weight of the size of a conflict used in score calculation */
+   SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
+   SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
    SCIP_Bool             conf_enabledualray; /**< enable dual ray analyzes */
    SCIP_Bool             conf_enablegraph;   /**< perform only dualray analysis */
    SCIP_Bool             conf_applymir;      /**< apply the MIR function on the dualray */
-   SCIP_Bool             conf_onlybest;      /**< use the ray before and after applying the MIR function */
+   SCIP_Bool             conf_prefermir;     /**< prefere the ray after applying the MIR function if the proof is still
+                                              *   valid, use both rays otherwise
+                                              */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
