@@ -169,11 +169,10 @@ struct SCIP_Set
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
                                               *   (-1: use all generated conflict constraints) */
    int                   conf_maxstoresize;  /**< maximal size of conflict storage */
-   int                   conf_cleanupfreq;   /**< frequency to cleanup the storage if it is not full */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
-   SCIP_Bool             conf_cleanboundexeedings;/**< should conflicts related to an old cutoff bound removed? */
+   SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound removed? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
    SCIP_Bool             conf_useinflp;      /**< should infeasible LP conflict analysis be used? */
    SCIP_Bool             conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used? */
@@ -215,10 +214,10 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;
    SCIP_Real             conf_weightrepropdepth;
    SCIP_Real             conf_weightvaliddepth;
-   SCIP_Bool             conf_enabledualray;/**< enable dual ray analyzes */
+   SCIP_Bool             conf_enabledualray; /**< enable dual ray analyzes */
    SCIP_Bool             conf_enablegraph;   /**< perform only dualray analysis */
-   SCIP_Bool             conf_applymir;        /**< apply the MIR function on the dualray */
-   SCIP_Bool             conf_onlybest;       /**< use the ray before and after applying the MIR function */
+   SCIP_Bool             conf_applymir;      /**< apply the MIR function on the dualray */
+   SCIP_Bool             conf_onlybest;      /**< use the ray before and after applying the MIR function */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

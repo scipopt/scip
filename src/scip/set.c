@@ -107,7 +107,7 @@
 #define SCIP_DEFAULT_CONF_CLEANUPFREQ         5 /**< frequency to clean up the storage if it is not full */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
-#define SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS FALSE /**< should conflicts based on an old cutoff bound removed? */
+#define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCONSS         -1 /**< maximal number of intermediate conflict constraints generated in
@@ -1174,7 +1174,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/graph/cleanboundexceedings",
          "should conflicts based on an old cutoff bound removed?",
-         &(*set)->conf_cleanboundexeedings, TRUE, SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS,
+         &(*set)->conf_cleanbnddepend, TRUE, SCIP_DEFAULT_CONF_CLEANBNDDEPEND,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/useprop",
@@ -1245,11 +1245,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/graph/maxstoresize",
          "maximal size of conflict storage (-1: auto, 0: disable storage)",
          &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, -1, INT_MAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/cleanupfreq",
-         "frequency to clean up the storage if it is not full. (0: do not clean up)",
-         &(*set)->conf_cleanupfreq, TRUE, SCIP_DEFAULT_CONF_CLEANUPFREQ, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/graph/preferbinary",

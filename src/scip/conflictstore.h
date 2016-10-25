@@ -64,8 +64,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_Bool*            success             /**< pointer to store whether the dualray was excepted */
+   SCIP_PROB*            transprob           /**< transformed problem */
    );
 
 /** adds a conflict to the conflict storage */
