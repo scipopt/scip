@@ -141,10 +141,10 @@ SCIP_RETCODE SCIPcutsApplyMIR(
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
-   int*                  varinds,
-   int*                  nvarinds,
-   SCIP_Real*            minact,
-   SCIP_Bool*            varused,
+   int*                  varinds,            /**< array of variable indeces with a mircoef != 0 */
+   int*                  nvarinds,           /**< number of variables indeces in varinds array */
+   SCIP_Real*            minact,             /**< pointer to store the minimal activity */
+   SCIP_Bool*            varused,            /**< array to store whether a variable has a mircoef != 0 */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
    SCIP_Bool*            islocal             /**< pointer to store whether the returned constraint is only valid locally */
    );

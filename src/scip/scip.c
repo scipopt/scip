@@ -12327,6 +12327,8 @@ int SCIPgetNCheckConss(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note this method will release the constraint at the end
  */
 SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */

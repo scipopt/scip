@@ -6086,6 +6086,8 @@ int SCIPgetNCheckConss(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note this method will release the constraint at the end
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflict(
