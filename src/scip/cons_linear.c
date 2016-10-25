@@ -2237,15 +2237,15 @@ void consdataCalcActivities(
    assert(consdata->glbminactivity >= SCIP_INVALID || consdata->validglbminact);
    assert(consdata->glbmaxactivity >= SCIP_INVALID || consdata->validglbmaxact);
 
-   consdata->validmaxabsval = FALSE;
-   consdata->validminabsval = FALSE;
+   consdata->validmaxabsval = TRUE;
+   consdata->validminabsval = TRUE;
    consdata->validactivities = TRUE;
    consdata->validminact = TRUE;
    consdata->validmaxact = TRUE;
    consdata->validglbminact = TRUE;
    consdata->validglbmaxact = TRUE;
-   consdata->maxabsval = SCIP_INVALID;
-   consdata->minabsval = SCIP_INVALID;
+   consdata->maxabsval = 0.0;
+   consdata->minabsval = (consdata->nvars == 0 ? 0.0 : REALABS(consdata->vals[0]));
    consdata->minactivity = 0.0;
    consdata->maxactivity = 0.0;
    consdata->lastminactivity = 0.0;
