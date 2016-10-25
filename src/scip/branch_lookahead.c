@@ -173,6 +173,7 @@ typedef struct
    SCIP_VAR**            othervars;          /**< An array containing the other variable needed to create the implied binary
                                               *   constraint. */
    int                   nentries;           /**< The number of entries in both arrays. */
+   int                   nviolatedentries;   /**< The number of entries that are violated by the base LP solution. */
    int                   memsize;            /**< The number of entries that currently fit in the arrays. Only for internal
                                               *   usage! */
 } BINARYBOUNDDATA;
@@ -334,19 +335,25 @@ SCIP_RETCODE allocBinaryBoundData(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->eithervars, nentries) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->othervars, nentries) );
    (*binarybounddata)->memsize = nentries;
+   (*binarybounddata)->nentries = 0;
+   (*binarybounddata)->nviolatedentries = 0;
    return SCIP_OKAY;
 }
 
-/**
- * Resets the given BinaryBoundData struct.
- */
 static
-void initBinaryBoundData(
-   BINARYBOUNDDATA*      binarybounddata     /**< The struct to be reset. */
+SCIP_Bool isBinaryConstraintViolatedBySolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             eithervar,          /**< One of both vars for the constraint. */
+   SCIP_VAR*             othervar,           /**< The other one of the vars for the constraint. */
+   SCIP_SOL*             baselpsol           /**< the lp solution in the base node */
    )
 {
-   binarybounddata->nentries = 0;
+   SCIP_Real eitherval = SCIPgetSolVal(scip, baselpsol, eithervar);
+   SCIP_Real otherval = SCIPgetSolVal(scip, baselpsol, othervar);
+
+   return SCIPisGT(scip, eitherval + otherval, 1);
 }
+
 
 /**
  * Adds the data for an implied binary constraint to the container.
@@ -356,7 +363,8 @@ SCIP_RETCODE addBinaryBoundEntry(
    SCIP*                 scip,               /**< SCIP data structure */
    BINARYBOUNDDATA*      container,          /**< The container for the implied binary constraints. */
    SCIP_VAR*             eithervar,          /**< One of both vars for the constraint. */
-   SCIP_VAR*             othervar            /**< The other one of the vars for the constraint. */
+   SCIP_VAR*             othervar,           /**< The other one of the vars for the constraint. */
+   SCIP_SOL*             baselpsol           /**< the lp solution in the base node */
    )
 {
    int emptyindex;
@@ -380,6 +388,11 @@ SCIP_RETCODE addBinaryBoundEntry(
    container->eithervars[emptyindex] = eithervar;
    container->othervars[emptyindex] = othervar;
    container->nentries = emptyindex + 1;
+
+   /*if( isBinaryConstraintViolatedBySolution(scip, eithervar, othervar, baselpsol) )
+   {
+      container->nviolatedentries++;
+   }*/
 
    return SCIP_OKAY;
 }
@@ -777,7 +790,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    STATUS*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
-   SCIP_Real             globallpobjval,       /**< objective value of the base lp */
+   SCIP_Real             globallpobjval,     /**< objective value of the base lp */
    SCIP_Real             localpobjval,
    SCIP_VAR*             basevarforbound,    /**< the first level branch var, ready for use in the grand child binary cons.
                                               *   Can be NULL.*/
@@ -912,7 +925,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                {
                   /* if the up branching was cutoff and both branching variables are binary we can deduce a binary
                    * constraint. add the constraint to the buffer and add them all later to the problem */
-                  SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepbranchvar) );
+                  SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepbranchvar, baselpsol) );
                }
 
                if( branchruledata->useimplieddomred )
@@ -941,7 +954,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                    * is cutoff we can build, together with the binary first level variable x and the branching constraint
                    * f(x) >= 1, the constraint f(x) + (1-y) <= 1.*/
                   SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
-                  SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound) );
+                  SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound, baselpsol) );
                }
 
                if( branchruledata->useimplieddomred )
@@ -1328,7 +1341,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          /* the initial number of entries in the struct is chosen arbitrarily */
          SCIP_CALL( allocBinaryBoundData(scip, &binarybounddata, (int)SCIPceil(scip, 0.1 * nlpcands)) );
-         initBinaryBoundData(binarybounddata);
       }
 
       /* init all structs and variables */
@@ -1343,6 +1355,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       /* use the probing mode, so that we can execute our branching without influencing the original branching tree. */
       SCIP_CALL( SCIPstartProbing(scip) );
+      SCIPenableVarHistory(scip);
       SCIPdebugMessage("Start Probing Mode\n");
 
       for( i = 0; i < nlpcands && isExecuteFirstLevelBranching(status) && !SCIPisStopped(scip); i++ )
@@ -1551,7 +1564,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
          status->addimpbinconst = TRUE;
       }
-      else if( !status->lperror && !status->depthtoosmall && !status->firstlvlfullcutoff
+
+      if( !status->lperror && !status->depthtoosmall && !status->firstlvlfullcutoff
          && (branchruledata->usedirectdomred || branchruledata->useimplieddomred) )
       {
          /* if we have no other result status set and found (potential) implied domain reductions, we add those here */
@@ -1825,6 +1839,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_Real provedbound;
       STATUS* status;
 
+      /*bestdown = -SCIPinfinity(scip);
+      bestdownvalid = FALSE;
+      bestup = -SCIPinfinity(scip);
+      bestupvalid = FALSE;
+      provedbound = -SCIPinfinity(scip);*/
+
       /* get all fractional candidates we can branch on */
       SCIP_CALL( getLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
@@ -1838,11 +1858,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
             status, &bestcand, &bestdown, &bestdownvalid, &bestup, &bestupvalid, &provedbound) );
       SCIPdebugMessage("Result is <%i>\n", *result);
 
-      if( status->lperror )
-      {
-         *result = SCIP_DIDNOTFIND;
-      }
-      else if( status->firstlvlfullcutoff || status->domredcutoff )
+      if( status->firstlvlfullcutoff || status->domredcutoff )
       {
          *result = SCIP_CUTOFF;
       }
@@ -1853,6 +1869,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       else if( status->domred || status->propagationdomred )
       {
          *result = SCIP_REDUCEDDOM;
+      }
+      else if( status->lperror )
+      {
+         *result = SCIP_DIDNOTFIND;
       }
 
       if( *result != SCIP_CUTOFF /* a variable could not be branched in any direction or any of the calculated domain
@@ -1983,7 +2003,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->useimpliedbincons, TRUE, DEFAULT_USEIMPLIEDBINARYCONSTRAINTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addbinconsrow",
-         "should implied binary constraints be added as a row to the problem matrix?",
+         "should implied binary constraints be added as a row to the LP?",
          &branchruledata->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, NULL, NULL) );
    return SCIP_OKAY;
 }
