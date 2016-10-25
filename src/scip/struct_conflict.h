@@ -72,7 +72,7 @@ struct SCIP_ConflictSet
    unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
    unsigned int          sorted:1;           /**< is the conflict set sorted */
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
-   unsigned int          conflicttype:3;     /**< conflict type: infeasible LP, bound exceeding LP, propagation */
+   unsigned int          conflicttype:2;     /**< conflict type: infeasible LP, bound exceeding LP, propagation */
 };
 
 /** set of LP bound change */
@@ -140,10 +140,10 @@ struct SCIP_Conflict
    SCIP_Longint          ndualrayinfsuccess; /**< number of successfully dualray analysis calls for infeasible LPs */
    SCIP_Longint          ndualrayinfseparoot;/**< number of infeasible dualrays separating the root LP solution */
 
-   SCIP_Real             dualrayinfavglength;
-   SCIP_Longint          dualrayinfminlength;
-   SCIP_Longint          dualrayinfmaxlength;
-   SCIP_Longint          dualrayinfdomreds;
+   SCIP_Real             dualrayinfavglength;/**< average length of accepted dual rays */
+   SCIP_Longint          dualrayinfminlength;/**< minimal length of accepted dual rays */
+   SCIP_Longint          dualrayinfmaxlength;/**< maximal length of accepted dual rays */
+   SCIP_Longint          dualrayinfdomreds;  /**< number of domain reductions obtained by dual rays */
 
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 

@@ -45,10 +45,10 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
 /** types of conflicts */
 enum SCIP_ConflictType
 {
-   SCIP_CONFTYPE_UNKNOWN      = 0,
-   SCIP_CONFTYPE_PROPAGATION  = 1,
-   SCIP_CONFTYPE_INFEASLP     = 2,
-   SCIP_CONFTYPE_BNDEXCEEDING = 3
+   SCIP_CONFTYPE_UNKNOWN      = 0,                /**< unknown type */
+   SCIP_CONFTYPE_PROPAGATION  = 1,                /**< conflict results from propagation */
+   SCIP_CONFTYPE_INFEASLP     = 2,                /**< conflict results from an infeasible LP relaxation */
+   SCIP_CONFTYPE_BNDEXCEEDING = 3                 /**< conflict results from a boundexceeding LP relaxation */
 };
 typedef enum SCIP_ConflictType SCIP_CONFTYPE;
 
