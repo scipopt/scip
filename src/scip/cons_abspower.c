@@ -2136,6 +2136,7 @@ static
 SCIP_Real proposeBranchingPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint which variable to get branching point for */
+   SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP or pseudosol) */
    int                   preferzero,         /**< how much we prefer branching on -xoffset (0, 1, or 2) if sign is not fixed */
    SCIP_Bool             branchminconverror  /**< whether to minimize convexification error if sign is fixed */
    )
@@ -2143,6 +2144,7 @@ SCIP_Real proposeBranchingPoint(
    SCIP_CONSDATA* consdata;
    SCIP_VAR*      x;
    SCIP_Real      xref;
+   SCIP_Real      zref;
    SCIP_Real      xlb;
    SCIP_Real      xub;
 
@@ -2174,14 +2176,15 @@ SCIP_Real proposeBranchingPoint(
       xlb += consdata->xoffset;
       xub += consdata->xoffset;
 
-      xref = SCIPgetVarSol(scip, x) + consdata->xoffset;
+      xref = (sol == NULL) ? SCIPgetVarSol(scip, x) + consdata->xoffset : SCIPgetSolVal(scip, sol, x) + consdata->xoffset;
+      zref = (sol == NULL) ? SCIPgetVarSol(scip, consdata->z) : SCIPgetSolVal(scip, sol, consdata->z);
       if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* signpow(x,n,offset) + c*z <= 0 is violated
           *  if we are close to or right of -offset, then branching on -offset gives a convex function on the right branch, this is good
           *  otherwise if branching on -offset yields a violated secant cut in left branch, then current solution would be cutoff there, this is also still good
           */
-         if( !SCIPisFeasNegative(scip, xref) || SCIPisFeasPositive(scip, -consdata->power(-xlb, consdata->exponent)*xref/xlb + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
+         if( !SCIPisFeasNegative(scip, xref) || SCIPisFeasPositive(scip, -consdata->power(-xlb, consdata->exponent)*xref/xlb + consdata->zcoef * zref) )
             return -consdata->xoffset;
          return SCIP_INVALID;
       }
@@ -2191,7 +2194,7 @@ SCIP_Real proposeBranchingPoint(
        *  if we are close to or left of zero, then branching on 0.0 gives a concave function on the left branch, this is good
        *  otherwise if branching on 0.0 yields a violated secant cut in right branch, then current solution would be cutoff there, this is also still good
        */
-      if( !SCIPisFeasPositive(scip, xref) || SCIPisFeasNegative(scip, -consdata->power(xub, consdata->exponent)*xref/xub + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
+      if( !SCIPisFeasPositive(scip, xref) || SCIPisFeasNegative(scip, -consdata->power(xub, consdata->exponent)*xref/xub + consdata->zcoef * zref) )
          return -consdata->xoffset;
       return SCIP_INVALID;
    }
@@ -2291,7 +2294,7 @@ SCIP_RETCODE registerBranchingCandidates(
             assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
 
             SCIPdebugMessage("register var <%s> in cons <%s> with violation %g %g\n", SCIPvarGetName(consdata->x), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], sol, conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
             ++*nnotify;
          }
       }
@@ -6152,7 +6155,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
       /* domain propagation should have removed cons when x is fixed */
       assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
 
-      SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, consdata->lhsviol + consdata->rhsviol, proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
+      SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, consdata->lhsviol + consdata->rhsviol, proposeBranchingPoint(scip, conss[c], NULL, conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
       ++nnotify;
    }
 
