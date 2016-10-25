@@ -47,13 +47,13 @@
 #define READER_DESC             "file reader for variable bounds"
 #define READER_EXTENSION        "bnd"
 
-#define DEFAULT_BND_IMPROVEONLY FALSE     /**< Should bounds only be updated if they are improvements of current bounds */
+#define DEFAULT_IMPROVEONLY     FALSE        /**< only use improving bounds */
 
 
-/** BND reading data */
+/** BND reader data */
 struct SCIP_ReaderData
 {
-   SCIP_Bool             improveonly;     /**< Should bounds only be updated if they are improvements of current bounds */
+   SCIP_Bool             improveonly;        /**< only use improving bounds */
 };
 
 
@@ -143,7 +143,6 @@ SCIP_RETCODE readBounds(
          continue;
       }
 
-
       /* cast the lower bound value */
       if( strncasecmp(lbstring, "inv", 3) == 0 )
          continue;
@@ -182,44 +181,29 @@ SCIP_RETCODE readBounds(
          }
       }
 
-      /* set the bounds of the variable */
       if( readerdata->improveonly )
       {
-         if( SCIPisGE(scip, lb, SCIPvarGetLbGlobal(var)))
+         if( SCIPisLT(scip, lb, SCIPvarGetLbGlobal(var)) )
          {
-            SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
-         }
-         else
-         {
-            SCIPwarningMessage(scip, "not applying lower bound value %s for variable <%s> in line %d of bounds file %s, "
-               "because it does not improve existing bound of %f\n",
+            SCIPwarningMessage(scip, "not applying lower bound value %s for variable <%s> in line %d of bounds file %s,"
+               " because it does not improve existing bound of %f\n",
                lbstring, SCIPvarGetName(var), lineno, fname, SCIPvarGetLbGlobal(var));
          }
-
-         if( SCIPisLE(scip, ub, SCIPvarGetUbGlobal(var)))
-         {
-            SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
-         }
-         else
+         if( SCIPisGT(scip, ub, SCIPvarGetUbGlobal(var)) )
          {
             SCIPwarningMessage(scip, "not applying upper bound value %s for variable <%s> in line %d of bounds file %s, "
                "because it does not improve existing bound of %f\n",
                ubstring, SCIPvarGetName(var), lineno, fname, SCIPvarGetUbGlobal(var));
          }
+
+         /* collect best variable bounds */
+         lb = MAX(lb, SCIPvarGetLbGlobal(var));
+         ub = MIN(ub, SCIPvarGetUbGlobal(var));
       }
-      else
-      {
-         if( lb <= SCIPvarGetUbGlobal(var) )
-         {
-            SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
-            SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
-            SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
-         }
-      }
+
+      /* note that we don't need to check if lb > ub in SCIPchgVar{Lb,Ub} */
+      SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+      SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
    }
 
    /* close input file */
@@ -427,11 +411,10 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteBnd) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeBnd) );
 
-
    /* add bnd reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/bndreader/improveonly", "should bounds only be updated if they are improvements of current bounds",
-         &readerdata->improveonly, FALSE, DEFAULT_BND_IMPROVEONLY, NULL, NULL) );
+         "reading/bndreader/improveonly", "only use improving bounds",
+         &readerdata->improveonly, FALSE, DEFAULT_IMPROVEONLY, NULL, NULL) );
 
    return SCIP_OKAY;
 }
