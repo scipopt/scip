@@ -31,20 +31,12 @@ LPS=${14}
 VALGRIND=${15}
 CLIENTTMPDIR=${16}
 REOPT=${17}
-<<<<<<< HEAD
-PERMUTE=${18}
-OPTCOMMAND=${19}
-SETCUTOFF=${20}
-MAXJOBS=${21}
-VISUALIZE=${22}
-=======
 OPTCOMMAND=${18}
 SETCUTOFF=${19}
 MAXJOBS=${20}
 VISUALIZE=${21}
 PERMUTE=${22}
 SEEDS=${23}
->>>>>>> master
 
 # check if all variables defined (by checking the last one)
 if test -z $SEEDS
@@ -103,89 +95,6 @@ fi
 
 INIT="true"
 COUNT=0
-<<<<<<< HEAD
-# loop over testset
-for INSTANCE in `cat testset/$TSTNAME.test` DONE
-do
-    # loop over permutations
-    for ((p = 0; $p <= $PERMUTE; p++))
-    do
-      COUNT=`expr $COUNT + 1`
-
-      # loop over settings
-      for SETNAME in ${SETTINGSLIST[@]}
-      do
-        # waiting while the number of jobs has reached the maximum
-        if [ $MAXJOBS -ne 1 ]
-        then
-              while [ `jobs -r|wc -l` -ge $MAXJOBS ]
-              do
-                  sleep 10
-                  echo "Waiting for jobs to finish."
-              done
-        fi
-
-        # infer the names of all involved files from the arguments
-        QUEUE=`hostname`
-
-        if test "$INSTANCE" = "DONE"
-        then
-            wait
-            #echo $EVALFILE
-            ./evalcheck_cluster.sh -r $EVALFILE
-            continue
-        fi
-
-        # infer the names of all involved files from the arguments
-        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE $p
-
-        if test "$SKIPINSTANCE" = "true"
-        then
-            continue
-        fi
-
-        # find out the solver that should be used
-        SOLVER=`stripversion $BINNAME`
-
-        CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
-
-        # we don't have separate configuration files for most examples and applications, use SCIP configuration file instead
-        if ! test -f "$CONFFILE"
-        then
-            CONFFILE="configuration_tmpfile_setup_scip.sh"
-        fi
-
-        # overwrite the tmp file now
-        # call tmp file configuration for SCIP
-        . ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-            $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
-
-        # additional environment variables needed by run.sh
-        export SOLVERPATH=$SCIPPATH
-        EXECNAME=$BINNAME
-
-        if test -e $SCIPPATH/../$BINNAME
-        then
-            export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
-        else
-            export EXECNAME=$BINNAME
-        fi
-        export BASENAME=$FILENAME
-        export FILENAME=$INSTANCE
-        export SOLNAME=$SOLCHECKFILE
-        export CLIENTTMPDIR
-        export CHECKERPATH=$SCIPPATH/solchecker
-        echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
-        if [ $MAXJOBS -eq 1 ]
-        then
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
-        else
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh" &
-        fi
-      done # end for SETNAME
-      INIT="false"
-  done # end for PERMUTE
-=======
 for idx in ${!INSTANCELIST[@]}
 do
     # retrieve instance and timelimits from arrays set in the configuration_set.sh script
@@ -274,5 +183,4 @@ do
 
     # after the first termination of the set loop, no file needs to be initialized anymore
     INIT="false"
->>>>>>> master
 done # end for TSTNAME

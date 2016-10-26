@@ -26,6 +26,8 @@ features:
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- implement a storage for conflicts to have more controle over active conflicts
+- can now analyze dual unbounded rays of primal infeasibility LPs
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -40,6 +42,8 @@ parameters:
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool); new options are
+  'o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray
 
 performance improvements:
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting

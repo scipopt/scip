@@ -11823,7 +11823,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
    needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
-      || (set->conf_enable && set->conf_useinflp));
+      || (set->conf_enable && set->conf_useinflp != 'o'));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
    harditlim = (int) MIN(itlim, INT_MAX);

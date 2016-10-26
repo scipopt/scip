@@ -89,6 +89,7 @@ typedef unsigned int SCIP_PROPTIMING;
 
 typedef unsigned int SCIP_HEURTIMING;
 
+
 #ifdef __cplusplus
 }
 #endif
