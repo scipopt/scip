@@ -3831,6 +3831,7 @@ SCIP_RETCODE solveNode(
       nloops++;
       lperror = FALSE;
       lpsolved = FALSE;
+      forcedenforcement = FALSE;
 
       while( (propagateagain || solvelpagain || solverelaxagain) && !lperror && !(*cutoff) )
       {
@@ -3840,7 +3841,7 @@ SCIP_RETCODE solveNode(
          solvelpagain = FALSE;
          propagate = propagateagain;
          propagateagain = FALSE;
-         forcedenforcement = FALSE;
+
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, cutoff) );
