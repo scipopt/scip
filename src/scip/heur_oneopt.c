@@ -659,7 +659,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          /** @todo try to correct lp rows */
          SCIPdebugMsg(scip, "Some global bound changes were not valid in lp rows.\n");
-         goto TERMINATE;
+
+         SCIPfreeBufferArray(scip, &activities);
+         SCIP_CALL( SCIPfreeSol(scip, &worksol) );
+
+         return SCIP_OKAY;
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
@@ -856,12 +860,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       SCIPfreeBufferArray(scip, &shiftvals);
       SCIPfreeBufferArray(scip, &shiftcands);
+      SCIPfreeBufferArray(scip, &activities);
+      SCIP_CALL( SCIPfreeSol(scip, &worksol) );
+
       bestsol = SCIPgetBestSol(scip);
    } while( heurdata->lastsolindex != SCIPsolGetIndex(bestsol) );
-
- TERMINATE:
-   SCIPfreeBufferArray(scip, &activities);
-   SCIP_CALL( SCIPfreeSol(scip, &worksol) );
 
    return SCIP_OKAY;
 }
