@@ -129,6 +129,7 @@
 #define getBoundString(lower) ((lower) ? "lb" : "ub")
 #define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
 #define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
+#define getOtherBoundIndex(idx) (((idx) % 2 == 0) ? (idx) + 1 : (idx) - 1)
 
 /**@} */
 
@@ -472,6 +473,7 @@ SCIP_RETCODE extractCycle(
                                               *   already visited for each node on the stack; only needed for
                                               *   performance reasons */
    int                   stacksize,          /**< current stack size */
+   SCIP_Bool             samebound,          /**< does the cycle contain the same bound twice or both bounds of the same variable? */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
 
    )
@@ -485,6 +487,7 @@ SCIP_RETCODE extractCycle(
    SCIP_Bool islower;
    SCIP_Real newbound;
    int cycleidx = dfsstack[stacksize - 1];
+   int startidx;
    int ntmpimpls;
    int j;
    int k;
@@ -492,9 +495,17 @@ SCIP_RETCODE extractCycle(
    assert(scip != NULL);
    assert(propdata != NULL);
 
+   assert(samebound);
+
    vars = propdata->vars;
 
-   for( j = stacksize - 2; dfsstack[j] != cycleidx && j >= 0; --j );
+   if( samebound )
+      startidx = cycleidx;
+   else
+      startidx = cycleidx % 2 == 0 ? cycleidx + 1 : cycleidx - 1;
+
+
+   for( j = stacksize - 2; dfsstack[j] != startidx && j >= 0; --j );
    assert(j >= 0);
 
    for( ; j < stacksize - 1; ++j )
@@ -660,7 +671,7 @@ SCIP_RETCODE extractCycle(
    }
 
    printf("==> %s(%s) -- (*%g + %g) --> %s(%s)\n",
-      indexGetBoundString(cycleidx), SCIPvarGetName(vars[getVarIndex(cycleidx)]),
+      indexGetBoundString(startidx), SCIPvarGetName(vars[getVarIndex(startidx)]),
       coef, constant,
       indexGetBoundString(cycleidx), SCIPvarGetName(vars[getVarIndex(cycleidx)]));
 
@@ -811,14 +822,14 @@ SCIP_RETCODE dfs(
                else
                   idx = varGetLbIndex(propdata, cliquevars[i]);
 
-               if( idx >= 0 && visited[idx] == visitedflag )
+               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag) )
                {
                   printf("found cycle\n");
 
                   dfsstack[stacksize] = idx;
                   stacknextedge[stacksize - 1] = -j - 2;
 
-                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, infeasible) );
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == visitedflag, infeasible) );
 
                   if( *infeasible )
                      break;
@@ -895,14 +906,14 @@ SCIP_RETCODE dfs(
 
                idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
-               if( idx >= 0 && visited[idx] == visitedflag )
+               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag) )
                {
                   printf("found cycle\n");
 
                   dfsstack[stacksize] = idx;
                   stacknextedge[stacksize - 1] = i + 1;
 
-                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, infeasible) );
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == visitedflag, infeasible) );
 
                   if( *infeasible )
                      break;
@@ -955,14 +966,14 @@ SCIP_RETCODE dfs(
             idx = vboundidx[i];
             assert(idx >= 0);
 
-            if( visited[idx] == visitedflag )
+            if( visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag )
             {
                printf("found cycle\n");
 
                dfsstack[stacksize] = idx;
                stacknextedge[stacksize - 1] = nimpls + i + 1;
 
-               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, infeasible) );
+               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == visitedflag, infeasible) );
 
                if( *infeasible )
                   break;
