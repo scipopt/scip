@@ -4717,6 +4717,9 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, relaxation, tree, reopt,
                      lp, eventqueue, eventfilter, relaxsol, FALSE) );
                
+               /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
+               SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, &cutoff) );
+               
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;
