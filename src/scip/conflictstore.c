@@ -861,7 +861,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
    return SCIP_OKAY;
 }
 
-/* return the maximal size of the conflict pool */
+/** return the maximal size of the conflict pool */
 int SCIPconflictstoreGetMaxPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
    )
@@ -871,7 +871,7 @@ int SCIPconflictstoreGetMaxPoolSize(
    return MAX(conflictstore->storesize, conflictstore->maxstoresize);
 }
 
-/* return the initial size of the conflict pool */
+/** return the initial size of the conflict pool */
 int SCIPconflictstoreGetInitPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
    )
@@ -879,4 +879,68 @@ int SCIPconflictstoreGetInitPoolSize(
    assert(conflictstore != NULL);
 
    return conflictstore->initstoresize;
+}
+
+/** returns the number of stored conflicts on the conflict pool
+ *
+ *  note: the number of active conflicts can be less
+ */
+int SCIPconflictstoreGetNConflictsInStore(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   )
+{
+   assert(conflictstore != NULL);
+
+   return conflictstore->nconflicts;
+}
+
+/** returns all active conflicts stored in the conflict store */
+SCIP_RETCODE SCIPconflictstoreGetConflicts(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONS**           conflicts,          /**< array to store conflicts */
+   int                   conflictsize,       /**< site of the conflict array */
+   int*                  nconflicts          /**< pointer to store the number of conflicts */
+   )
+{
+   int i;
+
+   assert(conflictstore != NULL);
+
+   /* return if the allocated memory is obviously to small */
+   if( conflictstore->nconflicts > conflictsize )
+   {
+      (*nconflicts) = conflictstore->nconflicts;
+      return SCIP_OKAY;
+   }
+
+   (*nconflicts) = 0;
+   for( i = 0; i < conflictstore->nconflicts; i++ )
+   {
+      SCIP_CONS* conflict;
+      int idx;
+
+      idx = ((int) (size_t) SCIPqueueRemove(conflictstore->orderqueue)) - 1;
+      assert(idx >= 0 && idx < conflictstore->conflictsize);
+      assert(conflictstore->conflicts[idx] != NULL);
+
+      conflict = conflictstore->conflicts[idx];
+
+      /* skip deactivated and deleted constraints */
+      if( !SCIPconsIsActive(conflict) || SCIPconsIsDeleted(conflict) )
+         continue;
+
+      /* count exect number conflicts */
+      if( *nconflicts > conflictsize )
+         ++(*nconflicts);
+      else
+      {
+         conflicts[*nconflicts] = conflict;
+         ++(*nconflicts);
+      }
+
+      /* reinsert id */
+      SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
+   }
+
+   return SCIP_OKAY;
 }

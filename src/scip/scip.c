@@ -3126,6 +3126,164 @@ SCIP_RETCODE SCIPcopyCuts(
    return SCIP_OKAY;
 }
 
+/** copies all active conflicts from the conflict pool of sourcescip to linear constraints in targetscip
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyConflicts(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   )
+{
+   SCIP_CONS** sourceconfs;
+   SCIP_HASHMAP* localvarmap;
+   SCIP_HASHMAP* localconsmap;
+   SCIP_Bool uselocalvarmap;
+   SCIP_Bool uselocalconsmap;
+   SCIP_Bool success;
+   int sourceconfssize;
+   int nsourceconfs;
+   int c;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check if we locally need to create a variable or constraint hash map */
+   uselocalvarmap = (varmap == NULL);
+   uselocalconsmap = (consmap == NULL);
+
+   if( uselocalvarmap )
+   {
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+   }
+   else
+      localvarmap = varmap;
+
+   if( uselocalconsmap )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+   }
+   else
+      localconsmap = consmap;
+
+   /* get number of conflicts stored in the conflict pool */
+   sourceconfssize = SCIPconflictstoreGetNConflictsInStore(sourcescip->conflictstore);
+
+   /* allocate buffer */
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &sourceconfs, sourceconfssize) );
+
+   /* get all conflicts stored in the conflict pool */
+   SCIP_CALL( SCIPconflictstoreGetConflicts(sourcescip->conflictstore, sourceconfs, sourceconfssize, &nsourceconfs) );
+   assert(nsourceconfs <= sourceconfssize);
+
+   assert(SCIPisTransformed(sourcescip));
+
+   /* copy conflicts */
+   for( c = 0; c < nsourceconfs; ++c )
+   {
+      SCIP_CONS* targetcons;
+
+      /* all constraints have to be active */
+      assert(sourceconfs[c] != NULL);
+      assert(SCIPconsIsActive(sourceconfs[c]));
+      assert(!SCIPconsIsDeleted(sourceconfs[c]));
+      assert(SCIPconsIsConflict(sourceconfs[c]));
+
+      /* in case of copying the global problem we have to ignore the local constraints which are active */
+      if( global && SCIPconsIsLocal(sourceconfs[c]) )
+      {
+         SCIPdebugMsg(sourcescip, "did not copy local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconfs[c]));
+         continue;
+      }
+
+      /* use the copy constructor of the constraint handler and creates and captures the constraint if possible */
+      targetcons = NULL;
+      SCIP_CALL( SCIPgetConsCopy(sourcescip, targetscip, sourceconfs[c], &targetcons, SCIPconsGetHdlr(sourceconfs[c]),
+            localvarmap, localconsmap, NULL, SCIPconsIsInitial(sourceconfs[c]), SCIPconsIsSeparated(sourceconfs[c]),
+            SCIPconsIsEnforced(sourceconfs[c]), SCIPconsIsChecked(sourceconfs[c]),
+            SCIPconsIsPropagated(sourceconfs[c]), FALSE, SCIPconsIsModifiable(sourceconfs[c]),
+            SCIPconsIsDynamic(sourceconfs[c]), SCIPconsIsRemovable(sourceconfs[c]), FALSE, global, &success) );
+
+      /* add the copied constraint to target SCIP if the copying process was valid */
+      if( success )
+      {
+         assert(targetcons != NULL);
+
+         if( !enablepricing )
+            SCIPconsSetModifiable(targetcons, FALSE);
+
+         /* add constraint to target SCIP */
+         SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+
+         /* release constraint once for the creation capture */
+         SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
+      }
+      else
+      {
+         *valid = FALSE;
+         SCIPdebugMsg(sourcescip, "failed to copy constraint %s\n", SCIPconsGetName(sourceconfs[c]));
+      }
+   }
+
+   if( uselocalvarmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localvarmap);
+   }
+
+   if( uselocalconsmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&localconsmap);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** copies implications and cliques of sourcescip to targetscip
  *
  *  This function should be called for a targetscip in transformed stage. It can save time in presolving of the

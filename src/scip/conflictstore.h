@@ -96,16 +96,34 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
    SCIP_Real             cutoffbound         /**< current cutoff bound */
    );
 
-/* return the maximal size of the conflict pool */
+/** return the maximal size of the conflict pool */
 extern
 int SCIPconflictstoreGetMaxPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
    );
 
-/* return the initial size of the conflict pool */
+/** return the initial size of the conflict pool */
 extern
 int SCIPconflictstoreGetInitPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   );
+
+/** returns the number of stored conflicts on the conflict pool
+ *
+ *  note: the number of active conflicts can be less
+ */
+extern
+int SCIPconflictstoreGetNConflictsInStore(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   );
+
+/** returns all active conflicts stored in the conflict store */
+extern
+SCIP_RETCODE SCIPconflictstoreGetConflicts(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONS**           conflicts,          /**< array to store conflicts */
+   int                   conflictsize,       /**< site of the conflict array */
+   int*                  nconflicts          /**< pointer to store the number of conflicts */
    );
 
 #ifdef __cplusplus

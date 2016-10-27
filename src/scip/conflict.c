@@ -5853,19 +5853,20 @@ SCIP_RETCODE tightenDualray(
    for( i = 0; i < *nvarinds; i++ )
    {
       switch( SCIPvarGetType(vars[varinds[i]]) ) {
-         case SCIP_VARTYPE_BINARY:
-            ++nbinvars;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            ++nintvars;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-         case SCIP_VARTYPE_IMPLINT:
-            ++ncontvars;
-            break;
-         default:
-            SCIPsetDebugMsg(set, "unexpected type %u od variable <%s>.\n", SCIPvarGetType(vars[varinds[i]]), SCIPvarGetName(vars[varinds[i]]));
-            return SCIP_INVALIDDATA;
+      case SCIP_VARTYPE_BINARY:
+         ++nbinvars;
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         ++nintvars;
+         break;
+      case SCIP_VARTYPE_CONTINUOUS:
+      case SCIP_VARTYPE_IMPLINT:
+         ++ncontvars;
+         break;
+      default:
+         SCIPsetDebugMsg(set, "unexpected type %u od variable <%s>.\n", SCIPvarGetType(vars[varinds[i]]), SCIPvarGetName(vars[varinds[i]]));
+         return SCIP_INVALIDDATA;
+         break;
       }
    }
 
