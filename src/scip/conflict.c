@@ -2588,7 +2588,6 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*conflict)->dualrayinftime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* enable or disable timing depending on the parameter statistic timing */
    SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
@@ -2645,13 +2644,9 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->npseudoconfliterals = 0;
    (*conflict)->npseudoreconvconss = 0;
    (*conflict)->npseudoreconvliterals = 0;
-   (*conflict)->ndualrayinfcalls = 0;
    (*conflict)->ndualrayinfsuccess = 0;
    (*conflict)->ndualrayinfseparoot = 0;
-   (*conflict)->dualrayinfminlength = LONG_MAX;
-   (*conflict)->dualrayinfmaxlength = 0;
-   (*conflict)->dualrayinfavglength = 0.0;
-   (*conflict)->dualrayinfdomreds = 0;
+   (*conflict)->dualrayinfnnonzeros = 0;
 
    return SCIP_OKAY;
 }
@@ -2677,7 +2672,6 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPclockFree(&(*conflict)->boundlpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
    SCIPclockFree(&(*conflict)->pseudoanalyzetime);
-   SCIPclockFree(&(*conflict)->dualrayinftime);
    SCIPpqueueFree(&(*conflict)->bdchgqueue);
    SCIPpqueueFree(&(*conflict)->forcedbdchgqueue);
    conflictsetFree(&(*conflict)->conflictset, blkmem);
@@ -4332,7 +4326,7 @@ SCIP_RETCODE SCIPconflictAnalyze(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !set->conf_enable )
+   if( !SCIPconflictApplicable(set) )
       return SCIP_OKAY;
 
    /* check, if the conflict set will get too large with high probability */
@@ -5687,7 +5681,7 @@ SCIP_Real getMinActivity(
 
    for( i = 0; i < nvarinds; i++ )
    {
-      int v = SCIPvarGetProbindex(transprob->vars[varinds[i]]);
+      int v = varinds[i];
 
       /* calculate the minimal activity */
       if( vals[v] > 0.0 )
@@ -5732,17 +5726,99 @@ SCIP_Bool cutoffRootSol(
    return cutoff;
 }
 
-/** tighten a given infeasibility proof
+/** apply the MIR function to a given constraint */
+static
+SCIP_RETCODE applyMIR(
+   SCIP_SET*             set,                /**< global SCIP settimngs */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Real*            vals,               /**< values of variables */
+   SCIP_Bool*            varused,            /**< used array */
+   int*                  varinds,            /**< array of indeces with non-zero value */
+   int*                  nvarinds,           /**< number of indeces with non-zero value */
+   SCIP_Real*            rhs,                /**< right-hand side of constraint */
+   SCIP_Bool*            success             /**< pounter to store whether apply MIR was successfull */
+   )
+{
+   SCIP_Real* copy_vals;
+   SCIP_Bool* copy_varused;
+   int* copy_varinds;
+   int copy_nvarinds;
+   SCIP_Real copy_rhs;
+
+   SCIP_Real minact;
+   SCIP_Bool islocal;
+   SCIP_Bool separoot;
+
+   islocal = FALSE;
+
+   /* create local copies */
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &copy_vals, vals, transprob->nvars) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &copy_varused, varused, transprob->nvars) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &copy_varinds, varinds, transprob->nvars) );
+   copy_rhs = (*rhs);
+   copy_nvarinds = (*nvarinds);
+
+   SCIP_CALL( SCIPcutsApplyMIR(set->scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC,
+         SCALE, NULL, NULL, copy_vals, &copy_rhs, copy_varinds, &copy_nvarinds, &minact, copy_varused, success, &islocal) );
+   assert(!islocal);
+
+   if( *success )
+   {
+      /* check whether the constraint is still globally valid */
+      if( SCIPsetIsLE(set, minact, copy_rhs) )
+      {
+         separoot = FALSE;
+         *success = FALSE;
+      }
+      else
+      {
+         /* check whether the new constraint cuts off the root LP solution
+          *
+          * todo: do we realy want this?
+          */
+         if( cutoffRootSol(set, transprob, transprob->vars, copy_vals, copy_rhs, transprob->nvars, FALSE) )
+            separoot = TRUE;
+         else
+            separoot = FALSE;
+      }
+
+#ifdef SCIP_DEBUG
+      /* calculate the violation */
+      SCIP_Real violation = minact-copy_rhs;
+      SCIPsetDebugMsg(set, "->        after MIR: nvars=%d minact=%g rhs=%g violation=%g separoot=%u\n",
+            copy_nvarinds, minact, copy_rhs, violation, separoot);
+#endif
+
+      /* the new constraint is tighter and we keep it */
+      if( *success && separoot )
+      {
+         BMScopyMemoryArray(&vals, copy_vals, transprob->nvars);
+         BMScopyMemoryArray(&varused, copy_varused, transprob->nvars);
+         BMScopyMemoryArray(&varinds, copy_varinds, transprob->nvars);
+         (*rhs) = copy_rhs;
+         (*nvarinds) = copy_nvarinds;
+      }
+   }
+
+   /* free local copies */
+   SCIPsetFreeBufferArray(set, &copy_varinds);
+   SCIPsetFreeBufferArray(set, &copy_varused);
+   SCIPsetFreeBufferArray(set, &copy_vals);
+
+   return SCIP_OKAY;
+}
+
+/** tighten a given infeasibility proof a^Tx <= b with minact > b wrt local bounds
  *
- *  TODO: try the following reductions:
- *        1. remove all cont. variables
- *        2. sort remaining variables in increasing order wrt impact on minimal activity:
- *             a) val > 0 : |glblb - loclb * val|
- *             b) val < 0 : |glbub - locub * val|
- *           until the proof is valid do:
- *             val = 0   and   rhs -= glb{ub/lb}*val
+ *  remove all continuous variables from the proof. we don't care if the proof is locally invalid afterwards
+ *  because we have already proven the infeasibility of the current node.
  *
- *  TODO: write detailed description
+ *  Apply the MIR function after each step (if enabled) but use it iff the resulting constraint separated the
+ *  root LP solution.
+ *
+ *  @todo we may want to always accept the constraint after applying the MIR funtion?!
+ *
+ *  @todo if all variables we may want to separate instead of propagate the constraint?!
  */
 static
 SCIP_RETCODE tightenDualray(
@@ -5760,90 +5836,151 @@ SCIP_RETCODE tightenDualray(
    SCIP_Bool*            success             /**< success pointer */
    )
 {
-   SCIP_Real* wc_vals;
-   SCIP_Bool* wc_varused;
-   int* wc_varinds;
-   SCIP_Real wc_rhs;
+   SCIP_VAR** vars;
    SCIP_Real minact;
    SCIP_Real violation;
-   SCIP_Bool islocal;
-   SCIP_Bool separoot;
-   int wc_nvars;
-   int nvars;
+   int nbinvars;
+   int ncontvars;
+   int nintvars;
+   int i;
 
-   nvars = transprob->nvars;
+   vars = SCIPprobGetVars(transprob);
+   nbinvars = 0;
+   nintvars = 0;
+   ncontvars = 0;
 
-   /* create working copies of values and rhs */
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &wc_vals, vals, nvars) );
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &wc_varused, varused, nvars) );
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &wc_varinds, varinds, nvars) );
-   wc_rhs = (*rhs);
-   wc_nvars = (*nvarinds);
-
-   SCIPdebugMessage("start dualray tightening:\n");
-
-   /* get minimal activity */
-   minact = getMinActivity(set, transprob, wc_vals, wc_varinds, wc_nvars, curvarlbs, curvarubs);
-
-   /* calculate the violation */
-   violation = minact-wc_rhs;
-
-   SCIPdebugMessage("-> tighten dual ray: nvars=%d minact=%g rhs=%g violation=%g\n", wc_nvars, minact, wc_rhs, violation);
-
-   islocal = FALSE;
-   minact = 0.0;
-
-   if( set->conf_applymir )
+   /* count number of binary, integer, and continuous variables */
+   for( i = 0; i < *nvarinds; i++ )
    {
-      SCIP_CALL( SCIPcutsApplyMIR(set->scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC, SCALE,
-            NULL, NULL, wc_vals, &wc_rhs, wc_varinds, &wc_nvars, &minact, wc_varused, success, &islocal) );
-      assert(!islocal);
-
-      if( *success )
-      {
-         /* get new minimal activity */
-         minact = getMinActivity(set, transprob, wc_vals, wc_varinds, wc_nvars, curvarlbs, curvarubs);
-
-         /* check whether we still have a proof */
-         if( SCIPsetIsLE(set, minact, wc_rhs) )
-         {
-            separoot = FALSE;
-            *success = FALSE;
-         }
-         else
-         {
-            /* check whether the new constraint cuts off the root LP solution */
-            if( cutoffRootSol(set, transprob, transprob->vars, wc_vals, wc_rhs, transprob->nvars, FALSE) )
-               separoot = TRUE;
-            else
-               separoot = FALSE;
-         }
-
-         /* calculate the violation */
-         violation = minact-wc_rhs;
-
-         SCIPdebugMessage("->        after MIR: nvars=%d minact=%g rhs=%g violation=%g separoot=%u\n",
-               wc_nvars, minact, wc_rhs, violation, separoot);
-
-         /* the new constraint is tighter and we keep it */
-         if( *success && separoot )
-         {
-            BMScopyMemoryArray(vals, wc_vals, nvars);
-            BMScopyMemoryArray(varused, wc_varused, nvars);
-            BMScopyMemoryArray(varinds, wc_varinds, nvars);
-            (*rhs) = wc_rhs;
-            (*nvarinds) = wc_nvars;
-         }
+      switch( SCIPvarGetType(vars[varinds[i]]) ) {
+         case SCIP_VARTYPE_BINARY:
+            ++nbinvars;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            ++nintvars;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+         case SCIP_VARTYPE_IMPLINT:
+            ++ncontvars;
+            break;
+         default:
+            SCIPsetDebugMsg(set, "unexpected type %u od variable <%s>.\n", SCIPvarGetType(vars[varinds[i]]), SCIPvarGetName(vars[varinds[i]]));
+            return SCIP_INVALIDDATA;
       }
    }
-   else
+
+   SCIPsetDebugMsg(set, "start dualray tightening:\n");
+
+   /* get minimal activity */
+   minact = getMinActivity(set, transprob, vals, varinds, (*nvarinds), curvarlbs, curvarubs);
+
+   /* calculate the violation */
+   violation = minact-(*rhs);
+
+   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d) minact=%g rhs=%g violation=%g\n",
+         (*nvarinds), nbinvars, nintvars, ncontvars, minact, *rhs, violation);
+
+   /* return if all variables are continuous */
+   if( ncontvars == (*nvarinds) )
+   {
       *success = FALSE;
+      return SCIP_OKAY;
+   }
 
+   /* apply MIR function */
+   if( set->conf_applymir )
+   {
+      SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
 
-   /* free buffer memory */
-   SCIPsetFreeBufferArray(set, &wc_varinds);
-   SCIPsetFreeBufferArray(set, &wc_varused);
-   SCIPsetFreeBufferArray(set, &wc_vals);
+      /* get minimal activity */
+      minact = getMinActivity(set, transprob, vals, varinds, (*nvarinds), curvarlbs, curvarubs);
+
+      SCIPsetDebugMsg(set, "-> after applying MIR: minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+
+      if( !(*success) )
+         return SCIP_OKAY;
+   }
+   else
+      *success = TRUE;
+
+   /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sighn of val )
+    * from the proof
+    */
+   for( i = 0; i < *nvarinds; )
+   {
+      int idx = varinds[i];
+
+      assert(vars[idx] != NULL);
+      assert(SCIPvarIsActive(vars[idx]));
+      assert(!SCIPsetIsZero(set, vals[idx]));
+      assert(varused[idx]);
+
+      /* skip integral variables */
+      if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
+      {
+         ++i;
+         continue;
+      }
+      else
+      {
+         SCIP_Real glbbd;
+         SCIP_Real locbd;
+
+         /* get appropriate global and local bounds */
+         glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
+         locbd = (vals[idx] < 0.0 ? SCIPvarGetUbLocal(vars[idx]) : SCIPvarGetLbLocal(vars[idx]));
+
+         if( !SCIPsetIsEQ(set, glbbd, locbd) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n", SCIPvarGetName(vars[idx]),
+               SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
+               SCIPvarGetUbLocal(vars[idx]), vals[idx]);
+
+         /* update activity and rhs */
+         minact -= (locbd * vals[idx]);
+         (*rhs) -= (glbbd * vals[idx]);
+
+         SCIPsetDebugMsg(set, "-> update: minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+
+         vals[idx] = 0.0;
+         varused[idx] = FALSE;
+
+         /* do not increase i, update sparsety pattern */
+         varinds[i] = varinds[(*nvarinds)-1];
+         --(*nvarinds);
+      }
+   }
+
+   /* apply MIR function again */
+   if( set->conf_applymir )
+   {
+      SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
+
+      /* get minimal activity */
+      minact = getMinActivity(set, transprob, vals, varinds, (*nvarinds), curvarlbs, curvarubs);
+
+      SCIPsetDebugMsg(set, "-> after applying MIR: minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+   }
+   else
+      *success = (*success && TRUE);
+
+#if SCIP_DEBUG
+   minact = getMinActivity(set, transprob, vals, varinds, *nvarinds, curvarlbs, curvarubs);
+
+   SCIPsetDebugMsg(set, "-> final constraint after tightenDualray():\n");
+   printf("-> final constraint after tightenDualray():\n");
+   for( i = 0; i < *nvarinds; i++ )
+   {
+      SCIPsetDebugMsg(set, "   %g<%s> glb=[%g,%g] loc=[%g,%g] type=%d\n", vals[varinds[i]], SCIPvarGetName(vars[varinds[i]]),
+            SCIPvarGetLbGlobal(vars[varinds[i]]), SCIPvarGetUbGlobal(vars[varinds[i]]),
+            SCIPvarGetLbLocal(vars[varinds[i]]), SCIPvarGetUbLocal(vars[varinds[i]]), SCIPvarGetType(vars[varinds[i]]));
+   }
+   SCIPsetDebugMsg(set, "-> minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+#endif
 
    return SCIP_OKAY;
 }
@@ -5902,7 +6039,7 @@ SCIP_RETCODE createAndAddDualray(
    else
       orthogonality = 1.0 - REALABS(prod) / (SQRT(normcons) * SQRT(normobj));
 
-   if( set->conf_minmaxvars < nnonzeros && SCIPsetIsLT(set, orthogonality, set->sepa_minortho) )
+   if( SCIPsetIsLT(set, orthogonality, set->sepa_minortho) )
       return SCIP_OKAY;
 
    if( conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP )
@@ -5912,7 +6049,7 @@ SCIP_RETCODE createAndAddDualray(
 
    /* TODO: check if a more specialized constraint (setppc, logic-or etc) can be created */
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, nvars, vars, vals, lhs, rhs,
-         FALSE, separate, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+         FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -5929,13 +6066,7 @@ SCIP_RETCODE createAndAddDualray(
       ++conflict->ndualrayinfseparoot;
 
    /* update statistics */
-   conflict->dualrayinfavglength += nnonzeros;
-
-   if( nnonzeros < conflict->dualrayinfminlength )
-      conflict->dualrayinfminlength = nnonzeros;
-   if( nnonzeros > conflict->dualrayinfmaxlength )
-      conflict->dualrayinfmaxlength = nnonzeros;
-
+   conflict->dualrayinfnnonzeros += nnonzeros;
    ++conflict->ndualrayinfsuccess;
 
    /* release the constraint */
@@ -5996,7 +6127,8 @@ SCIP_RETCODE handleSingleVar(
             eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
    }
 
-   ++conflict->dualrayinfdomreds;
+   ++conflict->nglbchgbds;
+   ++conflict->dualrayinfnnonzeros; /* we count a global bound reduction as size 1 */
    ++conflict->ndualrayinfsuccess;
 
    return SCIP_OKAY;
@@ -6032,7 +6164,9 @@ SCIP_RETCODE performDualRayAnalysis(
    int* varinds;
    SCIP_Bool* varused;
    SCIP_Real mirrhs;
+#ifndef NDEBUG
    SCIP_Real minact;
+#endif
    SCIP_Bool success;
    int ndualrayvars;
    int nmirvars;
@@ -6043,49 +6177,37 @@ SCIP_RETCODE performDualRayAnalysis(
    assert(farkascoefs != NULL);
    assert(!SCIPsetIsInfinity(set, !farkaslhs));
 
-   /* start time for dualŕay analysis of infeasible LPs */
-   SCIPclockStart(conflict->dualrayinftime, set);
-   ++conflict->ndualrayinfcalls;
-
    ndualrayvars = transprob->nvars;
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &mirvars, transprob->vars, ndualrayvars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &mirvals, farkascoefs, ndualrayvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varinds, ndualrayvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varused, ndualrayvars) );
 
-   minact = 0.0;
    nmirvars = 0;
 
-   /* the farkas proof a constraint of type lhs <= a^T x, such that the maximal activity of a^T x is strict less than lhs.
+   /* the farkas proof constraint is of type lhs <= a^T x, such that the maximal activity of a^T x is strict less than lhs.
     * the MIR function implemented in cuts.c only supports constraints of type a^T x <= rhs, thus, we multiply with -1.0
     */
    mirrhs = -farkaslhs;
 
    for( v = 0; v < transprob->nvars; v++ )
    {
-      if( SCIPsetIsZero(set, mirvals[v]) )
-      {
-         mirvals[v] = 0.0;
-         varused[v] = FALSE;
-      }
-      else
-      {
-         mirvals[v] *= -1.0;
-         varused[v] = TRUE;
+      mirvals[v] *= -1.0;
+      varused[v] = TRUE;
 
-         /* calculate the minimal activity */
-         if( mirvals[v] > 0.0 )
-            minact += mirvals[v] * curvarlbs[v];
-         else
-            minact += mirvals[v] * curvarubs[v];
-
-         /* update sparcety information */
-         varinds[nmirvars] = v;
-         ++nmirvars;
-      }
+      /* update sparcety information */
+      varinds[nmirvars] = v;
+      ++nmirvars;
    }
-   assert(SCIPsetIsGT(set, minact, mirrhs));
+
+   /* try to remove all nearly zero coefficients */
+   SCIPcutsCleanupRow(set->scip, mirvals, &mirrhs, varused, varinds, &nmirvars, FALSE);
    assert(nmirvars >= 1);
+
+#ifndef NDEBUG
+   minact = getMinActivity(set, transprob, mirvals, varinds, nmirvars, curvarlbs, curvarubs);
+   assert(SCIPsetIsGT(set, minact, mirrhs));
+#endif
 
    success = FALSE;
 
@@ -6099,6 +6221,7 @@ SCIP_RETCODE performDualRayAnalysis(
    }
    else
    {
+      /* try to enforce the constraint based on a dual ray */
       SCIP_CALL( tightenDualray(set, transprob, mirvals, &mirrhs, varinds, &nmirvars, varused, curvarlbs, curvarubs,
             lbchginfoposs, ubchginfoposs, &success) );
 
@@ -6137,9 +6260,6 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIPsetFreeBufferArray(set, &varinds);
    SCIPsetFreeBufferArray(set, &mirvals);
    SCIPsetFreeBufferArray(set, &mirvars);
-
-   /* stop time for dualŕay analysis of infeasible LPs */
-   SCIPclockStop(conflict->dualrayinftime, set);
 
    return SCIP_OKAY;
 }
@@ -6704,9 +6824,9 @@ SCIP_RETCODE conflictAnalyzeLP(
 #ifdef SCIP_DEBUG
    if( !valid || stopped )
    {
+      SCIP_Real uobjlim;
       SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
          SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
-         SCIP_Real uobjlim;
 
       SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &uobjlim) );
       SCIPdebugMessage(" -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
@@ -6896,7 +7016,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !set->conf_enable )
+   if( !set->conf_enable || (set->conf_useinflp == 'o' && set->conf_useboundlp == 'o') )
       return SCIP_OKAY;
 
    /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
@@ -7422,16 +7542,6 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
    return SCIPclockGetTime(conflict->sbanalyzetime);
 }
 
-/** gets number of calls to infeasible dualray analysis */
-SCIP_Longint SCIPconflictGetNDualrayInfCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->ndualrayinfcalls;
-}
-
 /** gets number of successful calls to infeasible dualray analysis */
 SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -7442,60 +7552,14 @@ SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
    return conflict->ndualrayinfsuccess;
 }
 
-/** gets number of infeasible dualrays separating root LP solution */
-SCIP_Longint SCIPconflictGetNDualrayInfSepaRootsol(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->ndualrayinfseparoot;
-}
-
-/** gets minimal length of infeasible dualrays */
-SCIP_Longint SCIPconflictGetDualrayInfLengthMin(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   if( conflict->dualrayinfminlength == LONG_MAX )
-      return 0;
-   else
-      return conflict->dualrayinfminlength;
-}
-
 /** gets average length of infeasible dualrays */
-SCIP_Real SCIPconflictGetDualrayInfLengthAvg(
+SCIP_Longint SCIPconflictGetNDualrayInfeasibleNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   if( conflict->ndualrayinfsuccess == 0 )
-      return 0.0;
-   else
-      return conflict->dualrayinfavglength/conflict->ndualrayinfsuccess;
-}
-
-/** gets maximal length of infeasible dualrays */
-SCIP_Longint SCIPconflictGetDualrayInfLengthMax(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->dualrayinfmaxlength;
-}
-
-/** gets number of domain reductions get from infeasible dualrays */
-SCIP_Longint SCIPconflictGetDualrayInfDomreds(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->dualrayinfdomreds;
+   return conflict->dualrayinfnnonzeros;
 }
 
 /** gets number of calls to infeasible strong branching conflict analysis */
@@ -7727,16 +7791,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    return SCIP_OKAY;
 }
 
-/** gets time in seconds used for analyzing dualray of infeasible LPs */
-SCIP_Real SCIPconflictGetDualrayInfTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return SCIPclockGetTime(conflict->dualrayinftime);
-}
-
 /** gets time in seconds used for analyzing pseudo solution conflicts */
 SCIP_Real SCIPconflictGetPseudoTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -7821,7 +7875,6 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
-   SCIPclockEnableOrDisable(conflict->dualrayinftime, enable);
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
 

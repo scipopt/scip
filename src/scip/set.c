@@ -94,7 +94,7 @@
 #define SCIP_DEFAULT_CONF_USEINFLP          'c' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
-#define SCIP_DEFAULT_CONF_USEBOUNDLP        'c' /**< should bound exceeding LP conflict analysis be used?
+#define SCIP_DEFAULT_CONF_USEBOUNDLP        'o' /**< should bound exceeding LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible/bound exceeding strong branching conflict analysis
@@ -1177,8 +1177,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_enable, FALSE, SCIP_DEFAULT_CONF_ENABLE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/cleanboundexceedings",
-         "should conflicts based on an old cutoff bound removed?",
+         "conflict/cleanboundexceedings",
+         "should conflicts based on an old cutoff bound removed from the conflict pool after improving the primal bound?",
          &(*set)->conf_cleanbnddepend, TRUE, SCIP_DEFAULT_CONF_CLEANBNDDEPEND,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1227,52 +1227,52 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_lpiterations, TRUE, SCIP_DEFAULT_CONF_LPITERATIONS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/fuiplevels",
+         "conflict/fuiplevels",
          "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
          &(*set)->conf_fuiplevels, TRUE, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/interconss",
+         "conflict/interconss",
          "maximal number of intermediate conflict constraints generated in conflict graph (-1: use every intermediate constraint)",
          &(*set)->conf_interconss, TRUE, SCIP_DEFAULT_CONF_INTERCONSS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/reconvlevels",
+         "conflict/reconvlevels",
          "number of depth levels up to which UIP reconvergence constraints are generated (-1: generate reconvergence constraints in all depth levels)",
          &(*set)->conf_reconvlevels, TRUE, SCIP_DEFAULT_CONF_RECONVLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/maxconss",
+         "conflict/maxconss",
          "maximal number of conflict constraints accepted at an infeasible node (-1: use all generated conflict constraints)",
          &(*set)->conf_maxconss, TRUE, SCIP_DEFAULT_CONF_MAXCONSS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/graph/maxstoresize",
+         "conflict/maxstoresize",
          "maximal size of conflict storage (-1: auto, 0: disable storage)",
          &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/preferbinary",
+         "conflict/preferbinary",
          "should binary conflicts be preferred?",
          &(*set)->conf_preferbinary, FALSE, SCIP_DEFAULT_CONF_PREFERBINARY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/allowlocal",
+         "conflict/allowlocal",
          "should conflict constraints be generated that are only valid locally?",
          &(*set)->conf_allowlocal, TRUE, SCIP_DEFAULT_CONF_ALLOWLOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/settlelocal",
+         "conflict/settlelocal",
          "should conflict constraints be attached only to the local subtree where they can be useful?",
          &(*set)->conf_settlelocal, TRUE, SCIP_DEFAULT_CONF_SETTLELOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/repropagate",
+         "conflict/repropagate",
          "should earlier nodes be repropagated in order to replace branching decisions by deductions?",
          &(*set)->conf_repropagate, TRUE, SCIP_DEFAULT_CONF_REPROPAGATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/keepreprop",
+         "conflict/keepreprop",
          "should constraints be kept for repropagation even if they are too long?",
          &(*set)->conf_keepreprop, TRUE, SCIP_DEFAULT_CONF_KEEPREPROP,
          NULL, NULL) );
@@ -1287,7 +1287,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_dynamic, TRUE, SCIP_DEFAULT_CONF_DYNAMIC,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/graph/removable",
+         "conflict/removable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removable, TRUE, SCIP_DEFAULT_CONF_REMOVEABLE,
          NULL, NULL) );
@@ -1297,22 +1297,22 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_depthscorefac, TRUE, SCIP_DEFAULT_CONF_DEPTHSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/proofscorefac",
+         "conflict/proofscorefac",
          "score factor for impact on acticity in bound relaxation heuristic",
          &(*set)->conf_proofscorefac, TRUE, SCIP_DEFAULT_CONF_PROOFSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/uplockscorefac",
+         "conflict/uplockscorefac",
          "score factor for up locks in bound relaxation heuristic",
          &(*set)->conf_uplockscorefac, TRUE, SCIP_DEFAULT_CONF_UPLOCKSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/downlockscorefac",
+         "conflict/downlockscorefac",
          "score factor for down locks in bound relaxation heuristic",
          &(*set)->conf_downlockscorefac, TRUE, SCIP_DEFAULT_CONF_DOWNLOCKSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/scorefac",
+         "conflict/scorefac",
          "factor to decrease importance of variables' earlier conflict scores",
          &(*set)->conf_scorefac, TRUE, SCIP_DEFAULT_CONF_SCOREFAC, 1e-6, 1.0,
          NULL, NULL) );
@@ -1342,35 +1342,35 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_fullshortenconflict, TRUE, SCIP_DEFAULT_CONF_FULLSHORTENCONFLICT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/conflictweight",
+         "conflict/conflictweight",
          "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict",
          &(*set)->conf_conflictweight, FALSE, SCIP_DEFAULT_CONF_CONFLITWEIGHT, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/conflictgraphweight",
+         "conflict/conflictgraphweight",
          "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
          &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/dualray/usemir",
+         "conflict/usemir",
          "apply MIR function to dual rays",
-         &(*set)->conf_applymir, FALSE, SCIP_DEFAULT_CONF_APPLYMIR,
+         &(*set)->conf_applymir, TRUE, SCIP_DEFAULT_CONF_APPLYMIR,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/dualray/prefermir",
+         "conflict/prefermir",
          "prefere the ray after applying the MIR function if the proof is still valid, use both rays otherwise",
-         &(*set)->conf_prefermir, FALSE, SCIP_DEFAULT_CONF_PREFERMIR,
+         &(*set)->conf_prefermir, TRUE, SCIP_DEFAULT_CONF_PREFERMIR,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/weightsize",
+         "conflict/weightsize",
          "weight of the size of a conflict used in score calculation",
          &(*set)->conf_weightsize, TRUE, SCIP_DEFAULT_CONF_WEIGHTSIZE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/weightrepropdepth",
+         "conflict/weightrepropdepth",
          "weight of the repropagation depth of a conflict used in score calculation",
          &(*set)->conf_weightrepropdepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "conflict/graph/weightvaliddepth",
+         "conflict/weightvaliddepth",
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
 

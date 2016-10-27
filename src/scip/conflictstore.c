@@ -79,7 +79,7 @@ SCIP_RETCODE initConflictstore(
    /* calculate the maximal size of the conflict storage */
    if( conflictstore->maxstoresize == -1 )
    {
-      SCIP_CALL( SCIPsetGetIntParam(set, "conflict/graph/maxstoresize", &conflictstore->maxstoresize) );
+      SCIP_CALL( SCIPsetGetIntParam(set, "conflict/maxstoresize", &conflictstore->maxstoresize) );
 
       /* the size should be dynamic wrt number of variables after presolving */
       if( conflictstore->maxstoresize == -1 )
@@ -617,13 +617,13 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
             SCIP_CALL( SCIPconsRelease(&olddualray, blkmem, set) );
             --conflictstore->ndualrays;
 
-            SCIPsetDebugMessagePrint(set, "-> remove deleted dual ray: pos=%d\n", i);
+            SCIPsetDebugMsg(set, "-> remove deleted dual ray: pos=%d\n", i);
 
             /* replace with the last stored dual ray */
             if( i < conflictstore->ndualrays )
             {
                conflictstore->dualrays[i] = conflictstore->dualrays[conflictstore->ndualrays];
-               SCIPsetDebugMessagePrint(set, "->           replaced with: pos=%d\n", conflictstore->ndualrays);
+               SCIPsetDebugMsg(set, "->           replaced with: pos=%d\n", conflictstore->ndualrays);
             }
 
             continue;
@@ -640,7 +640,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualray(
       }
       assert(idx >= 0);
 
-      SCIPsetDebugMessagePrint(set, "-> remove oldest dual ray: pos=%d, age=%g\n", idx, maxage);
+      SCIPsetDebugMsg(set, "-> remove oldest dual ray: pos=%d, age=%g\n", idx, maxage);
 
       /* remove the oldest dual ray */
       SCIP_CALL( SCIPconsDelete(conflictstore->dualrays[idx], blkmem, set, stat, transprob) );

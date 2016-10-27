@@ -575,44 +575,15 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to infeasible dualray analysis */
-extern
-SCIP_Longint SCIPconflictGetNDualrayInfCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
 /** gets number of successful calls to infeasible dualray analysis */
 extern
 SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of infeasible dualrays separating root LP solution */
-extern
-SCIP_Longint SCIPconflictGetNDualrayInfSepaRootsol(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets minimal length of infeasible dualrays */
-extern
-SCIP_Longint SCIPconflictGetDualrayInfLengthMin(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
 /** gets average length of infeasible dualrays */
 extern
-SCIP_Real SCIPconflictGetDualrayInfLengthAvg(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets maximal length of infeasible dualrays */
-extern
-SCIP_Longint SCIPconflictGetDualrayInfLengthMax(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of domain reductions get from infeasible dualrays */
-SCIP_Longint SCIPconflictGetDualrayInfDomreds(
+SCIP_Longint SCIPconflictGetNDualrayInfeasibleNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -686,12 +657,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
-   );
-
-/** gets time in seconds used for analyzing dualray of infeasible LPs */
-extern
-SCIP_Real SCIPconflictGetDualrayInfTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets time in seconds used for analyzing pseudo solution conflicts */

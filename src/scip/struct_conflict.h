@@ -136,14 +136,10 @@ struct SCIP_Conflict
    SCIP_Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict constraints */
    SCIP_Longint          npseudoreconvconss; /**< number of reconvergence constraints detected in pseudo sol conflict analysis */
    SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence constraints */
-   SCIP_Longint          ndualrayinfcalls;   /**< number of dualray analysis calls for infeasible LPs */
    SCIP_Longint          ndualrayinfsuccess; /**< number of successfully dualray analysis calls for infeasible LPs */
    SCIP_Longint          ndualrayinfseparoot;/**< number of infeasible dualrays separating the root LP solution */
 
-   SCIP_Real             dualrayinfavglength;/**< average length of accepted dual rays */
-   SCIP_Longint          dualrayinfminlength;/**< minimal length of accepted dual rays */
-   SCIP_Longint          dualrayinfmaxlength;/**< maximal length of accepted dual rays */
-   SCIP_Longint          dualrayinfdomreds;  /**< number of domain reductions obtained by dual rays */
+   SCIP_Longint          dualrayinfnnonzeros;/**< number of non-zeros over all accepted dual rays */
 
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 
@@ -152,7 +148,6 @@ struct SCIP_Conflict
    SCIP_CLOCK*           boundlpanalyzetime; /**< time used for bound exceeding LP conflict analysis */
    SCIP_CLOCK*           sbanalyzetime;      /**< time used for strong branching LP conflict analysis */
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
-   SCIP_CLOCK*           dualrayinftime;     /**< time needed for dualray analysis of infeasible LPs */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
