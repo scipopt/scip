@@ -45,35 +45,38 @@
  * href="http://dx.doi.org/10.1007/s10898-016-0450-4">here </a>. Variables which do not appear non-linearly in the
  * nonlinear constraints will not be considered even though they might lead to additional tightenings.
  *
- * After solving an NLP we try to exploit the dual information to generate a globally valid inequality, called
- * Generalized Variable Bound (see @ref prop_genvbounds.h). Let \f$ \lambda_j \f$, \f$ \mu \f$, \f$ \alpha \f$, and
- * \f$ \beta \f$ be the dual multipliers for the constraints of the NLP where \f$ \alpha \f$ and \f$ \beta \f$
- * correspond to the variable bound constraints. Because of the convexity of \f$ g_j \f$ we know that
+ * After solving the NLP to optimize \f$ x_i \f$ we try to exploit the dual information to generate a globally valid
+ * inequality, called Generalized Variable Bound (see @ref prop_genvbounds.h). Let \f$ \lambda_j \f$, \f$ \mu \f$, \f$
+ * \alpha \f$, and \f$ \beta \f$ be the dual multipliers for the constraints of the NLP where \f$ \alpha \f$ and \f$
+ * \beta \f$ correspond to the variable bound constraints. Because of the convexity of \f$ g_j \f$ we know that
  *
  * \f[
  *      g_j(x) \ge g_j(x^*) + \nabla g_j(x^*)(x-x^*)
  * \f]
  *
- * holds for every \f$ x^* \in [\ell,u] \f$. In an optimal solution \f$ x^* \f$ of the NLP we know that the KKT
- * conditions
+ * holds for every \f$ x^* \in [\ell,u] \f$. Let \f$ x^* \f$ be the optimal solution after solving the NLP for the case
+ * of minimizing \f$ x_i \f$ (similiar for the case of maximizing \f$ x_i \f$). Since the NLP is convex we know that the
+ * KKT conditions
  *
  * \f[
- *      e_i + \nabla g(x^*) + c + \alpha - \beta = 0
+ *      e_i + \lambda' \nabla g(x^*) + \mu' c + \alpha - \beta = 0
  * \f]
  * \f[
- *      \lambda_j g_j(x) = 0
+ *      \lambda_j g_j(x^*) = 0
  * \f]
  *
- * hold. Applying these identities to a redundant but valid inequality
+ * hold. Aggregating the inequalities \f$ x_i \ge x_i \f$ and \f$ g_j(x) \le 0 \f$ leads to the inequality
  *
  * \f[
- *      x_i \ge x_i + \sum_{j} g_j(x^*_i)
+ *      x_i \ge x_i + \sum_{j} g_j(x_i)
  * \f]
  *
- * leads to a globally valid inequality
+ * Instead of calling the (expensive) propagator during the tree search we can use this inequality to derive further
+ * reductions on \f$ x_i \f$. Multiplying the first KKT condition by \f$ (x - x^*) \f$ and using the fact that each
+ * \f$ g_j \f$ is convex we can rewrite the previous inequality to
  *
  * \f[
- *      x_i \ge (\beta - \alpha)'x + (e_i + \alpha - \beta) x^* + \mu \mathcal{U} .
+ *      x_i \ge (\beta - \alpha)'x + (e_i + \alpha - \beta) x^* + \mu \mathcal{U}.
  * \f]
  *
  * which is passed to the genvbounds propagator.
