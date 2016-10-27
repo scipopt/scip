@@ -39,6 +39,7 @@ parameters:
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH
 
 performance improvements:
 - improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
