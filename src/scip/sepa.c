@@ -38,8 +38,6 @@
 #include "scip/struct_sepa.h"
 #include "scip/tree.h"
 
-#define MAXSEPAFREQ MAXDEPTH  /**< maximal allowed value for depth-related parameters such as separation frequency */
-
 
 /** compares two separators w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPsepaComp)
@@ -162,7 +160,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*sepa)->freq, FALSE, freq, -1, MAXSEPAFREQ, NULL, NULL) );
+         &(*sepa)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxbounddist", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",

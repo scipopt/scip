@@ -37,8 +37,6 @@
 #include "scip/struct_heur.h"
 #include "scip/tree.h"
 
-#define MAXHEURFREQ MAXDEPTH /**< maximum value for all depth-related parameters such as frequency */
-
 /** compares two heuristics w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
@@ -714,15 +712,15 @@ SCIP_RETCODE SCIPheurCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freq, FALSE, freq, -1, MAXHEURFREQ, NULL, NULL) );
+                  &(*heur)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freqofs", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency offset for calling primal heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freqofs, FALSE, freqofs, 0, MAXHEURFREQ, NULL, NULL) );
+                  &(*heur)->freqofs, FALSE, freqofs, 0, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->maxdepth, TRUE, maxdepth, -1, MAXHEURFREQ, NULL, NULL) );
+                  &(*heur)->maxdepth, TRUE, maxdepth, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }

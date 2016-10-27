@@ -46,8 +46,6 @@
 #include "scip/struct_tree.h"
 #endif
 
-#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
