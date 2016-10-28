@@ -301,7 +301,7 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPsetSolVal(scip, points[i], y, SCIPrandomGetReal(randumgen, -10.0, 10.0)) );
    }
 
-   SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, maxreldist, INT_MAX) );
+   SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, 1e+04, maxreldist, INT_MAX) );
    cr_assert(nclusters > 0 && nclusters <= NPOINTS);
 
    for( i = 0; i < NPOINTS; ++i )
@@ -313,7 +313,7 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
 
       for( j = i + 1; j < NPOINTS; ++j )
       {
-         SCIP_Real dist = getRelDistance(scip, points[i], points[j]);
+         SCIP_Real dist = getRelDistance(scip, points[i], points[j], 1e+04);
 
          /* distance between i and j in the same cluster should not be twice as large as maxreldist */
          cr_assert(clusteridx[i] != clusteridx[j] || dist <= 2 * maxreldist);

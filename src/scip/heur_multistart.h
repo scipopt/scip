@@ -44,7 +44,9 @@
  *        x^i := x^i + \frac{1}{n_j} \sum_{j} d_j
  *    \f]
  *
- *    where \f$ n_j \f$ is the number of strictly positive \f$ d_j \f$.
+ *    where \f$ n_j \f$ is the number of strictly positive \f$ d_j \f$. The algorithm is called Constraint Consensus
+ *    Method and has been introduced by <a
+ *    href="http://www.sce.carleton.ca/faculty/chinneck/docs/ConstraintConsensusJoC.pdf">here </a>.
  *
  * 3. cluster points
  *

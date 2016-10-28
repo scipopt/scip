@@ -41,7 +41,7 @@
 #define DEFAULT_RANDSEED      59             /**< initial random seed */
 #define DEFAULT_NRNDPOINTS    100            /**< default number of generated random points per call */
 #define DEFAULT_MAXBOUNDSIZE  2e+4           /**< default maximum variable domain size for unbounded variables */
-#define DEFAULT_MAXITER       300            /**< default number of iterations to reduce the maximum violation of a point */
+#define DEFAULT_MAXITER       300            /**< default number of iterations to reduce the violation of a point */
 #define DEFAULT_MINIMPRFAC    0.05           /**< default minimum required improving factor to proceed in improvement of a point */
 #define DEFAULT_MINIMPRITER   10             /**< default number of iteration when checking the minimum improvement */
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
@@ -63,6 +63,7 @@ struct SCIP_HeurData
    unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_Real             maxboundsize;       /**< maximum variable domain size for unbounded variables */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_HEUR*            heursubnlp;         /**< sub-NLP heuristic */
 
    int                   maxiter;            /**< number of iterations to reduce the maximum violation of a point */
    SCIP_Real             minimprfac;         /**< minimum required improving factor to proceed in the improvement of a single point */
@@ -412,7 +413,7 @@ SCIP_RETCODE improvePoint(
       /* check stopping criterion */
       if( r % 5 == 0 && r > 0 )
       {
-         if( *minfeas <= MINFEAS || (*minfeas - lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac )
+         if( *minfeas <= MINFEAS || (*minfeas-lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac )
             break;
          lastminfeas = *minfeas;
       }
@@ -428,7 +429,9 @@ SCIP_RETCODE improvePoint(
    return SCIP_OKAY;
 }
 
-/** sort points w.r.t their violations; filters out points with too large infeasibility */
+/** sorts points w.r.t their feasibilities; points with a feasibility which is too small (w.r.t. the geometric mean of
+ *  all feasibilities) will be filtered out
+ */
 static
 SCIP_RETCODE filterPoints(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -447,7 +450,7 @@ SCIP_RETCODE filterPoints(
    assert(npoints > 0);
    assert(nusefulpoints != NULL);
 
-   /* sort points w.r.t their violations; non-negative violations correspond to feasible points for the NLP */
+   /* sort points w.r.t their feasibilities; non-negative feasibility correspond to feasible points for the NLP */
    SCIPsortDownRealPtr(feasibilities, (void**)points, npoints);
    minfeas = feasibilities[npoints - 1];
 
@@ -460,16 +463,17 @@ SCIP_RETCODE filterPoints(
 
    *nusefulpoints = 0;
 
-   /* compute shifted geometric mean of feasibilities (shift value = minfeas + 1) */
+   /* compute shifted geometric mean of feasibilities (shift value = 1 - minfeas) */
    meanfeas = 1.0;
    for( i = 0; i < npoints; ++i )
    {
-      assert(feasibilities[i] - minfeas + 1.0 >= 0.0);
+      assert(feasibilities[i] - minfeas + 1.0 > 0.0);
       meanfeas *= pow(feasibilities[i] - minfeas + 1.0, 1.0 / npoints);
    }
    meanfeas += minfeas - 1.0;
    SCIPdebugMessage("meanfeas = %e\n", meanfeas);
 
+   /* keep all points with which have a feasibility not much below the geometric mean of infeasibilities */
    for( i = 0; i < npoints; ++i )
    {
       if( SCIPisFeasLT(scip, feasibilities[i], 0.0)
@@ -482,25 +486,57 @@ SCIP_RETCODE filterPoints(
    return SCIP_OKAY;
 }
 
-/** returns the relative distance between two points */
+/** returns the relative distance between two points; considers a smaller bounded domain for unbounded variables */
 static
 SCIP_Real getRelDistance(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             x,                  /**< first point */
-   SCIP_SOL*             y                   /**< second point */
+   SCIP_SOL*             y,                  /**< second point */
+   SCIP_Real             maxboundsize        /**< maximum variable domain size for unbounded variables */
    )
 {
    SCIP_VAR** vars;
    SCIP_Real distance;
+   SCIP_Real solx;
+   SCIP_Real soly;
+   SCIP_Real lb;
+   SCIP_Real ub;
    int i;
+
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(SCIPgetNVars(scip) > 0);
 
    vars = SCIPgetVars(scip);
    distance = 0.0;
 
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      distance += REALABS(SCIPgetSolVal(scip, x, vars[i]) - SCIPgetSolVal(scip, y, vars[i]))
-         / (MAX(1.0, SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i])));
+      lb = SCIPvarGetLbLocal(vars[i]);
+      ub = SCIPvarGetUbLocal(vars[i]);
+      solx = SCIPgetSolVal(scip, x, vars[i]);
+      soly = SCIPgetSolVal(scip, y, vars[i]);
+
+      /* adjust lower and upper bounds for unbounded variables*/
+      if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+      {
+         lb = -maxboundsize / 2.0;
+         ub = +maxboundsize / 2.0;
+      }
+      else if( SCIPisInfinity(scip, -lb) )
+      {
+         lb = ub - maxboundsize;
+      }
+      else if( SCIPisInfinity(scip, ub) )
+      {
+         ub = lb + maxboundsize;
+      }
+
+      /* project solution values to the variable domain */
+      solx = MIN(MAX(solx, lb), ub);
+      soly = MIN(MAX(soly, lb), ub);
+
+      distance += REALABS(solx - soly) / MAX(1.0, ub - lb);
    }
 
    return distance / SCIPgetNVars(scip);
@@ -514,6 +550,7 @@ SCIP_RETCODE clusterPointsGreedy(
    int                   npoints,            /**< total number of points */
    int*                  clusteridx,         /**< array to store for each point the index of the cluster */
    int*                  ncluster,           /**< pointer to store the total number of cluster */
+   SCIP_Real             maxboundsize,       /**< maximum variable domain size for unbounded variables */
    SCIP_Real             maxreldist,         /**< maximum relative distance between any two points of the same cluster */
    int                   maxncluster         /**< maximum number of clusters to compute */
    )
@@ -546,7 +583,7 @@ SCIP_RETCODE clusterPointsGreedy(
 
       for( j = i + 1; j < npoints; ++j )
       {
-         if( clusteridx[j] == INT_MAX && getRelDistance(scip, points[i], points[j]) <= maxreldist )
+         if( clusteridx[j] == INT_MAX && getRelDistance(scip, points[i], points[j], maxboundsize) <= maxreldist )
             clusteridx[j] = *ncluster;
       }
 
@@ -613,7 +650,7 @@ SCIP_RETCODE solveNLP(
 
    /** round point for sub-NLP heuristic */
    SCIP_CALL( SCIProundSol(scip, refpoint, success) );
-   SCIPdebugMessage("rounding refpoint successful? %d\n", *success);
+   SCIPdebugMessage("rounding of refpoint successfully? %d\n", *success);
 
    /* round variables manually if the locks did not allow us to round them */
    if( !(*success) )
@@ -639,21 +676,10 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL, refpoint) );
-   SCIPdebugMessage("SUBNLPRESULT = %d SOLVAL=%e\n", nlpresult, SCIPgetSolOrigObj(scip, refpoint));
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL, NULL) );
+   SCIPdebugMessage("sub-NLP result = %d solval= %g\n", nlpresult, SCIPgetSolOrigObj(scip, refpoint));
 
-   if( nlpresult == SCIP_FOUNDSOL )
-   {
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, TRUE, TRUE, TRUE, TRUE, TRUE, success) );
-#else
-      SCIP_CALL( SCIPtrySolFree(scip, &refpoint, FALSE, FALSE, FALSE, FALSE, FALSE, success) );
-#endif
-   }
-   else
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
-   }
+   SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
    return SCIP_OKAY;
 }
@@ -673,13 +699,13 @@ static
 SCIP_RETCODE applyHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
    SCIP_SOL** points;
    SCIP_HASHMAP* varindex;
-   SCIP_HEURDATA* heurdata;
-   SCIP_Real* violations;
+   SCIP_Real* feasibilities;
    int* clusteridx;
    int nusefulpoints;
    int ncluster;
@@ -689,8 +715,6 @@ SCIP_RETCODE applyHeur(
    assert(scip != NULL);
    assert(heur != NULL);
    assert(result != NULL);
-
-   heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
    SCIPdebugMessage("call applyHeur()\n");
@@ -701,7 +725,7 @@ SCIP_RETCODE applyHeur(
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &points, heurdata->nrndpoints) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &violations, heurdata->nrndpoints) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &feasibilities, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &clusteridx, heurdata->nrndpoints) );
    SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
 
@@ -722,21 +746,21 @@ SCIP_RETCODE applyHeur(
    for( i = 0; i < heurdata->nrndpoints; ++i )
    {
       SCIP_CALL( improvePoint(scip, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), varindex, heurdata->exprinterpreter, points[i],
-         heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &violations[i]) );
+         heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &feasibilities[i]) );
    }
 
    /*
     * 3. filter and cluster points
     */
-   SCIP_CALL( filterPoints(scip, points, violations, heurdata->nrndpoints, &nusefulpoints) );
+   SCIP_CALL( filterPoints(scip, points, feasibilities, heurdata->nrndpoints, &nusefulpoints) );
    assert(nusefulpoints >= 0);
    SCIPdebugMessage("nusefulpoints = %d\n", nusefulpoints);
 
    if( nusefulpoints == 0 )
       goto TERMINATE;
 
-   SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxreldist,
-         heurdata->maxncluster) );
+   SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxboundsize,
+         heurdata->maxreldist, heurdata->maxncluster) );
    assert(ncluster >= 0 && ncluster <= heurdata->maxncluster);
    SCIPdebugMessage("ncluster = %d\n", ncluster);
 
@@ -762,16 +786,16 @@ SCIP_RETCODE applyHeur(
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
 
-      /* only solve sub-NLP if we have enough time left */
-      if( timelimit <= 0.0 )
+      /* try to solve sub-NLP if we have enough time left */
+      if( timelimit <= 1.0 )
       {
-         SCIPdebugMessage("no time left!\n");
+         SCIPdebugMessage("not enough time left! (%g)\n", timelimit);
          break;
       }
 
       /* call sub-NLP heuristic */
-      SCIP_CALL( solveNLP(scip, heur, SCIPfindHeur(scip, "subnlp"), &points[start], end - start, -1LL,
-            timelimit, heurdata->nlpminimpr, &success) );
+      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL, timelimit,
+            heurdata->nlpminimpr, &success) );
       SCIPdebugMessage("solveNLP result = %d\n", success);
 
       if( success )
@@ -791,7 +815,7 @@ TERMINATE:
 
    SCIPhashmapFree(&varindex);
    SCIPfreeBufferArray(scip, &clusteridx);
-   SCIPfreeBufferArray(scip, &violations);
+   SCIPfreeBufferArray(scip, &feasibilities);
    SCIPfreeBufferArray(scip, &points);
 
    return SCIP_OKAY;
@@ -848,6 +872,9 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
    SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
+   /* try to find sub-NLP heuristic */
+   heurdata->heursubnlp = SCIPfindHeur(scip, "subnlp");
+
    return SCIP_OKAY;
 }
 
@@ -869,50 +896,26 @@ SCIP_DECL_HEUREXIT(heurExitMultistart)
    return SCIP_OKAY;
 }
 
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_HEURINITSOL(heurInitsolMultistart)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of multistart primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitsolMultistart NULL
-#endif
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolMultistart)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of multistart primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitsolMultistart NULL
-#endif
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecMultistart)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( heur != NULL );
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
    *result = SCIP_DIDNOTRUN;
 
    /* check cases for which the heuristic is not applicable */
-   if( !SCIPisNLPConstructed(scip) || SCIPfindHeur(scip, "subnlp") == NULL )
+   if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( applyHeur(scip, heur, result) );
+   SCIP_CALL( applyHeur(scip, heur, heurdata, result) );
 
    return SCIP_OKAY;
 }
@@ -946,8 +949,6 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeMultistart) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitMultistart) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitMultistart) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolMultistart) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolMultistart) );
 
    /* add multistart primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nrndpoints",
