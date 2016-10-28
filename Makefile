@@ -64,9 +64,11 @@ BUILDFLAGS=" ARCH=$(ARCH)\\n\
 		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
 		NOBLKMEM=$(NOBLKMEM)\\n\
 		NOBUFMEM=$(NOBUFMEM)\\n\
+		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
 		READLINE=$(READLINE)\\n\
+		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
@@ -75,6 +77,7 @@ BUILDFLAGS=" ARCH=$(ARCH)\\n\
 		USRFLAGS=$(USRFLAGS)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
+		VERSION=$(VERSION)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
 		ZLIB=$(ZLIB)"
@@ -545,7 +548,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/primal.o \
 			scip/prob.o \
 			scip/prop.o \
-			scip/random.o \
 			scip/reader.o \
 			scip/relax.o \
 			scip/reopt.o \

@@ -39,7 +39,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_undercover.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 #include "nlpi/exprinterpret.h"
 
 #define HEUR_NAME               "undercover"
@@ -107,7 +107,7 @@ struct SCIP_HeurData
 {
    SCIP_CONSHDLR**       nlconshdlrs;        /**< array of nonlinear constraint handlers */
    SCIP_HEUR*            nlpheur;            /**< pointer to NLP local search heuristics */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    char*                 fixingalts;         /**< sequence of fixing values used: 'l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
@@ -2989,7 +2989,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIP_RESULT nlpresult;
 
-                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL) );
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL, NULL) );
                   SCIPdebugMsg(scip, "NLP local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
 
                   if( nlpresult == SCIP_FOUNDSOL )
@@ -3133,7 +3133,7 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -3153,7 +3153,7 @@ SCIP_DECL_HEUREXIT(heurExitUndercover)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
