@@ -79,7 +79,8 @@
  *      x_i \ge (\beta - \alpha)'x + (e_i + \alpha - \beta) x^* + \mu \mathcal{U}.
  * \f]
  *
- * which is passed to the genvbounds propagator.
+ * which is passed to the genvbounds propagator. Note that if \f$ \alpha_i \neq \beta_i \f$ we know that the bound of
+ * \f$ x_i \f$ is the proof for optimality and thus no useful genvbound can be found.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
