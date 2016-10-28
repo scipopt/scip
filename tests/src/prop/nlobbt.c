@@ -39,7 +39,7 @@ void setup(void)
 {
    /* skip the test if IPOPT is not available */
    if( !SCIPisIpoptAvailableIpopt() )
-      cr_skip_test();
+      return;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -73,6 +73,10 @@ void setup(void)
 static
 void teardown(void)
 {
+   /* skip the test if IPOPT is not available */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return;
+
    SCIPhashmapFree(&var2idx);
    SCIP_CALL( SCIPfree(&scip) );
 
@@ -98,6 +102,10 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_EXPR* xexpr;
    SCIP_EXPR* expexpr;
    int i;
+
+   /* skip the test if IPOPT is not available */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* test the following (nonconvex) optimization problem
     *
