@@ -6995,7 +6995,6 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetNSiblings
 #undef SCIPtreeGetNNodes
 #undef SCIPtreeIsPathComplete
-#undef SCIPtreeGetDepthLimit
 #undef SCIPtreeProbing
 #undef SCIPtreeGetProbingRoot
 #undef SCIPtreeGetProbingDepth
@@ -7989,16 +7988,6 @@ int SCIPtreeGetCurrentDepth(
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->pathlen-1;
-}
-
-/** gets the maximal allowed tree depth */
-int SCIPtreeGetDepthLimit(
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return (int)SCIP_MAXTREEDEPTH;
 }
 
 /** returns, whether the LP was or is to be solved in the current node */
