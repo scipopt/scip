@@ -432,27 +432,14 @@ SCIP_Bool tryFixVar(
       {
          inftycounter[rowindex]--;
       }
-      /* author bzfhende: TODO I think this needs to be a -sign because fixing this variable reduces the potential */
-      /*if( 0 > sgn * vals[i] )
-      {
-         assert(!SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)));
-         potential[rowindex] += vals[i] * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
-      }
-      else
-      {
-         assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-         potential[rowindex] += vals[i] * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
-      }*/
-      /* todo comment negative slack means violated right hand side, but in this case, the potential is always positive because of the single contributions you compute */
+
       assert(0 <= inftycounter[rowindex]);
       if( 0 == inftycounter[rowindex] && REALABS(potential[rowindex]) < alpha * REALABS(slack[rowindex]) )
       {
-         /* author bzfhende: TODO this is hard to read here */
-
+         /* inverts the changes before */
          for( ; i >= 0; --i )
          {
             sgn = 1;
-            /*rowindex = SCIProwGetIndex(rows[i]);*/
             if( 0 == slack[rowindex] )
             {
                continue;
@@ -482,9 +469,9 @@ SCIP_Bool tryFixVar(
 static
 SCIP_RETCODE checkCands(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /* author bzfhende: TODO missing documentation */
-   SCIP_Bool             roundit,
-   SCIP_Bool*            success
+   SCIP_SOL*             sol,                /**< to be proofed solution */
+   SCIP_Bool             roundit,            /**< if not integral integral variables are found, should they rounded? */
+   SCIP_Bool*            success             /**< pointer to store if all integral variables are integral or could be rounded */
    )
 {
    SCIP_VAR** vars;
@@ -508,7 +495,6 @@ SCIP_RETCODE checkCands(
       value = SCIPgetSolVal(scip, sol, vars[i]);
       if( !SCIPisFeasIntegral(scip, value) )
       {
-         /* author bzfhende: TODO use more sophisticated rounding that involves SCIPvarGetNLocksUp/Down() */
          if( roundit )
          {
             SCIP_Real roundedvalue;
@@ -590,9 +576,9 @@ SCIP_RETCODE createNewSol(
 /** reads a given SCIP solution file, problem has to be transformed in advance */
 static
 SCIP_RETCODE extendedProgramm(
-   SCIP*                 scip,             /* author bzfhende: TODO missing documentation */
-   SCIP_HEUR*            heur,
-   SCIP_RESULT*          result
+   SCIP*                 scip,             /* SCIP data structure of the problem */
+   SCIP_HEUR*            heur,             /* pointer to this heuristic instance */
+   SCIP_RESULT*          result            /* pointer to return the result status */
    )
 {
    SCIP* subscip = NULL;
@@ -642,6 +628,7 @@ SCIP_RETCODE extendedProgramm(
 
    /* author bzfhende: TODO use new debug message function SCIPdebugMsg(scip, ...) */
    SCIPdebugMessage("\n\n Calling objective factor calculation \n\n");
+
    if( heurdata->useobjfactor )
    {
       SCIP_CALL( getObjectiveFactor(scip, subscip, &factor, &success) );
