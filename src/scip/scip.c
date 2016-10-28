@@ -33584,6 +33584,8 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
+   SCIP_Bool cutadded;
+   
    SCIP_CALL( checkStage(scip, "SCIPapplyCutsProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
@@ -33594,7 +33596,7 @@ SCIP_RETCODE SCIPapplyCutsProbing(
 
    SCIP_CALL( SCIPsepastoreApplyCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
          scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
-         scip->cliquetable, FALSE, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+         scip->cliquetable, FALSE, SCIP_EFFICIACYCHOICE_LP, cutoff, &cutadded) );
 
    return SCIP_OKAY;
 }

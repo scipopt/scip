@@ -1130,7 +1130,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
-   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether an empty domain was created */
+   SCIP_Bool*            cutadded            /**< pointer to store whether at least one cut was added to the LP */
    )
 {
    SCIP_NODE* node;
@@ -1146,6 +1147,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    assert(tree != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
+   assert(cutadded != NULL);
 
    *cutoff = FALSE;
 
@@ -1238,6 +1240,9 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       /* release cut */
       SCIP_CALL( SCIProwRelease(&cut, blkmem, set, lp) );
    }
+   
+   if( ncutsapplied > 0 )
+      *cutadded = TRUE;
 
    /* clear the separation storage and reset statistics for separation round */
    SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );

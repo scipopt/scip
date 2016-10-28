@@ -115,7 +115,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
-   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether an empty domain was created */
+   SCIP_Bool*            cutadded            /**< pointer to store whether at least one cut was added to the LP */
    );
 
 /** clears the separation storage without adding the cuts to the LP */
