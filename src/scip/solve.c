@@ -3392,7 +3392,7 @@ void updateLoopStatus(
 
       /* check, if one of the external relaxations should be solved again */
       for( r = 0; r < set->nrelaxs && !(*solverelaxagain); ++r )
-         *solverelaxagain = !SCIPrelaxIsSolved(set->relaxs[r], stat);
+         *solverelaxagain = *solverelaxagain || ( !SCIPrelaxIsSolved(set->relaxs[r], stat) );
    }
    else
    {
