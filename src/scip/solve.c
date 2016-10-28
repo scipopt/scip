@@ -2325,7 +2325,7 @@ SCIP_RETCODE priceAndCutLoop(
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
          && nsepastallrounds < maxnsepastallrounds
-         && (!(*propagateagain) || nsepastallrounds == 0)
+//         && (!(*propagateagain) || nsepastallrounds == 0)
          && !(*cutoff);
 
       /* if separators were delayed, we want to apply a final separation round with the delayed separators */
@@ -3363,13 +3363,13 @@ SCIP_RETCODE propAndSolve(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_NODE*            focusnode,          /**< focused node */
    int                   actdepth,           /**< depth in the b&b tree */
-   SCIP_Bool             afterlpprop,        /**< should AFTERLP propagation be performed? */
    SCIP_Bool             propagate,          /**< should we propagate */
    SCIP_Bool             solvelp,            /**< should we solve the lp */
    SCIP_Bool             solverelax,         /**< should we solve the relaxation */
    SCIP_Bool             forcedlpsolve,      /**< is there a need for a solve lp */
    SCIP_Bool             initiallpsolved,    /**< was the initial LP already solved? */
    SCIP_Bool             fullseparation,     /**< are we in the first prop-and-cut-and-price loop? */
+   SCIP_Longint*         afterlpproplps,     /**< pointer to store the last LP count for which AFTERLP propagation was performed */
    SCIP_HEURTIMING*      heurtiming,         /**< timing for running heuristics after propagation call */
    int*                  nlperrors,          /**< pointer to store the number of lp errors */
    SCIP_Bool*            fullpropagation,    /**< pointer to store whether we want to do a fullpropagation next time */
@@ -3409,6 +3409,7 @@ SCIP_RETCODE propAndSolve(
    assert(nlperrors != NULL);
    assert(fullpropagation != NULL);
    assert(propagateagain != NULL);
+   assert(afterlpproplps != NULL);
    assert(lpsolved != NULL);
    assert(solvelpagain != NULL);
    assert(solverelaxagain != NULL);
@@ -3420,8 +3421,7 @@ SCIP_RETCODE propAndSolve(
 
    newinitconss = FALSE;
 
-   /* domain propagation */
-   if( propagate && !(*cutoff) )
+   if( !(*cutoff) )
    {
       SCIP_Longint oldninitconssadded;
       SCIP_Longint oldnboundchgs;
@@ -3432,7 +3432,7 @@ SCIP_RETCODE propAndSolve(
       oldninitconssadded = stat->ninitconssadded;
 
       /* call after LP propagators */
-      if( afterlpprop )
+      if( (*afterlpproplps) < stat->nnodelps && (*lpsolved) )
       {
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_AFTERLPLOOP, cutoff) );
@@ -3440,10 +3440,12 @@ SCIP_RETCODE propAndSolve(
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
+         *afterlpproplps = stat->nnodelps;
+         propagate = propagate || (stat->nboundchgs > oldnboundchgs);
       }
 
       /* call before LP propagators */
-      if( !(*cutoff) )
+      if( propagate && !(*cutoff) )
       {
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_BEFORELP, cutoff) );
@@ -3720,6 +3722,7 @@ SCIP_RETCODE solveNode(
 {
    SCIP_NODE* focusnode;
    SCIP_Longint lastdomchgcount;
+   SCIP_Longint afterlpproplps;
    SCIP_Real restartfac;
    SCIP_Longint lastlpcount;
    SCIP_HEURTIMING heurtiming;
@@ -3832,8 +3835,10 @@ SCIP_RETCODE solveNode(
       lperror = FALSE;
       lpsolved = FALSE;
       forcedenforcement = FALSE;
+      afterlpproplps = -1L;
 
-      while( (propagateagain || solvelpagain || solverelaxagain) && !lperror && !(*cutoff) )
+      while( !lperror && !(*cutoff) && (propagateagain || solvelpagain || solverelaxagain
+            || (afterlpproplps < stat->nnodelps && lpsolved)) )
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
@@ -3842,15 +3847,14 @@ SCIP_RETCODE solveNode(
          propagate = propagateagain;
          propagateagain = FALSE;
 
-
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, cutoff) );
 
          /* propagate domains before lp solving and solve relaxation and lp */
          SCIPsetDebugMsg(set, " -> node solving loop: call propagators that are applicable before%s LP is solved\n", lpsolved ? " and after" : "");
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
-               branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, focusnode, actdepth, lpsolved,
-               propagate, solvelp, solverelax, forcedlpsolve, initiallpsolved, fullseparation, &heurtiming, &nlperrors, &fullpropagation, &propagateagain,
+               branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, focusnode, actdepth, propagate, solvelp, solverelax,
+               forcedlpsolve, initiallpsolved, fullseparation, &afterlpproplps, &heurtiming, &nlperrors, &fullpropagation, &propagateagain,
                &lpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, stopped, &lperror, &pricingaborted,
                &forcedenforcement) );
          initiallpsolved |= lpsolved;
