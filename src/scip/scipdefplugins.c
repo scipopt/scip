@@ -132,6 +132,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
+   SCIP_CALL( SCIPincludeHeurLocks(scip) );
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
