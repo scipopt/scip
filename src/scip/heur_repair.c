@@ -53,6 +53,7 @@
 #define DEFAULT_USEOBJFACTOR  FALSE /**< should a scaled objective function for original variables be used in repair subproblem? */
 #define DEFAULT_USEVARFIX     TRUE  /**< should variable fixings be used in repair subproblem? */
 #define DEFAULT_USESLACKVARS  FALSE /**< should slack variables be used in repair subproblem? */
+#define DEFAULT_ALPHA         2.0
 
 /*
  * Data structures
@@ -87,22 +88,16 @@ struct SCIP_HeurData
 
    SCIP_Real             orsolval;           /**< value of the solution find by repair, in the original Problem*/
    SCIP_Real             improovedoldsol;    /**< value of the given sol sfter beeing improoved by SCIP */
-   /* author bzfhende: TODO don't use camel case in release code */
-   SCIP_SOL*             infSol;             /**< infeasible solution to start with */
+   SCIP_SOL*             infsol;             /**< infeasible solution to start with */
+   SCIP_Real             alpha;              /**< */
 };
 
 
 /** TODO GENERAL TODOS:
- *  - check potential definition in the code (seems wrong when used in tryFixVar)
- *  - let the heuristic use reasonable node limits similar to other LNS's
  *  - implement a minfixingrate-parameter
  *  - concentrate on the binary and integer variables for the fixing.
- *
  *  - fold the methods extendedProgram and variableFixings into one that does both (and calls subroutines where necessary)
  */
-
-/*
-
 
 /*
  * Local methods
@@ -257,7 +252,9 @@ SCIP_RETCODE readSol(
       return SCIP_OKAY;
 }
 
-/* author bzfhende: TODO method documentation is missing */
+/**
+ * computes a factor to norm the original objectiv uper bound to 1.
+ */
 static
 SCIP_RETCODE getObjectiveFactor(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -330,38 +327,73 @@ SCIP_RETCODE getObjectiveFactor(
       *factor = 1 / *factor;
    }
 
-   /* author bzfhende: TODO please comment on the offset */
+   /* sets an offset, which guarantee positive objective values */
    objoffset = -lprelaxobj * (*factor);
    SCIP_CALL( SCIPaddOrigObjoffset(subscip, -objoffset) );
 
    return SCIP_OKAY;
 }
 
-/* author bzfhende: TODO missing method documentation */
+/** */
+static
+SCIP_Real getPotentialContributed(
+   SCIP*             scip,
+   SCIP_SOL*         sol,
+   SCIP_VAR*         var,
+   SCIP_Real         coeffiant,
+   int               sgn
+   )
+{
+   if( 0 > sgn * coeffiant )
+   {
+      if(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)))
+      {
+         return SCIPinfinity(scip);
+      }
+      return coeffiant * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
+   }
+   else
+   {
+      if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)))
+      {
+         return -SCIPinfinity(scip);
+      }
+      return coeffiant * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
+   }
+}
+
+
+
+
+
+/**
+ * tries to fix a variable, if a it is possible, the potentials of rows is adapted.
+ */
 static
 SCIP_Bool tryFixVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< SCIP data structure */
    SCIP_Real*            potential,          /**< Array with all potential values */
    SCIP_Real*            slack,              /**< Array with all potential values */
-   SCIP_VAR*             var                 /**< Variable to be fixed? */
+   SCIP_VAR*             var,                /**< Variable to be fixed? */
+   int*                  inftycounter,       /**< counters how many variables have an infinity potential in a row */
+   SCIP_HEURDATA*        heurdata            /**< repairs heuristic data */
    )
 {
    SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
-   /* author bzfhende: TODO alpha should be a parameter of the heuristic */
-   SCIP_Real alpha = 2.0;
+   SCIP_Real alpha = heurdata->alpha;
    int nrows;
    int i;
    int sgn;
    int rowindex;
 
-   if(SCIPisFeasLT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var)))
+   if( SCIPisFeasLT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var)) )
    {
       return FALSE;
    }
-   if(SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var)))
+   if( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var)) )
    {
       return FALSE;
    }
@@ -371,20 +403,37 @@ SCIP_Bool tryFixVar(
    nrows = SCIPcolGetNLPNonz(col);
    vals = SCIPcolGetVals(col);
 
-   /*todo iterate over nonzero rows*/
+   /*iterate over nonzero rows*/
    for( i = 0; i < nrows; ++i)
    {
-      /* author bzfhende: TODO what happens if the rowindex (which should be renamed rowpos) is -1? */
+      SCIP_Real contribution;
       rowindex = SCIProwGetLPPos(rows[i]);
       assert(rowindex >= 0);
+      if( 0 > rowindex )
+      {
+         continue;
+      }
+      if( 0 == slack[rowindex] )
+      {
+         continue;
+      }
       sgn = 1;
       if( 0 > slack[rowindex])
       {
          sgn = -1;
       }
 
+      contribution = getPotentialContributed(scip, sol, var, vals[i], sgn);
+      if( !SCIPisInfinity(scip, REALABS(contribution)) )
+      {
+         potential[rowindex] -= contribution;
+      }
+      else
+      {
+         inftycounter[rowindex]--;
+      }
       /* author bzfhende: TODO I think this needs to be a -sign because fixing this variable reduces the potential */
-      if( 0 > sgn * vals[i] )
+      /*if( 0 > sgn * vals[i] )
       {
          assert(!SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)));
          potential[rowindex] += vals[i] * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
@@ -393,9 +442,10 @@ SCIP_Bool tryFixVar(
       {
          assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
          potential[rowindex] += vals[i] * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
-      }
+      }*/
       /* todo comment negative slack means violated right hand side, but in this case, the potential is always positive because of the single contributions you compute */
-      if( potential[rowindex] < alpha * slack[rowindex] )
+      assert(0 <= inftycounter[rowindex]);
+      if( 0 == inftycounter[rowindex] && REALABS(potential[rowindex]) < alpha * REALABS(slack[rowindex]) )
       {
          /* author bzfhende: TODO this is hard to read here */
 
@@ -403,19 +453,23 @@ SCIP_Bool tryFixVar(
          {
             sgn = 1;
             /*rowindex = SCIProwGetIndex(rows[i]);*/
+            if( 0 == slack[rowindex] )
+            {
+               continue;
+            }
             rowindex = SCIProwGetLPPos(rows[i]);
             if( 0 > slack[rowindex])
             {
                sgn = -1;
             }
-
-            if( 0 > sgn * vals[i] )
+            contribution = getPotentialContributed(scip, sol, var, vals[i], sgn);
+            if( !SCIPisInfinity(scip, REALABS(contribution)) )
             {
-               potential[rowindex] -= vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetLbGlobal(var));
+               potential[rowindex] += contribution;
             }
             else
             {
-               potential[rowindex] -= vals[i]*(SCIPgetSolVal(scip, sol, var)-SCIPvarGetUbGlobal(var));
+               inftycounter[rowindex]++;
             }
          }
          return FALSE;
@@ -458,7 +512,16 @@ SCIP_RETCODE checkCands(
          if( roundit )
          {
             SCIP_Real roundedvalue;
-            roundedvalue = SCIPround(scip, value);
+
+            if( SCIPvarGetNLocksUp(vars[i]) > SCIPvarGetNLocksDown(vars[i]) )
+            {
+               roundedvalue = SCIPceil(scip, value - 1.0);
+            }
+            else
+            {
+               roundedvalue = SCIPfloor(scip, value + 1.0);
+            }
+
             SCIP_CALL(SCIPsetSolVal(scip, sol, vars[i], roundedvalue));
          }
          else
@@ -552,7 +615,7 @@ SCIP_RETCODE extendedProgramm(
    SCIP_Bool success;
 
    heurdata = SCIPheurGetData(heur);
-   sol = heurdata->infSol;
+   sol = heurdata->infsol;
 
    /* initializes the subscip */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -815,9 +878,17 @@ SCIP_RETCODE extendedProgramm(
    /* set limits for the subproblem */
    /*heurdata->nodelimit = nstallnodes;
    SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes));*/
-   SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
-   SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
-   SCIP_CALL(SCIPsetObjlimit(subscip,1.0));
+   {
+      SCIP_Longint nnodes;
+      SCIP_CALL(SCIPgetLongintParam(scip, "limits/nodes", &nnodes));
+      nnodes = (SCIP_Longint)(0.1 * nnodes);
+      SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
+      SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
+      SCIP_CALL(SCIPsetObjlimit(subscip,1.0));
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nnodes/10)) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
+   }
    /*SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", 1));*/
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
@@ -937,6 +1008,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIP_CONS** subcons = NULL;
    int* nviolatedrows = NULL;
    int* permutation = NULL;
+   int* inftycounter = NULL;
    SCIP_SOL* sol = NULL;
    SCIP_SOL* subsol = NULL;
    SCIP_HEURDATA* heurdata = NULL;
@@ -955,7 +1027,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIP_Bool success;
 
    heurdata = SCIPheurGetData(heur);
-   sol = heurdata->infSol;
+   sol = heurdata->infsol;
 
    /* initializes the subscip */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -1036,6 +1108,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    SCIP_CALL( SCIPallocBufferArray(scip, &potential, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &slack, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subcons, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inftycounter, nrows) );
    /* Adds all original constraints and computes potentials and slacks */
    for (i = 0; i < nrows; ++i)
    {
@@ -1060,6 +1133,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       rowsolact = SCIPgetRowSolActivity(scip, rows[i], sol) - constant;
       vals = SCIProwGetVals(rows[i]);
       potential[i] = 0.0;
+      inftycounter[i] = 0;
 
       assert(SCIPisFeasLE(scip, lhs, rhs));
 
@@ -1086,6 +1160,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
       /* translate all variables from the original scip to the subscip with subscip variables. */
       for( j = 0; j < nnonz; ++j )
       {
+         SCIP_Real contribution;
          int pos;
          int sgn = 1;
 
@@ -1100,17 +1175,26 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
          consvars[j] = subvars[pos];
 
          /* compute potentials */
-         assert(!SCIPisZero(scip,vals[j]));
-         if( 0 > sgn * vals[j] )
+         /*if( 0 > sgn * vals[j] )
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[pos])));
-            potential[i] += vals[j] * (SCIPgetSolVal(scip, sol, vars[pos]) - SCIPvarGetLbGlobal(vars[pos]));
+            potential[i] += vals[j] * (SCIPvarGetLbGlobal(vars[pos]) - SCIPgetSolVal(scip, sol, vars[pos]));
          }
          else
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[pos])));
-            potential[i] += vals[j] * (SCIPgetSolVal(scip, sol, vars[pos]) - SCIPvarGetUbGlobal(vars[pos]));
+            potential[i] += vals[j] * (SCIPvarGetUbGlobal(vars[pos]) - SCIPgetSolVal(scip, sol, vars[pos]));
+         }*/
+         contribution = getPotentialContributed(scip, sol, vars[pos], vals[j], sgn);
+         if( !SCIPisInfinity(scip, REALABS(contribution)) )
+         {
+            potential[i] += contribution;
          }
+         else
+         {
+            inftycounter[i]++;
+         }
+
          if( !SCIPisZero(scip, slack[i]) )
          {
             nviolatedrows[pos]++;
@@ -1166,7 +1250,7 @@ SCIP_RETCODE varFixings(SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
    {
       /* author bzfhende: TODO get rid of the printf's */
       printf("Try to fix %s",SCIPvarGetName(vars[permutation[i]]));
-      if( tryFixVar(scip, sol, potential, slack, vars[permutation[i]]) )
+      if( tryFixVar(scip, sol, potential, slack, vars[permutation[i]], inftycounter, heurdata) )
       {
          SCIP_Bool infeasible = FALSE;
          SCIP_Bool fixed = TRUE;
@@ -1436,6 +1520,7 @@ TERMINATE:
    /* author bzfhende: TODO buffer arrays must be freed in reverse order of allocation */
    SCIPfreeBufferArrayNull(scip, &subvars);
    SCIPfreeBufferArrayNull(scip, &permutation);
+   SCIPfreeBufferArrayNull(scip, &inftycounter);
    SCIPfreeBufferArrayNull(scip, &potential);
    SCIPfreeBufferArrayNull(scip, &slack);
    SCIPfreeBufferArrayNull(scip, &subcons);
@@ -1703,12 +1788,12 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
 
    /* create zero solution */
-   SCIP_CALL( SCIPcreateOrigSol(scip, &(heurdata->infSol), heur) );
+   SCIP_CALL( SCIPcreateOrigSol(scip, &(heurdata->infsol), heur) );
 
    heurdata = SCIPheurGetData(heur);
 
    /* use read method to enter solution from a file */
-   retcode = readSol(scip, heurdata->infSol, heurdata->filename);
+   retcode = readSol(scip, heurdata->infsol, heurdata->filename);
 
    if( SCIP_NOFILE == retcode )
    {
@@ -1716,23 +1801,23 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
          SCIPwarningMessage(scip, "cannot open file <%s> for reading\n",
                heurdata->filename);
 
-      SCIPfreeSol(scip, &(heurdata->infSol));
+      SCIPfreeSol(scip, &(heurdata->infsol));
       return SCIP_OKAY;
    }
    else if( retcode != SCIP_OKAY )
    {
-      SCIPfreeSol(scip, &(heurdata->infSol));
+      SCIPfreeSol(scip, &(heurdata->infsol));
       return SCIP_OKAY;
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "Repair: Solution file read.\n");
 
    /* checks the integrality of all discrete variable */
-   SCIP_CALL( checkCands(scip, heurdata->infSol, heurdata->roundit, &success) );
+   SCIP_CALL( checkCands(scip, heurdata->infsol, heurdata->roundit, &success) );
    if( !success )
    {
       SCIPdebugMessage("Hello Termination\n");
-      SCIPfreeSol(scip, &(heurdata->infSol));
+      SCIPfreeSol(scip, &(heurdata->infsol));
       return SCIP_OKAY;
    }
    *result = SCIP_DIDNOTFIND;
@@ -1817,6 +1902,9 @@ SCIP_RETCODE SCIPincludeHeurRepair(
       SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useslackvars",
             "should slack variables be used in repair subproblem?",
             &heurdata->useslackvars, FALSE, DEFAULT_USESLACKVARS, NULL, NULL));
+
+      SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/alpha", "factor for the potential of var fixings",
+               &heurdata->alpha, TRUE, DEFAULT_ALPHA, 0.0, 100.00, NULL, NULL) );
 
 
    return SCIP_OKAY;
