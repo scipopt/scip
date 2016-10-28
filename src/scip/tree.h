@@ -921,7 +921,7 @@ void SCIPtreeMarkProbingObjChanged(
 #define SCIPtreeGetNNodes(tree)         \
    (SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree))
 #define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
-#define SCIPtreeGetDepthLimit(tree)     (MAXDEPTH)
+#define SCIPtreeGetDepthLimit(tree)     (SCIP_MAXTREEDEPTH)
 #define SCIPtreeProbing(tree)           ((tree)->probingroot != NULL)
 #define SCIPtreeGetProbingRoot(tree)    (tree)->probingroot
 #define SCIPtreeGetProbingDepth(tree)   (SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth((tree)->probingroot))
