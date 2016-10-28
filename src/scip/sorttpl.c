@@ -858,11 +858,13 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       }
    }
 
-   assert(start <= end);
+   assert(start <= end || end == -1 || start == len);
    assert(end - start + 1 <= SORTTPL_SHELLSORTMAX);
 
    /* use shell sort to solve the remaining elements completely */
-   SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
+   if( end - start + 1 > 1 )
+   {
+      SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
       (key, weights,
          SORTTPL_HASFIELD1PAR(field1)
          SORTTPL_HASFIELD2PAR(field2)
@@ -874,13 +876,13 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          SORTTPL_HASINDCOMPPAR(indcomp)
          SORTTPL_HASINDCOMPPAR(dataptr)
          start, end);
-
+   }
    /* determine the median position among the remaining elements */
-   for( j = start; j < end; ++j )
+   for( j = start; j <= MAX(end, start); ++j )
    {
       SCIP_Real weight = (weights != NULL ? weights[j] : 1);
       /* we finally found the median element */
-      if( weight > residualcapacity )
+      if( weight >= residualcapacity )
       {
          if( medianpos != NULL )
             *medianpos = j;
@@ -892,8 +894,11 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    }
 
    /* the capacity is not exceeded by the elements in the array */
-   if( j == end && medianpos != NULL )
-      *medianpos = end;
+   if( j == len && medianpos != NULL )
+   {
+      assert(residualcapacity > 0);
+      *medianpos = len;
+   }
 }
 
 /** partially sorts a given keys array around the given index \p k and permutes the additional 'field' arrays are in the same way */
