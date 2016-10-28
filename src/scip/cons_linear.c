@@ -15991,7 +15991,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
-         &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
@@ -16086,7 +16086,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/rangedrowfreq",
          "frequency for applying ranged row propagation",
-         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
