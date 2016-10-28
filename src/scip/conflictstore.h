@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
 
 /** adds a constraint to the pool of dual rays */
 extern
-SCIP_RETCODE SCIPconflictstoreAddDualray(
+SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_CONS*            dualray,            /**< dual ray to add */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    );
 
-/** delete all conflicts depending a cutoff bound larger than the given bound */
+/** deletes all conflicts depending a cutoff bound larger than the given bound */
 extern
 SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
    SCIP_Real             cutoffbound         /**< current cutoff bound */
    );
 
-/** return the maximal size of the conflict pool */
+/** returns the maximal size of the conflict pool */
 extern
 int SCIPconflictstoreGetMaxPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */

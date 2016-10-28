@@ -36,9 +36,9 @@ struct SCIP_ConflictStore
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to catch improving solutions */
    SCIP_CONS**           conflicts;          /**< array with conflicts */
-   SCIP_CONS**           dualrays;           /**< array with dual rays */
+   SCIP_CONS**           dualrayconss;       /**< array with constraints based on dual rays */
    SCIP_Real*            primalbounds;       /**< array of primal bounds valid at the time the corresponding bound exceeding
-                                               *   conflict was found (-infinity if the conflict as based on an infeasible LP) */
+                                              *   conflict was found (-infinity if the conflict as based on an infeasible LP) */
    SCIP_QUEUE*           slotqueue;          /**< queue of empty slots in the conflicts and primalbounds array */
    SCIP_QUEUE*           orderqueue;         /**< queue of conflict pointer preserving the order of generation */
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */

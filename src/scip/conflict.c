@@ -141,13 +141,13 @@
 #include "scip/struct_conflict.h"
 #include "scip/cons_linear.h"
 
-#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see SCIPcalcMIR() */
-#define USEVBDS                   FALSE /**< use variable bounds - see SCIPcalcMIR() */
-#define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see SCIPcalcMIR() */
-#define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
-#define MINFRAC                   0.05
-#define MAXFRAC                   0.999
-#define SCALE                     1.0
+#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see SCIPcutsAppyMIR() */
+#define USEVBDS                   FALSE /**< use variable bounds - see SCIPcutsAppyMIR() */
+#define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see SCIPcutsAppyMIR() */
+#define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcutsAppyMIR() */
+#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see SCIPcutsAppyMIR() */
+#define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see SCIPcutsAppyMIR() */
+#define SCALE                     1.0   /**< additional scaling factor - see SCIPcutsApplyMIR() */
 
 /*#define SCIP_CONFGRAPH*/
 
@@ -586,7 +586,7 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos,        /**< number of bound changes in the conflict set */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved,     /**< depend the conflict on the cutoff bound? */
+   SCIP_Bool             usescutoffbound,    /**< depends the conflict on the cutoff bound? */
    SCIP_Bool             resolved,           /**< was the conflict set already used to create a constraint? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -605,7 +605,7 @@ SCIP_RETCODE SCIPconflicthdlrExec(
       SCIPclockStart(conflicthdlr->conflicttime, set);
 
       SCIP_CALL( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, validnode, bdchginfos, relaxedbds, nbdchginfos,
-            conftype, cutoffinvolved, set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic,
+            conftype, usescutoffbound, set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic,
             set->conf_removable, resolved, result) );
 
       /* stop timing */
@@ -936,7 +936,7 @@ void conflictsetClear(
    conflictset->repropdepth = 0;
    conflictset->repropagate = TRUE;
    conflictset->usescutoffbound = FALSE;
-   conflictset->conflicttype = (unsigned int)SCIP_CONFTYPE_UNKNOWN;
+   conflictset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
 }
 
 /** creates an empty conflict set */
@@ -1038,7 +1038,10 @@ SCIP_RETCODE conflictsetEnsureBdchginfosMem(
    return SCIP_OKAY;
 }
 
-/** calculates the score of the conflict set */
+/** calculates the score of the conflict set
+ *
+ *  the score is weighted sum of number of bound changes, repropagation depth, and valid depth
+ */
 static
 SCIP_Real conflictsetCalcScore(
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set */
@@ -2219,7 +2222,7 @@ SCIP_RETCODE conflictAddConflictCons(
       {
          SCIP_RESULT result;
 
-         assert(conflictset->conflicttype != (unsigned int)SCIP_CONFTYPE_UNKNOWN);
+         assert(conflictset->conflicttype != SCIP_CONFTYPE_UNKNOWN);
 
          SCIP_CALL( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[insertdepth],
                tree->path[conflictset->validdepth], conflictset->bdchginfos, conflictset->relaxedbds,
@@ -2719,7 +2722,7 @@ SCIP_RETCODE SCIPconflictInit(
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
        || conftype == SCIP_CONFTYPE_PROPAGATION);
-   conflict->conflictset->conflicttype = (unsigned int)conftype;
+   conflict->conflictset->conflicttype = conftype;
 
    /* set whether a cutoff bound is involved */
    conflict->conflictset->usescutoffbound = usescutoffbound;
@@ -3822,7 +3825,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
 
    firstuipdepth = SCIPbdchginfoGetDepth(firstuip);
 
-   conftype = (SCIP_CONFTYPE) conflict->conflictset->conflicttype;
+   conftype = conflict->conflictset->conflicttype;
    usescutoffbound = conflict->conflictset->usescutoffbound;
 
    /* for each succeeding UIP pair of the last depth level, create one reconvergence constraint */
@@ -3846,7 +3849,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
       /* initialize conflict data */
       SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob, conftype, usescutoffbound) );
 
-      conflict->conflictset->conflicttype = (unsigned int) conftype;
+      conflict->conflictset->conflicttype = conftype;
       conflict->conflictset->usescutoffbound = usescutoffbound;
 
       /* create a temporary bound change information for the negation of the UIP's bound change;
@@ -4008,7 +4011,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
       uip = nextuip;
    }
 
-   conflict->conflictset->conflicttype = (unsigned int) conftype;
+   conflict->conflictset->conflicttype = conftype;
    conflict->conflictset->usescutoffbound = usescutoffbound;
 
 
@@ -4560,13 +4563,13 @@ SCIP_RETCODE addBdchg(
    SCIP_VAR*             var,                /**< variable to change the LP bounds for */
    SCIP_Real             newlb,              /**< new lower bound */
    SCIP_Real             newub,              /**< new upper bound */
-   SCIP_LPBDCHGS*        oldlpbdchgs,        /**< old LP bound changes used for reset the LP bound change, or NULL */
-   SCIP_LPBDCHGS*        relaxedlpbdchgs,    /**< relaxed LP bound changes used for reset the LP bound change, or NULL */
+   SCIP_LPBDCHGS*        oldlpbdchgs,        /**< old LP bound changes used for reset the LP bound change */
+   SCIP_LPBDCHGS*        relaxedlpbdchgs,    /**< relaxed LP bound changes used for reset the LP bound change */
    SCIP_LPI*             lpi                 /**< pointer to LPi to access infinity of LP solver; necessary to set correct value */
    )
 {
    assert(newlb <= newub);
-   assert(oldlpbdchgs != NULL); /* ?????? this can be NULL, see comment above */
+   assert(oldlpbdchgs != NULL);
    assert(relaxedlpbdchgs != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -4924,7 +4927,6 @@ SCIP_RETCODE undoBdchgsProof(
                SCIPvarGetName(var), curvarlbs[v], curvarubs[v], SCIPvarGetLbGlobal(var), curvarubs[v],
                proofcoefs[v], prooflhs, proofact);
             curvarlbs[v] = SCIPvarGetLbGlobal(var);
-            curvarlbs[v] = SCIPvarGetLbGlobal(var);
             lbchginfoposs[v] = -1;
             relaxed = TRUE;
          }
@@ -5059,8 +5061,8 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_LPBDCHGS*        relaxedlpbdchgs,    /**< relaxed LP bound changes used for reset the LP bound change, or NULL */
    SCIP_Bool*            valid,              /**< pointer to store whether the unfixings are valid */
    SCIP_Bool*            resolve,            /**< pointer to store whether the changed LP should be resolved again */
-   SCIP_Real*            farkascoefs,        /**< coefficients in the proof constraint */
-   SCIP_Real*            farkaslhs,          /**< lhs of the proof constraint */
+   SCIP_Real             farkascoefs,        /**< coefficients in the proof constraint */
+   SCIP_Real             farkaslhs,          /**< lhs of the proof constraint */
    SCIP_Real*            farkasactivity      /**< maximal activity of the proof constraint */
    )
 {
@@ -5085,10 +5087,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    lpi = SCIPlpGetLPI(lp);
 
    /* check, if the Farkas row is still violated (using current bounds and ignoring local rows) */
-   if( SCIPsetIsFeasGT(set, *farkaslhs, *farkasactivity) )
+   if( SCIPsetIsFeasGT(set, farkaslhs, farkasactivity) )
    {
       /* undo bound changes while keeping the infeasibility proof valid */
-      SCIP_CALL( undoBdchgsProof(set, prob, currentdepth, farkascoefs, *farkaslhs, *farkasactivity,
+      SCIP_CALL( undoBdchgsProof(set, prob, currentdepth, farkascoefs, farkaslhs, farkasactivity,
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, resolve, lpi) );
 
       *valid = TRUE;
@@ -5169,7 +5171,7 @@ SCIP_RETCODE undoBdchgsDualsol(
    assert(nrows == lp->nlpirows);
 
    /* get temporary memory */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &primsols, nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &primsols, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsols, nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &redcosts, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualcoefs, nvars) );
@@ -5377,7 +5379,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    SCIP_VAR** vars;
    SCIP_VAR* var;
    SCIP_CONFTYPE conftype;
-   SCIP_Bool cutoffinvolved;
+   SCIP_Bool usescutoffbound;
    int nvars;
    int v;
    int nbdchgs;
@@ -5403,13 +5405,13 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    maxsize = 2*conflictCalcMaxsize(set, prob);
 
    /* initialize conflict data */
-   conftype = (SCIP_CONFTYPE) conflict->conflictset->conflicttype;
-   cutoffinvolved = conflict->conflictset->usescutoffbound;
+   conftype = conflict->conflictset->conflicttype;
+   usescutoffbound = conflict->conflictset->usescutoffbound;
 
-   SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob, conftype, cutoffinvolved) );
+   SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob, conftype, usescutoffbound) );
 
-   conflict->conflictset->conflicttype = (unsigned int) conftype;
-   conflict->conflictset->usescutoffbound = cutoffinvolved;
+   conflict->conflictset->conflicttype = conftype;
+   conflict->conflictset->usescutoffbound = usescutoffbound;
 
    /* add remaining bound changes to conflict queue */
    SCIPsetDebugMsg(set, "initial conflict set after undoing bound changes:\n");
@@ -5519,6 +5521,9 @@ SCIP_RETCODE getFarkasProof(
    int i;
    int r;
    int v;
+
+   assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
+   assert(SCIPlpiIsPrimalInfeasible(lpi) || !SCIPlpDivingObjChanged(lp));
 
    /* get LP rows and problem variables */
    rows = SCIPlpGetRows(lp);
@@ -5702,7 +5707,7 @@ SCIP_Bool cutoffRootSol(
    SCIP_Real*            vals,               /**< array of variable coefficients */
    SCIP_Real             side,               /**< side (lhs/rhs) of the constraint */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool             haslhs              /**< true iff the side is a lhs */
+   SCIP_Bool             islhs               /**< true iff the side is a lhs */
    )
 {
    SCIP_Real activity;
@@ -5718,10 +5723,10 @@ SCIP_Bool cutoffRootSol(
 
    cutoff = FALSE;
 
-   if( haslhs )
-      cutoff = SCIPsetIsLT(set, activity, side);
+   if( islhs )
+      cutoff = SCIPsetIsFeasLT(set, activity, side);
    else
-      cutoff = SCIPsetIsGT(set, activity, side);
+      cutoff = SCIPsetIsFeasGT(set, activity, side);
 
    return cutoff;
 }
@@ -5749,6 +5754,14 @@ SCIP_RETCODE applyMIR(
    SCIP_Bool islocal;
    SCIP_Bool separoot;
 
+   assert(transprob != NULL);
+   assert(vals != NULL)
+   assert(varused != NULL);
+   assert(nvarinds != NULL);
+   assert(varinds != NULL && *nvarinds >= 0);
+   assert(rhs != NULL);
+   assert(success != NULL);
+
    islocal = FALSE;
 
    /* create local copies */
@@ -5765,7 +5778,7 @@ SCIP_RETCODE applyMIR(
    if( *success )
    {
       /* check whether the constraint is still globally valid */
-      if( SCIPsetIsLE(set, minact, copy_rhs) )
+      if( SCIPsetIsFeasLE(set, minact, copy_rhs) )
       {
          separoot = FALSE;
          *success = FALSE;
@@ -6013,6 +6026,11 @@ SCIP_RETCODE createAndAddDualray(
    int nnonzeros;
    int i;
 
+   assert(conflict != NULL);
+   assert(conflictstore != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(vals != NULL || nvars == 0);
+
    prod = 0.0;
    normcons = 0.0;
    normobj = 0.0;
@@ -6056,7 +6074,7 @@ SCIP_RETCODE createAndAddDualray(
    SCIPconsMarkConflict(cons);
 
    /* add constraint based on dual ray to storage */
-   SCIP_CALL( SCIPconflictstoreAddDualray(conflictstore, cons, blkmem, set, stat, prob) );
+   SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, prob) );
 
    /* add constraint to problem */
    SCIP_CALL( SCIPaddCons(set->scip, cons) );
@@ -6076,9 +6094,14 @@ SCIP_RETCODE createAndAddDualray(
    return SCIP_OKAY;
 }
 
-/* tighten the bound of a singleton variable in a constraint */
+/** tighten the bound of a singleton variable in a constraint
+ *
+ *  if the bound is contradicting with a global bound we cannot tighten the bound directly.
+ *  in this case we need to create and add a constraint of size one such that propagating this constraint will
+ *  enforce the infeasibility.
+ */
 static
-SCIP_RETCODE handleSingleVar(
+SCIP_RETCODE tightenSingleVar(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict pool data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6135,7 +6158,15 @@ SCIP_RETCODE handleSingleVar(
    return SCIP_OKAY;
 }
 
-/** perform conflict analysis */
+/** perform conflict analysis based on a dual unbounded ray
+ *
+ *  given an aggregation of rows lhs <= a^Tx such that lhs > maxactivity. if the consttraint has size one we add a
+ *  bound change instead of the constraint.
+ *
+ *  we call tightenDualray() to strengthen the constraint:
+ *    - apply MIR function
+ *    - remove some continuous variables
+ */
 static
 SCIP_RETCODE performDualRayAnalysis(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -6212,13 +6243,13 @@ SCIP_RETCODE performDualRayAnalysis(
 
    success = FALSE;
 
-   /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
+   /* only one variable has a coefficient different to zero, we add this as a bound change instead of a constraint of
+    * size one
+    */
    if( nmirvars == 1 && !diving )
    {
-      SCIP_CALL( handleSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+      SCIP_CALL( tightenSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
             branchcand, eventqueue, cliquetable, mirvars[varinds[0]], mirvals[varinds[0]], mirrhs) );
-
-      goto TERMINATE;
    }
    else
    {
@@ -6229,10 +6260,8 @@ SCIP_RETCODE performDualRayAnalysis(
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
       if( nmirvars == 1 && success && !diving )
       {
-         SCIP_CALL( handleSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+         SCIP_CALL( tightenSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
                branchcand, eventqueue, cliquetable, mirvars[varinds[0]], mirvals[varinds[0]], mirrhs) );
-
-         goto TERMINATE;
       }
       else
       {
@@ -6256,7 +6285,7 @@ SCIP_RETCODE performDualRayAnalysis(
       }
    }
 
-  TERMINATE:
+   /* free buffer memory */
    SCIPsetFreeBufferArray(set, &varused);
    SCIPsetFreeBufferArray(set, &varinds);
    SCIPsetFreeBufferArray(set, &mirvals);
@@ -6304,7 +6333,7 @@ SCIP_RETCODE runBoundHeuristic(
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool             marklpunsolved,     /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
-   SCIP_Bool*            valid
+   SCIP_Bool*            valid               /**< pointer to store whether the result is stil a valid proof */
    )
 {
    SCIP_LPBDCHGS* oldlpbdchgs;
@@ -6312,6 +6341,8 @@ SCIP_RETCODE runBoundHeuristic(
    SCIP_Bool solvelp;
    SCIP_Bool resolve;
    int ncols;
+
+   assert(set != NULL);
 
    /* get number of columns in the LP */
    ncols = SCIPlpGetNCols(lp);
@@ -6330,7 +6361,7 @@ SCIP_RETCODE runBoundHeuristic(
       if( SCIPlpiIsPrimalInfeasible(lpi) )
       {
          SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs,
-               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, farkascoefs, farkaslhs, farkasactivity) );
+               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, farkascoefs, *farkaslhs, *farkasactivity) );
       }
       else
       {
@@ -6500,7 +6531,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
                      lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, valid, &resolve,
-                     farkascoefs, farkaslhs, farkasactivity) );
+                     farkascoefs, *farkaslhs, *farkasactivity) );
             }
             else
             {
@@ -6888,7 +6919,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    SCIPclockStart(conflict->inflpanalyzetime, set);
    conflict->ninflpcalls++;
 
-   conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_INFEASLP;
+   conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
@@ -6962,7 +6993,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    conflict->nboundlpcalls++;
 
    /* mark the conflict to depend on the cutoff bound */
-   conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_BNDEXCEEDING;
+   conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
 
    /* perform conflict analysis */
@@ -7389,7 +7420,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
             SCIPtreeGetCurrentDepth(tree));
 
-         conflict->conflictset->conflicttype = (unsigned int)SCIP_CONFTYPE_INFEASLP;
+         conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
          conflict->nsbcalls++;
 
          /* change the upper bound */
@@ -7452,7 +7483,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
             SCIPtreeGetCurrentDepth(tree));
 
-         conflict->conflictset->conflicttype = (unsigned int)SCIP_CONFTYPE_INFEASLP;
+         conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
          conflict->nsbcalls++;
 
          /* change the lower bound */
@@ -7697,7 +7728,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPsetDebugMsg(set, "analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
       SCIPlpGetPseudoObjval(lp, set, transprob), lp->cutoffbound);
 
-   conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_BNDEXCEEDING;
+   conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
 
    /* start timing */
@@ -7757,8 +7788,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       int nliterals;
       int nreconvconss;
       int nreconvliterals;
-
-      // todo add dual ray stuff
 
       /* undo bound changes without destroying the infeasibility proof */
       SCIP_CALL( undoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, pseudoact,
@@ -7879,26 +7908,3 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
 
-/** marg the conflict to depend on the current cutoff bound */
-void SCIPconflictsetSetCutoffInvolved(
-   SCIP_CONFLICT*        conflict
-   )
-{
-   assert(conflict != NULL);
-   assert(conflict->conflictset != NULL);
-
-   conflict->conflictset->usescutoffbound = TRUE;
-}
-
-/** set the type of the conflict */
-void SCIPconflictSetType(
-   SCIP_CONFLICT*        conflict,
-   SCIP_CONFTYPE         conftype
-   )
-{
-   assert(conflict != NULL);
-   assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
-       || conftype == SCIP_CONFTYPE_PROPAGATION);
-
-   conflict->conflictset->conflicttype = (unsigned int)conftype;
-}

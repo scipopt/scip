@@ -118,7 +118,7 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos,        /**< number of bound changes in the conflict set */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved,     /**< depend the conflict on the cutoff bound? */
+   SCIP_Bool             usescutoffbound,    /**< depends the conflict on the cutoff bound? */
    SCIP_Bool             resolved,           /**< was the conflict set already used to create a constraint? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -706,19 +706,6 @@ extern
 void SCIPconflictEnableOrDisableClocks(
    SCIP_CONFLICT*        conflict,           /**< the conflict analysis data for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
-   );
-
-/** marg the conflict to depend on the current cutoff bound */
-extern
-void SCIPconflictsetSetCutoffInvolved(
-   SCIP_CONFLICT*        conflict
-   );
-
-/** set the type of the conflict */
-extern
-void SCIPconflictSetType(
-   SCIP_CONFLICT*        conflict,
-   SCIP_CONFTYPE         conftype
    );
 
 #ifdef __cplusplus
