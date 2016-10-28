@@ -784,7 +784,7 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
-      if( parent->depth >= MAXDEPTH-1 )
+      if( parent->depth >= SCIP_MAXTREEDEPTH-1 )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
          return SCIP_MAXDEPTHLEVEL;
@@ -4771,9 +4771,9 @@ SCIP_RETCODE SCIPtreeCreateRoot(
 
 #ifndef NDEBUG
    /* check, if the sizes in the data structures match the maximal numbers defined here */
-   tree->root->depth = MAXDEPTH;
+   tree->root->depth = SCIP_MAXTREEDEPTH;
    tree->root->repropsubtreemark = MAXREPROPMARK;
-   assert(tree->root->depth == MAXDEPTH);
+   assert(tree->root->depth == SCIP_MAXTREEDEPTH);
    assert(tree->root->repropsubtreemark == MAXREPROPMARK);
    tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
@@ -7014,7 +7014,6 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetNSiblings
 #undef SCIPtreeGetNNodes
 #undef SCIPtreeIsPathComplete
-#undef SCIPtreeGetDepthLimit
 #undef SCIPtreeProbing
 #undef SCIPtreeGetProbingRoot
 #undef SCIPtreeGetProbingDepth
@@ -8008,16 +8007,6 @@ int SCIPtreeGetCurrentDepth(
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->pathlen-1;
-}
-
-/** gets the maximal allowed tree depth */
-int SCIPtreeGetDepthLimit(
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return (int)MAXDEPTH;
 }
 
 /** returns, whether the LP was or is to be solved in the current node */

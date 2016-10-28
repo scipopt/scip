@@ -68,6 +68,7 @@ BUILDFLAGS=" ARCH=$(ARCH)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
 		READLINE=$(READLINE)\\n\
+		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
@@ -423,6 +424,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_mutation.o \
+			scip/heur_multistart.o \
 			scip/heur_nlpdiving.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \

@@ -42,7 +42,7 @@ make
 ```
 
 **NOTE** `make` will read the options used for building `SCIP` from the binary. It uses `scip --version` to find out the options.
-If `SHARED=true` was not used when compiling `SCIP`, `make` will end with a proper error. If the binary is not found, it will
+If `SHARED=true`, or `OPT=dbg`  were not used when compiling `SCIP`, `make` will end with a proper error. If the binary is not found, it will
 assume `SHARED=true` and `OPT=dbg`.
 
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
@@ -64,11 +64,16 @@ This creates `CTestTestfile.cmake` with a list of the test to run and then calls
 make BUGS=true
 ```
 
+You can also run a single test, e.g. `
+```
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+```
+
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
 
 ## Debug
 
-If a test fails, one can use `gdb` or `undodb-gdb` to debug. For example:
+If a test fails, use `gdb` to debug. For example:
 
 ```
  >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
@@ -77,18 +82,11 @@ If a test fails, one can use `gdb` or `undodb-gdb` to debug. For example:
          [====] Synthesis: Tested: 1 | Passing: 0 | Failing: 1 | Crashing: 0
 ```
 
-The test suite is `separation` and the test name is `gauge`. To debug with `gdb` write in one terminal:
+The test suite is `separation` and the test name is `gauge`. To debug:
 
 ```
->> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug
-```
-This will start a `gdbserver`. To connect, in another terminal use
-```
->> gdb bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 -ex "target remote localhost:1234"
+>> gdb --args bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --single separation::gauge
+(gdb) br src/cons/quadratic/gauge.c:112
 ```
 
-To use `undodb-gdb` or `gdb` when one doesn't want to use a `gdbserver` use:
-```
->> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug=idle
-```
-This will give the PID of the process which can then be attached to a `undodb-gdb` or `gdb` session.
+Criterion by default prints all of the critical debugging information (test_suite::test_name, file and line number were to break). When a test crashes, there is no need to `break` in `gdb`.

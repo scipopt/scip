@@ -3819,6 +3819,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* increase the amount of strong branching */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "branching/fullstrong/maxdepth", 10, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "branching/fullstrong/priority", INT_MAX / 4, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/fullstrong/maxbounddist", 0.0, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/relpscost/sbiterquot", 1.0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "branching/relpscost/sbiterofs", 1000000, quiet) );

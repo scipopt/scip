@@ -849,7 +849,7 @@ SCIP_RETCODE presolveFindDuplicates(
             {
                SCIPdebugMsg(scip, "infeasibility detected while solving the equations, no solution exists\n");
                SCIPdebugPrintCons(scip, cons0, NULL);
-	       SCIPdebugPrintCons(scip, cons1, NULL);
+               SCIPdebugPrintCons(scip, cons1, NULL);
                break;
             }
 
@@ -857,7 +857,7 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIPvarGetName(consdata0->x), SCIPvarGetLbLocal(consdata0->x), SCIPvarGetUbLocal(consdata0->x), xval,
                SCIPvarGetName(consdata0->z), SCIPvarGetLbLocal(consdata0->z), SCIPvarGetUbLocal(consdata0->z), zval);
             SCIPdebugPrintCons(scip, cons0, NULL);
-	    SCIPdebugPrintCons(scip, cons1, NULL);
+            SCIPdebugPrintCons(scip, cons1, NULL);
 
             if( SCIPvarGetStatus(SCIPvarGetProbvar(consdata0->x)) != SCIP_VARSTATUS_MULTAGGR )
             {
