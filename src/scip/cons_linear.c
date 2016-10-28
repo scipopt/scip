@@ -15588,6 +15588,10 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* we can skip events droped for deleted constraints */
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
 
@@ -15606,14 +15610,22 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
-      /* update the activity values */
-      if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-         consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
-      else
+      /* we only need to update the activities if the constraint is active,
+       * otherwise we mark them to be invalid
+       */
+      if( SCIPconsIsActive(cons) )
       {
-         assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-         consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         /* update the activity values */
+         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+            consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         else
+         {
+            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+            consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         }
       }
+      else
+         consdataInvalidateActivities(consdata);
 
       consdata->presolved = FALSE;
       consdata->rangedrowpropagation = FALSE;

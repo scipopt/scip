@@ -480,7 +480,7 @@ SCIP_RETCODE generateAverageNBRay(
          if( f >= 0 )
          {
             raydirection[f] += factor * coeffs[j] / rownorm;
-            assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
+            assert( ! SCIPisInfinity(scip, REALABS(raydirection[f])) );
          }
       }
    }
