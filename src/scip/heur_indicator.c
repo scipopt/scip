@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -87,7 +87,7 @@ SCIP_RETCODE tryOneOpt(
    assert( solcand != NULL );
    assert( nfoundsols != NULL );
 
-   SCIPdebugMessage("Performing one-opt ...\n");
+   SCIPdebugMsg(scip, "Performing one-opt ...\n");
    *nfoundsols = 0;
 
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -106,6 +106,10 @@ SCIP_RETCODE tryOneOpt(
       /* skip constraints with fixed variables */
       if ( SCIPvarGetUbLocal(binvar) < 0.5 || SCIPvarGetLbLocal(binvar) > 0.5 )
          continue;
+
+      /* return if the we would exceed the depth limit of the tree */
+      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+         break;
 
       /* get rid of all bound changes */
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -161,7 +165,7 @@ SCIP_RETCODE tryOneOpt(
       {
 #ifdef SCIP_DEBUG
          if ( lperror )
-            SCIPdebugMessage("An LP error occured.\n");
+            SCIPdebugMsg(scip, "An LP error occured.\n");
 #endif
          SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
          continue;
@@ -174,17 +178,17 @@ SCIP_RETCODE tryOneOpt(
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
       /* check solution for feasibility */
-      SCIPdebugMessage("One-opt found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
+      SCIPdebugMsg(scip, "One-opt found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
 
       /* only check integrality, because we solved an LP */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &stored) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored) );
       if ( stored )
          ++(*nfoundsols);
       SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
    }
    SCIP_CALL( SCIPendProbing(scip) );
 
-   SCIPdebugMessage("Finished one-opt (tried variables: %d, found sols: %d).\n", cnt, *nfoundsols);
+   SCIPdebugMsg(scip, "Finished one-opt (tried variables: %d, found sols: %d).\n", cnt, *nfoundsols);
 
    return SCIP_OKAY;
 }
@@ -215,10 +219,18 @@ SCIP_RETCODE trySolCandidate(
    assert( solcand != NULL );
    assert( nfoundsols != NULL );
 
-   SCIPdebugMessage("Trying to generate feasible solution with indicators from solution candidate ...\n");
+   SCIPdebugMsg(scip, "Trying to generate feasible solution with indicators from solution candidate ...\n");
    *nfoundsols = 0;
 
    SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* we can stop here if we have already reached the maximal depth */
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPnewProbingNode(scip) );
 
    /* fix variables */
@@ -255,7 +267,7 @@ SCIP_RETCODE trySolCandidate(
    SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, NULL) );
    if ( cutoff )
    {
-      SCIPdebugMessage("Solution candidate reaches cutoff (in propagation).\n");
+      SCIPdebugMsg(scip, "Solution candidate reaches cutoff (in propagation).\n");
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
    }
@@ -268,9 +280,13 @@ SCIP_RETCODE trySolCandidate(
    {
 #ifdef SCIP_DEBUG
       if ( lperror )
-         SCIPdebugMessage("An LP error occured.\n");
+      {
+         SCIPdebugMsg(scip, "An LP error occured.\n");
+      }
       else
-         SCIPdebugMessage("Solution candidate reaches cutoff (in LP solving).\n");
+      {
+         SCIPdebugMsg(scip, "Solution candidate reaches cutoff (in LP solving).\n");
+      }
 #endif
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
@@ -284,21 +300,21 @@ SCIP_RETCODE trySolCandidate(
 
    /* check solution for feasibility */
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("Found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
+   SCIPdebugMsg(scip, "Found solution candidate with value %g.\n", SCIPgetSolTransObj(scip, sol));
 #ifdef SCIP_MORE_DEBUG
    SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
    if ( stored )
    {
       ++(*nfoundsols);
-      SCIPdebugMessage("Solution is feasible and stored.\n");
+      SCIPdebugMsg(scip, "Solution is feasible and stored.\n");
    }
    else
-      SCIPdebugMessage("Solution was not stored.\n");
+      SCIPdebugMsg(scip, "Solution was not stored.\n");
 #else
    /* only check integrality, because we solved an LP */
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored) );
    if ( stored )
       ++(*nfoundsols);
 #endif
@@ -478,7 +494,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
          }
       }
 
-      SCIPdebugMessage("Trying to improve best solution of value %f.\n", SCIPgetSolOrigObj(scip, bestsol) );
+      SCIPdebugMsg(scip, "Trying to improve best solution of value %f.\n", SCIPgetSolOrigObj(scip, bestsol) );
 
       /* try one-opt heuristic */
       SCIP_CALL( tryOneOpt(scip, heur, heurdata, nindconss, indconss, solcand, &nfoundsols) );

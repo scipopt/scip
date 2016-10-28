@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPdispCopyInclude(
 
    if( disp->dispcopy != NULL )
    {
-      SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
       SCIP_CALL( disp->dispcopy(set->scip, disp) );
    }
    return SCIP_OKAY;
@@ -520,7 +520,7 @@ void SCIPdispLongint(
       if( val < 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "-");
       else if( val < 10 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "%"SCIP_LONGINT_FORMAT, val);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%" SCIP_LONGINT_FORMAT, val);
       else
          SCIPmessageFPrintInfo(messagehdlr, file, "+");
    }

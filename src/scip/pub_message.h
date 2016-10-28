@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,7 +54,7 @@ extern "C" {
 /** executes command only if SCIP_DEBUG flag is set */
 #define SCIPdebug(x)                        x
 
-/** prints a debugging message if SCIP_DEBUG flag is set */
+/** prints a debugging message if SCIP_DEBUG flag is set - also consider using SCIPdebugMsg/SCIPsetDebugMsg */
 #define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
@@ -73,7 +73,7 @@ extern "C" {
 /** executes command only if SCIP_DEBUG flag is set */
 #define SCIPdebug(x)                        /**/
 
-/** prints a debugging message if SCIP_DEBUG flag is set */
+/** prints a debugging message if SCIP_DEBUG flag is set - also consider using SCIPdebugMsg/SCIPsetDebugMsg */
 #define SCIPdebugMessage                while( FALSE ) printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
@@ -111,6 +111,7 @@ extern "C" {
 
 /** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
+ *  Use SCIPsetMessagehdlr() to make SCIP aware of the created message handler.
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
  *  @note Creating a message handler automatically captures it.
  */

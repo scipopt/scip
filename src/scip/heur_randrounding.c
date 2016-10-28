@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "scip/heur_randrounding.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "randrounding"
@@ -44,18 +45,18 @@
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
-#define DEFAULT_RANDSEED      14081986       /**< default random seed */
+#define DEFAULT_RANDSEED         23          /**< default random seed */
 #define DEFAULT_USESIMPLEROUNDING    FALSE   /**< should the heuristic apply the variable lock strategy of simple rounding,
                                                *  if possible? */
 #define DEFAULT_MAXPROPROUNDS 1              /**< limit of rounds for each propagation call */
-#define DEFAULT_PROPAGATEONLYROOT TRUE      /**< should the probing part of the heuristic be applied exclusively at the root node */
+#define DEFAULT_PROPAGATEONLYROOT TRUE       /**< should the probing part of the heuristic be applied exclusively at the root node */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed for random number generation */
    int                   maxproprounds;      /**< limit of rounds for each propagation call */
    SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
    SCIP_Bool             usesimplerounding;  /**< should the heuristic apply the variable lock strategy of simple rounding,
@@ -100,7 +101,7 @@ SCIP_RETCODE performRandRounding(
 
    assert(permutedcands != NULL);
 
-   SCIPpermuteArray((void **)permutedcands, 0, ncands, &heurdata->randseed);
+   SCIPrandomPermuteArray(heurdata->randnumgen, (void **)permutedcands, 0, ncands);
    cutoff = FALSE;
 
    /* loop over candidates and perform randomized rounding and optionally probing. */
@@ -131,7 +132,7 @@ SCIP_RETCODE performRandRounding(
       ceilval = SCIPfeasCeil(scip, oldsolval);
       floorval = SCIPfeasFloor(scip, oldsolval);
 
-      SCIPdebugMessage("rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
+      SCIPdebugMsg(scip, "rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* abort if rounded ceil and floor value lie outside the variable domain. Otherwise, check if
@@ -158,7 +159,7 @@ SCIP_RETCODE performRandRounding(
          /* the standard randomized rounding */
          SCIP_Real randnumber;
 
-         randnumber = SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed);
+         randnumber = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
          if( randnumber <= oldsolval - floorval )
             newsolval = ceilval;
          else
@@ -198,16 +199,19 @@ SCIP_RETCODE performRandRounding(
          /* enter a new probing node if the variable was not already fixed before */
          if( lbadjust || ubadjust )
          {
-            SCIP_RETCODE retcode;
-
             if( SCIPisStopped(scip) )
                break;
 
-            retcode = SCIPnewProbingNode(scip);
-            if( retcode == SCIP_MAXDEPTHLEVEL )
+            /* We only want to create a new probing node if we do not exceeed the maximal tree depth,
+             * otherwise we finish at this point.
+             * @todo: Maybe we want to continue with the same node because we do not backtrack.
+             */
+            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+            {
+               SCIP_CALL( SCIPnewProbingNode(scip) );
+            }
+            else
                break;
-
-            SCIP_CALL( retcode );
 
             /* tighten the bounds to fix the variable for the probing node */
             if( lbadjust )
@@ -236,20 +240,20 @@ SCIP_RETCODE performRandRounding(
           * neither integrality nor feasibility of LP rows has to be checked, because all fractional
           * variables were already moved in feasible direction to the next integer
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
       }
       else
       {
          /* if there are variables which are not present in the LP, e.g., for
           * column generation, we need to check their bounds
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
       }
 
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
@@ -316,7 +320,7 @@ SCIP_RETCODE performLPRandRounding(
    *result = SCIP_DIDNOTFIND;
 
    /* perform random rounding */
-   SCIPdebugMessage("executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
+   SCIPdebugMsg(scip, "executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
    SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, nlpcands, propagate, result) );
 
    return SCIP_OKAY;
@@ -372,7 +376,10 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = DEFAULT_RANDSEED;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -389,6 +396,9 @@ SCIP_DECL_HEUREXIT(heurExitRandrounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

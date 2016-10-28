@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -92,6 +92,9 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
 
+/** random number generator */
+typedef struct SCIP_RandNumGen SCIP_RANDNUMGEN;
+
 /** Resource activity data structure
  *
  *  - \ref ResourceActivity "List of all available methods"
@@ -119,6 +122,12 @@ typedef struct SCIP_Bt SCIP_BT;
 /** search node of \ref SCIP_BT "binary tree" */
 typedef struct SCIP_BtNode SCIP_BTNODE;
 
+/** regression data structure to compute an incremental linear regression of paired observations
+ *
+ *  - \ref Regression "List of all available methods"
+ */
+typedef struct SCIP_Regression SCIP_REGRESSION;
+
 /** compares two element indices
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -143,6 +152,7 @@ typedef struct SCIP_BtNode SCIP_BTNODE;
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+
 
 #ifdef __cplusplus
 }

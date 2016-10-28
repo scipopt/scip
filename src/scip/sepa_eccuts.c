@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,11 +18,9 @@
  * @author Benjamin Müller
  */
 
-/**@todo solveFacetEquality() copy the array and this array will be copied in SCIPsolveLinearProb() => unify methods to
- * solve linear problems in nlpi_ipopt.c and nlpi_ipopt_dummy.c and do not copy array there */
 /**@todo only count number of fixed variables in the edge concave terms */
 /**@todo only add nonlinear row aggregations where at least ...% of the variables (bilinear terms?) are in edge concave
- * terms? */
+ * terms */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -30,11 +28,9 @@
 
 #include "scip/scipdefplugins.h"
 #include "scip/sepa_eccuts.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_xor.h"
 #include "scip/nlp.h"
 #include "tclique/tclique.h"
-#include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME                            "eccuts"
 #define SEPA_DESC                            "separator for edge-concave functions"
@@ -272,13 +268,13 @@ void ecaggrPrint(
    assert(scip != NULL);
    assert(ecaggr != NULL);
 
-   SCIPdebugMessage(" nvars = %d nterms = %d\n", ecaggr->nvars, ecaggr->nterms);
-   SCIPdebugMessage(" vars: ");
+   SCIPdebugMsg(scip, " nvars = %d nterms = %d\n", ecaggr->nvars, ecaggr->nterms);
+   SCIPdebugMsg(scip, " vars: ");
    for( i = 0; i < ecaggr->nvars; ++i )
-      SCIPdebugPrintf("%s ", SCIPvarGetName(ecaggr->vars[i]));
-   SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "%s ", SCIPvarGetName(ecaggr->vars[i]));
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMessage(" terms: ");
+   SCIPdebugMsg(scip, " terms: ");
    for( i = 0; i < ecaggr->nterms; ++i )
    {
       SCIP_VAR* x;
@@ -286,9 +282,9 @@ void ecaggrPrint(
 
       x = ecaggr->vars[ ecaggr->termvars1[i] ];
       y = ecaggr->vars[ ecaggr->termvars2[i] ];
-      SCIPdebugPrintf("%e %s * %s  ", ecaggr->termcoefs[i], SCIPvarGetName(x), SCIPvarGetName(y) );
+      SCIPdebugMsgPrint(scip, "%e %s * %s  ", ecaggr->termcoefs[i], SCIPvarGetName(x), SCIPvarGetName(y) );
    }
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 }
 #endif
 
@@ -495,7 +491,7 @@ SCIP_RETCODE nlrowaggrCreate(
 
       if( idx >= 0)
       {
-         SCIPdebugMessage("add quadvar %d to aggr. %d\n", i, idx);
+         SCIPdebugMsg(scip, "add quadvar %d to aggr. %d\n", i, idx);
          SCIP_CALL( ecaggrAddQuadvar((*nlrowaggr)->ecaggr[idx], SCIPnlrowGetQuadVars(nlrow)[i]) );
       }
    }
@@ -520,12 +516,12 @@ SCIP_RETCODE nlrowaggrCreate(
       if( idx1 >= 0 && idx2 >= 0 && idx1 == idx2 && (quadelem->idx1 != quadelem->idx2 || SCIPisNegative(scip, coef) ) )
       {
          SCIP_CALL( ecaggrAddBilinTerm(scip, (*nlrowaggr)->ecaggr[idx1], x, y, coef) );
-         SCIPdebugMessage("add term %e *%d*%d to aggr. %d\n", coef, quadelem->idx1, quadelem->idx2, idx1);
+         SCIPdebugMsg(scip, "add term %e *%d*%d to aggr. %d\n", coef, quadelem->idx1, quadelem->idx2, idx1);
       }
       else
       {
          SCIP_CALL( nlrowaggrAddRemBilinTerm(scip, *nlrowaggr, x, y, coef) );
-         SCIPdebugMessage("add term %e *%d*%d to the remaining part\n", coef, quadelem->idx1, quadelem->idx2);
+         SCIPdebugMsg(scip, "add term %e *%d*%d to the remaining part\n", coef, quadelem->idx1, quadelem->idx2);
       }
    }
 
@@ -598,20 +594,20 @@ void nlrowaggrPrint(
 {
    int i;
 
-   SCIPdebugMessage(" nlrowaggr rhs = %e\n", nlrowaggr->rhs);
-   SCIPdebugMessage(" #remaining terms = %d\n", nlrowaggr->nremterms);
+   SCIPdebugMsg(scip, " nlrowaggr rhs = %e\n", nlrowaggr->rhs);
+   SCIPdebugMsg(scip, " #remaining terms = %d\n", nlrowaggr->nremterms);
 
-   SCIPdebugMessage("remaining terms: ");
+   SCIPdebugMsg(scip, "remaining terms: ");
    for( i = 0; i < nlrowaggr->nremterms; ++i )
-      SCIPdebugPrintf("%e %s * %s + ", nlrowaggr->remtermcoefs[i], SCIPvarGetName(nlrowaggr->remtermvars1[i]),
+      SCIPdebugMsgPrint(scip, "%e %s * %s + ", nlrowaggr->remtermcoefs[i], SCIPvarGetName(nlrowaggr->remtermvars1[i]),
          SCIPvarGetName(nlrowaggr->remtermvars2[i]) );
    for( i = 0; i < nlrowaggr->nlinvars; ++i )
-      SCIPdebugPrintf("%e %s + ", nlrowaggr->lincoefs[i], SCIPvarGetName(nlrowaggr->linvars[i]) );
-   SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "%e %s + ", nlrowaggr->lincoefs[i], SCIPvarGetName(nlrowaggr->linvars[i]) );
+   SCIPdebugMsgPrint(scip, "\n");
 
    for( i = 0; i < nlrowaggr->necaggr; ++i )
    {
-      SCIPdebugMessage("print e.c. aggr %d\n", i);
+      SCIPdebugMsg(scip, "print e.c. aggr %d\n", i);
       ecaggrPrint(scip, nlrowaggr->ecaggr[i]);
    }
    return;
@@ -823,7 +819,7 @@ SCIP_RETCODE createMIP(
       quadelem  = &SCIPnlrowGetQuadElems(nlrow)[i];
 
       edgeweight = (quadelem->idx1 == quadelem->idx2) ? 0.0 : nodeweights[quadelem->idx1] + nodeweights[quadelem->idx2];
-      SCIPdebugMessage("edge {%d,%d} = {%s,%s}  coeff=%e edgeweight=%e\n", quadelem->idx1, quadelem->idx2,
+      SCIPdebugMsg(scip, "edge {%d,%d} = {%s,%s}  coeff=%e edgeweight=%e\n", quadelem->idx1, quadelem->idx2,
          SCIPvarGetName(SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1]),
          SCIPvarGetName(SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2]), quadelem->coef, edgeweight);
 
@@ -1107,7 +1103,7 @@ SCIP_RETCODE createTcliqueGraph(
 
       /* note: clique code can only handle integer weights */
       nodeweight = 100 + (int)(100 * nodeweights[i]);
-      /* SCIPdebugMessage("%d (%s): nodeweight %d \n", i, SCIPvarGetName(SCIPnlrowGetQuadVars(nlrow)[i]), nodeweight); */
+      /* SCIPdebugMsg(scip, "%d (%s): nodeweight %d \n", i, SCIPvarGetName(SCIPnlrowGetQuadVars(nlrow)[i]), nodeweight); */
 
       if( !tcliqueAddNode(*graph, i, nodeweight) )
       {
@@ -1139,7 +1135,7 @@ SCIP_RETCODE createTcliqueGraph(
       assert(quadelem->idx1 != quadelem->idx2);
 
 #ifdef SCIP_DEBUG_DETAILED
-      SCIPdebugMessage("   add edge (%d, %d) = (%s,%s) to tclique graph\n",
+      SCIPdebugMsg(scip, "   add edge (%d, %d) = (%s,%s) to tclique graph\n",
             SCIPvarGetIndex(bilinvar1), SCIPvarGetIndex(bilinvar2),
             SCIPvarGetName(bilinvar1), SCIPvarGetName(bilinvar2));
 #endif
@@ -1205,7 +1201,7 @@ SCIP_RETCODE searchEcAggrWithCliques(
    {
       if( quadvar2aggr[i] != -1 )
       {
-         SCIPdebugMessage("exclude node %d from clique graph\n", i);
+         SCIPdebugMsg(scip, "exclude node %d from clique graph\n", i);
          tcliqueChangeWeight(graph, i, 0);
       }
    }
@@ -1270,7 +1266,7 @@ SCIP_RETCODE searchEcAggrWithCliques(
    for( i = 0; i < aggrsize; ++i )
    {
       quadvar2aggr[ maxcliquenodes[i] ] = *foundaggr ? nfoundsofar : -2;
-      SCIPdebugMessage("%s %d\n", *foundaggr ? "aggregate node: " : "exclude node: ", maxcliquenodes[i]);
+      SCIPdebugMsg(scip, "%s %d\n", *foundaggr ? "aggregate node: " : "exclude node: ", maxcliquenodes[i]);
    }
 
    SCIPfreeBufferArray(scip, &degrees);
@@ -1341,7 +1337,7 @@ SCIP_RETCODE searchEcAggr(
       SCIP_VAR* var = quadvars[i];
       quadvar2aggr[i] = -1;
       nodeweights[i] = phi(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) );
-      SCIPdebugMessage("%s = %e (%e in [%e, %e])\n", SCIPvarGetName(var), nodeweights[i], SCIPgetSolVal(scip, sol, var),
+      SCIPdebugMsg(scip, "%s = %e (%e in [%e, %e])\n", SCIPvarGetName(var), nodeweights[i], SCIPgetSolVal(scip, sol, var),
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
    }
 
@@ -1356,7 +1352,7 @@ SCIP_RETCODE searchEcAggr(
 
    SCIP_CALL( createMIP(scip, subscip, sepadata, nlrow, rhsaggr, forwardarcs, backwardarcs, nodeweights, &nedges) );
    assert(nedges >= 0);
-   SCIPdebugMessage("nedges (without loops) = %d\n", nedges);
+   SCIPdebugMsg(scip, "nedges (without loops) = %d\n", nedges);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1366,7 +1362,7 @@ SCIP_RETCODE searchEcAggr(
       SCIP_Bool aggrleft;
       SCIP_Bool found;
 
-      SCIPdebugMessage("#remaining edges = %d\n", nedges);
+      SCIPdebugMsg(scip, "#remaining edges = %d\n", nedges);
 
       /* not enough edges left */
       if( nedges < sepadata->minaggrsize )
@@ -1378,7 +1374,7 @@ SCIP_RETCODE searchEcAggr(
          timelimit -= SCIPgetSolvingTime(scip);
          if( timelimit <= 0.0 )
          {
-            SCIPdebugMessage("skip aggregation search since no time left\n");
+            SCIPdebugMsg(scip, "skip aggregation search since no time left\n");
             goto TERMINATE;
          }
       }
@@ -1389,7 +1385,7 @@ SCIP_RETCODE searchEcAggr(
       /* 1.b - there are no more edge-concave aggregations left */
       if( !aggrleft )
       {
-         SCIPdebugMessage("no more aggregation left\n");
+         SCIPdebugMsg(scip, "no more aggregation left\n");
          break;
       }
 
@@ -1431,7 +1427,7 @@ SCIP_RETCODE searchEcAggr(
          if( !foundclique )
          {
             assert(!foundaggr);
-            SCIPdebugMessage("did not find a clique to exclude -> leave aggregation search\n");
+            SCIPdebugMsg(scip, "did not find a clique to exclude -> leave aggregation search\n");
             break;
          }
       }
@@ -1439,7 +1435,7 @@ SCIP_RETCODE searchEcAggr(
       /* leave the algorithm if we did not find something for maxstallrounds many iterations */
       if( nunsucces >= sepadata->maxstallrounds && *nfound == 0 )
       {
-         SCIPdebugMessage("did not find an e.c. aggregation for %d iterations\n", nunsucces);
+         SCIPdebugMsg(scip, "did not find an e.c. aggregation for %d iterations\n", nunsucces);
          break;
       }
 
@@ -1450,10 +1446,10 @@ SCIP_RETCODE searchEcAggr(
 TERMINATE:
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("aggregations found:\n");
+   SCIPdebugMsg(scip, "aggregations found:\n");
    for( i = 0; i < nquadvars; ++i )
    {
-      SCIPdebugMessage(" %d in %d\n", i, quadvar2aggr[i]);
+      SCIPdebugMsg(scip, " %d in %d\n", i, quadvar2aggr[i]);
    }
 #endif
 
@@ -1557,7 +1553,7 @@ SCIP_RETCODE isCandidate(
 
    SCIPfreeBufferArray(scip, &degrees);
 
-   SCIPdebugMessage("nlrow contains: %d edges\n", nposedges + nnegedges);
+   SCIPdebugMsg(scip, "nlrow contains: %d edges\n", nposedges + nnegedges);
 
    /* too many edges, too few edges, or to few nodes with degree at least 2 in the graph  */
    if( nposedges + nnegedges > sepadata->maxbilinterms || nposedges + nnegedges < sepadata->minaggrsize
@@ -1597,13 +1593,13 @@ SCIP_RETCODE findAndStoreEcAggregations(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadvar2aggr, SCIPnlrowGetNQuadVars(nlrow)) ); /*lint !e705*/
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("search for edge-concave aggregation for the nonlinear row: \n");
+   SCIPdebugMsg(scip, "search for edge-concave aggregation for the nonlinear row: \n");
    SCIP_CALL( SCIPnlrowPrint(nlrow, SCIPgetMessagehdlr(scip), NULL) );
 #endif
 
    /* check obvious conditions for existing cycles with an odd number of positive/negative edges */
    SCIP_CALL( isCandidate(scip, sepadata, nlrow, &rhscandidate, &lhscandidate) );
-   SCIPdebugMessage("rhs candidate = %u lhs candidate = %u\n", rhscandidate, lhscandidate);
+   SCIPdebugMsg(scip, "rhs candidate = %u lhs candidate = %u\n", rhscandidate, lhscandidate);
 
    /* search for edge-concave aggregations (consider <= rhs) */
    if( rhscandidate )
@@ -1613,7 +1609,7 @@ SCIP_RETCODE findAndStoreEcAggregations(
 
       assert(!SCIPisInfinity(scip, REALABS(SCIPnlrowGetRhs(nlrow))));
 
-      SCIPdebugMessage("consider <= rhs\n");
+      SCIPdebugMsg(scip, "consider <= rhs\n");
       SCIP_CALL( searchEcAggr(scip, sepadata, nlrow, sol, TRUE, quadvar2aggr, &nfound) );
 
       if( nfound > 0 )
@@ -1633,7 +1629,7 @@ SCIP_RETCODE findAndStoreEcAggregations(
 
       assert(!SCIPisInfinity(scip, REALABS(SCIPnlrowGetLhs(nlrow))));
 
-      SCIPdebugMessage("consider >= lhs\n");
+      SCIPdebugMsg(scip, "consider >= lhs\n");
       SCIP_CALL( searchEcAggr(scip, sepadata, nlrow, sol, FALSE, quadvar2aggr, &nfound) );
 
       if( nfound > 0 )
@@ -1666,10 +1662,10 @@ void printFacet(
 {
    int i;
 
-   SCIPdebugMessage("print facet (val=%e): ", facetval);
+   SCIPdebugMsg(scip, "print facet (val=%e): ", facetval);
    for( i = 0; i < nvars; ++i )
-      SCIPdebugPrintf("%e %s + ", facet[i], SCIPvarGetName(vars[i]));
-   SCIPdebugPrintf("%e\n", facet[nvars]);
+      SCIPdebugMsgPrint(scip, "%e %s + ", facet[i], SCIPvarGetName(vars[i]));
+   SCIPdebugMsgPrint(scip, "%e\n", facet[nvars]);
 }
 #endif
 
@@ -1736,7 +1732,7 @@ SCIP_Bool checkRikun(
       prev = gray;
    }
 
-   SCIPdebugMessage("maximum violation of facet: %2.8e\n", maxviolation);
+   SCIPdebugMsg(scip, "maximum violation of facet: %2.8e\n", maxviolation);
 
    /* there seem to be numerical problems if the violation is too large; in this case we reject the facet */
    if( maxviolation > ADJUSTFACETTOL )
@@ -1809,7 +1805,7 @@ SCIP_RETCODE createLP(
       lb[i] = 0.0;
       ub[i] = 0.0;
 
-      SCIPdebugMessage("col %i starts at position %d\n", i, k);
+      SCIPdebugMsg(scip, "col %i starts at position %d\n", i, k);
       beg[i] = k;
       row = 0;
       a = 1;
@@ -1822,7 +1818,7 @@ SCIP_RETCODE createLP(
             val[k] = 1.0;
             ind[k] = row;
 
-            SCIPdebugMessage(" val[%d][%d] = 1 (position  %d)\n", row, i, k);
+            SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", row, i, k);
 
             ++k;
          }
@@ -1836,7 +1832,7 @@ SCIP_RETCODE createLP(
       val[k] = 1.0;
       ind[k] = nrows - 1;
       ++k;
-      SCIPdebugMessage(" val[%d][%d] = 1 (position  %d)\n", nrows - 1, i, k);
+      SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", nrows - 1, i, k);
    }
    assert(k == nnonz);
 
@@ -2010,7 +2006,7 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
       /* update bounds; fix variables to zero which are currently not in the LP */
       lb[i] = 0.0;
       ub[i] = i < ncorner ? 1.0 : 0.0;
-      SCIPdebugMessage("bounds of LP col %d = [%e, %e]; obj = %e\n", i, lb[i], ub[i], fvals[i]);
+      SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lb[i], ub[i], fvals[i]);
    }
 
    /* update lhs and rhs */
@@ -2036,7 +2032,7 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
          side[i] = (i == nrows - 1) ? 1.0 : 0.0;
       }
 
-      SCIPdebugMessage("LP row %d in [%e, %e]\n", i, side[i], side[i]);
+      SCIPdebugMsg(scip, "LP row %d in [%e, %e]\n", i, side[i], side[i]);
    }
 
    /* update LP */
@@ -2088,12 +2084,12 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("facet for the transformed problem: ");
+   SCIPdebugMsg(scip, "facet for the transformed problem: ");
    for( i = 0; i < ecaggr->nvars; ++i )
    {
-      SCIPdebugPrintf("%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
    }
-   SCIPdebugPrintf("%3.4e\n", facet[ecaggr->nvars]);
+   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[ecaggr->nvars]);
 #endif
 
    /*
@@ -2105,7 +2101,7 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
     *  alpha_0 = beta_0 - sum_i lb_i * beta_i/(ub_i - lb_i)
     */
 
-   SCIPdebugMessage("facet in orig. space: ");
+   SCIPdebugMsg(scip, "facet in orig. space: ");
    *facetval = 0.0;
 
    for( i = 0; i < ecaggr->nvars; ++i )
@@ -2124,12 +2120,12 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
       facet[i] = facet[i] / (varub - varlb);
       *facetval += facet[i] * SCIPgetSolVal(scip, sol, ecaggr->vars[i]);
 
-      SCIPdebugPrintf("%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(ecaggr->vars[i]));
    }
 
    /* add constant part to the facet value */
    *facetval += facet[ecaggr->nvars];
-   SCIPdebugPrintf("%3.4e\n", facet[ecaggr->nvars]);
+   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[ecaggr->nvars]);
 
    /*
     *  5. adjust and check facet with the algorithm of Rikun et al.
@@ -2137,7 +2133,7 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
 
    if( checkRikun(scip, ecaggr, fvals, facet) )
    {
-      SCIPdebugMessage("facet pass the check of Rikun et al.\n");
+      SCIPdebugMsg(scip, "facet pass the check of Rikun et al.\n");
       *success = TRUE;
    }
 
@@ -2247,12 +2243,12 @@ SCIP_RETCODE addLinearTermToCut(
    {
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), SCIPgetSolVal(scip, sol, x)));
       *cutconstant += activity;
-      SCIPdebugMessage("add to cut: %e\n", activity);
+      SCIPdebugMsg(scip, "add to cut: %e\n", activity);
    }
    else
    {
       SCIP_CALL( SCIPaddVarToRow(scip, cut, x, coeff) );
-      SCIPdebugMessage("add to cut: %e * %s\n", coeff, SCIPvarGetName(x));
+      SCIPdebugMsg(scip, "add to cut: %e * %s\n", coeff, SCIPvarGetName(x));
    }
 
    *cutactivity += activity;
@@ -2327,7 +2323,7 @@ SCIP_RETCODE addBilinearTermToCut(
       /* add underestimate to cut */
       SCIP_CALL( SCIPaddVarToRow(scip, cut, x, lincoef) );
 
-      SCIPdebugMessage("add to cut: %e * %s + %e\n", lincoef, SCIPvarGetName(x), linconst);
+      SCIPdebugMsg(scip, "add to cut: %e * %s + %e\n", lincoef, SCIPvarGetName(x), linconst);
    }
    /* bilinear case */
    else
@@ -2362,7 +2358,7 @@ SCIP_RETCODE addBilinearTermToCut(
       SCIP_CALL( SCIPaddVarToRow(scip, cut, x, lincoefx) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, y, lincoefy) );
 
-      SCIPdebugMessage("add to cut: %e * %s + %e * %s + %e\n", lincoefx, SCIPvarGetName(x), lincoefy,
+      SCIPdebugMsg(scip, "add to cut: %e * %s + %e * %s + %e\n", lincoefx, SCIPvarGetName(x), lincoefy,
          SCIPvarGetName(y), linconst);
    }
 
@@ -2422,11 +2418,11 @@ SCIP_RETCODE computeCut(
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPnlrowPrint(nlrowaggr->nlrow, SCIPgetMessagehdlr(scip), NULL) );
 
-   SCIPdebugMessage("current solution:\n");
+   SCIPdebugMsg(scip, "current solution:\n");
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
       SCIP_VAR* var = SCIPgetVars(scip)[i];
-      SCIPdebugMessage("  %s = [%e, %e] solval = %e\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+      SCIPdebugMsg(scip, "  %s = [%e, %e] solval = %e\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
          SCIPvarGetUbLocal(var), SCIPgetSolVal(scip, sol, var));
    }
 #endif
@@ -2443,7 +2439,7 @@ SCIP_RETCODE computeCut(
       /* compute a facet of the convex envelope */
       SCIP_CALL( SCIPcomputeConvexEnvelopeFacet(scip, sepadata, sol, ecaggr, bestfacet, &bestfacetval, &found) );
 
-      SCIPdebugMessage("found facet for edge-concave aggregation %d/%d ? %s\n", i, nlrowaggr->necaggr,
+      SCIPdebugMsg(scip, "found facet for edge-concave aggregation %d/%d ? %s\n", i, nlrowaggr->necaggr,
          found ? "yes" : "no");
 
 #ifdef SCIP_DEBUG
@@ -2500,7 +2496,7 @@ SCIP_RETCODE computeCut(
          goto TERMINATE;
    }
 
-   SCIPdebugMessage("cut activity = %e rhs(nlrow) = %e\n", cutactivity, nlrowaggr->rhs);
+   SCIPdebugMsg(scip, "cut activity = %e rhs(nlrow) = %e\n", cutactivity, nlrowaggr->rhs);
 
    /* set rhs of the cut (substract the constant part of the cut) */
    SCIP_CALL( SCIPchgRowRhs(scip, cut, nlrowaggr->rhs - cutconstant) );
@@ -2513,7 +2509,7 @@ SCIP_RETCODE computeCut(
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
-   SCIPdebugMessage("EC cut <%s>: act=%f eff=%f rank=%d range=%e\n",
+   SCIPdebugMsg(scip, "EC cut <%s>: act=%f eff=%f rank=%d range=%e\n",
       SCIProwGetName(cut), SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut),
       SCIProwGetRank(cut), SCIPgetRowMaxCoef(scip, cut) / SCIPgetRowMinCoef(scip, cut) );
 
@@ -2526,13 +2522,13 @@ SCIP_RETCODE computeCut(
       {
          SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
          *separated = TRUE;
-         SCIPdebugMessage("added separating cut\n");
+         SCIPdebugMsg(scip, "added separating cut\n");
       }
 
       if( !(*cutoff) && !islocalcut )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-         SCIPdebugMessage("added cut to cut pool\n");
+         SCIPdebugMsg(scip, "added cut to cut pool\n");
       }
    }
 
@@ -2561,7 +2557,7 @@ SCIP_Bool isPossibleToComputeCut(
 
    if( !SCIPnlrowIsInNLP(nlrowaggr->nlrow) )
    {
-      SCIPdebugMessage("nlrow is not in NLP anymore\n");
+      SCIPdebugMsg(scip, "nlrow is not in NLP anymore\n");
       return FALSE;
    }
 
@@ -2574,14 +2570,14 @@ SCIP_Bool isPossibleToComputeCut(
       if( SCIPisInfinity(scip, REALABS(SCIPvarGetLbLocal(var))) || SCIPisInfinity(scip, REALABS(SCIPvarGetUbLocal(var)))
             || SCIPisInfinity(scip, REALABS(SCIPgetSolVal(scip, sol, var))) )
       {
-         SCIPdebugMessage("nlrow aggregation contains unbounded variables\n");
+         SCIPdebugMsg(scip, "nlrow aggregation contains unbounded variables\n");
          return FALSE;
       }
 
       /* check whether the variable has been fixed and is in one edge-concave aggregation */
       if( nlrowaggr->quadvar2aggr[i] >= 0 && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       {
-         SCIPdebugMessage("nlrow aggregation contains fixed variables in an e.c. aggregation\n");
+         SCIPdebugMsg(scip, "nlrow aggregation contains fixed variables in an e.c. aggregation\n");
          return FALSE;
       }
    }
@@ -2605,12 +2601,12 @@ SCIP_RETCODE separateCuts(
 
    assert(*result == SCIP_DIDNOTRUN);
 
-   SCIPdebugMessage("separate cuts...\n");
+   SCIPdebugMsg(scip, "separate cuts...\n");
 
    /* skip if there are no nonlinear row aggregations */
    if( sepadata->nnlrowaggrs == 0 )
    {
-      SCIPdebugMessage("no aggregations exists -> skip call\n");
+      SCIPdebugMsg(scip, "no aggregations exists -> skip call\n");
       return SCIP_OKAY;
    }
 
@@ -2634,11 +2630,11 @@ SCIP_RETCODE separateCuts(
 
       *result = (*result == SCIP_DIDNOTRUN) ? SCIP_DIDNOTFIND : *result;
 
-      SCIPdebugMessage("try to compute a cut for nonlinear row aggregation %d\n", i);
+      SCIPdebugMsg(scip, "try to compute a cut for nonlinear row aggregation %d\n", i);
 
       /* compute and add cut */
       SCIP_CALL( computeCut(scip, sepa, sepadata, nlrowaggr, sol, &separated, &cutoff) );
-      SCIPdebugMessage("found a cut: %s cutoff: %s\n", separated ? "yes" : "no", cutoff ? "yes" : "no");
+      SCIPdebugMsg(scip, "found a cut: %s cutoff: %s\n", separated ? "yes" : "no", cutoff ? "yes" : "no");
 
       /* stop if the current node gets cut off */
       if( cutoff )
@@ -2715,7 +2711,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolEccuts)
    /* mark that we should search again for nonlinear row aggregations */
    sepadata->searchedforaggr = FALSE;
 
-   SCIPdebugMessage("exitsol\n");
+   SCIPdebugMsg(scip, "exitsol\n");
 
    return SCIP_OKAY;
 }
@@ -2744,7 +2740,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
    /* skip if the LP is not constructed yet */
    if( !SCIPisNLPConstructed(scip) )
    {
-      SCIPdebugMessage("Skip since NLP is not constructed yet.\n");
+      SCIPdebugMsg(scip, "Skip since NLP is not constructed yet.\n");
       return SCIP_OKAY;
    }
 
@@ -2767,7 +2763,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
 
       SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
 
-      SCIPdebugMessage("search for nonlinear row aggregations\n");
+      SCIPdebugMsg(scip, "search for nonlinear row aggregations\n");
       for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
       {
          SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];

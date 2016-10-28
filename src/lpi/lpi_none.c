@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -204,6 +204,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
 
+#ifndef NDEBUG
+   {
+      /* perform check that no new rows are added - this is forbidden */
+      int j;
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+   }
+#endif
+
    lpi->ncols += ncols;
 
    return SCIP_OKAY;
@@ -271,6 +280,15 @@ SCIP_RETCODE SCIPlpiAddRows(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
+
+#ifndef NDEBUG
+   /* perform check that no new columns are added - this is forbidden */
+   {
+      int j;
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < lpi->ncols );
+   }
+#endif
 
    lpi->nrows += nrows;
 
@@ -348,6 +366,24 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {  /*lint --e{715}*/
+   int j;
+
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+
+   for (j = 0; j < ncols; ++j)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+   }
+
    return SCIP_OKAY;
 }
 

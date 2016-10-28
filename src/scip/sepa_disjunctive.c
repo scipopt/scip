@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,6 +23,10 @@
  * "A complementarity-based partitioning and disjunctive cut algorithm for mathematical programming problems with
  * equilibrium constraints"@n
  * Júdice, J.J., Sherali, H.D., Ribeiro, I.M., Faustino, A.M., Journal of Global Optimization 36(1), 89–114 (2006)
+ *
+ * Cut coefficients belonging to integer variables can be strengthened by the 'monoidal cut strengthening' procedure, see@n
+ * "Strengthening cuts for mixed integer programs"@n
+ * Egon Balas, Robert G. Jeroslow, European Journal of Operational Research, Volume 4, Issue 4, 1980, Pages 224-234
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,6 +50,7 @@
 #define DEFAULT_MAXRANK              20 /**< maximal rank of a cut that could not be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXWEIGHTRANGE    1e+03 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+#define DEFAULT_STRENGTHEN         TRUE /**< strengthen cut if integer variables are present */
 
 #define DEFAULT_MAXDEPTH             -1 /**< node depth of separating cuts (-1: no limit) */
 #define DEFAULT_MAXROUNDS            25 /**< maximal number of separation rounds in a branching node (-1: no limit) */
@@ -54,10 +59,13 @@
 #define DEFAULT_MAXINVCUTSROOT      250 /**< maximal number of cuts investigated per iteration in the root node */
 #define DEFAULT_MAXCONFSDELAY    100000 /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
 
+#define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
+
 
 /** separator data */
 struct SCIP_SepaData
 {
+   SCIP_Bool             strengthen;         /**< strengthen cut if integer variables are present */
    SCIP_CONSHDLR*        conshdlr;           /**< SOS1 constraint handler */
    SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    int                   maxrank;            /**< maximal rank of a cut that could not be scaled to integral coefficients (-1: unlimited) */
@@ -186,8 +194,11 @@ SCIP_RETCODE generateDisjCutSOS1(
    int                   ncols,              /**< number of LP columns */
    int                   ndisjcuts,          /**< number of disjunctive cuts found so far */
    SCIP_Bool             scale,              /**< should cut be scaled */
-   SCIP_Real             cutlhs1,            /**< left hand side of the first sum of simplex rows */
-   SCIP_Real             cutlhs2,            /**< left hand side of the second sum of simplex rows */
+   SCIP_Bool             strengthen,         /**< should cut be strengthened if integer variables are present */
+   SCIP_Real             cutlhs1,            /**< left hand side of the first simplex row */
+   SCIP_Real             cutlhs2,            /**< left hand side of the second simplex row */
+   SCIP_Real             bound1,             /**< bound of first simplex row */
+   SCIP_Real             bound2,             /**< bound of second simplex row */
    SCIP_Real*            simplexcoefs1,      /**< simplex coefficients of first row */
    SCIP_Real*            simplexcoefs2,      /**< simplex coefficients of second row */
    SCIP_Real*            cutcoefs,           /**< pointer to store cut coefficients (length: nscipvars) */
@@ -229,6 +240,10 @@ SCIP_RETCODE generateDisjCutSOS1(
    else
       sgn = -1.0;
 
+   /* check bounds */
+   if ( SCIPisInfinity(scip, REALABS(bound1)) || SCIPisInfinity(scip, REALABS(bound2)) )
+      strengthen = FALSE;
+
    /* compute left hand side of row (a later update is possible, see below) */
    cutlhs = sgn * cutlhs1 * cutlhs2;
 
@@ -244,7 +259,23 @@ SCIP_RETCODE generateDisjCutSOS1(
       {
          lb = SCIPcolGetLb(col);
 
-         cutcoefs[ind] = MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
+         /* for integer variables we may obtain stronger coefficients */
+         if ( strengthen && SCIPcolIsIntegral(col) )
+         {
+            SCIP_Real mval;
+            SCIP_Real mvalfloor;
+            SCIP_Real mvalceil;
+
+            mval = (cutlhs2 * simplexcoefs1[nonbasicnumber] - cutlhs1 * simplexcoefs2[nonbasicnumber]) / (cutlhs2 * bound1 + cutlhs1 * bound2);
+            mvalfloor = SCIPfloor(scip, mval);
+            mvalceil = SCIPceil(scip, mval);
+
+            cutcoefs[ind] = MIN(sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] - mvalfloor * bound1), sgn * cutlhs1 * (simplexcoefs2[nonbasicnumber] + mvalceil * bound2));
+            assert( SCIPisFeasLE(scip, cutcoefs[ind], MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
+         }
+         else
+            cutcoefs[ind] = MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
+
          cutlhs += cutcoefs[ind] * lb;
          ++nonbasicnumber;
       }
@@ -252,7 +283,23 @@ SCIP_RETCODE generateDisjCutSOS1(
       {
          ub = SCIPcolGetUb(col);
 
-         cutcoefs[ind] = MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
+         /* for integer variables we may obtain stronger coefficients */
+         if ( strengthen && SCIPcolIsIntegral(col) )
+         {
+            SCIP_Real mval;
+            SCIP_Real mvalfloor;
+            SCIP_Real mvalceil;
+
+            mval = (cutlhs2 * simplexcoefs1[nonbasicnumber] - cutlhs1 * simplexcoefs2[nonbasicnumber]) / (cutlhs2 * bound1 + cutlhs1 * bound2);
+            mvalfloor = SCIPfloor(scip, -mval);
+            mvalceil = SCIPceil(scip, -mval);
+
+            cutcoefs[ind] = MAX(sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] + mvalfloor * bound1), sgn * cutlhs1 * (simplexcoefs2[nonbasicnumber] - mvalceil * bound2));
+            assert( SCIPisFeasLE(scip, -cutcoefs[ind], -MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
+         }
+         else
+            cutcoefs[ind] = MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
+
          cutlhs += cutcoefs[ind] * ub;
          ++nonbasicnumber;
       }
@@ -339,33 +386,19 @@ SCIP_RETCODE generateDisjCutSOS1(
     */
    if ( scale )
    {
-      int maxdepth;
-      int depth;
       SCIP_Longint maxdnom;
       SCIP_Real maxscale;
 
-      depth = SCIPgetDepth(scip);
-      assert( depth >= 0 );
-      maxdepth = SCIPgetMaxDepth(scip);
-      if ( depth == 0 )
+      assert( SCIPgetDepth(scip) >= 0 );
+      if( SCIPgetDepth(scip) == 0 )
       {
-         maxdnom = 1000;
-         maxscale = 1000.0;
-      }
-      else if ( depth <= maxdepth/4 )
-      {
-         maxdnom = 1000;
-         maxscale = 1000.0;
-      }
-      else if ( depth <= maxdepth/2 )
-      {
-         maxdnom = 100;
-         maxscale = 100.0;
+	 maxdnom = 100;
+	 maxscale = 100.0;
       }
       else
       {
-         maxdnom = 10;
-         maxscale = 10.0;
+	 maxdnom = 10;
+	 maxscale = 10.0;
       }
 
       SCIP_CALL( SCIPmakeRowIntegral(scip, *row, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom, maxscale, TRUE, madeintegral) );
@@ -547,6 +580,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          return SCIP_OKAY;
    }
 
+   /* check accuracy of rows */
+   for (j = 0; j < nrows; ++j)
+   {
+      SCIP_ROW* row;
+
+      row = rows[j];
+
+      if ( ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER  && ! SCIPisEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) )
+           || ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER && ! SCIPisEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) ) )
+         return SCIP_OKAY;
+   }
+
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
@@ -678,6 +723,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_Bool madeintegral;
       SCIP_Real cutlhs1;
       SCIP_Real cutlhs2;
+      SCIP_Real bound1;
+      SCIP_Real bound2;
       SCIP_ROW* row = NULL;
       SCIP_VAR* var;
       SCIP_COL* col;
@@ -708,8 +755,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          varrank[ind] = getVarRank(scip, binvrow, rowsmaxval, sepadata->maxweightrange, rows, nrows);
       cutrank = MAX(cutrank, varrank[ind]);
 
-      /* get right hand side of simplex talbeau row */
+      /* get right hand side and bound of simplex talbeau row */
       cutlhs1 = SCIPcolGetPrimsol(col);
+      if ( SCIPisFeasPositive(scip, cutlhs1) )
+         bound1 = SCIPcolGetUb(col);
+      else
+         bound1 = SCIPcolGetLb(col);
 
 
       /* determine second simplex row */
@@ -731,11 +782,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          varrank[ind] = getVarRank(scip, binvrow, rowsmaxval, sepadata->maxweightrange, rows, nrows);
       cutrank = MAX(cutrank, varrank[ind]);
 
-      /* get right hand side of simplex talbeau row */
+      /* get right hand side and bound of simplex talbeau row */
       cutlhs2 = SCIPcolGetPrimsol(col);
+      if ( SCIPisFeasPositive(scip, cutlhs2) )
+         bound2 = SCIPcolGetUb(col);
+      else
+         bound2 = SCIPcolGetLb(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, cutlhs1, cutlhs2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
       if ( row == NULL )
          continue;
 
@@ -783,7 +838,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          *result = SCIP_DIDNOTFIND;
    }
 
-   SCIPdebugMessage("Number of found disjunctive cuts: %d.\n", ndisjcuts);
+   SCIPdebugMsg(scip, "Number of found disjunctive cuts: %d.\n", ndisjcuts);
 
    /* free buffer arrays */
    SCIPfreeBufferArrayNull(scip, &cutcoefs);
@@ -827,6 +882,10 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolDisjunctive) );
 
    /* add separator parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/strengthen",
+         "strengthen cut if integer variables are present.",
+         &sepadata->strengthen, TRUE, DEFAULT_STRENGTHEN, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxdepth",
          "node depth of separating bipartite disjunctive cuts (-1: no limit)",
          &sepadata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );

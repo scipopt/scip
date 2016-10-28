@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,11 +29,28 @@
  * and query information about the solution. Although it includes a few SCIP header files, e.g., because it uses SCIP's
  * return codes, it can be used independently of any SCIP instance.
  *
+ * The basis status for (column) variables are as follows:
+ * - If x_j = lb, then j is at its lower bound (SCIP_BASESTAT_LOWER).
+ * - If x_j = ub, then j is at its lower bound (SCIP_BASESTAT_UPPER).
+ * - If x_j is in the basis, it has SCIP_BASESTAT_BASIC status.
+ * - If x_j is free and non-basic, it has SCIP_BASESTAT_ZERO status.
+ *
+ * The basis status for (row) slack variables are:
+ * - If (A * x)_i = lhs, then i is at its lower bound (SCIP_BASESTAT_LOWER).
+ * - If (A * x)_i = rhs, then i is at its upper bound (SCIP_BASESTAT_UPPER).
+ * - If the slack variable for row i is basic, it has SCIP_BASESTAT_BASIC status.
+ *
+ * If the solvers use their status differently, the have to be corrected.
+ *
  * In the methods accessing information about the (inverse of the) basis matrix, the interface assumes the following
  * column-oriented format: slack variables of rows have coefficient +1 and the basis matrix is a regular m times m
  * submatrix of (A,I), where m is the number of rows and I is the identity matrix. This means that if, internally, the
  * LP solver uses coefficients -1 for some of the slack variables, then rows associated with slacks variables whose
  * coefficient is -1 should be negated in order to return the result in terms of the LP interface definition.
+ *
+ * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
+ * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
+ * is an error, if matrix entries are added for rows or columns that have not been added before.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

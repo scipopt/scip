@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -158,12 +158,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
    if( plungedepth > maxplungedepth )
    {
       /* we don't want to plunge again: select best node from the tree */
-      SCIPdebugMessage("plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
+      SCIPdebugMsg(scip, "plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
       if( SCIPgetNNodes(scip) % bestnodefreq == 0 )
          *selnode = SCIPgetBestboundNode(scip);
       else
          *selnode = SCIPgetBestNode(scip);
-      SCIPdebugMessage("  -> best node   : lower=%g\n",
+      SCIPdebugMsg(scip, "  -> best node   : lower=%g\n",
          *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
    }
    else
@@ -192,7 +192,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
          maxbound = lowerbound + maxplungequot * (cutoffbound - lowerbound);
       }
 
-      SCIPdebugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
+      SCIPdebugMsg(scip, "plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
          minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);
 
       /* we want to plunge again: prefer children over siblings, and siblings over leaves,
@@ -203,7 +203,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
       if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
       {
          *selnode = node;
-         SCIPdebugMessage("  -> selected prio child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
+         SCIPdebugMsg(scip, "  -> selected prio child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
       }
       else
       {
@@ -211,7 +211,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
          if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
          {
             *selnode = node;
-            SCIPdebugMessage("  -> selected best child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
+            SCIPdebugMsg(scip, "  -> selected best child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
          }
          else
          {
@@ -219,7 +219,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
             if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
             {
                *selnode = node;
-               SCIPdebugMessage("  -> selected prio sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
+               SCIPdebugMsg(scip, "  -> selected prio sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
             }
             else
             {
@@ -227,7 +227,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
                if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
                {
                   *selnode = node;
-                  SCIPdebugMessage("  -> selected best sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
+                  SCIPdebugMsg(scip, "  -> selected best sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
                }
                else
                {
@@ -235,7 +235,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectHybridestim)
                      *selnode = SCIPgetBestboundNode(scip);
                   else
                      *selnode = SCIPgetBestNode(scip);
-                  SCIPdebugMessage("  -> selected best leaf: estimate=%g\n",
+                  SCIPdebugMsg(scip, "  -> selected best leaf: estimate=%g\n",
                      *selnode != NULL ? SCIPnodeGetEstimate(*selnode) : SCIPinfinity(scip));
                }
             }

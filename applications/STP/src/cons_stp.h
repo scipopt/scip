@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,43 @@ SCIP_RETCODE SCIPcreateConsStp(
    const char*           name,               /**< name of constraint */
    GRAPH*                graph               /**< graph data structure */
    );
+
+/** dual ascent heuristic */
+extern
+SCIP_RETCODE SCIPdualAscentStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval,             /**< pointer to store objective value */
+   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
+   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
+   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
+   int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
+   int                   root,               /**< the root */
+   int                   nruns,              /**< number of dual ascent runs */
+   char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
+   char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
+   );
+
+/** dual ascent heuristic for the PCSPG and the MWCSP */
+extern
+SCIP_RETCODE SCIPdualAscentPcStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval,             /**< pointer to store objective value */
+   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
+   int                   nruns               /**< number of dual ascent runs */
+   );
+
+/** dual ascent heuristic, adding cuts */
+extern
+SCIP_RETCODE SCIPdualAscentAddCutsStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   nruns               /**< number of dual ascent runs */
+   );
+
 
 #ifdef __cplusplus
 }

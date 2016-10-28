@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -183,7 +183,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
    assert(hashdata->nvars == 2);
 
    /* if we have only two variables we store at each 16 bits of the hash value the index of a variable */
-   hashval = (SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
+   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 
    return hashval;
 }
@@ -253,7 +253,7 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
     * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the data
     */
    for( v = 1; v >= 0; --v )
-      hashval |= (1 << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
+      hashval |= (1U << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
 
    return hashval;
 }
@@ -1018,11 +1018,11 @@ SCIP_RETCODE extractGates(
 #ifdef SCIP_DEBUG
       if( ngateconss == nlogicorvars )
       {
-	 SCIPdebugMessage("Following constraints form a set-partitioning constraint.\n");
+	 SCIPdebugMsg(scip, "Following constraints form a set-partitioning constraint.\n");
       }
       else
       {
-	 SCIPdebugMessage("Following constraints form an and-constraint.\n");
+	 SCIPdebugMsg(scip, "Following constraints form an and-constraint.\n");
       }
 #endif
 
@@ -1076,7 +1076,7 @@ SCIP_RETCODE extractGates(
 	       local, modifiable, dynamic, removable, stickingatnode) );
 
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMessage("-------------->\n");
+	 SCIPdebugMsg(scip, "-------------->\n");
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
 	 ++(*naddconss);
@@ -1100,7 +1100,7 @@ SCIP_RETCODE extractGates(
 	       local, modifiable, dynamic, removable, stickingatnode) );
 
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMessage("-------------->\n");
+	 SCIPdebugMsg(scip, "-------------->\n");
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
 	 ++(*naddconss);
@@ -1644,7 +1644,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 		  SCIP_CALL( SCIPsetConsRemovable(scip, setppc, removable) );
 		  SCIP_CALL( SCIPsetConsStickingAtNode(scip, setppc, stickingatnode) );
 
-		  SCIPdebugMessage("Following logicor is redundant to the set-partitioning constraint.\n");
+		  SCIPdebugMsg(scip, "Following logicor is redundant to the set-partitioning constraint.\n");
 		  SCIPdebugPrintCons(scip, logicor, NULL);
 		  SCIPdebugPrintCons(scip, setppc, NULL);
 	       }
@@ -1655,7 +1655,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
 		  assert(SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PACKING);
 
-		  SCIPdebugMessage("Following logicor and set-packing constraints form a set-partitioning constraint.\n");
+		  SCIPdebugMsg(scip, "Following logicor and set-packing constraints form a set-partitioning constraint.\n");
 		  SCIPdebugPrintCons(scip, logicor, NULL);
 		  SCIPdebugPrintCons(scip, setppc, NULL);
 
@@ -1666,7 +1666,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 			local, modifiable, dynamic, removable, stickingatnode) );
 
 		  SCIP_CALL( SCIPaddCons(scip, newcons) );
-		  SCIPdebugMessage("-------------->\n");
+		  SCIPdebugMsg(scip, "-------------->\n");
 		  SCIPdebugPrintCons(scip, newcons, NULL);
 
 		  ++(*naddconss);

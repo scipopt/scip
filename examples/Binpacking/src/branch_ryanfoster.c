@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,12 +23,16 @@
  *
  * @page BRANCHING Ryan/Foster branching
  *
- * Ryan/Foster branching is a very useful branching rule  for the integer program model in use. A
+ * Ryan/Foster branching is a very useful branching rule for the integer program model in use. A
  * standard variable branching has the disadvantage that the zero branch is more or less useless because
  * we only forbid one packing out of exponential many. On the other hand, the branch fixing a packing reduces the problem since
  * certain items are packed. This leads to a very unbalanced search tree.
  *
- * The branching idea of Ryan/Foster is to select a pair of items which is either a) forced to be packed together or b)
+ * The branching rule of Ryan/Foster was itroduced in@n
+ * D. M. Ryan and B. A. Foster: An Integer Programming Approach to Scheduling,
+ * In Computer scheduling of public transport: Urban passenger vehicle and crew scheduling, A. Wren editor, North-Holland 1981, 269-280.
+ *
+ * The idea is to select a pair of items which is either a) forced to be packed together or b)
  * not allowed to be packed together. Note that in both cases, it is allowed to use packings
  * which contain none of the two items.
  *
@@ -123,7 +127,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -206,7 +210,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    }
    SCIPfreeBufferArray(scip, &pairweights);
 
-   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n",
+   SCIPdebugMsg(scip, "branch on order pair <%d,%d> with weight <%g>\n",
       SCIPprobdataGetIds(probdata)[id1], SCIPprobdataGetIds(probdata)[id2], bestvalue);
 
    /* create the branch-and-bound tree child nodes of the current node */

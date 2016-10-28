@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,11 +70,13 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/disp_default.h"
+#include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_bound.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
+#include "scip/heur_completesol.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"
@@ -129,6 +131,7 @@
 #include "scip/presol_domcol.h"
 #include "scip/presol_implfree.h"
 #include "scip/presol_dualagg.h"
+#include "scip/presol_dualcomp.h"
 #include "scip/presol_dualinfer.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
@@ -155,6 +158,7 @@
 #include "scip/reader_gms.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
+#include "scip/reader_mst.h"
 #include "scip/reader_opb.h"
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"

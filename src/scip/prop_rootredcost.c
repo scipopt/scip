@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,6 +51,18 @@
 
 /**@} */
 
+/**@name Default parameter values
+ *
+ * @{
+ */
+#define DEFAULT_ONLYBINARY        FALSE /**< should only binary variables be propagated? */
+#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
+                                         *   the reductions are always valid, but installing an upper bound on priced
+                                         *   variables may lead to problems in pricing (existing variables at their upper
+                                         *   bound may be priced again since they may have negative reduced costs) */
+
+/**@} */
+
 
 /*
  * Data structures
@@ -65,6 +77,8 @@ struct SCIP_PropData
    int                   nredcostbinvars;    /**< number of binary variables with non-zero root reduced cost */
    int                   glbfirstnonfixed;   /**< index of first globally non-fixed binary variable */
    SCIP_Bool             initialized;        /**< is the propagator data initialized */
+   SCIP_Bool             onlybinary;         /**< should only binary variables be propagated? */
+   SCIP_Bool             force;              /**< should the propagator be forced even if active pricer are present? */
 };
 
 
@@ -215,7 +229,7 @@ SCIP_RETCODE propdataInit(
 
    /* count binary variables with non-zero root reduced cost */
    nredcostbinvars = countNonZeroRootRedcostVars(scip, vars, nbinvars);
-   SCIPdebugMessage("There are %d (poor) binary variables with non-zero root reduced cost <%s>.\n", nredcostbinvars, SCIPgetProbName(scip));
+   SCIPdebugMsg(scip, "There are %d (poor) binary variables with non-zero root reduced cost <%s>.\n", nredcostbinvars, SCIPgetProbName(scip));
 
    /* count non-binary variables with non-zero root reduced cost */
    nredcostvars = countNonZeroRootRedcostVars(scip, &vars[nbinvars], nvars - nbinvars);
@@ -230,7 +244,7 @@ SCIP_RETCODE propdataInit(
       k = 0;
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->redcostvars, nredcostvars) );
 
-      SCIPdebugMessage("Store non-zero root reduced cost variables at address <%p>.\n", (void*)propdata->redcostvars);
+      SCIPdebugMsg(scip, "Store non-zero root reduced cost variables at address <%p>.\n", (void*)propdata->redcostvars);
 
       for( v = 0; v < nvars; ++v )
       {
@@ -275,7 +289,7 @@ SCIP_RETCODE propdataInit(
 
       assert(k == nredcostvars);
 
-      SCIPdebugMessage("variables with non-zero redcostective coefficient: %d binaries, %d non-binaries\n", nredcostbinvars, nredcostvars - nredcostbinvars);
+      SCIPdebugMsg(scip, "variables with non-zero redcostective coefficient: %d binaries, %d non-binaries\n", nredcostbinvars, nredcostvars - nredcostbinvars);
    }
 
    propdata->nredcostvars = nredcostvars;
@@ -400,7 +414,7 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
           */
          assert(!(*cutoff));
 
-         SCIPdebugMessage("globally fixed binary variable <%s> [%g,%g] bestroot sol <%g>, redcost <%g>, lpobj <%g>\n",
+         SCIPdebugMsg(scip, "globally fixed binary variable <%s> [%g,%g] bestroot sol <%g>, redcost <%g>, lpobj <%g>\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             SCIPvarGetBestRootSol(var), SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootLPObjval(var) );
 
@@ -425,12 +439,12 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
           * the reduced cost are positive and the upper bound if the reduced cost are negative. For binary variables
           * that is 0 for the lower bound and 1 for the upper bound.
           */
-         SCIPdebugMessage("interrupt propagation for binary variables after %d from %d binary variables\n",
+         SCIPdebugMsg(scip, "interrupt propagation for binary variables after %d from %d binary variables\n",
             v, propdata->nredcostbinvars);
 
          if( *cutoff )
          {
-            SCIPdebugMessage("detected cutoff: binary variable <%s> [%g,%g], redcost <%g>, rootsol <%g>, rootlpobjval <%g>\n",
+            SCIPdebugMsg(scip, "detected cutoff: binary variable <%s> [%g,%g], redcost <%g>, rootsol <%g>, rootlpobjval <%g>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
                SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootSol(var), SCIPvarGetBestRootLPObjval(var));
          }
@@ -570,6 +584,10 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   /* do nothing if active pricer are present and force flag is not TRUE */
+   if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    /* get current cutoff bound */
    cutoffbound = SCIPgetCutoffbound(scip);
 
@@ -597,9 +615,9 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
     */
    propdata->lastcutoffbound = cutoffbound;
 
-   SCIPdebugMessage("searching for root reduced cost fixings\n");
-   SCIPdebugMessage("-> cutoffbound <%g>\n", cutoffbound);
-   SCIPdebugMessage("-> LP objective value <%g>\n", lpobjval);
+   SCIPdebugMsg(scip, "searching for root reduced cost fixings\n");
+   SCIPdebugMsg(scip, "-> cutoffbound <%g>\n", cutoffbound);
+   SCIPdebugMsg(scip, "-> LP objective value <%g>\n", lpobjval);
 
    *result = SCIP_DIDNOTFIND;
    nchgbds = 0;
@@ -608,20 +626,23 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    /* propagate the binary variables with non-zero root reduced cost */
    SCIP_CALL( propagateBinaryBestRootRedcost(scip, propdata, cutoffbound, &nchgbds, &cutoff) );
 
-   /* check reduced costs for non-binary variables that were columns of the root LP */
-   for( v = propdata->nredcostbinvars; v < nredcostvars && !cutoff; ++v )
+   if( !propdata->onlybinary )
    {
-      SCIP_VAR* var;
-      SCIP_Bool tightened;
+      /* check reduced costs for non-binary variables that were columns of the root LP */
+      for( v = propdata->nredcostbinvars; v < nredcostvars && !cutoff; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Bool tightened;
 
-      var = redcostvars[v];
-      assert(var != NULL);
+         var = redcostvars[v];
+         assert(var != NULL);
 
-      /* try to tighten the variable bound */
-      SCIP_CALL( propagateRootRedcostVar(scip, var, cutoffbound, &cutoff, &tightened) );
+         /* try to tighten the variable bound */
+         SCIP_CALL( propagateRootRedcostVar(scip, var, cutoffbound, &cutoff, &tightened) );
 
-      if( tightened )
-         nchgbds++;
+         if( tightened )
+            nchgbds++;
+      }
    }
 
    /* evaluate propagation results */
@@ -634,7 +655,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    else if( nchgbds > 0 )
       (*result) = SCIP_REDUCEDDOM;
 
-   SCIPdebugMessage("tightened %d variable domains (%u cutoff)\n", nchgbds, cutoff);
+   SCIPdebugMsg(scip, "tightened %d variable domains (%u cutoff)\n", nchgbds, cutoff);
 
    return SCIP_OKAY;
 }
@@ -667,6 +688,15 @@ SCIP_RETCODE SCIPincludePropRootredcost(
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyRootredcost) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeRootredcost) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolRootredcost) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/onlybinary",
+         "should only binary variables be propagated?",
+         &propdata->onlybinary, TRUE, DEFAULT_ONLYBINARY, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/force",
+         "should the propagator be forced even if active pricer are present?",
+         &propdata->force, TRUE, DEFAULT_FORCE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

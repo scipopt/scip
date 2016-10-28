@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,7 +74,7 @@ SCIP_RETCODE addCut(
 
    /* calculate activity of cut */
    activity = val1 * solval1 + val2 * solval2;
-   /*debugMessage(" -> %g<%s>[%g] + %g<%s>[%g] <= %g (act: %g)\n", 
+   /*SCIPdebugMsg(scip, " -> %g<%s>[%g] + %g<%s>[%g] <= %g (act: %g)\n",
      val1, SCIPvarGetName(var1), solval1, val2, SCIPvarGetName(var2), solval2, rhs, activity);*/
 
    /* check, if cut is violated */
@@ -94,7 +94,7 @@ SCIP_RETCODE addCut(
       SCIProwChgRank(cut, 1);
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage(" -> found cut (activity = %g): ", activity);
+      SCIPdebugMsg(scip, " -> found cut (activity = %g): ", activity);
       SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
@@ -143,7 +143,7 @@ SCIP_RETCODE separateCuts(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPdebugMessage("searching for implied bound cuts\n");
+   SCIPdebugMsg(scip, "searching for implied bound cuts\n");
 
    /* search binary variables for violated implications */
    for( i = 0; i < nfracs; i++ )
@@ -167,7 +167,7 @@ SCIP_RETCODE separateCuts(
       impltypes = SCIPvarGetImplTypes(fracvars[i], TRUE);
       implbounds = SCIPvarGetImplBounds(fracvars[i], TRUE);
 
-      /*debugMessage("%d implications for <%s>[%g] == 1\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
+      /*SCIPdebugMsg(scip, "%d implications for <%s>[%g] == 1\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
 
       /* try to add cuts for implications of x == 1
        *    x == 1 -> y <= p:  y <= ub + x * (p - ub)  <==>  y + (ub - p) * x <=  ub
@@ -230,7 +230,7 @@ SCIP_RETCODE separateCuts(
       impltypes = SCIPvarGetImplTypes(fracvars[i], FALSE);
       implbounds = SCIPvarGetImplBounds(fracvars[i], FALSE);
 
-      /*debugMessage("%d implications for <%s>[%g] == 0\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
+      /*SCIPdebugMsg(scip, "%d implications for <%s>[%g] == 0\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
 
       /* try to add cuts for implications of x == 0
        *    x == 0 -> y <= p:  y <= p + x * (ub - p)  <==>  y + (p - ub) * x <=  p

@@ -1,12 +1,12 @@
-/* $Id: for_one.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
-# ifndef CPPAD_FOR_ONE_INCLUDED
-# define CPPAD_FOR_ONE_INCLUDED
+// $Id$
+# ifndef CPPAD_FOR_ONE_HPP
+# define CPPAD_FOR_ONE_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -23,15 +23,10 @@ $spell
 $$
 
 
-$index partial, first order driver$$
-$index first, order partial driver$$
-$index driver, first order partial$$
 
-$index easy, partial$$
-$index driver, easy partial$$
-$index partial, easy$$
 
 $section First Order Partial Derivative: Driver Routine$$
+$mindex easy$$
 
 $head Syntax$$
 $icode%dy% = %f%.ForOne(%x%, %j%)%$$
@@ -43,10 +38,10 @@ $cref/AD function/glossary/AD Function/$$ corresponding to $icode f$$.
 The syntax above sets $icode dy$$ to the
 partial of $latex F$$ with respect to $latex x_j$$; i.e.,
 $latex \[
-dy 
-= \D{F}{ x_j } (x) 
-= \left[ 
-	\D{ F_0 }{ x_j } (x) , \cdots , \D{ F_{m-1} }{ x_j } (x) 
+dy
+= \D{F}{ x_j } (x)
+= \left[
+	\D{ F_0 }{ x_j } (x) , \cdots , \D{ F_{m-1} }{ x_j } (x)
 \right]
 \] $$
 
@@ -64,7 +59,7 @@ $codei%
 	const %Vector% &%x%
 %$$
 (see $cref/Vector/ForOne/Vector/$$ below)
-and its size 
+and its size
 must be equal to $icode n$$, the dimension of the
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
@@ -77,7 +72,7 @@ $codei%
 %$$
 an is less than $icode n$$,
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
-It specifies the component of $icode F$$ 
+It specifies the component of $icode F$$
 for which we are computing the partial derivative.
 
 $head dy$$
@@ -105,7 +100,7 @@ if this is not the case.
 
 $head ForOne Uses Forward$$
 After each call to $cref Forward$$,
-the object $icode f$$ contains the corresponding 
+the object $icode f$$ contains the corresponding
 $cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
 After a call to $code ForOne$$,
 the zero order Taylor coefficients correspond to
@@ -116,7 +111,7 @@ $head Example$$
 $children%
 	example/for_one.cpp
 %$$
-The routine 
+The routine
 $cref/ForOne/for_one.cpp/$$ is both an example and test.
 It returns $code true$$, if it succeeds and $code false$$ otherwise.
 
@@ -141,7 +136,7 @@ Vector ADFun<Base>::ForOne(const Vector &x, size_t j)
 	CPPAD_ASSERT_KNOWN(
 		x.size() == n,
 		"ForOne: Length of x not equal domain dimension for f"
-	); 
+	);
 	CPPAD_ASSERT_KNOWN(
 		j < n,
 		"ForOne: the index j is not less than domain dimension for f"

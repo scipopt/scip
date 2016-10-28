@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.2.0.1"
+VERSION="3.2.1.2"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -32,7 +32,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
 $NAME/doc/howtoadd.dxy $NAME/doc/interfaces.dxy \
-$NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
+$NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
@@ -55,7 +55,7 @@ $NAME/check/run.sh $NAME/check/evalcheck_cluster.sh \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp \
-$NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
+$NAME/src/scip/*.c $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
@@ -63,7 +63,7 @@ $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
-$NAME/src/cppad/* $NAME/src/cppad/local/* \
+$NAME/src/cppad/* $NAME/src/cppad/local/* $NAME/src/cppad/utility/* \
 $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
@@ -75,14 +75,17 @@ $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAM
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
-$NAME/applications/MultiObjective/doc/* \
-$NAME/applications/MultiObjective/src/depend.* \
-$NAME/applications/MultiObjective/src/*.c $NAME/applications/MultiObjective/src/*.cpp $NAME/applications/MultiObjective/src/*.h \
-$NAME/applications/MultiObjective/data/*.mop \
-$NAME/applications/MultiObjective/Makefile $NAME/applications/MultiObjective/INSTALL $NAME/applications/MultiObjective/scipmip.set \
+$NAME/applications/PolySCIP/doc/* \
+$NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
+$NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
+$NAME/applications/PolySCIP/data/*.mop \
+$NAME/applications/PolySCIP/cmake/* $NAME/applications/PolySCIP/mult_zimpl/*.py \
+$NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
+$NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
+$NAME/applications/PolySCIP/CMakeLists.txt \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
-$NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.cpp $NAME/applications/STP/src/*.h \
+$NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
 $NAME/applications/STP/data/D/* \
 $NAME/applications/STP/scip-jack.sh \
@@ -146,10 +149,9 @@ $NAME/interfaces/jni/examples/JniKnapsack/Makefile $NAME/interfaces/jni/examples
 $NAME/interfaces/jni/examples/JniKnapsack/java/JniKnapsack.java \
 $NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
 $NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
-$NAME/interfaces/python/include/ $NAME/interfaces/python/lib/ \
-$NAME/interfaces/python/pyscipopt/*.pyx $NAME/interfaces/python/pyscipopt/*.pxd \
-$NAME/interfaces/python/pyscipopt/*.py $NAME/interfaces/python/tests/*.py \
-$NAME/interfaces/python/INSTALL $NAME/interfaces/python/LICENSE \
+$NAME/interfaces/python/pyscipopt/* \
+$NAME/interfaces/python/tests/*.py \
+$NAME/interfaces/python/INSTALL \
 $NAME/interfaces/python/README $NAME/interfaces/python/*.py \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \

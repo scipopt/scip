@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
+#include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
@@ -44,6 +45,8 @@
 #ifndef NDEBUG
 #include "scip/struct_tree.h"
 #endif
+
+#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
 
 #ifdef __cplusplus
 extern "C" {
@@ -872,6 +875,12 @@ int SCIPtreeGetCurrentDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** gets the maximal allowed tree depth */
+extern
+int SCIPtreeGetDepthLimit(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
@@ -914,6 +923,7 @@ void SCIPtreeMarkProbingObjChanged(
 #define SCIPtreeGetNNodes(tree)         \
    (SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree))
 #define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
+#define SCIPtreeGetDepthLimit(tree)     (MAXDEPTH)
 #define SCIPtreeProbing(tree)           ((tree)->probingroot != NULL)
 #define SCIPtreeGetProbingRoot(tree)    (tree)->probingroot
 #define SCIPtreeGetProbingDepth(tree)   (SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth((tree)->probingroot))

@@ -4,6 +4,7 @@
 # exclude patterns (uncomment them if you want to use them):
 *.[oa]
 *.pyc
+*.so
 *~
 \#*
 backup/
@@ -27,15 +28,26 @@ doc/*.tmp
 .project
 .settings/
 hooks/
+
+###############################
+## files created by `make lint`
+################################
+lint.out
+lint/gcc-include-path.lnt
+lint/lint_cmac.h
+lint/lint_cppmac.h
+lint/size-options.lnt
+
 localhooks/
 src/scip/githash.c
 settings/
-interfaces/ampl/solvers
-interfaces/ampl/check/locks
-interfaces/ampl/check/results
-interfaces/ampl/lint
-examples/CallableLibrary/lint
 unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh
 unittests/check/getlastprob.awk
+interfaces/python/.cache/
+interfaces/python/build/
+interfaces/python/include/
+interfaces/python/tests/check
+interfaces/python/pyscipopt/*.c
+interfaces/gams/gams

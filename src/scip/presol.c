@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPpresolCopyInclude(
 
    if( presol->presolcopy != NULL )
    {
-      SCIPdebugMessage("including presolver %s in subscip %p\n", SCIPpresolGetName(presol), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including presolver %s in subscip %p\n", SCIPpresolGetName(presol), (void*)set->scip);
       SCIP_CALL( presol->presolcopy(set->scip, presol) );
    }
    return SCIP_OKAY;
@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPpresolCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( timing < SCIP_PRESOLTIMING_FAST || timing > SCIP_PRESOLTIMING_ALWAYS )
+   if( timing < SCIP_PRESOLTIMING_NONE || timing > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> presolver instead.\n", name);
@@ -416,7 +416,7 @@ SCIP_RETCODE SCIPpresolExec(
    /* check, if presolver should be called with the current timing */
    if( timing & presol->timing )
    {
-      SCIPdebugMessage("calling presolver <%s> with timing %u\n", presol->name, timing);
+      SCIPsetDebugMsg(set, "calling presolver <%s> with timing %u\n", presol->name, timing);
 
       /* start timing */
       SCIPclockStart(presol->presolclock, set);

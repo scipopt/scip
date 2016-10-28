@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,6 +70,7 @@
 -esym(578,scip)           // Declaration of symbol hides symbol
 -esym(715,scip)           // Symbol not referenced
 -esym(528,consdataPrint)  // Symbol not referenced
+-esym(528,errorhandler)   // Symbol not referenced
 -esym(1712,Obj*)          // Default constructor not defined for class
 
 -esym(1740,"*::scip_")

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,7 +93,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &solvals);
 
@@ -277,7 +277,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 #endif
       }
 
-   SCIPdebugMessage(">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
+   SCIPdebugMsg(scip, ">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
 
    if( nsolsadded > 0 )
       *result = SCIP_FOUNDSOL;
@@ -301,7 +301,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 /* returns the number of checked solutions */
 int SCIPreoptsolsGetNCheckedsols(
    SCIP*                 scip
-)
+   )
 {
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
@@ -320,7 +320,7 @@ int SCIPreoptsolsGetNCheckedsols(
 /* returns the number of found improving solutions */
 int SCIPreoptsolsGetNImprovingsols(
    SCIP*                 scip
-)
+   )
 {
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,7 +49,7 @@ extern "C" {
 EXTERN
 SCIP_VAR** SCIPexprtreeGetVars(
    SCIP_EXPRTREE*        tree                /**< expression tree */
-);
+   );
 
 /** stores array of variables in expression tree */
 EXTERN
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars                /**< variables */
-);
+   );
 
 /** adds variables to the expression tree variables array */
 EXTERN
@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars                /**< variables */
-);
+   );
 
 /** prints an expression tree using variable names from variables array */
 EXTERN
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file for printing, or NULL for stdout */
-);
+   );
 
 /** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
  * Note that this is an O(n) operation!
@@ -82,7 +82,7 @@ EXTERN
 int SCIPexprtreeFindVar(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_VAR*             var                 /**< variable to search for */
-);
+   );
 
 /**@} */
 

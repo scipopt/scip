@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,6 +23,9 @@
 #ifndef __SCIP_DEF_H__
 #define __SCIP_DEF_H__
 
+#ifdef __cplusplus
+#define __STDC_LIMIT_MACROS
+#endif
 
 #include <stdio.h>
 #include <stdint.h>
@@ -40,6 +43,13 @@
       + __GNUC_MINOR__ * 10                             \
       + __GNUC_PATCHLEVEL__)
 #endif
+#endif
+
+/*
+ * define whether compiler allows variadic macros
+ */
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
 
 /*
@@ -83,9 +93,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                320 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -216,6 +226,8 @@ extern "C" {
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+
 /*
  * Global debugging settings
  */
@@ -307,9 +319,9 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
-#elif defined(__GNUC__) && defined(__linux__)
+#elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED

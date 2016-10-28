@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -22,6 +22,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#ifdef __cplusplus
+#define __STDC_LIMIT_MACROS
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -38,6 +42,8 @@
 
 /*#define CHECKMEM*/
 
+/* Uncomment the following for a warnings if buffers are not freed in the reverse order of allocation. */
+/* #define CHECKBUFFERORDER */
 
 /* if we are included in SCIP, use SCIP's message output methods */
 #ifdef SCIPdebugMessage
@@ -1096,14 +1102,16 @@ int createChunk(
 
    debugMessage("allocated new chunk %p: %d elements with size %d\n", (void*)newchunk, newchunk->storesize, newchunk->elemsize);
 
-   /* add new memory to the lazy free list */
+   /* add new memory to the lazy free list
+    * (due to the BMSisAligned assert above, we know that elemsize is divisible by the size of pointers)
+    */
    for( i = 0; i < newchunk->storesize - 1; ++i )
    {
-      freelist = (FREELIST*) ((char*) (newchunk->store) + i * chkmem->elemsize); /*lint !e826*/
-      freelist->next = (FREELIST*) ((char*) (newchunk->store) + (i + 1) * chkmem->elemsize); /*lint !e826*/
+      freelist = (FREELIST*) newchunk->store + i * chkmem->elemsize / sizeof(FREELIST*);
+      freelist->next = (FREELIST*) newchunk->store + (i + 1) * chkmem->elemsize / sizeof(FREELIST*);
    }
 
-   freelist = (FREELIST*) ((char*) (newchunk->store) + (newchunk->storesize - 1) * chkmem->elemsize); /*lint !e826*/
+   freelist = (FREELIST*) newchunk->store + (newchunk->storesize - 1) * chkmem->elemsize / sizeof(FREELIST*);
    freelist->next = chkmem->lazyfree;
    chkmem->lazyfree = (FREELIST*) (newchunk->store);
    chkmem->lazyfreesize += newchunk->storesize;
@@ -2329,8 +2337,8 @@ void BMSdisplayBlockMemory_call(
    printInfo("\n");
 }
 
-/** outputs warning messages, if there are allocated elements in the block memory */
-void BMScheckEmptyBlockMemory_call(
+/** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
+long long BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    )
 {
@@ -2347,53 +2355,57 @@ void BMScheckEmptyBlockMemory_call(
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL )
       {
-	 const CHUNK* chunk;
-	 int nchunks = 0;
-	 int nelems = 0;
-	 int neagerelems = 0;
+         const CHUNK* chunk;
+         int nchunks = 0;
+         int nelems = 0;
+         int neagerelems = 0;
 
          for( c = 0; c < chkmem->nchunks; ++c )
          {
             chunk = chkmem->chunks[c];
             assert(chunk != NULL);
-	    assert(chunk->elemsize == chkmem->elemsize);
-	    assert(chunk->chkmem == chkmem);
-	    nchunks++;
-	    nelems += chunk->storesize;
-	    if( chunk->eagerfree != NULL )
-	       neagerelems += chunk->eagerfreesize;
+            assert(chunk->elemsize == chkmem->elemsize);
+            assert(chunk->chkmem == chkmem);
+            nchunks++;
+            nelems += chunk->storesize;
+            if( chunk->eagerfree != NULL )
+               neagerelems += chunk->eagerfreesize;
 	 }
 
-	 assert(nchunks == chkmem->nchunks);
-	 assert(nelems == chkmem->storesize);
-	 assert(neagerelems == chkmem->eagerfreesize);
+         assert(nchunks == chkmem->nchunks);
+         assert(nelems == chkmem->storesize);
+         assert(neagerelems == chkmem->eagerfreesize);
 
-	 if( nelems > 0 )
-	 {
-	    allocedmem += (long long)chkmem->elemsize * (long long)nelems;
-	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
+         if( nelems > 0 )
+         {
+            allocedmem += (long long)chkmem->elemsize * (long long)nelems;
+            freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               printInfo("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
+               errorMessage("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               printInfo("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
+               errorMessage("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
             }
-	 }
-	 chkmem = chkmem->nextchkmem;
+         }
+         chkmem = chkmem->nextchkmem;
       }
    }
 
    if( allocedmem != freemem )
-      printInfo("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
+   {
+      errorMessage("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
+   }
+
+   return allocedmem - freemem;
 }
 
 
@@ -2469,10 +2481,15 @@ void BMSdestroyBufferMemory_call(
 
    if ( *buffer != NULL )
    {
-      for (i = 0; i < (*buffer)->ndata; ++i)
-      {
-         assert( ! (*buffer)->used[i] );
-         BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+      i = (*buffer)->ndata;
+      if ( i > 0 ) {
+         for (--i ; ; i--)
+         {
+            assert( ! (*buffer)->used[i] );
+            BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+            if ( i == 0 )
+               break;
+         }
       }
       BMSfreeMemoryArrayNull(&(*buffer)->data);
       BMSfreeMemoryArrayNull(&(*buffer)->size);
@@ -2933,6 +2950,13 @@ void BMSfreeBufferMemory_work(
    bufnum = buffer->firstfree-1;
    while ( bufnum > 0 && buffer->data[bufnum] != *ptr )
       --bufnum;
+
+#ifdef CHECKBUFFERORDER
+   if ( bufnum < buffer->firstfree - 1 )
+   {
+      warningMessage("[%s:%d]: freeing buffer in wrong order.\n", filename, line);
+   }
+#endif
 
 #ifndef NDEBUG
    if ( bufnum == 0 && buffer->data[bufnum] != *ptr )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,6 +28,7 @@
 #include "scip/pub_reopt.h"
 #include "scip/type_primal.h"
 #include "scip/type_retcode.h"
+#include "scip/type_misc.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
 
@@ -219,7 +220,7 @@ SCIP_Real SCIPreoptGetOldObjCoef(
    int                   idx                 /**< problem index of variable */
    );
 
-/** return the best solution of a given run.
+/** return the best solution of a given run
  *
  *  @note the returned solution is part of the original space.
  */

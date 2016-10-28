@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,6 +51,7 @@
 #include "IpIpoptData.hpp"
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
+#include "IpLapack.hpp"
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
@@ -70,6 +71,8 @@ using namespace Ipopt;
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 #define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
+
+#define DEFAULT_RANDSEED   71                /**< initial random seed */
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
@@ -161,6 +164,7 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -172,13 +176,21 @@ public:
 
    /** constructor */
    ScipNLP(
-      SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL /**< NLPI problem data */
+      SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
+      BMS_BLKMEM*        blkmem = NULL       /**< block memory */
       )
-      : nlpiproblem(nlpiproblem_), approxhessian(false)
-   { }
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), approxhessian(false)
+   {
+      assert(blkmem != NULL);
+      SCIP_CALL_ABORT_QUIET( SCIPrandomCreate(&randnumgen, blkmem, DEFAULT_RANDSEED) );
+   }
 
    /** destructor */
-   ~ScipNLP() { }
+   ~ScipNLP()
+   {
+      assert(randnumgen != NULL);
+      SCIPrandomFree(&randnumgen);
+   }
 
    /** sets NLPI data structure */
    void setNLPIPROBLEM(SCIP_NLPIPROBLEM* nlpiproblem_)
@@ -563,7 +575,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       }
 
       /* initialize Ipopt/SCIP NLP interface */
-      (*problem)->nlp = new ScipNLP(*problem);
+      (*problem)->nlp = new ScipNLP(*problem, data->blkmem);
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
@@ -595,7 +607,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
+#else
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+#endif
       {
          SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -1088,12 +1104,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* ReOptimizeNLP with Ipopt <= 3.10.3 could return a solution not within bounds if all variables are fixed (see Ipopt ticket #179) */
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 10) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 10 && IPOPT_VERSION_RELEASE > 3)
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
-#else
-         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
-#endif
       }
 
       // catch the very bad status codes
@@ -1123,7 +1134,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lasttime  = stats->TotalCPUTime();
       }
    }
-   catch( IpoptException except )
+   catch( IpoptException& except )
    {
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
@@ -2146,21 +2157,19 @@ bool ScipNLP::get_starting_point(
       else
       {
          SCIP_Real lb, ub;
-         unsigned int perturbseed;
 
          SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
-         perturbseed = 1;
          for( int i = 0; i < n; ++i )
          {
             lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
             ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
             if( lb > 0.0 )
-               x[i] = SCIPgetRandomReal(lb, lb + MAXPERTURB*MIN(1.0, ub-lb), &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
             else if( ub < 0.0 )
-               x[i] = SCIPgetRandomReal(ub - MAXPERTURB*MIN(1.0, ub-lb), ub, &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
             else
-               x[i] = SCIPgetRandomReal(MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)), &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
          }
       }
    }
@@ -2778,14 +2787,6 @@ void ScipNLP::finalize_solution(
    }
 }
 
-/* Ipopt >= 3.10 do not reveal defines like F77_FUNC.
- * However, they install IpLapack.hpp, so Ipopt's Lapack interface is available.
- * Thus, we use IpLapack if F77_FUNC is not defined and access Lapack's Dsyev directly if F77_FUNC is defined.
- */
-#ifndef F77_FUNC
-
-#include "IpLapack.hpp"
-
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
  *  It's here, because we use Ipopt's interface to Lapack.
@@ -2810,7 +2811,49 @@ SCIP_RETCODE LapackDsyev(
    return SCIP_OKAY;
 }
 
-/** solves a linear problem of the form Ax = b
+/** solves a linear problem of the form Ax = b for a regular matrix 3*3 A */
+static
+SCIP_RETCODE SCIPsolveLinearProb3(
+   SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size 3) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real Acopy[9];
+   SCIP_Real bcopy[3];
+   int pivotcopy[3];
+   const int N = 3;
+   int info;
+
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear problem of the form Ax = b for a regular matrix A
  *
  *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
@@ -2818,17 +2861,16 @@ SCIP_RETCODE LapackDsyev(
  */
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
-   SCIP_Real**           A,                  /**< matrix data on input (size N*N) */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real* tmp_A;
-   SCIP_Real* tmp_b;
-   int* tmp_pivot;
+   SCIP_Real* Acopy;
+   SCIP_Real* bcopy;
+   int* pivotcopy;
    int info;
-   int i;
 
    assert(N > 0);
    assert(A != NULL);
@@ -2836,116 +2878,43 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(x != NULL);
    assert(success != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_A, N*N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_b, N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_pivot, N) );
-
-   /* copy values from A into the tmp_A array */
-   for( i = 0; i < N; ++i)
+   /* call SCIPsolveLinearProb3() for performance reasons */
+   if( N == 3 )
    {
-      int j;
-      for( j = 0; j < N; ++j )
-         tmp_A[N*i+j] = A[j][i]; /* note that we have to fill tmp_A column wise */
-
-      tmp_b[i] = b[i];
-   }
-
-   /* compute the LU factorization */
-   IpLapackDgetrf(N, tmp_A, tmp_pivot, N, info);
-
-   if( info != 0 )
-   {
-      BMSfreeMemoryArray(&tmp_pivot);
-      BMSfreeMemoryArray(&tmp_b);
-      BMSfreeMemoryArray(&tmp_A);
-
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
-      *success = FALSE;
-
+      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
       return SCIP_OKAY;
    }
 
-   /* solve linear problem */
-   IpLapackDgetrs(N, 1, tmp_A, N, tmp_pivot, tmp_b, N);
+   Acopy = NULL;
+   bcopy = NULL;
+   pivotcopy = NULL;
 
-   /* copy the solution */
-   for( i = 0; i < N; ++i )
-      x[i] = tmp_b[i];
+   SCIP_ALLOC( BMSduplicateMemoryArray(&Acopy, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&bcopy, b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
 
-   BMSfreeMemoryArray(&tmp_pivot);
-   BMSfreeMemoryArray(&tmp_b);
-   BMSfreeMemoryArray(&tmp_A);
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
-   *success = TRUE;
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   BMSfreeMemoryArray(&pivotcopy);
+   BMSfreeMemoryArray(&bcopy);
+   BMSfreeMemoryArray(&Acopy);
 
    return SCIP_OKAY;
 }
-
-#else
-
-extern "C" {
-   /** LAPACK Fortran subroutine DSYEV */
-   void F77_FUNC(dsyev,DSYEV)(
-      char*                 jobz,               /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
-      char*                 uplo,               /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
-      int*                  n,                  /**< dimension */
-      double*               A,                  /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
-      int*                  ldA,                /**< leading dimension, probably equal to n */
-      double*               W,                  /**< buffer for the eigenvalues in ascending order */
-      double*               WORK,               /**< workspace array */
-      int*                  LWORK,              /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
-      int*                  info                /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
-      );
-}
-
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- *
- *  It's here, because Ipopt is linked against Lapack.
- */
-SCIP_RETCODE LapackDsyev(
-   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
-   int                   N,                  /**< dimension */
-   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
-   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
-   )
-{
-   int     INFO;
-   char    JOBZ = computeeigenvectors ? 'V' : 'N';
-   char    UPLO = 'L';
-   int     LDA  = N;
-   double* WORK = NULL;
-   int     LWORK;
-   double  WORK_PROBE;
-   int     i;
-
-   /* First we find out how large LWORK should be */
-   LWORK = -1;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   LWORK = (int) WORK_PROBE;
-   assert(LWORK > 0);
-
-   SCIP_ALLOC( BMSallocMemoryArray(&WORK, LWORK) );
-
-   for( i = 0; i < LWORK; ++i )
-      WORK[i] = i;
-
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
-
-   BMSfreeMemoryArray(&WORK);
-
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
-#endif

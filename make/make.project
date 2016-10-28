@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -46,6 +46,8 @@ NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
 PERMUTE         =       0
+SEEDS           =       0
+GLBSEEDSHIFT    =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
@@ -65,7 +67,7 @@ MAXJOBS         =       1
 VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
-LPS		=	spx
+LPS		=	spx2
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -79,6 +81,7 @@ NOBLKBUFMEM	=	false
 PARASCIP	=	false
 
 #third party compiling parameters
+OPENSOURCE   =         true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
@@ -132,7 +135,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
-XPRESS		=	xpress
+XPRESS_BIN      =       xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
@@ -141,13 +144,20 @@ BLIS            =       blis
 SHELL		= 	bash
 READ		=	read -e
 LN_s		= 	ln -s
+LN_sf		=	ln -sf
 
 #initial compiler and linker flags
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
+
+ifeq ($(COMP),msvc)
+LDFLAGS		=
+else
 LDFLAGS		=	$(LINKCC_l)m$(LINKLIBSUFFIX)
+endif
+
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -155,14 +165,14 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
 
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
@@ -237,11 +247,16 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+ifeq ($(LPS),spx)
+override LPS	=	spx2
+endif
+
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
 LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)dl$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),grb)
@@ -251,7 +266,7 @@ endif
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 ifneq ($(LINKRPATH),)
-LDFLAGS                +=      $(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/xprsinc/../lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
 endif
 endif
 
@@ -260,7 +275,7 @@ LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
-ifeq ($(LPS),spx)
+ifeq ($(LPS),spx1)
 LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
@@ -269,15 +284,11 @@ endif
 endif
 
 ifeq ($(LPS),spx2)
-LPSLDFLAGS  += $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS  += $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
-endif
-
-ifeq ($(LPS),spx132)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),clp)
@@ -340,7 +351,8 @@ ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
 endif
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+ZIMPLLIB	=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX)
+LDFLAGS		+=	$(ZIMPLLIB) $(ZIMPL_LDFLAGS)
 endif
 
 ifeq ($(GMP),true)
@@ -363,9 +375,10 @@ LINKER		=	CPP
 # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # - shared libraries are installed into the lib directory, so add this to the rpath
 FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
-LDFLAGS		+=	$(shell cat $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -388,17 +401,25 @@ FLAGS		+=	-fPIC
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
+LIBBUILD_L	=	$(LINKCXX_L)
 else
 LIBBUILD	=	$(LINKCC)
+LIBBUILD_L	=	$(LINKCC_L)
 endif
+
+ifeq ($(COMP),msvc)
+LIBBUILDFLAGS	+=      -dll
+LIBBUILD_o	= 	-out:
+else
 LIBBUILDFLAGS	+=      -shared
 LIBBUILD_o	= 	-o # the trailing space is important
+endif
 ARFLAGS		=
 RANLIB		=
 endif
 
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)
 endif
 
 

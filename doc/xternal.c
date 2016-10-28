@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2015 Konrad-Zuse-Zentrum                            */
+/*                  2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,6 +83,9 @@
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
+ *
+ *    Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
+ *
  *   - \ref CONS    "Constraint handlers"
  *   - \ref PRICER  "Variable pricers"
  *   - \ref PRESOL  "Presolvers"
@@ -99,8 +102,14 @@
  *   - \ref EVENT   "Event handler"
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
- *   - \ref CONF    "Conflict analysis"
  *   - \ref PARAM   "additional user parameters"
+ *
+ * @subsection HOWTOUSESECTION How to use ...
+ *
+ *   - \ref CONF    "Conflict analysis"
+ *   - \ref REOPT   "Reoptimization"
+ *   - \ref TEST    "How to run automated tests with SCIP"
+ *   - \ref COUNTER "How to use SCIP to count feasible solutions"
  *
  *
  * @section FURTHERINFO Further information
@@ -120,7 +129,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.2.0.1
+ * @version  3.2.1.2
  *
  * \image html scippy.png
  *
@@ -261,7 +270,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MultiObjective"><b>Multi-objective Optimization</b></a>
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
@@ -605,7 +614,7 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT >= 3.11)
  *
  * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
  *
@@ -878,7 +887,7 @@
  *   We suggest the use one of the following examples:
  *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example 
+ *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
  *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
@@ -940,7 +949,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -5592,8 +5601,6 @@
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
  * can be found in the file \ref exprinterpret.h
  *
- * Note that the expression interpreter API has <b>BETA status</b> and thus may change in the next version.
- *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
  *    \n
@@ -5909,27 +5916,44 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page MEMORY Using the memory functions of SCIP
  *
- *  SCIP provides three ways for allocating memory.
+ *  SCIP provides three ways for allocating memory:
+ *  -# <b>block memory:</b> efficient handling of memory blocks of similar small sizes
+ *  -# <b>buffer memory:</b> efficient handling of memory that needs to locally be allocated and freed
+ *  -# <b>standard memory:</b> access to standard malloc/free
  *
- *  @section STDMEM Standard memory
+ *  <em>Whenever possible, the first two should be used, because of reasons detailed below.</em>
  *
- *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
- *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
- *  debug mode.
+ *  In the following, we provide a brief description of these methods. We refer the reader to the dissertation of Tobias
+ *  Achterberg for more details. We also present best practice models.
  *
- *  The most important functions are
- *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory
- *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
+ *  @section MEMBACK Background
  *
+ *  The main goals for providing such particular methods are:
+ * - <em>Accounting:</em> Using its own functions, SCIP knows the total size of memory allocated internally and can change its
+ *   behavior: for instance, it can change to "memory saving mode" (using depth first search (DFS) and possibly do a garbage
+ *   collection). It also allows for keeping a memory limit.
+ * - <em>Speed:</em> SCIP often needs to allocate a very large number of small blocks of similar sizes (often powers of
+ *   two). Depending on the operating system and compiler, the methods implemented in SCIP can be faster, since blocks
+ *   of the same size are grouped together. Especially at the end of the 1990ies the standard malloc/free methods were
+ *   quite ineffective. The experiments of Tobias Achterberg in 2007 show a speed improvement of 11 % when using block
+ *   memory.
+ * - <em>Efficiency:</em> Since blocks are groups in sizes, the blocks do not need to store their sizes within each
+ *   block. In comparison, standard malloc/free stores the size using one word for each memory chunk. The price to pay
+ *   is that one needs to pass the size to the methods that free a block. In any case, the methods in SCIP can save
+ *   memory. Moreover, buffer memory is stored in similar places and not spread out, which also might help cache.
+ * - <em>Debugging:</em> All of the possibilities provide methods to detect memory leaks. Together with tools like
+ *   valgrind, this can be quite effective in avoiding such problems.
+ *
+ *  @n
  *  @section BLKMEM Block memory
  *
  *  SCIP offers its own block memory handling, which allows efficient handling of smaller blocks of memory in cases in
- *  which many blocks of the same (small) size appear. This is adaquate for branch-and-cut codes in which small blocks
+ *  which many blocks of the same (small) size appear. This is adequate for branch-and-cut codes in which small blocks
  *  of the same size are allocated and freed very often (for data structures used to store rows or branch-and-bound
  *  nodes). Actually, most blocks allocated within SCIP have small sizes like 8, 16, 30, 32, 64.  The idea is simple:
  *  There is a separate list of memory blocks for each interesting small size. When allocating memory, the list is
- *  checked for a free spot in the list; if no such spot exists the list is enlarged. Freeing just sets the block to be
- *  available. Very large blocks are handled separatedly. See the dissertation of Tobias Achterberg for more details.
+ *  checked for a free spot in the list; if no such spot exists, the list is enlarged. Freeing just sets the block to be
+ *  available. Very large blocks are handled separately. See the dissertation of Tobias Achterberg for more details.
  *
  *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
  *
@@ -5954,35 +5978,79 @@
  *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
  *  }
  *  \endcode
+ *  @n
  *
  *  @section BUFMEM Buffer memory
+ *
+ *  @subsection BUFMEMSTD Standard Buffer Memory
  *
  *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
  *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
  *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
  *
  *  The most important functions are
- *  - SCIPallocBufferMemory(), SCIPallocBufferArray() to allocate memory
- *  - SCIPfreeBufferMemory(), SCIPfreeBufferArray() to free memory
+ *  - SCIPallocBuffer(), SCIPallocBufferArray() to allocate memory,
+ *  - SCIPfreeBuffer(), SCIPfreeBufferArray() to free memory.
  *
- *  SCIP 3.2 introduced a new type of buffer memory, the clean buffer. It provides memory which is initialized to zero
+ *  @subsection BUFMEMCLEAN Clean Buffer Memory
+ *
+ *  SCIP 3.2 introduced a new type of buffer memory, the <em>clean buffer</em>. It provides memory which is initialized to zero
  *  and requires the user to reset the memory to zero before freeing it. This can be used at performance-critical
  *  places where only few nonzeros are added to a dense array and removing these nonzeros individually is much faster
- *  than clearing the whole array. Same as the normal buffer array, the clean buffer should be used for temporary memory
+ *  than clearing the whole array. Similar to the normal buffer array, the clean buffer should be used for temporary memory
  *  allocated and freed within the same function.
  *
  *  The most important functions are
- *  - SCIPallocCleanBufferArray() to allocate memory
- *  - SCIPfreeCleanBufferArray() to free memory
+ *  - SCIPallocCleanBufferArray() to allocate memory,
+ *  - SCIPfreeCleanBufferArray() to free memory.
  *
- *  @section GENMEM General notes
+ *  @n
+ *  @section STDMEM Standard memory
+ *
+ *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
+ *  debug mode.
+ *
+ *  The most important functions are
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory,
+ *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory.
+ *
+ *  @n
+ *  @section MEMBESTPRACTICE Best Practice of Using Memory Functions
+ *
+ *  Since allocating and freeing memory is very crucial for the speed and memory consumption of a program, it is
+ *  important to keep the following notes and recommendations in mind.
+ *
+ *  @subsection GEN General Notes
  *
  *  The following holds for all three types of memory functions:
- *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
- *  - The functions always allocate at least one byte, so that freeing is always possible.
+ *  - In debug mode, the arguments are checked for overly large allocations (usually arising from a bug). Note that all
+ *    arguments are converted to unsigned values of type @c size_t, such that negative sizes are converted into very
+ *    large values.
+ *  - The functions always allocate at least one byte and return non-NULL pointers if memory is available. In particular,
+ *    freeing is always possible.
  *  - The freeing methods set the pointer to the memory to NULL.
- *  - For maximum speed you should free memory in the reverse order in which it was allocated.
- *    For block and buffer memory this @b significantly speeds up the code.
+ *  - Debugging can be supported by using the compiler flags @p NOBLKMEM=true, @p NOBUFMEM=true, @p NOBLKBUFMEM=true
+ *    that turn off the usage of block memory, buffer memory, as well as block and buffer memory, respectively. Since,
+ *    the internal block and buffer memory is freed at the end (leaving no memory leaks), turning them off allows tools
+ *    like valgrind to find memory leaks.
+ *  - Moreover, additional checks can be turned on by defining @p CHECKMEM in memory.c.
+ *
+ *  @n
+ *  @subsection DOS Things to do ...
+ *
+ *  - Use buffer memory if your memory chunk can be allocated and freed within the same function.
+ *  - Use buffer and block memory wherever possible, because of the reasons explained above.
+ *  - Free memory in the reverse order in which it was allocated! For block and buffer memory this @b significantly
+ *    speeds up the code.
+ *  - Use as few memory allocations/freeing operations as possible, since these functions take a significant amount of time.
+ *
+ *  @n
+ *  @subsection DONTS Things to avoid ...
+ *
+ *  - Avoid the usage of standard memory, since SCIP is unaware of the size used in such blocks.
+ *  - Avoid reallocation with only slightly increased size, rather use a geometrically growing
+ *    size allocation. SCIPcalcMemGrowSize() is one way to calculate new sizes.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6053,7 +6121,7 @@
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -7289,10 +7357,6 @@
   *   - Removed method SCIPreallocBufferSize()
   *   - Removed method SCIPfreeBufferSize()
   *   - Removed method callback SCIPdialogExecConflictgraph()
-  *
-  * <br>
-  * @section MISCELLANEOUS7 Miscellaneous
-  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
@@ -7414,16 +7478,13 @@
  * \htmlinclude faq.inc
  */
 
-
-/**@page AUTHORS SCIP Authors
- * \htmlinclude authors.inc
- */
-
 /**@page INSTALL Installation information
  * \verbinclude INSTALL
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.2.1
  *
  * \verbinclude SCIP-release-notes-3.2
  *
@@ -7672,3 +7733,55 @@
  *
  * \verbinclude interfaces/jni/README
  */
+
+/**@page INTERFACES Interfaces
+  *
+  * There are several ways of accessing the \SCIP Optimization Suite from other software packages or programming
+  * platforms.
+  *
+  *
+  * @section FILEFORMATS File formats
+  *
+  *  The easiest way to load a problem into \SCIP is via an input file, given in a format that \SCIP can parse directly,
+  *  see SHELL.  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
+  *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
+  *  \SCIP Optimization Suite. See \ref AVAILABLEFORMATS "List of readable file formats".
+  *
+  *
+  * @section CPLUSPLUS C++ wrapper
+  *
+  * Since SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
+  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
+  * directory of the \SCIP standard distribution. See also <a href=annotated.php>Wrapper Classes</a>.
+  *
+  *
+  * @section MODELLING Modeling languages and Matlab interface
+  *
+  * A natural way of formulating an optimization problem is to use a modeling language. Besides ZIMPL there are several
+  * other modeling tools with a direct interface to \SCIP. These include <a href="http://dynadec.com/">Comet</a>, a
+  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
+  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
+  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * The AMPL, GAMS, and ZIMPL interfaces are included in the SCIP distribution, the GAMS interface originated <a
+  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
+  *
+  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
+  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
+  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
+  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  * free modeling language.
+  *
+  * @section OTHER Python and Java interfaces
+  *
+  * With \SCIP 3.1, beta versions of a \ref JNI_INTERFACE "Java native interface" and a \ref PYTHON_INTERFACE "Python interface" have been released.
+  *
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
+  * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
+  * href="http://code.google.com/p/python-zibopt/">python-zibopt</a>. <a href="http://numberjack.ucc.ie/">NUMBERJACK</a>
+  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
+  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
+  * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
+  *
+  *
+  */

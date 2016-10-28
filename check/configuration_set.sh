@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -24,6 +24,7 @@
 #    SETCUTOFF - should optimal solution value (from solu file) be passed as objective limit?
 #    SOLUFILE - .solu file for this test set, for parsing optimal solution values
 #    VALGRINDCMD - the valgrind command to use
+#    INSTANCELIST - list of all instances with complete path
 
 # function to capitalize a whole string
 function capitalize {
@@ -35,7 +36,7 @@ function stripversion {
     NAMENOPATH=`basename $1`
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
-    NAMENOVERSION=${NAMENOVERSION%%.*}
+    NAMENOVERSION=${NAMENOVERSION%%\.*}
     echo $NAMENOVERSION
 }
 
@@ -77,11 +78,20 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# figure out the correct settings file extension
+if test $BINNAME = cplex
+then
+    SETEXTEXTENSION="prm"
+else
+    SETEXTEXTENSION="set"
+fi
+
+
 # check if all settings files exist
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.
@@ -89,47 +99,23 @@ do
     fi
 done
 
-# if cutoff should be passed, check for solu file
+SOLUFILE=""
+for SOLU in testset/$TSTNAME.solu testset/all.solu
+do
+    if test -e $SOLU
+    then
+        SOLUFILE=$SOLU
+        break
+    fi
+done
+
+# if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1
 then
-    SOLUFILE=""
-    for SOLU in testset/$TSTNAME.solu testset/all.solu
-    do
-        if test -e $SOLU
-        then
-            SOLUFILE=$SOLU
-            break
-        fi
-    done
     if test $SOLUFILE = ""
     then
         echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
         exit
-    fi
-fi
-
-# we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
-
-if test $TIMEFORMAT = "format"
-then
-    #format is (d-)HH:MM:SS
-    TMP=`expr $HARDTIMELIMIT`
-    HARDTIMELIMIT=""
-    DIVISORS=(60 60 24)
-    for((i=0; i<=2; i++))
-    do
-        printf -v HARDTIMELIMIT "%02d${HARDTIMELIMIT}" `expr ${TMP} % ${DIVISORS[i]}`
-        # separate the numbers by colons except for the last (HH hours)
-        if test $i -lt 2
-        then
-            HARDTIMELIMIT=":${HARDTIMELIMIT}"
-        fi
-        TMP=`expr ${TMP} / ${DIVISORS[i]}`
-    done
-    if test ${TMP} -gt 0
-    then
-        HARDTIMELIMIT=${TMP}-${HARDTIMELIMIT}
     fi
 fi
 
@@ -159,4 +145,71 @@ then
     POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
 fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-echo $POSSIBLEPATHS
+# echo $POSSIBLEPATHS
+
+#check if we use a ttest or a test file
+if [ -f testset/$TSTNAME.ttest ];
+then
+    FULLTSTNAME="testset/$TSTNAME.ttest"
+    TIMEFACTOR=$TIMELIMIT
+else
+    FULLTSTNAME="testset/$TSTNAME.test"
+    TIMEFACTOR=1
+fi
+
+#write instance names to an array
+COUNT=0
+for INSTANCE in `cat $FULLTSTNAME | awk '{print $1}'`
+do
+    # check if problem instance exists
+    for IPATH in ${POSSIBLEPATHS[@]}
+    do
+        #echo $IPATH
+        if test "$IPATH" = "DONE"
+        then
+            echo "input file $INSTANCE not found!"
+        elif test -f $IPATH/$INSTANCE
+        then
+            INSTANCELIST[$COUNT]="${IPATH}/${INSTANCE}"
+            break
+        fi
+    done
+    COUNT=$(( $COUNT + 1 ))
+done
+INSTANCELIST[$COUNT]="DONE"
+COUNT=$(( $COUNT + 1 ))
+
+#write timelimits to an array
+#if no second column with timelimits exists in the test file the normal timelimit will be returned by the awk command
+COUNT=0
+for TL in `cat $FULLTSTNAME | awk '{print match($2, /[^ ]/) ? $2 : "'$TIMELIMIT'"}'`
+do
+    TMPTL=$(( $TL * $TIMEFACTOR ))
+    TIMELIMLIST[$COUNT]=$TMPTL
+    # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
+    HARDTIMELIMIT=`expr \`expr $TMPTL + 600\` + $TMPTL`
+
+    if test $TIMEFORMAT = "format"
+    then
+        #format is (d-)HH:MM:SS
+        TMP=`expr $HARDTIMELIMIT`
+        HARDTIMELIMIT=""
+        DIVISORS=(60 60 24)
+        for((i=0; i<=2; i++))
+        do
+            printf -v HARDTIMELIMIT "%02d${HARDTIMELIMIT}" `expr ${TMP} % ${DIVISORS[i]}`
+            # separate the numbers by colons except for the last (HH hours)
+            if test $i -lt 2
+            then
+                HARDTIMELIMIT=":${HARDTIMELIMIT}"
+            fi
+            TMP=`expr ${TMP} / ${DIVISORS[i]}`
+        done
+        if test ${TMP} -gt 0
+        then
+            HARDTIMELIMIT=${TMP}-${HARDTIMELIMIT}
+        fi
+    fi
+    HARDTIMELIMLIST[$COUNT]=$HARDTIMELIMIT
+    COUNT=$(( $COUNT + 1 ))
+done

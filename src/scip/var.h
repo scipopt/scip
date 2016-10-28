@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1227,16 +1227,6 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns for given variable the reduced cost */
-extern
-SCIP_Real SCIPvarGetRedcost(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current LP data */
-   );
-
 /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
  *  the binary variable is fixed to the given value
  */
@@ -1344,6 +1334,15 @@ extern
 SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+
+/** compares both possible directions for rounding the given solution value and returns the minimum pseudo-costs of the variable */
+SCIP_Real SCIPvarGetMinPseudocostScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solval              /**< solution value, e.g., LP solution value */
    );
 
 /** gets the an estimate of the variable's pseudo cost variance in direction \p dir */

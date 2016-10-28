@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -125,7 +125,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* check feasibility of new solution and pass it to trysol heuristic */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -268,7 +268,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    success = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, TRUE, &success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &success) );
 
    if( sepadata->copycuts )
    {
@@ -306,7 +306,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
    }
 
-   SCIPdebugMessage("Copying SCIP was%s successful.\n", success ? "" : " not");
+   SCIPdebugMsg(scip, "Copying SCIP was%s successful.\n", success ? "" : " not");
 
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    if( SCIPisParamFixed(subscip, "lp/solvefreq") )
@@ -453,31 +453,31 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* if problem was already solved do not increase limits to run again */
    if( SCIPgetStage(subscip) == SCIP_STAGE_SOLVED )
    {
-      SCIPdebugMessage("Subscip was completely solved, status %d.\n", SCIPgetStatus(subscip));
+      SCIPdebugMsg(scip, "Subscip was completely solved, status %d.\n", SCIPgetStatus(subscip));
    }
    /* abort solving, if limit of applied conflicts is reached */
    else if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
    {
-      SCIPdebugMessage("finish after %" SCIP_LONGINT_FORMAT " successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
+      SCIPdebugMsg(scip, "finish after %" SCIP_LONGINT_FORMAT " successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
    }
    /* if the first 20% of the solution process were successful, proceed */
    else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
       || (sepadata->applybdchgs && SCIPgetNFixedVars(subscip) > nfixedvars)
       || (sepadata->applyconflicts && SCIPgetNConflictConssApplied(subscip) > 0) ) 
    {
-      SCIPdebugMessage("proceed solving after the first 20%% of the solution process, since:\n");
+      SCIPdebugMsg(scip, "proceed solving after the first 20%% of the solution process, since:\n");
 
       if( SCIPgetNSols(subscip) > 0 && SCIPisFeasLE(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
       {
-         SCIPdebugMessage("   - there was a better solution (%f < %f)\n",SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip));
+         SCIPdebugMsg(scip, "   - there was a better solution (%f < %f)\n",SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip));
       }
       if( SCIPgetNFixedVars(subscip) > nfixedvars )
       {
-         SCIPdebugMessage("   - there were %d variables fixed\n", SCIPgetNFixedVars(scip)-nfixedvars );
+         SCIPdebugMsg(scip, "   - there were %d variables fixed\n", SCIPgetNFixedVars(scip)-nfixedvars );
       }
       if( SCIPgetNConflictConssFound(subscip) > 0 )
       {
-         SCIPdebugMessage("   - there were %" SCIP_LONGINT_FORMAT " conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
+         SCIPdebugMsg(scip, "   - there were %" SCIP_LONGINT_FORMAT " conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
       }
 
       /* set node limit to 100% */
@@ -499,7 +499,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    }
    else
    {
-      SCIPdebugMessage("do not proceed solving after the first 20%% of the solution process.\n");
+      SCIPdebugMsg(scip, "do not proceed solving after the first 20%% of the solution process.\n");
    }
 
 #ifdef SCIP_DEBUG
@@ -526,7 +526,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       /* sequentially add solutions to trysol heuristic */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-         SCIPdebugMessage("Try to create new solution by copying subscip solution.\n");
+         SCIPdebugMsg(scip, "Try to create new solution by copying subscip solution.\n");
          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
@@ -541,7 +541,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       /* we need to multiply the dualbound with the scaling factor and add the offset,
        * because this information has been disregarded in the sub-SCIP
        */
-      SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
+      SCIPdebugMsg(scip, "Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
 
       SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPretransformObj(scip, SCIPgetDualbound(subscip))) );
       dualboundchg = TRUE;
@@ -600,7 +600,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                }
                else
                {
-                  SCIPdebugMessage("failed to copy conflict constraint %s back to original SCIP\n", SCIPconsGetName(cons));
+                  SCIPdebugMsg(scip, "failed to copy conflict constraint %s back to original SCIP\n", SCIPconsGetName(cons));
                }
             }
          }
@@ -668,10 +668,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }   
    }
 
-   SCIPdebugPrintf("XXX Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n", nconflicts, nbdchgs, soladded ? "found" : "no", 
-      dualboundchg ? "found" : "no");
+   SCIPdebugMsg(scip, "Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
+      nconflicts, nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
 
-   SCIPdebugPrintf("YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 
+   SCIPdebugMsg(scip, "YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n",
       100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
 
    /* change result pointer */

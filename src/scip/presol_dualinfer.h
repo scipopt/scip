@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,9 +18,9 @@
  * @author Dieter Weninger
  *
  * This presolver exploits dual information for primal variable fixings:
- * a) The first method is an enhanced dual fixing technique.
- * b) The second method does dual bound strengthening on continuous primal
- *    variables and applies complementary slackness (yA-c)_i > 0 => x_i = 0
+ * 1. The first method is an enhanced dual fixing technique.
+ * 2. The second method does dual bound strengthening on continuous primal
+ *    variables and applies complementary slackness \f$(A^T y - c)_i > 0 \Rightarrow x_i = 0\f$
  *    for fixing primal variables at their lower bound.
  *
  */

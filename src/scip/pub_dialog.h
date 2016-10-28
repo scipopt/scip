@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,6 +54,18 @@ void SCIPdialoghdlrClearBuffer(
 EXTERN
 SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
    SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+   );
+
+/** returns the next line in the handler's command buffer; if the buffer is empty, displays the given prompt or the
+ *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
+ */
+EXTERN
+SCIP_RETCODE SCIPdialoghdlrGetLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputline,          /**< pointer to store the complete line in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    );
 
 /** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
@@ -192,6 +204,12 @@ EXTERN
 void SCIPdialogSetData(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
+   );
+
+/** writes command history to specified filename */
+EXTERN
+SCIP_RETCODE SCIPdialogWriteHistory(
+   const char*           filename            /**< file name for (over)writing history */
    );
 
 #ifdef __cplusplus

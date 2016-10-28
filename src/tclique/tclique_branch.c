@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -773,7 +773,7 @@ int branch(
    /* increase the number of nodes, and stop solving, if the node limit is exceeded */
    (*ntreenodes)++;
 #ifdef TCLIQUE_DEBUG
-   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT"), cliques=%d]\n",
+   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT "), cliques=%d]\n",
       level, *ntreenodes, *maxcliqueweight, *curcliqueweight,
       BMSgetChunkMemoryUsed(mem), BMSgetMemoryUsed(), cliquehash == NULL ? 0 : cliquehash->ncliques);
 

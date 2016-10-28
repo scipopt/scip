@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -158,7 +158,7 @@ SCIP_RETCODE createObjRow(
       SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, sepadata->objvar, -1.0) );
       SCIP_CALL( SCIPflushRowExtensions(scip, sepadata->objrow) );
 
-      SCIPdebugMessage("created objective value row: ");
+      SCIPdebugMsg(scip, "created objective value row: ");
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, sepadata->objrow, NULL) ) );
    }
 
@@ -208,14 +208,14 @@ SCIP_RETCODE separateCuts(
    {
       intbound = SCIPceil(scip, objval) - sepadata->setoff;
       SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
-      SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n",
+      SCIPdebugMsg(scip, "new objective variable lower bound: <%s>[%g,%g]\n",
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
    else
    {
       intbound = SCIPfloor(scip, objval) - sepadata->setoff;
       SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
-      SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n",
+      SCIPdebugMsg(scip, "new objective variable upper bound: <%s>[%g,%g]\n",
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
 
@@ -398,7 +398,7 @@ SCIP_DECL_EVENTEXEC(eventExecIntobj)
    switch( SCIPeventGetType(event) )
    {
    case SCIP_EVENTTYPE_VARADDED:
-      SCIPdebugMessage("variable <%s> with obj=%g was added to the problem\n", SCIPvarGetName(var), SCIPvarGetObj(var));
+      SCIPdebugMsg(scip, "variable <%s> with obj=%g was added to the problem\n", SCIPvarGetName(var), SCIPvarGetObj(var));
       objdelta = SCIPvarGetObj(var);
       if( !SCIPisZero(scip, objdelta) )
       {
@@ -407,8 +407,7 @@ SCIP_DECL_EVENTEXEC(eventExecIntobj)
       break;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
-      SCIPdebugMessage("variable <%s> changed objective value from %g to %g\n", 
-         SCIPvarGetName(var), SCIPeventGetOldobj(event), SCIPeventGetNewobj(event));
+      SCIPdebugMsg(scip, "variable <%s> changed objective value from %g to %g\n", SCIPvarGetName(var), SCIPeventGetOldobj(event), SCIPeventGetNewobj(event));
       objdelta = SCIPeventGetNewobj(event) - SCIPeventGetOldobj(event);
       SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, var, objdelta) );
       break;

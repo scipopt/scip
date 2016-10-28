@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,7 +15,7 @@
 
 /**@file   type_matrix.h
  * @ingroup TYPEDEFINITIONS
- * @brief  type definitions for MILP matrix
+ * @brief  type definitions for MIP matrix
  * @author Dieter Weninger
  */
 
@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-typedef struct SCIPmilpMatrix SCIPMILPMATRIX;
+typedef struct SCIP_Matrix SCIP_MATRIX;
 
 #ifdef __cplusplus
 }

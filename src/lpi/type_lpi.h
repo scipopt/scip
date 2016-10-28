@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -56,7 +56,8 @@ enum SCIP_LPParam
                                          *   if number of rows divided by number of columns exceeds this value */
    SCIP_LPPAR_THREADS        = 15,      /**< number of threads used to solve the LP */
    SCIP_LPPAR_CONDITIONLIMIT = 16,      /**< maximum condition number of LP basis counted as stable */
-   SCIP_LPPAR_TIMING         = 17       /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   SCIP_LPPAR_TIMING         = 17,      /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   SCIP_LPPAR_RANDOMSEED     = 18       /**< inital random seed, e.g. for perturbations in the simplex (0: LP default) */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 
@@ -86,8 +87,8 @@ typedef enum SCIP_BaseStat SCIP_BASESTAT;
 /** LP solution quality quantities */
 enum SCIP_LPSolQuality
 {
-   SCIP_LPSOLQUALITY_ESTIMCONDITION,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
-   SCIP_LPSOLQUALITY_EXACTCONDITION     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_ESTIMCONDITION = 0,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_EXACTCONDITION = 1     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
 };
 typedef enum SCIP_LPSolQuality SCIP_LPSOLQUALITY;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,13 +55,12 @@
  * Data structures
  */
 
-/** @brief Constraint data for  \ref cons_samediff.c "SameDiff" constraints */
+/** Constraint data for  \ref cons_samediff.c "SameDiff" constraints */
 struct SCIP_ConsData
 {
-   int                   itemid1;           /**< item id one */
-   int                   itemid2;           /**< item id two */
+   int                   itemid1;            /**< item id one */
+   int                   itemid2;            /**< item id two */
    CONSTYPE              type;               /**< stores whether the items have to be in the SAME or DIFFER packing */
-
    int                   npropagatedvars;    /**< number of variables that existed, the last time, the related node was
                                               *   propagated, used to determine whether the constraint should be
                                               *   repropagated*/
@@ -69,13 +68,6 @@ struct SCIP_ConsData
    unsigned int          propagated:1;       /**< is constraint already propagated? */
    SCIP_NODE*            node;               /**< the node in the B&B-tree at which the cons is sticking */
 };
-
-#ifdef SCIP_DISABLED_CODE
-/** @brief Constraint handler data for \ref cons_samediff.c "SameDiff" constraint handler */
-struct SCIP_ConshdlrData
-{
-};
-#endif
 
 /**@name Local methods
  *
@@ -184,7 +176,7 @@ SCIP_RETCODE checkVariable(
       if( infeasible )
       {
          assert( SCIPvarGetLbLocal(var) > 0.5 );
-         SCIPdebugMessage("-> cutoff\n");
+         SCIPdebugMsg(scip, "-> cutoff\n");
          (*cutoff) = TRUE;
       }
       else
@@ -214,14 +206,14 @@ SCIP_RETCODE consdataFixVariables(
    nfixedvars = 0;
    cutoff = FALSE;
 
-   SCIPdebugMessage("check variables %d to %d\n", consdata->npropagatedvars, nvars);
+   SCIPdebugMsg(scip, "check variables %d to %d\n", consdata->npropagatedvars, nvars);
 
    for( v = consdata->npropagatedvars; v < nvars && !cutoff; ++v )
    {
       SCIP_CALL( checkVariable(scip, consdata, vars[v], &nfixedvars, &cutoff) );
    }
 
-   SCIPdebugMessage("fixed %d variables locally\n", nfixedvars);
+   SCIPdebugMsg(scip, "fixed %d variables locally\n", nfixedvars);
 
    if( cutoff )
       *result = SCIP_CUTOFF;
@@ -238,7 +230,8 @@ static
 SCIP_Bool consdataCheck(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Bool             beforeprop          /**< is this check performed before propagation? */
    )
 {
    SCIP_VAR** vars;
@@ -257,7 +250,8 @@ SCIP_Bool consdataCheck(
    int v;
 
    vars = SCIPprobdataGetVars(probdata);
-   nvars = SCIPprobdataGetNVars(probdata);
+   nvars = (beforeprop ? consdata->npropagatedvars : SCIPprobdataGetNVars(probdata));
+   assert(nvars <= SCIPprobdataGetNVars(probdata));
 
    for( v = 0; v < nvars; ++v )
    {
@@ -291,7 +285,7 @@ SCIP_Bool consdataCheck(
 }
 #endif
 
-/** frees a logic or constraint data */
+/** frees samediff constraint data */
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -323,7 +317,7 @@ SCIP_DECL_CONSDELETE(consDeleteSamediff)
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   /* free LP row and logic or constraint */
+   /* free samediff constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
@@ -381,8 +375,9 @@ SCIP_DECL_CONSPROP(consPropSamediff)
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
 
-   SCIPdebugMessage("propagation constraints of constraint handler <"CONSHDLR_NAME">\n");
+   SCIPdebugMsg(scip, "propagation constraints of constraint handler <"CONSHDLR_NAME">\n");
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
@@ -417,7 +412,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
 
       if( !consdata->propagated )
       {
-         SCIPdebugMessage("propagate constraint <%s> ", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "propagate constraint <%s> ", SCIPconsGetName(conss[c]));
          SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
          SCIP_CALL( consdataFixVariables(scip, consdata, vars, nvars, result) );
@@ -433,7 +428,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
       }
 
       /* check if constraint is completely propagated */
-      assert( consdataCheck(scip, probdata, consdata) );
+      assert( consdataCheck(scip, probdata, consdata, FALSE) );
    }
 
    return SCIP_OKAY;
@@ -447,25 +442,32 @@ static
 SCIP_DECL_CONSACTIVE(consActiveSamediff)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
 
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(SCIPgetProbData(scip)));
+   assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(probdata));
 
-   SCIPdebugMessage("activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
+   SCIPdebugMsg(scip, "activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
-   if( consdata->npropagatedvars != SCIPprobdataGetNVars(SCIPgetProbData(scip)) )
+   if( consdata->npropagatedvars != SCIPprobdataGetNVars(probdata) )
    {
-      SCIPdebugMessage("-> mark constraint to be repropagated\n");
+      SCIPdebugMsg(scip, "-> mark constraint to be repropagated\n");
       consdata->propagated = FALSE;
       SCIP_CALL( SCIPrepropagateNode(scip, consdata->node) );
    }
+
+   /* check if all previously generated variables are valid for this constraint */
+   assert( consdataCheck(scip, probdata, consdata, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -488,18 +490,12 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   /* check if all variables which are not fixed locally to zero are valid for this constraint/node */
-   assert( consdataCheck(scip, probdata, consdata) );
-
-   SCIPdebugMessage("deactivate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
+   SCIPdebugMsg(scip, "deactivate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
    /* set the number of propagated variables to current number of variables is SCIP */
    consdata->npropagatedvars = SCIPprobdataGetNVars(probdata);
-
-   /* check if all variables are valid for this constraint */
-   assert( consdataCheck(scip, probdata, consdata) );
 
    return SCIP_OKAY;
 }
@@ -530,14 +526,9 @@ SCIP_RETCODE SCIPincludeConshdlrSamediff(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLR* conshdlr = NULL;
 
-   /* create samediff constraint handler data */
-   conshdlrdata = NULL;
-   /* TODO: (optional) create constraint handler specific data here */
-
-   conshdlr = NULL;
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
@@ -561,8 +552,8 @@ SCIP_RETCODE SCIPcreateConsSamediff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   itemid1,           /**< item id one */
-   int                   itemid2,           /**< item id two */
+   int                   itemid1,            /**< item id one */
+   int                   itemid2,            /**< item id two */
    CONSTYPE              type,               /**< stores whether the items have to be in the SAME or DIFFER packing */
    SCIP_NODE*            node,               /**< the node in the B&B-tree at which the cons is sticking */
    SCIP_Bool             local               /**< is constraint only valid locally? */
@@ -586,7 +577,7 @@ SCIP_RETCODE SCIPcreateConsSamediff(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, FALSE, FALSE, TRUE,
          local, FALSE, FALSE, FALSE, TRUE) );
 
-   SCIPdebugMessage("created constraint: ");
+   SCIPdebugMsg(scip, "created constraint: ");
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
    return SCIP_OKAY;
