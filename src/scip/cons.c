@@ -7445,7 +7445,6 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
             SCIPconsCapture(conshdlr->storedpropconss[v]);
-            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->storedpropconss[v], set) );
          }
          /* assert(conshdlr->nmarkedpropconss == 0); this assert does not hold if updates are delayed */
       }
