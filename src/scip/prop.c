@@ -38,7 +38,6 @@
 #include "scip/struct_prop.h"
 
 
-
 /** compares two propagators w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPpropComp)
 {  /*lint --e{715}*/
@@ -193,7 +192,7 @@ SCIP_RETCODE SCIPpropCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*prop)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*prop)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,

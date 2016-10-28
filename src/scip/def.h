@@ -229,6 +229,12 @@ extern "C" {
 #define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
 
 /*
+ * Tree settings
+ */
+
+#define SCIP_MAXTREEDEPTH             65535  /**< maximal allowed depth of the branch-and-bound tree */
+
+/*
  * Global debugging settings
  */
 

@@ -13052,7 +13052,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/sepacardfreq",
          "multiplier on separation frequency, how often knapsack cuts are separated (-1: never, 0: only at root)",
-         &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/" CONSHDLR_NAME "/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cuts",

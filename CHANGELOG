@@ -40,6 +40,7 @@ parameters:
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 
 performance improvements:
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
