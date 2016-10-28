@@ -35,7 +35,6 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_heur.h"
-#include "scip/tree.h"
 
 /** compares two heuristics w. r. to their delay positions and their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)

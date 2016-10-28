@@ -36,7 +36,6 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_sepa.h"
-#include "scip/tree.h"
 
 
 /** compares two separators w. r. to their priority */

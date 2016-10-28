@@ -52,7 +52,6 @@
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
-#include "scip/tree.h"
 
 /*
  * Default settings

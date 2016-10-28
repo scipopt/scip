@@ -36,7 +36,6 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_prop.h"
-#include "scip/tree.h"
 
 
 /** compares two propagators w. r. to their priority */
