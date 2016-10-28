@@ -93,8 +93,11 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
    }
 }
 
-/* when the capacity is zero, the weighted median is always the minimum element of the array */
-Test(select, zero_capacity, .description = "tests if weighted median selection always returns the maximum element when the capacity is zero")
+/* For SCIPselectWeightedInt, we test the boundary case when the capacity is 0. In this case, the algorithm should always return
+ * the first element (since the algorithm partially sorts the given array). To test this, we build an all 1 array (key) and modify
+ * its i-th position to be 0, call SCIPselectWeightedInt and expect key[0] to be 0
+ */
+Test(select, zero_capacity, .description = "tests if weighted median selection always returns the minimum element when the capacity is zero")
 {
    int i;
    int key[ARRAYMEMSIZE];
@@ -103,7 +106,7 @@ Test(select, zero_capacity, .description = "tests if weighted median selection a
    for( i = 0; i < ARRAYMEMSIZE; ++i )
       key[i] = 1;
 
-   /* test if the minimum element of the key array selected, no matter where it is at the beginning */
+   /* test if the minimum element of the key array is selected, no matter where it is at the beginning */
    for( i = 0; i < ARRAYMEMSIZE; ++i )
    {
       int medianpos;
