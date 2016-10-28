@@ -184,6 +184,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 
    if( SCIPgetStatus(relaxscip) == SCIP_STATUS_OPTIMAL )
    {
+      *lowerbound = relaxval;
       *result = SCIP_SUCCESS;
 
       /* store relaxation solution in original SCIP */
@@ -203,10 +204,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
       /* mark relaxation solution to be valid */
       SCIP_CALL( SCIPmarkRelaxSolValid(scip) );
       
-      /* set the lowerbound to the value of the relaxation solution, this has to be done this way since there
-       * is a strict < test in SCIP and the updates to the relaxation solution add rounding errors
-       */
-      *lowerbound = SCIPgetRelaxSolObj(scip);
+
    }
 
    /* free memory */
