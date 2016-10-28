@@ -13421,9 +13421,10 @@ SCIP_RETCODE singletonColumnStuffing(
                   tryfixing = FALSE;
                   break;
                }
+
                maxcondactivity += val * lb;
                mincondactivity += val * lb;
-               swapped[v] = FALSE;
+               swapped[nsingletons] = FALSE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13439,9 +13440,10 @@ SCIP_RETCODE singletonColumnStuffing(
                /* multiply column by (-1) to become case 1.
                 * now bounds are swapped: ub := -lb, lb := -ub
                 */
+
                maxcondactivity += val * ub;
                mincondactivity += val * ub;
-               swapped[v] = TRUE;
+               swapped[nsingletons] = TRUE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13548,14 +13550,14 @@ SCIP_RETCODE singletonColumnStuffing(
             {
                if( swapped[v] )
                {
-                  //printf("fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
                   ++conshdlrdata->stufffixes;
 
                }
                else
                {
-                  //printf("fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
                   ++conshdlrdata->stufffixes;
                }
@@ -13573,13 +13575,13 @@ SCIP_RETCODE singletonColumnStuffing(
                SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
                if( swapped[v] )
                {
-                  //printf("tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
+                  SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
                   ++conshdlrdata->stuffbdchgs;
                }
                else
                {
-                  //printf("tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
+                  SCIPdebugMsg(scip, "tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
                   SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
                   ++conshdlrdata->stuffbdchgs;
                }
@@ -13595,13 +13597,13 @@ SCIP_RETCODE singletonColumnStuffing(
             {
                if( swapped[v] )
                {
-                  //printf("fix3 <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
                   ++conshdlrdata->stufffixes;
                }
                else
                {
-                  //printf("fix3 <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
                   ++conshdlrdata->stufffixes;
                }
