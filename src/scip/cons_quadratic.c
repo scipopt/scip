@@ -7752,8 +7752,7 @@ SCIP_RETCODE computeReferencePointProjection(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             refsol,             /**< reference point where to compute gauge, or NULL if LP solution should be used */
-   SCIP_Real*            ref,                /**< array to store reference point */
-   SCIP_Bool*            success             /**< buffer to store whether we succeeded computing reference point */
+   SCIP_Real*            ref                 /**< array to store reference point */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8097,7 +8096,8 @@ SCIP_RETCODE generateCutSol(
          else if( conshdlrdata->projectedcuts && consdata->isedavailable )
          {
             SCIPdebugMessage("use the projection of refsol onto the region defined by the constraint as reference point\n");
-            SCIP_CALL( computeReferencePointProjection(scip, conshdlr, cons, refsol, ref, &success) );
+            SCIP_CALL( computeReferencePointProjection(scip, conshdlr, cons, refsol, ref) );
+            success = TRUE;
          }
       }
 
@@ -8148,12 +8148,9 @@ SCIP_RETCODE generateCutSol(
    if( mode == 'p' )
    {
       assert((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT));
-      if( conshdlrdata->gaugecuts && consdata->isgaugeavailable )
+      if( conshdlrdata->projectedcuts && consdata->isedavailable )
       {
-         SCIP_CALL( computeReferencePointProjection(scip, conshdlr, cons, refsol, ref, &success) );
-      }
-      if( success )
-      {
+         SCIP_CALL( computeReferencePointProjection(scip, conshdlr, cons, refsol, ref) );
          SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
       }
    }
