@@ -20,6 +20,7 @@ features:
 - added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
+- add check whether variables have been released when freeing SCIP
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters

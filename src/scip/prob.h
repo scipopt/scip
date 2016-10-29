@@ -134,6 +134,7 @@ void SCIPprobSetCopy(
 extern
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */

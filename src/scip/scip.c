@@ -9900,7 +9900,7 @@ SCIP_RETCODE SCIPfreeProb(
          SCIP_CALL( SCIPreoptFree(&scip->reopt, scip->set, scip->origprimal, scip->mem->probmem) );
       }
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
-      SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
       /* readers */
@@ -14442,7 +14442,7 @@ SCIP_RETCODE freeTransform(
    }
 
    /* free transformed problem data structures */
-   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );

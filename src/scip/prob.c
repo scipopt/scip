@@ -394,6 +394,7 @@ void SCIPprobSetCopy(
 /** frees problem data structure */
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -401,6 +402,7 @@ SCIP_RETCODE SCIPprobFree(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
+   SCIP_Bool warnreleasevar = TRUE;
    int v;
 
    assert(prob != NULL);
@@ -452,6 +454,14 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
+
+      if ( warnreleasevar && SCIPvarGetNUses((*prob)->vars[v]) > 1 )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
+         warnreleasevar = FALSE;
+      }
+
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
       SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
@@ -461,6 +471,14 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nfixedvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
+
+      if ( warnreleasevar && SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
+         warnreleasevar = FALSE;
+      }
+
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
