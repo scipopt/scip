@@ -289,9 +289,8 @@ LPILIBNAME	=	lpi$(LPS)
 #-------------------------------------------------------
 # define flags for CPLEX (only static version available)
 ifeq ($(LPS),cpx)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/static $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)pthread$(LINKLIBSUFFIX) \
-			$(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 endif
 
 #-------------------------------------------------------
