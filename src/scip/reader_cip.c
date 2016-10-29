@@ -24,6 +24,10 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 #include <ctype.h>
 
 #include "scip/reader_cip.h"
@@ -144,7 +148,7 @@ SCIP_RETCODE getInputString(
    }
    assert(endline != NULL);
 
-   /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
+   /*SCIPdebugMsg(scip, "read line: %s\n", cipinput->strbuf);*/
 
    /* check for windows "carriage return" endline character */
    windowsendlinechar = strrchr(cipinput->strbuf, '\r');
@@ -208,7 +212,7 @@ SCIP_RETCODE getStatistics(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("parse statistics\n");
+   SCIPdebugMsg(scip, "parse statistics\n");
 
    if( strncmp(buf, "  Problem name", 14) == 0 )
    {
@@ -237,7 +241,7 @@ SCIP_RETCODE getStatistics(
       /* set problem name */
       SCIP_CALL( SCIPsetProbName(scip, name) );
 
-      SCIPdebugMessage("problem name <%s>\n", name);
+      SCIPdebugMsg(scip, "problem name <%s>\n", name);
    }
 
    return SCIP_OKAY;
@@ -272,7 +276,7 @@ SCIP_RETCODE getObjective(
    if( cipinput->section != CIP_OBJECTIVE )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("parse objective information\n");
+   SCIPdebugMsg(scip, "parse objective information\n");
 
    /* remove white space */
    while ( isspace((unsigned char)* buf) )
@@ -309,7 +313,7 @@ SCIP_RETCODE getObjective(
 
       /* set problem name */
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
-      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+      SCIPdebugMsg(scip, "objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
    else if( strncasecmp(buf, "Offset", 6) == 0 )
    {
@@ -334,7 +338,7 @@ SCIP_RETCODE getObjective(
       if ( SCIPstrToRealValue(name, &off, &endptr) )
       {
          *objoffset += off;
-         SCIPdebugMessage("offset <%g> (total: %g)\n", off, *objoffset);
+         SCIPdebugMsg(scip, "offset <%g> (total: %g)\n", off, *objoffset);
       }
       else
       {
@@ -365,7 +369,7 @@ SCIP_RETCODE getObjective(
       if ( SCIPstrToRealValue(name, &scale, &endptr) )
       {
          *objscale *= scale;
-         SCIPdebugMessage("objscale <%g> (total: %g)\n", scale, *objscale);
+         SCIPdebugMsg(scip, "objscale <%g> (total: %g)\n", scale, *objscale);
       }
       else
       {
@@ -404,7 +408,7 @@ SCIP_RETCODE getVariable(
    if( cipinput->section != CIP_VARS )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("parse variable\n");
+   SCIPdebugMsg(scip, "parse variable\n");
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
@@ -453,7 +457,7 @@ SCIP_RETCODE getFixedVariable(
    if( cipinput->section != CIP_FIXEDVARS )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("parse fixed variable\n");
+   SCIPdebugMsg(scip, "parse fixed variable\n");
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
@@ -500,7 +504,7 @@ SCIP_RETCODE getFixedVariable(
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 
-      SCIPdebugMessage("creating negated variable <%s> (of <%s>) ...\n", SCIPvarGetName(var), SCIPvarGetName(negvar) );
+      SCIPdebugMsg(scip, "creating negated variable <%s> (of <%s>) ...\n", SCIPvarGetName(var), SCIPvarGetName(negvar) );
       SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
 
       /* add linear constraint for negation */
@@ -509,7 +513,7 @@ SCIP_RETCODE getFixedVariable(
       vars[1] = negvar;
       vals[0] = 1.0;
       vals[1] = 1.0;
-      SCIPdebugMessage("coupling constraint:\n");
+      SCIPdebugMsg(scip, "coupling constraint:\n");
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, 2, vars, vals, 1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPaddCons(scip, lincons) );
@@ -529,7 +533,7 @@ SCIP_RETCODE getFixedVariable(
 
       buf += 11;
 
-      SCIPdebugMessage("parsing aggregated variable <%s> ...\n", SCIPvarGetName(var));
+      SCIPdebugMsg(scip, "parsing aggregated variable <%s> ...\n", SCIPvarGetName(var));
 
       /* first parse constant */
       if ( ! SCIPstrToRealValue(buf, &rhs, &endptr) )
@@ -546,7 +550,7 @@ SCIP_RETCODE getFixedVariable(
       /* if next char is '<' we found a variable -> constant is 0 */
       if ( *str != '<' )
       {
-         SCIPdebugMessage("constant: %f\n", rhs);
+         SCIPdebugMsg(scip, "constant: %f\n", rhs);
          buf = endptr;
       }
       else
@@ -597,7 +601,7 @@ SCIP_RETCODE getFixedVariable(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
 
          /* add linear constraint for (multi-)aggregation */
-         SCIPdebugMessage("coupling constraint:\n");
+         SCIPdebugMsg(scip, "coupling constraint:\n");
          SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars + 1, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
          SCIPdebugPrintCons(scip, lincons, NULL);
          SCIP_CALL( SCIPaddCons(scip, lincons) );
@@ -658,7 +662,7 @@ SCIP_RETCODE getConstraint(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("parse constraints in line %d\n", cipinput->linenumber);
+   SCIPdebugMsg(scip, "parse constraints in line %d\n", cipinput->linenumber);
 
    separate = TRUE;
    enforce = TRUE;
@@ -855,7 +859,7 @@ SCIP_DECL_READERREAD(readerReadCip)
          TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, objoffsetvar) );
       SCIP_CALL( SCIPreleaseVar(scip, &objoffsetvar) );
-      SCIPdebugMessage("added variables <objoffset> for objective offset of <%g>\n", objoffset);
+      SCIPdebugMsg(scip, "added variables <objoffset> for objective offset of <%g>\n", objoffset);
    }
 
    if( cipinput.section != CIP_END && !cipinput.haserror )
@@ -969,7 +973,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
        * requires several runs over the variables, but the depth (= number of loops) is usually small. */
       while ( nwritten < nfixedvars )
       {
-         SCIPdebugMessage("written %d of %d fixed variables.\n", nwritten, nfixedvars);
+         SCIPdebugMsg(scip, "written %d of %d fixed variables.\n", nwritten, nfixedvars);
          for (i = 0; i < nfixedvars; ++i)
          {
             SCIP_VAR* var;

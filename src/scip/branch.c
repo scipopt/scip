@@ -202,7 +202,7 @@ SCIP_RETCODE branchcandCalcLPCands(
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
-   SCIPdebugMessage("calculating LP branching candidates: validlp=%" SCIP_LONGINT_FORMAT ", lpcount=%" SCIP_LONGINT_FORMAT "\n",
+   SCIPsetDebugMsg(set, "calculating LP branching candidates: validlp=%" SCIP_LONGINT_FORMAT ", lpcount=%" SCIP_LONGINT_FORMAT "\n",
       branchcand->validlpcandslp, stat->lpcount);
 
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -214,7 +214,7 @@ SCIP_RETCODE branchcandCalcLPCands(
       branchcand->nimpllpfracs = 0;
       branchcand->validlpcandslp = stat->lpcount;
 
-      SCIPdebugMessage(" LP is unbounded -> no branching candidates\n");
+      SCIPsetDebugMsg(set, " LP is unbounded -> no branching candidates\n");
       return SCIP_OKAY;
    }
 
@@ -232,7 +232,7 @@ SCIP_RETCODE branchcandCalcLPCands(
       int c;
       int insertpos;
 
-      SCIPdebugMessage(" -> recalculating LP branching candidates\n");
+      SCIPsetDebugMsg(set, " -> recalculating LP branching candidates\n");
 
       cols = SCIPlpGetCols(lp);
       ncols = SCIPlpGetNCols(lp);
@@ -363,7 +363,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          else
             branchcand->nimpllpfracs++;
 
-         SCIPdebugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n", 
+         SCIPsetDebugMsg(set, " -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n",
             branchcand->nlpcands, SCIPvarGetName(var), primsol, frac, branchpriority, branchcand->lpmaxpriority,
             insertpos);
       }
@@ -383,7 +383,7 @@ SCIP_RETCODE branchcandCalcLPCands(
    }
    assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
 
-   SCIPdebugMessage(" -> %d fractional variables (%d of maximal priority)\n", branchcand->nlpcands, branchcand->npriolpcands);
+   SCIPsetDebugMsg(set, " -> %d fractional variables (%d of maximal priority)\n", branchcand->nlpcands, branchcand->npriolpcands);
 
    return SCIP_OKAY;
 }
@@ -550,7 +550,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
 
    SCIP_CALL( ensureExterncandsSize(branchcand, set, branchcand->nexterncands+1) );
 
-   SCIPdebugMessage("inserting external candidate <%s> of type %d and priority %d into candidate set (maxprio: %d), score = %g, solval = %g\n",
+   SCIPsetDebugMsg(set, "inserting external candidate <%s> of type %d and priority %d into candidate set (maxprio: %d), score = %g, solval = %g\n",
       SCIPvarGetName(var), vartype, branchpriority, branchcand->externmaxpriority, score, solval);
 
    /* insert the variable into externcands, making sure, that the highest priority candidates are at the front
@@ -643,7 +643,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    branchcand->externcandssol[insertpos] = solval;
    branchcand->nexterncands++;
 
-   SCIPdebugMessage(" -> inserted at position %d (nprioexterncands=%d)\n", insertpos, branchcand->nprioexterncands);
+   SCIPsetDebugMsg(set, " -> inserted at position %d (nprioexterncands=%d)\n", insertpos, branchcand->nprioexterncands);
 
    assert(0 <= branchcand->nprioexterncands && branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(0 <= branchcand->nprioexternbins && branchcand->nprioexternbins <= branchcand->nprioexterncands);
@@ -1209,7 +1209,7 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
 
    if( branchrule->branchcopy != NULL )
    {
-      SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), (void*)set->scip);
       SCIP_CALL( branchrule->branchcopy(set->scip, branchrule) );
    }
 
@@ -1285,7 +1285,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*branchrule)->maxdepth, FALSE, maxdepth, -1, INT_MAX,
+         &(*branchrule)->maxdepth, FALSE, maxdepth, -1, SCIP_MAXTREEDEPTH,
          NULL, NULL) ); /*lint !e740*/
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxbounddist", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
@@ -1490,7 +1490,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
          int oldncuts;
          int oldnactiveconss;
 
-         SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
+         SCIPsetDebugMsg(set, "executing LP branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -1598,7 +1598,7 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
          int oldncuts;
          int oldnactiveconss;
 
-         SCIPdebugMessage("executing external solution branching rule <%s>\n", branchrule->name);
+         SCIPsetDebugMsg(set, "executing external solution branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -1701,7 +1701,7 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
          SCIP_Longint oldnprobdomchgs;
          SCIP_Longint oldnactiveconss;
 
-         SCIPdebugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
+         SCIPsetDebugMsg(set, "executing pseudo branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -2419,7 +2419,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
    assert((branchcand->npriolpcands == 0) == (branchcand->nlpcands == 0));
 
-   SCIPdebugMessage("branching on LP solution with %d (+%d) fractional (+implicit fractional) variables (%d of maximal priority)\n",
+   SCIPsetDebugMsg(set, "branching on LP solution with %d (+%d) fractional (+implicit fractional) variables (%d of maximal priority)\n",
       branchcand->nlpcands, branchcand->nimpllpfracs, branchcand->npriolpcands);
 
    nalllpcands = branchcand->nlpcands + branchcand->nimpllpfracs;
@@ -2517,7 +2517,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("branching on external solution with %d branching candidates (%d of maximal priority)\n",
+   SCIPsetDebugMsg(set, "branching on external solution with %d branching candidates (%d of maximal priority)\n",
       branchcand->nexterncands, branchcand->nprioexterncands);
 
    /* do nothing, if no external candidates exist */
@@ -2600,7 +2600,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
       assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
       assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
 
-      SCIPdebugMessage("no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
+      SCIPsetDebugMsg(set, "no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
 
       SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
@@ -2634,7 +2634,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    assert(branchcand != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("branching on pseudo solution with %d unfixed variables\n", branchcand->npseudocands);
+   SCIPsetDebugMsg(set, "branching on pseudo solution with %d unfixed variables\n", branchcand->npseudocands);
 
    *result = SCIP_DIDNOTRUN;
 

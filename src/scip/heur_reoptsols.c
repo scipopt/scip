@@ -277,7 +277,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 #endif
       }
 
-   SCIPdebugMessage(">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
+   SCIPdebugMsg(scip, ">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
 
    if( nsolsadded > 0 )
       *result = SCIP_FOUNDSOL;

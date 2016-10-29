@@ -31,6 +31,7 @@
 #include "scip/scip.h"
 #include "scip/heur_clique.h"
 #include "scip/cons_logicor.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "clique"
@@ -52,7 +53,7 @@
 #define DEFAULT_NODESOFS      500LL                      /**< number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1                        /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_MAXPROPROUNDS 2                          /**< maximum number of propagation rounds during probing */
-#define DEFAULT_INITSEED      0                          /**< random seed value to initialize the random permutation
+#define DEFAULT_RANDSEED      61                         /**< random seed value to initialize the random permutation
                                                           *   value for variables
                                                           */
 #define DEFAULT_MULTIPLIER    1.1                        /**< value to increase node number to determine the next run */
@@ -68,6 +69,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
@@ -79,7 +81,6 @@ struct SCIP_HeurData
    SCIP_Longint          nnodefornextrun;    /**< node number for next run */
    SCIP_Real             multiplier;         /**< multiplier to determine next node number */
    int                   initseed;           /**< initial random seed value */
-   unsigned int          seed;               /**< seed value for random number generator */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
@@ -293,7 +294,7 @@ SCIP_RETCODE applyCliqueFixings(
       assert(c == cliquepartition[bestpos]);
 
       /* stop if we reached the depth limit */
-      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -307,7 +308,7 @@ SCIP_RETCODE applyCliqueFixings(
 
          /* fix best possible clique variable to 1 */
          SCIP_CALL( SCIPfixVarProbing(scip, binvars[v], 1.0) );
-         SCIPdebugMessage("probing: fixing variable <%s> to 1\n", SCIPvarGetName(binvars[v]));
+         SCIPdebugMsg(scip, "probing: fixing variable <%s> to 1\n", SCIPvarGetName(binvars[v]));
 
          ++v;
       }
@@ -318,7 +319,7 @@ SCIP_RETCODE applyCliqueFixings(
          if( SCIPvarGetUbLocal(binvars[v]) > 0.5 && SCIPvarGetLbLocal(binvars[v]) < 0.5 )
          {
             SCIP_CALL( SCIPfixVarProbing(scip, binvars[v], 0.0) );
-            SCIPdebugMessage("probing: fixing variable <%s> to 0\n", SCIPvarGetName(binvars[v]));
+            SCIPdebugMsg(scip, "probing: fixing variable <%s> to 0\n", SCIPvarGetName(binvars[v]));
          }
          ++v;
       }
@@ -341,7 +342,7 @@ SCIP_RETCODE applyCliqueFixings(
 
       if( success )
       {
-         SCIPdebugMessage("clique heuristic found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
+         SCIPdebugMsg(scip, "clique heuristic found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
 
 #ifdef SCIP_DEBUG
          ++nsolstried;
@@ -352,7 +353,7 @@ SCIP_RETCODE applyCliqueFixings(
          /* check, if solution was feasible and good enough */
          if( success )
          {
-            SCIPdebugMessage(" -> solution was feasible and good enough\n");
+            SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
             *result = SCIP_FOUNDSOL;
          }
       }
@@ -370,11 +371,11 @@ SCIP_RETCODE applyCliqueFixings(
    assert((*probingdepthofonefix > 0 && *nonefixvars > 0) || (*probingdepthofonefix == 0 && *nonefixvars == 0));
    assert(*cutoff || (nbinvars - v == ncliques - c) || (v == nbinvars && (c == ncliques || c == ncliques - 1)));
 
-   SCIPdebugMessage("fixed %d of %d variables in probing\n", v, nbinvars);
-   SCIPdebugMessage("applied %d of %d cliques in probing\n", c, ncliques);
-   SCIPdebugMessage("probing was %sfeasible\n", (*cutoff) ? "in" : "");
+   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, nbinvars);
+   SCIPdebugMsg(scip, "applied %d of %d cliques in probing\n", c, ncliques);
+   SCIPdebugMsg(scip, "probing was %sfeasible\n", (*cutoff) ? "in" : "");
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("clique heuristic rounded %d solutions and tried %d of them\n", nsolsround, nsolstried);
+   SCIPdebugMsg(scip, "clique heuristic rounded %d solutions and tried %d of them\n", nsolsround, nsolstried);
 #endif
    return SCIP_OKAY;
 }
@@ -476,10 +477,32 @@ SCIP_DECL_HEURINIT(heurInitClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* set the seed value to the initial random seed value */
-   heurdata->seed = (unsigned int) heurdata->initseed;
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
 
    heurdata->usednodes = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitClique)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -570,7 +593,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -591,7 +614,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
    else
    {
-      SCIPpermuteArray((void**)binvars, 0, nbinvars, &(heurdata->seed));
+      SCIPrandomPermuteArray(heurdata->randnumgen, (void**)binvars, 0, nbinvars);
    }
 #endif
 
@@ -599,7 +622,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
    /* @todo get negated clique partition and use this too, or maybe mix both */
 
-   SCIPdebugMessage("found %d cliques\n", ncliques);
+   SCIPdebugMsg(scip, "found %d cliques\n", ncliques);
 
    /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
    SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
@@ -629,7 +652,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    if( i + 2 < heurdata->minfixingrate * nbinvars )
    {
-      SCIPdebugMessage("--> too few variables in nontrivial cliques\n");
+      SCIPdebugMsg(scip, "--> too few variables in nontrivial cliques\n");
 
       goto TERMINATE;
    }
@@ -684,17 +707,17 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* propagate fixings */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &backtrackcutoff, NULL) );
 
-      SCIPdebugMessage("backtrack was %sfeasible\n", (backtrackcutoff ? "in" : ""));
+      SCIPdebugMsg(scip, "backtrack was %sfeasible\n", (backtrackcutoff ? "in" : ""));
    }
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
 
    if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
-      SCIPdebugMessage("--> too few fixings\n");
+      SCIPdebugMsg(scip, "--> too few fixings\n");
 
       goto TERMINATE;
    }
@@ -708,7 +731,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    if( !backtrackcutoff && solvelp )
    {
 #if 1
-      SCIPdebugMessage("starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
@@ -727,12 +750,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
-      SCIPdebugMessage("ending solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "ending solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, lpstatus);
    }
 
    /* check if this is a feasible solution */
@@ -748,7 +771,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       if( success )
       {
-         SCIPdebugMessage("clique heuristic found roundable primal solution: obj=%g\n",
+         SCIPdebugMsg(scip, "clique heuristic found roundable primal solution: obj=%g\n",
             SCIPgetSolOrigObj(scip, sol));
 
          /* check solution for feasibility, and add it to solution store if possible.
@@ -764,7 +787,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
          if( stored )
          {
-            SCIPdebugMessage("found feasible solution:\n");
+            SCIPdebugMsg(scip, "found feasible solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
          }
@@ -935,10 +958,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          }
          cutoffbound = MIN(upperbound, cutoffbound);
          SCIP_CALL( SCIPsetObjlimit(subscip, cutoffbound) );
-         SCIPdebugMessage("setting objlimit for subscip to %g\n", cutoffbound);
+         SCIPdebugMsg(scip, "setting objlimit for subscip to %g\n", cutoffbound);
       }
 
-      SCIPdebugMessage("starting solving clique-submip at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "starting solving clique-submip at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve the subproblem */
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -957,7 +980,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPpresolve(subscip) );
 #endif
 
-      SCIPdebugMessage("clique heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+      SCIPdebugMsg(scip, "clique heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
@@ -968,7 +991,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          SCIP_Bool success;
          int nsubsols;
 
-         SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
+         SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
 #ifdef NDEBUG
          {
@@ -982,7 +1005,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #else
          SCIP_CALL( SCIPsolve(subscip) );
 #endif
-         SCIPdebugMessage("ending solving clique-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
+         SCIPdebugMsg(scip, "ending solving clique-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
@@ -1062,7 +1085,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* calculate next node number to run this heuristic */
    tmpnnodes = (SCIP_Longint) SCIPceil(scip, heurdata->nnodefornextrun * heurdata->multiplier);
    heurdata->nnodefornextrun = MIN(tmpnnodes, INT_MAX);
-   SCIPdebugMessage("Next run will be at node %" SCIP_LONGINT_FORMAT ".\n", heurdata->nnodefornextrun);
+   SCIPdebugMsg(scip, "Next run will be at node %" SCIP_LONGINT_FORMAT ".\n", heurdata->nnodefornextrun);
 #endif
    return SCIP_OKAY;
 }
@@ -1093,6 +1116,7 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyClique) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeClique) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitClique) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitClique) );
 
    /* add clique primal heuristic parameters */
 
@@ -1102,7 +1126,7 @@ SCIP_RETCODE SCIPincludeHeurClique(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/initseed",
          "initial random seed value to permutate variables",
-         &(heurdata->initseed), TRUE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
+         &(heurdata->initseed), TRUE, DEFAULT_RANDSEED, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixable",

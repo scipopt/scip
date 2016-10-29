@@ -220,11 +220,11 @@ void printCycle(
    /* print start/end node */
    if( varsindex < nbinvars || ( varsindex >= 2*nbinvars && varsindex < 3*nbinvars ) )
    {
-      SCIPdebugMessage("+ %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
+      SCIPdebugMsg(scip, "+ %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
    }
    else
    {
-      SCIPdebugMessage("- %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
+      SCIPdebugMsg(scip, "- %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
    }
 
    /* print inner nodes */
@@ -232,11 +232,11 @@ void printCycle(
    {
       if( varsindex < nbinvars || ( varsindex >= 2*nbinvars && varsindex < 3*nbinvars ) )
       {
-         SCIPdebugMessage("+ %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
+         SCIPdebugMsg(scip, "+ %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
       }
       else
       {
-         SCIPdebugMessage("- %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
+         SCIPdebugMsg(scip, "- %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
       }
       ++counter;
    }
@@ -244,15 +244,15 @@ void printCycle(
    /* print start/end node */
    if( varsindex < nbinvars || ( varsindex >= 2*nbinvars && varsindex < 3*nbinvars ) )
    {
-      SCIPdebugMessage("+ %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
+      SCIPdebugMsg(scip, "+ %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
    }
    else
    {
-      SCIPdebugMessage("- %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
+      SCIPdebugMsg(scip, "- %s\n",SCIPvarGetName(vars[varsindex%nbinvars]));
    }
 
    ++counter;
-   SCIPdebugMessage("original cycle has %u variables.\n", counter);
+   SCIPdebugMsg(scip, "original cycle has %u variables.\n", counter);
 }
 #endif
 
@@ -883,7 +883,7 @@ SCIP_RETCODE generateOddCycleCut(
    /* cycle contains only one node */
    if( ncyclevars < 3 )
    {
-      SCIPdebugMessage("fixing variable\n");
+      SCIPdebugMsg(scip, "fixing variable\n");
       /* strengthening variable bounds due to single-variable-cycle */
       if( startnode < nbinvars )
       {
@@ -1223,7 +1223,7 @@ SCIP_RETCODE checkArraySizesHeur(
    assert(weightArray != NULL);
    assert(success != NULL);
 
-   SCIPdebugMessage("reallocating...\n");
+   SCIPdebugMsg(scip, "reallocating...\n");
 
    additional = MIN(graph->maxarcs + graph->maxnodes - *size, *size) * ((int) sizeof(**weightArray));
    if( targetArray != NULL )
@@ -1248,7 +1248,7 @@ SCIP_RETCODE checkArraySizesHeur(
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
    {
       *success = FALSE;
-      SCIPdebugMessage("...memory limit exceeded\n");
+      SCIPdebugMsg(scip, "...memory limit exceeded\n");
       return SCIP_OKAY;
    }
 
@@ -1276,11 +1276,11 @@ SCIP_RETCODE checkArraySizesHeur(
    if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       *success = FALSE;
-      SCIPdebugMessage("...memory limit exceeded\n");
+      SCIPdebugMsg(scip, "...memory limit exceeded\n");
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("...with success\n");
+   SCIPdebugMsg(scip, "...with success\n");
 
    return SCIP_OKAY;
 }
@@ -2717,7 +2717,7 @@ SCIP_RETCODE checkArraySizesGLS(
    assert(graph->weight != NULL);
    assert(success != NULL);
 
-   SCIPdebugMessage("reallocating graph->head and graph->weight...\n");
+   SCIPdebugMsg(scip, "reallocating graph->head and graph->weight...\n");
 
    additional = (MIN(maxarcs, 2 * (*arraysize)) - (*arraysize)) * ((int) sizeof(*(graph->head)));
    additional += (MIN(maxarcs, 2 * (*arraysize)) - (*arraysize)) * ((int) sizeof(*(graph->weight)));
@@ -2734,7 +2734,7 @@ SCIP_RETCODE checkArraySizesGLS(
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
    {
       *success = FALSE;
-      SCIPdebugMessage("...memory limit exceeded\n");
+      SCIPdebugMsg(scip, "...memory limit exceeded\n");
       return SCIP_OKAY;
    }
 
@@ -2756,7 +2756,7 @@ SCIP_RETCODE checkArraySizesGLS(
 
    if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
-      SCIPdebugMessage("...memory limit exceeded - freeing all arrays\n");
+      SCIPdebugMsg(scip, "...memory limit exceeded - freeing all arrays\n");
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -2768,7 +2768,7 @@ SCIP_RETCODE checkArraySizesGLS(
       (graph->weight)[j] = DIJKSTRA_UNUSED;
    }
 
-   SCIPdebugMessage("...with success\n");
+   SCIPdebugMsg(scip, "...with success\n");
 
    return SCIP_OKAY;
 }
@@ -3278,7 +3278,7 @@ SCIP_RETCODE separateGLS(
    /* correct number of arcs */
    graph.arcs = narcs;
 
-   SCIPdebugMessage("--- graph successfully created (%u nodes, %u arcs) ---\n", graph.nodes, narcs);
+   SCIPdebugMsg(scip, "--- graph successfully created (%u nodes, %u arcs) ---\n", graph.nodes, narcs);
 
    /* graph is now prepared for Dijkstra methods */
    assert( dijkstraGraphIsValid(&graph) );
@@ -3545,21 +3545,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    /* only call separator if enough binary variables are present */
    if( SCIPgetNBinVars(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNBinVars(scip) < 5))
    {
-      SCIPdebugMessage("skipping separator: not enough binary variables\n");
+      SCIPdebugMsg(scip, "skipping separator: not enough binary variables\n");
       return SCIP_OKAY;
    }
 
    /* only call separator if enough fractional variables are present */
    if( SCIPgetNLPBranchCands(scip) < 3 || (!(sepadata->includetriangles) && SCIPgetNLPBranchCands(scip) < 5))
    {
-      SCIPdebugMessage("skipping separator: not enough fractional variables\n");
+      SCIPdebugMsg(scip, "skipping separator: not enough fractional variables\n");
       return SCIP_OKAY;
    }
 
    /* only call separator if enough implications (but not all implications should come from cliques) are present */
    if( SCIPgetNImplications(scip) < 1 || SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
    {
-      SCIPdebugMessage("skipping separator: not enough implications present\n");
+      SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
       return SCIP_OKAY;
    }
 
@@ -3577,7 +3577,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    {
       if ( sepadata->nunsucessfull > sepadata->maxunsucessfull )
       {
-         SCIPdebugMessage("skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
+         SCIPdebugMsg(scip, "skipping separator: number of unsucessfull calls = %d.\n", sepadata->nunsucessfull);
          return SCIP_OKAY;
       }
    }
@@ -3594,27 +3594,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    /* perform the actual separation routines */
    if( sepadata->usegls )
    {
-      SCIPdebugMessage("using GLS method for finding odd cycles\n");
+      SCIPdebugMsg(scip, "using GLS method for finding odd cycles\n");
       SCIP_CALL( separateGLS(scip, sepa, sepadata, NULL, result) );
    }
    else
    {
-      SCIPdebugMessage("using level graph heuristic for finding odd cycles\n");
+      SCIPdebugMsg(scip, "using level graph heuristic for finding odd cycles\n");
       SCIP_CALL( separateHeur(scip, sepa, sepadata, NULL, result) );
    }
 
    if( sepadata->ncuts - sepadata->oldncuts > 0 )
    {
-      SCIPdebugMessage("added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
+      SCIPdebugMsg(scip, "added %u cuts (%d allowed), %d lifted.\n", sepadata->ncuts - sepadata->oldncuts,
          sepadata->maxsepacutsround, sepadata->nliftedcuts - oldnliftedcuts);
       sepadata->nunsucessfull = 0;
    }
    else
    {
-      SCIPdebugMessage("no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
+      SCIPdebugMsg(scip, "no cuts added (%d allowed)\n", sepadata->maxsepacutsround);
       ++sepadata->nunsucessfull;
    }
-   SCIPdebugMessage("total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
+   SCIPdebugMsg(scip, "total sepatime: %.2f - total number of added cuts: %u\n", SCIPsepaGetTime(sepa), sepadata->ncuts);
 
    return SCIP_OKAY;
 }

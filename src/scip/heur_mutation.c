@@ -67,7 +67,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Mutation should at least improve the incumbent      */
    SCIP_Longint          usednodes;          /**< nodes already used by Mutation in earlier calls                     */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
-   unsigned int          randseed;           /**< seed value for random number generator                              */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                              */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
@@ -89,7 +89,7 @@ SCIP_RETCODE determineVariableFixings(
    SCIP_Real*            fixedvals,          /**< array to store the fixing values to fix variables in the subproblem */
    int*                  nfixedvars,         /**< pointer to store the number of variables that should be fixed */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   unsigned int*         randseed,           /**< a seed value for the random number generator                  */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator                                       */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked   */
    )
 {
@@ -126,7 +126,7 @@ SCIP_RETCODE determineVariableFixings(
    BMScopyMemoryArray(fixedvars, vars, ndiscretevars);
 
    /* shuffle the array randomly */
-   SCIPpermuteArray((void **)fixedvars, 0, nbinvars + nintvars, randseed);
+   SCIPrandomPermuteArray(randnumgen, (void **)fixedvars, 0, nbinvars + nintvars);
 
    *success = TRUE;
    /* store the fixing values for the subset of variables that should be fixed */
@@ -262,7 +262,29 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitMutation)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -353,12 +375,12 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
 
    /* determine variables that should be fixed in the mutation subproblem */
-   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, &heurdata->randseed, &success) );
+   SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata->minfixingrate, heurdata->randnumgen, &success) );
 
    /* terminate if it was not possible to create the subproblem */
    if( !success )
    {
-      SCIPdebugMessage("Could not create the subproblem -> skip call\n");
+      SCIPdebugMsg(scip, "Could not create the subproblem -> skip call\n");
       goto TERMINATE;
    }
 
@@ -493,7 +515,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
 
    /* solve the subproblem */
-   SCIPdebugMessage("Solve Mutation subMIP\n");
+   SCIPdebugMsg(scip, "Solve Mutation subMIP\n");
    retcode = SCIPsolve(subscip);
 
    /* Errors in solving the subproblem should not kill the overall solving process
@@ -571,6 +593,7 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyMutation) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeMutation) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitMutation) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitMutation) );
 
    /* add mutation primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nodesofs",

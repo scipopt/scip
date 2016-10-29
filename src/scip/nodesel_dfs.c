@@ -66,11 +66,11 @@ SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
       *selnode = SCIPgetPrioSibling(scip);
       if( *selnode == NULL )
       {
-         SCIPdebugMessage("select best leaf\n");
+         SCIPdebugMsg(scip, "select best leaf\n");
          *selnode = SCIPgetBestLeaf(scip);
       }
 
-      SCIPdebugMessage("select best sibling leaf\n");
+      SCIPdebugMsg(scip, "select best sibling leaf\n");
    }
 
    return SCIP_OKAY;

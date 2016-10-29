@@ -139,7 +139,7 @@ SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPdebugMessage("exec method of event handler for soft time limit\n");
+   SCIPdebugMsg(scip, "exec method of event handler for soft time limit\n");
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", eventhdlrdata->softtimelimit) );
 

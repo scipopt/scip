@@ -480,7 +480,7 @@ SCIP_RETCODE generateAverageNBRay(
          if( f >= 0 )
          {
             raydirection[f] += factor * coeffs[j] / rownorm;
-            assert( ! SCIPisInfinity(scip, REALABS(raydirection[j])) );
+            assert( ! SCIPisInfinity(scip, REALABS(raydirection[f])) );
          }
       }
    }
@@ -914,7 +914,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    *result = SCIP_DIDNOTFIND;
 
    /* starting OCTANE */
-   SCIPdebugMessage("run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
+   SCIPdebugMsg(scip, "run Octane heuristic on %s variables, which are %d vars, generate at most %d facets, using rule number %d\n",
       usefracspace ? "fractional" : "all", nsubspacevars, f_max, (heurdata->lastrule+1)%5);
 
    /* generate starting point in original coordinates */
@@ -1152,7 +1152,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &first_sols);
-   for( i = f_max; i >= 0; --i )
+   for( i = 0; i <= f_max; ++i )
       SCIPfreeBufferArray(scip, &facets[i]);
    SCIPfreeBufferArray(scip, &facets);
    SCIPfreeBufferArray(scip, &lambda);

@@ -176,7 +176,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
+   SCIPdebugMsg(scip, "linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
 
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -2075,7 +2075,7 @@ SCIP_DECL_READERREAD(readerReadGms)
    /* call GAMS with convertd solver to get compiled model instance in temporary directory */
    SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d",
       filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? 3 : 0);
-   SCIPdebugMessage(gamscall);
+   SCIPdebugMsg(scip, gamscall);
    rc = system(gamscall);
    if( rc != 0 )
    {

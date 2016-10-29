@@ -1018,11 +1018,11 @@ SCIP_RETCODE extractGates(
 #ifdef SCIP_DEBUG
       if( ngateconss == nlogicorvars )
       {
-	 SCIPdebugMessage("Following constraints form a set-partitioning constraint.\n");
+	 SCIPdebugMsg(scip, "Following constraints form a set-partitioning constraint.\n");
       }
       else
       {
-	 SCIPdebugMessage("Following constraints form an and-constraint.\n");
+	 SCIPdebugMsg(scip, "Following constraints form an and-constraint.\n");
       }
 #endif
 
@@ -1076,7 +1076,7 @@ SCIP_RETCODE extractGates(
 	       local, modifiable, dynamic, removable, stickingatnode) );
 
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMessage("-------------->\n");
+	 SCIPdebugMsg(scip, "-------------->\n");
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
 	 ++(*naddconss);
@@ -1100,7 +1100,7 @@ SCIP_RETCODE extractGates(
 	       local, modifiable, dynamic, removable, stickingatnode) );
 
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMessage("-------------->\n");
+	 SCIPdebugMsg(scip, "-------------->\n");
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
 	 ++(*naddconss);
@@ -1644,7 +1644,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 		  SCIP_CALL( SCIPsetConsRemovable(scip, setppc, removable) );
 		  SCIP_CALL( SCIPsetConsStickingAtNode(scip, setppc, stickingatnode) );
 
-		  SCIPdebugMessage("Following logicor is redundant to the set-partitioning constraint.\n");
+		  SCIPdebugMsg(scip, "Following logicor is redundant to the set-partitioning constraint.\n");
 		  SCIPdebugPrintCons(scip, logicor, NULL);
 		  SCIPdebugPrintCons(scip, setppc, NULL);
 	       }
@@ -1655,7 +1655,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
 		  assert(SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PACKING);
 
-		  SCIPdebugMessage("Following logicor and set-packing constraints form a set-partitioning constraint.\n");
+		  SCIPdebugMsg(scip, "Following logicor and set-packing constraints form a set-partitioning constraint.\n");
 		  SCIPdebugPrintCons(scip, logicor, NULL);
 		  SCIPdebugPrintCons(scip, setppc, NULL);
 
@@ -1666,7 +1666,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 			local, modifiable, dynamic, removable, stickingatnode) );
 
 		  SCIP_CALL( SCIPaddCons(scip, newcons) );
-		  SCIPdebugMessage("-------------->\n");
+		  SCIPdebugMsg(scip, "-------------->\n");
 		  SCIPdebugPrintCons(scip, newcons, NULL);
 
 		  ++(*naddconss);

@@ -449,7 +449,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    if( *success )
    {
-      SCIPdebugMessage("DINS successfully found new solution\n");
+      SCIPdebugMsg(scip, "DINS successfully found new solution\n");
    }
 
    SCIPfreeBufferArray(scip, &subsolvals);
@@ -480,7 +480,7 @@ SCIP_DECL_EVENTEXEC(eventExecDins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -543,6 +543,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolDins)
 
    /* initialize data */
    heurdata->usednodes = 0;
+   heurdata->lastnsolsfound = 0;
 
    /* create flag array */
    heurdata->deltalength = SCIPgetNBinVars(scip);
@@ -721,7 +722,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", fixedvars, fixedvals, binfixings + intfixings, heurdata->uselprows, heurdata->copycuts, &success) );
-   SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
+   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
    /* create event handler for LP events */
@@ -732,7 +733,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       return SCIP_PLUGINNOTFOUND;
    }
 
-   SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
 
    /* store subproblem variables that correspond to original variables */
    for( i = 0; i < nvars; i++ )
@@ -875,7 +876,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n", heurdata->neighborhoodsize, nsubnodes);
+   SCIPdebugMsg(scip, "solving DINS sub-MIP with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n", heurdata->neighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
@@ -902,7 +903,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
-   SCIPdebugMessage("DINS used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
+   SCIPdebugMsg(scip, "DINS used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
 
    /* check, whether a  (new) solution was found */
    if( nsubsols > 0 )

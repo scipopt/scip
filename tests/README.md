@@ -38,10 +38,12 @@ Smart test discovery is already built into the `Makefile`, so anything in `src` 
 The easiest way to compile and run the tests is:
 
 ```
-make IPOPT=<true|false>
+make
 ```
 
-**NOTE** This assumes that `SCIP` was compiled with `OPT=dbg SHARED=true`.
+**NOTE** `make` will read the options used for building `SCIP` from the binary. It uses `scip --version` to find out the options.
+If `SHARED=true`, or `OPT=dbg`  were not used when compiling `SCIP`, `make` will end with a proper error. If the binary is not found, it will
+assume `SHARED=true` and `OPT=dbg`.
 
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
 If you already have installed Criterion on you system, execute `touch Criterion` or `mkdir Criterion` before calling make.
@@ -53,13 +55,18 @@ If you already have installed Criterion on you system, execute `touch Criterion`
 See above for the easiest way to compile and run tests. For simply running tests:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=<true|false> test
+make
 ```
 
 This creates `CTestTestfile.cmake` with a list of the test to run and then calls `ctest --output-on-failure`. By default, tests in `src/bugs/` are not compiled or run since they take a long time. To compile and run them:
 
 ```
-make OPT=<opt|dbg> ZIMPL=<true|false> IPOPT=<true|false> test BUGS=true
+make BUGS=true
+```
+
+You can also run a single test, e.g. `
+```
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
 ```
 
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
@@ -82,4 +89,4 @@ The test suite is `separation` and the test name is `gauge`. To debug:
 (gdb) br src/cons/quadratic/gauge.c:112
 ```
 
-Criterion by default prints all of the critical debugging information (test_suite::test_name, file and line number were to break). When a test crashes, there is no need to `break` in `gdb`. TODO: simplify debugging.
+Criterion by default prints all of the critical debugging information (test_suite::test_name, file and line number were to break). When a test crashes, there is no need to `break` in `gdb`.

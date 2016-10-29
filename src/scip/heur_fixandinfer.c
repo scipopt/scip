@@ -135,7 +135,7 @@ SCIP_RETCODE fixVariable(
    }
 
    assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
-   SCIPdebugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n",
+   SCIPdebugMsg(scip, " -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n",
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval, npseudocands - 1);
    SCIP_CALL( SCIPfixVarProbing(scip, var, solval) );
 
@@ -218,13 +218,13 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
+   SCIPdebugMsg(scip, "starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -258,7 +258,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    /* check, if we are still feasible */
    if( cutoff )
    {
-      SCIPdebugMessage("propagation detected a cutoff\n");
+      SCIPdebugMsg(scip, "propagation detected a cutoff\n");
    }
    else if( ncands == 0 )
    {
@@ -271,17 +271,17 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
 
       if( success )
       {
-         SCIPdebugMessage("found primal feasible solution\n");
+         SCIPdebugMsg(scip, "found primal feasible solution\n");
          *result = SCIP_FOUNDSOL;
       }
       else
       {
-         SCIPdebugMessage("primal solution was rejected\n");
+         SCIPdebugMsg(scip, "primal solution was rejected\n");
       }
    }
    else
    {
-      SCIPdebugMessage("probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
+      SCIPdebugMsg(scip, "probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
    }
 
    /* end probing */

@@ -255,7 +255,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
    if ( sepadata->discardnode == currentnodenumber )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Separation method of closecuts separator.\n");
+   SCIPdebugMsg(scip, "Separation method of closecuts separator.\n");
 
    /* check whether we have to compute a relative interior point */
    if ( sepadata->separelint )
@@ -323,7 +323,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
    /* separate close cuts */
    if ( sepadata->sepasol != NULL )
    {
-      SCIPdebugMessage("Generating close cuts ... (combination value: %f)\n", sepadata->sepacombvalue);
+      SCIPdebugMsg(scip, "Generating close cuts ... (combination value: %f)\n", sepadata->sepacombvalue);
       *result = SCIP_DIDNOTFIND;
 
       /* generate point to be separated */
@@ -369,12 +369,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
             }
          }
 
-         SCIPdebugMessage("Separated close cuts: %d (enoughcuts: %d, unsuccessful: %d).\n", SCIPgetNCuts(scip) - noldcuts,
+         SCIPdebugMsg(scip, "Separated close cuts: %d (enoughcuts: %d, unsuccessful: %d).\n", SCIPgetNCuts(scip) - noldcuts,
             SCIPgetNCuts(scip) - noldcuts > sepadata->sepathreshold, sepadata->nunsuccessful);
 
          if ( sepadata->maxunsuccessful >= 0 && sepadata->nunsuccessful > sepadata->maxunsuccessful )
          {
-            SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
+            SCIPdebugMsg(scip, "Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
             sepadata->discardnode = currentnodenumber;
             sepadata->nunsuccessful = 0;
          }

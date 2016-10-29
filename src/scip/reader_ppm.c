@@ -573,7 +573,7 @@ SCIP_RETCODE SCIPwritePpm(
       if(i)
       {
          printbool = TRUE;
-         SCIPdebugPrintf("Maximal coefficient = %g\n", maxcoef);
+         SCIPdebugMsgPrint(scip, "Maximal coefficient = %g\n", maxcoef);
       }
 
 

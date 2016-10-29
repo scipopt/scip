@@ -336,7 +336,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%" SCIP_LONGINT_FORMAT ", maxdivedepth=%d\n",
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%" SCIP_LONGINT_FORMAT ", maxdivedepth=%d\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
    /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
@@ -448,7 +448,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
          if( success )
          {
-            SCIPdebugMessage("objpscostdiving found roundable primal solution: obj=%g\n",
+            SCIPdebugMsg(scip, "objpscostdiving found roundable primal solution: obj=%g\n",
                SCIPgetSolOrigObj(scip, heurdata->sol));
 
             /* try to add solution to SCIP */
@@ -457,7 +457,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             /* check, if solution was feasible and good enough */
             if( success )
             {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
                *result = SCIP_FOUNDSOL;
             }
          }
@@ -472,7 +472,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       {
          /* variable was already soft rounded upwards: hard round it downwards */
          SCIP_CALL( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
-         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded upwards -> bounds=[%g,%g]\n",
+         SCIPdebugMsg(scip, "  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded upwards -> bounds=[%g,%g]\n",
             divedepth, maxdivedepth, SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var));
       }
@@ -480,7 +480,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       {
          /* variable was already soft rounded downwards: hard round it upwards */
          SCIP_CALL( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded downwards -> bounds=[%g,%g]\n",
+         SCIPdebugMsg(scip, "  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded downwards -> bounds=[%g,%g]\n",
             divedepth, maxdivedepth, SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var));
       }
@@ -516,7 +516,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             roundings[varidx] = -1;
          }
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobj) );
-         SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, round=%u/%u, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
+         SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, round=%u/%u, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var), oldobj, newobj);
@@ -554,7 +554,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          /* get new fractional variables */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
       }
-      SCIPdebugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
+      SCIPdebugMsg(scip, "   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
    }
 
    /* check if a solution has been found */
@@ -564,7 +564,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIPdebugMessage("objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+      SCIPdebugMsg(scip, "objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -572,7 +572,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       /* check, if solution was feasible and good enough */
       if( success )
       {
-         SCIPdebugMessage(" -> solution was feasible and good enough\n");
+         SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -586,7 +586,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* free temporary memory for remembering the current soft roundings */
    SCIPfreeBufferArray(scip, &roundings);
 
-   SCIPdebugMessage("objpscostdiving heuristic finished\n");
+   SCIPdebugMsg(scip, "objpscostdiving heuristic finished\n");
 
    return SCIP_OKAY;
 }

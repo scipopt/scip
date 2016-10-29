@@ -154,23 +154,23 @@ SCIP_RETCODE constructCompression(
       depth = SCIPnodeGetDepth(currentnode);
    }
 
-   SCIPdebugMessage(">> start <%s> at node %llu (nleaves: %d, depth: %d)\n", COMPR_NAME,
+   SCIPdebugMsg(scip, ">> start <%s> at node %llu (nleaves: %d, depth: %d)\n", COMPR_NAME,
          SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetNumber(SCIPgetCurrentNode(scip)),
          nleaveids, depth);
 
    if( SCIPcomprGetMinNodes(compr) > nleaveids )
    {
-      SCIPdebugMessage("-> skip compression (min. leaves = %d)\n", SCIPcomprGetMinNodes(compr));
+      SCIPdebugMsg(scip, "-> skip compression (min. leaves = %d)\n", SCIPcomprGetMinNodes(compr));
       return SCIP_OKAY;
    }
 
    if( nleaveids == 0 )
    {
-      SCIPdebugMessage("-> skip compression (k = %d, nleaves = %d)\n", 1, nleaveids);
+      SCIPdebugMsg(scip, "-> skip compression (k = %d, nleaves = %d)\n", 1, nleaveids);
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("-> try compression with %d node(s)\n", 1);
+   SCIPdebugMsg(scip, "-> try compression with %d node(s)\n", 1);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -249,7 +249,7 @@ SCIP_RETCODE constructCompression(
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
       assert(reoptnode != NULL);
 
-      SCIPdebugMessage("-> use node at id %u, %d vars, %d conss, lowerbound = %.g\n", leaveids[k], nvars[k],
+      SCIPdebugMsg(scip, "-> use node at id %u, %d vars, %d conss, lowerbound = %.g\n", leaveids[k], nvars[k],
             SCIPreoptnodeGetNConss(reoptnode), SCIPreoptnodeGetLowerbound(reoptnode));
 #endif
    }
@@ -330,7 +330,7 @@ SCIP_RETCODE constructCompression(
 
    *result = SCIP_SUCCESS;
 
-   SCIPdebugMessage("-> found representation of size %d.\n", comprdata->nrepresentatives);
+   SCIPdebugMsg(scip, "-> found representation of size %d.\n", comprdata->nrepresentatives);
 
    /* free memory */
    for(k = size-1; k >= 0; k--)
@@ -475,7 +475,7 @@ SCIP_DECL_COMPREXEC(comprExecWeakcompr)
 
    if( !comprdata->initialized )
    {
-      SCIPdebugMessage(">> initializing <%s>\n", COMPR_NAME);
+      SCIPdebugMsg(scip, ">> initializing <%s>\n", COMPR_NAME);
 
       comprdata->representativessize = DEFAULT_MEM_REPR;
       comprdata->nrepresentatives = 0;
@@ -494,7 +494,7 @@ SCIP_DECL_COMPREXEC(comprExecWeakcompr)
       SCIP_CALL( applyCompression(scip, compr, comprdata, result) );
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
-      SCIPdebugMessage("->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
+      SCIPdebugMsg(scip, "->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
    }
 
    return SCIP_OKAY;

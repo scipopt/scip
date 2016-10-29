@@ -137,7 +137,7 @@ SCIP_RETCODE computeFixingrate(
    /* if there is no NLP relaxation available (e.g., because the presolved problem is linear), use LP relaxation */
    if( !SCIPisNLPConstructed(scip) )
    {
-      SCIPdebugMessage("no NLP present, use LP relaxation instead\n");
+      SCIPdebugMsg(scip, "no NLP present, use LP relaxation instead\n");
       (*startsol) = 'l';
    }
 
@@ -159,7 +159,7 @@ SCIP_RETCODE computeFixingrate(
       SCIPdebug( SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, &nlpverblevel) ) );
       SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, MAX(1,nlpverblevel)) ) );
 
-      SCIPdebugMessage("try to solve NLP relaxation to obtain fixing values\n");
+      SCIPdebugMsg(scip, "try to solve NLP relaxation to obtain fixing values\n");
 
       /* set starting point to LP solution */
       SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -170,7 +170,7 @@ SCIP_RETCODE computeFixingrate(
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);
       *success = (stat == SCIP_NLPSOLSTAT_GLOBOPT) || (stat == SCIP_NLPSOLSTAT_LOCOPT) || stat == (SCIP_NLPSOLSTAT_FEASIBLE);
-      SCIPdebugMessage("solving NLP relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
+      SCIPdebugMsg(scip, "solving NLP relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
 
       /* reset NLP verblevel to the value it had before */
       SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );
@@ -349,7 +349,7 @@ SCIP_DECL_EVENTEXEC(eventExecRens)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -488,7 +488,7 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_CALL( restrictToBinaryBounds(scip, subscip, subvars, startsol) );
    }
 
-   SCIPdebugMessage("RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+   SCIPdebugMsg(scip, "RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -606,7 +606,7 @@ SCIP_RETCODE SCIPapplyRens(
       goto TERMINATE;
    }
 
-   SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
+   SCIPdebugMsg(scip, "RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
    allfixingrate = (SCIPgetNOrigVars(subscip) - SCIPgetNVars(subscip)) / (SCIP_Real)SCIPgetNOrigVars(subscip);
 
@@ -627,7 +627,7 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
       /* solve the subproblem */
-      SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, maxnodes);
+      SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, maxnodes);
       retcode = SCIPsolve(subscip);
 
       /* drop LP events of sub-SCIP */
@@ -801,7 +801,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping RENS: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping RENS: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 

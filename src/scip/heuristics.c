@@ -348,7 +348,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /* enables collection of variable statistics during probing */
    SCIPenableVarHistory(scip);
 
-   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing %s heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n",
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") executing %s heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPheurGetName(heur), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       lastlpdepth = SCIPgetProbingDepth(scip);
       domreds = 0;
 
-      SCIPdebugMessage("%s heuristic continues diving at depth %d, %d candidates left\n",
+      SCIPdebugMsg(scip, "%s heuristic continues diving at depth %d, %d candidates left\n",
          SCIPdivesetGetName(diveset), lastlpdepth, nlpcands);
 
 
@@ -447,7 +447,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          if( success )
          {
             SCIP_Bool changed = FALSE;
-            SCIPdebugMessage("%s found roundable primal solution: obj=%g\n", SCIPdivesetGetName(diveset), SCIPgetSolOrigObj(scip, worksol));
+            SCIPdebugMsg(scip, "%s found roundable primal solution: obj=%g\n", SCIPdivesetGetName(diveset), SCIPgetSolOrigObj(scip, worksol));
 
             /* adjust indicator constraints */
             if( indconshdlr != NULL )
@@ -462,7 +462,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* check, if solution was feasible and good enough */
             if( success )
             {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
                *result = SCIP_FOUNDSOL;
 
                /* the rounded solution found above led to a cutoff of the node LP solution */
@@ -553,9 +553,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             assert(bdchgvals != NULL);
 
             /* return if we reached the depth limit */
-            if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+            if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
             {
-               SCIPdebugMessage("depth limit reached, we stop diving immediately.\n");
+               SCIPdebugMsg(scip, "depth limit reached, we stop diving immediately.\n");
                goto TERMINATE;
             }
 
@@ -580,7 +580,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                ublocal = SCIPvarGetUbLocal(bdchgvar);
 
 
-               SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
+               SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
                      SCIPvarGetName(bdchgvar), lblocal, ublocal);
 
@@ -640,13 +640,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                 */
                if( infeasbdchange )
                {
-                  SCIPdebugMessage("\nSelected variable <%s> domain already [%g,%g] as least as tight as desired bound change, diving aborted \n",
+                  SCIPdebugMsg(scip, "\nSelected variable <%s> domain already [%g,%g] as least as tight as desired bound change, diving aborted \n",
                      SCIPvarGetName(bdchgvar), lblocal, ublocal);
                   cutoff = TRUE;
                   break;
                }
 
-               SCIPdebugMessage("newbounds=[%g,%g]\n",
+               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n",
                      lblocal, ublocal);
             }
             /* break loop immediately if we detected a cutoff */
@@ -681,7 +681,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* perform backtracking if a cutoff was detected */
             if( cutoff && !backtracked && SCIPdivesetUseBacktrack(diveset) )
             {
-               SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
+               SCIPdebugMsg(scip, "  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
                SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
                ++totalnbacktracks;
                backtracked = TRUE;
@@ -786,7 +786,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
       else
          nlpcands = 0;
-      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", SCIPgetLPSolstat(scip), SCIPgetLPObjval(scip), searchbound, nlpcands);
+      SCIPdebugMsg(scip, "   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", SCIPgetLPSolstat(scip), SCIPgetLPObjval(scip), searchbound, nlpcands);
    }
 
    success = FALSE;
@@ -795,7 +795,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    {
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-      SCIPdebugMessage("%s found primal solution: obj=%g\n", SCIPdivesetGetName(diveset), SCIPgetSolOrigObj(scip, worksol));
+      SCIPdebugMsg(scip, "%s found primal solution: obj=%g\n", SCIPdivesetGetName(diveset), SCIPgetSolOrigObj(scip, worksol));
 
       /* try to add solution to SCIP */
       SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -803,7 +803,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* check, if solution was feasible and good enough */
       if( success )
       {
-         SCIPdebugMessage(" -> solution was feasible and good enough\n");
+         SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -811,7 +811,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, SCIPgetNSolsFound(scip) - oldnsolsfound,
          SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, success);
 
-   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
       SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
       SCIPretransformObj(scip, SCIPgetLPObjval(scip)), SCIPretransformObj(scip, searchbound), SCIPgetLPSolstat(scip), cutoff);
 

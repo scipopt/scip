@@ -73,7 +73,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBreadthfirst)
    }
    if( *selnode != NULL )
    {
-      SCIPdebugMessage("Selecting next node number %" SCIP_LONGINT_FORMAT " at depth %d\n", SCIPnodeGetNumber(*selnode), SCIPnodeGetDepth(*selnode));
+      SCIPdebugMsg(scip, "Selecting next node number %" SCIP_LONGINT_FORMAT " at depth %d\n", SCIPnodeGetNumber(*selnode), SCIPnodeGetDepth(*selnode));
    }
 
    return SCIP_OKAY;

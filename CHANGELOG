@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- implemented linear time methods for (weighted) median selection for joint arrays of various types
 - new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
 - new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
 - added leaf statistics about LP objective limit|feasible|infeasible leaves to the statistics output and
@@ -20,6 +21,11 @@ features:
 - added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
+- use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
+- new random number gerator in pub_misc.h
+- the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
+  as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
+  though the solutions required an addition NLP solve
 - add check whether variables have been released when freeing SCIP
 
 parameters:
@@ -32,8 +38,13 @@ parameters:
 - new parameter class randomization
 - moved permutationseed from misc to randomization
 - new parameter randomization/lpseed to set the initial seed of the LP solver
+- setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
+- parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
+  "randomization/permuteconss", and "randomization/permutevars"
+- add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 
 performance improvements:
+- knapsack approximation algorithms use linear-time weighted median selection instead of sorting
 - improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
   and only create and populate a sub-SCIP if enough variables will be fixed.
@@ -45,6 +56,8 @@ performance improvements:
 - reduce performance variability by using random numbers as tie-breaker for external branching candidates
 
 interface:
+- separated header pub_misc.h from repeated methods for sorting and (weighted) median selection; those are also available in separate headers pub_misc_sort.h
+  and pub_misc_select.h, but included into pub_misc.h
 - new library methods SCIPenableConsCompression(), SCIPisConsCompressionEnabled(), SCIPcopyConsCompression(), SCIPcopyOrigConsCompression()
 - new method SCIPcopyLargeNeighborhoodSearch() in heuristics.h that supports compressed copying and two kinds of problem copy: the MIP-relaxation or
   a 1-1 problem copy (by copying the constraints, and not the LP relaxation)
@@ -63,7 +76,15 @@ interface:
 - new function SCIPisDualSolAvailable() to query the dual solution availability
 - submakefile for CrayXC systems added
 - new method SCIPinitializeRandomSeed()
+- new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
+  subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
 - add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
+- methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
+- methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
+- method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
+- bound reader uses angle bracket around variable names
 
 fixed bugs:
 
@@ -96,6 +117,8 @@ fixed bugs:
 - fixed bug in heur_octane with uninitialized ray direction
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
 - SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
+- ignore lower and upper bound tightenigs beyond +/-infinity during solving
+- fix wrong NLP representation of logic or constraints in the dual value heuristic
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
@@ -106,6 +129,8 @@ interface:
 - removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
 - removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
 - removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
+- new function SCIPswapReals() to swap two real values
+- new command line parameter -v to print detailed build options
 
 Makefile:
 - revise sub-makefiles for MSVC on MinGW

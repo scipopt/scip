@@ -47,6 +47,8 @@
 /*#define CHECKMEM*/
 /*#define CHECKCHKFREE*/
 
+/* Uncomment the following for a warnings if buffers are not freed in the reverse order of allocation. */
+/* #define CHECKBUFFERORDER */
 
 /* if we are included in SCIP, use SCIP's message output methods */
 #ifdef SCIPdebugMessage
@@ -2951,6 +2953,13 @@ void BMSfreeBufferMemory_work(
    bufnum = buffer->firstfree-1;
    while ( bufnum > 0 && buffer->data[bufnum] != *ptr )
       --bufnum;
+
+#ifdef CHECKBUFFERORDER
+   if ( bufnum < buffer->firstfree - 1 )
+   {
+      warningMessage("[%s:%d]: freeing buffer in wrong order.\n", filename, line);
+   }
+#endif
 
 #ifndef NDEBUG
    if ( bufnum == 0 && buffer->data[bufnum] != *ptr )

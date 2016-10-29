@@ -829,7 +829,7 @@ SCIP_RETCODE changeEmphasisParameters(
          break;
       case SOLVINGPHASE_UNINITIALIZED:
       default:
-         SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
+         SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
          break;
    }
@@ -863,7 +863,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
          break;
       case SOLVINGPHASE_UNINITIALIZED:
       default:
-         SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
+         SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
          break;
    }

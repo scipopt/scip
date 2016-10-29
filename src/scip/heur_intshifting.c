@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "scip/heur_intshifting.h"
-
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "intshifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
@@ -46,7 +46,7 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -592,8 +592,11 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    SCIPheurSetData(heur, heurdata);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -610,6 +613,10 @@ SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -724,7 +731,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMessage("executing intshifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing intshifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
    nvars = SCIPgetNVars(scip);
@@ -867,7 +874,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_Bool oldsolvalisfrac;
       int probindex;
 
-      SCIPdebugMessage("intshifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
+      SCIPdebugMsg(scip, "intshifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj),
          SCIPretransformObj(scip, SCIPgetCutoffbound(scip)));
 
@@ -894,7 +901,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          if( nviolfracrows > 0 )
             rowidx = nviolfracrows - 1;
          else
-            rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
+            rowidx = SCIPrandomGetInt(heurdata->randnumgen, 0, nviolrows-1);
 
          assert(0 <= rowidx && rowidx < nviolrows);
          row = violrows[rowidx];
@@ -903,7 +910,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          assert(violrowpos[rowpos] == rowidx);
          assert(nfracsinrow[rowpos] == 0 || rowidx == nviolfracrows - 1);
 
-         SCIPdebugMessage("intshifting heuristic: try to fix violated row <%s>: %g <= [%g,%g] <= %g\n",
+         SCIPdebugMsg(scip, "intshifting heuristic: try to fix violated row <%s>: %g <= [%g,%g] <= %g\n",
             SCIProwGetName(row), SCIProwGetLhs(row), minactivities[rowpos], maxactivities[rowpos], SCIProwGetRhs(row));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
@@ -919,20 +926,20 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 
       if( shiftvar == NULL && nfrac > 0 )
       {
-         SCIPdebugMessage("intshifting heuristic: search rounding variable and try to stay feasible\n");
+         SCIPdebugMsg(scip, "intshifting heuristic: search rounding variable and try to stay feasible\n");
          SCIP_CALL( selectEssentialRounding(scip, sol, minobj, lpcands, nlpcands, &shiftvar, &oldsolval, &newsolval) );
       }
 
       /* check, whether shifting was possible */
       if( shiftvar == NULL || SCIPisEQ(scip, oldsolval, newsolval) )
       {
-         SCIPdebugMessage("intshifting heuristic:  -> didn't find a shifting variable\n");
+         SCIPdebugMsg(scip, "intshifting heuristic:  -> didn't find a shifting variable\n");
          break;
       }
 
       assert(SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
 
-      SCIPdebugMessage("intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
+      SCIPdebugMsg(scip, "intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
          oldsolval, newsolval, SCIPvarGetObj(shiftvar));
 
@@ -997,7 +1004,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          }
       }
 
-      SCIPdebugMessage("intshifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+      SCIPdebugMsg(scip, "intshifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
    }
 
@@ -1014,7 +1021,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_RETCODE retstat;
 #endif
 
-      SCIPdebugMessage("shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
+      SCIPdebugMsg(scip, "shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
 
       /* start diving to calculate the LP relaxation */
       SCIP_CALL( SCIPstartDive(scip) );
@@ -1042,7 +1049,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       }
 
       /* solve LP */
-      SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -1057,8 +1064,8 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -1076,7 +1083,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 
          if( stored )
          {
-            SCIPdebugMessage("found feasible shifted solution:\n");
+            SCIPdebugMsg(scip, "found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
          }

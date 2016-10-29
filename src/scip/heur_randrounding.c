@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "scip/heur_randrounding.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "randrounding"
@@ -54,8 +55,8 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed for random number generation */
    int                   maxproprounds;      /**< limit of rounds for each propagation call */
    SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
    SCIP_Bool             usesimplerounding;  /**< should the heuristic apply the variable lock strategy of simple rounding,
@@ -100,7 +101,7 @@ SCIP_RETCODE performRandRounding(
 
    assert(permutedcands != NULL);
 
-   SCIPpermuteArray((void **)permutedcands, 0, ncands, &heurdata->randseed);
+   SCIPrandomPermuteArray(heurdata->randnumgen, (void **)permutedcands, 0, ncands);
    cutoff = FALSE;
 
    /* loop over candidates and perform randomized rounding and optionally probing. */
@@ -131,7 +132,7 @@ SCIP_RETCODE performRandRounding(
       ceilval = SCIPfeasCeil(scip, oldsolval);
       floorval = SCIPfeasFloor(scip, oldsolval);
 
-      SCIPdebugMessage("rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
+      SCIPdebugMsg(scip, "rand rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* abort if rounded ceil and floor value lie outside the variable domain. Otherwise, check if
@@ -158,7 +159,7 @@ SCIP_RETCODE performRandRounding(
          /* the standard randomized rounding */
          SCIP_Real randnumber;
 
-         randnumber = SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed);
+         randnumber = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
          if( randnumber <= oldsolval - floorval )
             newsolval = ceilval;
          else
@@ -205,7 +206,7 @@ SCIP_RETCODE performRandRounding(
              * otherwise we finish at this point.
              * @todo: Maybe we want to continue with the same node because we do not backtrack.
              */
-            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+            if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
@@ -252,7 +253,7 @@ SCIP_RETCODE performRandRounding(
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
@@ -319,7 +320,7 @@ SCIP_RETCODE performLPRandRounding(
    *result = SCIP_DIDNOTFIND;
 
    /* perform random rounding */
-   SCIPdebugMessage("executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
+   SCIPdebugMsg(scip, "executing rand LP-rounding heuristic: %d fractionals\n", nlpcands);
    SCIP_CALL( performRandRounding(scip, heurdata, sol, lpcands, nlpcands, propagate, result) );
 
    return SCIP_OKAY;
@@ -375,7 +376,10 @@ SCIP_DECL_HEURINIT(heurInitRandrounding) /*lint --e{715}*/
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -392,6 +396,9 @@ SCIP_DECL_HEUREXIT(heurExitRandrounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

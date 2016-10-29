@@ -190,7 +190,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       nnewbinvars = (int)SCIPfloor(scip, (log((SCIP_Real) domainsize)/log(2.0))) + 1;
 
-      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %" SCIP_LONGINT_FORMAT "\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
+      SCIPdebugMsg(scip, "integer variable <%s> [%g,%g], domainsize %" SCIP_LONGINT_FORMAT "\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
          SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
 
       assert(nnewbinvars > 0);
@@ -213,7 +213,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       for( v2 = nnewbinvars - 1; v2 >= 0; --v2 )
       {
-         SCIPdebugMessage("creating for <%s>[%g,%g] %d. binary variable\n", SCIPvarGetName(vars[v]), lb, ub, v2);
+         SCIPdebugMsg(scip, "creating for <%s>[%g,%g] %d. binary variable\n", SCIPvarGetName(vars[v]), lb, ub, v2);
 
          /* create binary variable */
          (void) SCIPsnprintf(newbinvarname, SCIP_MAXSTRLEN, "%s_bin_%d", SCIPvarGetName(vars[v]), v2);

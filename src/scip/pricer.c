@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPpricerCopyInclude(
 
    if( pricer->pricercopy != NULL )
    {
-      SCIPdebugMessage("including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), (void*)set->scip);
       SCIP_CALL( pricer->pricercopy(set->scip, pricer, valid) );
    }
    return SCIP_OKAY;
@@ -361,7 +361,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(lowerbound != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
+   SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
 
    oldnvars = prob->nvars;
 
@@ -400,7 +400,7 @@ SCIP_RETCODE SCIPpricerFarkas(
    if( pricer->pricerfarkas == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("executing Farkas pricing of variable pricer <%s>\n", pricer->name);
+   SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);
 
    oldnvars = prob->nvars;
 
