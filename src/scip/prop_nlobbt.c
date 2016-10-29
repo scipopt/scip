@@ -259,7 +259,7 @@ SCIP_RETCODE addGenVBound(
    SCIP_Real* alpha;
    SCIP_Real* beta;
    SCIP_Real constant;
-   SCIP_Real gamma;
+   SCIP_Real mu;
    int nlvbvars;
    int i;
 
@@ -279,7 +279,7 @@ SCIP_RETCODE addGenVBound(
    SCIP_CALL( SCIPallocBufferArray(scip, &lvbcoefs, propdata->nlpinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lvbvars, propdata->nlpinvars) );
    constant = boundtype == SCIP_BOUNDTYPE_LOWER ? primal[varidx] : -primal[varidx];
-   gamma = 0.0;
+   mu = 0.0;
    nlvbvars = 0;
 
    /* collect coefficients of genvbound */
@@ -298,14 +298,14 @@ SCIP_RETCODE addGenVBound(
    /* first dual multiplier corresponds to the cutoff row if cutoffbound < SCIPinfinity() */
    if( !SCIPisInfinity(scip, cutoffbound) && SCIPisGT(scip, dual[0], 0.0) )
    {
-      gamma = dual[0];
-      constant += gamma * cutoffbound;
+      mu = dual[0];
+      constant += mu * cutoffbound;
    }
 
    /* add genvbound to genvbounds propagator */
-   if( !SCIPisInfinity(scip, REALABS(constant)) && (nlvbvars > 0 || SCIPisFeasGT(scip, gamma, 0.0)) )
+   if( !SCIPisInfinity(scip, REALABS(constant)) && (nlvbvars > 0 || SCIPisFeasGT(scip, mu, 0.0)) )
    {
-      SCIP_CALL( SCIPgenVBoundAdd(scip, propdata->genvboundprop, lvbvars, var, lvbcoefs, nlvbvars, -gamma, constant,
+      SCIP_CALL( SCIPgenVBoundAdd(scip, propdata->genvboundprop, lvbvars, var, lvbcoefs, nlvbvars, -mu, constant,
             boundtype) );
       SCIPdebugMsg(scip, "add genvbound for %s\n", SCIPvarGetName(var));
    }
