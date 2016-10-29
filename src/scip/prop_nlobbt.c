@@ -760,8 +760,8 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    return SCIP_OKAY;
 }
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which
- *  the number of non-linearly occurrences and stores it in the nlscore array; the values are used to sort all variables
+/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable
+ *  the number of non-linearly occurrences and stores it in the nlscore array; the scores are used to sort all variables
  *  in applyNlobbt() and process the 'best' candidates first; to reduce performance variability we store the scores as
  *  floating points to perturb them later
  *
