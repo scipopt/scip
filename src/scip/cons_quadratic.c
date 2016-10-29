@@ -6913,6 +6913,9 @@ SCIP_RETCODE generateCut(
 /** compute eigen decomposition of A, where \f$ f(x) = x^T A x + b^T x \f$. The eigen decomposition is given by
  * A = P D P^T, where D is diagonal formed by the eigenvalues and P is orthonormal whose columns are the eigenvectors;
  * we also compute b^T * P, in case one needs the change of variables P^T x = y <=> x = P y
+ * We store P^T in an array, specifically, in consdata->eigenvectors we store P^T row-wise, i.e.,
+ * the first row of P^T is store in eigenvector[0..n-1], the second row is stored in eigenvectors[n..2n-1], etc;
+ * equivalently, the first eigenvector is eigenvector[0..n-1], the second one is eigenvectors[n..2n-1], etc;
  */
 static
 SCIP_RETCODE computeED(
