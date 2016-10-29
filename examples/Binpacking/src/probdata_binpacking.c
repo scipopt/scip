@@ -110,7 +110,7 @@ SCIP_DECL_EVENTEXEC(eventExecAddedVar)
    assert(event != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_VARADDED);
 
-   SCIPdebugMessage("exec method of event handler for added variable to probdata\n");
+   SCIPdebugMsg(scip, "exec method of event handler for added variable to probdata\n");
 
    /* add new variable to probdata */
    SCIP_CALL( SCIPprobdataAddVar(scip, SCIPgetProbData(scip), SCIPeventGetVar(event)) );
@@ -233,7 +233,7 @@ SCIP_RETCODE createInitialColumns(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
-      SCIPdebugMessage("create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
+      SCIPdebugMsg(scip, "create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
 
       /* create variable for the packing pattern which contains only this item */
       SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, TRUE, TRUE, NULL) );
@@ -280,7 +280,7 @@ SCIP_RETCODE createInitialColumns(
 static
 SCIP_DECL_PROBDELORIG(probdelorigBinpacking)
 {
-   SCIPdebugMessage("free original problem data\n");
+   SCIPdebugMsg(scip, "free original problem data\n");
 
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -309,7 +309,7 @@ SCIP_DECL_PROBTRANS(probtransBinpacking)
 static
 SCIP_DECL_PROBDELTRANS(probdeltransBinpacking)
 {
-   SCIPdebugMessage("free transformed problem data\n");
+   SCIPdebugMsg(scip, "free transformed problem data\n");
 
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -503,7 +503,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
    probdata->vars[probdata->nvars] = var;
    probdata->nvars++;
 
-   SCIPdebugMessage("added variable to probdata; nvars = %d\n", probdata->nvars);
+   SCIPdebugMsg(scip, "added variable to probdata; nvars = %d\n", probdata->nvars);
 
    return SCIP_OKAY;
 }

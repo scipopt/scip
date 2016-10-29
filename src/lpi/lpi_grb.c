@@ -1322,9 +1322,23 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    invalidateSolution(lpi);
 
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+      int j;
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
+
    /* add columns - all new variables are continuous */
-   CHECK_ZERO( lpi->messagehdlr, GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)obj, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames) )
-      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val,
+      (SCIP_Real*)obj, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1424,6 +1438,19 @@ SCIP_RETCODE SCIPlpiAddRows(
    SCIPdebugMessage("adding %d rows with %d nonzeros to Gurobi\n", nrows, nnonz);
 
    invalidateSolution(lpi);
+
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new rcols are added - this is forbidden */
+      int ncols;
+      int j;
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 

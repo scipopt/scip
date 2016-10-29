@@ -51,6 +51,39 @@ SCIPINTERNAL	=	true
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.project
 
+#-----------------------------------------------------------------------------
+# define build flags
+#-----------------------------------------------------------------------------
+BUILDFLAGS=" ARCH=$(ARCH)\\n\
+		COMP=$(COMP)\\n\
+		EXPRINT=$(EXPRINT)\\n\
+		GAMS=$(GAMS)\\n\
+		GMP=$(GMP)\\n\
+		IPOPT=$(IPOPT)\\n\
+		IPOPTOPT=$(IPOPTOPT)\\n\
+		LPS=$(LPS)\\n\
+		LPSCHECK=$(LPSCHECK)\\n\
+		LPSOPT=$(LPSOPT)\\n\
+		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
+		NOBLKMEM=$(NOBLKMEM)\\n\
+		NOBUFMEM=$(NOBUFMEM)\\n\
+		OPT=$(OPT)\\n\
+		OSTYPE=$(OSTYPE)\\n\
+		PARASCIP=$(PARASCIP)\\n\
+		READLINE=$(READLINE)\\n\
+		SANITIZE=$(SANITIZE)\\n\
+		SHARED=$(SHARED)\\n\
+		USRARFLAGS=$(USRARFLAGS)\\n\
+		USRCFLAGS=$(USRCFLAGS)\\n\
+		USRCXXFLAGS=$(USRCXXFLAGS)\\n\
+		USRDFLAGS=$(USRDFLAGS)\\n\
+		USRFLAGS=$(USRFLAGS)\\n\
+		USRLDFLAGS=$(USRLDFLAGS)\\n\
+		USROFLAGS=$(USROFLAGS)\\n\
+		VERSION=$(VERSION)\\n\
+		ZIMPL=$(ZIMPL)\\n\
+		ZIMPLOPT=$(ZIMPLOPT)\\n\
+		ZLIB=$(ZLIB)"
 
 #-----------------------------------------------------------------------------
 # default settings
@@ -393,6 +426,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_mutation.o \
+			scip/heur_multistart.o \
 			scip/heur_nlpdiving.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
@@ -522,6 +556,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/reopt.o \
 			scip/retcode.o \
 			scip/scip.o \
+			scip/scipbuildflags.o \
 			scip/scipdefplugins.o \
 			scip/scipgithash.o \
 			scip/scipshell.o \
@@ -558,6 +593,7 @@ endif
 ALLSRC		+=	$(SCIPLIBSRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
+SCIPBUILDFLAGSFILE	= 	$(SRCDIR)/scip/buildflags.c
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -703,7 +739,7 @@ check:		test
 test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: testcount
 testcount:
@@ -1055,14 +1091,10 @@ endif
 
 .PHONY: dll
 dll: $(SCIPLIBOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
-ifeq ($(COMP),msvc)
 		@echo "-> generating library $@"
 		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(DLLFILENAME) \
 			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
-else
-		@echo "can not use 'make dll' without MSVC"
-endif
 
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(GAMSDEP) $(LPSCHECKDEP) $(PARASCIPDEP) | $(LIBOBJDIR)
@@ -1084,6 +1116,9 @@ endif
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
 				$(MAKE) githash ; \
 			fi'
+ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
+		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
+endif
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -1136,6 +1171,7 @@ ifneq ($(SANITIZE),$(LAST_SANITIZE))
 		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
+		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)

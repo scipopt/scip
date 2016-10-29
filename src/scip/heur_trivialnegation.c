@@ -131,7 +131,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /*lint !e514*/
          }
 
-         SCIPdebugMessage("check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(transvar), changed ? "" : "not ", oldcoef, newcoef);
+         SCIPdebugMsg(scip, "check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(transvar), changed ? "" : "not ", oldcoef, newcoef);
 
          if( changed )
          {
@@ -149,12 +149,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             obj = SCIPgetSolTransObj(scip, allchanged);
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
-               SCIPdebugMessage("try solution with all negations\n");
-               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIPdebugMsg(scip, "try solution with all negations\n");
+               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
-                  SCIPdebugMessage("found feasible solution solution:\n");
+                  SCIPdebugMsg(scip, "found feasible solution solution:\n");
                   SCIPdebug( SCIP_CALL( SCIPprintSol(scip, allchanged, NULL, FALSE) ) );
 
                   *result = SCIP_FOUNDSOL;
@@ -166,12 +166,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             obj = SCIPgetSolTransObj(scip, feasiblechanged);
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
-               SCIPdebugMessage("try solution with feasible negations\n");
-               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIPdebugMsg(scip, "try solution with feasible negations\n");
+               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
-                  SCIPdebugMessage("found feasible solution solution:\n");
+                  SCIPdebugMsg(scip, "found feasible solution solution:\n");
                   SCIPdebug( SCIP_CALL( SCIPprintSol(scip, feasiblechanged, NULL, FALSE) ) );
 
                   *result = SCIP_FOUNDSOL;
@@ -189,12 +189,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
                success = FALSE;
-               SCIPdebugMessage("try solution with a single negation\n");
-               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIPdebugMsg(scip, "try solution with a single negation\n");
+               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
-                  SCIPdebugMessage("found feasible solution:\n");
+                  SCIPdebugMsg(scip, "found feasible solution:\n");
                   SCIPdebug( SCIP_CALL( SCIPprintSol(scip, singlenegatedsol, NULL, FALSE) ) );
 
                   *result = SCIP_FOUNDSOL;

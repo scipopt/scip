@@ -207,7 +207,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -237,7 +237,7 @@ SCIP_DECL_EVENTEXEC(eventExecRins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -413,7 +413,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("RINS heuristic fixes %d out of %d binary+integer variables\n", nfixedvars, nbinvars + nintvars);
+   SCIPdebugMsg(scip, "RINS heuristic fixes %d out of %d binary+integer variables\n", nfixedvars, nbinvars + nintvars);
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
@@ -423,7 +423,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &valid) );
 
-   SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
    assert(valid);
 
    eventhdlr = NULL;

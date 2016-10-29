@@ -5275,9 +5275,20 @@ $(LIBOBJDIR)/scip/cons.o: src/scip/cons.c src/scip/def.h src/scip/type_retcode.h
  src/scip/type_reopt.h src/scip/pub_var.h src/scip/type_implics.h \
  src/scip/pub_misc.h src/scip/struct_var.h src/scip/prob.h \
  src/scip/struct_prob.h src/scip/tree.h src/scip/pub_tree.h \
- src/scip/struct_tree.h src/lpi/type_lpi.h src/scip/sepastore.h \
- src/scip/type_sepastore.h src/scip/cons.h src/scip/pub_cons.h \
- src/scip/struct_cons.h src/scip/branch.h src/scip/pub_branch.h
+ src/scip/struct_tree.h src/lpi/type_lpi.h src/scip/scip.h \
+ src/scip/type_nlp.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+ src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+ src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
+ src/scip/pub_history.h src/scip/pub_implics.h src/scip/pub_lp.h \
+ src/scip/pub_nlp.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
+ src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
+ src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
+ src/scip/pub_sol.h src/lpi/lpi.h src/nlpi/pub_expr.h \
+ src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
+ src/scip/presolve.h src/scip/heuristics.h src/scip/sepastore.h \
+ src/scip/type_sepastore.h src/scip/cons.h src/scip/struct_cons.h \
+ src/scip/branch.h
 $(LIBOBJDIR)/scip/cutpool.o: src/scip/cutpool.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/set.h \
  src/blockmemshell/memory.h src/scip/type_set.h src/scip/type_stat.h \
@@ -6031,7 +6042,8 @@ $(LIBOBJDIR)/scip/reopt.o: src/scip/reopt.c src/scip/def.h src/scip/type_retcode
  src/scip/tree.h src/scip/struct_tree.h src/scip/primal.h \
  src/scip/struct_primal.h src/scip/prob.h src/scip/struct_prob.h \
  src/scip/cons.h src/scip/type_sepastore.h src/scip/struct_cons.h \
- src/scip/cons_logicor.h src/scip/clock.h src/scip/heur_reoptsols.h
+ src/scip/cons_logicor.h src/scip/cons_linear.h src/scip/clock.h \
+ src/scip/heur_reoptsols.h
 $(LIBOBJDIR)/scip/retcode.o: src/scip/retcode.c src/scip/retcode.h src/scip/pub_message.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/type_message.h
 $(LIBOBJDIR)/scip/scip.o: src/scip/scip.c src/scip/def.h src/scip/type_retcode.h \
@@ -6065,14 +6077,14 @@ $(LIBOBJDIR)/scip/scip.o: src/scip/scip.c src/scip/def.h src/scip/type_retcode.h
  src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pricestore.h \
  src/scip/type_pricestore.h src/scip/sepastore.h \
  src/scip/type_sepastore.h src/scip/cutpool.h src/scip/type_cutpool.h \
- src/scip/pub_cutpool.h src/scip/solve.h src/scip/scipgithash.h \
- src/scip/scip.h src/scip/pub_branch.h src/scip/pub_conflict.h \
- src/scip/pub_cons.h src/scip/pub_dialog.h src/scip/pub_disp.h \
- src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
- src/scip/pub_history.h src/scip/pub_nodesel.h src/scip/pub_presol.h \
- src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
- src/scip/pub_sepa.h src/scip/pub_prop.h src/lpi/lpi.h \
- src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/scip/pub_cutpool.h src/scip/solve.h src/scip/scipbuildflags.h \
+ src/scip/scipgithash.h src/scip/scip.h src/scip/pub_branch.h \
+ src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_fileio.h src/scip/pub_heur.h \
+ src/scip/pub_compr.h src/scip/pub_history.h src/scip/pub_nodesel.h \
+ src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
+ src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/heuristics.h \
  src/scip/branch.h src/scip/conflict.h src/scip/cons.h \
  src/scip/struct_cons.h src/scip/dialog.h src/scip/disp.h src/scip/heur.h \
@@ -6083,6 +6095,9 @@ $(LIBOBJDIR)/scip/scip.o: src/scip/scip.c src/scip/def.h src/scip/type_retcode.h
  src/scip/branch_nodereopt.h src/scip/heur_reoptsols.h \
  src/scip/heur_trivialnegation.h src/scip/heur_ofins.h \
  src/scip/struct_scip.h
+$(LIBOBJDIR)/scip/scipbuildflags.o: src/scip/scipbuildflags.c src/scip/scipbuildflags.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/scip/buildflags.c
 $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefplugins.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -6365,7 +6380,8 @@ $(LIBOBJDIR)/scip/set.o: src/scip/set.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/cons.h src/scip/struct_cons.h src/scip/disp.h src/scip/dialog.h \
  src/scip/heur.h src/scip/compr.h src/scip/nodesel.h src/scip/presol.h \
  src/scip/pricer.h src/scip/type_pricestore.h src/scip/reader.h \
- src/scip/relax.h src/scip/sepa.h src/scip/prop.h src/nlpi/nlpi.h
+ src/scip/relax.h src/scip/sepa.h src/scip/prop.h src/nlpi/nlpi.h \
+ src/scip/struct_scip.h src/scip/type_interrupt.h
 $(LIBOBJDIR)/scip/sol.o: src/scip/sol.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/set.h \
  src/blockmemshell/memory.h src/scip/type_set.h src/scip/type_stat.h \

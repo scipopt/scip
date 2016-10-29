@@ -4227,7 +4227,7 @@
  * @section DIVING_FURTHERINFO Further information
  *
  * This is all there is to extend the SCIP set of diving heuristics by a new one. For further information, please see
- * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref pub_dive.h, and \ref heur_guideddiving.h or
+ * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref heuristics.h, and \ref heur_guideddiving.h or
  * other diving heuristics that implement diving through a diveset.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -5601,8 +5601,6 @@
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
  * can be found in the file \ref exprinterpret.h
  *
- * Note that the expression interpreter API has <b>BETA status</b> and thus may change in the next version.
- *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
  *    \n
@@ -5918,27 +5916,44 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page MEMORY Using the memory functions of SCIP
  *
- *  SCIP provides three ways for allocating memory.
+ *  SCIP provides three ways for allocating memory:
+ *  -# <b>block memory:</b> efficient handling of memory blocks of similar small sizes
+ *  -# <b>buffer memory:</b> efficient handling of memory that needs to locally be allocated and freed
+ *  -# <b>standard memory:</b> access to standard malloc/free
  *
- *  @section STDMEM Standard memory
+ *  <em>Whenever possible, the first two should be used, because of reasons detailed below.</em>
  *
- *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
- *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
- *  debug mode.
+ *  In the following, we provide a brief description of these methods. We refer the reader to the dissertation of Tobias
+ *  Achterberg for more details. We also present best practice models.
  *
- *  The most important functions are
- *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory
- *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
+ *  @section MEMBACK Background
  *
+ *  The main goals for providing such particular methods are:
+ * - <em>Accounting:</em> Using its own functions, SCIP knows the total size of memory allocated internally and can change its
+ *   behavior: for instance, it can change to "memory saving mode" (using depth first search (DFS) and possibly do a garbage
+ *   collection). It also allows for keeping a memory limit.
+ * - <em>Speed:</em> SCIP often needs to allocate a very large number of small blocks of similar sizes (often powers of
+ *   two). Depending on the operating system and compiler, the methods implemented in SCIP can be faster, since blocks
+ *   of the same size are grouped together. Especially at the end of the 1990ies the standard malloc/free methods were
+ *   quite ineffective. The experiments of Tobias Achterberg in 2007 show a speed improvement of 11 % when using block
+ *   memory.
+ * - <em>Efficiency:</em> Since blocks are groups in sizes, the blocks do not need to store their sizes within each
+ *   block. In comparison, standard malloc/free stores the size using one word for each memory chunk. The price to pay
+ *   is that one needs to pass the size to the methods that free a block. In any case, the methods in SCIP can save
+ *   memory. Moreover, buffer memory is stored in similar places and not spread out, which also might help cache.
+ * - <em>Debugging:</em> All of the possibilities provide methods to detect memory leaks. Together with tools like
+ *   valgrind, this can be quite effective in avoiding such problems.
+ *
+ *  @n
  *  @section BLKMEM Block memory
  *
  *  SCIP offers its own block memory handling, which allows efficient handling of smaller blocks of memory in cases in
- *  which many blocks of the same (small) size appear. This is adaquate for branch-and-cut codes in which small blocks
+ *  which many blocks of the same (small) size appear. This is adequate for branch-and-cut codes in which small blocks
  *  of the same size are allocated and freed very often (for data structures used to store rows or branch-and-bound
  *  nodes). Actually, most blocks allocated within SCIP have small sizes like 8, 16, 30, 32, 64.  The idea is simple:
  *  There is a separate list of memory blocks for each interesting small size. When allocating memory, the list is
- *  checked for a free spot in the list; if no such spot exists the list is enlarged. Freeing just sets the block to be
- *  available. Very large blocks are handled separatedly. See the dissertation of Tobias Achterberg for more details.
+ *  checked for a free spot in the list; if no such spot exists, the list is enlarged. Freeing just sets the block to be
+ *  available. Very large blocks are handled separately. See the dissertation of Tobias Achterberg for more details.
  *
  *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
  *
@@ -5963,35 +5978,79 @@
  *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
  *  }
  *  \endcode
+ *  @n
  *
  *  @section BUFMEM Buffer memory
+ *
+ *  @subsection BUFMEMSTD Standard Buffer Memory
  *
  *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
  *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
  *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
  *
  *  The most important functions are
- *  - SCIPallocBufferMemory(), SCIPallocBufferArray() to allocate memory
- *  - SCIPfreeBufferMemory(), SCIPfreeBufferArray() to free memory
+ *  - SCIPallocBuffer(), SCIPallocBufferArray() to allocate memory,
+ *  - SCIPfreeBuffer(), SCIPfreeBufferArray() to free memory.
  *
- *  SCIP 3.2 introduced a new type of buffer memory, the clean buffer. It provides memory which is initialized to zero
+ *  @subsection BUFMEMCLEAN Clean Buffer Memory
+ *
+ *  SCIP 3.2 introduced a new type of buffer memory, the <em>clean buffer</em>. It provides memory which is initialized to zero
  *  and requires the user to reset the memory to zero before freeing it. This can be used at performance-critical
  *  places where only few nonzeros are added to a dense array and removing these nonzeros individually is much faster
- *  than clearing the whole array. Same as the normal buffer array, the clean buffer should be used for temporary memory
+ *  than clearing the whole array. Similar to the normal buffer array, the clean buffer should be used for temporary memory
  *  allocated and freed within the same function.
  *
  *  The most important functions are
- *  - SCIPallocCleanBufferArray() to allocate memory
- *  - SCIPfreeCleanBufferArray() to free memory
+ *  - SCIPallocCleanBufferArray() to allocate memory,
+ *  - SCIPfreeCleanBufferArray() to free memory.
  *
- *  @section GENMEM General notes
+ *  @n
+ *  @section STDMEM Standard memory
+ *
+ *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
+ *  debug mode.
+ *
+ *  The most important functions are
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory,
+ *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory.
+ *
+ *  @n
+ *  @section MEMBESTPRACTICE Best Practice of Using Memory Functions
+ *
+ *  Since allocating and freeing memory is very crucial for the speed and memory consumption of a program, it is
+ *  important to keep the following notes and recommendations in mind.
+ *
+ *  @subsection GEN General Notes
  *
  *  The following holds for all three types of memory functions:
- *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
- *  - The functions always allocate at least one byte, so that freeing is always possible.
+ *  - In debug mode, the arguments are checked for overly large allocations (usually arising from a bug). Note that all
+ *    arguments are converted to unsigned values of type @c size_t, such that negative sizes are converted into very
+ *    large values.
+ *  - The functions always allocate at least one byte and return non-NULL pointers if memory is available. In particular,
+ *    freeing is always possible.
  *  - The freeing methods set the pointer to the memory to NULL.
- *  - For maximum speed you should free memory in the reverse order in which it was allocated.
- *    For block and buffer memory this @b significantly speeds up the code.
+ *  - Debugging can be supported by using the compiler flags @p NOBLKMEM=true, @p NOBUFMEM=true, @p NOBLKBUFMEM=true
+ *    that turn off the usage of block memory, buffer memory, as well as block and buffer memory, respectively. Since,
+ *    the internal block and buffer memory is freed at the end (leaving no memory leaks), turning them off allows tools
+ *    like valgrind to find memory leaks.
+ *  - Moreover, additional checks can be turned on by defining @p CHECKMEM in memory.c.
+ *
+ *  @n
+ *  @subsection DOS Things to do ...
+ *
+ *  - Use buffer memory if your memory chunk can be allocated and freed within the same function.
+ *  - Use buffer and block memory wherever possible, because of the reasons explained above.
+ *  - Free memory in the reverse order in which it was allocated! For block and buffer memory this @b significantly
+ *    speeds up the code.
+ *  - Use as few memory allocations/freeing operations as possible, since these functions take a significant amount of time.
+ *
+ *  @n
+ *  @subsection DONTS Things to avoid ...
+ *
+ *  - Avoid the usage of standard memory, since SCIP is unaware of the size used in such blocks.
+ *  - Avoid reallocation with only slightly increased size, rather use a geometrically growing
+ *    size allocation. SCIPcalcMemGrowSize() is one way to calculate new sizes.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
