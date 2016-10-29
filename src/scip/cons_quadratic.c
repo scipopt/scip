@@ -6925,7 +6925,6 @@ SCIP_RETCODE computeED(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool convex;
    int n;
    int nn;
    int row;
@@ -6946,8 +6945,8 @@ SCIP_RETCODE computeED(
    /* @todo: maybe we can use sepabilinvar2pos to help us with our computation here? */
 
    /* function has to be convex with finite rhs or concave with finite lhs */
-   convex = consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs);
-   assert(convex || (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
+   assert((consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
+         (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
 
    /* can't compute eigenvectors without IPOPT */
    if( !SCIPisIpoptAvailableIpopt() )
