@@ -26,7 +26,7 @@
 #
 # The necessary SCIP libraries can be linked by adding
 # $(LINKCXXSCIPALL) or $(LINKCCSCIPALL) to your local linking command,
-# e.g.  $(LINKCXX) ... $(LINKCXXSCIPALL) $(LDFLAGS).
+# e.g. $(LINKCXX) ... $(LINKCXXSCIPALL) $(LDFLAGS) if you use the C++ interface.
 
 
 
