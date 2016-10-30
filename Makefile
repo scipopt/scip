@@ -1379,6 +1379,7 @@ help:
 		@echo
 		@echo "  The main targets are:"
 		@echo "  - all (default): Build SCIP libary and binary."
+		@echo "  - makesciplibfile: Make libscip for the main part of SCIP."
 		@echo "  - makeobjsciplibfile: Make libscipobjs for the C++-interface of SCIP."
 		@echo "  - makelpilibfile: Make liblpi for the LP interface in SCIP."
 		@echo "  - makenlpilibfile: Make libnlpi for the NLP interface in SCIP."
