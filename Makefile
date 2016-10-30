@@ -1031,32 +1031,15 @@ depend:		scipdepend lpidepend nlpidepend maindepend objscipdepend
 -include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
-ifeq ($(SHARED),true)
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE) $(LINKCC_o)$@ \
+		-$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LDFLAGS) $(LINKCC_o)$@
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
-		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCXX_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE) $(LINKCXX_o)$@ \
+		-$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
-endif
-else
-$(MAINFILE):	$(SCIPLIBOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
-		@echo "-> linking $@"
-ifeq ($(LINKER),C)
-		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
-		|| ($(MAKE) errorhints && false)
-endif
-ifeq ($(LINKER),CPP)
-		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCXX_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
-		|| ($(MAKE) errorhints && false)
-endif
 endif
 
 
