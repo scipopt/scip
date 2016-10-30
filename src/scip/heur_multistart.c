@@ -32,7 +32,7 @@
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'm'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             0
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
