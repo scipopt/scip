@@ -241,7 +241,6 @@ LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
-ALLSRC		+=	$(LPILIBSRC)
 
 ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS) $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
@@ -288,7 +287,6 @@ NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/
 NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
 NLPILIBSHORTLINK=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
-ALLSRC		+=	$(NLPILIBSRC)
 
 ifeq ($(SHARED),true)
 NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) \
@@ -579,13 +577,18 @@ SCIPLIBOBJ	=	scip/branch.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
 
+# the SCIP library contains all files except objscip
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPPLUGINLIBOBJ))
 SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
+SCIPLIBOBJFILES +=	$(LPILIBOBJFILES)
+SCIPLIBOBJFILES +=	$(NLPILIBOBJFILES)
+SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
-SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
+SCIPLIBSRC	+=	$(LPILIBSRC)
+SCIPLIBSRC	+=	$(NLPILIBSRC)
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
@@ -594,10 +597,11 @@ ifeq ($(GAMS),true)
 SCIPLIBOBJFILES += 	$(addprefix $(LIBOBJDIR)/scip/,gmomcc.o gevmcc.o reader_gmo.o)
 endif
 
-ALLSRC		+=	$(SCIPLIBSRC)
+ALLSRC		=	$(SCIPLIBSRC)
 
 SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
+
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -630,6 +634,7 @@ OBJSCIPINCSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.h))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 OBJSCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 OBJSCIPLIBSHORTLINK=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
+
 ALLSRC		+=	$(OBJSCIPLIBSRC)
 
 
@@ -669,7 +674,7 @@ MAKE		+= -s
 endif
 
 .PHONY: all
-all:		libs
+all:		makesciplibfile
 		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
@@ -688,9 +693,8 @@ preprocess:     checkdefines
 		@$(MAKE) touchexternal
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC)
 		-rm -f lint.out
-
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
 			then \
 				echo "-> generating gcc-include-path lint-file" ; \
@@ -736,6 +740,7 @@ ifneq ($(FILES),)
 else
 		echo "please specify file(s) for which preview should be created"
 endif
+
 .PHONY: check
 check:		test
 
@@ -999,33 +1004,29 @@ depend:		scipdepend lpidepend nlpidepend maindepend
 -include	$(NLPILIBDEP)
 
 ifeq ($(SHARED),true)
-$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
-		$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE) $(LINKCC_o)$@ \
+		$(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
 		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCXX_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
-		$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE) $(LINKCXX_o)$@ \
+		$(LINKCXX_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 else
-$(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(SCIPLIBOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
-		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
+		$(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
 		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
-		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
+		$(LINKCXX_L)$(LIBDIR)/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 endif
@@ -1043,8 +1044,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-
-
+.PHONY: makeobjsciplibfile
 $(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
@@ -1053,6 +1053,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
+.PHONY: makelpilibfile
 $(LPILIBFILE):	$(LPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
@@ -1061,6 +1062,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
+.PHONY: makenlpilibfile
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
