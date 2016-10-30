@@ -911,7 +911,7 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:          cleanlib cleanbin | $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
+clean:          cleanlibs cleanbin | $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
 		@-(cd $(LIBOBJDIR) && rm -f */*.o)
 		@-rmdir $(LIBOBJSUBDIRS)
@@ -925,8 +925,8 @@ ifneq ($(OBJDIR),)
 		@-rmdir $(OBJDIR)
 endif
 
-.PHONY: cleanlib
-cleanlib:       | $(LIBDIR)/$(LIBTYPE)
+.PHONY: cleanlibs
+cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@echo "-> remove library $(SCIPLIBFILE)"
 		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
 		@echo "-> remove library $(OBJSCIPLIBFILE)"
@@ -957,7 +957,8 @@ ifeq ($(LINKER),CPP)
 		| sed '\''s|$(LIBDIR)/include/spxinc[^ ]*||g'\'' \
 		>$(LPILIBDEP)'
 endif
-		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define
+# We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
+# but contain all LPI's that use the WITH_LPSCHECK define.
 		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
 
 .PHONY: nlpidepend
@@ -1377,6 +1378,7 @@ help:
 		@echo "  - links: Reconfigures the links in the \"lib\" directory."
 		@echo "  - doc: creates documentation in the \"doc\" directory."
 		@echo "  - clean: Removes all object files."
+		@echo "  - cleanlibs: Remove all SCIP libraries."
 		@echo "  - depend: Creates dependencies files. This is only needed if you add files to SCIP."
 		@echo "  - check or test: Runs the check/test script, see the online documentation."
 
