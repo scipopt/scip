@@ -512,7 +512,9 @@ NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)
 # total linking part for all of SCIP
 #-----------------------------------------------------------------------------
 
+# link SCIP for C projects
 LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPDIR)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS)
 
+# link SCIP for C++ projects (including libobjscip)
 LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPDIR)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS)
