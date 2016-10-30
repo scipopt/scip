@@ -1038,7 +1038,7 @@ ifeq ($(LINKER),C)
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
-		-$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@ \
+		-$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 
