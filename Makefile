@@ -698,7 +698,7 @@ MAKE		+= -s
 endif
 
 .PHONY: all
-all:		makesciplibfile
+all:		libs
 		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
