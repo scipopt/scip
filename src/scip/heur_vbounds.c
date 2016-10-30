@@ -383,7 +383,7 @@ SCIP_RETCODE applyVboundsFixings(
          continue;
 
       /* only open a new probing node if we will not exceed the maximal tree depth */
-      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
       }
