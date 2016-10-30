@@ -426,14 +426,14 @@ LINKER		=	CPP
 # we require here Ipopt >= 3.10.0
 # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # - shared libraries are installed into the lib directory, so add this to the rpath
-FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
-IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
 LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
 ifneq ($(SCIPINTERNAL),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 else
-LDFLAGS		+=	$(LINKRPATH)\$(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 endif
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
