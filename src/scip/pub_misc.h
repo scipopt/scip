@@ -116,8 +116,6 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
-/**@} */
-
 /**@defgroup Regression Regression methods for linear regression
  *
  * @{
@@ -1535,11 +1533,14 @@ SCIP_RETCODE SCIPrandomCreate(
    unsigned int          initialseed         /**< initial random seed (> 0) */
    );
 
+
 /** frees a random number generator */
 extern
 void SCIPrandomFree(
    SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
+
+/**@} */
 
 /*
  * Additional math functions

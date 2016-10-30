@@ -91,6 +91,7 @@
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
 #include "scip/heur_locks.h"
+#include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
