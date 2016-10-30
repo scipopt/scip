@@ -24,7 +24,7 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/heur_twoopt.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "twoopt"
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
@@ -76,7 +76,7 @@ struct SCIP_HeurData
    int                   nintblocks;         /**< number of blocks */
 
    SCIP_Bool             execute;            /**< has presolveTwoOpt detected necessary structure for execution of heuristic? */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   maxnslaves;         /**< delimits the maximum number of slave candidates for a master variable */
 
 #ifdef SCIP_STATISTIC
@@ -846,7 +846,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nintblocks = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
 #ifdef SCIP_STATISTIC
@@ -1339,7 +1339,7 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
    assert(heurdata->intvars == NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    SCIPheurSetData(heur, heurdata);
 

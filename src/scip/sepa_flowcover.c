@@ -1025,8 +1025,10 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
 {
    SCIP_Real* tempsort;
    SCIP_Real solitemsweight;
+   SCIP_Real mediancapacity;
    int j;
    int i;
+   int criticalitem;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1045,14 +1047,16 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
 
    /* allocate memory for temporary array used for sorting; array should contain profits divided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+
    /* initialize temporary array */ 
    for( i = nitems - 1; i >= 0; --i )
-   {
-      tempsort[i] = profits[i] / weights [i];
-   }
+      tempsort[i] = profits[i] / weights[i];
 
-   /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIPsortDownRealRealRealInt ( tempsort, weights, profits, items, nitems);
+   /* decrease capacity slightly to make it tighter than the original capacity */
+   mediancapacity = capacity * (1 - SCIPfeastol(scip));
+
+   /* rearrange items around  */
+   SCIPselectWeightedDownRealRealInt(tempsort, profits, items, weights, mediancapacity, nitems, &criticalitem);
 
    /* free temporary array */
    SCIPfreeBufferArray(scip, &tempsort);

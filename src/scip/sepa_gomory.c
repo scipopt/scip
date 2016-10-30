@@ -50,7 +50,7 @@
 #include <string.h>
 
 #include "scip/sepa_gomory.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_lp.h"
 
 #define SEPA_NAME              "gomory"
@@ -89,7 +89,7 @@
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             away;               /**< minimal integrality violation of a basis variable in order to try Gomory cut */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
@@ -184,7 +184,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    assert(sepadata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &sepadata->randnumgen) );
+   SCIPrandomFree(&sepadata->randnumgen);
 
    SCIPfreeMemory(scip, &sepadata);
 
@@ -613,7 +613,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    sepadata->lastncutsfound = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &sepadata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&sepadata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include separator */

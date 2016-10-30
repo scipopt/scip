@@ -543,6 +543,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolDins)
 
    /* initialize data */
    heurdata->usednodes = 0;
+   heurdata->lastnsolsfound = 0;
 
    /* create flag array */
    heurdata->deltalength = SCIPgetNBinVars(scip);
