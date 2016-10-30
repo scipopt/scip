@@ -1396,11 +1396,18 @@ help:
 		@echo
 		@echo "  The main targets are:"
 		@echo "  - all (default): Build SCIP libary and binary."
+		@echo "  - makeobjsciplibfile: Make libscipobjs for the C++-interface of SCIP."
+		@echo "  - makelpilibfile: Make liblpi for the LP interface in SCIP."
+		@echo "  - makenlpilibfile: Make libnlpi for the NLP interface in SCIP."
 		@echo "  - links: Reconfigures the links in the \"lib\" directory."
-		@echo "  - doc: creates documentation in the \"doc\" directory."
+		@echo "  - doc: Creates documentation in the \"doc\" directory."
+		@echo "  - libs: Create all SCIP libaries."
+		@echo "  - lint: Run lint on all SCIP files. (Need flexelint.)"
+		@echo "  - lint: Run splint on all C SCIP files. (Need splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
 		@echo "  - depend: Creates dependencies files. This is only needed if you add files to SCIP."
+		@echo "  - tags: Creates TAGS file that can be used in (x)emacs."
 		@echo "  - check or test: Runs the check/test script, see the online documentation."
 
 # --- EOF ---------------------------------------------------------------------
