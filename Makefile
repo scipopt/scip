@@ -1327,5 +1327,47 @@ ifeq ($(LPS),spx2)
 endif
 endif
 
+.PHONY: help
+help:
+		@echo "Use the SCIP makefile system."
+		@echo
+		@echo "  The main options for the SCIP makefile system are as follows:"
+		@echo
+		@echo "  General commands:"
+		@echo "  - OPT={dbg|opt}: Use debug or optimized (default) mode, respectively."
+		@echo "  - LPS={clp|cpx|grb|msk|qso|spx|xprs|none}: Determine LP-solver."
+		@echo "      clp: COIN-OR Clp LP-solver"
+		@echo "      cpx: CPLEX LP-solver"
+		@echo "      grb: Gurobi LP-solver (interface is in beta stage)"
+		@echo "      msk: Mosek LP-solver"
+		@echo "      qso: QSopt LP-solver"
+		@echo "      spx: old SoPlex LP-solver (for versions < 2)"
+		@echo "      spx2: new SoPlex LP-solver (default) (from version 2)"
+		@echo "      xprs: XPress LP-solver"
+		@echo "      none: no LP-solver"
+		@echo "  - COMP={clang|gnu|intel}: Determine compiler."
+		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
+		@echo
+		@echo "  More detailed options:"
+		@echo "  - ZIMPL=<true|false>: Turn ZIMPL support on (default) or off."
+		@echo "  - ZIMPLOPT=<dbg|opt>: Use debug or optimized (default) mode for ZIMPL."
+		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
+		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
+		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
+		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
+		@echo "  - GAMS=<true|false>: To enable or disable (default) reading functionality in GAMS reader (needs GAMS)."
+		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
+		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."
+		@echo "  - NOBLKBUFMEM=<true|false>: Turn usage of internal memory functions off or on (default)."
+		@echo "  - VERBOSE=<true|false>: Turn on verbose messages of makefile or off (default)."
+		@echo
+		@echo "  The main targets are:"
+		@echo "  - all (default): Build SCIP libary and binary."
+		@echo "  - links: Reconfigures the links in the \"lib\" directory."
+		@echo "  - doc: creates documentation in the \"doc\" directory."
+		@echo "  - clean: Removes all object files."
+		@echo "  - depend: Creates dependencies files. This is only needed if you add files to SCIP."
+		@echo "  - check or test: Runs the check/test script, see the online documentation."
+
 # --- EOF ---------------------------------------------------------------------
 # DO NOT DELETE
