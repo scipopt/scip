@@ -72,7 +72,7 @@
 #define DEFAULT_ADDFLOWEXTENDED   FALSE /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
 #define DEFAULT_SEPARATEPARITY    FALSE /**< should parity inequalities be separated? */
 #define DEFAULT_GAUSSPROPFREQ         5 /**< frequency for applying the Gauss propagator */
-#define HASHSIZE_XORCONS         131101 /**< minimal size of hash table in logicor constraint tables */
+#define HASHSIZE_XORCONS            500 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -2270,7 +2270,7 @@ SCIP_RETCODE checkSystemGF2(
    nvars = SCIPgetNVars(scip);
 
    /* set up hash map from variable to column index */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xoractive, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xorvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xoridx, nvars) );
@@ -3583,8 +3583,9 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = 2*nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_XORCONS);
+
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyXorcons, hashKeyEqXorcons, hashKeyValXorcons, (void*) scip) );
 

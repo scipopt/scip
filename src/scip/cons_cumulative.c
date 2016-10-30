@@ -3496,7 +3496,7 @@ SCIP_RETCODE collectBranchingCands(
    assert(conss != NULL);
 
    /* create a hash table */
-   SCIP_CALL( SCIPhashtableCreate(&collectedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip)),
+   SCIP_CALL( SCIPhashtableCreate(&collectedvars, SCIPblkmem(scip), SCIPgetNVars(scip),
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    assert(scip != NULL);
@@ -11688,7 +11688,7 @@ SCIP_RETCODE findCumulativeConss(
    SCIP_CALL( SCIPallocBufferArray(scip, &demandcol, nnodes) );
 
    /* create a hash table to store all start time variables which are already covered by at least one clique */
-   SCIP_CALL( SCIPhashtableCreate(&covered, SCIPblkmem(scip), SCIPcalcHashtableSize(nnodes),
+   SCIP_CALL( SCIPhashtableCreate(&covered, SCIPblkmem(scip), nnodes,
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* for each variables/job we are ... */
@@ -12041,7 +12041,7 @@ SCIP_RETCODE createTcliqueGraph(
    SCIP_CALL( SCIPallocBuffer(scip, tcliquegraph) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), nvars) );
 
    /* each active variables get a node in the graph */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &(*tcliquegraph)->vars, vars, nvars) );
@@ -14121,7 +14121,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    nvars = consdata->nvars;
 
-   SCIP_CALL( SCIPhashtableCreate(&vars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars),
+   SCIP_CALL( SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* create opening of the GML format */
@@ -14299,7 +14299,7 @@ SCIP_RETCODE SCIPcreateWorstCaseProfile(
    int v;
 
    /* create hash map for variables which are added, mapping to their duration */
-   SCIP_CALL( SCIPhashmapCreate(&addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&addedvars, SCIPblkmem(scip), nvars) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &copydemands, nvars) );

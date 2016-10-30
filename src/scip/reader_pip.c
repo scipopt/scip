@@ -919,7 +919,7 @@ SCIP_RETCODE readPolynomial(
    /* initialize buffer for storing the variables */
    varssize = PIP_INIT_VARSSIZE;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(PIP_INIT_VARSSIZE)) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), PIP_INIT_VARSSIZE) );
 
    /* initialize buffer for storing the monomials */
    monomialssize = PIP_INIT_MONOMIALSSIZE;
@@ -3488,7 +3488,7 @@ SCIP_RETCODE SCIPwritePip(
 
    /* create hashtable for storing aggregated variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 100, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
    for (c = 0; c < nConsQuadratic; ++c)

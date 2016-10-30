@@ -69,6 +69,21 @@ struct SCIP_PQueue
    int                   size;               /**< total number of available element slots */
 };
 
+/** hash table data structure */
+struct SCIP_HashTable
+{
+   SCIP_DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
+   void*                 userptr;            /**< user pointer */
+   void**                slots;              /**< slots of the hash table */
+   unsigned int*         hashes;             /**< hash values of elements stored in slots */
+   unsigned int          shift;              /**< power such that 2^(32-shift) == nslots */
+   unsigned int          mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   SCIP_Longint          nelements;          /**< number of elements in the hashtable */
+};
+
 /** element list to store single elements of a hash table */
 struct SCIP_HashTableList
 {
@@ -77,7 +92,7 @@ struct SCIP_HashTableList
 };
 
 /** hash table data structure */
-struct SCIP_HashTable
+struct SCIP_MultiHash
 {
    SCIP_DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
@@ -89,20 +104,27 @@ struct SCIP_HashTable
    SCIP_Longint          nelements;          /**< number of elements in the hashtable */
 };
 
-/** element list to store single mappings of a hash map */
-struct SCIP_HashMapList
+typedef union {
+   void*                 ptr;                /**< pointer image */
+   SCIP_Real             real;               /**< real image */
+} SCIP_HASHMAPIMAGE;
+
+/** hash map entry */
+struct SCIP_HashMapEntry
 {
-   void*                 origin;             /**< origin of the mapping origin -> image */
-   void*                 image;              /**< image of the mapping origin -> image */
-   SCIP_HASHMAPLIST*     next;               /**< rest of the hash map list */
+   void*                 origin;             /**< origin of element */
+   SCIP_HASHMAPIMAGE     image;              /**< image of element */
 };
 
 /** hash map data structure to map pointers on pointers */
 struct SCIP_HashMap
 {
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
-   SCIP_HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
-   int                   nlists;             /**< number of lists stored in the hash map */
+   SCIP_HASHMAPENTRY*    slots;              /**< buffer for hashmap entries */
+   unsigned int*         hashes;             /**< hashes of elements */
+   unsigned int          shift;              /**< power such that 2^(32-shift) == nslots */
+   unsigned int          mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   SCIP_Longint          nelements;          /**< number of elements in the hashtable */
 };
 
 /** dynamic array for storing real values */

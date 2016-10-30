@@ -73,7 +73,7 @@
 #define DEFAULT_UPGRRESULTANT      TRUE /**< should all binary resultant variables be upgraded to implicit binary variables */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving be performed? */
 
-#define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
+#define HASHSIZE_ANDCONS            500 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -3313,7 +3313,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = 2*nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_ANDCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyAndcons, hashKeyEqAndcons, hashKeyValAndcons, (void*) scip) );

@@ -71,7 +71,7 @@
 /*
  * Data structures
  */
-#define HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS 131101 /**< minimal size of hash table in and constraint tables */
+#define HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS 500 /**< minimal size of hash table in and constraint tables */
 
 
 /* - create special linear(knapsack, setppc, logicor, (eqknapsack)) and and-constraints with check flags FALSE, to
@@ -391,12 +391,12 @@ SCIP_RETCODE inithashmapandtable(
    assert((*conshdlrdata)->hashmap == NULL);
 
    /* create a hash table for and-constraint data objects */
-   (*conshdlrdata)->hashtablesize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
-   SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->hashtablesize,
+   (*conshdlrdata)->hashtablesize = HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS;
+   SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->nallconsanddatas,
          hashGetKeyAndConsDatas, hashKeyEqAndConsDatas, hashKeyValAndConsDatas, (void*) scip) );
 
    /* create a hash table for and-resultant to and-constraint data objects */
-   (*conshdlrdata)->hashmapsize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
+   (*conshdlrdata)->hashmapsize = HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS;
    SCIP_CALL( SCIPhashmapCreate(&((*conshdlrdata)->hashmap), SCIPblkmem(scip), (*conshdlrdata)->hashmapsize) );
 
    (*conshdlrdata)->inithashmapandtable = TRUE;

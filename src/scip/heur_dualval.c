@@ -239,30 +239,32 @@ SCIP_RETCODE releaseHashmapEntries(
    SCIP_Bool             isvarmap            /**< are the entries variables or constraints? */
    )
 {
-   SCIP_HASHMAPLIST* list;
-   int nlists;
+   int nentries;
    int i;
 
    assert(scip != NULL);
    assert(hashmap != NULL);
 
-   nlists = SCIPhashmapGetNLists(hashmap);
+   nentries = SCIPhashmapGetNEntries(hashmap);
 
-   for( i = 0; i < nlists; ++i )
+   for( i = 0; i < nentries; ++i )
    {
-      for( list = SCIPhashmapGetList(hashmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(hashmap, i);
+
+      if( entry != NULL )
       {
          if( isvarmap )
          {
             SCIP_VAR* var;
-            var = (SCIP_VAR*) SCIPhashmapListGetImage(list);
+            var = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
 
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
          else
          {
             SCIP_CONS* cons;
-            cons = (SCIP_CONS*) SCIPhashmapListGetImage(list);
+            cons = (SCIP_CONS*) SCIPhashmapEntryGetImage(entry);
 
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
@@ -279,21 +281,22 @@ SCIP_RETCODE releaseHashmapNLPRows(
    SCIP_HASHMAP*         hashmap             /**< hashmap */
    )
 {
-   SCIP_HASHMAPLIST* list;
-   int nlists;
+   int nentries;
    int i;
 
    assert(scip != NULL);
    assert(hashmap != NULL);
 
-   nlists = SCIPhashmapGetNLists(hashmap);
+   nentries = SCIPhashmapGetNEntries(hashmap);
 
-   for( i = 0; i < nlists; ++i )
+   for( i = 0; i < nentries; ++i )
    {
-      for( list = SCIPhashmapGetList(hashmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(hashmap, i);
+      if( entry != NULL )
       {
          SCIP_NLROW* nlrow;
-         nlrow = (SCIP_NLROW*) SCIPhashmapListGetImage(list);
+         nlrow = (SCIP_NLROW*) SCIPhashmapEntryGetImage(entry);
 
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
       }
@@ -828,7 +831,6 @@ SCIP_RETCODE createSubSCIP(
 {
    SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
-   SCIP_HASHMAPLIST* list;
    SCIP_CONSHDLR*  conshdlrindicator;
    SCIP_CONSHDLR*  conshdlrindi;
    SCIP_CONSHDLR*  conshdlrlin;
@@ -933,8 +935,8 @@ SCIP_RETCODE createSubSCIP(
    /* create variable hash mapping scip -> subscip */
    SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX ( nvars, 5 )));
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(heurdata->maxcalls*2)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars2, SCIPblkmem(scip), SCIPcalcHashtableSize(heurdata->maxcalls*2)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars, SCIPblkmem(scip), heurdata->maxcalls) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars2, SCIPblkmem(scip), heurdata->maxcalls) );
 
    /* create sub-SCIP copy of CIP, copy interesting plugins */
    success = TRUE;
@@ -961,10 +963,10 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->origsubscipConsMap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->origsubscipConsMap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
 
    nconss = SCIPgetNOrigConss(scip);
    conss = SCIPgetOrigConss(scip);
@@ -982,7 +984,7 @@ SCIP_RETCODE createSubSCIP(
       SCIP_CALL( SCIPhashmapInsert(heurdata->origsubscipConsMap, transcons, subcons) );
    }
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->conss2nlrow, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->conss2nlrow, SCIPblkmem(scip), SCIPgetNConss(scip)) );
 
    if( !heurdata->subscipisvalid )
    {
@@ -995,17 +997,19 @@ SCIP_RETCODE createSubSCIP(
    /* create hashmaps from scip transformed vars to subscip original vars, and vice versa
     * capture variables in SCIP and sub-SCIP
     * catch global bound change events */
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsubsciptoscip, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsciptosubscip, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsubsciptoscip, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsciptosubscip, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
 
    /* we need to get all subscip variables, also those which are copies of fixed variables from the main scip,
     * therefore we iterate over the hashmap */
-   for( i = 0; i < SCIPhashmapGetNLists(varsmap); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries(varsmap); ++i )
    {
-      for( list = SCIPhashmapGetList(varsmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(varsmap, i);
+      if( entry != NULL )
       {
-         var    = (SCIP_VAR*) SCIPhashmapListGetOrigin(list);
-         subvar = (SCIP_VAR*) SCIPhashmapListGetImage(list);
+         var    = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
+         subvar = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
 
          assert( SCIPvarGetProbindex(subvar) >= 0 );
          assert( SCIPvarGetProbindex(subvar) <= heurdata->nsubvars );
@@ -1033,12 +1037,12 @@ SCIP_RETCODE createSubSCIP(
    conshdlrindicator  = SCIPfindConshdlr(scip, "indicator");
    nconsindicator = SCIPconshdlrGetNConss(conshdlrindicator);
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slacktoindivarsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicators, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymap, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymapback, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarlbMap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarubMap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slacktoindivarsmap, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicators, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymap, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymapback, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarlbMap, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarubMap, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
 
    for( i = 0; i < nconsindicator; i++ )
    {
@@ -1057,9 +1061,9 @@ SCIP_RETCODE createSubSCIP(
 
    /* we introduce slackvariables s+ and s- for each constraint to ensure that the problem is feasible
     * we want to minimize over the sum of these variables, so set the objective to 1 */
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxcons, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxconsindi, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slack2var, SCIPblkmem(scip), SCIPcalcHashtableSize(2*nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxcons, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxconsindi, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slack2var, SCIPblkmem(scip), 2 * nvars) );
 
    vars = SCIPgetOrigVars(scip);
    nvars = SCIPgetNOrigVars(scip);
@@ -2530,7 +2534,7 @@ SCIP_DECL_HEURINIT(heurInitDualval)
    if( SCIPheurGetFreqofs(heur) == 0 )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->dualvalues, SCIPblkmem(scip), 1024) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->dualvalues, SCIPblkmem(scip), 512) );
 
    return SCIP_OKAY;
 }

@@ -61,7 +61,7 @@
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_STRENGTHEN         TRUE /**< should pairwise constraint comparison try to strengthen constraints by removing superflous non-zeros? */
 
-#define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
+#define HASHSIZE_LOGICORCONS        500 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in presolving */
@@ -1917,7 +1917,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = 2*nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_LOGICORCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyLogicorcons, hashKeyEqLogicorcons, hashKeyValLogicorcons, (void*) scip) );
@@ -2818,7 +2818,6 @@ SCIP_RETCODE prepareCons(
    return SCIP_OKAY;
 }
 
-#define HASHTABLESIZE_FACTOR 5
 
 /** find covered/subsumed constraints and redundant non-zero entries
  *
@@ -2959,7 +2958,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    BMSclearMemoryArray(occurlistsizes, occurlistsize);
 
    /* create hashmap to map all occuring variables to a position in the list */
-   SCIP_CALL( SCIPhashmapCreate(&varstopos, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nmyconss)) );
+   SCIP_CALL( SCIPhashmapCreate(&varstopos, SCIPblkmem(scip), nmyconss) );
 
    /* get maximal number of variables over all logicor constraints */
    c = nmyconss - 1;
