@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_oneopt.c
  * @brief  improvement heuristic that alters single variable values
  * @author Timo Berthold
@@ -43,7 +43,7 @@
 #define DEFAULT_DURINGROOT    TRUE           /**< should the heuristic be called before and during the root node? */
 #define DEFAULT_BEFOREPRESOL  FALSE          /**< should the heuristic be called before presolving */
 #define DEFAULT_FORCELPCONSTRUCTION FALSE    /**< should the construction of the LP be forced even if LP solving is deactivated? */
-
+#define DEFAULT_USELOOP       FALSE          /**< should the heuristic continue to run as long as improvements are found? */
 /*
  * Data structures
  */
@@ -56,6 +56,7 @@ struct SCIP_HeurData
    SCIP_Bool             duringroot;         /**< should the heuristic be called before and during the root node? */
    SCIP_Bool             forcelpconstruction;/**< should the construction of the LP be forced even if LP solving is deactivated? */
    SCIP_Bool             beforepresol;       /**< should the heuristic be called before presolving */
+   SCIP_Bool             useloop;            /**< should the heuristic continue to run as long as improvements are found? */
 };
 
 
@@ -530,7 +531,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 #ifndef NDEBUG
             SCIP_CALL( retcode );
 #endif
-            SCIPwarningMessage(scip, "Error while solving subproblem in Oneopt heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+            SCIPwarningMessage(scip, "Error while solving subproblem in 1-opt heuristic; sub-SCIP terminated with code <%d>\n",retcode);
          }
 
 #ifdef SCIP_DEBUG
@@ -727,6 +728,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
                SCIPvarGetName(var), shiftval);
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
             SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
+            ++nsuccessfulshifts;
          }
          else
          {
@@ -776,7 +778,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          shifted = TRUE;
       }
 
-   } while( shifted );
+   } while( heurdata->useloop && shifted );
 
    if( nsuccessfulshifts > 0 )
    {
@@ -796,7 +798,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          {
             SCIPdebugMsg(scip, "found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
-            heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
          }
       }
@@ -844,7 +845,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          retstat = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage(scip, "Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
+            SCIPwarningMessage(scip, "Error while solving LP in 1-opt heuristic; LP solve terminated with code <%d>\n",retstat);
          }
 #else
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
@@ -867,7 +868,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             {
                SCIPdebugMsg(scip, "found feasible shifted solution:\n");
                SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
-               heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
                *result = SCIP_FOUNDSOL;
             }
          }
@@ -876,6 +876,12 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_CALL( SCIPendDive(scip) );
       }
    }
+
+   /* heuristic should not rerun on this incumbent because the heuristic loop finishes only after no further
+    * improvements of the incumbent solution are possible
+    */
+   if( heurdata->useloop )
+      heurdata->lastsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
 
    SCIPfreeBufferArray(scip, &shiftvals);
    SCIPfreeBufferArray(scip, &shiftcands);
@@ -933,6 +939,10 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/beforepresol",
          "should the heuristic be called before presolving?",
          &heurdata->beforepresol, TRUE, DEFAULT_BEFOREPRESOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/useloop",
+         "should the heuristic continue to run as long as improvements are found?",
+         &heurdata->useloop, TRUE, DEFAULT_USELOOP, NULL, NULL) );
 
    return SCIP_OKAY;
 }
