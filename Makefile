@@ -1257,6 +1257,15 @@ ifeq ($(MAKESOFTLINKS), true)
 				else \
 					echo "* skipped creation of softlink \"$@\". Call \"make links\" if needed later." ; \
 				fi ; \
+				FILENAME=$@ ; \
+				FNAME=$${FILENAME#lib/static} ; \
+				FNAME=$${FNAME#lib/include} ; \
+				FNAME="lib"$$FNAME ; \
+				if test -e $$FNAME ; \
+				then \
+					echo ; \
+					echo "The link "$$FNAME" still exists. Consider removing it." ; \
+				fi ; \
 				echo ; \
 			fi'
 endif
