@@ -484,9 +484,9 @@ endif
 #-----------------------------------------------------------------------------
 
 SCIPLIBNAME	=	scip
-SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
+SCIPLIB		=	$(SCIPLIBNAME).$(BASE).$(LPS)
 SCIPLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBNAME).$(LIBEXT)
+SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBNAME).$(LPS).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
