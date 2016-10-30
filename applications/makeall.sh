@@ -56,28 +56,22 @@ do
 		    LIBEXT="a"
 		fi
 
-		LPILIB=../../lib/$TYPE/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
-		if test -e $LPILIB
+		SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LPS.$LIBEXT
+		if test -e $SCIPLIB
 		then
-		    SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
-		    if test -e $SCIPLIB
+		    echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
+		    if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
 		    then
-			echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
-			if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
-			then
-			    exit $STATUS
-			fi
-			echo
-			echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
-			if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL )
-			then
-			    exit $STATUS
-			fi
-		    else
-			echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
+			exit $STATUS
+		    fi
+		    echo
+		    echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL
+		    if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL )
+		    then
+			exit $STATUS
 		    fi
 		else
-		    echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
+		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS", "$TYPE")"
 		fi
 		echo
 	    done
