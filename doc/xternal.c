@@ -4227,7 +4227,7 @@
  * @section DIVING_FURTHERINFO Further information
  *
  * This is all there is to extend the SCIP set of diving heuristics by a new one. For further information, please see
- * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref pub_dive.h, and \ref heur_guideddiving.h or
+ * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref heuristics.h, and \ref heur_guideddiving.h or
  * other diving heuristics that implement diving through a diveset.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
