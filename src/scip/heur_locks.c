@@ -366,7 +366,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       }
 
       /* stop if we reached the depth limit */
-      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
 
       if( propagated )
