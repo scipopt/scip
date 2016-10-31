@@ -206,7 +206,7 @@ SCIP_RETCODE performRandRounding(
              * otherwise we finish at this point.
              * @todo: Maybe we want to continue with the same node because we do not backtrack.
              */
-            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+            if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }

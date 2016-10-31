@@ -4,4 +4,8 @@
 # check/results should only contain results from one run
 
 cd check/
-./evalcheck_cluster.sh -R results/check.*.eval
+if [ -z "$TESTSET" ]; then
+    echo "Missing testset information. Aborting..."
+    exit 1
+fi
+./evalcheck_cluster.sh -R results/check.$TESTSET.*.eval

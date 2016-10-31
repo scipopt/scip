@@ -728,7 +728,7 @@ SCIP_RETCODE executeHeuristic(
 
          SCIP_CALL( constructSolution(scip, sol, vars, starttimes, njobs) );
 
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          if( stored )
             *result = SCIP_FOUNDSOL;

@@ -218,7 +218,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
