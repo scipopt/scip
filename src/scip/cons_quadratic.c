@@ -6944,7 +6944,6 @@ SCIP_RETCODE computeED(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   /* @todo: maybe we can use sepabilinvar2pos to help us with our computation here? */
 
    /* function has to be convex with finite rhs or concave with finite lhs */
    assert((consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
@@ -6958,7 +6957,7 @@ SCIP_RETCODE computeED(
    }
 
    /* @todo: - it seems that if A is of the form [I 0; 0 A'], one only needs to compute the decomposition for A'
-    * so one could do better in terms of memory and speed
+    *          so one could do better in terms of memory and speed
     *        - if n too big don't compute SVD
     */
    n = consdata->nquadvars;
@@ -6970,6 +6969,7 @@ SCIP_RETCODE computeED(
    matrix = consdata->eigenvectors;
    BMSclearMemoryArray(matrix, nn);
 
+   /* @todo if we are called in solving stage (or late from initsol), we can avoid the hashmap by using sepabilinvar2pos */
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
 
    for( i = 0; i < n; ++i )
