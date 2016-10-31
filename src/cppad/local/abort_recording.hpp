@@ -1,12 +1,12 @@
-/* $Id: abort_recording.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_ABORT_RECORDING_INCLUDED
-# define CPPAD_ABORT_RECORDING_INCLUDED
+// $Id$
+# ifndef CPPAD_ABORT_RECORDING_HPP
+# define CPPAD_ABORT_RECORDING_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -14,16 +14,12 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 /*
 $begin abort_recording$$
-$spell 
+$spell
 $$
 
 $section Abort Recording of an Operation Sequence$$
+$mindex tape$$
 
-$index abort, operation sequence$$
-$index operation, sequence abort$$
-$index sequence, operation abort$$
-$index recording, abort$$
-$index tape, abort recording$$
 
 $head Syntax$$
 $codei%AD<%Base%>::abort_recording()%$$
@@ -44,7 +40,7 @@ $children%
 %$$
 $head Example$$
 The file
-$cref abort_recording.cpp$$ 
+$cref abort_recording.cpp$$
 contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 

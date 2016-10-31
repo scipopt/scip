@@ -27,6 +27,7 @@
 
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
+#include "scip/pub_misc.h"
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -62,9 +63,10 @@
 #define DEFAULT_CONFIDENCELEVEL 2       /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
 #define DEFAULT_SKIPBADINITCANDS TRUE  /**< should branching rule skip candidates that have a low probability to be
                                           *  better than the best strong-branching or pseudo-candidate? */
-#define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
-#define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
-
+#define DEFAULT_STARTRANDSEED      5    /**< start random seed for random number generation */
+#define DEFAULT_RANDINITORDER  FALSE    /**< should slight perturbation of scores be used to break ties in the prior scores? */
+#define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
+#define DEFAULT_DYNAMICWEIGHTS TRUE     /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -95,13 +97,15 @@ struct SCIP_BranchruleData
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             skipbadinitcands;   /**< should branching rule skip candidates that have a low probability to be
                                                *  better than the best strong-branching or pseudo-candidate? */
+   SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters? */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
    int*                  nlcount;            /**< array to store nonlinear count values */
    int                   nlcountsize;        /**< length of nlcount array */
    int                   nlcountmax;         /**< maximum entry in nlcount array or 1 if NULL */
-   SCIP_Bool             randinitorder;      /**< should init candidates be processed in a random order? */
-   unsigned int          randseed;           /**< random seed for random number generation */
+   SCIP_Bool             randinitorder;      /**< should slight perturbation of scores be used to break ties in the prior scores? */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   startrandseed;      /**< start random seed for random number generation */
+   SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 };
 
 /*
@@ -241,7 +245,7 @@ SCIP_RETCODE branchruledataEnsureNlcount(
 
    nvars = SCIPgetNVars(scip);
 
-   /**@todo test whether we want to apply this als if problem has only and constraints */
+   /**@todo test whether we want to apply this as if problem has only and constraints */
    /**@todo update changes in and constraints */
    if( branchruledata->nlscoreweight > 0.0 ) /*  && SCIPisNLPConstructed(scip) */
    {
@@ -321,19 +325,27 @@ SCIP_Real calcScore(
    )
 {
    SCIP_Real score;
+   SCIP_Real dynamicfactor;
 
    assert(branchruledata != NULL);
    assert(0.0 < frac && frac < 1.0);
 
-   score = branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
-      + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
-      + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
-      + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
-      + branchruledata->pscostweight * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
-      + branchruledata->nlscoreweight * nlscore;
+   if( branchruledata->dynamicweights )
+   {
+      dynamicfactor = (SCIPgetNInfeasibleLeaves(scip) + 1.0) / (SCIPgetNObjlimLeaves(scip) + 1.0);
+   }
+   else
+      dynamicfactor = 1.0;
+
+   score = dynamicfactor * (branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
+            + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
+            + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
+            + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore)))
+         + branchruledata->pscostweight / dynamicfactor * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
+         + branchruledata->nlscoreweight * nlscore;
 
    /* avoid close to integral variables */
-   if( MIN(frac, 1.0 - frac) < 10.0*SCIPfeastol(scip) )
+   if( MIN(frac, 1.0 - frac) < 10.0 * SCIPfeastol(scip) )
       score *= 1e-6;
 
    return score;
@@ -425,7 +437,7 @@ SCIP_RETCODE applyBdchgs(
    assert(branchruledata != NULL);
 #endif
 
-   SCIPdebugMessage("applying %d bound changes\n", nbdchgs);
+   SCIPdebugMsg(scip, "applying %d bound changes\n", nbdchgs);
 
    for( i = 0; i < nbdchgs; ++i )
    {
@@ -433,7 +445,7 @@ SCIP_RETCODE applyBdchgs(
 
       v = bdchginds[i];
 
-      SCIPdebugMessage(" -> <%s> [%g,%g]\n",
+      SCIPdebugMsg(scip, " -> <%s> [%g,%g]\n",
          SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v]));
 
       if( bdchgtypes[i] == SCIP_BOUNDTYPE_LOWER )
@@ -464,7 +476,7 @@ SCIP_RETCODE applyBdchgs(
          /* if we did propagation, the bound change might already have been added */
          assert(tightened || (branchruledata->maxproprounds != 0));
       }
-      SCIPdebugMessage("  -> [%g,%g]\n", SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v]));
+      SCIPdebugMsg(scip, "  -> [%g,%g]\n", SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v]));
    }
 
    return SCIP_OKAY;
@@ -716,7 +728,7 @@ SCIP_RETCODE execRelpscost(
                upgain = MAX(up - lastlpobjval, 0.0);
                pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
-               SCIPdebugMessage(" -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
+               SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
                   SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
             }
 
@@ -785,7 +797,7 @@ SCIP_RETCODE execRelpscost(
             upgain = MAX(up - lastlpobjval, 0.0);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
-            SCIPdebugMessage(" -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
+            SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
                SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
          }
          else if( maxninitcands > 0 )
@@ -841,7 +853,7 @@ SCIP_RETCODE execRelpscost(
 
             /* assign a random score to this uninitialized candidate */
             if( branchruledata->randinitorder )
-               score = SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed);
+               score += SCIPrandomGetReal(branchruledata->randnumgen, 0.0, 1e-4);
 
             /* pseudo cost of variable is not reliable: insert candidate in initcands buffer */
             for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
@@ -882,7 +894,7 @@ SCIP_RETCODE execRelpscost(
       if( branchruledata->usehyptestforreliability && ninitcands == 1 )
       {
          ninitcands = 0;
-         SCIPdebugMessage("Only one single candidate for initialization-->Skipping strong branching\n");
+         SCIPdebugMsg(scip, "Only one single candidate for initialization-->Skipping strong branching\n");
       }
 
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
@@ -918,7 +930,7 @@ SCIP_RETCODE execRelpscost(
          inititer = MIN(inititer, 500);
       }
 
-      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, maxbdchgs=%d, inititer=%d, iterations:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", basic:%u)\n",
+      SCIPdebugMsg(scip, "strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, maxbdchgs=%d, inititer=%d, iterations:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", basic:%u)\n",
          reliable, ninitcands, nbranchcands, nuninitcands, maxninitcands, maxlookahead, maxbdchgs, inititer,
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
@@ -1002,7 +1014,7 @@ SCIP_RETCODE execRelpscost(
                continue;
             }
          }
-         SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iterations) -- %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " iterations\n",
+         SCIPdebugMsg(scip, "init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iterations) -- %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " iterations\n",
             SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS),
             SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS),
             SCIPvarGetName(branchcands[c]), branchcandssol[c], initcandscores[i],
@@ -1060,13 +1072,13 @@ SCIP_RETCODE execRelpscost(
          {
             bestsolidx = SCIPsolGetIndex(SCIPgetBestSol(scip));
 
-            SCIPdebugMessage(" -> strong branching on variable <%s> lead to a new incumbent\n",
+            SCIPdebugMsg(scip, " -> strong branching on variable <%s> lead to a new incumbent\n",
                SCIPvarGetName(branchcands[c]));
 
             /* proved bound for current node is larger than new cutoff bound -> cut off current node */
             if( SCIPisGE(scip, provedbound, SCIPgetCutoffbound(scip)) )
             {
-               SCIPdebugMessage(" -> node can be cut off (provedbound=%g, cutoff=%g)\n", provedbound, SCIPgetCutoffbound(scip));
+               SCIPdebugMsg(scip, " -> node can be cut off (provedbound=%g, cutoff=%g)\n", provedbound, SCIPgetCutoffbound(scip));
 
                *result = SCIP_CUTOFF;
                break; /* terminate initialization loop, because node is infeasible */
@@ -1082,10 +1094,10 @@ SCIP_RETCODE execRelpscost(
                {
                   bestsbdowncutoff = TRUE;
 
-                  SCIPdebugMessage(" -> valid dual bound for down child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbdown=%g, cutoff=%g)\n",
+                  SCIPdebugMsg(scip, " -> valid dual bound for down child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbdown=%g, cutoff=%g)\n",
                      SCIPvarGetName(branchcands[bestsbcand]), bestsbdownvalid, bestsbdown, SCIPgetCutoffbound(scip));
 
-                  SCIPdebugMessage(" -> increase lower bound of best candidate <%s> to %g\n",
+                  SCIPdebugMsg(scip, " -> increase lower bound of best candidate <%s> to %g\n",
                      SCIPvarGetName(branchcands[bestsbcand]), SCIPfeasCeil(scip, branchcandssol[bestsbcand]));
 
                   SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestsbcand]),
@@ -1096,10 +1108,10 @@ SCIP_RETCODE execRelpscost(
                {
                   bestsbupcutoff = TRUE;
 
-                  SCIPdebugMessage(" -> valid dual bound for up child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbup=%g, cutoff=%g)\n",
+                  SCIPdebugMsg(scip, " -> valid dual bound for up child of best candidate <%s> is higher than new cutoff bound (valid=%u, bestsbup=%g, cutoff=%g)\n",
                      SCIPvarGetName(branchcands[bestsbcand]), bestsbupvalid, bestsbup, SCIPgetCutoffbound(scip));
 
-                  SCIPdebugMessage(" -> decrease upper bound of best candidate <%s> to %g\n",
+                  SCIPdebugMsg(scip, " -> decrease upper bound of best candidate <%s> to %g\n",
                      SCIPvarGetName(branchcands[bestsbcand]), SCIPfeasFloor(scip, branchcandssol[bestsbcand]));
 
                   SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[bestsbcand]),
@@ -1122,14 +1134,38 @@ SCIP_RETCODE execRelpscost(
           * depending on the user parameter choice of storesemiinitcosts, pseudo costs are also updated in single directions,
           * if the node in the other direction was infeasible or cut off
           */
-         if( !downinf && (!upinf || branchruledata->storesemiinitcosts) )
+         if( !downinf
+#ifdef WITH_LPSOLSTAT
+               && SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_DOWNWARDS) != SCIP_LPSOLSTAT_ITERLIMIT
+#endif
+               && (!upinf || branchruledata->storesemiinitcosts) )
          {
+            SCIP_Real weight;
+
+            /* smaller weights are given if the strong branching hit the time limit in the corresponding direction */
+            if( branchruledata->usesmallweightsitlim )
+               weight = SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_DOWNWARDS) != SCIP_LPSOLSTAT_ITERLIMIT ? 1.0 : 0.5;
+            else
+               weight = 1.0;
+
             /* update pseudo cost values */
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, weight) );
          }
-         if( !upinf && (!downinf || branchruledata->storesemiinitcosts)  )
+         if( !upinf
+#ifdef WITH_LPSOLSTAT
+               && SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_UPWARDS) != SCIP_LPSOLSTAT_ITERLIMIT
+#endif
+               && (!downinf || branchruledata->storesemiinitcosts)  )
          {
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, 1.0) );
+            SCIP_Real weight;
+
+            /* smaller weights are given if the strong branching hit the time limit in the corresponding direction */
+            if( branchruledata->usesmallweightsitlim )
+               weight = SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_UPWARDS) != SCIP_LPSOLSTAT_ITERLIMIT ? 1.0 : 0.5;
+            else
+               weight = 1.0;
+
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, weight) );
          }
 
          /* the minimal lower bound of both children is a proved lower bound of the current subtree */
@@ -1153,7 +1189,7 @@ SCIP_RETCODE execRelpscost(
                {
                   if( SCIPisGT(scip, newlbs[v], SCIPvarGetLbLocal(vars[v])) )
                   {
-                     SCIPdebugMessage("better lower bound for variable <%s>: %.9g -> %.9g (by strongbranching on <%s>)\n",
+                     SCIPdebugMsg(scip, "better lower bound for variable <%s>: %.9g -> %.9g (by strongbranching on <%s>)\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), newlbs[v], SCIPvarGetName(branchcands[c]));
 
                      SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, v,
@@ -1161,7 +1197,7 @@ SCIP_RETCODE execRelpscost(
                   }
                   if( SCIPisLT(scip, newubs[v], SCIPvarGetUbLocal(vars[v])) )
                   {
-                     SCIPdebugMessage("better upper bound for variable <%s>: %.9g -> %.9g (by strongbranching on <%s>)\n",
+                     SCIPdebugMsg(scip, "better upper bound for variable <%s>: %.9g -> %.9g (by strongbranching on <%s>)\n",
                         SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), newubs[v], SCIPvarGetName(branchcands[c]));
 
                      SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, v,
@@ -1183,7 +1219,7 @@ SCIP_RETCODE execRelpscost(
              */
             if( allowaddcons && downinf == downconflict && upinf == upconflict )
             {
-               SCIPdebugMessage(" -> variable <%s> is infeasible in %s: conflict constraint added\n",
+               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in %s: conflict constraint added\n",
                   SCIPvarGetName(branchcands[c]),
                   downinf && upinf ? "both directions" : (downinf ? "downward branch" : "upward branch"));
                *result = SCIP_CONSADDED;
@@ -1194,7 +1230,7 @@ SCIP_RETCODE execRelpscost(
             else if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
-               SCIPdebugMessage(" -> variable <%s> is infeasible in both directions (conflict: %u/%u)\n",
+               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions (conflict: %u/%u)\n",
                   SCIPvarGetName(branchcands[c]), downconflict, upconflict);
                *result = SCIP_CUTOFF;
                break; /* terminate initialization loop, because node is infeasible */
@@ -1202,7 +1238,7 @@ SCIP_RETCODE execRelpscost(
             else
             {
                /* rounding is infeasible in one direction -> round variable in other direction */
-               SCIPdebugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %u/%u)\n",
+               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in %s branch (conflict: %u/%u)\n",
                   SCIPvarGetName(branchcands[c]), downinf ? "downward" : "upward", downconflict, upconflict);
                SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgtypes, &bdchgbounds, &nbdchgs, SCIPvarGetProbindex(branchcands[c]),
                      (downinf ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
@@ -1266,7 +1302,7 @@ SCIP_RETCODE execRelpscost(
             else
                lookahead += 1.0;
 
-            SCIPdebugMessage(" -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g -> %g)\n",
+            SCIPdebugMsg(scip, " -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g -> %g)\n",
                SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, downvalid, up, upgain, upvalid,
                pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
          }
@@ -1274,7 +1310,7 @@ SCIP_RETCODE execRelpscost(
 #ifdef SCIP_DEBUG
       if( bestsbcand >= 0 )
       {
-         SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
+         SCIPdebugMsg(scip, " -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
             SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore,
             lookahead, maxlookahead);
       }
@@ -1372,7 +1408,7 @@ SCIP_RETCODE execRelpscost(
       val = branchcandssol[bestcand];
 
       /* perform the branching */
-      SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%u, psc=%g/%g [%g])\n",
+      SCIPdebugMsg(scip, " -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%u, psc=%g/%g [%g])\n",
          nbranchcands, ninitcands, bestcand, SCIPvarGetName(var), branchcandssol[bestcand],
          bestsbdown, bestsbdown - lpobjval, bestsbup, bestsbup - lpobjval, bestisstrongbranch,
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS),
@@ -1399,8 +1435,8 @@ SCIP_RETCODE execRelpscost(
          }
       }
 
-      SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
-      SCIPdebugMessage(" -> up child's lowerbound  : %g\n", SCIPnodeGetLowerbound(upchild));
+      SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+      SCIPdebugMsg(scip, " -> up child's lowerbound  : %g\n", SCIPnodeGetLowerbound(upchild));
 
       assert(SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_INFEASIBLE && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT);
 
@@ -1455,8 +1491,11 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    branchruledata->nlcount = NULL;
    branchruledata->nlcountsize = 0;
    branchruledata->nlcountmax = 1;
+   assert(branchruledata->startrandseed >= 0);
 
-   branchruledata->randseed = (unsigned int)branchruledata->startrandseed;
+   /* create a random number generator */
+   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, branchruledata->startrandseed)) );
 
    return SCIP_OKAY;
 }
@@ -1471,6 +1510,9 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    /* free memory in branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
+
+   /* free random number generator */
+   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1493,7 +1535,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
@@ -1653,6 +1695,16 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/randinitorder",
          "should candidates be initialized in randomized order?",
          &branchruledata->randinitorder, TRUE, DEFAULT_RANDINITORDER,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesmallweightsitlim",
+         "should smaller weights be used for pseudo cost updates after hitting the LP iteration limit?",
+         &branchruledata->usesmallweightsitlim, TRUE, DEFAULT_USESMALLWEIGHTSITLIM,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/dynamicweights",
+         "should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters?",
+         &branchruledata->dynamicweights, TRUE, DEFAULT_DYNAMICWEIGHTS,
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );

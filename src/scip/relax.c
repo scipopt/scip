@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPrelaxCopyInclude(
 
    if( relax->relaxcopy != NULL )
    {
-      SCIPdebugMessage("including relaxation handler %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including relaxation handler %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
       SCIP_CALL( relax->relaxcopy(set->scip, relax) );
    }
    return SCIP_OKAY;
@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxation handler <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*relax)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -308,14 +308,14 @@ SCIP_RETCODE SCIPrelaxExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check, if the relaxation is already solved */
-   if( relax->lastsolvednode == stat->ntotalnodes )
+   if( relax->lastsolvednode == stat->ntotalnodes && ! SCIPinProbing(set->scip) )
       return SCIP_OKAY;
 
    relax->lastsolvednode = stat->ntotalnodes;
 
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
-      SCIPdebugMessage("executing relaxation handler <%s>\n", relax->name);
+      SCIPsetDebugMsg(set, "executing relaxation handler <%s>\n", relax->name);
 
       /* start timing */
       SCIPclockStart(relax->relaxclock, set);

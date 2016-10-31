@@ -37,6 +37,7 @@
 
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
+#define DEFAULT_RANDSEED            73       /**< initial random seed */
 
 /** sign of a value (-1 or +1)
  *
@@ -893,8 +894,8 @@ void polynomialdataMergeMonomials(
    }
 
 #ifndef NDEBUG
-   while( i < polynomialdata->nmonomials )
-      assert(polynomialdata->monomials[i++] == NULL);
+   for( ; i < polynomialdata->nmonomials; ++i )
+      assert(polynomialdata->monomials[i] == NULL);
 #endif
 
    polynomialdata->nmonomials -= offset;
@@ -1631,6 +1632,9 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
 
 /** point evaluation for EXPR_DIV */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalDiv )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -2550,7 +2554,7 @@ SCIP_DECL_EXPREVAL( exprevalQuadratic )
    quadelems  = quaddata->quadelems;
 
    assert(quadelems != NULL || nquadelems == 0);
-   assert(argvals != NULL   || nargs == 0);
+   assert(argvals != NULL || nquadelems == 0);
 
    *result = quaddata->constant;
 
@@ -3983,11 +3987,13 @@ SCIP_RETCODE exprUnconvertPolynomial(
    {
       /* polynomial is product of children */
       monomial = polynomialdata->monomials[0];
+      assert(monomial->nfactors == nchildren);
 
       if( monomial->nfactors == 1 )
       {
          /* polynomial is x^k for some k */
          assert(monomial->exponents[0] != 1.0); /* should have been handled before */
+         assert(monomial->childidxs[0] == 0);
 
          if( monomial->exponents[0] == 2.0 )
          {
@@ -4072,6 +4078,8 @@ SCIP_RETCODE exprUnconvertPolynomial(
       if( monomial->nfactors == 2 && monomial->exponents[0] == 1.0 && monomial->exponents[1] == -1.0 )
       {
          /* polynomial is x/y, so turn into SCIP_EXPR_DIV */
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -4085,6 +4093,9 @@ SCIP_RETCODE exprUnconvertPolynomial(
       {
          /* polynomial is y/x, so turn into SCIP_EXPR_DIV */
          void* tmp;
+
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -5155,10 +5166,17 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprParse(blkmem, messagehdlr, expr, subexpptr, subexplength, subexpendptr, nvars, varnames, vartable, recursiondepth + 1) );
       ++str;
    }
-   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+')
+         && (isdigit((unsigned char)str[1]) || str[1] == ' ')) )
    {
-      /* there is a number coming */
-      if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
+      /* check if there is a lonely minus coming, indicating a -1.0 */
+      if( str[0] == '-'  && str[1] == ' ' )
+      {
+         number = -1.0;
+         nonconstendptr = (char*) str + 1;
+      }
+      /* check if there is a number coming */
+      else if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
@@ -5169,7 +5187,7 @@ SCIP_RETCODE exprParse(
       while( isspace((unsigned char)*str) && str != lastchar )
          ++str;
 
-      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '/' && str[0] != '^' )
+      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '^' )
       {
          if( str < lastchar )
          {
@@ -6885,8 +6903,8 @@ void SCIPexprMergeMonomialFactors(
    }
 
 #ifndef NDEBUG
-   while( i < monomial->nfactors )
-      assert(monomial->childidxs[i++] == -1);
+   for( ; i < monomial->nfactors; ++i )
+      assert(monomial->childidxs[i] == -1);
 #endif
 
    monomial->nfactors -= offset;
@@ -7578,11 +7596,17 @@ SCIP_Bool SCIPexprAreEqual(
       if( data1->lincoefs != NULL || data2->lincoefs != NULL )
          for( i = 0; i < expr1->nchildren; ++i )
          {
-            if( data1->lincoefs == NULL && !EPSZ(data2->lincoefs[i], eps) )
-               return FALSE;
-            if( data2->lincoefs == NULL && !EPSZ(data1->lincoefs[i], eps) )
-               return FALSE;
-            if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
+            if( data1->lincoefs == NULL )
+            {
+               if( !EPSZ(data2->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( data2->lincoefs == NULL )
+            {
+               if( !EPSZ(data1->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
                return FALSE;
          }
 
@@ -8115,9 +8139,9 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_CONST:
       if (expr->data.dbl < 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "(%lf)", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "(%g)", expr->data.dbl );
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%lf", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", expr->data.dbl );
       break;
 
    case SCIP_EXPR_PLUS:
@@ -8774,21 +8798,24 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    )
 {
 #ifndef NDEBUG
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real* testx;
    SCIP_Real testval_before;
    SCIP_Real testval_after;
    int i;
-   unsigned int seed;
 #endif
 
    assert(tree != NULL);
 
 #ifndef NDEBUG
-   seed = 42;
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, tree->blkmem, 42) );
+
    SCIP_ALLOC( BMSallocMemoryArray(&testx, SCIPexprtreeGetNVars(tree)) );  /*lint !e666*/
    for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
+
+   SCIPrandomFree(&randnumgen);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -10283,9 +10310,24 @@ void exprgraphNodePropagateBounds(
    case SCIP_EXPR_ABS:
    {
       assert(node->nchildren == 1);
-      /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
 
-      SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
+      /* use identity if child bounds are non-negative */
+      if( node->children[0]->bounds.inf >= 0 )
+      {
+         SCIPintervalSetBounds(&childbounds, node->bounds.inf, node->bounds.sup);
+      }
+      /* use -identity if child bounds are non-positive */
+      else if( node->children[0]->bounds.sup <= 0 )
+      {
+         assert(node->bounds.inf <= node->bounds.sup);
+         SCIPintervalSetBounds(&childbounds, -node->bounds.sup, -node->bounds.inf);
+      }
+      /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
+      else
+      {
+         SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
+      }
+
       SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
@@ -10449,7 +10491,7 @@ void exprgraphNodePropagateBounds(
                assert(maxlinactivityinf == 1);
                childbounds.inf = node->bounds.inf - maxlinactivity;
             }
-            else
+            else if( maxlinactivityinf == 0 )
             {
                childbounds.inf = node->bounds.inf - maxlinactivity + node->children[i]->bounds.sup;
             }
@@ -10484,7 +10526,7 @@ void exprgraphNodePropagateBounds(
          {
             if( i == j )
                continue;
-            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[i]->bounds);
+            SCIPintervalMul(infinity, &childbounds, childbounds, node->children[j]->bounds);
 
             /* if there is 0.0 in the product, then later division will hardly give useful bounds, so giveup for this i */
             if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
@@ -15502,10 +15544,10 @@ SCIP_Bool SCIPexprgraphFindConstNode(
          break;
       }
    }
-   assert(left == right+1 || *constnode != NULL);
    if( left == right+1 )
       return FALSE;
 
+   assert(*constnode != NULL);
    assert((*constnode)->op == SCIP_EXPR_CONST);
    assert((*constnode)->data.dbl == constant);  /*lint !e777*/
 
@@ -15732,9 +15774,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_Real* testx;
    SCIP_HASHMAP* testvalidx;
    SCIP_Real* testvals;
+   SCIP_RANDNUMGEN* randnumgen;
    int testvalssize;
    int ntestvals;
-   unsigned int seed;
 #endif
 
    assert(exprgraph != NULL);
@@ -15743,7 +15785,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   seed = 42;
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, DEFAULT_RANDSEED) );
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;
@@ -15751,7 +15793,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
 
    SCIP_ALLOC( BMSallocMemoryArray(&testx, exprgraph->nvars) );
    for( i = 0; i < exprgraph->nvars; ++i )
-      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprgraphEval(exprgraph, testx) );
    for( d = 1; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
@@ -15768,6 +15810,8 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             ++ntestvals;
          }
       }
+
+   SCIPrandomFree(&randnumgen);
 #endif
 
 #ifdef SCIP_OUTPUT

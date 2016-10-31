@@ -309,7 +309,7 @@ SCIP_RETCODE SCIPnodepqInsert(
    bfsqueue[bfspos] = pos;
    bfsposs[pos] = bfspos;
 
-   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
+   SCIPsetDebugMsg(set, "inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
 
    return SCIP_OKAY;
 }
@@ -354,7 +354,7 @@ SCIP_Bool nodepqDelPos(
    freebfspos = bfsposs[rempos];
    assert(0 <= freebfspos && freebfspos < nodepq->len);
 
-   SCIPdebugMessage("delete node %p[%g] at pos %d and bfspos %d of node queue\n", 
+   SCIPsetDebugMsg(set, "delete node %p[%g] at pos %d and bfspos %d of node queue\n",
       (void*)slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
 
    /* remove node of the tree and get a free slot,
@@ -633,7 +633,7 @@ SCIP_RETCODE SCIPnodepqBound(
 
    assert(nodepq != NULL);
 
-   SCIPdebugMessage("bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
+   SCIPsetDebugMsg(set, "bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
    pos = nodepq->len-1;
    while( pos >= 0 )
    {
@@ -643,7 +643,7 @@ SCIP_RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
-         SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
+         SCIPsetDebugMsg(set, "free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
 
          /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
@@ -681,7 +681,7 @@ SCIP_RETCODE SCIPnodepqBound(
       else
          pos--;
    }
-   SCIPdebugMessage(" -> bounded node queue has length %d\n", nodepq->len);
+   SCIPsetDebugMsg(set, " -> bounded node queue has length %d\n", nodepq->len);
 
    return SCIP_OKAY;
 }
@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPnodeselCopyInclude(
 
    if( nodesel->nodeselcopy != NULL )
    {
-      SCIPdebugMessage("including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), (void*)set->scip);
       SCIP_CALL( nodesel->nodeselcopy(set->scip, nodesel) );
    }
    return SCIP_OKAY;
@@ -794,7 +794,7 @@ SCIP_RETCODE SCIPnodeselCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/stdpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/4,
+                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/2,
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/memsavepriority", name);
@@ -955,6 +955,7 @@ SCIP_RETCODE SCIPnodeselSelect(
    SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
+
    assert(nodesel != NULL);
    assert(nodesel->nodeselselect != NULL);
    assert(set != NULL);

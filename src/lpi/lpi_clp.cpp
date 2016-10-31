@@ -946,13 +946,11 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiChgBounds()\n");
-
    assert(lpi != 0);
    assert(lpi->clp != 0);
-   assert(ind != 0);
-   assert(lb != 0);
-   assert(ub != 0);
+   assert(ncols == 0 || (ind != 0 && lb != 0 && ub != 0));
+
+   SCIPdebugMessage("calling SCIPlpiChgBounds()\n");
 
    invalidateSolution(lpi);
 
@@ -966,7 +964,19 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    for (int j = 0; j < ncols; ++j)
    {
+      if ( SCIPlpiIsInfinity(lpi, lb[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+
       clp->setColumnBounds(ind[j], lb[j], ub[j]);
+
       if ( sol != 0 )
       {
          if( clp->statusExists() )

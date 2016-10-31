@@ -28,10 +28,6 @@
  * @author Felipe Serrano
  */
 
-/* CPLEX supports FASTMIP which fastens the lp solving process but therefor it might happen that there will be a loss in
- * precision (because e.g. the optimal basis will not be factorized again)
- */
-
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -55,7 +51,7 @@
    }
 
 /* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
-#define ABORT_ZERO(x) { int _restat_;                                   \
+#define ABORT_ZERO(x) { /*lint --e{527}*/ int _restat_;                 \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPerrorMessage("LP Error: CPLEX returned %d\n", _restat_);   \
@@ -68,7 +64,7 @@
 
 /* At several places we need to guarantee to have a factorization of an optimal basis and call the simplex to produce
  * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
- * refactorization, it might be necessary to do a few extra pivot steps, in particular if FASTMIP is used. */
+ * refactorization, it might be necessary to do a few extra pivot steps. */
 #define CPX_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
 
 /* CPLEX seems to ignore bounds with absolute value less than 1e-10. There is no interface define for this constant yet,
@@ -82,9 +78,9 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 /* CPLEX parameter lists which can be changed */
 #if (CPX_VERSION < 12060100)
-#define NUMINTPARAM  10
+#define NUMINTPARAM  11
 #else
-#define NUMINTPARAM  9
+#define NUMINTPARAM  10
 #endif
 static const int intparam[NUMINTPARAM] =
 {
@@ -99,7 +95,8 @@ static const int intparam[NUMINTPARAM] =
    CPX_PARAM_DPRIIND,
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND,
-   CPX_PARAM_THREADS
+   CPX_PARAM_THREADS,
+   CPX_PARAM_RANDOMSEED
 };
 
 #define NUMDBLPARAM  7
@@ -1249,6 +1246,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden, see the CPLEX documentation */
+      int nrows;
+      int j;
+
+      nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+#endif
+
       CHECK_ZERO( lpi->messagehdlr, CPXaddcols(lpi->cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
    }
    else
@@ -1332,6 +1339,15 @@ SCIP_RETCODE SCIPlpiAddRows(
    /* add rows to LP */
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols;
+      int j;
+
+      ncols = CPXgetnumcols(lpi->cpxenv, lpi->cpxlp);
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
       CHECK_ZERO( lpi->messagehdlr, CPXaddrows(lpi->cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
             rownames) );
    }
@@ -1435,18 +1451,30 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
+   int i;
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
-#ifdef SCIP_DEBUG
+
+   for( i = 0; i < ncols; ++i )
    {
-      int i;
-      for( i = 0; i < ncols; ++i )
-         SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+      SCIPdebugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
    }
-#endif
 
    invalidateSolution(lpi);
 
@@ -1457,7 +1485,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
 #ifndef NDEBUG
    {
-      int i;
       for( i = 0; i < ncols; ++i )
       {
          SCIP_Real cpxlb;
@@ -3518,7 +3545,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int retval;
    int nrows;
    int r;
@@ -3664,8 +3691,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int nrows;
    int r;
 
-   assert(lpi->cpxenv != NULL);
    assert(lpi != NULL);
+   assert(lpi->cpxenv != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binva-col %d\n", c);
@@ -4049,7 +4076,11 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 /**@name Parameter Methods */
 /**@{ */
 
-/** gets integer parameter of LP */
+/** gets integer parameter of LP
+ *
+ * CPLEX supported FASTMIP in versions up to 12.6.1. FASTMIP fastens the lp solving process but therefor it might happen
+ * that there will be a loss in precision (because e.g. the optimal basis will not be factorized again).
+ */
 SCIP_RETCODE SCIPlpiGetIntpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
@@ -4155,7 +4186,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    {
    case SCIP_LPPAR_FROMSCRATCH:
       assert(ival == TRUE || ival == FALSE);
-      lpi->fromscratch = ival;
+      lpi->fromscratch = (SCIP_Bool) ival;
       break;
 #if (CPX_VERSION < 12060100)
    case SCIP_LPPAR_FASTMIP:
@@ -4233,6 +4264,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       ival = MIN(ival, CPX_INT_MAX);
 #endif
       setIntParam(lpi, CPX_PARAM_THREADS, ival);
+      break;
+   case SCIP_LPPAR_RANDOMSEED:
+      setIntParam(lpi, CPX_PARAM_RANDOMSEED, ival);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

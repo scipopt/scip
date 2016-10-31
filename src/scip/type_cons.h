@@ -206,8 +206,11 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
+ *
+ *  output:
+ *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
  */
-#define SCIP_DECL_CONSINITLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
+#define SCIP_DECL_CONSINITLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool* infeasible)
 
 /** separation method of constraint handler for LP solution
  *
@@ -382,6 +385,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - checkintegrality: Has integrality to be checked?
  *  - checklprows     : Do constraints represented by rows in the current LP have to be checked?
  *  - printreason     : Should the reason for the violation be printed?
+ *  - completely      : Should all violations be checked?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
@@ -389,7 +393,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
-      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_RESULT* result)
+      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_Bool completely, SCIP_RESULT* result)
 
 /** domain propagation method of constraint handler
  *
@@ -462,9 +466,6 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nchgcoefs       : pointer to count total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to count total number of changed left/right hand sides of all presolvers
  *
- *  @todo: implement a final round of presolving after SCIPisPresolveFinished(),
- *         therefore, duplicate counters to a "relevant for finishing presolve" version
- *
  *  output:
  *  - result          : pointer to store the result of the presolving call
  *
@@ -503,7 +504,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
- *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of
+ *  With a call to SCIPgetVarLbAtIndex(scip, z, bdchgidx, TRUE), the handler can find out, that the lower bound of
  *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
  *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  *  the reason for the deduction of the lower bound of z.

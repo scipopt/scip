@@ -83,7 +83,7 @@ SCIP_RETCODE performSimpleRounding(
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
       mayrounddown = SCIPvarMayRoundDown(var);
       mayroundup = SCIPvarMayRoundUp(var);
-      SCIPdebugMessage("simple rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
+      SCIPdebugMsg(scip, "simple rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* choose rounding direction */
@@ -119,20 +119,20 @@ SCIP_RETCODE performSimpleRounding(
           * neither integrality nor feasibility of LP rows has to be checked, because all fractional
           * variables were already moved in feasible direction to the next integer
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       }
       else
       {
          /* if there are variables which are not present in the LP, e.g., for 
           * column generation, we need to check their bounds
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
       }
 
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
@@ -191,7 +191,7 @@ SCIP_RETCODE performLPSimpleRounding(
    heurdata->lastlp = nlps;
 
    /* perform simple rounding */
-   SCIPdebugMessage("executing simple LP-rounding heuristic: %d fractionals\n", nlpcands);
+   SCIPdebugMsg(scip, "executing simple LP-rounding heuristic: %d fractionals\n", nlpcands);
    SCIP_CALL( performSimpleRounding(scip, sol, lpcands, lpcandssol, nlpcands, result) );
 
    return SCIP_OKAY;
@@ -256,7 +256,7 @@ SCIP_RETCODE performRelaxSimpleRounding(
    SCIP_CALL( SCIPlinkRelaxSol(scip, sol) );
 
    /* perform simple rounding */
-   SCIPdebugMessage("executing simple rounding heuristic on relaxation solution: %d fractionals\n", nrelaxcands);
+   SCIPdebugMsg(scip, "executing simple rounding heuristic on relaxation solution: %d fractionals\n", nrelaxcands);
    SCIP_CALL( performSimpleRounding(scip, sol, relaxcands, relaxcandssol, nrelaxcands, result) );
 
    /* free storage */

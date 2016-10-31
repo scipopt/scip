@@ -27,7 +27,6 @@
 #include <string.h>
 
 #include "scip/heur_coefdiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "coefdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the matrix coefficients"

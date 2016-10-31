@@ -198,6 +198,30 @@ struct SCIP_Bt
    BMS_BLKMEM*           blkmem;             /**< block memory used to store tree nodes */
 };
 
+/** data structure for incremental linear regression of data points (X_i, Y_i)  */
+struct SCIP_Regression
+{
+   SCIP_Real             intercept;          /**< the current axis intercept of the regression */
+   SCIP_Real             slope;              /**< the current slope of the regression */
+   SCIP_Real             meanx;              /**< mean of all X observations */
+   SCIP_Real             meany;              /**< mean of all Y observations */
+   SCIP_Real             sumxy;              /**< accumulated sum of all products X * Y */
+   SCIP_Real             variancesumx;       /**< incremental variance term for X observations  */
+   SCIP_Real             variancesumy;       /**< incremental variance term for Y observations */
+   SCIP_Real             corrcoef;           /**< correlation coefficient of X and Y */
+   int                   nobservations;      /**< number of observations so far */
+};
+
+/** random number generator data */
+struct SCIP_RandNumGen
+{
+   unsigned int          seed;               /**< start seed */
+   unsigned int          xor_seed;           /**< Xorshift seed */
+   unsigned int          mwc_seed;           /**< Multiply-with-carry seed */
+   unsigned int          cst_seed;           /**< constant seed */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
+};
+
 #ifdef __cplusplus
 }
 #endif
