@@ -5709,7 +5709,7 @@ SCIP_Real getMinActivity(
 
 /** returns true if the given constraint (represented by variables, coefficients, and side) separates the root LP solution */
 static
-SCIP_Bool cutoffRootSol(
+SCIP_Bool isSeparatingRootLPSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_VAR**            vars,               /**< array of problem variables */
@@ -5798,7 +5798,7 @@ SCIP_RETCODE applyMIR(
           *
           * todo: do we realy want this?
           */
-         if( cutoffRootSol(set, transprob, transprob->vars, copy_vals, copy_rhs, transprob->nvars, FALSE) )
+         if( isSeparatingRootLPSol(set, transprob, transprob->vars, copy_vals, copy_rhs, transprob->nvars, FALSE) )
             separoot = TRUE;
          else
             separoot = FALSE;
@@ -6089,8 +6089,8 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_CALL( SCIPaddCons(set->scip, cons) );
 
    /* check whether the constraint separates the root solution */
-   if( (!SCIPsetIsInfinity(set, -lhs) && cutoffRootSol(set, prob, vars, vals, lhs, nvars, TRUE))
-      || (!SCIPsetIsInfinity(set, rhs) && cutoffRootSol(set, prob, vars, vals, rhs, nvars, FALSE)) )
+   if( (!SCIPsetIsInfinity(set, -lhs) && isSeparatingRootLPSol(set, prob, vars, vals, lhs, nvars, TRUE))
+      || (!SCIPsetIsInfinity(set, rhs) && isSeparatingRootLPSol(set, prob, vars, vals, rhs, nvars, FALSE)) )
       ++conflict->ndualrayinfseparoot;
 
    /* update statistics */
