@@ -147,7 +147,7 @@ SCIP_RETCODE SCIPpropCreate(
     */
    if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
-      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+      SCIPmessagePrintError(messagehdlr, "ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> propagator instead.\n", name);
 
       return SCIP_PARAMETERWRONGVAL;
@@ -859,7 +859,7 @@ SCIP_RETCODE SCIPpropSetPresol(
     */
    if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
-      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+      SCIPmessagePrintErrorStatic("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", prop->name);
 
       return SCIP_PARAMETERWRONGVAL;

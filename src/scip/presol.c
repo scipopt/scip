@@ -121,7 +121,7 @@ SCIP_RETCODE SCIPpresolCreate(
     */
    if( timing < SCIP_PRESOLTIMING_NONE || timing > SCIP_PRESOLTIMING_ALWAYS )
    {
-      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+      SCIPmessagePrintError(messagehdlr, "ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> presolver instead.\n", name);
 
       return SCIP_PARAMETERWRONGVAL;
