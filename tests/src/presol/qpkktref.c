@@ -98,8 +98,8 @@ SCIP_RETCODE createKKTComplementarityLinear(
    SCIP_CALL( SCIPaddVarSOS1(scip, sos1cons, dualvar, 2.0) );
 
    /* add/release constraints */
-   SCIP_CALL( SCIPaddCons(scip, sos1cons) );
-   SCIP_CALL( SCIPaddCons(scip, KKTlincons) );
+   /*SCIP_CALL( SCIPaddCons(scip, sos1cons) );
+   SCIP_CALL( SCIPaddCons(scip, KKTlincons) );*/
    SCIP_CALL( SCIPreleaseCons(scip, &sos1cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &KKTlincons) );
    *naddconss = *naddconss + 2;
@@ -165,7 +165,7 @@ SCIP_RETCODE createKKTComplementarityBounds(
       SCIP_CALL( SCIPaddVarSOS1(scip, sos1cons, dualvar, 2.0) );
 
       /* add/release constraint */
-      SCIP_CALL( SCIPaddCons(scip, sos1cons) );
+      /*SCIP_CALL( SCIPaddCons(scip, sos1cons) );*/
       SCIP_CALL( SCIPreleaseCons(scip, &sos1cons) );
       ++(*naddconss);
    }
@@ -194,8 +194,8 @@ SCIP_RETCODE createKKTComplementarityBounds(
       SCIP_CALL( SCIPaddVarSOS1(scip, sos1cons, dualvar, 2.0) );
 
       /* add/release constraints */
-      SCIP_CALL( SCIPaddCons(scip, sos1cons) );
-      SCIP_CALL( SCIPaddCons(scip, KKTlincons) );
+      /*SCIP_CALL( SCIPaddCons(scip, sos1cons) );
+      SCIP_CALL( SCIPaddCons(scip, KKTlincons) );*/
       SCIP_CALL( SCIPreleaseCons(scip, &sos1cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &KKTlincons) );
       *naddconss = *naddconss + 2;
@@ -247,7 +247,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    SCIP_CALL( SCIPaddCoefLinear(scip, conslinbin1, dualbin1, 1.0) );
    SCIP_CALL( SCIPaddCoefLinear(scip, conslinbin1, dualbin2, -1.0) );
    SCIP_CALL( SCIPaddCoefLinear(scip, conslinbin1, slackbin1, -1.0) );
-   SCIP_CALL( SCIPaddCons(scip, conslinbin1) );
+   /*SCIP_CALL( SCIPaddCons(scip, conslinbin1) );*/
    SCIP_CALL( SCIPreleaseCons(scip, &conslinbin1) );
    ++(*naddconss);
 
@@ -260,7 +260,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    SCIP_CALL( SCIPaddVarSOS1(scip, sos1cons1, slackbin1, 2.0) );
 
    /* add/release constraint */
-   SCIP_CALL( SCIPaddCons(scip, sos1cons1) );
+   /*SCIP_CALL( SCIPaddCons(scip, sos1cons1) );*/
    SCIP_CALL( SCIPreleaseCons(scip, &sos1cons1) );
    ++(*naddconss);
 
@@ -279,7 +279,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &conslinbin2, name, 0, NULL, NULL, 1.0, 1.0) );
    SCIP_CALL( SCIPaddCoefLinear(scip, conslinbin2, var, 1.0) );
    SCIP_CALL( SCIPaddCoefLinear(scip, conslinbin2, slackbin2, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, conslinbin2) );
+   /*SCIP_CALL( SCIPaddCons(scip, conslinbin2) );*/
    SCIP_CALL( SCIPreleaseCons(scip, &conslinbin2) );
    ++(*naddconss);
 
@@ -292,7 +292,7 @@ SCIP_RETCODE createKKTComplementarityBinary(
    SCIP_CALL( SCIPaddVarSOS1(scip, sos1cons2, slackbin2, 2.0) );
 
    /* add/release constraint */
-   SCIP_CALL( SCIPaddCons(scip, sos1cons2) );
+   /*SCIP_CALL( SCIPaddCons(scip, sos1cons2) );*/
    SCIP_CALL( SCIPreleaseCons(scip, &sos1cons2) );
    ++(*naddconss);
 
@@ -1303,7 +1303,7 @@ SCIP_RETCODE runUnittest(void)
       SCIP_CALL( SCIPprintBestSol(scip1, NULL, FALSE) );
       SCIP_CALL( SCIPprintStatistics(scip1, NULL) );
       */
-      /*SCIP_CALL( SCIPwriteTrafoProblem(scip2, "trafounittestQP.lp", NULL, FALSE ) );*/
+      /*SCIP_CALL( SCIPwriteTransProblem(scip2, "trafounittestQP.lp", NULL, FALSE ) );*/
 
       if ( SCIPisFeasEQ(scip1, SCIPgetPrimalbound(scip1), SCIPgetPrimalbound(scip2) ) )
          equal = TRUE;
