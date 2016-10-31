@@ -183,18 +183,14 @@ SCIP_Bool isNlobbtApplicable(
 static
 SCIP_RETCODE filterCands(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_NLPSOLSTAT       nlpsolstat          /**< NLP solution status */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
    SCIP_Real* primal;
    int i;
 
    assert(propdata->currpos >= 0 && propdata->currpos < propdata->nlpinvars);
-
-   /* at least a feasible solution is needed */
-   if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
-      return SCIP_OKAY;
+   assert(SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE);
 
    SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
    assert(primal != NULL);
@@ -266,14 +262,12 @@ SCIP_RETCODE addGenVBound(
    assert(propdata->genvboundprop != NULL);
    assert(var != NULL);
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
-
-   if( SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) > SCIP_NLPSOLSTAT_LOCOPT )
-      return SCIP_OKAY;
+   assert(SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta) );
 
    /* not possible to generate genvbound if the duals for the propagated variable do not disappear */
-   if( !SCIPisFeasZero(scip, alpha[varidx] + beta[varidx]) )
+   if( !SCIPisFeasZero(scip, alpha[varidx] - beta[varidx]) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lvbcoefs, propdata->nlpinvars) );
@@ -383,20 +377,23 @@ SCIP_RETCODE solveNlp(
    *nlpiter = SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics);
    SCIPdebugMsg(scip, "iterations %d time %g\n", *nlpiter, SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
 
-   /* try to add a genvbound in the root node */
-   if( propdata->genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
-   {
-      SCIP_CALL( addGenVBound(scip, propdata, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
-   }
-
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
-   SCIP_CALL( filterCands(scip, propdata, SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob)) );
+   if( SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+      SCIP_CALL( filterCands(scip, propdata) );
+   }
 
    /* try to tighten variable bound */
    if( SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
    {
       SCIP_Bool tightened;
       SCIP_Bool infeasible;
+
+      /* try to add a genvbound in the root node */
+      if( propdata->genvboundprop != NULL && SCIPgetDepth(scip) == 0 )
+      {
+         SCIP_CALL( addGenVBound(scip, propdata, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
+      }
 
       SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
 
@@ -561,7 +558,10 @@ SCIP_RETCODE applyNlobbt(
       /* skip binary or almost fixed variables */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
          || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      {
+         ++(propdata->currpos);
          continue;
+      }
 
       SCIPdebugMsg(scip, "iterations left %d\n", nlpiterleft);
 
@@ -585,7 +585,7 @@ SCIP_RETCODE applyNlobbt(
       }
 
       /* update the current position */
-      ++propdata->currpos;
+      ++(propdata->currpos);
    }
 
    return SCIP_OKAY;
@@ -656,6 +656,8 @@ static
 SCIP_DECL_PROPEXEC(propExecNlobbt)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+
+   *result = SCIP_DIDNOTRUN;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
