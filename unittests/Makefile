@@ -46,7 +46,7 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=  unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol unittest-qpkktref unittest-depthlevel unittest-slack unittest-lpibases unittest-regression
+UNITTESTS	=  unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol unittest-depthlevel unittest-slack unittest-lpibases unittest-regression
 EXTRASRC	=  unittest-relax/relax_unittest unittest-cons/cons_unittest unittest-presol/presol_unittest
 
 

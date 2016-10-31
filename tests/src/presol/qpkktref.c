@@ -677,6 +677,7 @@ SCIP_RETCODE checkConsLinear(
    int ndualconss = 0;
    int naddconss = 0;
    int nvars;
+   int j;
 
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, 0.0, 0.0) );
 
@@ -702,6 +703,10 @@ SCIP_RETCODE checkConsLinear(
    SCIP_CALL( checkNAddConss(scip, vars, nvars, lhs, rhs, naddconss) );
 
    /* free buffer array */
+   for (j = 0; j < ndualconss; ++j)
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &dualconss[j]) );
+   }
    SCIPfreeBufferArray(scip, &dualconss);
 
    /* free hash map */
@@ -732,6 +737,7 @@ SCIP_RETCODE checkConsKnapsack(
    int naddconss = 0;
    int nvars;
    int v;
+   int j;
 
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, 0.0, 0.0) );
 
@@ -762,6 +768,10 @@ SCIP_RETCODE checkConsKnapsack(
    SCIP_CALL( checkNAddConss(scip, vars, nvars, lhs, rhs, naddconss) );
 
    /* free buffer arrays */
+   for (j = 0; j < ndualconss; ++j)
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &dualconss[j]) );
+   }
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &dualconss);
 
