@@ -107,9 +107,9 @@ SCIP_RETCODE propdataClear(
    {
       assert(propdata->nlpi != NULL);
 
-      SCIPfreeMemoryArray(scip, &propdata->status);
-      SCIPfreeMemoryArray(scip, &propdata->nlscore);
-      SCIPfreeMemoryArray(scip, &propdata->nlpivars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->nlpivars, propdata->nlpinvars);
       SCIPhashmapFree(&propdata->var2nlpiidx);
       SCIPnlpiFreeProblem(propdata->nlpi, &propdata->nlpiprob);
 
@@ -496,9 +496,9 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPnlpiCreateProblem(propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip),
             SCIPcalcHashtableSize(propdata->nlpinvars)) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
       SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             propdata->nlpiprob, propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip)) );
