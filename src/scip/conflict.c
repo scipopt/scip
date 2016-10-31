@@ -4682,8 +4682,8 @@ SCIP_RETCODE addCand(
    SCIP_VAR*             var,                /**< variable to add to candidate array */
    int                   lbchginfopos,       /**< positions of currently active lower bound change information in variable's array */
    int                   ubchginfopos,       /**< positions of currently active upper bound change information in variable's array */
-   SCIP_Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
    SCIP_Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
+   SCIP_Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
    SCIP_Real             proofact,           /**< activity of infeasibility/bound proof row */
    SCIP_VAR***           cands,              /**< pointer to candidate array for undoing bound changes */
    SCIP_Real**           candscores,         /**< pointer to candidate score array for undoing bound changes */
@@ -5991,11 +5991,10 @@ SCIP_RETCODE tightenDualray(
    else
       *success = (*success && TRUE);
 
-#if SCIP_DEBUG
+#ifdef SCIP_DEBUG
    minact = getMinActivity(set, transprob, vals, varinds, *nvarinds, curvarlbs, curvarubs);
 
    SCIPsetDebugMsg(set, "-> final constraint after tightenDualray():\n");
-   printf("-> final constraint after tightenDualray():\n");
    for( i = 0; i < *nvarinds; i++ )
    {
       SCIPsetDebugMsg(set, "   %g<%s> glb=[%g,%g] loc=[%g,%g] type=%d\n", vals[varinds[i]], SCIPvarGetName(vars[varinds[i]]),
@@ -6863,15 +6862,12 @@ SCIP_RETCODE conflictAnalyzeLP(
    }
 
 #ifdef SCIP_DEBUG
-   if( !valid || stopped )
-   {
       SCIP_Real uobjlim;
       SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
          SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 
       SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &uobjlim) );
       SCIPdebugMessage(" -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
-   }
 #endif
 
    return SCIP_OKAY;
