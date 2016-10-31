@@ -3091,7 +3091,6 @@ void markRelaxsUnsolved(
       SCIPrelaxMarkUnsolved(set->relaxs[r]);
 }
 
-/* @ENFORELAX pass solution and value pointer to propAndSolve() */
 /** enforces constraints by branching, separation, or domain reduction */
 static
 SCIP_RETCODE enforceConstraints(
@@ -3190,7 +3189,7 @@ SCIP_RETCODE enforceConstraints(
    {
       assert(SCIPsepastoreGetNCuts(sepastore) == 0); /* otherwise, the LP should have been resolved first */
 
-      /* @ENFORELAX either we enforce the LP, pseudo, or relaxation solution (depending on the values) */
+      /* enforce LP, pseudo, or relaxation solution */
       if( enforcerelaxsol )
       {
          SCIPdebugMessage("enforce relaxation solution with value %g\n", bestrelaxval);
@@ -3443,7 +3442,6 @@ void updateLoopStatus(
    }
 }
 
-/* @ENFORELAX pass best relaxation solution and its value; these two needs to be passed to solveNodeRelax() */
 /** propagate domains and solve relaxation and lp */
 static
 SCIP_RETCODE propAndSolve(
@@ -3597,7 +3595,7 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with non-negative priority */
    if( solverelax && !(*cutoff) )
    {
-      /* @ENFORELAX initialize value for the best relaxation solution; probably with SCIP_INVALID to detect the case where no relaxation solution has been found */
+      /* initialize value for the best relaxation solution */
       *bestrelaxval = -SCIPsetInfinity(set);
       
       /* clear the storage of external branching candidates */
@@ -3900,7 +3898,7 @@ SCIP_RETCODE solveNode(
    forcedlpsolve = FALSE;
    nloops = 0;
 
-   /* @ENFORELAX allocate memory to store the best relaxation solution; maybe this can be done in a global data structure? */
+   /* allocate memory to store the best relaxation solution */
    bestrelaxsol = NULL;
    bestrelaxval = -SCIPsetInfinity(set);
    SCIP_CALL( SCIPsolCreate(&bestrelaxsol, blkmem, set, stat, primal, tree, NULL) );
@@ -3932,7 +3930,6 @@ SCIP_RETCODE solveNode(
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, cutoff) );
 
-      /* @ENFORELAX pass solution and value pointer to propAndSolve() */
       /* propagate domains before lp solving and solve relaxation and lp */
       SCIPdebugMessage(" -> node solving loop: call propagators that are applicable before LP is solved\n");
       SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
@@ -3951,8 +3948,6 @@ SCIP_RETCODE solveNode(
 
          /* propagate domains after lp solving and resolve relaxation and lp */
          SCIPdebugMessage(" -> node solving loop: call propagators that are applicable after LP has been solved\n");
-
-         /* @ENFORELAX pass solution and value pointer to propAndSolve() */
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
                branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
                propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
@@ -4052,7 +4047,6 @@ SCIP_RETCODE solveNode(
             *infeasible = FALSE;
          }
 
-         /* @ENFORELAX pass solution and value pointer to enforceConstraints() */
          /* call constraint enforcement */
          SCIP_CALL( enforceConstraints(blkmem, set, stat, transprob, tree, lp, relaxation, sepastore, branchcand,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement, bestrelaxsol, bestrelaxval) );
