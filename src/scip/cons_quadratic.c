@@ -7885,8 +7885,12 @@ SCIP_RETCODE computeReferencePointProjection(
 
    /* come back to the original coordinates: new ref point is P*yrho */
    for( i = 0; i < n; i++ )
+   {
+      ref[i] = 0.0;
+
       for( j = 0; j < n; j++ )
          ref[i] += pt[j*n + i] * yrho[j];
+   }
 
    /* change data back if function is concave */
    if( isconcave )
