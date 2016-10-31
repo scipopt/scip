@@ -39,8 +39,6 @@ struct SCIP_ConflictStore
    SCIP_CONS**           dualrayconss;       /**< array with constraints based on dual rays */
    SCIP_Real*            primalbounds;       /**< array of primal bounds valid at the time the corresponding bound exceeding
                                               *   conflict was found (-infinity if the conflict as based on an infeasible LP) */
-   SCIP_QUEUE*           slotqueue;          /**< queue of empty slots in the conflicts and primalbounds array */
-   SCIP_QUEUE*           orderqueue;         /**< queue of conflict pointer preserving the order of generation */
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
