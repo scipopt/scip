@@ -4682,8 +4682,8 @@ SCIP_RETCODE addCand(
    SCIP_VAR*             var,                /**< variable to add to candidate array */
    int                   lbchginfopos,       /**< positions of currently active lower bound change information in variable's array */
    int                   ubchginfopos,       /**< positions of currently active upper bound change information in variable's array */
-   SCIP_Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
    SCIP_Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
+   SCIP_Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
    SCIP_Real             proofact,           /**< activity of infeasibility/bound proof row */
    SCIP_VAR***           cands,              /**< pointer to candidate array for undoing bound changes */
    SCIP_Real**           candscores,         /**< pointer to candidate score array for undoing bound changes */
@@ -4850,7 +4850,7 @@ SCIP_RETCODE undoBdchgsProof(
    int                   currentdepth,       /**< current depth in the tree */
    SCIP_Real*            proofcoefs,         /**< coefficients in infeasibility proof */
    SCIP_Real             prooflhs,           /**< left hand side of proof */
-   SCIP_Real             proofact,           /**< current activity of proof */
+   SCIP_Real*            proofact,           /**< current activity of proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
@@ -4874,7 +4874,7 @@ SCIP_RETCODE undoBdchgsProof(
 
    assert(prob != NULL);
    assert(proofcoefs != NULL);
-   assert(SCIPsetIsFeasGT(set, prooflhs, proofact));
+   assert(SCIPsetIsFeasGT(set, prooflhs, (*proofact)));
    assert(curvarlbs != NULL);
    assert(curvarubs != NULL);
    assert(lbchginfoposs != NULL);
@@ -4925,7 +4925,7 @@ SCIP_RETCODE undoBdchgsProof(
          {
             SCIPsetDebugMsg(set, " -> relaxing variable <%s>[%g,%g] to [%g,%g]: proofcoef=%g, %g <= %g\n",
                SCIPvarGetName(var), curvarlbs[v], curvarubs[v], SCIPvarGetLbGlobal(var), curvarubs[v],
-               proofcoefs[v], prooflhs, proofact);
+               proofcoefs[v], prooflhs, (*proofact));
             curvarlbs[v] = SCIPvarGetLbGlobal(var);
             lbchginfoposs[v] = -1;
             relaxed = TRUE;
@@ -4938,7 +4938,7 @@ SCIP_RETCODE undoBdchgsProof(
          {
             SCIPsetDebugMsg(set, " -> relaxing variable <%s>[%g,%g] to [%g,%g]: proofcoef=%g, %g <= %g\n",
                SCIPvarGetName(var), curvarlbs[v], curvarubs[v], curvarlbs[v], SCIPvarGetUbGlobal(var),
-               proofcoefs[v], prooflhs, proofact);
+               proofcoefs[v], prooflhs, (*proofact));
             curvarubs[v] = SCIPvarGetUbGlobal(var);
             ubchginfoposs[v] = -1;
             relaxed = TRUE;
@@ -4953,7 +4953,7 @@ SCIP_RETCODE undoBdchgsProof(
       if( lbchginfoposs[v] >= 0 || ubchginfoposs[v] >= 0 )
       {
          SCIP_CALL( addCand(set, currentdepth, var, lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v],
-               prooflhs, proofact, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, 0) );
+               prooflhs, (*proofact), &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, 0) );
       }
       /* we can set the proof coefficient to zero, because the varibale is not needed */
       else
@@ -4973,7 +4973,7 @@ SCIP_RETCODE undoBdchgsProof(
        * feasibility tolerance because if 'prooflhs' is (feas-))equal to 'proofact + proofactdeltas[i]' it would mean
        * that there is no violation
        */
-      if( SCIPsetIsFeasGT(set, prooflhs, proofact + proofactdeltas[i]) )
+      if( SCIPsetIsFeasGT(set, prooflhs, (*proofact) + proofactdeltas[i]) )
       {
          v = SCIPvarGetProbindex(cands[i]);
          assert(0 <= v && v < nvars);
@@ -4983,7 +4983,7 @@ SCIP_RETCODE undoBdchgsProof(
             SCIPvarGetName(cands[i]), curvarlbs[v], curvarubs[v],
             proofcoefs[v] > 0.0 ? curvarlbs[v] : newbounds[i],
             proofcoefs[v] > 0.0 ? newbounds[i] : curvarubs[v],
-            proofcoefs[v], prooflhs, proofact, proofactdeltas[i]);
+            proofcoefs[v], prooflhs, (*proofact), proofactdeltas[i]);
 
          assert((SCIPsetIsPositive(set, proofcoefs[v]) && SCIPsetIsGT(set, newbounds[i], curvarubs[v]))
             || (SCIPsetIsNegative(set, proofcoefs[v]) && SCIPsetIsLT(set, newbounds[i], curvarlbs[v])));
@@ -5011,7 +5011,7 @@ SCIP_RETCODE undoBdchgsProof(
          {
             SCIP_CALL( addBdchg(set, cands[i], curvarlbs[v], curvarubs[v], oldlpbdchgs, relaxedlpbdchgs, lpi) );
          }
-         proofact += proofactdeltas[i];
+         (*proofact) += proofactdeltas[i];
          if( resolve != NULL && SCIPvarIsInLP(cands[i]) )
             *resolve = TRUE;
 
@@ -5025,7 +5025,7 @@ SCIP_RETCODE undoBdchgsProof(
          if( lbchginfoposs[v] >= 0 || ubchginfoposs[v] >= 0 )
          {
             SCIP_CALL( addCand(set, currentdepth, cands[i], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v],
-                  prooflhs, proofact, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, i+1) );
+                  prooflhs, (*proofact), &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, i+1) );
          }
          else
             proofcoefs[v] = 0.0;
@@ -5061,7 +5061,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_LPBDCHGS*        relaxedlpbdchgs,    /**< relaxed LP bound changes used for reset the LP bound change, or NULL */
    SCIP_Bool*            valid,              /**< pointer to store whether the unfixings are valid */
    SCIP_Bool*            resolve,            /**< pointer to store whether the changed LP should be resolved again */
-   SCIP_Real             farkascoefs,        /**< coefficients in the proof constraint */
+   SCIP_Real*            farkascoefs,        /**< coefficients in the proof constraint */
    SCIP_Real             farkaslhs,          /**< lhs of the proof constraint */
    SCIP_Real*            farkasactivity      /**< maximal activity of the proof constraint */
    )
@@ -5087,7 +5087,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    lpi = SCIPlpGetLPI(lp);
 
    /* check, if the Farkas row is still violated (using current bounds and ignoring local rows) */
-   if( SCIPsetIsFeasGT(set, farkaslhs, farkasactivity) )
+   if( SCIPsetIsFeasGT(set, farkaslhs, *farkasactivity) )
    {
       /* undo bound changes while keeping the infeasibility proof valid */
       SCIP_CALL( undoBdchgsProof(set, prob, currentdepth, farkascoefs, farkaslhs, farkasactivity,
@@ -5338,7 +5338,7 @@ SCIP_RETCODE undoBdchgsDualsol(
    if( SCIPsetIsFeasGT(set, duallhs, dualact) )
    {
       /* undo bound changes while keeping the infeasibility proof valid */
-      SCIP_CALL( undoBdchgsProof(set, prob, currentdepth, dualcoefs, duallhs, dualact,
+      SCIP_CALL( undoBdchgsProof(set, prob, currentdepth, dualcoefs, duallhs, &dualact,
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, resolve, lpi) );
 
       *valid = TRUE;
@@ -5508,7 +5508,7 @@ SCIP_RETCODE getFarkasProof(
    SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   SCIP_Bool*            stopped             /**< pointer store whether we can stop analyzing the proof constraint */
+   SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    )
 {
    SCIP_ROW** rows;
@@ -5541,7 +5541,7 @@ SCIP_RETCODE getFarkasProof(
 
    /* calculate the Farkas row */
    (*farkaslhs) = 0.0;
-   (*stopped) = FALSE;
+   (*valid) = TRUE;
    for( r = 0; r < nrows; ++r )
    {
       row = rows[r];
@@ -5576,7 +5576,7 @@ SCIP_RETCODE getFarkasProof(
             /* due to numerical reasons we want to stop */
             if( REALABS(dualfarkas[r] * (row->lhs - row->constant)) > NUMSTOP )
             {
-               (*stopped) = TRUE;
+               (*valid) = FALSE;
                goto TERMINATE;
             }
             (*farkaslhs) += dualfarkas[r] * (row->lhs - row->constant);
@@ -5590,7 +5590,7 @@ SCIP_RETCODE getFarkasProof(
             /* due to numerical reasons we want to stop */
             if( REALABS(dualfarkas[r] * (row->rhs - row->constant)) > NUMSTOP )
             {
-               (*stopped) = TRUE;
+               (*valid) = FALSE;
                goto TERMINATE;
             }
 
@@ -5602,7 +5602,7 @@ SCIP_RETCODE getFarkasProof(
          /* due to numerical reasons we want to stop */
          if( REALABS(*farkaslhs) > NUMSTOP )
          {
-            (*stopped) = TRUE;
+            (*valid) = FALSE;
             goto TERMINATE;
          }
 
@@ -5640,7 +5640,7 @@ SCIP_RETCODE getFarkasProof(
             || !SCIPsetIsPositive(set, SCIPvarGetUbLP(var, set)));
          if( SCIPsetIsInfinity(set, curvarubs[v]) )
          {
-            (*stopped) = TRUE;
+            (*valid) = FALSE;
             goto TERMINATE;
          }
          (*farkasact) += farkascoefs[v] * curvarubs[v];
@@ -5653,7 +5653,7 @@ SCIP_RETCODE getFarkasProof(
             || !SCIPsetIsNegative(set, SCIPvarGetLbLP(var, set)));
          if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
          {
-            (*stopped) = TRUE;
+            (*valid) = FALSE;
             goto TERMINATE;
          }
          (*farkasact) += farkascoefs[v] * curvarlbs[v];
@@ -5662,6 +5662,15 @@ SCIP_RETCODE getFarkasProof(
       }
    }
    SCIPdebugMessage(" -> farkaslhs=%g, farkasact=%g\n", *farkaslhs, (*farkasact));
+
+   /* the constructed proof is not valid, this can happen due to numerical reasons,
+    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
+    */
+   if( SCIPsetIsFeasLE(set, *farkaslhs, *farkasact) )
+   {
+      (*valid) = FALSE;
+      SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkaslhs, *farkasact);
+   }
 
   TERMINATE:
    SCIPsetFreeBufferArray(set, &dualfarkas);
@@ -5755,7 +5764,7 @@ SCIP_RETCODE applyMIR(
    SCIP_Bool separoot;
 
    assert(transprob != NULL);
-   assert(vals != NULL)
+   assert(vals != NULL);
    assert(varused != NULL);
    assert(nvarinds != NULL);
    assert(varinds != NULL && *nvarinds >= 0);
@@ -6197,7 +6206,7 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Bool* varused;
    SCIP_Real mirrhs;
 #ifndef NDEBUG
-   SCIP_Real minact;
+   SCIP_Real activity;
 #endif
    SCIP_Bool success;
    int ndualrayvars;
@@ -6221,7 +6230,6 @@ SCIP_RETCODE performDualRayAnalysis(
     * the MIR function implemented in cuts.c only supports constraints of type a^T x <= rhs, thus, we multiply with -1.0
     */
    mirrhs = -farkaslhs;
-
    for( v = 0; v < transprob->nvars; v++ )
    {
       mirvals[v] *= -1.0;
@@ -6237,8 +6245,8 @@ SCIP_RETCODE performDualRayAnalysis(
    assert(nmirvars >= 1);
 
 #ifndef NDEBUG
-   minact = getMinActivity(set, transprob, mirvals, varinds, nmirvars, curvarlbs, curvarubs);
-   assert(SCIPsetIsGT(set, minact, mirrhs));
+   activity = getMinActivity(set, transprob, mirvals, varinds, nmirvars, curvarlbs, curvarubs);
+   assert(SCIPsetIsGT(set, activity, mirrhs));
 #endif
 
    success = FALSE;
@@ -6361,7 +6369,7 @@ SCIP_RETCODE runBoundHeuristic(
       if( SCIPlpiIsPrimalInfeasible(lpi) )
       {
          SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs,
-               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, farkascoefs, *farkaslhs, *farkasactivity) );
+               ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, farkascoefs, (*farkaslhs), farkasactivity) );
       }
       else
       {
@@ -6508,11 +6516,14 @@ SCIP_RETCODE runBoundHeuristic(
             /* undo additional bound changes */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
-               SCIP_Bool stopped = FALSE;
 
                /* the original LP exceeds the current cutoff bound, thus, we have not constructed the farkas proof */
                SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, farkaslhs, farkasactivity,
-                     curvarlbs, curvarubs, &stopped) );
+                     curvarlbs, curvarubs, valid) );
+
+               /* the constructed Farkas proof is not valid, we need to break here */
+               if( !(*valid) )
+                  break;
 
                /* start dual ray analysis */
                if( set->conf_useinflp == 'd' || set->conf_useinflp == 'b' )
@@ -6531,7 +6542,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
                      lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, valid, &resolve,
-                     farkascoefs, *farkaslhs, *farkasactivity) );
+                     farkascoefs, (*farkaslhs), farkasactivity) );
             }
             else
             {
@@ -6625,7 +6636,6 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_VAR** vars;
    SCIP_LPI* lpi;
    SCIP_Bool valid;
-   SCIP_Bool stopped;
    int nvars;
    int v;
 
@@ -6807,14 +6817,13 @@ SCIP_RETCODE conflictAnalyzeLP(
       if( !valid )
          goto TERMINATE;
 
-      stopped = FALSE;
       if( SCIPlpiIsPrimalInfeasible(lpi) )
       {
          SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
-               curvarubs, &stopped) );
+               curvarubs, &valid) );
       }
 
-      if( stopped )
+      if( !valid )
          goto TERMINATE;
 
       /* start dual ray analysis */
@@ -7790,7 +7799,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       int nreconvliterals;
 
       /* undo bound changes without destroying the infeasibility proof */
-      SCIP_CALL( undoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, pseudoact,
+      SCIP_CALL( undoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, &pseudoact,
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, lp->lpi) );
 
       /* analyze conflict on remaining bound changes */

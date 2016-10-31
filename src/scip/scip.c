@@ -2806,11 +2806,11 @@ SCIP_RETCODE SCIPcopyConss(
             if( !enablepricing )
                SCIPconsSetModifiable(targetcons, FALSE);
 
-	    /* add constraint to target SCIP */
-	    SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+            /* add constraint to target SCIP */
+            SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
 
-	    /* release constraint once for the creation capture */
-	    SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
+            /* release constraint once for the creation capture */
+            SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
          }
          else
          {
