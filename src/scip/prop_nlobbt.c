@@ -29,7 +29,7 @@
 #define PROP_NAME              "nlobbt"
 #define PROP_DESC              "propagator template"
 #define PROP_PRIORITY          -1100000
-#define PROP_FREQ                     0
+#define PROP_FREQ                    -1
 #define PROP_DELAY                 TRUE
 #define PROP_TIMING            SCIP_PROPTIMING_AFTERLPLOOP
 
@@ -40,7 +40,7 @@
 #define DEFAULT_ADDLPROWS          TRUE      /**< should (non-initial) LP rows be used? */
 #define DEFAULT_ITLIMITFACTOR       2.0      /**< multiple of root node LP iterations used as total LP iteration
                                               *   limit for nlobbt (<= 0: no limit ) */
-#define DEFAULT_NLPITERLIMIT          0      /**< default iteration limit of NLP solver; 0 for no limit */
+#define DEFAULT_NLPITERLIMIT        500      /**< default iteration limit of NLP solver; 0 for no limit */
 #define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for no limit */
 #define DEFAULT_NLPVERLEVEL           0      /**< verbosity level of NLP solver */
 #define DEFAULT_RANDSEED             79      /**< initial random seed */
