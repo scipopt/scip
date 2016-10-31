@@ -7854,6 +7854,7 @@ SCIP_RETCODE computeReferencePointProjection(
    phirhoprime = 1.0;
    for( iter = 0; iter < 9; iter++ )
    {
+      assert(phirhoprime != 0.0);
       rho = rho - (phirho - c)/ phirhoprime;
 
       /* compute phi(rho) and phi'(rho):
@@ -7869,6 +7870,7 @@ SCIP_RETCODE computeReferencePointProjection(
       phirhoprime = 0.0;
       for( i = 0; i < n; i++ )
       {
+         assert(1.0 + rho * D[i] != 0.0);
          yrho[i]      = (y0[i] - rho * bp[i]/2.0) / (1.0 + rho * D[i]);
          yrhoprime[i] = -(D[i] * y0[i] + bp[i]/2.0) / ( (1.0 + rho * D[i])*(1.0 + rho * D[i]) );
          phirho      += yrho[i] * (yrho[i] * D[i] + bp[i]);
