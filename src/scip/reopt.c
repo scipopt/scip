@@ -7033,7 +7033,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
          /* random order */
          case 'r':
-            permuteRandom(vars, bounds, boundtypes, nvars, &randseed);
+            permuteRandom(reopt->randnumgen, vars, bounds, boundtypes, nvars);
             break;
 
       default:
