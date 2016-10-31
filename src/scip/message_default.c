@@ -17,6 +17,7 @@
  * @ingroup PUBLICMETHODS
  * @brief  default message handler
  * @author Stefan Heinz
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -44,6 +45,15 @@ void logMessage(
 /*
  * Callback methods of message handler
  */
+
+/** default error printing method which is used to print all occurring errors */
+static
+SCIP_DECL_MESSAGEERROR(messageErrorDefault)
+{  /*lint --e{715}*/
+   if ( msg != NULL )
+      fputs(msg, stderr);
+   fflush(stderr);
+}
 
 /** warning message print method of message handler */
 static
@@ -79,7 +89,7 @@ SCIP_RETCODE SCIPcreateMessagehdlrDefault(
 {
    /* create message handler */
    SCIP_CALL( SCIPmessagehdlrCreate(messagehdlr, bufferedoutput, filename, quiet,
-         messageWarningDefault, messageDialogDefault, messageInfoDefault,
+         messageErrorDefault, messageWarningDefault, messageDialogDefault, messageInfoDefault,
          NULL, NULL) );
 
    return SCIP_OKAY;

@@ -16,6 +16,7 @@
 /**@file   objmessagehdlr.h
  * @brief  C++ wrapper for message handlers
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,6 +55,15 @@ public:
    /** destructor */
    virtual ~ObjMessagehdlr()
    {
+   }
+
+   /** error message print method of message handler
+    *
+    *  @see SCIP_DECL_MESSAGEERROR(x) in @ref type_message.h
+    */
+   virtual SCIP_DECL_MESSAGEERROR(scip_error)
+   { /*lint --e{715}*/
+
    }
 
    /** warning message print method of message handler

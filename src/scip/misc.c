@@ -8642,7 +8642,7 @@ void SCIPprintSysError(
 
    buf[SCIP_MAXSTRLEN - 1] = '\0';
 #endif
-   SCIPmessagePrintError("%s: %s\n", message, buf);
+   SCIPmessagePrintErrorStatic("%s: %s\n", message, buf);
 }
 
 /** extracts tokens from strings - wrapper method for strtok_r() */

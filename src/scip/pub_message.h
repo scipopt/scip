@@ -18,6 +18,7 @@
  * @brief  public methods for message output
  * @author Tobias Achterberg
  * @author Stefan Heinz
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,12 +43,12 @@ extern "C" {
 #define SCIP_THREADSAFE_MESSAGEHDLRS
 
 /** prints an error message */
-#define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILE__, __LINE__); \
-                                        SCIPmessagePrintError
+#define SCIPerrorMessage                SCIPmessagePrintErrorHeaderStatic(__FILE__, __LINE__); \
+                                        SCIPmessagePrintErrorStatic
 
 /** define used in blockmemshell/memory.c */
-#define printErrorHeader                SCIPmessagePrintErrorHeader
-#define printError                      SCIPmessagePrintError
+#define printErrorHeader                SCIPmessagePrintErrorHeaderStatic
+#define printError                      SCIPmessagePrintErrorStatic
 
 #ifdef SCIP_DEBUG
 
@@ -121,6 +122,7 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
    const char*           filename,           /**< name of log file, or NULL for no log */
    SCIP_Bool             quiet,              /**< should screen messages be suppressed? */
+   SCIP_DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
    SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
    SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
    SCIP_DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
@@ -191,6 +193,38 @@ EXTERN
 void SCIPmessageVFPrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   );
+
+/** prints an error message, acting like the printf() command */
+EXTERN
+void SCIPmessagePrintError(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints an error message, acting like the vprintf() command */
+EXTERN
+void SCIPmessageVPrintError(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   );
+
+/** prints an error message into a file, acting like the fprintf() command */
+EXTERN
+void SCIPmessageFPrintError(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints an error message into a file, acting like the vfprintf() command */
+EXTERN
+void SCIPmessageVFPrintError(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
    va_list               ap                  /**< variable argument list */
    );
@@ -303,47 +337,6 @@ void SCIPmessageVFPrintVerbInfo(
    va_list               ap                  /**< variable argument list */
    );
 
-/** prints the header with source file location for an error message using the static message handler */
-EXTERN
-void SCIPmessagePrintErrorHeader(
-   const char*           sourcefile,         /**< name of the source file that called the function */
-   int                   sourceline          /**< line in the source file where the function was called */
-   );
-
-/** prints an error message, acting like the printf() command using the static message handler */
-EXTERN
-void SCIPmessagePrintError(
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
-   );
-
-/** prints an error message, acting like the vprintf() command using the static message handler */
-EXTERN
-void SCIPmessageVPrintError(
-   const char*           formatstr,          /**< format string like in printf() function */
-   va_list               ap                  /**< variable argument list */
-   );
-
-/** Method to set the error printing method. Setting the error printing method to NULL will suspend all error methods.
- *
- *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
- */
-EXTERN
-void SCIPmessageSetErrorPrinting(
-   SCIP_DECL_ERRORPRINTING((*errorPrinting)),/**< error message print method of message handler, or NULL */
-   void*                 data                /**< data pointer which will be passed to the error printing method, or NULL */
-   );
-
-/** Method to set the error printing method to default version prints everything the stderr.
- *
- *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
- */
-EXTERN
-void SCIPmessageSetErrorPrintingDefault(
-   void
-   );
-
-
 /** returns the user data of the message handler */
 EXTERN
 SCIP_MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
@@ -361,6 +354,52 @@ EXTERN
 SCIP_Bool SCIPmessagehdlrIsQuiet(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
+
+/*
+ * static error printing functions - use only if no message handler is available
+ */
+
+/** prints the header with source file location for an error message using the static message handler */
+EXTERN
+void SCIPmessagePrintErrorHeaderStatic(
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline          /**< line in the source file where the function was called */
+   );
+
+/** prints an error message, acting like the printf() command using the static message handler */
+EXTERN
+void SCIPmessagePrintErrorStatic(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints an error message, acting like the vprintf() command using the static message handler */
+EXTERN
+void SCIPmessageVPrintErrorStatic(
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   );
+
+/** Method to set the static error printing method. Setting the error printing method to NULL will suspend all error methods.
+ *
+ *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
+ */
+EXTERN
+void SCIPmessageSetStaticErrorPrinting(
+   SCIP_DECL_ERRORPRINTING((*errorPrinting)),/**< error message print method of message handler, or NULL */
+   void*                 data                /**< data pointer which will be passed to the error printing method, or NULL */
+   );
+
+/** Method to set the static error printing method to default version prints everything the stderr.
+ *
+ *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
+ */
+EXTERN
+void SCIPmessageSetStaticErrorPrintingDefault(
+   void
+   );
+
+
 
 #ifdef NDEBUG
 

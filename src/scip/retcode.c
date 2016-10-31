@@ -104,64 +104,64 @@ void SCIPretcodePrintError(
    switch( retcode )
    {
    case SCIP_OKAY:
-      SCIPmessagePrintError("normal termination");
+      SCIPmessagePrintErrorStatic("normal termination");
       break;
    case SCIP_ERROR:
-      SCIPmessagePrintError("unspecified error");
+      SCIPmessagePrintErrorStatic("unspecified error");
       break;
    case SCIP_NOMEMORY:
-      SCIPmessagePrintError("insufficient memory error");
+      SCIPmessagePrintErrorStatic("insufficient memory error");
       break;
    case SCIP_READERROR:
-      SCIPmessagePrintError("read error");
+      SCIPmessagePrintErrorStatic("read error");
       break;
    case SCIP_WRITEERROR:
-      SCIPmessagePrintError("write error");
+      SCIPmessagePrintErrorStatic("write error");
       break;
    case SCIP_NOFILE:
-      SCIPmessagePrintError("file not found error");
+      SCIPmessagePrintErrorStatic("file not found error");
       break;
    case SCIP_FILECREATEERROR:
-      SCIPmessagePrintError("cannot create file");
+      SCIPmessagePrintErrorStatic("cannot create file");
       break;
    case SCIP_LPERROR:
-      SCIPmessagePrintError("error in LP solver");
+      SCIPmessagePrintErrorStatic("error in LP solver");
       break;
    case SCIP_NOPROBLEM:
-      SCIPmessagePrintError("no problem exists");
+      SCIPmessagePrintErrorStatic("no problem exists");
       break;
    case SCIP_INVALIDCALL:
-      SCIPmessagePrintError("method cannot be called at this time in solution process");
+      SCIPmessagePrintErrorStatic("method cannot be called at this time in solution process");
       break;
    case SCIP_INVALIDDATA:
-      SCIPmessagePrintError("method cannot be called with this type of data");
+      SCIPmessagePrintErrorStatic("method cannot be called with this type of data");
       break;
    case SCIP_INVALIDRESULT:
-      SCIPmessagePrintError("method returned an invalid result code");
+      SCIPmessagePrintErrorStatic("method returned an invalid result code");
       break;
    case SCIP_PLUGINNOTFOUND:
-      SCIPmessagePrintError("a required plugin was not found");
+      SCIPmessagePrintErrorStatic("a required plugin was not found");
       break;
    case SCIP_PARAMETERUNKNOWN:
-      SCIPmessagePrintError("the parameter with the given name was not found");
+      SCIPmessagePrintErrorStatic("the parameter with the given name was not found");
       break;
    case SCIP_PARAMETERWRONGTYPE:
-      SCIPmessagePrintError("the parameter is not of the expected type");
+      SCIPmessagePrintErrorStatic("the parameter is not of the expected type");
       break;
    case SCIP_PARAMETERWRONGVAL:
-      SCIPmessagePrintError("the value is invalid for the given parameter");
+      SCIPmessagePrintErrorStatic("the value is invalid for the given parameter");
       break;
    case SCIP_KEYALREADYEXISTING:
-      SCIPmessagePrintError("the given key is already existing in table");
+      SCIPmessagePrintErrorStatic("the given key is already existing in table");
       break;
    case SCIP_MAXDEPTHLEVEL:
-      SCIPmessagePrintError("maximal branching depth level exceeded");
+      SCIPmessagePrintErrorStatic("maximal branching depth level exceeded");
       break;
    case SCIP_BRANCHERROR:
-      SCIPmessagePrintError("branching could not be performed (e.g. too large values in variable domain)");
+      SCIPmessagePrintErrorStatic("branching could not be performed (e.g. too large values in variable domain)");
       break;
    default:
-      SCIPmessagePrintError("unknown error code");
+      SCIPmessagePrintErrorStatic("unknown error code");
       break;
    }
 }

@@ -666,9 +666,9 @@ void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    )
 {
-   SCIPmessagePrintError("SCIP Error (%d): ", retcode);
+   SCIPmessagePrintErrorStatic("SCIP Error (%d): ", retcode);
    SCIPretcodePrintError(retcode);
-   SCIPmessagePrintError("\n");
+   SCIPmessagePrintErrorStatic("\n");
 }
 
 /** update statistical information when a new solution was found */
