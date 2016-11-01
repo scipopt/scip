@@ -7051,7 +7051,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
-   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user()" */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;
@@ -8359,8 +8359,9 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_USER:
    {
-      int i;
       SCIP_EXPRDATA_USER* exprdata;
+      int i;
+
       exprdata = (SCIP_EXPRDATA_USER*)expr->data.data;
       assert(exprdata != NULL);
 
@@ -8370,9 +8371,10 @@ void SCIPexprPrint(
       }
       else
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "user(");
+         SCIPmessageFPrintInfo(messagehdlr, file, "user");
       }
 
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
       for( i = 0; i < expr->nchildren; ++i )
       {
          if( i > 0 )
@@ -13338,7 +13340,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
-   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user()" */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;

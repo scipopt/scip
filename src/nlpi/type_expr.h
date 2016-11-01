@@ -299,9 +299,10 @@ typedef struct SCIP_UserExprData SCIP_USEREXPRDATA; /**< the user data of a user
 #define SCIP_DECL_USEREXPRFREEDATA(x) void x (BMS_BLKMEM* blkmem, int nchildren, SCIP_USEREXPRDATA* data)
 
 /** signature of a user's expression print function
+ * The function should print the user expression's name that prepends the list of arguments "(x1,x2,...)". If not specified, only "user" is printed.
  *
- * - data         expressions user data
- * - messagehdlr  scip message handler
+ * - data         user expression data
+ * - messagehdlr  SCIP message handler
  * - file         output file, or NULL if standard output should be used
  */
 #define SCIP_DECL_USEREXPRPRINT(x) void x (SCIP_USEREXPRDATA* data, SCIP_MESSAGEHDLR*  messagehdlr, FILE* file)
