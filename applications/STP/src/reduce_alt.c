@@ -2272,7 +2272,7 @@ SCIP_RETCODE sd_reduction(
       g->mark[i] = (g->grad[i] > 0);
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         randarr[e] = SCIPgetRandomReal(0.0, (g->cost[e]), seed);/* @todo: org (double)(rand() % 512); */
+         randarr[e] = (double)(rand() % 512);/* @todo: org (double)(rand() % 512); */
          cost[e] = g->cost[e] * 1.0 + randarr[e];
       }
    }
