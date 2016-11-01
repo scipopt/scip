@@ -157,7 +157,7 @@ SCIP_DECL_HASHKEYEQ(hashdataKeyEqCons)
    {
       /* tests if variables are equal */
       if( hashdata1->vars[v] != hashdata2->vars[v] )
-	 return FALSE;
+         return FALSE;
 
       assert(SCIPvarCompare(hashdata1->vars[v], hashdata2->vars[v]) == 0);
    }
@@ -221,7 +221,7 @@ SCIP_DECL_HASHKEYEQ(setppcHashdataKeyEqCons)
    {
       /* tests if variables are equal */
       if( hashdata1->vars[v] != hashdata2->vars[v] )
-	 return FALSE;
+         return FALSE;
 
       assert(SCIPvarCompare(hashdata1->vars[v], hashdata2->vars[v]) == 0);
    }
@@ -240,23 +240,15 @@ static
 SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
 {  /*lint --e{715}*/
    HASHDATA* hashdata;
-   unsigned int hashval;
-   int v;
 
    hashdata = (HASHDATA*)key;
    assert(hashdata != NULL);
    assert(hashdata->vars != NULL);
    assert(hashdata->nvars >= 2);
 
-   hashval = 0;
-
-   /* if we have more then one variables the index of each variable is imaged to a bit positioned from 0 to 31, and over
-    * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the data
-    */
-   for( v = 1; v >= 0; --v )
-      hashval |= (1U << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
-
-   return hashval;
+   return SCIPhashFour(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0]),
+                       SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]),
+                       SCIPvarGetIndex(hashdata->vars[hashdata->nvars-1]));
 }
 
 /** initialize gateextraction presolver data */

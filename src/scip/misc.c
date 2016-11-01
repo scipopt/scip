@@ -1345,7 +1345,7 @@ static const int primetablesize = sizeof(primetable)/sizeof(int);
 static
 unsigned int hashvalue(unsigned long long input)
 {
-   return ( (unsigned int) ((0xd37e9a1ce2148403ull * input)>>32) ) | 1u;
+   return ( (unsigned int) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2049,6 +2049,32 @@ void SCIPhashtableFree(
    assert(*hashtable != NULL);
    table = *hashtable;
    nslots = (*hashtable)->mask + 1;
+#ifdef SCIP_DEBUG
+   {
+      int maxprobelen = 0;
+      int probelensum = 0;
+      unsigned int i;
+
+      assert(table != NULL);
+
+      for( i = 0; i < nslots; ++i )
+      {
+         if( table->hashes[i] != 0 )
+         {
+            int probelen = ((i + table->mask + 1 - (table->hashes[i]>>(table->shift))) & table->mask) + 1;
+            probelensum += probelen;
+            maxprobelen = MAX(probelen, maxprobelen);
+         }
+      }
+
+      SCIPdebugMessage("%" SCIP_LONGINT_FORMAT " hash table entries, used %lld/%u slots (%.1f%%)",
+                           table->nelements, table->nelements, nslots, 100.0*(SCIP_Real)table->nelements/(SCIP_Real)(nslots));
+      if( table->nelements > 0 )
+         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %d",
+                              (SCIP_Real)(probelensum)/(SCIP_Real)table->nelements, maxprobelen);
+      SCIPdebugMessage("\n");
+   }
+#endif
    /* free main hash table data structure */
    BMSfreeBlockMemoryArray((*hashtable)->blkmem, &table->hashes, nslots);
    BMSfreeBlockMemoryArray((*hashtable)->blkmem, &table->slots, nslots);
@@ -2715,6 +2741,33 @@ void SCIPhashmapFree(
    assert(*hashmap != NULL);
 
    nslots = (*hashmap)->mask + 1;
+#ifdef SCIP_DEBUG
+   {
+      int maxprobelen = 0;
+      int probelensum = 0;
+      unsigned int i;
+
+      assert(hashmap != NULL);
+
+      for( i = 0; i < nslots; ++i )
+      {
+         if( (*hashmap)->hashes[i] != 0 )
+         {
+            int probelen = ((i + (*hashmap)->mask + 1 - ((*hashmap)->hashes[i]>>((*hashmap)->shift))) & (*hashmap)->mask) + 1;
+            probelensum += probelen;
+            maxprobelen = MAX(probelen, maxprobelen);
+         }
+      }
+
+      SCIPdebugMessage("%" SCIP_LONGINT_FORMAT " hash map entries, used %lld/%u slots (%.1f%%)",
+                           (*hashmap)->nelements, (*hashmap)->nelements, nslots, 100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
+      if( (*hashmap)->nelements > 0 )
+         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %d",
+                              (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, maxprobelen);
+      SCIPdebugMessage("\n");
+   }
+#endif
+
    /* free main hash map data structure */
    BMSfreeBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots);
    BMSfreeBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots);
