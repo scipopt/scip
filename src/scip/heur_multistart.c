@@ -679,9 +679,10 @@ SCIP_RETCODE solveNLP(
 
    /* call sub-NLP heuristic */
    SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL, NULL) );
-   SCIPdebugMessage("sub-NLP result = %d solval= %g\n", nlpresult, SCIPgetSolOrigObj(scip, refpoint));
-
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
+
+   if( nlpresult == SCIP_FOUNDSOL )
+      *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -747,6 +748,7 @@ SCIP_RETCODE applyHeur(
     */
    for( i = 0; i < heurdata->nrndpoints; ++i )
    {
+      SCIPdebugMessage("improve point %d / %d\n", i, heurdata->nrndpoints);
       SCIP_CALL( improvePoint(scip, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), varindex, heurdata->exprinterpreter, points[i],
          heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &feasibilities[i]) );
    }
