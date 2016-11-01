@@ -3373,8 +3373,7 @@ SCIP_RETCODE reformulate(
                      }
                   }
                }
-	    }
-
+            }
 
             if( modified )
             {
