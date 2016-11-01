@@ -140,8 +140,8 @@
 
 
 
-#define CONFLICTSETSCORE(conflictset) (-(conflictset)->nbdchginfos - 100*(conflictset)->repropdepth \
-      - 1000*(conflictset)->validdepth)
+#define CONFLICTSETSCORE(conflictset) (-(conflictset)->nbdchginfos - 100*((SCIP_Real)(conflictset)->repropdepth) \
+      - 1000*((SCIP_Real)(conflictset)->validdepth))
 
 
 /*#define SCIP_CONFGRAPH*/
@@ -1033,7 +1033,7 @@ SCIP_Real conflictsetCalcScore(
 {
    assert(conflictset != NULL);
 
-   return (SCIP_Real)CONFLICTSETSCORE(conflictset); /*lint !e790*/
+   return CONFLICTSETSCORE(conflictset); /*lint !e790*/
 }
 
 /** check if the bound change info (which is the potential next candidate which is queued) is valid for the current
