@@ -8321,7 +8321,7 @@ SCIP_RETCODE generateCutUnboundedLP(
    return SCIP_OKAY;
 }
 
-/** processes a cut for constraint cons, ie, checks numerics */
+/** processes a cut for constraint cons, i.e., checks numerics and possibly adds cut to sepastore */
 static
 SCIP_RETCODE processCut(
    SCIP*                 scip,               /**< SCIP data structure */
