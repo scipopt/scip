@@ -22828,7 +22828,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
-   maxncliquevarscomp = MIN(nvars*nvars, MAXNCLIQUEVARSCOMP);
+   maxncliquevarscomp = (int) MIN(nvars * (SCIP_Longint)nvars, MAXNCLIQUEVARSCOMP);
 
    /* calculate the clique partition */
    *ncliques = 0;
