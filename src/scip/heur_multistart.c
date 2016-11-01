@@ -47,6 +47,7 @@
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
 #define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_MAXNCLUSTER   10             /**< default maximum number of considered clusters per heuristic call */
+#define DEFAULT_MAXNNLROWS    500            /**< default maximum number of nonlinear rows for which heuristic is applied */
 
 #define MINFEAS               -1e+4          /**< minimum feasibility for a point; used for filtering and improving
                                               *   feasibility */
@@ -73,6 +74,7 @@ struct SCIP_HeurData
    SCIP_Real             nlpminimpr;         /**< factor by which heuristic should at least improve the incumbent */
 
    int                   maxncluster;        /**< maximum number of considered clusters per heuristic call */
+   int                   maxnnlrows;         /**< maximum maximum number of nonlinear rows for which heuristic is applied */
 };
 
 
@@ -910,7 +912,7 @@ SCIP_DECL_HEUREXEC(heurExecMultistart)
    *result = SCIP_DIDNOTRUN;
 
    /* check cases for which the heuristic is not applicable */
-   if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL )
+   if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL || heurdata->maxnnlrows < SCIPgetNNLPNlRows(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -982,6 +984,10 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxncluster",
          "maximum number of considered clusters per heuristic call",
          &heurdata->maxncluster, FALSE, DEFAULT_MAXNCLUSTER, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxnnlrows",
+         "maximum number of nonlinear rows for which heuristic is applied",
+         &heurdata->maxnnlrows, FALSE, DEFAULT_MAXNNLROWS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
