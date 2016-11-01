@@ -2435,47 +2435,32 @@ void SCIPhashtablePrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   /*TODO maybe print some statistics like min/max/avg chain length, load factor etc */
-#if 0
-   SCIP_HASHTABLELIST* hashtablelist;
-   int usedslots;
-   int maxslotsize;
-   int sumslotsize;
-   int slotsize;
+   int maxprobelen = 0;
+   int probelensum = 0;
+   int nslots;
    int i;
 
    assert(hashtable != NULL);
 
-   usedslots = 0;
-   maxslotsize = 0;
-   sumslotsize = 0;
-   for( i = 0; i < hashtable->nlists; ++i )
+   nslots = hashtable->mask + 1;
+
+   for( i = 0; i < nslots; ++i )
    {
-      hashtablelist = hashtable->lists[i];
-      if( hashtablelist != NULL )
+      if( hashtable->hashes[i] != 0 )
       {
-         usedslots++;
-         slotsize = 0;
-         while( hashtablelist != NULL )
-         {
-            slotsize++;
-            hashtablelist = hashtablelist->next;
-         }
-         maxslotsize = MAX(maxslotsize, slotsize);
-         sumslotsize += slotsize;
+         int probelen = ELEM_DISTANCE(i) + 1;
+         probelensum += probelen;
+         maxprobelen = MAX(probelen, maxprobelen);
       }
    }
-   assert(sumslotsize == hashtable->nelements);
 
    SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
-      hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
-   if( usedslots > 0 )
-      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
-         (SCIP_Real)(hashtable->nelements)/(SCIP_Real)usedslots, maxslotsize);
+      hashtable->nelements, hashtable->nelements, nslots, 100.0*(SCIP_Real)hashtable->nelements/(SCIP_Real)(nslots));
+   if( hashtable->nelements > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %d",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashtable->nelements, maxprobelen);
    SCIPmessagePrintInfo(messagehdlr, "\n");
-#endif
 }
-
 
 /** returns TRUE iff both keys (i.e. strings) are equal */
 SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
@@ -2950,44 +2935,31 @@ void SCIPhashmapPrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   /*TODO maybe print some statistics like min/max/avg chain length, load factor etc */
-#if 0
-   SCIP_HASHMAPLIST* hashmaplist;
-   int usedslots;
-   int maxslotsize;
-   int sumslotsize;
-   int slotsize;
+   int maxprobelen = 0;
+   int probelensum = 0;
+   int nslots;
    int i;
 
    assert(hashmap != NULL);
 
-   usedslots = 0;
-   maxslotsize = 0;
-   sumslotsize = 0;
-   for( i = 0; i < hashmap->nlists; ++i )
+   nslots = hashmap->mask + 1;
+
+   for( i = 0; i < nslots; ++i )
    {
-      hashmaplist = hashmap->lists[i];
-      if( hashmaplist != NULL )
+      if( hashmap->hashes[i] != 0 )
       {
-         usedslots++;
-         slotsize = 0;
-         while( hashmaplist != NULL )
-         {
-            slotsize++;
-            hashmaplist = hashmaplist->next;
-         }
-         maxslotsize = MAX(maxslotsize, slotsize);
-         sumslotsize += slotsize;
+         int probelen = ELEM_DISTANCE(i) + 1;
+         probelensum += probelen;
+         maxprobelen = MAX(probelen, maxprobelen);
       }
    }
 
-   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
-      sumslotsize, usedslots, hashmap->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashmap->nlists));
-   if( usedslots > 0 )
-      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot", 
-         (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
+   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
+      hashmap->nelements, hashmap->nelements, nslots, 100.0*(SCIP_Real)hashmap->nelements/(SCIP_Real)(nslots));
+   if( hashmap->nelements > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %d",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashmap->nelements, maxprobelen);
    SCIPmessagePrintInfo(messagehdlr, "\n");
-#endif
 }
 
 /** indicates whether a hash map has no entries */
