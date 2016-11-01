@@ -109,7 +109,9 @@
 #define DEFAULT_USEGUBS           FALSE /**< should GUB information be used for separation? */
 #define GUBCONSGROWVALUE              6 /**< memory growing value for GUB constraint array */
 #define GUBSPLITGNC1GUBS          FALSE /**< should GNC1 GUB conss without F vars be split into GOC1 and GR GUB conss? */
-
+#define DEFAULT_CLQPARTUPDATEFAC   1.5  /**< factor on the growth of global cliques to decide when to update a previous
+                                         *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
+#define DEFAULT_UPDATECLIQUEPARTITIONS FALSE /**< should clique partition information be updated when old partition seems outdated? */
 
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
@@ -168,7 +170,10 @@ struct SCIP_ConshdlrData
    SCIP_Bool             detectlowerbound;   /**< should presolving try to detect constraints parallel to the objective
                                               *   function defining a lower bound and prevent these constraints from
                                               *   entering the LP */
+   SCIP_Bool             updatecliquepartitions; /**< should clique partition information be updated when old partition seems outdated? */
    SCIP_Real             cliqueextractfactor;/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
+   SCIP_Real             clqpartupdatefac;   /**< factor on the growth of global cliques to decide when to update a previous
+                                              *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
 };
 
 
@@ -185,6 +190,8 @@ struct SCIP_ConsData
    int                   varssize;           /**< size of vars, weights, and eventdata arrays */
    int                   ncliques;           /**< number of cliques in the clique partition */
    int                   nnegcliques;        /**< number of cliques in the negated clique partition */
+   int                   ncliqueslastnegpart;/**< number of global cliques the last time a negated clique partition was computed */
+   int                   ncliqueslastpart;   /**< number of global cliques the last time a clique partition was computed */
    SCIP_Longint          capacity;           /**< capacity of knapsack */
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
@@ -423,24 +430,37 @@ void sortItems(
 static
 SCIP_RETCODE calcCliquepartition(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< knapsack constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool             normalclique,       /**< Should normal cliquepartition be created? */
    SCIP_Bool             negatedclique       /**< Should negated cliquepartition be created? */
    )
 {
+   SCIP_Bool ispartitionoutdated;
+   SCIP_Bool isnegpartitionoutdated;
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->cliquepartition != NULL && consdata->negcliquepartition != NULL));
 
-   if( normalclique && !consdata->cliquepartitioned )
+   /* rerun eventually if number of global cliques increased considerably since last partition */
+   ispartitionoutdated = (conshdlrdata->updatecliquepartitions && consdata->ncliques > 1
+         && SCIPgetNCliques(scip) >= (int)(conshdlrdata->clqpartupdatefac * consdata->ncliqueslastpart));
+
+   if( normalclique && ( !consdata->cliquepartitioned || ispartitionoutdated ) )
    {
       SCIP_CALL( SCIPcalcCliquePartition(scip, consdata->vars, consdata->nvars, consdata->cliquepartition, &consdata->ncliques) );
       consdata->cliquepartitioned = TRUE;
+      consdata->ncliqueslastpart = SCIPgetNCliques(scip);
    }
 
-   if( negatedclique && !consdata->negcliquepartitioned )
+   /* rerun eventually if number of global cliques increased considerably since last negated partition */
+   isnegpartitionoutdated = (conshdlrdata->updatecliquepartitions && consdata->nnegcliques > 1
+         && SCIPgetNCliques(scip) >= (int)(conshdlrdata->clqpartupdatefac * consdata->ncliqueslastnegpart));
+
+   if( negatedclique && (!consdata->negcliquepartitioned || isnegpartitionoutdated) )
    {
       SCIP_CALL( SCIPcalcNegatedCliquePartition(scip, consdata->vars, consdata->nvars, consdata->negcliquepartition, &consdata->nnegcliques) );
       consdata->negcliquepartitioned = TRUE;
+      consdata->ncliqueslastnegpart = SCIPgetNCliques(scip);
    }
 
    assert(!consdata->cliquepartitioned || consdata->ncliques <= consdata->nvars);
@@ -682,6 +702,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->sorted = FALSE;
    (*consdata)->cliquepartitioned = FALSE;
    (*consdata)->negcliquepartitioned = FALSE;
+   (*consdata)->ncliqueslastpart = -1;
+   (*consdata)->ncliqueslastnegpart = -1;
    (*consdata)->merged = FALSE;
    (*consdata)->cliquesadded = FALSE;
    (*consdata)->varsdeleted = FALSE;
@@ -7080,7 +7102,7 @@ SCIP_RETCODE stableSort(
 #endif
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &weightpointers);        
+   SCIPfreeBufferArray(scip, &weightpointers);
    SCIPfreeBufferArray(scip, &varpointers);
    SCIPfreeBufferArray(scip, &cliquecount);
 
@@ -7168,8 +7190,12 @@ SCIP_RETCODE propagateCons(
        */
       if( usenegatedclique && nvars > 0 )
       {
+         SCIP_CONSHDLRDATA* conshdlrdata;
+         conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+         assert(conshdlrdata != NULL);
+
          /* compute clique partitions */
-         SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
+         SCIP_CALL( calcCliquepartition(scip, conshdlrdata, consdata, FALSE, TRUE) );
          nnegcliques = consdata->nnegcliques;
 
          /* if we have no real negated cliques we can stop here */
@@ -7855,6 +7881,7 @@ SCIP_RETCODE detectRedundantVars(
    int*                  naddconss           /**< pointer to count number of added constraints */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Longint* weights;
@@ -7924,20 +7951,19 @@ SCIP_RETCODE detectRedundantVars(
    assert(nvars == consdata->nvars);
    assert(capacity == consdata->capacity);
 
+   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+   assert(conshdlrdata != NULL);
    /* calculate clique partition */
-   SCIP_CALL( calcCliquepartition(scip, consdata, TRUE, FALSE) );
+   SCIP_CALL( calcCliquepartition(scip, conshdlrdata, consdata, TRUE, FALSE) );
 
    /* check for real existing cliques */
    if( consdata->cliquepartition[v] < v )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Longint sumfront;
       SCIP_Longint maxactduetoclqfront;
       int* clqpart;
       int cliquenum;
 
-      conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
-      assert(conshdlrdata != NULL);
 
       sumfront = 0;
       maxactduetoclqfront = 0;
@@ -10020,7 +10046,7 @@ SCIP_RETCODE tightenWeightsLift(
 
    /* calculate the clique partition and the maximal sum of weights using the clique information */
    assert(consdata->sorted);
-   SCIP_CALL( calcCliquepartition(scip, consdata, TRUE, FALSE) );
+   SCIP_CALL( calcCliquepartition(scip, conshdlrdata, consdata, TRUE, FALSE) );
 
    assert(conshdlrdata->bools3size > 0);
 
@@ -10610,7 +10636,7 @@ SCIP_RETCODE tightenWeights(
             sortItems(consdata);
 
             /* calculate a clique partition */
-            SCIP_CALL( calcCliquepartition(scip, consdata, TRUE, FALSE) );
+            SCIP_CALL( calcCliquepartition(scip, conshdlrdata, consdata, TRUE, FALSE) );
 
             /* if there are only single element cliques, rule (2) is equivalent to rule (1) */
             if( consdata->cliquepartition[consdata->nvars - 1] == consdata->nvars - 1 )
@@ -10872,6 +10898,7 @@ SCIP_RETCODE addNegatedCliques(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** poscliquevars;
    SCIP_VAR** cliquevars;
    SCIP_Longint* maxweights;
@@ -10917,8 +10944,11 @@ SCIP_RETCODE addNegatedCliques(
 
    assert(consdata->merged);
 
+   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+   assert(conshdlrdata != NULL);
+
    /* calculate a clique partition */
-   SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
+   SCIP_CALL( calcCliquepartition(scip, conshdlrdata, consdata, FALSE, TRUE) );
    nnegcliques = consdata->nnegcliques;
 
    /* if we have no negated cliques, stop */
@@ -11177,6 +11207,7 @@ SCIP_RETCODE addCliques(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
    SCIP_Longint minactduetonegcliques;
    SCIP_Longint freecapacity;
@@ -11214,8 +11245,11 @@ SCIP_RETCODE addCliques(
 
    assert(consdata->merged);
 
+   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+   assert(conshdlrdata != NULL);
+
    /* calculate a clique partition */
-   SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
+   SCIP_CALL( calcCliquepartition(scip, conshdlrdata, consdata, FALSE, TRUE) );
    nnegcliques = consdata->nnegcliques;
    assert(nnegcliques <= nvars);
 
@@ -13138,6 +13172,15 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "constraints/" CONSHDLR_NAME "/detectlowerbound",
          "should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?",
          &conshdlrdata->detectlowerbound, TRUE, DEFAULT_DETECTLOWERBOUND, NULL, NULL) );
+    SCIP_CALL( SCIPaddBoolParam(scip,
+          "constraints/" CONSHDLR_NAME "/updatecliquepartitions",
+          "should clique partition information be updated when old partition seems outdated?",
+          &conshdlrdata->updatecliquepartitions, TRUE, DEFAULT_UPDATECLIQUEPARTITIONS, NULL, NULL) );
+    SCIP_CALL( SCIPaddRealParam(scip,
+          "constraints/" CONSHDLR_NAME "/clqpartupdatefac",
+          "factor on the growth of global cliques to decide when to update a previous "
+          "(negated) clique partition (used only if updatecliquepartitions is set to TRUE)",
+          &conshdlrdata->clqpartupdatefac, TRUE, DEFAULT_CLQPARTUPDATEFAC, 1.0, 10.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
