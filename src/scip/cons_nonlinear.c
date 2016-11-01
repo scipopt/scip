@@ -1841,7 +1841,8 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             consdata->nlinvars, consdata->linvars, consdata->lincoefs,
             0, NULL, 0, NULL,
-            NULL, consdata->lhs, consdata->rhs) );
+            NULL, consdata->lhs, consdata->rhs,
+            consdata->curvature) );
    }
    else if( consdata->nexprtrees == 1 && consdata->nonlincoefs[0] == 1.0 )
    {
@@ -1849,7 +1850,8 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             consdata->nlinvars, consdata->linvars, consdata->lincoefs,
             0, NULL, 0, NULL,
-            consdata->exprtrees[0], consdata->lhs, consdata->rhs) );
+            consdata->exprtrees[0], consdata->lhs, consdata->rhs,
+            consdata->curvature) );
    }
    else
    {
@@ -1867,7 +1869,8 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             consdata->nlinvars, consdata->linvars, consdata->lincoefs,
             0, NULL, 0, NULL,
-            exprtree, consdata->lhs, consdata->rhs) );
+            exprtree, consdata->lhs, consdata->rhs,
+            consdata->curvature) );
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
    }
 
@@ -7256,6 +7259,9 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
       {
          if( consdata->nlrow == NULL )
          {
+            /* compute curvature for the nonlinear constraint if not done yet */
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }

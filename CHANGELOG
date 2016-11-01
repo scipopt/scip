@@ -28,6 +28,7 @@ features:
   though the solutions required an addition NLP solve
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
+- add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
