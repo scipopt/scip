@@ -18,6 +18,25 @@
 /**@file   heur_gins.c
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
  * @author Gregor Hendel
+ *
+ * Graph Induced Neighborhood Search (GINS) is a Large Neighborhood Search Heuristic that attempts to improve
+ * an incumbent solution by fixing a suitable percentage of integer variables to the incumbent and
+ * solving the resulting, smaller and presumably easier sub-MIP.
+ *
+ * Its search neighborhoods are based on distances in a bipartite graph \f$G\f$ with the variables and constraints as nodes and
+ * an edge between a variable and a constraint, if the variable is part of the constraint.
+ * Given an integer \f$k\f$, the \f$k\f$-neighborhood of a variable \f$v\f$ in \f$G\f$ is the set of variables, whose nodes
+ * are connected to \f$v\f$ by a path not longer than \f$2 \cdot k\f$. Intuitively, a judiciously chosen neighborhood size
+ * allows to consider a local portion of the overall problem.
+ *
+ * An initial variable selection is made by randomly sampling different neighborhoods across the whole main problem.
+ * The neighborhood that offers the largest potential for improvement is selected to become the local search neighborhood,
+ * while all variables outside the neighborhood are fixed to their incumbent solution values.
+ *
+ * GINS also supports a rolling horizon approach, during which several local neighborhoods are considered
+ * with increasing distance to the variable selected for the initial sub-problem. The rolling horizon approach ends
+ * if no improvement could be found or a sufficient part of the problem component variables has been part of
+ * at least one neighborhood.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -64,13 +83,14 @@
  * Data structures
  */
 
-/** variable graph data structure;
+/** variable graph data structure to determine breadth-first distances between variables
  *
- *  a bipartite graph with variables and global constraints as nodes, and edges if a variable is part of the constraint */
+ *  the variable graph internally stores a mapping from the variables to the constraints in which they appear.
+ */
 struct VariableGraph
 {
    SCIP_CONS***          varconss;           /**< constraints of each variable */
-   SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth first search */
+   SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth-first search */
    int*                  nvarconss;          /**< number of constraints for each variable */
    int*                  varconssize;        /**< size array for every varconss entry */
 };
@@ -176,7 +196,7 @@ void addHistogramEntry(
 static
 SCIP_RETCODE fillVariableGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH*        vargraph,           /**< pointer to the variable graph */
+   VARIABLEGRAPH*        vargraph,           /**< variable graph data structure for breadth-first-search neighborhoods */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
@@ -232,7 +252,7 @@ SCIP_RETCODE fillVariableGraph(
       }
 
 
-      /*request constraint to write its variables into this buffer here */
+      /* collect constraint variables in buffer */
       SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
 
       if( !success )
@@ -321,6 +341,7 @@ SCIP_RETCODE variableGraphCreate(
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars) );
 
+   /* fill the variable graph with variable-constraint mapping for breadth-first search*/
    SCIP_CALL( fillVariableGraph(scip, *vargraph, heurdata) );
 
 
@@ -356,7 +377,7 @@ void variableGraphFree(
    SCIPfreeBlockMemory(scip, vargraph);
 }
 
-/* breadth first search on the variable constraint graph; uses a special kind of queue data structure that holds two queue levels
+/* breadth-first search on the variable constraint graph; uses a special kind of queue data structure that holds two queue levels
  * at the same time: the variables at the current distance and the ones at the next distance
  */
 static
@@ -437,19 +458,19 @@ SCIP_RETCODE variablegraphBreadthFirst(
          if( SCIPhashtableExists(vargraph->visitedconss, (void *)cons) )
             continue;
 
-         /* request number of variables */
+         /* request number of constraint variables */
          SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
 
          if( !success )
             continue;
 
-         /* request constraint to write its variables into this buffer here */
+         /* collect constraint variables in buffer */
          SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
 
          if( !success )
             continue;
 
-         /* loop over variables of this constraint */
+         /* collect previously unvisited variables of the constraint and enqueue them for breadth-first search */
          for( v = 0; v < nconsvars; ++v )
          {
             SCIP_VAR* nextvar = varbuffer[v];
@@ -498,16 +519,11 @@ SCIP_RETCODE variablegraphBreadthFirst(
    }
    while( queue[currlvlidx] != -1 && distances[queue[currlvlidx]] >= currentdistance );
 
-
-
    SCIPfreeBufferArray(scip, &varbuffer);
    SCIPfreeBufferArray(scip, &queue);
 
    return SCIP_OKAY;
 }
-
-
-
 
 /** create a rolling horizon data structure */
 static
@@ -587,6 +603,7 @@ void rollingHorizonStoreDistances(
          ++rollinghorizon->nnonreachable;
    }
 }
+
 /** get the potential of a subset of variables (distance to a reference point such as the pseudo-solution or root LP solution) */
 static
 SCIP_Real getPotential(
@@ -748,7 +765,7 @@ SCIP_RETCODE determineMaxDistance(
    int*                  choosevardistance   /**< pointer to store the computed maximum distance */
    )
 {
-   int* distancestmp;
+   int* distancescopy;
    int nrelevantdistances;
    int criticalidx;
    int zeropos;
@@ -761,15 +778,15 @@ SCIP_RETCODE determineMaxDistance(
    nrelevantdistances = (heurdata->fixcontvars ?  nvars : (nbinvars + nintvars));
 
    /* copy the relevant distances of either the discrete or all problem variables and sort them */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &distancestmp, distances, nrelevantdistances) );
-   SCIPsortInt(distancestmp, nrelevantdistances);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &distancescopy, distances, nrelevantdistances) );
+   SCIPsortInt(distancescopy, nrelevantdistances);
 
    /* distances can be infinite in the case of multiple connected components; therefore, search for the index of the
     * zero entry, which is the unique representative of the chosen variable in the sorted distances */
    zeropos = -1;
 
    /* todo: use selection method instead */
-   SCIPsortedvecFindInt(distancestmp, 0, nrelevantdistances, &zeropos);
+   SCIPsortedvecFindInt(distancescopy, 0, nrelevantdistances, &zeropos);
    assert(zeropos >= 0);
 
    /* determine the critical index to look for an appropriate neighborhood distance, starting from the zero position */
@@ -777,19 +794,19 @@ SCIP_RETCODE determineMaxDistance(
    criticalidx = MIN(criticalidx, nrelevantdistances - 1);
 
    /* determine the maximum breadth-first distance such that the neighborhood size stays small enough (below 1-minfixingrate)*/
-   *choosevardistance = distancestmp[criticalidx];
+   *choosevardistance = distancescopy[criticalidx];
 
    /* we set the distance to exactly the distance at the critical index. If the distance at critical index is not the
     * last one before the distance increases, we decrease the choosevardistance such that the entire neighborhood
     * fits into the minfixingrate restriction
     */
-   if( criticalidx != nrelevantdistances - 1 && distancestmp[criticalidx + 1] == *choosevardistance )
+   if( criticalidx != nrelevantdistances - 1 && distancescopy[criticalidx + 1] == *choosevardistance )
       (*choosevardistance)--;
 
    /* update the maximum distance */
-   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancestmp[nrelevantdistances]);
+   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancescopy[nrelevantdistances]);
 
-   SCIPfreeBufferArray(scip, &distancestmp);
+   SCIPfreeBufferArray(scip, &distancescopy);
 
    return SCIP_OKAY;
 }
@@ -895,7 +912,7 @@ SCIP_RETCODE selectInitialVariable(
       /* if there was no variable chosen, there are no active variables left */
       if( choosevar == NULL || SCIPvarGetProbindex(choosevar) < 0 )
       {
-         SCIPdebugMessage("No active variable left to perform breadth first search\n");
+         SCIPdebugMessage("No active variable left to perform breadth-first search\n");
          break;
       }
 
@@ -944,11 +961,8 @@ SCIP_RETCODE selectInitialVariable(
       }
       else
       {
-         /* compare the neighborhood potential to the previous one */
-         SCIP_Real potential;
-
          /* compare the neighborhood potential to the best potential found so far */
-         potential = getPotential(scip, heurdata, sol, neighborhood, neighborhoodsize);
+         SCIP_Real potential = getPotential(scip, heurdata, sol, neighborhood, neighborhoodsize);
 
          /* big potential, take this variable */
          if( potential > maxpotential )
@@ -1642,7 +1656,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
       /* create a problem copy as sub SCIP */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);

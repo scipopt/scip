@@ -18,7 +18,25 @@
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
  * @author Gregor Hendel
  *
- * todo documentation
+ *
+ * Graph Induced Neighborhood Search (GINS) is a Large Neighborhood Search Heuristic that attempts to improve
+ * an incumbent solution by fixing a suitable percentage of integer variables to the incumbent and
+ * solving the resulting, smaller and presumably easier sub-MIP.
+ *
+ * Its search neighborhoods are based on distances in a bipartite graph \f$G\f$ with the variables and constraints as nodes and
+ * an edge between a variable and a constraint, if the variable is part of the constraint.
+ * Given an integer \f$k\f$, the \f$k\f$-neighborhood of a variable \f$v\f$ in \f$G\f$ is the set of variables, whose nodes
+ * are connected to \f$v\f$ by a path not longer than \f$2 \cdot k\f$. Intuitively, a judiciously chosen neighborhood size
+ * allows to consider a local portion of the overall problem.
+ *
+ * An initial variable selection is made by randomly sampling different neighborhoods across the whole main problem.
+ * The neighborhood that offers the largest potential for improvement is selected to become the local search neighborhood,
+ * while all variables outside the neighborhood are fixed to their incumbent solution values.
+ *
+ * GINS also supports a rolling horizon approach, during which several local neighborhoods are considered
+ * with increasing distance to the variable selected for the initial sub-problem. The rolling horizon approach ends
+ * if no improvement could be found or a sufficient part of the problem component variables has been part of
+ * at least one neighborhood.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
