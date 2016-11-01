@@ -4088,22 +4088,33 @@ SCIP_RETCODE solveNode(
          {
             SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
                   eventqueue, eventfilter, bestrelaxsol, FALSE, TRUE, TRUE, TRUE, &stored) );
+            
+            if( stored )
+            {
+               stat->nrelaxsolsfound++;
+
+               if( primal->nbestsolsfound != oldnbestsolsfound )
+               {
+                  stat->nrelaxbestsolsfound++;
+                  SCIPstoreSolutionGap(set->scip);
+               }
+            }
          }
          else
          {
             SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
             SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
                   eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
-         }
-
-         if( stored )
-         {
-            stat->nlpsolsfound++;
-
-            if( primal->nbestsolsfound != oldnbestsolsfound )
+            
+            if( stored )
             {
-               stat->nlpbestsolsfound++;
-               SCIPstoreSolutionGap(set->scip);
+               stat->nlpsolsfound++;
+
+               if( primal->nbestsolsfound != oldnbestsolsfound )
+               {
+                  stat->nlpbestsolsfound++;
+                  SCIPstoreSolutionGap(set->scip);
+               }
             }
          }
 
