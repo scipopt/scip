@@ -2066,7 +2066,7 @@ SCIP_RETCODE checkCurvature(
          SCIP_CALL( SCIPexprtreeCheckCurvature(consdata->exprtrees[i], INTERVALINFTY, varbounds, &consdata->curvatures[i], NULL) );
          consdata->curvatures[i] = SCIPexprcurvMultiply(consdata->nonlincoefs[i], consdata->curvatures[i]);
 
-         if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated )
+         if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated && SCIPexprGetOperator(SCIPexprtreeGetRoot(consdata->exprtrees[i])) != SCIP_EXPR_USER )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
             SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], SCIPgetMessagehdlr(scip), NULL) ) );
@@ -2282,6 +2282,7 @@ SCIP_RETCODE reformMonomial(
    SCIP_Real*            exponents,          /**< exponents, or NULL if all 1.0 */
    SCIP_EXPRGRAPHNODE**  resultnode,         /**< buffer to store node which represents the reformulated monomial */
    SCIP_Bool             createauxcons,      /**< whether to create auxiliary var/cons */
+   int                   mindepth,           /**< minimal depth of new nodes in expression graph, or -1 */
    int*                  naddcons            /**< buffer to increase by number of added cons */
    )
 {
@@ -2342,7 +2343,7 @@ SCIP_RETCODE reformMonomial(
       reformfactors[1] = factors[0];
       reformexp[0] = 1.0;
       reformexp[1] = -exponents[0];  /*lint !e613*/
-      SCIP_CALL( reformMonomial(scip, exprgraph, 2, reformfactors, reformexp, &auxnode, FALSE, naddcons) );
+      SCIP_CALL( reformMonomial(scip, exprgraph, 2, reformfactors, reformexp, &auxnode, FALSE, mindepth, naddcons) );
 
       SCIP_CALL( SCIPcreateConsNonlinear2(scip, &auxcons, name, 0, NULL, NULL, auxnode, 1.0, 1.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -2389,7 +2390,7 @@ SCIP_RETCODE reformMonomial(
          else
             SCIP_CALL( SCIPexprgraphCreateNode(SCIPblkmem(scip), &expnode, SCIP_EXPR_REALPOWER, exponents[0]) );
 
-         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, expnode, -1, 1, &factors[0]) );
+         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, expnode, mindepth, 1, &factors[0]) );
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(expnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
          assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(expnode)));
       }
@@ -2438,10 +2439,10 @@ SCIP_RETCODE reformMonomial(
       SCIP_EXPRGRAPHNODE* productnode;
 
       /* create node for factor0*factor1 */
-      SCIP_CALL( reformMonomial(scip, exprgraph, 2, factors, NULL, &productnode, TRUE, naddcons) );
+      SCIP_CALL( reformMonomial(scip, exprgraph, 2, factors, NULL, &productnode, TRUE, mindepth, naddcons) );
 
       /* create node for productnode^exponents[0] by just calling this method again */
-      SCIP_CALL( reformMonomial(scip, exprgraph, 1, &productnode, &exponents[0], resultnode, createauxcons, naddcons) );
+      SCIP_CALL( reformMonomial(scip, exprgraph, 1, &productnode, &exponents[0], resultnode, createauxcons, mindepth, naddcons) );
 
       return SCIP_OKAY;
    }
@@ -2503,7 +2504,7 @@ SCIP_RETCODE reformMonomial(
 
       /* create node for auxvarnode^abs(exponents[0]) by just calling this method again */
       absexp = fabs(exponents[0]);
-      SCIP_CALL( reformMonomial(scip, exprgraph, 1, &auxvarnode, &absexp, resultnode, createauxcons, naddcons) );
+      SCIP_CALL( reformMonomial(scip, exprgraph, 1, &auxvarnode, &absexp, resultnode, createauxcons, mindepth, naddcons) );
 
       return SCIP_OKAY;
    }
@@ -2525,8 +2526,8 @@ SCIP_RETCODE reformMonomial(
       assert(half > 0);
       assert(half < nfactors);
 
-      SCIP_CALL( reformMonomial(scip, exprgraph, half, factors, exponents, &leftright[0], TRUE, naddcons) );
-      SCIP_CALL( reformMonomial(scip, exprgraph, nfactors-half, &factors[half], exponents != NULL ? &exponents[half] : NULL, &leftright[1], TRUE, naddcons) );  /*lint !e826*/
+      SCIP_CALL( reformMonomial(scip, exprgraph, half, factors, exponents, &leftright[0], TRUE, mindepth, naddcons) );
+      SCIP_CALL( reformMonomial(scip, exprgraph, nfactors-half, &factors[half], exponents != NULL ? &exponents[half] : NULL, &leftright[1], TRUE, mindepth, naddcons) );  /*lint !e826*/
 
       /* check if there is already a node for left * right */
       productnode = NULL;
@@ -2548,7 +2549,7 @@ SCIP_RETCODE reformMonomial(
       {
          /* create node for left * right */
          SCIP_CALL( SCIPexprgraphCreateNode(SCIPblkmem(scip), &productnode, SCIP_EXPR_MUL, NULL) );
-         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, productnode, -1, 2, leftright) );
+         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, productnode, mindepth, 2, leftright) );
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(productnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
          assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(productnode)));
       }
@@ -2740,9 +2741,10 @@ SCIP_RETCODE reformulate(
                   SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_MINUS &&
                   SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_SUM   &&
                   SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_LINEAR) )
-               assert(SCIPexprgraphGetNodeCurvature(children[j]) != SCIP_EXPRCURV_UNKNOWN);  /*lint !e613*/
+               assert(SCIPexprgraphGetNodeCurvature(children[j]) != SCIP_EXPRCURV_UNKNOWN || SCIPexprgraphGetNodeOperator(children[j]) == SCIP_EXPR_USER);  /*lint !e613*/
          }
 #endif
+
 
          switch( SCIPexprgraphGetNodeOperator(node) )
          {
@@ -2773,8 +2775,40 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_MUL:
          case SCIP_EXPR_QUADRATIC:
          {
-            /* ensure all children are linear, so next simplifier run makes sure all children will be variables */
+            SCIP_EXPRGRAPHNODE* child;
+            SCIP_Bool needupdate;
+
+            /* ensure all children are linear, so next simplifier run makes sure all children will be variables (by distributing the product)
+             * however, that will not work for user-expressions, so we should also ensure that they are none (@todo as they are linear, they could actually be replaced by a regular linear expression)
+             */
+            SCIPdebugMessage("ensure children are linear\n");
             SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons) );
+
+            needupdate = FALSE;  /* whether we need to update curvature of node */
+            for( c = 0; c < SCIPexprgraphGetNodeNChildren(node); ++c )
+            {
+               child = SCIPexprgraphGetNodeChildren(node)[c];
+               assert(child != NULL);
+
+               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER )
+               {
+                  SCIPdebugMessage("add auxiliary variable for child %p(%d,%d) with curvature %s operator %s\n",
+                     (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)), SCIPexpropGetName(SCIPexprgraphGetNodeOperator(child)) );
+
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, child, conss, nconss, naddcons, FALSE) );
+                  needupdate = TRUE;
+
+                  /* c'th child of node should now be a variable */
+                  assert(SCIPexprgraphGetNodeChildren(node)[c] != child);
+                  assert(SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(node)[c]) == SCIP_EXPR_VARIDX);
+               }
+            }
+            if( needupdate )
+            {
+               SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
+            }
+
             if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
             {
                /* if curvature is now known then we are done */
@@ -2782,7 +2816,7 @@ SCIP_RETCODE reformulate(
                break;
             }
 
-            /* if we have nonlinear parents or a sibling, then add add auxiliary variable for this node, so an upgrade to cons_quadratic should take place
+            /* if we have nonlinear parents or a sibling, then add auxiliary variable for this node, so an upgrade to cons_quadratic should take place
              * we assume that siblings are non-linear and non-quadratic, which should be the case if simplifier was run, and also if this node was created during reformulating a polynomial
              * @todo we could also add auxvars for the sibling nodes, e.g., if there is only one
              * @todo if sibling nodes are quadratic (or even linear) due to reformulation, then we do not need to reform here... (-> nvs16)
@@ -2901,7 +2935,7 @@ SCIP_RETCODE reformulate(
 
                /* if we have something like x^(-3) with mixed sign for x, then add auxvar and reform as auxvar*x^3 = 1 via reformMonomial */
                exponent = (SCIP_Real)SCIPexprgraphGetNodeIntPowerExponent(node);
-               SCIP_CALL( reformMonomial(scip, exprgraph, 1, children, &exponent, &auxvarnode, TRUE, naddcons) );
+               SCIP_CALL( reformMonomial(scip, exprgraph, 1, children, &exponent, &auxvarnode, TRUE, SCIPexprgraphGetNodeDepth(node), naddcons) );
                /* replace node by auxvarnode */
                SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conss, nconss) );
                break;
@@ -2985,7 +3019,7 @@ SCIP_RETCODE reformulate(
 
             /* if curvature is still unknown (quite likely), then turn into a cascade of bilinear terms
              * if node has parents, then ensure that it has a known curvature, otherwise we are also fine with a node that is a product of two (aux)variables */
-            SCIP_CALL( reformMonomial(scip, exprgraph, nchildren, children, NULL, &reformnode, havenonlinparent, naddcons) );
+            SCIP_CALL( reformMonomial(scip, exprgraph, nchildren, children, NULL, &reformnode, havenonlinparent, SCIPexprgraphGetNodeDepth(node), naddcons) );
 
             /* replace node by reformnode in graph and in all constraints that use it */
             SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conss, nconss) );
@@ -3227,6 +3261,26 @@ SCIP_RETCODE reformulate(
                expcurvpos = TRUE; /* whether exp_j * f_j''(x) >= 0 for all factors (assuming f_j >= 0) */
                expcurvneg = TRUE; /* whether exp_j * f_j''(x) <= 0 for all factors (assuming f_j >= 0) */
 
+               /* ensure that none of the children have unknown curvature */
+               for( c = 0; c < SCIPexprgraphGetNodeNChildren(node); ++c )
+               {
+                  childcurv = SCIPexprgraphGetNodeCurvature(children[c]);  /*lint !e613*/
+                  if( childcurv == SCIP_EXPRCURV_UNKNOWN )
+                  {
+                     SCIPdebugMessage("reform child %d with unknown curvature into var\n", c);
+                     SCIP_CALL( reformNode2Var(scip, exprgraph, children[c], conss, nconss, naddcons, FALSE) );  /*lint !e613*/
+                     modified = TRUE;
+                  }
+               }
+               if( modified )
+               {
+                  /* refresh curvature information in node, since we changed children */
+                  SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
+                  assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
+
+                  modified = FALSE;
+               }
+
                for( f = 0; f < nfactors; ++f )
                {
                   childcurv = SCIPexprgraphGetNodeCurvature(children[childidxs[f]]);  /*lint !e613*/
@@ -3365,7 +3419,7 @@ SCIP_RETCODE reformulate(
                 * if node has parents and monomial is of indefinite form x^a, then also create auxvar for it, since otherwise we create a auxnode with unknown curvature
                 * note, that the case x^a with positive and odd a will still give an indefinite node (without parents), where we assume that signpower will pick it up at some point
                 */
-               SCIP_CALL( reformMonomial(scip, exprgraph, nfactors, factors, exponents, &auxnode, havenonlinparent, naddcons) );
+               SCIP_CALL( reformMonomial(scip, exprgraph, nfactors, factors, exponents, &auxnode, havenonlinparent, SCIPexprgraphGetNodeDepth(node), naddcons) );
 
                if( nfactors > 1 )
                {
@@ -4930,7 +4984,7 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
       break;
    } /*lint !e788*/
 
-   SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d\n", SCIPexprGetOperator( expr ) );
+   SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d %s\n", SCIPexprGetOperator( expr ), SCIPexpropGetName(SCIPexprGetOperator( expr )));
    SCIPABORT();
    return SCIP_ERROR; /*lint !e527*/
 }
