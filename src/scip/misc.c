@@ -1345,7 +1345,7 @@ static const int primetablesize = sizeof(primetable)/sizeof(int);
 static
 unsigned int hashvalue(unsigned long long input)
 {
-   return ( (unsigned int) ((0xa638089ab6ff92b5ull * input)>>32) ) | 1u;
+   return ( (unsigned int) ((0xd37e9a1ce2148403ull * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
