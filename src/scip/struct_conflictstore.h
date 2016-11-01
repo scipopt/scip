@@ -37,14 +37,17 @@ struct SCIP_ConflictStore
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to catch improving solutions */
    SCIP_CONS**           conflicts;          /**< array with conflicts */
    SCIP_CONS**           dualrayconss;       /**< array with constraints based on dual rays */
+   SCIP_CONS**           origconfs;          /**< array of original conflicts added in stage SCIP_STAGE_PROBLEM */
    SCIP_Real*            primalbounds;       /**< array of primal bounds valid at the time the corresponding bound exceeding
                                               *   conflict was found (-infinity if the conflict as based on an infeasible LP) */
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
    int                   conflictsize;       /**< size of conflict array (bounded by conflict->maxpoolsize) */
+   int                   origconflictsize;   /**< size of origconfs array */
    int                   nconflicts;         /**< number of stored conflicts */
    int                   ndualrays;          /**< number of stored dualrays */
+   int                   norigconfs;         /**< number of original conflicts */
    int                   ncbconflicts;       /**< number of conflicts depending on cutoff bound */
    int                   nconflictsfound;    /**< total number of conflicts found so far */
    int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */

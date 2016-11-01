@@ -51,9 +51,19 @@ SCIP_RETCODE SCIPconflictstoreCreate(
 extern
 SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_EVENTFILTER*     eventfilter         /**< event filter */
+   );
+
+/** cleans conflict storage */
+extern
+SCIP_RETCODE SCIPconflictstoreClean(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
    );
 
 /** adds a constraint to the pool of dual rays */
@@ -78,8 +88,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_EVENTFILTER*     eventfilter,        /**< eventfiler */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
-   SCIP_NODE*            validnode,          /**< node at whichaddConf the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
@@ -124,6 +132,18 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
    SCIP_CONS**           conflicts,          /**< array to store conflicts */
    int                   conflictsize,       /**< site of the conflict array */
    int*                  nconflicts          /**< pointer to store the number of conflicts */
+   );
+
+/** transformed all original conflicts into transformed conflicts */
+extern
+SCIP_RETCODE SCIPconflictstoreTransform(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_EVENTFILTER*     eventfilter         /**< eventfiler */
    );
 
 #ifdef __cplusplus

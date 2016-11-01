@@ -39,6 +39,7 @@
 #include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
+#include "scip/type_conflictstore.h"
 
 #include "scip/struct_prob.h"
 
@@ -155,6 +156,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store data */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
 

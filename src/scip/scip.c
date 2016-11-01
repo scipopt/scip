@@ -1706,6 +1706,9 @@ SCIP_RETCODE copyProb(
    /**@todo copy solution of source SCIP as candidates for the target SCIP */
    SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
 
+   /* create conflict store to store conflict constraints */
+   SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
+
    if( uselocalvarmap )
    {
       /* free hash map */
@@ -2808,6 +2811,14 @@ SCIP_RETCODE SCIPcopyConss(
 
             /* add constraint to target SCIP */
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+
+            /* add the conflict constraint to the store of targetscip */
+            if( SCIPconsIsConflict(sourceconss[c]) )
+            {
+               /* add the constraint as a conflict to the conflict pool of targetscip */
+               SCIP_CALL( SCIPconflictstoreAddConflict(targetscip->conflictstore, targetscip->mem->probmem, targetscip->set,
+                     targetscip->stat, NULL, NULL, NULL, targetcons, SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPinfinity(targetscip)) );
+            }
 
             /* release constraint once for the creation capture */
             SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
@@ -9557,6 +9568,9 @@ SCIP_RETCODE SCIPcreateProb(
    /* create solution pool for original solution candidates */
    SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
 
+   /* create conflict pool for storing conflict constraints */
+   SCIP_CALL( SCIPconflictstoreCreate(&scip->conflictstore, scip->set) );
+
    /* initialize reoptimization structure, if needed */
    SCIP_CALL( SCIPenableReoptimization(scip, scip->set->reopt_enable) );
 
@@ -12526,9 +12540,7 @@ SCIP_RETCODE SCIPaddConflict(
 
    /* add the conflict to the conflict storage */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->eventfilter, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node,
-         validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, conftype, cutoffinvolved,
-         primalbound) );
+         scip->transprob, scip->eventfilter, cons, conftype, cutoffinvolved, primalbound) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -13342,7 +13354,8 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* copy problem in solve memory */
    SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree,
-         scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
+         scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue, scip->conflictstore,
+         &scip->transprob) );
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
@@ -14506,7 +14519,6 @@ SCIP_RETCODE initSolve(
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
-   SCIP_CALL( SCIPconflictstoreCreate(&scip->conflictstore, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -14620,7 +14632,7 @@ SCIP_RETCODE freeSolve(
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
    /* deinitialize conflict storage */
-   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->set, scip->eventfilter, scip->mem->probmem) );
+   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat) );
 
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, restart) );
@@ -14785,6 +14797,7 @@ SCIP_RETCODE freeTransform(
    }
 
    /* free transformed problem data structures */
+   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter) );
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );

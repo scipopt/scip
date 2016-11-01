@@ -51,7 +51,6 @@ static
 SCIP_DECL_EVENTEXEC(eventExecConflictstore)
 {
    assert(eventhdlr != NULL);
-   assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND);
@@ -60,6 +59,46 @@ SCIP_DECL_EVENTEXEC(eventExecConflictstore)
    {
       SCIP_CALL( SCIPcleanConflictStoreNewIncumbant(scip, event) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_EVENTINITSOL(eventInitsolConflictstore)
+{
+   SCIP_Bool cleanboundexceeding;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/cleanboundexceedings", &cleanboundexceeding) );
+
+   if( !cleanboundexceeding )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_EVENTEXITSOL(eventExitsolConflictstore)
+{
+   SCIP_Bool cleanboundexceeding;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/cleanboundexceedings", &cleanboundexceeding) );
+
+   if( !cleanboundexceeding )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -136,13 +175,6 @@ SCIP_RETCODE initConflictstore(
          SCIPdebugMessage("[init,max] size of conflict pool is [%d,%d].\n",
                conflictstore->initstoresize, conflictstore->maxstoresize);
 #endif
-
-      if( set->conf_cleanbnddepend )
-      {
-         /* add solution event to the eventfilter */
-         SCIP_CALL( SCIPeventfilterAdd(eventfilter, blkmem, set, SCIP_EVENTTYPE_BESTSOLFOUND, conflictstore->eventhdlr,
-               (SCIP_EVENTDATA*)conflictstore, NULL) );
-      }
    }
 
    return SCIP_OKAY;
@@ -178,7 +210,7 @@ SCIP_RETCODE conflictstoreEnsureMem(
       }
       else
       {
-         newsize = MIN(conflictstore->storesize, SCIPsetCalcMemGrowSize(set, num));
+         newsize = MIN(conflictstore->maxstoresize, SCIPsetCalcMemGrowSize(set, num));
          SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->conflicts, newsize) );
          SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->primalbounds, newsize) );
       }
@@ -192,7 +224,7 @@ SCIP_RETCODE conflictstoreEnsureMem(
 #endif
       conflictstore->conflictsize = newsize;
    }
-   assert(num <= conflictstore->conflictsize);
+   assert(num <= conflictstore->conflictsize || conflictstore->conflictsize == conflictstore->maxstoresize);
 
    return SCIP_OKAY;
 }
@@ -229,9 +261,10 @@ SCIP_RETCODE delPosConflict(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL if delete = FALSE */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   pos                 /**< position to remove */
+   int                   pos,                /**< position to remove */
+   SCIP_Bool             delete              /**< should the conflict be deleted? */
 )
 {
    SCIP_CONS* conflict;
@@ -246,10 +279,12 @@ SCIP_RETCODE delPosConflict(
    /* decrease number of conflicts depending an a cutoff bound */
    conflictstore->ncbconflicts -= (SCIPsetIsInfinity(set, REALABS(conflictstore->primalbounds[pos])) ? 0 : 1);
 
-   SCIPdebugMessage("-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
+#ifdef SCIP_PRINT_DETAILS
+   SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
+#endif
 
    /* mark the constraint as deleted */
-   if( !SCIPconsIsDeleted(conflict) )
+   if( delete && !SCIPconsIsDeleted(conflict) )
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
@@ -261,12 +296,12 @@ SCIP_RETCODE delPosConflict(
    {
       conflictstore->conflicts[pos] = conflictstore->conflicts[lastpos];
       conflictstore->primalbounds[pos] = conflictstore->primalbounds[lastpos];
+   }
 
 #ifndef NDEBUG
-      conflictstore->conflicts[lastpos] = NULL;
-      conflictstore->primalbounds[lastpos] = -SCIPsetInfinity(set);
+   conflictstore->conflicts[lastpos] = NULL;
+   conflictstore->primalbounds[lastpos] = -SCIPsetInfinity(set);
 #endif
-   }
 
    /* decrease number of conflicts */
    --conflictstore->nconflicts;
@@ -280,9 +315,10 @@ SCIP_RETCODE delPosDualray(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL if delete = FALSE */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   pos                 /**< position to remove */
+   int                   pos,                /**< position to remove */
+   SCIP_Bool             delete              /**< should the dual ray be deleted? */
 )
 {
    SCIP_CONS* dualray;
@@ -294,10 +330,12 @@ SCIP_RETCODE delPosDualray(
    dualray = conflictstore->dualrayconss[pos];
    assert(dualray != NULL);
 
+#ifdef SCIP_PRINT_DETAILS
    SCIPdebugMessage("-> remove dual ray at pos=%d with age=%g\n", pos, SCIPconsGetAge(dualray));
+#endif
 
    /* mark the constraint as deleted */
-   if( !SCIPconsIsDeleted(dualray) )
+   if( delete && !SCIPconsIsDeleted(dualray) )
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(dualray, blkmem, set, stat, transprob) );
@@ -347,7 +385,7 @@ SCIP_RETCODE cleanDeletedConflicts(
           *
           * don't increase i because delPosConflict will swap the last pointer to the i-th position
           */
-         SCIP_CALL( delPosConflict(conflictstore, set, stat, NULL, blkmem, i) );
+         SCIP_CALL( delPosConflict(conflictstore, set, stat, NULL, blkmem, i, FALSE) );
 
          ++(*ndelconfs);
       }
@@ -417,7 +455,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    if( SCIPsetIsEQ(set, maxage, SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])) )
    {
       /* remove conflict at first position */
-      SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0) );
+      SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
       ++ndelconfstmp;
    }
    else
@@ -430,7 +468,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
          if( SCIPsetIsEQ(set, maxage, SCIPconsGetAge(conflictstore->conflicts[i])) )
          {
             /* remove conflict at first position */
-            SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0) );
+            SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
             ++ndelconfstmp;
 
             /* delPos() decreases number of stored conflicts, we need to increase the number of conflicts again and
@@ -464,6 +502,41 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    return SCIP_OKAY;
 }
 
+/** adds an original conflict constraint to the store
+ *
+ *  note: the constraint will be only transfered to the storage of the transformed problem after calling
+ *        SCIPconflictstoreTransform()
+ */
+static
+SCIP_RETCODE conflictstoreAddOrigConflict(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS*            cons                /**< conflict constraint */
+   )
+{
+   assert(conflictstore != NULL);
+   assert(cons != NULL);
+
+   if( conflictstore->origconfs == NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->origconfs, DEFAULT_CONFLICTSTORE_MINSIZE) );
+      conflictstore->origconflictsize = DEFAULT_CONFLICTSTORE_MINSIZE;
+   }
+   else if( conflictstore->norigconfs == conflictstore->origconflictsize )
+   {
+      int newsize = SCIPsetCalcMemGrowSize(set, conflictstore->origconflictsize+1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->origconfs, conflictstore->origconflictsize, newsize) );
+      conflictstore->origconflictsize = newsize;
+   }
+
+   SCIPconsCapture(cons);
+   conflictstore->origconfs[conflictstore->norigconfs] = cons;
+   ++conflictstore->norigconfs;
+
+   return SCIP_OKAY;
+}
+
 
 /** creates conflict storage */
 SCIP_RETCODE SCIPconflictstoreCreate(
@@ -476,11 +549,14 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    SCIP_ALLOC( BMSallocMemory(conflictstore) );
 
    (*conflictstore)->conflicts = NULL;
-   (*conflictstore)->dualrayconss = NULL;
    (*conflictstore)->primalbounds = NULL;
+   (*conflictstore)->dualrayconss = NULL;
+   (*conflictstore)->origconfs = NULL;
    (*conflictstore)->conflictsize = 0;
+   (*conflictstore)->origconflictsize = 0;
    (*conflictstore)->nconflicts = 0;
    (*conflictstore)->ndualrays = 0;
+   (*conflictstore)->norigconfs = 0;
    (*conflictstore)->ncbconflicts = 0;
    (*conflictstore)->nconflictsfound = 0;
    (*conflictstore)->initstoresize = -1;
@@ -490,18 +566,10 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->lastnodenum = -1;
 
    /* create event handler for LP events */
-   SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL,
-         NULL, NULL, NULL, eventExecConflictstore, NULL) );
+   SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL,
+         NULL, NULL, eventInitsolConflictstore, eventExitsolConflictstore, NULL, eventExecConflictstore, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, (*conflictstore)->eventhdlr) );
-
-   if( (*conflictstore)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for conflictstore not found.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* initialize the conflict handler */
-   SCIP_CALL( SCIPeventhdlrInit((*conflictstore)->eventhdlr, set) );
+   assert((*conflictstore)->eventhdlr != NULL);
 
    return SCIP_OKAY;
 }
@@ -509,45 +577,73 @@ SCIP_RETCODE SCIPconflictstoreCreate(
 /** frees conflict storage */
 SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_EVENTFILTER*     eventfilter         /**< event filter */
    )
 {
    assert(conflictstore != NULL);
    assert(*conflictstore != NULL);
 
-   if( (*conflictstore)->nconflictsfound > 0 && set->conf_cleanbnddepend )
-   {
-      /* remove solution event from eventfilter */
-      SCIP_CALL( SCIPeventfilterDel(eventfilter, blkmem, set, SCIP_EVENTTYPE_BESTSOLFOUND, (*conflictstore)->eventhdlr,
-            (SCIP_EVENTDATA*)(*conflictstore), -1) );
-   }
-
-   if( (*conflictstore)->conflicts != NULL )
+   /* remove original constraints if present */
+   if( (*conflictstore)->origconfs != NULL )
    {
       int i;
-      for( i = 0; i < (*conflictstore)->nconflicts; i++ )
+      for( i = 0; i < (*conflictstore)->norigconfs; i++ )
       {
-         SCIP_CONS* conflict = (*conflictstore)->conflicts[i];
+         SCIP_CONS* conflict = (*conflictstore)->origconfs[i];
          SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
       }
-      BMSfreeMemoryArray(&(*conflictstore)->conflicts);
-      BMSfreeMemoryArray(&(*conflictstore)->primalbounds);
    }
 
-   if( (*conflictstore)->dualrayconss != NULL )
+   /* clear the storage */
+   SCIP_CALL( SCIPconflictstoreClean(*conflictstore, blkmem, set, stat) );
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->origconfs, (*conflictstore)->origconflictsize);
+   BMSfreeMemoryArrayNull(&(*conflictstore)->conflicts);
+   BMSfreeMemoryArrayNull(&(*conflictstore)->primalbounds);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualrayconss, DEFAULT_CONFLICTSTORE_DUALSIZE);
+   BMSfreeMemoryNull(conflictstore);
+
+   return SCIP_OKAY;
+}
+
+/** cleans conflict storage */
+SCIP_RETCODE SCIPconflictstoreClean(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   )
+{
+   int i;
+
+   assert(conflictstore != NULL);
+   assert(conflictstore->norigconfs == 0);
+
+   SCIPsetDebugMsg(set, "cleaning conflict store: %d conflicts, %d dual rays\n",
+         conflictstore->nconflicts, conflictstore->ndualrays);
+
+   if( conflictstore->conflicts != NULL )
    {
-      int i;
-      for( i = 0; i < (*conflictstore)->ndualrays; i++ )
+      /* we travers in reverse order to avoid swapping of pointers */
+      for( i = conflictstore->nconflicts-1; i >= 0; i--)
       {
-         SCIP_CONS* dualray = (*conflictstore)->dualrayconss[i];
-         SCIP_CALL( SCIPconsRelease(&dualray, blkmem, set) );
+         SCIP_CALL( delPosConflict(conflictstore, set, stat, NULL, blkmem, i, FALSE) );
       }
-      BMSfreeBlockMemoryArray(blkmem, &(*conflictstore)->dualrayconss, DEFAULT_CONFLICTSTORE_DUALSIZE);
+      assert(conflictstore->nconflicts == 0);
    }
 
-   BMSfreeMemory(conflictstore);
+   if( conflictstore->dualrayconss != NULL )
+   {
+      /* we travers in reverse order to avoid swapping of pointers */
+      for( i = conflictstore->ndualrays-1; i >= 0 ; i-- )
+      {
+         SCIP_CALL( delPosDualray(conflictstore, set, stat, NULL, blkmem, i, FALSE) );
+      }
+      assert(conflictstore->ndualrays == 0);
+   }
 
    return SCIP_OKAY;
 }
@@ -593,7 +689,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
              *
              * don't increase i because delPosDualray will swap the last pointer to the i-th position
              */
-            SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, i) );
+            SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, i, TRUE) );
          }
          else
             ++i;
@@ -604,7 +700,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
       assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualrayconss[0]),
             SCIPconsGetAge(conflictstore->dualrayconss[conflictstore->ndualrays-1])));
 
-      SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, 0) );
+      SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
    }
 
    /* add the new constraint based on a dual ray at the last position */
@@ -624,37 +720,40 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfiler */
+   SCIP_TREE*            tree,               /**< branch and bound tree (or NULL original constraint) */
+   SCIP_PROB*            transprob,          /**< transformed problem (or NULL original constraint) */
+   SCIP_EVENTFILTER*     eventfilter,        /**< eventfiler (or NULL original constraint) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
-   SCIP_NODE*            validnode,          /**< node at whichaddConf the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    )
 {
+   SCIP_Longint curnodenum;
    int nconflicts;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
    assert(stat != NULL);
-   assert(tree != NULL);
-   assert(transprob != NULL);
+   assert(tree != NULL || SCIPconsIsOriginal(cons));
+   assert(transprob != NULL || SCIPconsIsOriginal(cons));
    assert(cons != NULL);
-   assert(node != NULL);
-   assert(validnode != NULL);
-   assert(set->conf_allowlocal || SCIPnodeGetDepth(validnode) == 0);
-   assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || cutoffinvolved);
    assert(!cutoffinvolved || (cutoffinvolved && !SCIPsetIsInfinity(set, REALABS(primalbound))));
 
-   nconflicts = conflictstore->nconflicts;
-
    /* mark the constraint to be a conflict */
    SCIPconsMarkConflict(cons);
+
+   /* add the constraint to a special store */
+   if( SCIPconsIsOriginal(cons) )
+   {
+      assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM);
+      SCIP_CALL( conflictstoreAddOrigConflict(conflictstore, set, blkmem, cons) );
+      return SCIP_OKAY;
+   }
+
+   nconflicts = conflictstore->nconflicts;
 
    /* initialize the storage */
    if( conflictstore->maxstoresize == -1 )
@@ -677,15 +776,17 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
       return SCIP_OKAY;
    }
 
+   assert(tree != NULL);
+   curnodenum = (SCIPtreeGetFocusNode(tree) == NULL ? -1 : SCIPnodeGetNumber(SCIPtreeGetFocusNode(tree)));
+
    /* clean up the storage if we are at a new node or the storage is full */
-   if( conflictstore->lastnodenum != SCIPnodeGetNumber(SCIPtreeGetFocusNode(tree))
-         || conflictstore->nconflicts == conflictstore->conflictsize )
+   if( conflictstore->lastnodenum != curnodenum || conflictstore->nconflicts == conflictstore->conflictsize )
    {
       SCIP_CALL( conflictstoreCleanUpStorage(conflictstore, set, stat, transprob, blkmem) );
    }
 
    /* update the last seen node */
-   conflictstore->lastnodenum = SCIPnodeGetNumber(SCIPtreeGetFocusNode(tree));
+   conflictstore->lastnodenum = curnodenum;
 
    SCIPconsCapture(cons);
    conflictstore->conflicts[conflictstore->nconflicts] = cons;
@@ -695,12 +796,12 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    ++conflictstore->nconflicts;
    ++conflictstore->nconflictsfound;
 
-   SCIPdebugMessage("add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);
-   SCIPdebugMessage(" -> conflict type: %d, cutoff involved = %u\n", conftype, cutoffinvolved);
+#ifdef SCIP_PRINT_DETAILS
+   SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);
+   SCIPsetDebugMsg(set, " -> conflict type: %d, cutoff involved = %u\n", conftype, cutoffinvolved);
    if( cutoffinvolved )
-      SCIPdebugMessage(" -> current primal bound: %g\n", primalbound);
-   SCIPdebugMessage(" -> found at node %llu (depth: %d), valid at node %llu (depth: %d)\n", SCIPnodeGetNumber(node),
-         SCIPnodeGetDepth(node), SCIPnodeGetNumber(validnode), SCIPnodeGetDepth(validnode));
+      SCIPsetDebugMsg(set, " -> current primal bound: %g\n", primalbound);
+#endif
 
    return SCIP_OKAY;
 }
@@ -759,7 +860,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
           *
           * don't increase i because delPosConflict will swap the last pointer to the i-th position
           */
-         SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, i) );
+         SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, i, TRUE) );
          ++ndelconfs;
       }
       /* we remove all as deleted marked constraints too */
@@ -769,7 +870,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
           *
           * don't increase i because delPosConflict will swap the last pointer to the i-th position
           */
-         SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, i) );
+         SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, i, TRUE) );
          ++ndelconfs_del;
       }
       else
@@ -858,6 +959,56 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
          ++(*nconflicts);
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** transformed all original conflicts into transformed conflicts */
+SCIP_RETCODE SCIPconflictstoreTransform(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_EVENTFILTER*     eventfilter         /**< eventfiler */
+   )
+{
+   int ntransconss;
+   int i;
+
+   assert(conflictstore != NULL);
+   assert(set != NULL);
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_TRANSFORMING);
+
+   /* return if no original constraints are stored */
+   if( conflictstore->norigconfs == 0 )
+      return SCIP_OKAY;
+
+   ntransconss = 0;
+
+   for( i = 0; i < conflictstore->norigconfs; i++ )
+   {
+      SCIP_CONS* transcons;
+
+      assert(conflictstore->origconfs[i] != NULL);
+
+      transcons = SCIPconsGetTransformed(conflictstore->origconfs[i]);
+
+      if( transcons != NULL )
+      {
+         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, eventfilter, transcons,
+               SCIP_CONFTYPE_UNKNOWN, FALSE, SCIPsetInfinity(set)) );
+
+         ++ntransconss;
+      }
+
+      SCIP_CALL( SCIPconsRelease(&conflictstore->origconfs[i], blkmem, set) );
+   }
+
+   SCIPsetDebugMsg(set, "-> transform %d/%d conflicts into transformed space\n", ntransconss, conflictstore->norigconfs);
+
+   conflictstore->norigconfs = 0;
 
    return SCIP_OKAY;
 }
