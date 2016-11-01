@@ -531,7 +531,7 @@ SCIP_RETCODE applyOptcumulative(
 
          SCIPdebugMessage("************ try solution <%g>\n", SCIPgetSolOrigObj(scip, sol));
 
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
 
          if( stored )
             *result = SCIP_FOUNDSOL;

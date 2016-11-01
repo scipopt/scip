@@ -401,12 +401,19 @@ SCIP_RETCODE getSolutionValue(
       else
       {
          *val = scalar * debugsoldata->solvals[middle] + constant;
+
+         if( SCIPsetIsFeasLT(set, *val, SCIPvarGetLbGlobal(var)) || SCIPsetIsFeasGT(set, *val, SCIPvarGetUbGlobal(var)) )
+         {
+            SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
+               *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         }
+
          return SCIP_OKAY;
       }
    }
    *val = constant;
 
-   if( *val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06 )
+   if( SCIPsetIsFeasLT(set, *val, SCIPvarGetLbGlobal(var)) || SCIPsetIsFeasGT(set, *val, SCIPvarGetUbGlobal(var)) )
    {
       SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
@@ -1727,6 +1734,9 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       /* add values to SCIP debug solution */
       SCIP_CALL( SCIPsetSolVal(scip, debugsoldata->debugsol, var, debugsoldata->solvals[i] ) );
    }
+
+   /* get solution value once to produce warning if solution was cut off */
+   SCIPdebugGetSolVal(scip, var, &testval);
 
    return SCIP_OKAY;
 }

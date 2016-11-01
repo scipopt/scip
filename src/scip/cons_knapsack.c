@@ -1486,9 +1486,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    return SCIP_OKAY;
 }
 
-
 /** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
- *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not 
+ *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not
  *  selected items
  */
 SCIP_RETCODE SCIPsolveKnapsackApproximately(
@@ -1503,11 +1502,13 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
-   ) 
+   )
 {
    SCIP_Real* tempsort;
    SCIP_Longint solitemsweight;
+   SCIP_Real* realweights;
    int j;
+   int criticalindex;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1523,19 +1524,22 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    if( solval != NULL )
       *solval = 0.0;
 
-   /* sort items (plus corresponding arrays weights and profits) such that 
-    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n 
-    */
+   /* initialize data for median search */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &realweights, nitems) );
    for( j = nitems - 1; j >= 0; --j )
    {
       tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
+      realweights[j] = (SCIP_Real)weights[j];
+
    }
-   SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
+
+   /* partially sort indices such that all elements that are larger than the break item appear first */
+   SCIPselectWeightedDownRealLongRealInt(tempsort, weights, profits, items, realweights, capacity, nitems, &criticalindex);
 
    /* selects items as long as they fit into the knapsack */
    solitemsweight = 0;
-   for( j = 0; j < nitems && solitemsweight + weights[j] <= capacity; j++ )
+   for( j = 0; j < nitems && solitemsweight + weights[j] <= capacity; ++j )
    {
       if( solitems != NULL )
       {
@@ -1552,61 +1556,11 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
       (*nnonsolitems)++;
    }
 
+   SCIPfreeBufferArray(scip, &realweights);
    SCIPfreeBufferArray(scip, &tempsort);
 
    return SCIP_OKAY;
 }
-
-#ifndef NDEBUG
-/** returns, whether the the arrays transweights, transprofits and items are sorted such that 
- *  p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n and these arrays are not changed
- */
-static
-SCIP_Bool checkSolveKnapsack(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nitems,             /**< number of available items */
-   SCIP_Longint*         transweights,       /**< item weights */
-   SCIP_Real*            transprofits,       /**< item profits */
-   int*                  items,              /**< item numbers */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   SCIP_Bool             modtransused        /**< TRUE for mod trans sepa prob was used to find cover */
-   )
-{
-   int j;
-
-   assert(scip != NULL);
-   assert(nitems >= 0);
-   assert(weights != NULL);
-   assert(solvals != NULL);
-   assert(transweights != NULL);
-   assert(transprofits != NULL);
-
-   for( j = 1; j < nitems; j++ )
-   {
-      assert(SCIPisFeasGE(scip, transprofits[j-1]/transweights[j-1], transprofits[j]/transweights[j]));
-      if( SCIPisFeasLT(scip, transprofits[j-1]/transweights[j-1], transprofits[j]/transweights[j]) )
-         return FALSE;
-      assert(weights[items[j]] == transweights[j]);
-      if( weights[items[j]] != transweights[j] )
-         return FALSE;
-      if( modtransused )
-      {
-         assert(SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]) * weights[items[j]], transprofits[j]));
-         if( !SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]) * weights[items[j]], transprofits[j]) )
-            return FALSE;
-      }
-      else
-      {
-         assert(SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]), transprofits[j]));
-         if( !SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]), transprofits[j]) )
-            return FALSE;
-
-      }
-   }
-   return TRUE;
-}
-#endif
 
 #ifdef SCIP_DEBUG
 /** prints all nontrivial GUB constraints and their LP solution values */
@@ -2534,7 +2488,7 @@ SCIP_RETCODE getCover(
     */
    SCIP_CALL( SCIPsolveKnapsackApproximately(scip, nitems, transweights, transprofits, transcapacity, items,
          noncovervars, covervars, nnoncovervars, ncovervars, NULL) );
-   assert(checkSolveKnapsack(scip, nitems, transweights, transprofits, items, weights, solvals, modtransused));
+   /*assert(checkSolveKnapsack(scip, nitems, transweights, transprofits, items, weights, solvals, modtransused));*/
 
    /* constructs cover C (sum_{j in C} a_j > a_0) */
    for( j = 0; j < *ncovervars; j++ )
@@ -13098,7 +13052,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/sepacardfreq",
          "multiplier on separation frequency, how often knapsack cuts are separated (-1: never, 0: only at root)",
-         &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/" CONSHDLR_NAME "/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cuts",
