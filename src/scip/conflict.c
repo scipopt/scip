@@ -2409,7 +2409,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             (void*)tree->path[repropdepth], repropdepth, focusdepth);
       }
 
-      /* free the conflict storage */
+      /* free the conflict store */
       for( i = 0; i < conflict->nconflictsets; ++i )
       {
          conflictsetFree(&conflict->conflictsets[i], blkmem);
@@ -6328,7 +6328,7 @@ SCIP_RETCODE runBoundHeuristic(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Real*            farkascoefs,        /**< coefficients in the proof constraint */
    SCIP_Real*            farkaslhs,          /**< lhs of the proof constraint */

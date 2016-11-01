@@ -2765,8 +2765,8 @@ SCIP_RETCODE cutsLpCalcStrongCG(
    return SCIP_OKAY;
 }
 
-/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
- * rows cannot participate in a MIR cut.
+/* calculates an MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0 because these
+ * rows cannot participate in an MIR cut.
  */
 static
 SCIP_RETCODE cutsLpCalcMIR(
@@ -3172,8 +3172,8 @@ SCIP_RETCODE cutsApplyMIR(
    return SCIP_OKAY;
 }
 
-/** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
- *  rows cannot participate in a MIR cut.
+/** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0 because
+ *  these rows cannot participate in an MIR cut.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -3212,8 +3212,8 @@ SCIP_RETCODE SCIPcutsCalcStrongCG(
    return SCIP_OKAY;
 }
 
-/** calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
- *  rows cannot participate in a MIR cut.
+/** calculates an MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0 because
+ *  these rows cannot participate in an MIR cut.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -3245,7 +3245,7 @@ SCIP_RETCODE SCIPcutsCalcLpMIR(
    int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is
                                               *   unknown */
    int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
-   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
+   int                   rowlensum,          /**< total number of nonzeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
@@ -3294,8 +3294,8 @@ SCIP_RETCODE SCIPcutsApplyMIR(
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
-   int*                  varinds,            /**< array of variable indeces with a mircoef != 0 */
-   int*                  nvarinds,           /**< number of variables indeces in varinds array */
+   int*                  varinds,            /**< array of variable indices with a mircoef != 0 */
+   int*                  nvarinds,           /**< number of variables indices in varinds array */
    SCIP_Real*            minact,             /**< pointer to store the minimal activity */
    SCIP_Bool*            varused,            /**< array to store whether a variable has a mircoef != 0 */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
@@ -3309,8 +3309,8 @@ SCIP_RETCODE SCIPcutsApplyMIR(
    return SCIP_OKAY;
 }
 
-/** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
- *  prevent numerical rounding errors
+/** removes all nearly-zero coefficients from MIR row and relaxes the right hand side accordingly in order to prevent
+ *  numerical rounding errors
  */
 void SCIPcutsCleanupRow(
    SCIP*                 scip,               /**< SCIP data structure */

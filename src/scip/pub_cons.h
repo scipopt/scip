@@ -575,7 +575,7 @@ SCIP_Bool SCIPconsIsObsolete(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint is marked conflict */
+/** returns TRUE iff constraint is marked as a conflict */
 EXTERN
 SCIP_Bool SCIPconsIsConflict(
    SCIP_CONS*            cons                /**< constraint */

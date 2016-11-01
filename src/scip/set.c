@@ -147,10 +147,9 @@
 /* Conflict Analysis (dual ray) */
 
 #define SCIP_DEFAULT_CONF_ENABLEDUALRAY   FALSE /**< enable dual ray analyzes */
-#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR in dual rays */
-#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefere the ray after applying the MIR function if the proof is still
-                                                  *   valid, use both rays otherwise
-                                                  */
+#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
+#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
+                                                  *   valid, use both rays otherwise */
 
 /* Constraints */
 
@@ -1178,7 +1177,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/cleanboundexceedings",
-         "should conflicts based on an old cutoff bound removed from the conflict pool after improving the primal bound?",
+         "should conflicts based on an old cutoff bound be removed from the conflict pool after improving the primal bound?",
          &(*set)->conf_cleanbnddepend, TRUE, SCIP_DEFAULT_CONF_CLEANBNDDEPEND,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1248,7 +1247,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/maxstoresize",
-         "maximal size of conflict storage (-1: auto, 0: disable storage)",
+         "maximal size of conflict store (-1: auto, 0: disable storage)",
          &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1358,7 +1357,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/prefermir",
-         "prefere the ray after applying the MIR function if the proof is still valid, use both rays otherwise",
+         "prefer a ray after applying the MIR function if the proof is still valid, use both rays otherwise",
          &(*set)->conf_prefermir, TRUE, SCIP_DEFAULT_CONF_PREFERMIR,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

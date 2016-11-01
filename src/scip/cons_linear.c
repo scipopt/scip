@@ -6955,7 +6955,6 @@ SCIP_RETCODE tightenBounds(
 
    for( nrounds = 0; (force || !consdata->boundstightened) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
    {
-
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = TRUE;
 
@@ -6992,7 +6991,8 @@ SCIP_RETCODE tightenBounds(
       }
 
 #ifndef SCIP_DEBUG
-      SCIPdebugMessage("linear constraint <%s> found %d bound changes in round %d\n", SCIPconsGetName(cons), *nchgbds - oldnchgbdstotal, nrounds);
+      SCIPdebugMessage("linear constraint <%s> found %d bound changes in round %d\n", SCIPconsGetName(cons),
+         *nchgbds - oldnchgbdstotal, nrounds);
       oldnchgbdstotal += oldnchgbds;
 #endif
    }

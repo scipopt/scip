@@ -36,7 +36,6 @@
 extern "C" {
 #endif
 
-
 typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound changes */

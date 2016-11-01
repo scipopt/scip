@@ -168,11 +168,11 @@ struct SCIP_Set
                                               *   graph (-1: use every intermediate constraint) */
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
                                               *   (-1: use all generated conflict constraints) */
-   int                   conf_maxstoresize;  /**< maximal size of conflict storage */
+   int                   conf_maxstoresize;  /**< maximal size of conflict store */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
-   SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound removed? */
+   SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */
    char                  conf_useinflp;      /**< should infeasible LP conflict analysis be used?
                                               *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
@@ -215,11 +215,11 @@ struct SCIP_Set
    SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
                                                     *   variable if it is part of a conflict graph
                                                     */
-   SCIP_Real             conf_weightsize;    /**<weight of the size of a conflict used in score calculation */
+   SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
    SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
    SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
-   SCIP_Bool             conf_applymir;      /**< apply the MIR function on the dualray */
-   SCIP_Bool             conf_prefermir;     /**< prefere the ray after applying the MIR function if the proof is still
+   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
+   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
                                               *   valid, use both rays otherwise
                                               */
 

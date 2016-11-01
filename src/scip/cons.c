@@ -7788,7 +7788,7 @@ SCIP_Bool SCIPconsIsObsolete(
    return cons->updateobsolete || cons->obsolete;
 }
 
-/** returns TRUE iff constraint is marked conflict */
+/** returns TRUE iff constraint is marked as a conflict */
 SCIP_Bool SCIPconsIsConflict(
    SCIP_CONS*            cons                /**< constraint */
    )

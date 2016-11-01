@@ -156,7 +156,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
 

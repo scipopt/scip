@@ -1169,7 +1169,7 @@ SCIP_RETCODE SCIPcopyCuts(
    int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    );
 
-/** copies all active conflicts from the conflict pool of sourcescip to linear constraints in targetscip
+/** copies all active conflicts from the conflict pool of sourcescip and adds them as linear constraints to targetscip
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -1197,9 +1197,9 @@ SCIP_RETCODE SCIPcopyCuts(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
- *  @note sourcescip stage does not get changed
+ *  @note sourcescip stage does not change
  *
- *  @note targetscip stage does not get changed
+ *  @note targetscip stage does not change
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -6124,7 +6124,7 @@ int SCIPgetNCheckConss(
 /**@name Local Subproblem Methods */
 /**@{ */
 
-/** adds a conflict to the given node or globally to the problem is @p node == NULL.
+/** adds a conflict to a given node or globally to the problem if @p node == NULL.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6135,7 +6135,7 @@ int SCIPgetNCheckConss(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note this method will release the constraint at the end
+ *  @note this method will release the constraint
  */
 EXTERN
 SCIP_RETCODE SCIPaddConflict(
@@ -6147,7 +6147,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
    );
 
-/** remove all conflicts depending on a cutoff bound if the improvement compared to the new incumbant is large enough
+/** removes all conflicts depending on an old cutoff bound if the improvement of the incumbent is good enough
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6157,7 +6157,7 @@ SCIP_RETCODE SCIPaddConflict(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcleanConflictStoreNewIncumbant(
+SCIP_RETCODE SCIPcleanConflictStoreNewIncumbent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENT*           event               /**< event data */
    );

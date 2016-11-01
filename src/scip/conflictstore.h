@@ -43,33 +43,36 @@ extern "C" {
 /** creates separation storage */
 extern
 SCIP_RETCODE SCIPconflictstoreCreate(
-   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict store */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees separation storage */
 extern
 SCIP_RETCODE SCIPconflictstoreFree(
-   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter */
    );
 
-/** cleans conflict storage */
+/** cleans conflict store */
 extern
 SCIP_RETCODE SCIPconflictstoreClean(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< dynamic SCIP statistics */
    );
 
-/** adds a constraint to the pool of dual rays */
+/** adds a constraint to the pool of dual rays
+ *
+ *  @note this methods captures the constraint
+ */
 extern
 SCIP_RETCODE SCIPconflictstoreAddDualraycons(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS*            dualray,            /**< dual ray to add */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -77,26 +80,29 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_PROB*            transprob           /**< transformed problem */
    );
 
-/** adds a conflict to the conflict storage */
+/** adds a conflict to the conflict store
+ *
+ *  @note this method captures the constraint
+ */
 extern
 SCIP_RETCODE SCIPconflictstoreAddConflict(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfiler */
+   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL original constraint) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
+   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    );
 
-/** deletes all conflicts depending a cutoff bound larger than the given bound */
+/** deletes all conflicts depending on a cutoff bound larger than the given bound */
 extern
-SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -107,37 +113,37 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
 /** returns the maximal size of the conflict pool */
 extern
 int SCIPconflictstoreGetMaxPoolSize(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
-/** return the initial size of the conflict pool */
+/** returns the initial size of the conflict pool */
 extern
 int SCIPconflictstoreGetInitPoolSize(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** returns the number of stored conflicts on the conflict pool
  *
- *  note: the number of active conflicts can be less
+ *  @note the number of active conflicts can be less
  */
 extern
 int SCIPconflictstoreGetNConflictsInStore(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** returns all active conflicts stored in the conflict store */
 extern
 SCIP_RETCODE SCIPconflictstoreGetConflicts(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS**           conflicts,          /**< array to store conflicts */
-   int                   conflictsize,       /**< site of the conflict array */
+   int                   conflictsize,       /**< size of the conflict array */
    int*                  nconflicts          /**< pointer to store the number of conflicts */
    );
 
-/** transformed all original conflicts into transformed conflicts */
+/** transformes all original conflicts into transformed conflicts */
 extern
 SCIP_RETCODE SCIPconflictstoreTransform(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */

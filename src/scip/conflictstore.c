@@ -36,10 +36,10 @@
 #include "scip/struct_conflictstore.h"
 
 
-#define DEFAULT_CONFLICTSTORE_DUALSIZE     100 /* default size of conflict storage */
-#define DEFAULT_CONFLICTSTORE_MINSIZE     2000 /* default minimal size of a dynamic conflict storage */
-#define DEFAULT_CONFLICTSTORE_MAXSIZE    60000 /* maximal size of a dynamic conflict storage (multiplied by 3) */
-#define DEFAULT_CONFLICTSTORE_SIZE       10000 /* default size of conflict storage */
+#define DEFAULT_CONFLICTSTORE_DUALSIZE     100 /* default size of conflict store */
+#define DEFAULT_CONFLICTSTORE_MINSIZE     2000 /* default minimal size of a dynamic conflict store */
+#define DEFAULT_CONFLICTSTORE_MAXSIZE    60000 /* maximal size of a dynamic conflict store (multiplied by 3) */
+#define DEFAULT_CONFLICTSTORE_SIZE       10000 /* default size of conflict store */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "ConflictStore"
@@ -57,7 +57,7 @@ SCIP_DECL_EVENTEXEC(eventExecConflictstore)
 
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      SCIP_CALL( SCIPcleanConflictStoreNewIncumbant(scip, event) );
+      SCIP_CALL( SCIPcleanConflictStoreNewIncumbent(scip, event) );
    }
 
    return SCIP_OKAY;
@@ -122,10 +122,10 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
       return 0;
 }
 
-/* initialize the conflict storage */
+/* initializes the conflict store */
 static
 SCIP_RETCODE initConflictstore(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
@@ -134,7 +134,7 @@ SCIP_RETCODE initConflictstore(
 {
    assert(conflictstore != NULL);
 
-   /* calculate the maximal size of the conflict storage */
+   /* calculate the maximal size of the conflict store */
    if( conflictstore->maxstoresize == -1 )
    {
       SCIP_CALL( SCIPsetGetIntParam(set, "conflict/maxstoresize", &conflictstore->maxstoresize) );
@@ -183,7 +183,7 @@ SCIP_RETCODE initConflictstore(
 /** resizes conflict and primal bound arrays to be able to store at least num entries */
 static
 SCIP_RETCODE conflictstoreEnsureMem(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimal number of slots in array */
    )
@@ -232,12 +232,12 @@ SCIP_RETCODE conflictstoreEnsureMem(
 /* increase the dynamic storage if we could not delete enough conflicts
  *
  * we want to have at least set->conf_maxconss free slots in the conflict array, because this is the maximal number
- * of conflict generated at a node. we increase the size by the minimum of set->conf_maxconss and 1% of the current
+ * of conflicts generated at a node. we increase the size by the minimum of set->conf_maxconss and 1% of the current
  * store size. nevertheless, we don't exceed conflictstore->maxstoresize.
  */
 static
 void adjustStorageSize(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   ndelconfs           /**< number of deleted conflicts */
    )
@@ -248,7 +248,7 @@ void adjustStorageSize(
    if( conflictstore->storesize - conflictstore->nconflicts <= set->conf_maxconss
       && conflictstore->storesize < conflictstore->maxstoresize )
    {
-      conflictstore->storesize += MIN(set->conf_maxconss, (int)(ceil(0.001 * conflictstore->storesize)));
+      conflictstore->storesize += MIN(set->conf_maxconss, (int)(ceil(0.01 * conflictstore->storesize)));
       conflictstore->storesize = MIN(conflictstore->storesize, conflictstore->maxstoresize);
    }
 
@@ -258,7 +258,7 @@ void adjustStorageSize(
 /* removes conflict at position pos */
 static
 SCIP_RETCODE delPosConflict(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem, or NULL if delete = FALSE */
@@ -312,7 +312,7 @@ SCIP_RETCODE delPosConflict(
 /* removes dual ray at position pos */
 static
 SCIP_RETCODE delPosDualray(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem, or NULL if delete = FALSE */
@@ -361,7 +361,7 @@ SCIP_RETCODE delPosDualray(
 /** removes all deleted conflicts from the storage */
 static
 SCIP_RETCODE cleanDeletedConflicts(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -402,7 +402,7 @@ SCIP_RETCODE cleanDeletedConflicts(
 /** cleans up the storage */
 static
 SCIP_RETCODE conflictstoreCleanUpStorage(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -425,7 +425,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       return SCIP_OKAY;
    assert(conflictstore->nconflicts >= 1);
 
-   /* increase the number of clean up */
+   /* increase the number of clean ups */
    ++conflictstore->ncleanups;
 
    ndelconfs = 0;
@@ -504,12 +504,12 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
 
 /** adds an original conflict constraint to the store
  *
- *  note: the constraint will be only transfered to the storage of the transformed problem after calling
+ *  @note the constraint will be only transfered to the storage of the transformed problem after calling
  *        SCIPconflictstoreTransform()
  */
 static
 SCIP_RETCODE conflictstoreAddOrigConflict(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_CONS*            cons                /**< conflict constraint */
@@ -538,9 +538,9 @@ SCIP_RETCODE conflictstoreAddOrigConflict(
 }
 
 
-/** creates conflict storage */
+/** creates conflict store */
 SCIP_RETCODE SCIPconflictstoreCreate(
-   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict store */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -574,9 +574,9 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    return SCIP_OKAY;
 }
 
-/** frees conflict storage */
+/** frees conflict store */
 SCIP_RETCODE SCIPconflictstoreFree(
-   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
@@ -609,9 +609,9 @@ SCIP_RETCODE SCIPconflictstoreFree(
    return SCIP_OKAY;
 }
 
-/** cleans conflict storage */
+/** cleans conflict store */
 SCIP_RETCODE SCIPconflictstoreClean(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< dynamic SCIP statistics */
@@ -650,10 +650,10 @@ SCIP_RETCODE SCIPconflictstoreClean(
 
 /** adds a constraint to the pool of dual rays
  *
- *  note: this methods captures the constraint
+ *  @note this methods captures the constraint
  */
 SCIP_RETCODE SCIPconflictstoreAddDualraycons(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS*            dualraycons,        /**< constraint based on a dual ray */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -711,21 +711,21 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    return SCIP_OKAY;
 }
 
-/** adds a conflict to the conflict storage
+/** adds a conflict to the conflict store
  *
- *  note: this method captures the constraint
+ *  @note this method captures the constraint
  */
 SCIP_RETCODE SCIPconflictstoreAddConflict(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree (or NULL original constraint) */
    SCIP_PROB*            transprob,          /**< transformed problem (or NULL original constraint) */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfiler (or NULL original constraint) */
+   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL original constraint) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
+   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    )
 {
@@ -806,9 +806,9 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    return SCIP_OKAY;
 }
 
-/** deletes all conflicts depending a cutoff bound larger than the given bound */
-SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+/** deletes all conflicts depending on a cutoff bound larger than the given bound */
+SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -888,7 +888,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbant(
 
 /** returns the maximal size of the conflict pool */
 int SCIPconflictstoreGetMaxPoolSize(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    )
 {
    assert(conflictstore != NULL);
@@ -896,9 +896,9 @@ int SCIPconflictstoreGetMaxPoolSize(
    return MIN(conflictstore->storesize, conflictstore->maxstoresize);
 }
 
-/** return the initial size of the conflict pool */
+/** returns the initial size of the conflict pool */
 int SCIPconflictstoreGetInitPoolSize(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    )
 {
    assert(conflictstore != NULL);
@@ -908,10 +908,10 @@ int SCIPconflictstoreGetInitPoolSize(
 
 /** returns the number of stored conflicts on the conflict pool
  *
- *  note: the number of active conflicts can be less
+ *  @note the number of active conflicts can be less
  */
 int SCIPconflictstoreGetNConflictsInStore(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    )
 {
    assert(conflictstore != NULL);
@@ -921,9 +921,9 @@ int SCIPconflictstoreGetNConflictsInStore(
 
 /** returns all active conflicts stored in the conflict store */
 SCIP_RETCODE SCIPconflictstoreGetConflicts(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS**           conflicts,          /**< array to store conflicts */
-   int                   conflictsize,       /**< site of the conflict array */
+   int                   conflictsize,       /**< size of the conflict array */
    int*                  nconflicts          /**< pointer to store the number of conflicts */
    )
 {
@@ -963,9 +963,9 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
    return SCIP_OKAY;
 }
 
-/** transformed all original conflicts into transformed conflicts */
+/** transformes all original conflicts into transformed conflicts */
 SCIP_RETCODE SCIPconflictstoreTransform(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
