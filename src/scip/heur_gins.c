@@ -52,7 +52,7 @@
 #define HEUR_DESC             "gins works on k-neighborhood in a variable-constraint graph"
 #define HEUR_DISPCHAR         'K'
 #define HEUR_PRIORITY         -1103000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             20
 #define HEUR_FREQOFS          8
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -77,7 +77,7 @@
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #define DEFAULT_RANDSEED       71
 #define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be ignored by connectivity graph? */
-#define DEFAULT_USEROLLINGHORIZON FALSE     /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
+#define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
 #define ROLLINGHORIZON_MAXUSEDFACTOR 0.75   /**< percentage of variables used from a connected component to finish rolling horizon */
 /*
  * Data structures
