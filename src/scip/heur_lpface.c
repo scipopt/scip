@@ -45,7 +45,6 @@
 #define DEFAULT_NODESOFS      1500LL         /* number of nodes added to the contingent of the total nodes            */
 #define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
 #define DEFAULT_LPLIMFAC      2.0            /* factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait        */
 #define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
 #define DEFAULT_USELPROWS     TRUE          /* should subproblem be created out of the rows in the LP rows,
                                               * otherwise, the copy constructors of the constraints handlers are used */
@@ -85,7 +84,6 @@ struct SCIP_HeurData
    SCIP_Longint          nextnodenumber;     /**< number of nodes at which lpface should be called the next time */
    SCIP_Real             lastlpobjinfeas;    /**< last LP objective where the sub-MIP was run to proven infeasibility */
    SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed     */
-   SCIP_Real             minimprove;         /**< factor by which Lpface should at least improve the incumbent   */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    SCIP_Bool             dontwaitatroot;     /**< should the nwaitingnodes parameter be ignored at the root node?   */
@@ -1190,10 +1188,6 @@ SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/nwaitingnodes",
-         "number of nodes without incumbent change that heuristic should wait",
-         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
