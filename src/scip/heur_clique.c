@@ -31,7 +31,7 @@
 #include "scip/scip.h"
 #include "scip/heur_clique.h"
 #include "scip/cons_logicor.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "clique"
@@ -69,7 +69,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
@@ -294,7 +294,7 @@ SCIP_RETCODE applyCliqueFixings(
       assert(c == cliquepartition[bestpos]);
 
       /* stop if we reached the depth limit */
-      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -478,7 +478,7 @@ SCIP_DECL_HEURINIT(heurInitClique)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
 
    heurdata->usednodes = 0;
@@ -502,7 +502,7 @@ SCIP_DECL_HEUREXIT(heurExitClique)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

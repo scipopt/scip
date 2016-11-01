@@ -674,7 +674,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, COLORprobGetVarForStableSet(scip, i), 1.0) );
    }
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, FALSE, FALSE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, FALSE, FALSE, FALSE, &stored) );
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */

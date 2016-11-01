@@ -5441,7 +5441,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/xor/gausspropfreq",
          "frequency for applying the Gauss propagator",
-         &conshdlrdata->gausspropfreq, TRUE, DEFAULT_GAUSSPROPFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->gausspropfreq, TRUE, DEFAULT_GAUSSPROPFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }

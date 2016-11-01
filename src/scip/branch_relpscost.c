@@ -27,7 +27,7 @@
 
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -103,7 +103,7 @@ struct SCIP_BranchruleData
    int                   nlcountsize;        /**< length of nlcount array */
    int                   nlcountmax;         /**< maximum entry in nlcount array or 1 if NULL */
    SCIP_Bool             randinitorder;      /**< should slight perturbation of scores be used to break ties in the prior scores? */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   startrandseed;      /**< start random seed for random number generation */
    SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 };
@@ -1494,7 +1494,7 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    assert(branchruledata->startrandseed >= 0);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &branchruledata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, branchruledata->startrandseed)) );
 
    return SCIP_OKAY;
@@ -1512,7 +1512,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
+   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }

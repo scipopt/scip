@@ -15588,6 +15588,10 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* we can skip events droped for deleted constraints */
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
 
@@ -15606,14 +15610,22 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
-      /* update the activity values */
-      if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-         consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
-      else
+      /* we only need to update the activities if the constraint is active,
+       * otherwise we mark them to be invalid
+       */
+      if( SCIPconsIsActive(cons) )
       {
-         assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-         consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         /* update the activity values */
+         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+            consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         else
+         {
+            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+            consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
+         }
       }
+      else
+         consdataInvalidateActivities(consdata);
 
       consdata->presolved = FALSE;
       consdata->rangedrowpropagation = FALSE;
@@ -15979,7 +15991,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
-         &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
@@ -16074,7 +16086,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/rangedrowfreq",
          "frequency for applying ranged row propagation",
-         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
