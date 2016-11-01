@@ -561,7 +561,9 @@ void SCIPintervalAbs(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
-/** stores sine value of operand in resultant */
+/** stores sine value of operand in resultant
+ * NOTE: the operations are not applied rounding-safe here
+ */
 extern
 void SCIPintervalSin(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -569,7 +571,9 @@ void SCIPintervalSin(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
-/** stores cosine value of operand in resultant */
+/** stores cosine value of operand in resultant
+ * NOTE: the operations are not applied rounding-safe here
+ */
 extern
 void SCIPintervalCos(
    SCIP_Real             infinity,           /**< value for infinity */
