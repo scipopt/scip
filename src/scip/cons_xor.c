@@ -759,7 +759,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -784,9 +783,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
     * SCIPvarCompareActiveAndNegated (see var.c)
     */
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
 /** deletes all fixed variables and all pairs of equal variables */

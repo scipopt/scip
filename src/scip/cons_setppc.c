@@ -2611,7 +2611,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
 {
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -2634,9 +2633,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
 /** add extra clique-constraints resulting from a given cliquepartition to SCIP */

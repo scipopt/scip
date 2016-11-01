@@ -12467,7 +12467,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real maxabsrealval;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -12505,9 +12504,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
          addval += (unsigned int) maxabsrealval;
    }
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx + addval; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashFive(consdata->nvars, minidx, mididx, maxidx, addval);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 

@@ -457,6 +457,15 @@ void** SCIPpqueueElems(
  *@{
  */
 
+/* fast 2-universal hash functions for four and five elements */
+
+#define SCIPhashFour(a, b, c, d) ((unsigned int) ( (((unsigned long long int)(a) + 0xbd5c89185f082658ull) * ((unsigned long long int)(b) + 0xe5fcc163aef32782ull) + \
+                                                    ((unsigned long long int)(c) + 0xd37e9a1ce2148403ull) * ((unsigned long long int)(d) + 0x926f2d4dc4a67218ull))>>32 ))
+
+#define SCIPhashFive(a, b, c, d, e) ((unsigned int) ( (((unsigned long long int)(a) + 0xbd5c89185f082658ull) * ((unsigned long long int)(b) + 0xe5fcc163aef32782ull) + \
+                                                       ((unsigned long long int)(c) + 0xd37e9a1ce2148403ull) * ((unsigned long long int)(d) + 0x926f2d4dc4a67218ull) + \
+                                                       ((unsigned long long int)(e) * 0xfc3b36393b5f0474ull))>>32 ))
+
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
 EXTERN
 int SCIPcalcHashtableSize(

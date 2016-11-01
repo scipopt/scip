@@ -11359,11 +11359,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    SCIP* scip;
 #endif
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
-   int maxabsval;
 
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
@@ -11382,15 +11380,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && mididx >= 0 && maxidx >= 0);
 
-   if( consdata->weights[0] > INT_MAX )
-      maxabsval = 0;
-   else
-      maxabsval = (int) consdata->weights[0];
-
    /* hash value depends on vectors of variable indices */
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx + maxabsval; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashFive(consdata->nvars, minidx, mididx, maxidx, consdata->weights[0]);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
