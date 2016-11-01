@@ -2674,34 +2674,34 @@ void SCIPintervalSin(
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
    intervallen = operand.sup - operand.inf;
-   if(intervallen >= 2*M_PI)
+   if( intervallen >= 2*M_PI )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
 
    modinf = fmod(operand.inf, 2*M_PI);
-   if(modinf < 0.0)
+   if( modinf < 0.0 )
       modinf += 2*M_PI;
    modsup = modinf + intervallen;
 
-   for(b = 0; TRUE; ++b)
+   for( b = 0; TRUE; ++b )
    {
-      if(modinf <= extremepoints[b])
+      if( modinf <= extremepoints[b] )
       {
          a = b;
          break;
       }
    }
-   for(; b < 4; ++b)
+   for( ; b < 4; ++b )
    {
-      if(modsup <= extremepoints[b])
+      if( modsup <= extremepoints[b] )
          break;
    }
 
    nbetween = b-a;
 
-   if(nbetween > 1)
+   if( nbetween > 1 )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
@@ -2710,20 +2710,28 @@ void SCIPintervalSin(
    finf = sin(operand.inf);
    fsup = sin(operand.sup);
 
-   if(nbetween == 0)
+   if( nbetween == 0 )
    {
-      if(a & 1) /* next extremepoint is minimum -> decreasing -> finf < fsup */
+      if( a & 1 ) /* next extremepoint is minimum -> decreasing -> finf < fsup */
          SCIPintervalSetBounds(resultant, fsup, finf);
       else
          SCIPintervalSetBounds(resultant, finf, fsup);
    }
    else /* 1 extremepoint in between */
    {
-       if(a & 1) /* extremepoint is minimum */
+       if( a & 1 ) /* extremepoint is minimum */
           SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
        else
           SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
    }
+
+   /* above operations did not take outward rounding into account,
+    * so extend the computed interval slightly to increase the chance that it will contain the complete sin(operand)
+    */
+   if( resultant->inf > -1.0 )
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));
+   if( resultant->sup <  1.0 )
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));
 
    assert(resultant->inf <= resultant->sup);
 }
@@ -2751,34 +2759,34 @@ void SCIPintervalCos(
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
    intervallen = operand.sup - operand.inf;
-   if(intervallen >= 2*M_PI)
+   if( intervallen >= 2*M_PI )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
 
    modinf = fmod(operand.inf, 2*M_PI);
-   if(modinf < 0.0)
+   if( modinf < 0.0 )
       modinf += 2*M_PI;
    modsup = modinf + intervallen;
 
-   for(b = 0; TRUE; ++b)
+   for( b = 0; TRUE; ++b )
    {
-      if(modinf <= extremepoints[b])
+      if( modinf <= extremepoints[b] )
       {
          a = b;
          break;
       }
    }
-   for(; b < 3; ++b)
+   for( ; b < 3; ++b )
    {
-      if(modsup <= extremepoints[b])
+      if( modsup <= extremepoints[b] )
          break;
    }
 
    nbetween = b-a;
 
-   if(nbetween > 1)
+   if( nbetween > 1 )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
@@ -2787,20 +2795,28 @@ void SCIPintervalCos(
    finf = cos(operand.inf);
    fsup = cos(operand.sup);
 
-   if(nbetween == 0)
+   if( nbetween == 0 )
    {
-      if(a & 1) /* next extremepoint is maximum -> increasing -> finf < fsup */
+      if( a & 1 ) /* next extremepoint is maximum -> increasing -> finf < fsup */
          SCIPintervalSetBounds(resultant, finf, fsup);
       else
          SCIPintervalSetBounds(resultant, fsup, finf);
    }
    else /* 1 extremepoint in between */
    {
-       if(a & 1) /* extremepoint is maximum */
+       if( a & 1 ) /* extremepoint is maximum */
           SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
        else
           SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
    }
+
+   /* above operations did not take outward rounding into account,
+    * so extend the computed interval slightly to increase the chance that it will contain the complete cos(operand)
+    */
+   if( resultant->inf > -1.0 )
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));
+   if( resultant->sup <  1.0 )
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));
 
    assert(resultant->inf <= resultant->sup);
 }
