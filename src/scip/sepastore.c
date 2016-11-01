@@ -1243,6 +1243,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    
    if( ncutsapplied > 0 )
       *cutadded = TRUE;
+   else
+      *cutadded = FALSE;
 
    /* clear the separation storage and reset statistics for separation round */
    SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
