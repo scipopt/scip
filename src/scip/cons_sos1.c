@@ -10243,7 +10243,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/boundcutsfreq",
          "frequency for separating bound cuts; zero means to separate only in the root node",
-         &conshdlrdata->boundcutsfreq, TRUE, DEFAULT_BOUNDCUTSFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->boundcutsfreq, TRUE, DEFAULT_BOUNDCUTSFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/boundcutsdepth",
          "node depth of separating bound cuts (-1: no limit)",
@@ -10263,7 +10263,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/implcutsfreq",
          "frequency for separating implied bound cuts; zero means to separate only in the root node",
-         &conshdlrdata->implcutsfreq, TRUE, DEFAULT_IMPLCUTSFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->implcutsfreq, TRUE, DEFAULT_IMPLCUTSFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/implcutsdepth",
          "node depth of separating implied bound cuts (-1: no limit)",

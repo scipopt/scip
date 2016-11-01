@@ -214,7 +214,7 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
       
       success = FALSE;
       /* due to construction we already know, that the solution will be feasible */
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }

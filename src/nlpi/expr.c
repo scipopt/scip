@@ -5166,10 +5166,17 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprParse(blkmem, messagehdlr, expr, subexpptr, subexplength, subexpendptr, nvars, varnames, vartable, recursiondepth + 1) );
       ++str;
    }
-   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+')
+         && (isdigit((unsigned char)str[1]) || str[1] == ' ')) )
    {
-      /* there is a number coming */
-      if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
+      /* check if there is a lonely minus coming, indicating a -1.0 */
+      if( str[0] == '-'  && str[1] == ' ' )
+      {
+         number = -1.0;
+         nonconstendptr = (char*) str + 1;
+      }
+      /* check if there is a number coming */
+      else if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
