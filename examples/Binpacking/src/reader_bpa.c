@@ -154,7 +154,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
          return SCIP_READERROR;
       }
 
-      SCIPdebugMessage("problem name <%s>\n", name);
+      SCIPdebugMsg(scip, "problem name <%s>\n", name);
    }
 
    capacity = 0;
@@ -176,7 +176,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
          return SCIP_READERROR;
       }
 
-      SCIPdebugMessage("capacity = <%d>, number of items = <%d>, best known solution = <%d>\n", capacity, nitems, bestsolvalue);
+      SCIPdebugMsg(scip, "capacity = <%d>, number of items = <%d>, best known solution = <%d>\n", capacity, nitems, bestsolvalue);
    }
 
 
@@ -204,7 +204,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
          break;
       }
 
-      SCIPdebugMessage("found weight %d <%d>\n", nweights, weight);
+      SCIPdebugMsg(scip, "found weight %d <%d>\n", nweights, weight);
       weights[nweights] = weight;
       ids[nweights] = nweights;
       nweights++;

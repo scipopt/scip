@@ -1,12 +1,12 @@
-/* $Id: arithmetic.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_ARITHMETIC_INCLUDED
-# define CPPAD_ARITHMETIC_INCLUDED
+// $Id$
+# ifndef CPPAD_ARITHMETIC_HPP
+# define CPPAD_ARITHMETIC_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-07 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -21,13 +21,7 @@ $spell
 	const
 $$
 
-$index operator, AD arithmetic$$
-$index AD, arithmetic operator$$
-$index arithmetic, AD operator$$
 
-$index computed, AD assignment$$
-$index assignment, AD computed$$
-$index AD, computed assignment$$
 
 $section AD Arithmetic Operators and Computed Assignments$$
 

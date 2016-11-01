@@ -1060,6 +1060,8 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 EXTERN
 SCIP_Real SCIPvarGetLbAtIndex(
@@ -1070,6 +1072,8 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 EXTERN
 SCIP_Real SCIPvarGetUbAtIndex(
@@ -1080,6 +1084,8 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 EXTERN
 SCIP_Real SCIPvarGetBdAtIndex(
@@ -1089,7 +1095,10 @@ SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
 
-/** returns whether the binary variable was fixed at the time given by the bound change index */
+/** returns whether the binary variable was fixed at the time given by the bound change index
+ *
+ *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
+ */
 EXTERN
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */

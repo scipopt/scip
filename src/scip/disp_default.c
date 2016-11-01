@@ -27,7 +27,7 @@
 
 
 #define DISP_NAME_SOLFOUND      "solfound"
-#define DISP_DESC_SOLFOUND      "letter that indicates the heuristic, that found the solution"
+#define DISP_DESC_SOLFOUND      "letter that indicates the heuristic which found the solution"
 #define DISP_HEAD_SOLFOUND      " "
 #define DISP_WIDT_SOLFOUND      1
 #define DISP_PRIO_SOLFOUND      80000

@@ -212,6 +212,16 @@ struct SCIP_Regression
    int                   nobservations;      /**< number of observations so far */
 };
 
+/** random number generator data */
+struct SCIP_RandNumGen
+{
+   unsigned int          seed;               /**< start seed */
+   unsigned int          xor_seed;           /**< Xorshift seed */
+   unsigned int          mwc_seed;           /**< Multiply-with-carry seed */
+   unsigned int          cst_seed;           /**< constant seed */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
+};
+
 #ifdef __cplusplus
 }
 #endif

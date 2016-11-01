@@ -474,6 +474,7 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -484,6 +485,7 @@ SCIP_RETCODE SCIPparamSetInt(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -494,6 +496,7 @@ SCIP_RETCODE SCIPparamSetLongint(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -504,6 +507,7 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -514,6 +518,7 @@ SCIP_RETCODE SCIPparamSetChar(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char                  value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 

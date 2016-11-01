@@ -99,65 +99,6 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** copies the problem of scip to the problem of subscip - only necessary if uselprows is false */
-static
-SCIP_RETCODE createSubproblem(
-   SCIP*                 scip,               /**< SCIP data structure of the original problem                      */
-   SCIP*                 subscip,            /**< SCIP data structure of the subproblem                            */
-   SCIP_VAR**            subvars             /**< variables of the subproblem                                      */
-   )
-{
-   SCIP_ROW** rows;
-   int nrows;
-   int i;
-
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   for( i = 0; i < nrows; i++ )
-   {
-      SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_COL** cols;
-      SCIP_Real constant;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real* vals;
-      int nnonz;
-      int j;
-
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-
-      assert(lhs <= rhs);
-
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ )
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create new constraint and add it to subscip */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-      /* free memory */
-      SCIPfreeBufferArray(scip, &consvars);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** create the extra constraint of local branching and add it to subscip */
 static
 SCIP_RETCODE addLocalBranchingConstraint(
@@ -266,7 +207,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -297,7 +238,7 @@ SCIP_DECL_EVENTEXEC(eventExecLocalbranching)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -469,7 +410,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("running localbranching heuristic ...\n");
+   SCIPdebugMsg(scip, "running localbranching heuristic ...\n");
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -481,43 +422,19 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    success = FALSE;
+
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+
+   /* create event handler for LP events */
    eventhdlr = NULL;
-
-   if( heurdata->uselprows )
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLocalbranching, NULL) );
+   if( eventhdlr == NULL )
    {
-      char probname[SCIP_MAXSTRLEN];
-
-      /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-      /* get name of the original problem and add the string "_localbranchsub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
-
-      /* create the subproblem */
-      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-      /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
+      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
+      return SCIP_PLUGINNOTFOUND;
    }
-   else
-   {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "localbranchsub", TRUE, FALSE, TRUE, &success) );
-
-      if( heurdata->copycuts )
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
-      }
-
-      /* create event handler for LP events */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLocalbranching, NULL) );
-      if( eventhdlr == NULL )
-      {
-         SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
-   }
-   SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
    for (i = 0; i < nvars; ++i)
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -628,11 +545,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
-   /* copy the original problem and add the local branching constraint */
-   if( heurdata->uselprows )
-   {
-      SCIP_CALL( createSubproblem(scip, subscip, subvars) );
-   }
    SCIP_CALL( addLocalBranchingConstraint(scip, subscip, subvars, heurdata) );
 
    /* add an objective cutoff */
@@ -664,7 +576,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    }
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
+   SCIPdebugMsg(scip, "solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
       heurdata->curneighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
 
@@ -691,7 +603,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMessage("local branching used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
+   SCIPdebugMsg(scip, "local branching used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* check, whether a solution was found */
@@ -712,7 +624,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       }
       if( success )
       {
-         SCIPdebugMessage("-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -723,7 +635,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_BESTSOLLIMIT:
       heurdata->callstatus = WAITFORNEWSOL; /* new solution will immediately be installed at next call */
-      SCIPdebugMessage(" -> found new solution\n");
+      SCIPdebugMsg(scip, " -> found new solution\n");
       break;
 
    case SCIP_STATUS_NODELIMIT:
@@ -732,12 +644,12 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       heurdata->callstatus = EXECUTE;
       heurdata->curneighborhoodsize = (heurdata->emptyneighborhoodsize + heurdata->curneighborhoodsize)/2;
       heurdata->curminnodes *= 2;
-      SCIPdebugMessage(" -> node limit reached: reduced neighborhood to %d, increased minnodes to %d\n",
+      SCIPdebugMsg(scip, " -> node limit reached: reduced neighborhood to %d, increased minnodes to %d\n",
          heurdata->curneighborhoodsize, heurdata->curminnodes);
       if( heurdata->curneighborhoodsize <= heurdata->emptyneighborhoodsize )
       {
          heurdata->callstatus = WAITFORNEWSOL;
-         SCIPdebugMessage(" -> new neighborhood was already proven to be empty: wait for new solution\n");
+         SCIPdebugMsg(scip, " -> new neighborhood was already proven to be empty: wait for new solution\n");
       }
       break;
 
@@ -747,7 +659,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       heurdata->curneighborhoodsize += heurdata->curneighborhoodsize/2;
       heurdata->curneighborhoodsize = MAX(heurdata->curneighborhoodsize, heurdata->emptyneighborhoodsize + 2);
       heurdata->callstatus = EXECUTE;
-      SCIPdebugMessage(" -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
+      SCIPdebugMsg(scip, " -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
       break;
 
    case SCIP_STATUS_UNKNOWN:
@@ -760,7 +672,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_UNBOUNDED:
    default:
       heurdata->callstatus = WAITFORNEWSOL;
-      SCIPdebugMessage(" -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
+      SCIPdebugMsg(scip, " -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
       break;
    }
 

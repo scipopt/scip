@@ -38,7 +38,6 @@
 #include "scip/struct_sepa.h"
 
 
-
 /** compares two separators w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPsepaComp)
 {  /*lint --e{715}*/
@@ -78,7 +77,7 @@ SCIP_RETCODE SCIPsepaCopyInclude(
 
    if( sepa->sepacopy != NULL )
    {
-      SCIPdebugMessage("including separator %s in subscip %p\n", SCIPsepaGetName(sepa), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including separator %s in subscip %p\n", SCIPsepaGetName(sepa), (void*)set->scip);
       SCIP_CALL( sepa->sepacopy(set->scip, sepa) );
    }
    return SCIP_OKAY;
@@ -160,7 +159,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*sepa)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*sepa)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxbounddist", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
@@ -365,7 +364,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          int oldnactiveconss;
          int ncutsfound;
 
-         SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
+         SCIPsetDebugMsg(set, "executing separator <%s> on LP solution\n", sepa->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -424,7 +423,7 @@ SCIP_RETCODE SCIPsepaExecLP(
       }
       else
       {
-         SCIPdebugMessage("separator <%s> was delayed\n", sepa->name);
+         SCIPsetDebugMsg(set, "separator <%s> was delayed\n", sepa->name);
          *result = SCIP_DELAYED;
       }
 
@@ -468,7 +467,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          int oldnactiveconss;
          int ncutsfound;
 
-         SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, (void*)sol);
+         SCIPsetDebugMsg(set, "executing separator <%s> on solution %p\n", sepa->name, (void*)sol);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -527,7 +526,7 @@ SCIP_RETCODE SCIPsepaExecSol(
       }
       else
       {
-         SCIPdebugMessage("separator <%s> was delayed\n", sepa->name);
+         SCIPsetDebugMsg(set, "separator <%s> was delayed\n", sepa->name);
          *result = SCIP_DELAYED;
       }
 

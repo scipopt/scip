@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPdialogCopyInclude(
 
    if( dialog->dialogcopy != NULL )
    {
-      SCIPdebugMessage("including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
       SCIP_CALL( dialog->dialogcopy(set->scip, dialog) );
    }
    return SCIP_OKAY;

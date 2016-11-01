@@ -298,7 +298,7 @@ SCIP_RETCODE initializeCandsLists(
    int nvbs;
    int v;
 
-   SCIPdebugMessage("initialize variable bound heuristic (%s)\n", SCIPgetProbName(scip));
+   SCIPdebugMsg(scip, "initialize variable bound heuristic (%s)\n", SCIPgetProbName(scip));
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -367,7 +367,7 @@ SCIP_RETCODE applyVboundsFixings(
       var = forward ? vars[v] : vars[nvbvars - 1 - v];
       bound = forward ? heurdata->vbbounds[v] : heurdata->vbbounds[nvbvars - 1 - v];
 
-      /*SCIPdebugMessage("topoorder[%d]: %s(%s) (%s)\n", v,
+      /*SCIPdebugMsg(scip, "topoorder[%d]: %s(%s) (%s)\n", v,
          bound == SCIP_BOUNDTYPE_UPPER ? "ub" : "lb", SCIPvarGetName(var),
          SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS ? "c" : "d");*/
 
@@ -383,7 +383,7 @@ SCIP_RETCODE applyVboundsFixings(
          continue;
 
       /* only open a new probing node if we will not exceed the maximal tree depth */
-      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
       }
@@ -394,7 +394,7 @@ SCIP_RETCODE applyVboundsFixings(
       {
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
-         SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
+         SCIPdebugMsg(scip, "fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPgetNPseudoBranchCands(scip));
          *fixedtolb = TRUE;
       }
@@ -404,7 +404,7 @@ SCIP_RETCODE applyVboundsFixings(
             || (!obj && (tighten == (bound == SCIP_BOUNDTYPE_LOWER))));
          /* fix variable to upper bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
-         SCIPdebugMessage("fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
+         SCIPdebugMsg(scip, "fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPgetNPseudoBranchCands(scip));
          *fixedtolb = FALSE;
       }
@@ -413,7 +413,7 @@ SCIP_RETCODE applyVboundsFixings(
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
    }
 
-   SCIPdebugMessage("probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
+   SCIPdebugMsg(scip, "probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
 
    return SCIP_OKAY;
 }
@@ -454,7 +454,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -526,7 +526,7 @@ SCIP_RETCODE applyVbounds(
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -536,7 +536,7 @@ SCIP_RETCODE applyVbounds(
    SCIPstatistic( SCIP_CALL( SCIPcreateClock(scip, &clock) ) );
    SCIPstatistic( SCIP_CALL( SCIPstartClock(scip, clock) ) );
 
-   SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable bounds\n",
+   SCIPdebugMsg(scip, "apply variable bounds heuristic at node %lld on %d variable bounds\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars);
 
    /* check whether the LP should be solved at the current node in the tree to determine whether the heuristic
@@ -582,18 +582,18 @@ SCIP_RETCODE applyVbounds(
       /* propagate fixings */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &infeasible, NULL) );
 
-      SCIPdebugMessage("backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
+      SCIPdebugMsg(scip, "backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
    }
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
 
    /* check fixing rate */
    if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
-      SCIPdebugMessage("--> too few fixings\n");
+      SCIPdebugMsg(scip, "--> too few fixings\n");
 
       goto TERMINATE;
    }
@@ -605,7 +605,7 @@ SCIP_RETCODE applyVbounds(
    /* solve lp only if the problem is still feasible */
    if( !infeasible && solvelp )
    {
-      SCIPdebugMessage("starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
@@ -624,12 +624,12 @@ SCIP_RETCODE applyVbounds(
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
-      SCIPdebugMessage("ending solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "ending solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, lpstatus);
    }
 
    /* check if this is a feasible solution */
@@ -645,7 +645,7 @@ SCIP_RETCODE applyVbounds(
 
       if( success )
       {
-         SCIPdebugMessage("vbound heuristic found roundable primal solution: obj=%g\n",
+         SCIPdebugMsg(scip, "vbound heuristic found roundable primal solution: obj=%g\n",
             SCIPgetSolOrigObj(scip, newsol));
 
          /* check solution for feasibility, and add it to solution store if possible.
@@ -653,16 +653,16 @@ SCIP_RETCODE applyVbounds(
           * are guaranteed by the heuristic at this stage.
           */
 #ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
-         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
 
          foundsol = TRUE;
 
          if( stored )
          {
-            SCIPdebugMessage("found feasible solution:\n");
+            SCIPdebugMsg(scip, "found feasible solution:\n");
             *result = SCIP_FOUNDSOL;
          }
       }
@@ -691,7 +691,7 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
@@ -836,7 +836,7 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPpresolve(subscip) );
 #endif
 
-      SCIPdebugMessage("vbounds heuristic presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+      SCIPdebugMsg(scip, "vbounds heuristic presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
@@ -849,7 +849,7 @@ SCIP_RETCODE applyVbounds(
 
          SCIPstatistic( nprevars = SCIPgetNVars(subscip) );
 
-         SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
+         SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
 #ifdef NDEBUG
          {

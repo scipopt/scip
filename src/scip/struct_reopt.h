@@ -26,6 +26,7 @@
 
 #include "scip/def.h"
 #include "scip/type_reopt.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,6 +119,7 @@ struct SCIP_Reopt
    LOGICORDATA*          dualcons;                /**< constraint describing bound changes based on dual information */
    SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */
    SCIP_SOLTREE*         soltree;                 /**< tree to handle all saved solutions */
+   SCIP_RANDNUMGEN*      randnumgen;              /**< random number generator */
    SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */
    SCIP_Real             simtolastobj;            /**< similarity to the last objective function */
    SCIP_Real             simtofirstobj;           /**< similarity to the first objective function */
