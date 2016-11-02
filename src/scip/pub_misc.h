@@ -457,19 +457,19 @@ void** SCIPpqueueElems(
  *@{
  */
 
-/* fast 2-universal hash functions for four and five elements */
+/* fast 2-universal hash functions for two and four elements */
+#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ull) * ((uint64_t)(b) + 0xe5fcc163aef32782ull) )>>32))
 
+#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ull) * ((uint64_t)(b) + 0xe5fcc163aef32782ull) + \
+                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ull) * ((uint64_t)(d) + 0x926f2d4dc4a67218ull))>>32 ))
 
-#define SCIPcombineTwoInt(a, b)             (((unsigned long long int) (a) << 32) | (unsigned long long int) (b) )
+/* helpers to use above hashfuncions */
+#define SCIPcombineTwoInt(a, b)             (((uint64_t) (a) << 32) | (uint64_t) (b) )
 
-#define SCIPcombineThreeInt(a, b, c)        (((unsigned long long int) (a) << 43) + ((unsigned long long int) (b) << 21) + ((unsigned long long int) (c)) )
+#define SCIPcombineThreeInt(a, b, c)        (((uint64_t) (a) << 43) + ((uint64_t) (b) << 21) + ((uint64_t) (c)) )
 
-#define SCIPcombineFourInt(a, b, c, d)      (((unsigned long long int) (a) << 48) + ((unsigned long long int) (b) << 32) + ((unsigned long long int) (c) << 16) + ((unsigned long long int) (d)) )
+#define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
-#define SCIPhashTwo(a, b)  ((unsigned int)((((unsigned long long int)(a) + 0xd37e9a1ce2148403ull) * ((unsigned long long int)(b) + 0xe5fcc163aef32782ull) )>>32))
-
-#define SCIPhashFour(a, b, c, d) ((unsigned int) ( (((unsigned long long int)(a) + 0xbd5c89185f082658ull) * ((unsigned long long int)(b) + 0xe5fcc163aef32782ull) + \
-                                                    ((unsigned long long int)(c) + 0xd37e9a1ce2148403ull) * ((unsigned long long int)(d) + 0x926f2d4dc4a67218ull))>>32 ))
 
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */

@@ -78,10 +78,10 @@ struct SCIP_HashTable
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
    void*                 userptr;            /**< user pointer */
    void**                slots;              /**< slots of the hash table */
-   unsigned int*         hashes;             /**< hash values of elements stored in slots */
-   unsigned int          shift;              /**< power such that 2^(32-shift) == nslots */
-   unsigned int          mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
-   SCIP_Longint          nelements;          /**< number of elements in the hashtable */
+   uint32_t*             hashes;             /**< hash values of elements stored in slots */
+   uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
+   uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
 };
 
 /** element list to store single elements of a hash table */
@@ -121,10 +121,10 @@ struct SCIP_HashMap
 {
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
    SCIP_HASHMAPENTRY*    slots;              /**< buffer for hashmap entries */
-   unsigned int*         hashes;             /**< hashes of elements */
-   unsigned int          shift;              /**< power such that 2^(32-shift) == nslots */
-   unsigned int          mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
-   SCIP_Longint          nelements;          /**< number of elements in the hashtable */
+   uint32_t*             hashes;             /**< hashes of elements */
+   uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
+   uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
 };
 
 /** dynamic array for storing real values */

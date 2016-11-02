@@ -1343,9 +1343,9 @@ static const int primetablesize = sizeof(primetable)/sizeof(int);
 
 /**< simple and fast 2-universal hash function using multiply and shift */
 static
-unsigned int hashvalue(unsigned long long input)
+uint32_t hashvalue(uint64_t input)
 {
-   return ( (unsigned int) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2042,7 +2042,7 @@ void SCIPhashtableFree(
    SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
    )
 {
-   unsigned int nslots;
+   uint32_t nslots;
    SCIP_HASHTABLE* table;
 
    assert(hashtable != NULL);
@@ -2051,9 +2051,9 @@ void SCIPhashtableFree(
    nslots = (*hashtable)->mask + 1;
 #ifdef SCIP_DEBUG
    {
-      int maxprobelen = 0;
-      int probelensum = 0;
-      unsigned int i;
+      uint32_t maxprobelen = 0;
+      uint64_t probelensum = 0;
+      uint32_t i;
 
       assert(table != NULL);
 
@@ -2061,17 +2061,18 @@ void SCIPhashtableFree(
       {
          if( table->hashes[i] != 0 )
          {
-            int probelen = ((i + table->mask + 1 - (table->hashes[i]>>(table->shift))) & table->mask) + 1;
+            uint32_t probelen = ((i + table->mask + 1 - (table->hashes[i]>>(table->shift))) & table->mask) + 1;
             probelensum += probelen;
             maxprobelen = MAX(probelen, maxprobelen);
          }
       }
 
-      SCIPdebugMessage("%" SCIP_LONGINT_FORMAT " hash table entries, used %lld/%u slots (%.1f%%)",
-                           table->nelements, table->nelements, nslots, 100.0*(SCIP_Real)table->nelements/(SCIP_Real)(nslots));
+      SCIPdebugMessage("%u hash table entries, used %u/%u slots (%.1f%%)",
+                       (unsigned int)table->nelements, (unsigned int)table->nelements, (unsigned int)nslots,
+                       100.0*(SCIP_Real)table->nelements/(SCIP_Real)(nslots));
       if( table->nelements > 0 )
-         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %d",
-                              (SCIP_Real)(probelensum)/(SCIP_Real)table->nelements, maxprobelen);
+         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+                              (SCIP_Real)(probelensum)/(SCIP_Real)table->nelements, (unsigned int)maxprobelen);
       SCIPdebugMessage("\n");
    }
 #endif
@@ -2107,12 +2108,12 @@ SCIP_RETCODE hashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element,            /**< element to insert into the table */
    void*                 key,                /**< key of element */
-   unsigned int          hashval,            /**< hash value of element */
+   uint32_t              hashval,            /**< hash value of element */
    SCIP_Bool             override            /**< should element be overridden or error be returned if already existing */
    )
 {
-   int elemdistance;
-   unsigned int pos;
+   uint32_t elemdistance;
+   uint32_t pos;
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2127,7 +2128,7 @@ SCIP_RETCODE hashtableInsert(
    elemdistance = 0;
    while( TRUE )
    {
-      int distance;
+      uint32_t distance;
       /* if position is empty or key equal insert element */
       if( hashtable->hashes[pos] == 0 )
       {
@@ -2156,10 +2157,13 @@ SCIP_RETCODE hashtableInsert(
       distance = ELEM_DISTANCE(pos);
       if( distance < elemdistance )
       {
+         uint32_t tmp;
          /* if this is the case we insert the new element here and find a new position for the old one */
          elemdistance = distance;
          SCIPswapPointers(&hashtable->slots[pos], &element);
-         SCIPswapInts((int*) &hashval, (int*) &hashtable->hashes[pos]);
+         tmp = hashval;
+         hashval = hashtable->hashes[pos];
+         hashtable->hashes[pos] = tmp;
       }
 
       /* continue until we have found an empty position */
@@ -2176,11 +2180,11 @@ SCIP_RETCODE hashtableCheckLoad(
    /* use integer arithmetic to approximately check if load factor is above 90% */
    if( ((hashtable->nelements<<10)>>(32-hashtable->shift) > 921) )
    {
-      unsigned int i;
+      uint32_t i;
       void** slots;
-      unsigned int* hashes;
-      unsigned int nslots;
-      unsigned int newnslots;
+      uint32_t* hashes;
+      uint32_t nslots;
+      uint32_t newnslots;
       /* calculate new size (always power of two) */
       nslots = hashtable->mask + 1;
       newnslots = 2*nslots;
@@ -2223,7 +2227,7 @@ SCIP_RETCODE SCIPhashtableInsert(
 {
    void* key;
    unsigned int keyval;
-   unsigned int hashval;
+   uint32_t hashval;
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2256,7 +2260,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 {
    void* key;
    unsigned int keyval;
-   unsigned int hashval;
+   uint32_t hashval;
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2284,9 +2288,9 @@ void* SCIPhashtableRetrieve(
    )
 {
    unsigned int keyval;
-   unsigned int hashval;
-   unsigned int pos;
-   int elemdistance;
+   uint32_t hashval;
+   uint32_t pos;
+   uint32_t elemdistance;
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2306,7 +2310,7 @@ void* SCIPhashtableRetrieve(
 
    while( TRUE )
    {
-      int distance;
+      uint32_t distance;
 
       /* slots is empty so element cannot be contained */
       if( hashtable->hashes[pos] == 0 )
@@ -2352,10 +2356,10 @@ SCIP_RETCODE SCIPhashtableRemove(
 {
    void* key;
    unsigned int keyval;
-   unsigned int hashval;
-   int elemdistance;
-   int distance;
-   unsigned int pos;
+   uint32_t hashval;
+   uint32_t elemdistance;
+   uint32_t distance;
+   uint32_t pos;
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2399,7 +2403,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    --hashtable->nelements;
    while( TRUE )
    {
-      unsigned int nextpos = (pos + 1) & hashtable->mask;
+      uint32_t nextpos = (pos + 1) & hashtable->mask;
       /* nothing to do since there is no chain that needs to be moved */
       if( hashtable->hashes[nextpos] == 0 )
          return SCIP_OKAY;
@@ -2461,10 +2465,10 @@ void SCIPhashtablePrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   int maxprobelen = 0;
-   int probelensum = 0;
-   int nslots;
-   int i;
+   uint32_t maxprobelen = 0;
+   uint64_t probelensum = 0;
+   uint32_t nslots;
+   uint32_t i;
 
    assert(hashtable != NULL);
 
@@ -2474,17 +2478,18 @@ void SCIPhashtablePrintStatistics(
    {
       if( hashtable->hashes[i] != 0 )
       {
-         int probelen = ELEM_DISTANCE(i) + 1;
+         uint32_t probelen = ELEM_DISTANCE(i) + 1;
          probelensum += probelen;
          maxprobelen = MAX(probelen, maxprobelen);
       }
    }
 
-   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
-      hashtable->nelements, hashtable->nelements, nslots, 100.0*(SCIP_Real)hashtable->nelements/(SCIP_Real)(nslots));
+   SCIPmessagePrintInfo(messagehdlr, "%u hash entries, used %u/%u slots (%.1f%%)",
+      (unsigned int)hashtable->nelements, (unsigned int)hashtable->nelements, (unsigned int)nslots,
+                        100.0*(SCIP_Real)hashtable->nelements/(SCIP_Real)(nslots));
    if( hashtable->nelements > 0 )
-      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %d",
-         (SCIP_Real)(probelensum)/(SCIP_Real)hashtable->nelements, maxprobelen);
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %u",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashtable->nelements, (unsigned int)maxprobelen);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
@@ -2556,12 +2561,12 @@ SCIP_RETCODE hashmapInsert(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< element to insert into the table */
    SCIP_HASHMAPIMAGE     image,              /**< key of element */
-   unsigned int          hashval,            /**< hash value of element */
+   uint32_t              hashval,            /**< hash value of element */
    SCIP_Bool             override            /**< should element be overridden or error be returned if already existing */
    )
 {
-   int elemdistance;
-   unsigned int pos;
+   uint32_t elemdistance;
+   uint32_t pos;
 
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
@@ -2573,7 +2578,7 @@ SCIP_RETCODE hashmapInsert(
    elemdistance = 0;
    while( TRUE )
    {
-      int distance;
+      uint32_t distance;
       /* if position is empty or key equal insert element */
       if( hashmap->hashes[pos] == 0 )
       {
@@ -2604,9 +2609,12 @@ SCIP_RETCODE hashmapInsert(
       if( distance < elemdistance )
       {
          SCIP_HASHMAPIMAGE tmp;
+         uint32_t tmphash;
          /* if this is the case we insert the new element here and find a new position for the old one */
          elemdistance = distance;
-         SCIPswapInts((int*) &hashval, (int*) &hashmap->hashes[pos]);
+         tmphash = hashval;
+         hashval = hashmap->hashes[pos];
+         hashmap->hashes[pos] = tmphash;
          SCIPswapPointers(&hashmap->slots[pos].origin, &origin);
          tmp = image;
          image = hashmap->slots[pos].image;
@@ -2623,11 +2631,11 @@ static
 SCIP_Bool hashmapLookup(
    SCIP_HASHMAP*         hashmap,            /**< hash table */
    void*                 origin,             /**< origin to lookup */
-   unsigned int*         pos                 /**< pointer to store position of element, if exists */
+   uint32_t*             pos                 /**< pointer to store position of element, if exists */
    )
 {
-   unsigned int hashval;
-   int elemdistance;
+   uint32_t hashval;
+   uint32_t elemdistance;
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
@@ -2641,7 +2649,7 @@ SCIP_Bool hashmapLookup(
 
    while( TRUE )
    {
-      int distance;
+      uint32_t distance;
 
       /* slots is empty so element cannot be contained */
       if( hashmap->hashes[*pos] == 0 )
@@ -2669,11 +2677,11 @@ SCIP_RETCODE hashmapCheckLoad(
    /* use integer arithmetic to approximately check if load factor is above 90% */
    if( ((hashmap->nelements<<10)>>(32-hashmap->shift) > 921) )
    {
-      unsigned int i;
+      uint32_t i;
       SCIP_HASHMAPENTRY* slots;
-      unsigned int* hashes;
-      unsigned int nslots;
-      unsigned int newnslots;
+      uint32_t* hashes;
+      uint32_t nslots;
+      uint32_t newnslots;
       /* calculate new size (always power of two) */
       nslots = hashmap->mask + 1;
       --hashmap->shift;
@@ -2713,7 +2721,7 @@ SCIP_RETCODE SCIPhashmapCreate(
    int                   mapsize             /**< size of the hash map */
    )
 {
-   unsigned int nslots;
+   uint32_t nslots;
 
    assert(hashmap != NULL);
 
@@ -2736,16 +2744,16 @@ void SCIPhashmapFree(
    SCIP_HASHMAP**        hashmap             /**< pointer to the hash map */
    )
 {
-   unsigned int nslots;
+   uint32_t nslots;
    assert(hashmap != NULL);
    assert(*hashmap != NULL);
 
    nslots = (*hashmap)->mask + 1;
 #ifdef SCIP_DEBUG
    {
-      int maxprobelen = 0;
-      int probelensum = 0;
-      unsigned int i;
+      uint32_t maxprobelen = 0;
+      uint64_t probelensum = 0;
+      uint32_t i;
 
       assert(hashmap != NULL);
 
@@ -2753,17 +2761,18 @@ void SCIPhashmapFree(
       {
          if( (*hashmap)->hashes[i] != 0 )
          {
-            int probelen = ((i + (*hashmap)->mask + 1 - ((*hashmap)->hashes[i]>>((*hashmap)->shift))) & (*hashmap)->mask) + 1;
+            uint32_t probelen = ((i + (*hashmap)->mask + 1 - ((*hashmap)->hashes[i]>>((*hashmap)->shift))) & (*hashmap)->mask) + 1;
             probelensum += probelen;
             maxprobelen = MAX(probelen, maxprobelen);
          }
       }
 
-      SCIPdebugMessage("%" SCIP_LONGINT_FORMAT " hash map entries, used %lld/%u slots (%.1f%%)",
-                           (*hashmap)->nelements, (*hashmap)->nelements, nslots, 100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
+      SCIPdebugMessage("%u hash map entries, used %u/%u slots (%.1f%%)",
+                       (unsigned int)(*hashmap)->nelements, (unsigned int)(*hashmap)->nelements, (unsigned int)nslots,
+                       100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
       if( (*hashmap)->nelements > 0 )
-         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %d",
-                              (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, maxprobelen);
+         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+                          (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, (unsigned int)maxprobelen);
       SCIPdebugMessage("\n");
    }
 #endif
@@ -2782,7 +2791,7 @@ SCIP_RETCODE SCIPhashmapInsert(
    void*                 image               /**< new image for origin */
    )
 {
-   unsigned int hashval;
+   uint32_t hashval;
    SCIP_HASHMAPIMAGE img;
 
    assert(hashmap != NULL);
@@ -2809,7 +2818,7 @@ SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_Real             image               /**< new image for origin */
    )
 {
-   unsigned int hashval;
+   uint32_t hashval;
    SCIP_HASHMAPIMAGE img;
 
    assert(hashmap != NULL);
@@ -2835,7 +2844,7 @@ void* SCIPhashmapGetImage(
    void*                 origin              /**< origin to retrieve image for */
    )
 {
-   unsigned int pos;
+   uint32_t pos;
 
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
@@ -2854,7 +2863,7 @@ SCIP_Real SCIPhashmapGetImageReal(
    void*                 origin              /**< origin to retrieve image for */
    )
 {
-   unsigned int pos;
+   uint32_t pos;
 
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
@@ -2876,7 +2885,7 @@ SCIP_RETCODE SCIPhashmapSetImage(
    void*                 image               /**< new image for origin */
    )
 {
-   unsigned int hashval;
+   uint32_t hashval;
    SCIP_HASHMAPIMAGE img;
 
    assert(hashmap != NULL);
@@ -2904,7 +2913,7 @@ SCIP_RETCODE SCIPhashmapSetImageReal(
    SCIP_Real             image               /**< new image for origin */
    )
 {
-   unsigned int hashval;
+   uint32_t hashval;
    SCIP_HASHMAPIMAGE img;
 
    assert(hashmap != NULL);
@@ -2929,7 +2938,7 @@ SCIP_Bool SCIPhashmapExists(
    void*                 origin              /**< origin to search for */
    )
 {
-   unsigned int pos;
+   uint32_t pos;
 
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
@@ -2945,7 +2954,7 @@ SCIP_RETCODE SCIPhashmapRemove(
    void*                 origin              /**< origin to remove from the list */
    )
 {
-   unsigned int pos;
+   uint32_t pos;
 
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
@@ -2961,7 +2970,7 @@ SCIP_RETCODE SCIPhashmapRemove(
       /* move other elements if necessary */
       while( TRUE )
       {
-         unsigned int nextpos = (pos + 1) & hashmap->mask;
+         uint32_t nextpos = (pos + 1) & hashmap->mask;
          /* nothing to do since there is no chain that needs to be moved */
          if( hashmap->hashes[nextpos] == 0 )
             return SCIP_OKAY;
@@ -2988,10 +2997,10 @@ void SCIPhashmapPrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   int maxprobelen = 0;
-   int probelensum = 0;
-   int nslots;
-   int i;
+   uint32_t maxprobelen = 0;
+   uint64_t probelensum = 0;
+   uint32_t nslots;
+   uint32_t i;
 
    assert(hashmap != NULL);
 
@@ -3001,17 +3010,17 @@ void SCIPhashmapPrintStatistics(
    {
       if( hashmap->hashes[i] != 0 )
       {
-         int probelen = ELEM_DISTANCE(i) + 1;
+         uint32_t probelen = ELEM_DISTANCE(i) + 1;
          probelensum += probelen;
          maxprobelen = MAX(probelen, maxprobelen);
       }
    }
 
-   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
-      hashmap->nelements, hashmap->nelements, nslots, 100.0*(SCIP_Real)hashmap->nelements/(SCIP_Real)(nslots));
+   SCIPmessagePrintInfo(messagehdlr, "%u hash entries, used %u/%u slots (%.1f%%)",
+      (unsigned int)hashmap->nelements, (unsigned int)hashmap->nelements, (unsigned int)nslots, 100.0*(SCIP_Real)hashmap->nelements/(SCIP_Real)(nslots));
    if( hashmap->nelements > 0 )
-      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %d",
-         (SCIP_Real)(probelensum)/(SCIP_Real)hashmap->nelements, maxprobelen);
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %u",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashmap->nelements, (unsigned int)maxprobelen);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
