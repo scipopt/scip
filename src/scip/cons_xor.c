@@ -783,7 +783,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
     * SCIPvarCompareActiveAndNegated (see var.c)
     */
 
-   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** deletes all fixed variables and all pairs of equal variables */

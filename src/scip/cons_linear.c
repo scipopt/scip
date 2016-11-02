@@ -12466,11 +12466,7 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real maxabsrealval;
-   int minidx;
-   int mididx;
-   int maxidx;
-   unsigned int addval;
+
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12484,27 +12480,12 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    assert(consdata->nvars > 0);
 
    assert(consdata->sorted);
-
-   minidx = SCIPvarGetIndex(consdata->vars[0]);
-   mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
-   maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
-   assert(minidx >= 0 && minidx <= maxidx);
-
-   addval = (unsigned int) REALABS(consdata->vals[0]);
-   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
-   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
-
-   maxabsrealval = consdataGetMaxAbsval(consdata);
-   /* hash value depends on vectors of variable indices */
-   if( maxabsrealval < (SCIP_Real) INT_MAX )
-   {
-      if( maxabsrealval < 1.0 )
-         addval += (unsigned int) (MULTIPLIER * maxabsrealval);
-      else
-         addval += (unsigned int) maxabsrealval;
-   }
-
-   return SCIPhashFive(consdata->nvars, minidx, mididx, maxidx, addval);
+   /* using only the variable indices as hash, since the values are compared by epsilon */
+   return SCIPhashTwo(SCIPcombineThreeInt(consdata->nvars, SCIPvarGetIndex(consdata->vars[0]),
+                                          SCIPvarGetIndex(consdata->vars[consdata->nvars / 4])),
+                      SCIPcombineThreeInt(SCIPvarGetIndex(consdata->vars[2*consdata->nvars / 4]),
+                                          SCIPvarGetIndex(consdata->vars[3*consdata->nvars / 4]),
+                                          SCIPvarGetIndex(consdata->vars[consdata->nvars - 1])));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
