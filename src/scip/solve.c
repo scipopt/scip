@@ -2219,11 +2219,18 @@ SCIP_RETCODE priceAndCutLoop(
       /* solve the LP with pricing in new variables */
       while( mustprice && !(*lperror) )
       {
+         int oldnpricedcolvars;
+
+         oldnpricedcolvars = npricedcolvars;
+
          SCIP_CALL( SCIPpriceLoop(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
                pricestore, sepastore, branchcand, eventqueue, eventfilter, cliquetable, root, root, -1, &npricedcolvars,
                &mustsepa, lperror, pricingaborted) );
 
          mustprice = FALSE;
+         /* if variables were added during pricing the relaxation also needs to be resolved */
+         if( npricedcolvars != oldnpricedcolvars )
+            *solverelaxagain = TRUE;
 
          assert(lp->flushed);
          assert(lp->solved || *lperror);
