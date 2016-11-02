@@ -17,6 +17,7 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage);
 #include <criterion/criterion.h>
 #include <criterion/redirect.h>
 #include <criterion/parameterized.h>
+#include <criterion/theories.h>
 
 #undef SCIP_CALL
 #define SCIP_CALL(x)   do                                                                                     \
