@@ -2966,6 +2966,7 @@ SCIP_RETCODE solveNodeRelax(
    SCIP_Bool*            solvelpagain,       /**< pointer to store TRUE, if the node's LP has to be solved again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called
                                               *   again */
+   SCIP_Bool*            relaxcalled,        /**< pointer to store TRUE, if at least one relaxator was called */
    SCIP_SOL*             bestrelaxsol,       /**< pointer to store the best solution found by a relaxator which includes the LP */
    SCIP_Real*            bestrelaxval        /**< pointer to store the best lower bound found by a relaxator which includes the LP */
    )
@@ -2984,6 +2985,8 @@ SCIP_RETCODE solveNodeRelax(
    assert(bestrelaxval != NULL);
    assert(!(*cutoff));
 
+   *relaxcalled = FALSE;
+
    /* sort by priority */
    SCIPsetSortRelaxs(set);
 
@@ -2991,6 +2994,8 @@ SCIP_RETCODE solveNodeRelax(
    {
       if( beforelp != (SCIPrelaxGetPriority(set->relaxs[r]) >= 0) )
          continue;
+
+      *relaxcalled = TRUE;
 
       lowerbound = -SCIPsetInfinity(set);
 
@@ -3496,6 +3501,7 @@ SCIP_RETCODE propAndSolve(
    )
 {
    SCIP_Bool newinitconss;
+   SCIP_Bool relaxcalled;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -3600,6 +3606,7 @@ SCIP_RETCODE propAndSolve(
    }
 
    /* solve external relaxations with non-negative priority */
+   relaxcalled = FALSE;
    if( solverelax && !(*cutoff) )
    {
       /* initialize value for the best relaxation solution */
@@ -3609,7 +3616,7 @@ SCIP_RETCODE propAndSolve(
       SCIPbranchcandClearExternCands(branchcand);
 
       SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, TRUE,
-            cutoff, propagateagain, solvelpagain, solverelaxagain, bestrelaxsol, bestrelaxval) );
+            cutoff, propagateagain, solvelpagain, solverelaxagain, &relaxcalled, bestrelaxsol, bestrelaxval) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3708,11 +3715,14 @@ SCIP_RETCODE propAndSolve(
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || !SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
 
+   /* reset solverelaxagain if no relaxations were solved up to this point (the LP-changes are already included in relaxators called after the LP) */
+   *solverelaxagain = *solverelaxagain && relaxcalled;
+
    /* solve external relaxations with negative priority */
    if( solverelax && !(*cutoff) )
    {
       SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain,
-            solverelaxagain, bestrelaxsol, bestrelaxval) );
+            solverelaxagain, &relaxcalled, bestrelaxsol, bestrelaxval) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */
