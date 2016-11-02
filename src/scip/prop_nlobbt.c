@@ -1006,7 +1006,7 @@ SCIP_RETCODE SCIPcreateConvexNlpNlobbt(
          quadelems, exprvaridxs, exprtrees, names) );
 
    /* free memory */
-   for( i = nconss - 1; i >= 0; --i )
+   for( i = nconss - 1; i > 0; --i )
    {
       if( exprtrees[i] != NULL )
       {
@@ -1028,6 +1028,9 @@ SCIP_RETCODE SCIPcreateConvexNlpNlobbt(
          SCIPfreeBufferArray(scip, &lininds[i]);
       }
    }
+   /* free row for cutoff bound even if objective is 0 */
+   SCIPfreeBufferArray(scip, &linvals[i]);
+   SCIPfreeBufferArray(scip, &lininds[i]);
 
    SCIPfreeBufferArray(scip, &rhss);
    SCIPfreeBufferArray(scip, &lhss);
