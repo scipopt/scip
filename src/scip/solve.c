@@ -3955,6 +3955,26 @@ SCIP_RETCODE solveNode(
                &forcedenforcement, bestrelaxsol, &bestrelaxval) );
       }
 
+      /* reset relaxation solution to best solution found, this might be important for heuristics depending on the relaxation solution */
+      if( bestrelaxval != -SCIPsetInfinity(set) )
+      {
+         SCIP_Real val;
+         int i;
+
+         assert(bestrelaxsol != NULL);
+
+         for( i = 0; i < transprob->nvars; ++i )
+         {
+            assert(transprob->vars[i] != NULL);
+
+            val = SCIPsolGetVal(bestrelaxsol, set, stat, transprob->vars[i]);
+            SCIP_CALL( SCIPvarSetRelaxSol(transprob->vars[i], set, relaxation, val, TRUE) );
+         }
+
+         /* we have found at least one valid relaxation solution -> validate values stored in the variables */
+         SCIPrelaxationSetSolValid(relaxation, TRUE);
+      }
+
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
 
@@ -4337,23 +4357,6 @@ SCIP_RETCODE solveNode(
    if( !(*cutoff) && bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, transprob))) )
    {
-      SCIP_Real val;
-      int i;
-
-      assert(bestrelaxsol != NULL);
-
-      /* set relaxation solution to best solution found, this might be important for heuristics depending on the relaxation solution */
-      for( i = 0; i < transprob->nvars; ++i )
-      {
-         assert(transprob->vars[i] != NULL);
-
-         val = SCIPsolGetVal(bestrelaxsol, set, stat, transprob->vars[i]);
-         SCIP_CALL( SCIPvarSetRelaxSol(transprob->vars[i], set, relaxation, val, TRUE) );
-      }
-
-      /* we have found at least one valid relaxation solution -> validate values stored in the variables */
-      SCIPrelaxationSetSolValid(relaxation, TRUE);
-      
       /* copy best relaxation solution to output parameter */
       SCIP_CALL( SCIPsolCopy(relaxsol, blkmem, set, stat, primal, bestrelaxsol) );
    }
