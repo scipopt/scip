@@ -383,7 +383,7 @@ void project(SCIP_Bool* isrhsconvex)
    SCIP_CALL( SCIPsetSolVal(scip, toseparate_sol, y, 0.25) );
 
    /* compute violations */
-   SCIP_CALL( computeMaxViolation(scip, sepa, toseparate_sol, &maxvio) );
+   SCIP_CALL( computeMaxViolation(scip, sepadata, toseparate_sol, &maxvio) );
    cr_expect_float_eq(0.224076984, sepadata->constraintviolation[0], EPS, "got %f\n", sepadata->constraintviolation[0]);
    cr_expect_float_eq(0.3125, sepadata->constraintviolation[1], EPS, "got %f\n", sepadata->constraintviolation[1]);
    cr_expect_float_eq(1.937730557, sepadata->constraintviolation[2], EPS, "got %f\n", sepadata->constraintviolation[2]);
