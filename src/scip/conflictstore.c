@@ -663,6 +663,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    )
 {
    assert(conflictstore != NULL);
+   assert(conflictstore->ndualrays <= DEFAULT_CONFLICTSTORE_DUALSIZE);
 
    /* mark the constraint to be a conflict */
    SCIPconsMarkConflict(dualraycons);
@@ -678,10 +679,12 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
     * 1. check whether some constraints are marked as deleted and remove those
     * 2. if no constraint is marked as deleted: remove the oldest
     */
-   if( conflictstore->ndualrays >= DEFAULT_CONFLICTSTORE_DUALSIZE )
+   if( conflictstore->ndualrays == DEFAULT_CONFLICTSTORE_DUALSIZE )
    {
+      int ndeleted;
       int i;
 
+      ndeleted = 0;
       for( i = 0; i < conflictstore->ndualrays; )
       {
          if( SCIPconsIsDeleted(conflictstore->dualrayconss[i]) )
@@ -691,17 +694,23 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
              * don't increase i because delPosDualray will swap the last pointer to the i-th position
              */
             SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, i, TRUE) );
+
+            ++ndeleted;
          }
          else
             ++i;
       }
 
-      /* sort dual rays */
-      SCIPsortPtr((void**)conflictstore->dualrayconss, compareConss, conflictstore->ndualrays);
-      assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualrayconss[0]),
-            SCIPconsGetAge(conflictstore->dualrayconss[conflictstore->ndualrays-1])));
+      /* if we could not remove a dual ray that is already marked as deleted we need to remove the oldest active one */
+      if( ndeleted == 0 )
+      {
+         /* sort dual rays */
+         SCIPsortPtr((void**)conflictstore->dualrayconss, compareConss, conflictstore->ndualrays);
+         assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualrayconss[0]),
+               SCIPconsGetAge(conflictstore->dualrayconss[conflictstore->ndualrays-1])));
 
-      SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
+         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
+      }
    }
 
    /* add the new constraint based on a dual ray at the last position */
