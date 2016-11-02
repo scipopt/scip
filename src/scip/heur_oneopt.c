@@ -43,7 +43,7 @@
 #define DEFAULT_DURINGROOT    TRUE           /**< should the heuristic be called before and during the root node? */
 #define DEFAULT_BEFOREPRESOL  FALSE          /**< should the heuristic be called before presolving */
 #define DEFAULT_FORCELPCONSTRUCTION FALSE    /**< should the construction of the LP be forced even if LP solving is deactivated? */
-#define DEFAULT_USELOOP       FALSE          /**< should the heuristic continue to run as long as improvements are found? */
+#define DEFAULT_USELOOP       TRUE           /**< should the heuristic continue to run as long as improvements are found? */
 /*
  * Data structures
  */
