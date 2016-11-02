@@ -142,6 +142,7 @@
 #include "scip/presol_stuffing.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
+#include "scip/prop_nlobbt.h"
 #include "scip/prop_obbt.h"
 #include "scip/prop_probing.h"
 #include "scip/prop_pseudoobj.h"

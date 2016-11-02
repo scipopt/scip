@@ -5240,7 +5240,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          quadelem.idx2 = 1;
          quadelem.coef = 1.0;
 
-         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1, &quadelem, NULL, 0.0, 0.0) );
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1,
+               &quadelem, NULL, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
 
          /* add row to NLP and forget about it */
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );

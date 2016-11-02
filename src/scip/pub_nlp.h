@@ -172,6 +172,17 @@ SCIP_Real SCIPnlrowGetRhs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
+/** returns the curvature of a nonlinear row */
+SCIP_EXPRCURV SCIPnlrowGetCurvature(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
+/** sets the curvature of a nonlinear row */
+void SCIPnlrowSetCurvature(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
+   );
+
 /** returns the name of a nonlinear row */
 EXTERN
 const char* SCIPnlrowGetName(

@@ -30583,13 +30583,14 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Real             rhs                 /**< right hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, constant, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs) );
+         name, constant, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs, curvature) );
 
    return SCIP_OKAY;
 }
@@ -30615,7 +30616,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs) );
+         name, 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs, SCIP_EXPRCURV_UNKNOWN) );
 
    return SCIP_OKAY;
 }
@@ -30925,6 +30926,10 @@ SCIP_RETCODE SCIPaddQuadElementToNlRow(
 
    SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelem) );
 
+   /* invalidate curvature */
+   if( quadelem.coef != 0.0 )
+      SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
+
    return SCIP_OKAY;
 }
 
@@ -30958,6 +30963,9 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    {
       SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelems[v]) );
    }
+
+   /* invalidate curvature */
+   SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
 
    return SCIP_OKAY;
 }
@@ -31007,6 +31015,9 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
    SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowChgExprtree(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, exprtree) );
+
+   /* invalidate curvature */
+   SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
 
    return SCIP_OKAY;
 }
