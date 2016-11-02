@@ -389,10 +389,10 @@ SCIP_RETCODE addBinaryBoundEntry(
    container->othervars[emptyindex] = othervar;
    container->nentries = emptyindex + 1;
 
-   /*if( isBinaryConstraintViolatedBySolution(scip, eithervar, othervar, baselpsol) )
+   if( isBinaryConstraintViolatedBySolution(scip, eithervar, othervar, baselpsol) )
    {
       container->nviolatedentries++;
-   }*/
+   }
 
    return SCIP_OKAY;
 }
@@ -1833,17 +1833,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       int bestcand = 0;
       /* TODO: maybe add a struct for the resulting branching data below? */
       SCIP_Real bestdown;
-      SCIP_Bool bestdownvalid;
+      SCIP_Bool bestdownvalid = FALSE;
       SCIP_Real bestup;
-      SCIP_Bool bestupvalid;
+      SCIP_Bool bestupvalid = FALSE;
       SCIP_Real provedbound;
       STATUS* status;
-
-      /*bestdown = -SCIPinfinity(scip);
-      bestdownvalid = FALSE;
-      bestup = -SCIPinfinity(scip);
-      bestupvalid = FALSE;
-      provedbound = -SCIPinfinity(scip);*/
 
       /* get all fractional candidates we can branch on */
       SCIP_CALL( getLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
