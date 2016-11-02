@@ -680,6 +680,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPdebugMsg(scip, "Starting 1-opt heuristic iteration #%d\n", niterations);
 
       /* enumerate all integer variables and find out which of them are shiftable */
+      /* @todo if useloop=TRUE store for each variable which constraint blocked it and only iterate over those variables
+       *       in the following rounds for which the constraint slack was increased by previous shifts
+       */
       for( i = 0; i < nintvars; i++ )
       {
          if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
