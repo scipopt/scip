@@ -174,6 +174,7 @@
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
 #include "scip/sepa_cmir.h"
+#include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
 #include "scip/sepa_flowcover.h"
 #include "scip/sepa_gomory.h"
