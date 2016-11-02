@@ -24,14 +24,13 @@
 # paths variables
 #-----------------------------------------------------------------------------
 
-# define to be able to locate library files
-ifeq ($(OSTYPE),mingw)
 SCIPDIR		=	./
-else
-SCIPDIR		=	$(realpath .)
-endif
 
 INSTALLDIR	=
+
+#-----------------------------------------------------------------------------
+# include make.project file
+#-----------------------------------------------------------------------------
 
 # do not use other open source projects; needs to be set before including make.project
 ifeq ($(OPENSOURCE),false)
@@ -43,12 +42,10 @@ ifeq ($(OPENSOURCE),false)
 	override IPOPT		=	false
 endif
 
-# this is a SCIP internal makefile
+# mark that this is a SCIP internal makefile
 SCIPINTERNAL	=	true
 
-#-----------------------------------------------------------------------------
 # load default settings and detect host architecture
-#-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.project
 
 #-----------------------------------------------------------------------------
@@ -1255,7 +1252,7 @@ ifeq ($(MAKESOFTLINKS), true)
 				echo -n "> " ; \
 				cd $$DIRNAME ; \
 				eval $(READ) TARGET ; \
-				cd $(SCIPDIR) ; \
+				cd $(SCIPREALPATH) ; \
 				if test "$$TARGET" != "" ; \
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
