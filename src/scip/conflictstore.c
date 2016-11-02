@@ -271,6 +271,7 @@ SCIP_RETCODE delPosConflict(
    int lastpos;
 
    assert(conflictstore != NULL);
+   assert(pos >= 0 && pos < conflictstore->nconflicts);
 
    lastpos = conflictstore->nconflicts-1;
    conflict = conflictstore->conflicts[pos];
@@ -287,9 +288,9 @@ SCIP_RETCODE delPosConflict(
    if( delete && !SCIPconsIsDeleted(conflict) )
    {
       assert(transprob != NULL);
-      SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
+      SCIP_CALL( SCIPconsDelete(conflictstore->conflicts[pos], blkmem, set, stat, transprob) );
    }
-   SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+   SCIP_CALL( SCIPconsRelease(&conflictstore->conflicts[pos], blkmem, set) );
 
    /* replace with conflict at the last position */
    if( pos < lastpos )
@@ -844,7 +845,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    else
       improvement = (1 + 0.05);
 
-   /* remove all conflicts depending on a primalbound*improvement > cutoffbound */
+   /* remove all conflicts depending on a primalbound*improvement > cutoffbound
+    *
+    * note: we cannot remove conlicts that are marked as deleted because at this point in time we would distroy
+    *       the internal data structure
+    */
    for( i = 0; i < conflictstore->nconflicts; )
    {
       SCIP_CONS* conflict;
@@ -863,16 +868,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, i, TRUE) );
          ++ndelconfs;
       }
-      /* we remove all as deleted marked constraints too */
-      else if( SCIPconsIsDeleted(conflict) )
-      {
-         /* remove conflict at current position
-          *
-          * don't increase i because delPosConflict will swap the last pointer to the i-th position
-          */
-         SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, i, TRUE) );
-         ++ndelconfs_del;
-      }
       else
          /* increase i */
          ++i;
@@ -880,7 +875,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    assert(conflictstore->ncbconflicts >= 0);
    assert(conflictstore->nconflicts >= 0);
 
-   SCIPdebugMessage("-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs+ndelconfs_del,
+   SCIPsetDebugMsg(set, "-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs+ndelconfs_del,
          conflictstore->nconflicts+ndelconfs+ndelconfs_del, ndelconfs);
 
    return SCIP_OKAY;
@@ -992,13 +987,14 @@ SCIP_RETCODE SCIPconflictstoreTransform(
       SCIP_CONS* transcons;
 
       assert(conflictstore->origconfs[i] != NULL);
+      assert(SCIPconsIsOriginal(conflictstore->origconfs[i]));
 
       transcons = SCIPconsGetTransformed(conflictstore->origconfs[i]);
 
       if( transcons != NULL )
       {
          SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, eventfilter, transcons,
-               SCIP_CONFTYPE_UNKNOWN, FALSE, SCIPsetInfinity(set)) );
+               SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPsetInfinity(set)) );
 
          ++ntransconss;
       }
