@@ -861,11 +861,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
     */
    for( i = 0; i < conflictstore->nconflicts; )
    {
-      SCIP_CONS* conflict;
-
-      /* get the conflict */
-      conflict = conflictstore->conflicts[i];
-      assert(conflict != NULL);
+      assert(conflictstore->conflicts[i] != NULL);
 
       /* check if the conflict depends on the cutoff bound */
       if( SCIPsetIsGT(set, improvement * conflictstore->primalbounds[i], cutoffbound) )
