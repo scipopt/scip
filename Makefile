@@ -1056,6 +1056,9 @@ ifneq ($(RANLIB),)
 endif
 
 .PHONY: makeobjsciplibfile
+makeobjsciplibfile: preprocess
+		@$(MAKE) $(OBJSCIPLIBFILE)
+
 $(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
@@ -1065,6 +1068,9 @@ ifneq ($(RANLIB),)
 endif
 
 .PHONY: makelpilibfile
+makelpilibfile: preprocess
+		@$(MAKE) $(LPILIBFILE)
+
 $(LPILIBFILE):	$(LPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
@@ -1074,6 +1080,9 @@ ifneq ($(RANLIB),)
 endif
 
 .PHONY: makenlpilibfile
+makenlpilibfile: preprocess
+		@$(MAKE) $(NLPILIBFILE)
+
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
