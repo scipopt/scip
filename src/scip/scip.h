@@ -6454,6 +6454,11 @@ SCIP_RETCODE SCIPfreeSolve(
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
    );
 
+EXTERN
+SCIP_RETCODE SCIPfreeReoptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

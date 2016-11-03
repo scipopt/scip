@@ -22,7 +22,6 @@ testnodes:
                 $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
                 $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
-
 .PHONY: testclustercpx
 testclustercpx:
 		cd check; \

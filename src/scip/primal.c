@@ -185,6 +185,48 @@ SCIP_RETCODE SCIPprimalFree(
    return SCIP_OKAY;
 }
 
+/** clears primal data */
+SCIP_RETCODE SCIPprimalClear(
+   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   int s;
+
+   assert(primal != NULL);
+   assert(*primal != NULL);
+
+   /* free temporary solution for storing current solution */
+   if( (*primal)->currentsol != NULL )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->currentsol, blkmem, *primal) );
+   }
+
+   /* free solution for storing primal ray */
+   if( (*primal)->primalray != NULL )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->primalray, blkmem, *primal) );
+   }
+
+   /* free feasible primal CIP solutions */
+   for( s = 0; s < (*primal)->nsols; ++s )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
+   }
+
+   (*primal)->currentsol = NULL;
+   (*primal)->primalray = NULL;
+   (*primal)->nsols = 0;
+   (*primal)->nsolsfound = 0;
+   (*primal)->nlimsolsfound = 0;
+   (*primal)->nbestsolsfound = 0;
+   (*primal)->nlimbestsolsfound = 0;
+   (*primal)->upperbound = SCIP_INVALID;
+   (*primal)->cutoffbound = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
 /** sets the cutoff bound in primal data and in LP solver */
 static
 SCIP_RETCODE primalSetCutoffbound(
@@ -417,7 +459,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    int j;
 
    assert(primal != NULL);
-   assert(SCIPsetGetStage(set) <= SCIP_STAGE_EXITPRESOLVE);
+   assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
 
    /* recalculate internal objective limit */
    upperbound = SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(origprob, set));

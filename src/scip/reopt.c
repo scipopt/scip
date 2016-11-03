@@ -7997,6 +7997,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
       else
          ++c;
    }
+
    return SCIP_OKAY;
 }
 

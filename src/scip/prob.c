@@ -591,12 +591,18 @@ SCIP_RETCODE SCIPprobResetBounds(
    int v;
 
    assert(prob != NULL);
-   assert(!prob->transformed);
    assert(prob->nfixedvars == 0);
 
    for( v = 0; v < prob->nvars; ++v )
    {
-      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
+      if( !SCIPprobIsTransformed(prob) )
+      {
+         SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPvarResetLocalBounds(prob->vars[v], blkmem, set, stat) );
+      }
    }
 
    return SCIP_OKAY;
