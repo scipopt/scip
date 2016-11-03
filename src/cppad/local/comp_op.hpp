@@ -1,12 +1,12 @@
-/* $Id: comp_op.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
-# ifndef CPPAD_COMP_OP_INCLUDED
-# define CPPAD_COMP_OP_INCLUDED
+// $Id$
+# ifndef CPPAD_COMP_OP_HPP
+# define CPPAD_COMP_OP_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -16,159 +16,290 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup comp_op_hpp comp_op.hpp
-\{
 \file comp_op.hpp
 Zero order forward mode check how many comparisons changed.
 */
 
+// -------------------------------- <= -----------------------------------
 /*!
-Zero order forward mode execution of op = CompOp.
-
-The C++ source code corresponding to this operation is
-\verbatim
-	left Cop right
-\endverbatim
-where Cop is one of the following:
-<, <=, == , >=, >, !=.
-
-\tparam Base
-base type for the operator; i.e., this operation was recorded
-using AD< \a Base > and computations by this routine are done using type 
-\a Base.
+Zero order forward mode comparison check that left <= right
 
 \param count
-If the comparision has the same result as when t operation seqeunce was
-recorded, \a count is not affected.
-Otherwise it is incremented by one.
+It the condition is not true, ths counter is incremented by one.
 
 \param arg
-\n
-\a arg[0]
-is static cast to size_t from the enum type
-\verbatim
-	enum CompareOp {
-		CompareLt, 
-		CompareLe, 
-		CompareEq, 
-		CompareGe, 
-		CompareGt, 
-		CompareNe
-	}
-\endverbatim
-for this operation.
-\n
-\n 
-\a arg[1] & 1 
-\n
-If this expression is true, 
-the result of the comparison during taping it true.
-Othwise the result if false.
-\n
-\n
-\a arg[1] & 2
-\n
-if this expression is true, left is a variable, otherwise it is a parameter.
-\n
-\n
-\a arg[1] & 4
-\n
-if this expression is true, right is a variable, otherwise it is a parameter.
-\n
-
-\param num_par
-is the lenght of the \a parameter vector.
-This value is only used for checking assumptions mentioned below
-(and is not used at all when NDEBUG is defined).
+parameter[ arg[0] ] is the left operand and
+taylor[ arg[1] * cap_order + 0 ] is the zero order Taylor coefficient
+for the right operand.
 
 \param parameter
-Vector of parameters corresponding to the tape.
-If left is a parameter, \a parameter[ arg[2] ] is its value.
-If right is a parameter, \a parameter[ arg[3] ] is its value.
+vector of parameter values.
 
-\param nc_taylor
-number of columns in the matrix containing the Taylor coefficients.
+\param cap_order
+number of Taylor coefficients allocated for each variable
 
 \param taylor
-Matrix of Taylor coefficients.
-If left is a variable, \a taylor[ arg[2] * nc_taylor + 0 ] is its value.
-If right is a variable, \a taylor[ arg[3] * nc_taylor + 0 ] is its value.
-
-
-\par Checked Assertions where op is a binary operator:
-\li NumArg(ComOp) == 4
-\li NumRes(ComOp) == 0
-\li size_t(arg[0]) <= static_cast<size_t>( CompareNe )
-\li arg[1] != 0 (either left or right is a variable)
-\li if left is a parameter, \a arg[2] < \a num_par
-\li if right is a parameter, \a arg[3] < \a num_par
-
+vector of taylor coefficients.
 */
 template <class Base>
-inline void forward_comp_op_0(
-	size_t&        count       ,
-	const addr_t*  arg         , 
-	size_t         num_par     ,
-	const Base*    parameter   ,
-	size_t         nc_taylor   ,
-	Base*          taylor      )
-{	bool result;
-	Base left;
-	Base right;
+inline void forward_lepv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(LepvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(LepvOp) == 0 );
 
-	CPPAD_ASSERT_UNKNOWN( NumArg(ComOp) == 4 );
-	CPPAD_ASSERT_UNKNOWN( NumRes(ComOp) == 0 );
-	CPPAD_ASSERT_UNKNOWN( size_t(arg[0]) <= static_cast<size_t> (CompareNe) );
-	CPPAD_ASSERT_UNKNOWN( arg[1] != 0 );
+	// Taylor coefficients corresponding to arguments and result
+	Base  x = parameter[ arg[0] ];
+	Base* y = taylor + arg[1] * cap_order;
 
-	// result of comparision during recording
-	result = (arg[1] & 1) == 1;
-
-	// value of left operand for this forward sweep
-	if( arg[1] & 2 )
-		left = taylor[ arg[2] * nc_taylor + 0 ];
-	else
-	{	CPPAD_ASSERT_UNKNOWN( size_t(arg[2]) < num_par );
-		left = parameter[ arg[2] ];
-	}
-
-	// value of right operand for this forward sweep.
-	if( arg[1] & 4 )
-		right = taylor[ arg[3] * nc_taylor + 0 ];
-	else
-	{	CPPAD_ASSERT_UNKNOWN( size_t(arg[3]) < num_par );
-		right = parameter[ arg[3] ];
-	}
-	switch( CompareOp( arg[0] ) )
-	{	case CompareLt:
-		count += ( result != LessThanZero(left - right) );
-		break;
-
-		case CompareLe:
-		count += ( result != LessThanOrZero(left - right) );
-		break;
-
-		case CompareEq:
-		count += ( result != (left == right) );
-		break;
-
-		case CompareGe:
-		count += ( result != GreaterThanOrZero(left - right) );
-		break;
-
-		case CompareGt:
-		count += ( result != GreaterThanZero(left - right) );
-		break;
-
-		case CompareNe:
-		count += ( result != (left != right) );
-		break;
-
-		default:
-		CPPAD_ASSERT_UNKNOWN(0);
-	}
-	return;
+	count += GreaterThanZero(x - y[0]);
 }
-/*! \} */
+/*!
+Zero order forward mode comparison check that left <= right
+
+\param count
+It the condition is not true, ths counter is incremented by one.
+
+\param arg
+taylor[ arg[0] * cap_order + 0 ] is the zero order Taylor coefficient
+for the left operand and  parameter[ arg[1] ] is the right operand
+
+\param parameter
+vector of parameter values.
+
+\param cap_order
+number of Taylor coefficients allocated for each variable
+
+\param taylor
+vector of taylor coefficients.
+*/
+template <class Base>
+inline void forward_levp_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(LevpOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(LevpOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base* x = taylor + arg[0] * cap_order;
+	Base  y = parameter[ arg[1] ];
+
+	count += GreaterThanZero(x[0] - y);
+}
+/*!
+Zero order forward mode comparison check that left <= right
+
+\param count
+It the condition is not true, ths counter is incremented by one.
+
+\param arg
+taylor[ arg[0] * cap_order + 0 ] is the zero order Taylor coefficient
+for the left operand and
+taylor[ arg[1] * cap_order + 0 ] is the zero order Taylor coefficient
+for the right operand.
+
+\param parameter
+vector of parameter values.
+
+\param cap_order
+number of Taylor coefficients allocated for each variable
+
+\param taylor
+vector of taylor coefficients.
+*/
+template <class Base>
+inline void forward_levv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(LevvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(LevvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base* x = taylor + arg[0] * cap_order;
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += GreaterThanZero(x[0] - y[0]);
+}
+// ------------------------------- < -------------------------------------
+/*!
+Zero order forward mode comparison check that left < right
+
+\copydetails forward_lepv_op_0
+*/
+template <class Base>
+inline void forward_ltpv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(LtpvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(LtpvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base  x = parameter[ arg[0] ];
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += GreaterThanOrZero(x - y[0]);
+}
+/*!
+Zero order forward mode comparison check that left < right
+
+\copydetails forward_levp_op_0
+*/
+template <class Base>
+inline void forward_ltvp_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(LtvpOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(LtvpOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base* x = taylor + arg[0] * cap_order;
+	Base  y = parameter[ arg[1] ];
+
+	count += GreaterThanOrZero(x[0] - y);
+}
+/*!
+Zero order forward mode comparison check that left < right
+
+\copydetails forward_levv_op_0
+*/
+template <class Base>
+inline void forward_ltvv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(LtvvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(LtvvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base* x = taylor + arg[0] * cap_order;
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += GreaterThanOrZero(x[0] - y[0]);
+}
+// ------------------------------ == -------------------------------------
+/*!
+Zero order forward mode comparison check that left == right
+
+\copydetails forward_lepv_op_0
+*/
+template <class Base>
+inline void forward_eqpv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(EqpvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(EqpvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base  x = parameter[ arg[0] ];
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += (x != y[0]);
+}
+/*!
+Zero order forward mode comparison check that left == right
+
+\copydetails forward_levv_op_0
+*/
+template <class Base>
+inline void forward_eqvv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(EqvvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(EqvvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base* x = taylor + arg[0] * cap_order;
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += (x[0] != y[0]);
+}
+// -------------------------------- != -----------------------------------
+/*!
+Zero order forward mode comparison check that left != right
+
+\copydetails forward_lepv_op_0
+*/
+template <class Base>
+inline void forward_nepv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(NepvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(NepvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base  x = parameter[ arg[0] ];
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += (x == y[0]);
+}
+/*!
+Zero order forward mode comparison check that left != right
+
+\copydetails forward_levv_op_0
+*/
+template <class Base>
+inline void forward_nevv_op_0(
+	size_t&       count       ,
+	const addr_t* arg         ,
+	const Base*   parameter   ,
+	size_t        cap_order   ,
+	Base*         taylor      )
+{
+	// check assumptions
+	CPPAD_ASSERT_UNKNOWN( NumArg(NevvOp) == 2 );
+	CPPAD_ASSERT_UNKNOWN( NumRes(NevvOp) == 0 );
+
+	// Taylor coefficients corresponding to arguments and result
+	Base* x = taylor + arg[0] * cap_order;
+	Base* y = taylor + arg[1] * cap_order;
+
+	count += (x[0] == y[0]);
+}
+
+
 } // END_CPPAD_NAMESPACE
 # endif

@@ -1,24 +1,38 @@
-ZIB DEVELOPER'S CERTIFICATE OF ORIGIN
-Version July 4, 2014
+# Contributing
+Before making a contribution to SCIP, you'll need to agree to the terms outlined
+in the [Contributor License Agreement](CLA)
 
-By making a contribution to this project, I certify that:
+## Workflow
+Please see the [wiki](https://wiki.zib.de/confluence/display/SCIPOPTSUITE/Development+Workflow)
+for information about our contribution workflow with git. If you don't have
+access to this page, request it from @bzfgleix.
 
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the ZIB Academic License; or
+## Bug Reports
+Use the following sample template in the Issue description to ensure consistency
+across bug reports.
 
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the ZIB Academic License; or
+```
+|||
+| --- | --- |
+| Affected Versions | 3.2.2, 3.2.1 |
+| SCIP Commit | 8eec1de1206 |
+| LP Solver | [c155d8895e3](https://git.zib.de/integer/soplex/commit/c155d8895e3)|
+| OS | Linux |
+| Architecture | x86 64-bit |
+| Compile command | `make OPT=dbg LPS=spx` |
+| Compiler | gcc-4.8.4 |
+| Attachments | |
 
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
+## Steps to Reproduce
 
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed by ZIB under
-    any license of its choice, especially, but not only, the ZIB
-    Academic License.
+## Extended Description
+```
+
+When creating SCIP issues in the SCIP repository, all or part of the commit hash
+will auto-link to the commit. Commit hashes from other repositories, however,
+won't autolink, so be sure to include an explicit link. Also, please apply the
+~bug label when using the above template.
+
+## Linting
+
+Currently, `flexelint` and `cppcheck` are the preferred light-weight static analysis tooling that we use. `flexelint` supressions are done inline. `cppcheck` supresssions can also be performed inline, but it's typically preferably to disable a category of checks in `supressions.txt`

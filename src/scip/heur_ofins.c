@@ -50,7 +50,6 @@
 #define DEFAULT_NODESOFS      500LL     /**< number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1       /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_LPLIMFAC      2.0       /**< factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_COPYLPBASIS   FALSE     /**< should a LP starting basis copyied from the source SCIP? */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Ofins"
@@ -71,7 +70,6 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
-   SCIP_Bool             copylpbasis;             /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 /* ---------------- Callback methods of event handler ---------------- */
@@ -97,7 +95,7 @@ SCIP_DECL_EVENTEXEC(eventExecOfins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -154,7 +152,7 @@ SCIP_RETCODE createSubproblem(
    }
 
    /* set an objective limit */
-   SCIPdebugMessage("set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
+   SCIPdebugMsg(scip, "set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
 
    *success = TRUE;
@@ -201,7 +199,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -221,17 +219,13 @@ SCIP_RETCODE applyOfins(
 {
    SCIP* subscip;                                 /* the subproblem created by OFINS */
    SCIP_HASHMAP* varmapfw;                        /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_HASHMAP* consmapfw;
    SCIP_VAR** vars;                               /* source problem's variables */
    SCIP_VAR** subvars;                            /* subproblem's variables */
    SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
-   SCIP_ROW** sourcerows = NULL;
-   SCIP_CONS** targetconss = NULL;
 
    SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
    SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
 
-   int nsourcerows = 0;
    int nvars;                                     /* number of source problem's variables */
    int i;
 
@@ -251,7 +245,7 @@ SCIP_RETCODE applyOfins(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("+---+ Start OFINS heuristic +---+\n");
+   SCIPdebugMsg(scip, "+---+ Start OFINS heuristic +---+\n");
 
    /* check whether there is enough time and memory left */
    timelimit = 0.0;
@@ -271,7 +265,7 @@ SCIP_RETCODE applyOfins(
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
-      SCIPdebugMessage("-> not enough memory left\n");
+      SCIPdebugMsg(scip, "-> not enough memory left\n");
       return SCIP_OKAY;
    }
 
@@ -292,42 +286,21 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-   if( heurdata->copylpbasis )
-   {
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
-   }
-   else
-      consmapfw = NULL;
-
    eventhdlr = NULL;
 
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "ofins", TRUE, FALSE, TRUE, &valid) );
+   /* todo determine number of variables to fix beforehand */
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", TRUE, FALSE, TRUE, &valid) );
 
    if( heurdata->copycuts )
    {
-      if( heurdata->copylpbasis )
-      {
-         int sourcerowssize = SCIPgetNLPRows(scip);
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
-
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
-         assert(nsourcerows <= sourcerowssize);
-      }
-      else
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
-      }
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
    }
 
-   SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecOfins, NULL) );
@@ -345,34 +318,10 @@ SCIP_RETCODE applyOfins(
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs, &success) );
-
-   if( !success )
-      goto TERMINATE;
-
-   SCIPdebugMessage("OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
-
-   if( heurdata->copylpbasis )
-   {
-      /* use the last LP basis as starting basis */
-      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, FALSE) );
-   }
-
-   if( sourcerows != NULL )
-   {
-      assert(targetconss != NULL);
-      SCIPfreeBufferArray(scip, &targetconss);
-      SCIPfreeBufferArray(scip, &sourcerows);
-   }
-   else
-      assert(targetconss == NULL);
+   SCIPdebugMsg(scip, "OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( heurdata->copylpbasis )
-   {
-      assert(consmapfw != NULL);
-      SCIPhashmapFree(&consmapfw);
-   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -439,7 +388,7 @@ SCIP_RETCODE applyOfins(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("%s presolved subproblem: %d vars, %d cons\n", HEUR_NAME, SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+   SCIPdebugMsg(scip, "%s presolved subproblem: %d vars, %d cons\n", HEUR_NAME, SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    assert(eventhdlr != NULL);
 
@@ -447,7 +396,7 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
+   SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
    retcode = SCIPsolve(subscip);
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
@@ -630,7 +579,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping OFINS: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping OFINS: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -699,7 +648,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
          chgcoeffs[v] = FALSE;
    }
 
-   SCIPdebugMessage("%d (rate %.4f) changed coefficients\n", nchgcoefs, nchgcoefs/((SCIP_Real)nvars));
+   SCIPdebugMsg(scip, "%d (rate %.4f) changed coefficients\n", nchgcoefs, nchgcoefs/((SCIP_Real)nvars));
 
    /* we only want to run the heuristic, if there at least 3 changed coefficients.
     * if the number of changed coefficients is 2 the trivialnegation heuristic will construct an
@@ -767,10 +716,6 @@ SCIP_RETCODE SCIPincludeHeurOfins(
          &heurdata->maxchange, FALSE, DEFAULT_MAXCHANGE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
-         "should a LP starting basis copyied from the source SCIP?",
-         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 

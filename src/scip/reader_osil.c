@@ -143,6 +143,15 @@ SCIP_RETCODE readVariables(
       /* find variable name */
       varname = xmlGetAttrval(varnode, "name");
 
+      /* check for mult attribute */
+      attrval = xmlGetAttrval(varnode, "mult");
+      if( attrval != NULL && strcmp(attrval, "1") != 0 )
+      {
+         SCIPerrorMessage("Variable attribute 'mult' not supported (while parsing variable <%s>)\n", varname);
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
+
       /* find variable lower bound (default is 0.0 !) */
       attrval = xmlGetAttrval(varnode, "lb");
       if( attrval == NULL )
@@ -297,6 +306,15 @@ SCIP_RETCODE readObjective(
    /* if no objective, then nothing to do here */
    if( objective == NULL )
       return SCIP_OKAY;
+
+   /* check for mult attribute */
+   attrval = xmlGetAttrval(objective, "mult");
+   if( attrval != NULL && strcmp(attrval, "1") != 0 )
+   {
+      SCIPerrorMessage("Objective attribute 'mult' not supported.\n");
+      *doingfine = FALSE;
+      return SCIP_OKAY;
+   }
 
    /* objective sense */
    attrval = xmlGetAttrval(objective, "maxOrMin");
@@ -486,6 +504,15 @@ SCIP_RETCODE readConstraints(
       {
          (void) SCIPsnprintf(name, 20, "cons%d", *nconss);
          consname = name;
+      }
+
+      /* check for mult attribute */
+      attrval = xmlGetAttrval(consnode, "mult");
+      if( attrval != NULL && strcmp(attrval, "1") != 0 )
+      {
+         SCIPerrorMessage("Constraint attribute 'mult' not supported (while parsing constraint <%s>).\n", consname);
+         *doingfine = FALSE;
+         return SCIP_OKAY;
       }
 
       /* find constraint lower bound (=lhs) (default is -infinity) */
@@ -968,9 +995,9 @@ SCIP_RETCODE readLinearCoefs(
    }
 
  CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &start);
-   SCIPfreeBufferArrayNull(scip, &idx);
    SCIPfreeBufferArrayNull(scip, &val);
+   SCIPfreeBufferArrayNull(scip, &idx);
+   SCIPfreeBufferArrayNull(scip, &start);
 
    return SCIP_OKAY;
 }
@@ -1447,10 +1474,12 @@ SCIP_RETCODE readExpression(
          if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg2, SCIPexprGetOpReal(arg1)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
          }
          else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else
          {
@@ -1463,6 +1492,7 @@ SCIP_RETCODE readExpression(
          {
             assert(SCIPexprGetOpReal(arg2) != 0.0);
             SCIP_CALL( SCIPexprMulConstant(SCIPblkmem(scip), expr, arg1, 1.0/SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else
          {
@@ -1482,6 +1512,7 @@ SCIP_RETCODE readExpression(
             {
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
             }
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
          }
          else if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
          {
@@ -1501,6 +1532,7 @@ SCIP_RETCODE readExpression(
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, log(SCIPexprGetOpReal(arg1))) );
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_MUL, tmp, arg2) );
                SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, tmp) );
+               SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
             }
          }
          else

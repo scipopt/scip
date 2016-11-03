@@ -298,7 +298,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    /* enables collection of variable statistics during probing */
    SCIPenableVarHistory(scip);
 
-   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n",
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* copy the pseudo candidates into own array, because we want to reorder them */
@@ -353,7 +353,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       }
       fixcands[i] = var;
       fixcandscores[i] = score;
-      SCIPdebugMessage("  <%s>: ncliques=%d/%d, nimpls=%d/%d, inferencescore=%g, colveclen=%d  ->  score=%g\n",
+      SCIPdebugMsg(scip, "  <%s>: ncliques=%d/%d, nimpls=%d/%d, inferencescore=%g, colveclen=%d  ->  score=%g\n",
          SCIPvarGetName(var), SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE),
          SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE), SCIPgetVarAvgInferenceScore(scip, var),
          colveclen, score);
@@ -384,7 +384,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       SCIP_Longint nnewdomreds;
 
       /* open a new probing node if this will not exceed the maximal tree depth, otherwise stop here */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
          divedepth++;
@@ -504,21 +504,21 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
           */
          if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          {
-            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g], diving aborted \n",
+            SCIPdebugMsg(scip, "Selected variable <%s> already fixed to [%g,%g], diving aborted \n",
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
             cutoff = TRUE;
             break;
          }
          if( SCIPisFeasLT(scip, bestfixval, SCIPvarGetLbLocal(var)) || SCIPisFeasGT(scip, bestfixval, SCIPvarGetUbLocal(var)) )
          {
-            SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+            SCIPdebugMsg(scip, "selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestfixval);
             assert(backtracked);
             break;
          }
 
          /* apply fixing of best candidate */
-         SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", %d unfixed: var <%s>, sol=%g, oldbounds=[%g,%g], fixed to %g\n",
+         SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", %d unfixed: var <%s>, sol=%g, oldbounds=[%g,%g], fixed to %g\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations, SCIPgetNPseudoBranchCands(scip),
             SCIPvarGetName(var), bestsolval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestfixval);
          SCIP_CALL( SCIPfixVarProbing(scip, var, bestfixval) );
@@ -566,11 +566,11 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          /* perform backtracking if a cutoff was detected */
          if( cutoff && !backtracked && heurdata->backtrack )
          {
-            SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
+            SCIPdebugMsg(scip, "  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
 
             /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
-            assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+            assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
             SCIP_CALL( SCIPnewProbingNode(scip) );
 
@@ -602,16 +602,16 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
             SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
             if( success )
             {
-               SCIPdebugMessage("intdiving found roundable primal solution: obj=%g\n",
+               SCIPdebugMsg(scip, "intdiving found roundable primal solution: obj=%g\n",
                   SCIPgetSolOrigObj(scip, heurdata->sol));
 
                /* try to add solution to SCIP */
-               SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
                /* check, if solution was feasible and good enough */
                if( success )
                {
-                  SCIPdebugMessage(" -> solution was feasible and good enough\n");
+                  SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
                   *result = SCIP_FOUNDSOL;
                }
             }
@@ -619,7 +619,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          else
             nextcand = bestcand+1; /* continue with the next candidate in the following loop */
       }
-      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g\n", lpsolstat, objval, searchbound);
+      SCIPdebugMsg(scip, "   -> lpsolstat=%d, objval=%g/%g\n", lpsolstat, objval, searchbound);
    }
 
    /* free temporary memory */
@@ -631,7 +631,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
 
-   SCIPdebugMessage("intdiving heuristic finished\n");
+   SCIPdebugMsg(scip, "intdiving heuristic finished\n");
 
    return SCIP_OKAY;
 }

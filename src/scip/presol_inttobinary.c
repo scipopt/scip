@@ -105,7 +105,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          SCIP_Bool redundant;
          SCIP_Bool aggregated;
 
-         SCIPdebugMessage("converting <%s>[%g,%g] into binary variable\n", SCIPvarGetName(vars[v]), lb, ub);
+         SCIPdebugMsg(scip, "converting <%s>[%g,%g] into binary variable\n", SCIPvarGetName(vars[v]), lb, ub);
 
          /* create binary variable */
          (void) SCIPsnprintf(binvarname, SCIP_MAXSTRLEN, "%s_bin", SCIPvarGetName(vars[v]));

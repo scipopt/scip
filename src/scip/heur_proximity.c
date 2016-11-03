@@ -167,7 +167,7 @@ SCIP_RETCODE solveLp(
    }
 
    /* solve LP */
-   SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -182,12 +182,12 @@ SCIP_RETCODE solveLp(
 #endif
    }
 
-   SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-   SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+   SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    /* terminate diving mode */
@@ -282,7 +282,7 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to SCIP and free it immediately */
    if( !*success )
    {
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
@@ -376,95 +376,6 @@ SCIP_RETCODE setupSubproblem(
    return SCIP_OKAY;
 }
 
-/** creates the rows of the subproblem */
-static
-SCIP_RETCODE createRows(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
-   SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
-   SCIP_Bool             copylpbasis,        /**< should a starting basis should be copied into the subscip? */
-   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays */
-   int*                  nsourcerows         /**< number of rows / created constraints */
-   )
-{
-   SCIP_ROW** rows;                          /* original scip rows                       */
-   SCIP_CONS* cons;                          /* new constraint                           */
-   SCIP_VAR** consvars;                      /* new constraint's variables               */
-   SCIP_COL** cols;                          /* original row's columns                   */
-
-   SCIP_Real constant;                       /* constant added to the row                */
-   SCIP_Real lhs;                            /* left hand side of the row                */
-   SCIP_Real rhs;                            /* left right side of the row               */
-   SCIP_Real* vals;                          /* variables' coefficient values of the row */
-
-   int nrows;
-   int nnonz;
-   int i;
-   int j;
-
-   assert(!copylpbasis || nsourcerows != NULL);
-   assert(!copylpbasis || sourcerows != NULL);
-   assert(!copylpbasis || targetconss != NULL);
-
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-   assert(!copylpbasis || nrows <= sourcerowssize);
-
-   *nsourcerows = 0;
-
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-
-      assert(lhs <= rhs);
-
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ )
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-
-      if( copylpbasis )
-      {
-         assert(targetconss != NULL);
-         assert(*nsourcerows <= sourcerowssize);
-
-         /* store the added cons and the corresponding row */
-         sourcerows[(*nsourcerows)] = rows[i];
-         targetconss[(*nsourcerows)] = cons;
-
-         /* capture the row (the constraint was already captured twice: create, add)
-          * both will be released at the end of copyBasis in scip.c
-          */
-         SCIP_CALL( SCIPcaptureRow(scip, sourcerows[(*nsourcerows)]) );
-
-         ++(*nsourcerows);
-      }
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &consvars);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** frees the subproblem */
 static
 SCIP_RETCODE deleteSubproblem(
@@ -483,7 +394,7 @@ SCIP_RETCODE deleteSubproblem(
       assert(heurdata->subvars != NULL);
       assert(heurdata->objcons != NULL);
 
-      SCIPdebugMessage("Freeing subproblem of proximity heuristic\n");
+      SCIPdebugMsg(scip, "Freeing subproblem of proximity heuristic\n");
       SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
       SCIPhashmapFree(&heurdata->varmapfw);
       SCIPhashmapFree(&heurdata->consmapfw);
@@ -673,14 +584,14 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping proximity: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping proximity: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
    /* do not run proximity, if the problem does not have an objective function anyway */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      SCIPdebugMessage("skipping proximity: pure feasibility problem anyway\n");
+      SCIPdebugMsg(scip, "skipping proximity: pure feasibility problem anyway\n");
       return SCIP_OKAY;
    }
 
@@ -861,7 +772,7 @@ SCIP_RETCODE SCIPapplyProximity(
    /* use knowledge about integrality of objective to round up lower bound */
    if( SCIPisObjIntegral(scip) )
    {
-      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
+      SCIPdebugMsg(scip, " Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
@@ -946,26 +857,12 @@ SCIP_RETCODE SCIPapplyProximity(
 
       /* copy complete SCIP instance */
       valid = FALSE;
-      if( !heurdata->uselprows )
-      {
-         SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "proximity", TRUE, FALSE, TRUE, &valid) );
-      }
-      else
-      {
-         /* create the subproblem step by step, adding plugins and variables first, and finally creating
-          * linear constraints based on current LP rows */
-         SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
-         SCIP_CALL( SCIPcreateProbBasic(subscip, "proximitysub") );
 
-         SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-         for( i = 0; i < nvars; i++ )
-            subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      /* create a problem copy as sub SCIP */
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
+      assert(valid);
 
-         SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, heurdata->copylpbasis, sourcerowssize,
-               &nsourcerows) );
-      }
-      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+      SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
       /* create event handler for LP events */
       eventhdlr = NULL;

@@ -1136,7 +1136,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subvars);
    SCIPfreeBufferArray(scip, &subsolvals);
@@ -1184,7 +1184,7 @@ SCIP_RETCODE solveSubMIP(
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, consmap, "nlpdiving", FALSE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
 #ifndef NDEBUG
    /* assert that cover variables are fixed in source and target SCIP */
@@ -1409,7 +1409,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    }
    assert(0 <= heurdata->nfixedcovervars && heurdata->nfixedcovervars <= SCIPgetNVars(scip));
 
-   /* SCIPdebugMessage("changed bound of cover variable <%s> from %f to %f (nfixedcovervars: %d).\n", SCIPvarGetName(var),
+   /* SCIPdebugMsg(scip, "changed bound of cover variable <%s> from %f to %f (nfixedcovervars: %d).\n", SCIPvarGetName(var),
       oldbound, newbound, heurdata->nfixedcovervars); */
 
    return SCIP_OKAY;
@@ -1707,7 +1707,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* give up, if no feasible solution found */
       if( nlpsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE )
       {
-         SCIPdebugMessage("initial NLP infeasible or not solvable --> stop\n");
+         SCIPdebugMsg(scip, "initial NLP infeasible or not solvable --> stop\n");
 
          if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
          {
@@ -1747,13 +1747,13 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
       /* check, if solution was feasible and good enough */
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
       if( success )
       {
-         SCIPdebugMessage(" -> solution of first NLP was integral, feasible, and good enough\n");
+         SCIPdebugMsg(scip, " -> solution of first NLP was integral, feasible, and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
 
@@ -1883,7 +1883,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* get NLP objective value*/
    objval = SCIPgetNLPObjval(scip);
 
-   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing nlpdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n",
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") executing nlpdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nnlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* store a copy of the best solution, if guided diving should be used */
@@ -1934,7 +1934,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_Bool updatepscost;
 
       /* open a new probing node if this will not exceed the maximal tree depth, otherwise stop here */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
          divedepth++;
@@ -2037,19 +2037,19 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
          if( success )
          {
-            SCIPdebugMessage("nlpdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+            SCIPdebugMsg(scip, "nlpdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
             /* try to add solution to SCIP */
 #ifdef SCIP_DEBUG
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
             /* check, if solution was feasible and good enough */
             if( success )
             {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
                *result = SCIP_FOUNDSOL;
             }
          }
@@ -2073,14 +2073,14 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
              */
             if( SCIPvarGetLbLocal(backtrackvar) >= SCIPvarGetUbLocal(backtrackvar) - 0.5 )
             {
-               SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+               SCIPdebugMsg(scip, "Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                   SCIPvarGetName(backtrackvar), SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar), backtrackvarval);
                cutoff = TRUE;
                break;
             }
             if( SCIPisFeasLT(scip, backtrackvarval, SCIPvarGetLbLocal(backtrackvar)) || SCIPisFeasGT(scip, backtrackvarval, SCIPvarGetUbLocal(backtrackvar)) )
             {
-               SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+               SCIPdebugMsg(scip, "selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
                   SCIPvarGetName(backtrackvar), SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar), backtrackvarval);
                assert(backtracked);
                break;
@@ -2089,7 +2089,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             /* round backtrack variable up or down */
             if( backtrackroundup )
             {
-               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMsg(scip, "  dive %d/%d, NLP iter %d/%d: var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(backtrackvar), backtrackvarval, SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar),
                   SCIPfeasCeil(scip, backtrackvarval), SCIPvarGetUbLocal(backtrackvar));
@@ -2097,7 +2097,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             }
             else
             {
-               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMsg(scip, "  dive %d/%d, NLP iter %d/%d: var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(backtrackvar), backtrackvarval, SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar),
                   SCIPvarGetLbLocal(backtrackvar), SCIPfeasFloor(scip, backtrackvarval));
@@ -2121,14 +2121,14 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
              */
             if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
             {
-               SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+               SCIPdebugMsg(scip, "Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                   SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestboundval);
                cutoff = TRUE;
                break;
             }
             if( SCIPisFeasLT(scip, bestboundval, SCIPvarGetLbLocal(var)) || SCIPisFeasGT(scip, bestboundval, SCIPvarGetUbLocal(var)) )
             {
-               SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+               SCIPdebugMsg(scip, "selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
                   SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestboundval);
                assert(backtracked);
                break;
@@ -2138,7 +2138,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             if( bestcandroundup == !backtracked )
             {
                /* round variable up */
-               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMsg(scip, "  dive %d/%d, NLP iter %d/%d: var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(var), bestcandmayround,
                   bestboundval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -2157,7 +2157,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             else
             {
                /* round variable down */
-               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMsg(scip, "  dive %d/%d, NLP iter %d/%d: var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(var), bestcandmayround,
                   bestboundval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -2192,7 +2192,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
          if( cutoff )
          {
-            SCIPdebugMessage("  *** cutoff detected in propagation at level %d\n", SCIPgetProbingDepth(scip));
+            SCIPdebugMsg(scip, "  *** cutoff detected in propagation at level %d\n", SCIPgetProbingDepth(scip));
          }
 
          /* if all variables in the cover are fixed or there is no fractional variable in the cover,
@@ -2235,7 +2235,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                       *       not solve the probing LP). thus, it would be less work load in SCIPendProbing
                       *       and SCIPbacktrackProbing.
                       */
-                     if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+                     if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
                      {
                         SCIP_CALL( SCIPnewProbingNode(scip) );
                      }
@@ -2316,7 +2316,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
             if( cutoff )
             {
-               SCIPdebugMessage("  *** cutoff detected in LP solving at level %d, lpsolstat = %d\n", SCIPgetProbingDepth(scip), lpsolstat);
+               SCIPdebugMsg(scip, "  *** cutoff detected in LP solving at level %d, lpsolstat = %d\n", SCIPgetProbingDepth(scip), lpsolstat);
             }
          }
          else
@@ -2363,7 +2363,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             {
                assert(nlpstartsol != NULL);
 
-               SCIPdebugMessage("setting NLP initial guess\n");
+               SCIPdebugMsg(scip, "setting NLP initial guess\n");
 
                SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, nlpstartsol) );
             }
@@ -2394,7 +2394,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
             if( cutoff )
             {
-               SCIPdebugMessage("  *** cutoff detected in NLP solving at level %d, nlpsolstat: %d\n", SCIPgetProbingDepth(scip), nlpsolstat);
+               SCIPdebugMsg(scip, "  *** cutoff detected in NLP solving at level %d, nlpsolstat: %d\n", SCIPgetProbingDepth(scip), nlpsolstat);
             }
             else
             {
@@ -2424,22 +2424,22 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             if( backtrackdepth == -1 )
             {
                /* backtrack one step */
-               SCIPdebugMessage("  *** cutoff detected at level %d - backtracking one step\n", SCIPgetProbingDepth(scip));
+               SCIPdebugMsg(scip, "  *** cutoff detected at level %d - backtracking one step\n", SCIPgetProbingDepth(scip));
                SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
 
                /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
-               assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+               assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
             else
             {
                /* if we have a stored a depth for backtracking, go there */
-               SCIPdebugMessage("  *** cutoff detected at level %d - backtracking to depth %d\n", SCIPgetProbingDepth(scip), backtrackdepth);
+               SCIPdebugMsg(scip, "  *** cutoff detected at level %d - backtracking to depth %d\n", SCIPgetProbingDepth(scip), backtrackdepth);
                SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
 
                /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
-               assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+               assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
                SCIP_CALL( SCIPnewProbingNode(scip) );
                divedepth = backtrackdepth;
@@ -2465,37 +2465,37 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          /* get new fractional variables */
          SCIP_CALL( getNLPFracVars(scip, heurdata, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands) );
       }
-      SCIPdebugMessage("   -> nlpsolstat=%d, objval=%g/%g, nfrac nlp=%d lp=%d\n", nlpsolstat, objval, searchbound, nnlpcands, nlpbranchcands);
+      SCIPdebugMsg(scip, "   -> nlpsolstat=%d, objval=%g/%g, nfrac nlp=%d lp=%d\n", nlpsolstat, objval, searchbound, nnlpcands, nlpbranchcands);
    }
 
    /*lint --e{774}*/
-   SCIPdebugMessage("NLP nlpdiving ABORT due to ");
+   SCIPdebugMsg(scip, "NLP nlpdiving ABORT due to ");
    if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
-      SCIPdebugPrintf("NLP bad status - nlperror: %ud nlpsolstat: %d \n", nlperror, nlpsolstat);
+      SCIPdebugMsgPrint(scip, "NLP bad status - nlperror: %ud nlpsolstat: %d \n", nlperror, nlpsolstat);
       SCIPstatistic( heurdata->nfailnlperror++ );
    }
    else if( SCIPisStopped(scip) || cutoff )
    {
-      SCIPdebugPrintf("LIMIT hit - stop: %ud cutoff: %ud \n", SCIPisStopped(scip), cutoff);
+      SCIPdebugMsgPrint(scip, "LIMIT hit - stop: %ud cutoff: %ud \n", SCIPisStopped(scip), cutoff);
       SCIPstatistic( heurdata->nfailcutoff++ );
    }
    else if(! (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound) ) )
    {
-      SCIPdebugPrintf("TOO DEEP - divedepth: %4d cands halfed: %d ltmaxdepth: %d ltmaxiter: %d bound: %d\n", divedepth,
+      SCIPdebugMsgPrint(scip, "TOO DEEP - divedepth: %4d cands halfed: %d ltmaxdepth: %d ltmaxiter: %d bound: %d\n", divedepth,
          (nnlpcands > startnnlpcands - divedepth/2), (divedepth >= maxdivedepth), (heurdata->nnlpiterations >= maxnnlpiterations),
          (objval >= searchbound));
       SCIPstatistic( heurdata->nfaildepth++ );
    }
    else if( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
-      SCIPdebugPrintf("SUCCESS\n");
+      SCIPdebugMsgPrint(scip, "SUCCESS\n");
    }
    else
    {
-      SCIPdebugPrintf("UNKNOWN, very mysterical reason\n");  /* see also special case var == NULL (bestcand == -1) after choose*Var above */
+      SCIPdebugMsgPrint(scip, "UNKNOWN, very mysterical reason\n");  /* see also special case var == NULL (bestcand == -1) after choose*Var above */
    }
 
    /* check if a solution has been found */
@@ -2504,24 +2504,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_Bool success;
 
       /* create solution from diving NLP */
-      SCIPdebugMessage("nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+      SCIPdebugMsg(scip, "nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
 
       /* check, if solution was feasible and good enough */
       if( success )
       {
-         SCIPdebugMessage(" -> solution was feasible and good enough\n");
+         SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
       else
       {
-         SCIPdebugMessage(" -> solution was not accepted\n");
+         SCIPdebugMsg(scip, " -> solution was not accepted\n");
       }
    }
 
@@ -2593,7 +2593,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
 
-   SCIPdebugMessage("nlpdiving heuristic finished\n");
+   SCIPdebugMsg(scip, "nlpdiving heuristic finished\n");
 
    return SCIP_OKAY;
 }

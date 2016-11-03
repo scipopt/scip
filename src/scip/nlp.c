@@ -919,7 +919,7 @@ SCIP_RETCODE nlrowAddLinearCoef(
    if( pos > 0 && SCIPvarCompare(nlrow->linvars[pos-1], nlrow->linvars[pos]) > 0 )
       nlrow->linvarssorted = FALSE;
 
-   SCIPdebugMessage("added linear coefficient %g * <%s> at position %d to nonlinear row <%s>\n",
+   SCIPsetDebugMsg(set, "added linear coefficient %g * <%s> at position %d to nonlinear row <%s>\n",
       coef, SCIPvarGetName(var), pos, nlrow->name);
 
    return SCIP_OKAY;
@@ -1191,7 +1191,7 @@ SCIP_RETCODE nlrowAddQuadElement(
    if( pos > 0 )
       nlrow->quadelemssorted = FALSE;
 
-   SCIPdebugMessage("added quadratic element %g * <%s> * <%s> at position %d to nonlinear row <%s>\n",
+   SCIPsetDebugMsg(set, "added quadratic element %g * <%s> * <%s> at position %d to nonlinear row <%s>\n",
       elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]), pos, nlrow->name);
 
    return SCIP_OKAY;
@@ -1213,7 +1213,7 @@ SCIP_RETCODE nlrowDelQuadElemPos(
    assert(set != NULL);
    assert(0 <= pos && pos < nlrow->nquadelems);
 
-   SCIPdebugMessage("delete quad element (%d,%d) at pos %d\n", nlrow->quadelems[pos].idx1, nlrow->quadelems[pos].idx2, pos);
+   SCIPsetDebugMsg(set, "delete quad element (%d,%d) at pos %d\n", nlrow->quadelems[pos].idx1, nlrow->quadelems[pos].idx2, pos);
 
    elem = nlrow->quadelems[pos];
 
@@ -1243,7 +1243,7 @@ SCIP_RETCODE nlrowChgQuadElemPos(
    assert(nlrow != NULL);
    assert(0 <= pos && pos < nlrow->nquadelems);
 
-   SCIPdebugMessage("change quad element (%d,%d) at pos %d to %g\n", nlrow->quadelems[pos].idx1, nlrow->quadelems[pos].idx2, pos, coef);
+   SCIPsetDebugMsg(set, "change quad element (%d,%d) at pos %d to %g\n", nlrow->quadelems[pos].idx1, nlrow->quadelems[pos].idx2, pos, coef);
 
    if( SCIPsetIsZero(set, coef) )
    {
@@ -1509,7 +1509,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    if( nlrow->nquadvars == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("removing fixed quadratic variables from nlrow\n");
+   SCIPsetDebugMsg(set, "removing fixed quadratic variables from nlrow\n");
 
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
@@ -1538,7 +1538,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          continue;
       }
 
-      SCIPdebugMessage("removing fixed quadratic variables from %dth element %g <%s> <%s>\n",
+      SCIPsetDebugMsg(set, "removing fixed quadratic variables from %dth element %g <%s> <%s>\n",
          i, elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
 
       /* if one of the variable is not active, we remove the element and insert new disaggregated ones */
@@ -1907,7 +1907,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
 
    SCIPsetFreeBufferArray(set, &used);
 
-   SCIPdebugMessage("finished removing fixed quadratic variables\n");
+   SCIPsetDebugMsg(set, "finished removing fixed quadratic variables\n");
 
    return SCIP_OKAY;
 }
@@ -2354,7 +2354,7 @@ SCIP_RETCODE SCIPnlrowRelease(
    assert(*nlrow != NULL);
    assert((*nlrow)->nuses >= 1);
 
-   SCIPdebugMessage("release nonlinear row <%s> with nuses=%d\n", (*nlrow)->name, (*nlrow)->nuses);
+   SCIPsetDebugMsg(set, "release nonlinear row <%s> with nuses=%d\n", (*nlrow)->name, (*nlrow)->nuses);
    (*nlrow)->nuses--;
    if( (*nlrow)->nuses == 0 )
    {
@@ -4749,7 +4749,7 @@ SCIP_RETCODE nlpSolve(
 
          nlp->nlrows[i]->dualsol = nlrowdualvals != NULL ? nlrowdualvals[nlp->nlrows[i]->nlpiindex] : 0.0;
 
-         /* SCIPdebugMessage("dual of nlrow <%s> = %g\n", nlp->nlrows[i]->name, nlp->nlrows[i]->dualsol); */
+         /* SCIPsetDebugMsg(set, "dual of nlrow <%s> = %g\n", nlp->nlrows[i]->name, nlp->nlrows[i]->dualsol); */
       }
       assert(nlp->varlbdualvals != NULL || nlp->nvars == 0);
       assert(nlp->varubdualvals != NULL || nlp->nvars == 0);
@@ -4762,7 +4762,7 @@ SCIP_RETCODE nlpSolve(
             nlp->varlbdualvals[i] = varlbdualvals[nlp->varmap_nlp2nlpi[i]];
             nlp->varubdualvals[i] = varubdualvals[nlp->varmap_nlp2nlpi[i]];
 
-            /* SCIPdebugMessage("duals of var <%s> = %g %g\n", SCIPvarGetName(nlp->vars[i]), nlp->varlbdualvals[i], nlp->varubdualvals[i]); */
+            /* SCIPsetDebugMsg(set, "duals of var <%s> = %g %g\n", SCIPvarGetName(nlp->vars[i]), nlp->varlbdualvals[i], nlp->varubdualvals[i]); */
          }
       }
       else if( nlp->nvars > 0 )
@@ -4797,7 +4797,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(nlp->validfracvars <= stat->nnlps);
    assert(SCIPnlpHasSolution(nlp));
 
-   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%" SCIP_LONGINT_FORMAT ", nnlps=%" SCIP_LONGINT_FORMAT "\n", nlp->validfracvars, stat->nnlps);
+   SCIPsetDebugMsg(set, "calculating NLP fractional variables: validfracvars=%" SCIP_LONGINT_FORMAT ", nnlps=%" SCIP_LONGINT_FORMAT "\n", nlp->validfracvars, stat->nnlps);
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
@@ -4805,7 +4805,7 @@ SCIP_RETCODE nlpCalcFracVars(
       nlp->npriofracvars = 0;
       nlp->validfracvars = stat->nnlps;
 
-      SCIPdebugMessage("NLP globally infeasible, unbounded, or worse -> no solution values -> no fractional variables\n");
+      SCIPsetDebugMsg(set, "NLP globally infeasible, unbounded, or worse -> no solution values -> no fractional variables\n");
       return SCIP_OKAY;
    }
 
@@ -4820,7 +4820,7 @@ SCIP_RETCODE nlpCalcFracVars(
       int maxpriority;
       int i;
 
-      SCIPdebugMessage(" -> recalculating NLP fractional variables\n");
+      SCIPsetDebugMsg(set, " -> recalculating NLP fractional variables\n");
 
       if( nlp->fracvarssize == 0 )
       {
@@ -4856,6 +4856,14 @@ SCIP_RETCODE nlpCalcFracVars(
 
          /* check, if the LP solution value is fractional */
          frac = SCIPsetFeasFrac(set, primsol);
+
+         /* The fractionality should not be smaller than -feastol, however, if the primsol is large enough
+          * and close to an integer, fixed precision floating point arithmetic might give us values slightly
+          * smaller than -feastol. Originally, the "frac >= -feastol"-check was within SCIPsetIsFeasFracIntegral(),
+          * however, we relaxed it to "frac >= -2*feastol" and have the stricter check here for small-enough primsols.
+          */
+         assert(SCIPsetIsGE(set, frac, -SCIPsetFeastol(set)) || (primsol > 1e14 * SCIPsetFeastol(set)));
+
          if( SCIPsetIsFeasFracIntegral(set, frac) )
             continue;
 
@@ -4913,7 +4921,7 @@ SCIP_RETCODE nlpCalcFracVars(
          nlp->fracvarssol[insertpos]  = primsol;
          nlp->fracvarsfrac[insertpos] = frac;
 
-         SCIPdebugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n",
+         SCIPsetDebugMsg(set, " -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n",
             nlp->nfracvars, SCIPvarGetName(var), primsol, frac, branchpriority, maxpriority, insertpos);
       }
 
@@ -4922,7 +4930,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(0 <= nlp->npriofracvars);
    assert(nlp->npriofracvars <= nlp->nfracvars);
 
-   SCIPdebugMessage(" -> %d fractional variables (%d of maximal priority)\n", nlp->nfracvars, nlp->npriofracvars);
+   SCIPsetDebugMsg(set, " -> %d fractional variables (%d of maximal priority)\n", nlp->nfracvars, nlp->npriofracvars);
 
    return SCIP_OKAY;
 }
@@ -4946,28 +4954,28 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
 
    if( SCIP_EVENTTYPE_VARADDED & etype )
    {
-      SCIPdebugMessage( "-> handling varadd event, variable <%s>\n", SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling varadd event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( SCIPnlpAddVar(scip->nlp, SCIPblkmem(scip), scip->set, var) );
    }
    else if( SCIP_EVENTTYPE_VARDELETED & etype )
    {
-      SCIPdebugMessage( "-> handling vardel event, variable <%s>\n", SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling vardel event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( SCIPnlpDelVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
       /* variable was fixed, aggregated, or multi-aggregated */
-      SCIPdebugMessage( "-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
-      SCIPdebugMessage( "-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
       SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )
    {
-      SCIPdebugMessage( "-> handling objchg event, variable <%s>\n", SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling objchg event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( nlpUpdateObjCoef(scip->nlp, var) );
    }
    else

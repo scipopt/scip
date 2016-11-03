@@ -30,6 +30,7 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_cutpool.h"
 #include "scip/type_retcode.h"
+#include "scip/type_misc.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
 #include "scip/struct_var.h"

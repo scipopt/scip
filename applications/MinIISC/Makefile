@@ -94,7 +94,6 @@ $(BINDIR):
 
 .PHONY: test
 test:           $(MAINFILE)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
@@ -102,10 +101,9 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) "appl" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+			$(CONTINUE) $(LOCK) "appl" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE);
 
 .PHONY: clean
 clean:		$(OBJDIR)

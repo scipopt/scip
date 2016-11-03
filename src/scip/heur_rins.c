@@ -79,8 +79,6 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
-   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
-   int                   ncreatedsubmips;    /**< counter for the number of created sub-MIPs                          */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
@@ -88,20 +86,20 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** creates a subproblem for subscip by fixing a number of variables */
+/** determines variable fixings for RINS
+ *
+ *  RINS fixes variables with matching solution values in the current LP and the
+ *  incumbent solution
+ */
 static
-SCIP_RETCODE createSubproblem(
-   SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
-   SCIP_ROW**            sourcerows,         /**< rows of original SCIP                                         */
-   SCIP_CONS**           targetconss,        /**< constraints of target SCIP                                    */
-   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays                     */
-   int*                  nsourcerows,        /**< number of rows / created constraints                          */
-   SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?  */
-   SCIP_Bool             copylpbasis,        /**< should a starting basis should be copied into the subscip?    */
-   SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
+SCIP_RETCODE determineFixings(
+   SCIP*                 scip,               /**< original SCIP data structure  */
+   SCIP_VAR**            fixedvars,          /**< array to store source SCIP variables that should be fixed in the copy  */
+   SCIP_Real*            fixedvals,          /**< array to store fixing values for variables that should be fixed in the copy */
+   int*                  nfixedvars,         /**< pointer to store the number of variables that RINS can fix */
+   int                   fixedvarssize,      /**< size of the buffer arrays to store potential fixings */
+   SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed */
+   SCIP_Bool*            success             /**< pointer to store whether sufficiently many variable fixings were found */
    )
 {
    SCIP_SOL* bestsol;                        /* incumbent solution of the original problem */
@@ -114,15 +112,20 @@ SCIP_RETCODE createSubproblem(
    int i;
    int fixingcounter;
 
+   assert(fixedvals != NULL);
+   assert(fixedvars != NULL);
+   assert(nfixedvars != NULL);
+
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    bestsol = SCIPgetBestSol(scip);
    assert(bestsol != NULL);
 
    fixingcounter = 0;
+   assert(fixedvarssize >= nbinvars + nintvars);
 
-   /* change bounds of variables of the subproblem */
-   for( i = 0; i <  nbinvars + nintvars; i++ )
+   /* determine variables to fix in the subproblem */
+   for( i = 0; i < nbinvars + nintvars; i++ )
    {
       SCIP_Real lpsolval;
       SCIP_Real solval;
@@ -131,19 +134,22 @@ SCIP_RETCODE createSubproblem(
       lpsolval = SCIPvarGetLPSol(vars[i]);
       solval = SCIPgetSolVal(scip, bestsol, vars[i]);
 
-      /* iff both solutions are equal, variable is fixed to that value in the subproblem, otherwise it is just copied */
+      /* iff both solutions are equal, variable is stored to be fixed */
       if( SCIPisFeasEQ(scip, lpsolval, solval) )
       {
-         /* perform the bound change */
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
+         /* store the fixing and increase the number of fixed variables */
+         fixedvars[fixingcounter] = vars[i];
+         fixedvals[fixingcounter] = solval;
          fixingcounter++;
       }
    }
 
+   /* store the number of fixings */
+   *nfixedvars = fixingcounter;
+
    fixingrate = 0.0;
 
-   /* abort, if all variables were fixed */
+   /* abort, if all variables should be fixed */
    if( fixingcounter == nbinvars + nintvars )
    {
       *success = FALSE;
@@ -157,80 +163,6 @@ SCIP_RETCODE createSubproblem(
    {
       *success = FALSE;
       return SCIP_OKAY;
-   }
-
-   if( uselprows )
-   {
-      SCIP_ROW** rows;
-      int nrows;
-
-      assert(!copylpbasis || nsourcerows != NULL);
-      assert(!copylpbasis || sourcerows != NULL);
-      assert(!copylpbasis || targetconss != NULL);
-
-      /* get the rows and their number */
-      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-      assert(!copylpbasis || nrows <= sourcerowssize);
-
-      *nsourcerows = 0;
-
-      /* copy all rows to linear constraints */
-      for( i = 0; i < nrows; i++ )
-      {
-         SCIP_CONS* cons;
-         SCIP_VAR** consvars;
-         SCIP_COL** cols;
-         SCIP_Real constant;
-         SCIP_Real lhs;
-         SCIP_Real rhs;
-         SCIP_Real* vals;
-         int nnonz;
-         int j;
-
-         /* ignore rows that are only locally valid */
-         if( SCIProwIsLocal(rows[i]) )
-            continue;
-
-         /* get the row's data */
-         constant = SCIProwGetConstant(rows[i]);
-         lhs = SCIProwGetLhs(rows[i]) - constant;
-         rhs = SCIProwGetRhs(rows[i]) - constant;
-         vals = SCIProwGetVals(rows[i]);
-         nnonz = SCIProwGetNNonz(rows[i]);
-         cols = SCIProwGetCols(rows[i]);
-
-         assert( lhs <= rhs );
-
-         /* allocate memory array to be filled with the corresponding subproblem variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-         for( j = 0; j < nnonz; j++ )
-            consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-         /* create a new linear constraint and add it to the subproblem */
-         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-         SCIP_CALL( SCIPaddCons(subscip, cons) );
-
-         if( copylpbasis )
-         {
-            assert(targetconss != NULL);
-            assert(*nsourcerows <= sourcerowssize);
-
-            /* store the added cons and the corresponding row */
-            sourcerows[(*nsourcerows)] = rows[i];
-            targetconss[(*nsourcerows)] = cons;
-
-            /* capture the row (the constraint was already captured twice: create, add)
-             * both will be released at the end of copyBasis in scip.c
-             */
-            SCIP_CALL( SCIPcaptureRow(scip, sourcerows[(*nsourcerows)]) );
-
-            ++(*nsourcerows);
-         }
-
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &consvars);
-      }
    }
 
    *success = TRUE;
@@ -276,7 +208,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -306,7 +238,7 @@ SCIP_DECL_EVENTEXEC(eventExecRins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -368,7 +300,6 @@ SCIP_DECL_HEURINIT(heurInitRins)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->ncreatedsubmips = 0;
 
    return SCIP_OKAY;
 }
@@ -385,10 +316,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_VAR** vars;                          /* original problem's variables        */
    SCIP_VAR** subvars;                       /* subproblem's variables              */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_HASHMAP* consmapfw;                  /* mapping of SCIP constraints to sub-SCIP constraints */
-   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
-   SCIP_ROW** sourcerows = NULL;
-   SCIP_CONS** targetconss = NULL;
+   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP_VAR** fixedvars;
+   SCIP_Real* fixedvals;
 
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
@@ -400,9 +330,11 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    int nvars;
    int nbinvars;
    int nintvars;
+   int nfixedvars;
    int i;
 
    SCIP_Bool success;
+   SCIP_Bool valid;
    SCIP_RETCODE retcode;
 
    assert( heur != NULL );
@@ -444,7 +376,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* reward RINS if it succeeded often */
    nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nnodes -= (SCIP_Longint)(100.0 * heurdata->ncreatedsubmips);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes -= (SCIP_Longint)(100.0 * SCIPheurGetNCalls(heur));  /* count the setup costs for the sub-MIP as 100 nodes */
    nnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
@@ -464,124 +396,55 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
+   /* allocate buffer storage to hold the RINS fixings */
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nbinvars + nintvars) );
+
+   success = FALSE;
+
+   nfixedvars = 0;
+   /* determine possible fixings for RINS: variables with same value in bestsol and LP relaxation */
+   SCIP_CALL( determineFixings(scip, fixedvars, fixedvals, &nfixedvars, nbinvars + nintvars, heurdata->minfixingrate, &success) );
+
+   /* too few variables could be fixed by the RINS scheme */
+   if( !success )
+   {
+      goto TERMINATE;
+   }
+
+   assert(nfixedvars > 0 && nfixedvars < nbinvars + nintvars);
+
    *result = SCIP_DIDNOTFIND;
 
-   /* initializing the subproblem */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   SCIPdebugMsg(scip, "RINS heuristic fixes %d out of %d binary+integer variables\n", nfixedvars, nbinvars + nintvars);
    SCIP_CALL( SCIPcreate(&subscip) );
-   ++heurdata->ncreatedsubmips;
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   if( heurdata->copylpbasis )
-   {
-      sourcerowssize = SCIPgetNLPRows(scip);
+   valid = FALSE;
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &valid) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
-
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
-   }
-   else
-   {
-      consmapfw = NULL;
-      sourcerows = NULL;
-      targetconss = NULL;
-   }
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   assert(valid);
 
    eventhdlr = NULL;
-
-   if( heurdata->uselprows )
+   /* create event handler for LP events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
+   if( eventhdlr == NULL )
    {
-      char probname[SCIP_MAXSTRLEN];
-
-      /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-      /* get name of the original problem and add the string "_rinssub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_rinssub", SCIPgetProbName(scip));
-
-      /* do not abort subproblem on CTRL-C */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-      /* create the subproblem */
-      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-      /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
-   }
-   else
-   {
-      SCIP_Bool valid;
-      valid = FALSE;
-
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "rins", TRUE, FALSE, TRUE, &valid) );
-
-      if( heurdata->copycuts )
-      {
-         if( heurdata->copylpbasis )
-         {
-            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
-            assert(nsourcerows <= sourcerowssize);
-         }
-         else
-         {
-            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
-         }
-      }
-
-      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
-
-      /* create event handler for LP events */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
-      if( eventhdlr == NULL )
-      {
-         SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
+      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
+      return SCIP_PLUGINNOTFOUND;
    }
 
+   /* copy subproblem variables from map to obtain the same order */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-   success = FALSE;
-
-   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, &nsourcerows,
-         heurdata->minfixingrate, heurdata->uselprows, heurdata->copylpbasis, &success) );
-
-   if( success && heurdata->copylpbasis )
-   {
-      /* use the last LP basis as starting basis */
-      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
-   }
-
-   if( sourcerows != NULL )
-   {
-      assert(targetconss != NULL);
-      SCIPfreeBufferArray(scip, &targetconss);
-      SCIPfreeBufferArray(scip, &sourcerows);
-   }
-   else
-      assert(targetconss == NULL);
-
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( heurdata->copylpbasis )
-   {
-      assert(consmapfw != NULL);
-      SCIPhashmapFree(&consmapfw);
-   }
-
-   if( !success )
-   {
-      *result = SCIP_DIDNOTRUN;
-      goto TERMINATE;
-   }
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
@@ -700,24 +563,14 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* catch LP events of sub-SCIP */
-   if( !heurdata->uselprows )
-   {
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPtransformProb(subscip) );
-      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
-   }
+   SCIP_CALL( SCIPtransformProb(subscip) );
+   SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
-   if( !heurdata->uselprows )
-   {
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-   }
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* Errors in solving the subproblem should not kill the overall solving process
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -759,11 +612,13 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       if( success )
          *result = SCIP_FOUNDSOL;
    }
-
- TERMINATE:
-      /* free subproblem */
+   /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &fixedvals);
+   SCIPfreeBufferArray(scip, &fixedvars);
 
    return SCIP_OKAY;
 }

@@ -470,13 +470,13 @@ SCIP_RETCODE constructSNFRelaxation(
 
    *success = FALSE;
 
-   SCIPdebugMessage("--------------------- construction of SNF relaxation ------------------------------------\n");
+   SCIPdebugMsg(scip, "--------------------- construction of SNF relaxation ------------------------------------\n");
 
    /* get nonzero columns and coefficients of row */
    nonzcols =  SCIProwGetCols(row);
    nnonzcols = SCIProwGetNLPNonz(row);
    nonzcoefs = SCIProwGetVals(row);
-   SCIPdebugMessage("nnonzcols = %d\n",nnonzcols);
+   SCIPdebugMsg(scip, "nnonzcols = %d\n",nnonzcols);
 
    /* get data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &nonzcolsbinary, nnonzcols) );
@@ -556,7 +556,7 @@ SCIP_RETCODE constructSNFRelaxation(
     * start with non-binary variables because a binary variable x_j which is involved in a used variable bound 
     * imposed on a non-binary variable y_j has to be handled together with the non-binary variable y_j. 
     */
-   SCIPdebugMessage("transformation for NONBINARY variables (nnonbinvars=%d):\n", nnonzcolsnonbinary);
+   SCIPdebugMsg(scip, "transformation for NONBINARY variables (nnonbinvars=%d):\n", nnonzcolsnonbinary);
 
    /* non-binary variables and binary variables contained in used variable bounds */
    for( c = 0; c < nnonzcolsnonbinary; c++ )
@@ -591,7 +591,7 @@ SCIP_RETCODE constructSNFRelaxation(
       getClosestLb(scip, var, ALLOWLOCAL, &bestslb, &bestslbtype);
       getClosestUb(scip, var, ALLOWLOCAL, &bestsub, &bestsubtype);
 
-      SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g(%d),%g(%d)]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, 
+      SCIPdebugMsg(scip, "  %d: %g <%s, idx=%d, lp=%g, [%g(%d),%g(%d)]>:\n", c, rowcoef, SCIPvarGetName(var), probidx,
          varsolvals[probidx], bestslb, bestslbtype, bestsub, bestsubtype);
 
       /* mixed integer set cannot be relaxed to 0-1 single node flow set because both simple bounds are -infinity 
@@ -645,7 +645,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
          }
       }
-      SCIPdebugMessage("        bestlb=%g(%d), bestub=%g(%d)\n", bestlb, bestlbtype, bestub, bestubtype);
+      SCIPdebugMsg(scip, "        bestlb=%g(%d), bestub=%g(%d)\n", bestlb, bestlbtype, bestub, bestubtype);
 
       /* mixed integer set cannot be relaxed to 0-1 single node flow set because there are no suitable bounds 
        * to define the transformed variable y'_j 
@@ -721,8 +721,8 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             (*transrhs) -= (rowcoef * bestsub);
 
-            SCIPdebugMessage("    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n", 
-               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars], 
+            SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n",
+               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars],
                *ntransvars, *transrhs + (rowcoef * bestsub), rowcoef, bestsub, *transrhs);
          }
          else
@@ -772,9 +772,9 @@ SCIP_RETCODE constructSNFRelaxation(
             /* store for x_j that y'_j is the associated real variable in the 0-1 single node flow relaxation */
             assoctransvars[SCIPvarGetProbindex(vlbvars[bestlbtype])] = *ntransvars;
 
-            SCIPdebugMessage("    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n", 
-               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars], 
-               *ntransvars, SCIPvarGetName(vlbvars[bestlbtype]), *transrhs + (rowcoef * vlbconsts[bestlbtype]), rowcoef, 
+            SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n",
+               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars],
+               *ntransvars, SCIPvarGetName(vlbvars[bestlbtype]), *transrhs + (rowcoef * vlbconsts[bestlbtype]), rowcoef,
                vlbconsts[bestlbtype], *transrhs );
          }
       }
@@ -827,8 +827,8 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             (*transrhs) -= (rowcoef * bestslb);
 
-            SCIPdebugMessage("    --> bestub used for trans: ... %s y'_%d + ..., Y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n", 
-               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars], 
+            SCIPdebugMsg(scip, "    --> bestub used for trans: ... %s y'_%d + ..., Y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n",
+               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars],
                *ntransvars, *transrhs + (rowcoef * bestslb), rowcoef, bestslb, *transrhs);
          }
          else
@@ -879,9 +879,9 @@ SCIP_RETCODE constructSNFRelaxation(
             /* store for x_j that y'_j is the associated real variable in the 0-1 single node flow relaxation */
             assoctransvars[SCIPvarGetProbindex(vubvars[bestubtype])] = *ntransvars;
 
-            SCIPdebugMessage("    --> bestub used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n", 
-               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars], 
-               *ntransvars, SCIPvarGetName(vubvars[bestubtype]), *transrhs + (rowcoef * vubconsts[bestubtype]), rowcoef, 
+            SCIPdebugMsg(scip, "    --> bestub used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n",
+               transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, transvarvubcoefs[*ntransvars],
+               *ntransvars, SCIPvarGetName(vubvars[bestubtype]), *transrhs + (rowcoef * vubconsts[bestubtype]), rowcoef,
                vubconsts[bestubtype], *transrhs);
          }
       }
@@ -909,7 +909,7 @@ SCIP_RETCODE constructSNFRelaxation(
    }
    assert(*ntransvars == nnonzcolsnonbinary);
 
-   SCIPdebugMessage("transformation for BINARY variables (nbinvars=%d):\n", nnonzcolsbinary);
+   SCIPdebugMsg(scip, "transformation for BINARY variables (nbinvars=%d):\n", nnonzcolsbinary);
 
    /* binary variables not involved in used variable bounds imposed on non-binary variable */
    for( c = 0; c < nnonzcolsbinary; c++ )
@@ -927,7 +927,7 @@ SCIP_RETCODE constructSNFRelaxation(
       assert(rowcoefsbinary[probidx] == rowcoef); /*lint !e777*/
       assert(!SCIPisZero(scip, rowcoef));
 
-      SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g, %g]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, varsolvals[probidx], 
+      SCIPdebugMsg(scip, "  %d: %g <%s, idx=%d, lp=%g, [%g, %g]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, varsolvals[probidx],
          SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 
       /* x_j has already been handled in connection with a non-binary variable */ 
@@ -935,7 +935,7 @@ SCIP_RETCODE constructSNFRelaxation(
       {
          assert(assoctransvars[probidx] >= 0 && assoctransvars[probidx] <= nnonzcolsnonbinary);
          assert(boundsfortrans[probidx] == -3);
-         SCIPdebugMessage("   --> already handled\n");
+         SCIPdebugMsg(scip, "   --> already handled\n");
          continue;
       }
 
@@ -976,8 +976,7 @@ SCIP_RETCODE constructSNFRelaxation(
       assert(SCIPisFeasGE(scip, transvarvubcoefs[*ntransvars], 0.0) 
          && !SCIPisInfinity(scip, transvarvubcoefs[*ntransvars]));
 
-      SCIPdebugMessage("   --> ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s))\n", 
-         transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars, 
+      SCIPdebugMsg(scip, "   --> ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s))\n", transvarcoefs[*ntransvars] == 1 ? "+" : "-", *ntransvars, *ntransvars,
          transvarvubcoefs[*ntransvars], *ntransvars, SCIPvarGetName(var) );
 
       /* updates number of variables in transformed problem */
@@ -989,12 +988,12 @@ SCIP_RETCODE constructSNFRelaxation(
    *success = TRUE;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("constraint in constructed 0-1 single node flow relaxation: ");
+   SCIPdebugMsg(scip, "constraint in constructed 0-1 single node flow relaxation: ");
    for( c = 0; c < *ntransvars; c++ )
    {   
-      SCIPdebugPrintf("%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
+      SCIPdebugMsgPrint(scip, "%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
    }
-   SCIPdebugPrintf("<= %g\n", *transrhs);
+   SCIPdebugMsgPrint(scip, "<= %g\n", *transrhs);
 #endif
 
  TERMINATE:
@@ -1026,8 +1025,10 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
 {
    SCIP_Real* tempsort;
    SCIP_Real solitemsweight;
+   SCIP_Real mediancapacity;
    int j;
    int i;
+   int criticalitem;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1046,14 +1047,16 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
 
    /* allocate memory for temporary array used for sorting; array should contain profits divided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+
    /* initialize temporary array */ 
    for( i = nitems - 1; i >= 0; --i )
-   {
-      tempsort[i] = profits[i] / weights [i];
-   }
+      tempsort[i] = profits[i] / weights[i];
 
-   /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIPsortDownRealRealRealInt ( tempsort, weights, profits, items, nitems);
+   /* decrease capacity slightly to make it tighter than the original capacity */
+   mediancapacity = capacity * (1 - SCIPfeastol(scip));
+
+   /* rearrange items around  */
+   SCIPselectWeightedDownRealRealInt(tempsort, profits, items, weights, mediancapacity, nitems, &criticalitem);
 
    /* free temporary array */
    SCIPfreeBufferArray(scip, &tempsort);
@@ -1071,10 +1074,27 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
          (*solval) += profits[j];
       solitemsweight += weights[j];
    }
-   for( ; j < nitems && solitems != NULL; j++ )
+
+
+   /* continue to put items into the knapsack if they entirely fit */
+   for( ; j < nitems; j++ )
    {
-      nonsolitems[*nnonsolitems] = items[j];
-      (*nnonsolitems)++;
+      if( SCIPisFeasLT(scip, solitemsweight + weights[j], capacity) )
+      {
+         if( solitems != NULL )
+         {
+            solitems[*nsolitems] = items[j];
+            (*nsolitems)++;
+         }
+         if( solval != NULL )
+            (*solval) += profits[j];
+         solitemsweight += weights[j];
+      }
+      else if( solitems != NULL )
+      {
+         nonsolitems[*nnonsolitems] = items[j];
+         (*nnonsolitems)++;
+      }
    }
 
    return SCIP_OKAY;
@@ -1265,7 +1285,7 @@ SCIP_RETCODE getFlowCover(
    assert(lambda != NULL);
    assert(found != NULL);
 
-   SCIPdebugMessage("--------------------- get flow cover ----------------------------------------------------\n");
+   SCIPdebugMsg(scip, "--------------------- get flow cover ----------------------------------------------------\n");
 
    /* get data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &items, nvars) );
@@ -1296,7 +1316,7 @@ SCIP_RETCODE getFlowCover(
     *   put j into N2\C2,          if j in N2 and x*_j = 0 
     * and get the set of the remaining variables
     */
-   SCIPdebugMessage("0. Fix some variables in advance:\n");
+   SCIPdebugMsg(scip, "0. Fix some variables in advance:\n");
    nitems = 0;
    nn1items = 0;
    n1itemsweight = 0.0;
@@ -1333,7 +1353,7 @@ SCIP_RETCODE getFlowCover(
       {
          flowcoverstatus[j] = -1;
          (*nnonflowcovervars)++;
-         SCIPdebugMessage("     <%d>: in N1-C1\n", j);
+         SCIPdebugMsg(scip, "     <%d>: in N1-C1\n", j);
       }
       /* j is in N1 and x*_j = 1 */
       else if( coefs[j] == 1 && solvals[j] > 0.5 )
@@ -1341,7 +1361,7 @@ SCIP_RETCODE getFlowCover(
          flowcoverstatus[j] = 1;
          (*nflowcovervars)++;
          flowcoverweight += vubcoefs[j];
-         SCIPdebugMessage("     <%d>: in C1\n", j);
+         SCIPdebugMsg(scip, "     <%d>: in C1\n", j);
       }
       /* j is in N2 and x*_j = 1 */
       else if( coefs[j] == -1 && solvals[j] > 0.5 )
@@ -1349,7 +1369,7 @@ SCIP_RETCODE getFlowCover(
          flowcoverstatus[j] = 1;
          (*nflowcovervars)++;
          flowcoverweight -= vubcoefs[j];
-         SCIPdebugMessage("     <%d>: in C2\n", j);
+         SCIPdebugMsg(scip, "     <%d>: in C2\n", j);
       } 
       /* j is in N2 and x*_j = 0 */
       else 
@@ -1357,7 +1377,7 @@ SCIP_RETCODE getFlowCover(
          assert(coefs[j] == -1 && solvals[j] < 0.5);
          flowcoverstatus[j] = -1;
          (*nnonflowcovervars)++;
-         SCIPdebugMessage("     <%d>: in N2-C2\n", j);
+         SCIPdebugMsg(scip, "     <%d>: in N2-C2\n", j);
       }
    }
    assert((*nflowcovervars) + (*nnonflowcovervars) + nitems == nvars);
@@ -1391,7 +1411,8 @@ SCIP_RETCODE getFlowCover(
     *      c =        C (- b + sum_{j in N1} u_j )   - 1  if frac[ C (- b + sum_{j in N1} u_j ) ] = 0
     *    and solve it exactly under consideration of the fixing.
     */
-   SCIPdebugMessage("1. Transform KP^SNF to KP^SNF_rat:\n");
+   SCIPdebugMsg(scip, "1. Transform KP^SNF to KP^SNF_rat:\n");
+
    /* get weight and profit of variables in KP^SNF_rat and check, whether all weights are already integral */
    transweightsrealintegral = TRUE;
    for( j = 0; j < nitems; j++ )
@@ -1404,19 +1425,19 @@ SCIP_RETCODE getFlowCover(
       if( coefs[items[j]] == 1 )
       {         
          transprofitsreal[j] = 1.0 - solvals[items[j]];
-         SCIPdebugMessage("     <%d>: j in N1:   w_%d = %g, p_%d = %g %s\n", items[j], items[j], transweightsreal[j], 
+         SCIPdebugMsg(scip, "     <%d>: j in N1:   w_%d = %g, p_%d = %g %s\n", items[j], items[j], transweightsreal[j],
             items[j], transprofitsreal[j], SCIPisIntegral(scip, transweightsreal[j]) ? "" : "  ----> NOT integral");
       }
       else
       {
          transprofitsreal[j] = solvals[items[j]];
-         SCIPdebugMessage("     <%d>: j in N2:   w_%d = %g, p_%d = %g %s\n", items[j], items[j], transweightsreal[j], 
+         SCIPdebugMsg(scip, "     <%d>: j in N2:   w_%d = %g, p_%d = %g %s\n", items[j], items[j], transweightsreal[j],
             items[j], transprofitsreal[j], SCIPisIntegral(scip, transweightsreal[j]) ? "" : "  ----> NOT integral");
       }
    }
    /* get capacity of knapsack constraint in KP^SNF_rat */
    transcapacityreal = - rhs + flowcoverweight + n1itemsweight;
-   SCIPdebugMessage("     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n", 
+   SCIPdebugMsg(scip, "     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n",
       rhs, flowcoverweight, n1itemsweight, transcapacityreal);
 
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing 
@@ -1560,19 +1581,19 @@ SCIP_RETCODE getFlowCover(
 #ifdef SCIP_DEBUG
    if( *found )
    {
-      SCIPdebugMessage("2. %s solution:\n", kpexact ? "exact" : "approximate");
+      SCIPdebugMsg(scip, "2. %s solution:\n", kpexact ? "exact" : "approximate");
       for( j = 0; j < nvars; j++ )
       {
          if( coefs[j] == 1 && flowcoverstatus[j] == 1 )
          {
-            SCIPdebugMessage("     C1: + y_%d [u_%d = %g]\n", j, j, vubcoefs[j]);
+            SCIPdebugMsg(scip, "     C1: + y_%d [u_%d = %g]\n", j, j, vubcoefs[j]);
          }
          else if( coefs[j] == -1 && flowcoverstatus[j] == 1 )
          {
-            SCIPdebugMessage("     C2: - y_%d [u_%d = %g]\n", j, j, vubcoefs[j]);
+            SCIPdebugMsg(scip, "     C2: - y_%d [u_%d = %g]\n", j, j, vubcoefs[j]);
          }
       }
-      SCIPdebugMessage("     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", flowcoverweight, rhs, *lambda);
+      SCIPdebugMsg(scip, "     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", flowcoverweight, rhs, *lambda);
    }
 #endif
 
@@ -1626,9 +1647,9 @@ void getL1L2(
    fbeta = 1.0 - (lambda / delta);
    onedivoneminusfbeta = delta / lambda;
 
-   SCIPdebugMessage("     --------------------- get L1 and L2 -----------------------------------------------------\n");
-   SCIPdebugMessage("     L1 = { j in N1-C1 : y*_j >= ( u_j - lambda F_{f_beta}(  u_j/delta) ) x*_j }\n");
-   SCIPdebugMessage("     L2 = { j in N2-C2 : y*_j >=       - lambda F_{f_beta}(- u_j/delta)   x*_j }\n");
+   SCIPdebugMsg(scip, "     --------------------- get L1 and L2 -----------------------------------------------------\n");
+   SCIPdebugMsg(scip, "     L1 = { j in N1-C1 : y*_j >= ( u_j - lambda F_{f_beta}(  u_j/delta) ) x*_j }\n");
+   SCIPdebugMsg(scip, "     L2 = { j in N2-C2 : y*_j >=       - lambda F_{f_beta}(- u_j/delta)   x*_j }\n");
 
    /* set flowcover status of continuous variable x_j to 2, i.e., put j intp L1 and L2, respectively 
     *   if j is in N1\C1 and y*_j >= ( u_j - lambda F_{f_beta}(  u_j/delta) ) x*_j 
@@ -1664,8 +1685,8 @@ void getL1L2(
          if( SCIPisFeasGE(scip, transcontvarsolvals[j], ( transvarvubcoefs[j] - ( lambda * mirval ) ) * transbinvarsolvals[j]) )
             transvarflowcoverstatus[j] = 2;
 
-         SCIPdebugMessage("       <%d>: in N1-C1: %g ?>=?  ( %g - %g F_{f_beta}(%g)(%g) ) %g = %g  ---> fcstatus = %d\n", 
-            j, transcontvarsolvals[j], transvarvubcoefs[j], lambda, d, mirval, transbinvarsolvals[j], 
+         SCIPdebugMsg(scip, "       <%d>: in N1-C1: %g ?>=?  ( %g - %g F_{f_beta}(%g)(%g) ) %g = %g  ---> fcstatus = %d\n",
+            j, transcontvarsolvals[j], transvarvubcoefs[j], lambda, d, mirval, transbinvarsolvals[j],
             ( transvarvubcoefs[j] - ( lambda * mirval ) ) * transbinvarsolvals[j], transvarflowcoverstatus[j]);
       }
 
@@ -1688,8 +1709,8 @@ void getL1L2(
          if( SCIPisFeasGE(scip, transcontvarsolvals[j], - ( lambda * mirval ) * transbinvarsolvals[j]) )
             transvarflowcoverstatus[j] = 2;
 
-         SCIPdebugMessage("       <%d>: in N2-C2: %g ?>=?  - %g F_{f_beta}(-%g)(%g) %g = %g  ---> fcstatus = %d\n", 
-            j, transcontvarsolvals[j], lambda, d, mirval, transbinvarsolvals[j], 
+         SCIPdebugMsg(scip, "       <%d>: in N2-C2: %g ?>=?  - %g F_{f_beta}(-%g)(%g) %g = %g  ---> fcstatus = %d\n",
+            j, transcontvarsolvals[j], lambda, d, mirval, transbinvarsolvals[j],
             - ( lambda * mirval ) * transbinvarsolvals[j], transvarflowcoverstatus[j]);
       }
    }
@@ -1945,7 +1966,7 @@ SCIP_RETCODE addCut(
 
    *cutoff = FALSE;
 
-   SCIPdebugMessage("--------------------- found cut ---------------------------------------------------------\n");
+   SCIPdebugMsg(scip, "--------------------- found cut ---------------------------------------------------------\n");
 
    /* gets temporary memory for storing the cut as sparse row */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
@@ -1969,7 +1990,7 @@ SCIP_RETCODE addCut(
       /* set cut rank */
       SCIProwChgRank(cut, cutrank);
 
-      SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
+      SCIPdebugMsg(scip, " -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 
@@ -1978,7 +1999,7 @@ SCIP_RETCODE addCut(
             10, 100.0, MAKECONTINTEGRAL, &success) );
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
-         SCIPdebugMessage(" -> flowcover cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+         SCIPdebugMsg(scip, " -> flowcover cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          success = FALSE;
@@ -1990,7 +2011,7 @@ SCIP_RETCODE addCut(
       /* if scaling was successful, adds the cut */
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
-         SCIPdebugMessage(" -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
+         SCIPdebugMsg(scip, " -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
@@ -2100,7 +2121,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    assert(SCIPisFeasGT(scip, lambda, 0.0));
    assert(ncuts != NULL);
 
-   SCIPdebugMessage("--------------------- cut generation heuristic ------------------------------------------\n");
+   SCIPdebugMsg(scip, "--------------------- cut generation heuristic ------------------------------------------\n");
 
    /* get data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, ntransvars + 4) );
@@ -2110,7 +2131,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypesforsubst, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
 
-   SCIPdebugMessage("1. get candidate set for the value of delta:\n");
+   SCIPdebugMsg(scip, "1. get candidate set for the value of delta:\n");
 
    /* get candidate set for the value of delta  
     *   N* = { u_j : j in N and u_j > lambda} & { max{ u_j : j in N and u_j >= lambda } + 1, lambda + 1 };
@@ -2153,7 +2174,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       {
          candsetdelta[startidx + ncandsetdelta] = transvarvubcoefs[j];
          ncandsetdelta++;
-         SCIPdebugMessage("     u_j              = %g\n", transvarvubcoefs[j]);
+         SCIPdebugMsg(scip, "     u_j              = %g\n", transvarvubcoefs[j]);
       }
    }
 
@@ -2164,14 +2185,14 @@ SCIP_RETCODE cutGenerationHeuristic(
       startidx--;
       candsetdelta[startidx] = nvubcoefsmax + 1.0;
       ncandsetdelta++;
-      SCIPdebugMessage("     max u_j+1        = %g\n", nvubcoefsmax + 1.0);
+      SCIPdebugMsg(scip, "     max u_j+1        = %g\n", nvubcoefsmax + 1.0);
    }
 
    /* store lambda + 1 */
    startidx--;
    candsetdelta[startidx] = lambda + 1.0;
    ncandsetdelta++;
-   SCIPdebugMessage("     lambda + 1       = %g\n", lambda + 1.0);
+   SCIPdebugMsg(scip, "     lambda + 1       = %g\n", lambda + 1.0);
 
    /* store max{ u_j : j in C1 and u_j > lambda } and max{ u_j : j in C1 & L~2 and u_j > lambda } */
    if( !SCIPisInfinity(scip, -l2tmpvubcoefsmax) && SCIPisFeasGT(scip, l2tmpvubcoefsmax, c1vubcoefsmax) )
@@ -2180,7 +2201,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       startidx--;
       candsetdelta[startidx] = l2tmpvubcoefsmax;
       ncandsetdelta++;
-      SCIPdebugMessage("     l2tmpvubcoefsmax = %g\n", l2tmpvubcoefsmax);
+      SCIPdebugMsg(scip, "     l2tmpvubcoefsmax = %g\n", l2tmpvubcoefsmax);
    }
    if( !SCIPisInfinity(scip, -c1vubcoefsmax) )
    {
@@ -2188,14 +2209,14 @@ SCIP_RETCODE cutGenerationHeuristic(
       startidx--;
       candsetdelta[startidx] = c1vubcoefsmax;
       ncandsetdelta++;
-      SCIPdebugMessage("     c1vubcoefsmax    = %g\n", c1vubcoefsmax);
+      SCIPdebugMsg(scip, "     c1vubcoefsmax    = %g\n", c1vubcoefsmax);
    }
 
    assert(startidx >= 0 && startidx <= 3);
    assert(startidx + ncandsetdelta >= 4);
    assert(ncandsetdelta >= 1 && ncandsetdelta <= ntransvars + 4);
 
-   SCIPdebugMessage("2. generate c-MIRFCIs for different values of delta:\n");
+   SCIPdebugMsg(scip, "2. generate c-MIRFCIs for different values of delta:\n");
 
    /* for each value of delta choose L1 subset N1\C1 and L2 subset N2\C2 by comparison, generate the 
     * c-MIRFCI for delta, (C1, C2) and (L1, L2) and select the most efficient c-MIRFCI
@@ -2229,7 +2250,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       testeddeltas[ntesteddeltas] = delta;
       ntesteddeltas++;
 
-      SCIPdebugMessage("   delta = %g:\n", delta);
+      SCIPdebugMsg(scip, "   delta = %g:\n", delta);
 
       /* work on copy of transvarflowcoverstatus because current choice of sets L1 and L2 will change 
        * transvarflowcoverstatus 
@@ -2264,8 +2285,7 @@ SCIP_RETCODE cutGenerationHeuristic(
 
          efficacy = calcEfficacy(nvars, cutcoefs, cutrhs, cutact);
 
-         SCIPdebugMessage("   ---> act = %g  rhs = %g  eff = %g (old besteff = %g, old bestdelta=%g)\n", 
-            cutact, cutrhs, efficacy, bestefficacy, bestdelta);
+         SCIPdebugMsg(scip, "   ---> act = %g  rhs = %g  eff = %g (old besteff = %g, old bestdelta=%g)\n", cutact, cutrhs, efficacy, bestefficacy, bestdelta);
 
          if( efficacy > bestefficacy )
          {
@@ -2582,16 +2602,15 @@ SCIP_RETCODE separateCuts(
          rowweights[roworder[r]] = 1.0;
       else
       {
-         SCIPdebugMessage("skipping unconstrained row\n");
+         SCIPdebugMsg(scip, "skipping unconstrained row\n");
          rowweights[roworder[r]] = 0.0;
          continue;
       }
 
-      SCIPdebugMessage("===================== flow cover separation for row <%s> (%d of %d) ===================== \n",
+      SCIPdebugMsg(scip, "===================== flow cover separation for row <%s> (%d of %d) ===================== \n",
          SCIProwGetName(rows[roworder[r]]), r, nrows);
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[roworder[r]], NULL) ) );
-      SCIPdebugMessage("rowact=%g is closer to %s --> rowweight=%g\n", rowact, 
-         rowweights[roworder[r]] == 1 ? "rhs" : "lhs", rowweights[roworder[r]]);
+      SCIPdebugMsg(scip, "rowact=%g is closer to %s --> rowweight=%g\n", rowact, rowweights[roworder[r]] == 1 ? "rhs" : "lhs", rowweights[roworder[r]]);
 
       mult = 1.0;
       do
@@ -2610,7 +2629,7 @@ SCIP_RETCODE separateCuts(
          if( !transsuccess )
          {
             /* transformation will fail for mult = -1, too */
-            SCIPdebugMessage("mult=%g: no 0-1 single node flow relaxation found\n", mult);
+            SCIPdebugMsg(scip, "mult=%g: no 0-1 single node flow relaxation found\n", mult);
             break;
          }  
 
@@ -2621,7 +2640,7 @@ SCIP_RETCODE separateCuts(
                &ncovervars, &nnoncovervars, transvarflowcoverstatus, &lambda, &flowcoverfound) );
          if( !flowcoverfound ) 
          {
-            SCIPdebugMessage("mult=%g: no flow cover found\n", mult);
+            SCIPdebugMsg(scip, "mult=%g: no flow cover found\n", mult);
             mult *= -1.0;
             continue; 
          }

@@ -185,7 +185,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Execlp method of " BRANCHRULE_NAME " branching\n");
+   SCIPdebugMsg(scip, "Execlp method of " BRANCHRULE_NAME " branching\n");
 
    /* get problem variables and LP row data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -348,15 +348,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          /* create solution from diving LP */
          SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-         SCIPdebugMessage("cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
+         SCIPdebugMsg(scip, "cloud branching found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
 
          /* try to add solution to SCIP */
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &success) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
          /* check, if solution was feasible and good enough */
          if( success )
          {
-            SCIPdebugMessage(" -> solution was feasible and good enough\n");
+            SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
             SCIP_CALL( SCIPendDive(scip) );
             *result = SCIP_CUTOFF;
             goto TERMINATE;
@@ -400,7 +400,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          break;
    }
 
-   SCIPdebugMessage("considered %d additional points in the cloud\n",counter);
+   SCIPdebugMsg(scip, "considered %d additional points in the cloud\n",counter);
 
 
    /* terminate the diving */
@@ -454,8 +454,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          }
       }
 
-      SCIPdebugMessage("can fully skip %d/%d strong branching candidates\n", nlpcands - counter, nlpcands);
-      SCIPdebugMessage("can half  skip %d/%d strong branching candidates\n", counter - ncomplete, nlpcands);
+      SCIPdebugMsg(scip, "can fully skip %d/%d strong branching candidates\n", nlpcands - counter, nlpcands);
+      SCIPdebugMsg(scip, "can half  skip %d/%d strong branching candidates\n", counter - ncomplete, nlpcands);
    }
    else
       counter = nlpcands;
@@ -465,7 +465,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->ntried > 100 &&
       (SCIP_Real)branchruledata->nuseful / branchruledata->ntried < branchruledata->minsuccessrate )
    {
-      SCIPdebugMessage("Disabling cloud branching (not effective)\n");
+      SCIPdebugMsg(scip, "Disabling cloud branching (not effective)\n");
       branchruledata->usecloud = FALSE;
    }
 
@@ -479,12 +479,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    if( branchruledata->lastcand <= ncomplete )
    {
-      SCIPdebugMessage("saved %d of %d LPs\n", 2*(nlpcands - ncomplete), 2*nlpcands);
+      SCIPdebugMsg(scip, "saved %d of %d LPs\n", 2*(nlpcands - ncomplete), 2*nlpcands);
       branchruledata->nsavedlps += 2*(nlpcands - ncomplete);
    }
    else
    {
-      SCIPdebugMessage("saved %d of %d LPs\n", 2*(nlpcands - counter)+counter - ncomplete, 2*nlpcands);
+      SCIPdebugMsg(scip, "saved %d of %d LPs\n", 2*(nlpcands - counter)+counter - ncomplete, 2*nlpcands);
       branchruledata->nsavedlps += 2*(nlpcands - counter)+counter - ncomplete;
    }
 
@@ -582,12 +582,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       /* perform the branching */
       if( !newselected )
       {
-         SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
+         SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
             counter, bestcand, SCIPvarGetName(var), lpcandssolcopy[bestcand], bestdown, bestup, bestscore);
       }
       else
       {
-         SCIPdebugMessage(" -> selected from %d new candidates,  candidate %d: variable <%s> (down=%g, up=%g, score=%g)\n",
+         SCIPdebugMsg(scip, " -> selected from %d new candidates,  candidate %d: variable <%s> (down=%g, up=%g, score=%g)\n",
             counter, bestcand, SCIPvarGetName(var), bestdown, bestup, bestscore);
       }
 
@@ -611,8 +611,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
          SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
       }
-      SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
-      SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
+      SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+      SCIPdebugMsg(scip, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
       *result = SCIP_BRANCHED;
    }
@@ -634,7 +634,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->ntriedunions > 10 &&
       (SCIP_Real)branchruledata->nusefulunions / branchruledata->ntriedunions < branchruledata->minsuccessunion )
    {
-      SCIPdebugMessage("Disabling union usage (not effective)\n");
+      SCIPdebugMsg(scip, "Disabling union usage (not effective)\n");
       branchruledata->useunion = FALSE;
    }
 

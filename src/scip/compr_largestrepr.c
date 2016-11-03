@@ -143,17 +143,17 @@ SCIP_RETCODE constructCompression(
    currentnode = NULL;
    nleaveids = SCIPgetNReoptLeaves(scip, currentnode);
 
-   SCIPdebugMessage(">> start <%s> (nleaves: %d)\n", COMPR_NAME, nleaveids);
+   SCIPdebugMsg(scip, ">> start <%s> (nleaves: %d)\n", COMPR_NAME, nleaveids);
 
    if( SCIPcomprGetMinNodes(compr) > nleaveids )
    {
-      SCIPdebugMessage("-> skip compression (min. leaves = %d)\n", SCIPcomprGetMinNodes(compr));
+      SCIPdebugMsg(scip, "-> skip compression (min. leaves = %d)\n", SCIPcomprGetMinNodes(compr));
       return SCIP_OKAY;
    }
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("-> try compression with %d node(s)\n", nleaveids);
+   SCIPdebugMsg(scip, "-> try compression with %d node(s)\n", nleaveids);
 
    /* collect the nodes to compress */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &leaveids, nleaveids) );
@@ -217,7 +217,7 @@ SCIP_RETCODE constructCompression(
       SCIP_CALL( SCIPallocBufferArray(scip, &repvals, 2+comprdata->niters) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nrepvars, 2+comprdata->niters) );
 
-      SCIPdebugMessage("+---+ start round %d +---+\n", start_id+1);
+      SCIPdebugMsg(scip, "+---+ start round %d +---+\n", start_id+1);
 
       /* try to find common representatives */
       while( nreps-1 <= comprdata->niters && (nreps == -1 || (current_id % nleaveids) != start_id) )
@@ -292,7 +292,7 @@ SCIP_RETCODE constructCompression(
             nnon_zero_vars++;
          }
 
-         SCIPdebugMessage("start with ID %u, %d fixed variables\n", leaveids[current_id], nnon_zero_vars);
+         SCIPdebugMsg(scip, "start with ID %u, %d fixed variables\n", leaveids[current_id], nnon_zero_vars);
 
          covered_ids[ncovered] = current_id;
          ncovered++;
@@ -400,7 +400,7 @@ SCIP_RETCODE constructCompression(
          }
          else
          {
-            SCIPdebugMessage("-> did not found a intersection larger than %d\n", comprdata->mincomvars);
+            SCIPdebugMsg(scip, "-> did not found a intersection larger than %d\n", comprdata->mincomvars);
             covered[current_id] = FALSE;
          }
 
@@ -699,7 +699,7 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
 
    if( !comprdata->initialized )
    {
-      SCIPdebugMessage(">> initializing <%s>\n", COMPR_NAME);
+      SCIPdebugMsg(scip, ">> initializing <%s>\n", COMPR_NAME);
 
       comprdata->representativessize = DEFAUL_MEM_REPR;
       comprdata->nrepresentatives = 0;
@@ -727,7 +727,7 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
       SCIP_CALL( applyCompression(scip, compr, comprdata, result) );
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
-      SCIPdebugMessage("->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
+      SCIPdebugMsg(scip, "->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
    }
    else
    {

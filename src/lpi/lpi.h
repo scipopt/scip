@@ -47,6 +47,10 @@
  * submatrix of (A,I), where m is the number of rows and I is the identity matrix. This means that if, internally, the
  * LP solver uses coefficients -1 for some of the slack variables, then rows associated with slacks variables whose
  * coefficient is -1 should be negated in order to return the result in terms of the LP interface definition.
+ *
+ * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
+ * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
+ * is an error, if matrix entries are added for rows or columns that have not been added before.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
