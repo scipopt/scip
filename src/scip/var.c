@@ -2149,24 +2149,22 @@ SCIP_RETCODE SCIPvarCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
+
+      /* if copying was successful, add the created variable data to the variable as well as all callback methods */
+      if( result == SCIP_SUCCESS )
+      {
+         (*var)->varcopy = sourcevar->varcopy;
+         (*var)->vardelorig = sourcevar->vardelorig;
+         (*var)->vartrans = sourcevar->vartrans;
+         (*var)->vardeltrans = sourcevar->vardeltrans;
+         (*var)->vardata = targetdata;
+      }
    }
 
    /* we initialize histories of the variables by copying the source variable-information */
    if( set->history_allowtransfer )
    {
       SCIPvarMergeHistories((*var), sourcevar, stat);
-   }
-
-   /* in case the copying was successfully, add the created variable data to the variable as well as all callback
-    * methods 
-    */
-   if( result == SCIP_SUCCESS )
-   {
-      (*var)->varcopy = sourcevar->varcopy;
-      (*var)->vardelorig = sourcevar->vardelorig;
-      (*var)->vartrans = sourcevar->vartrans;
-      (*var)->vardeltrans = sourcevar->vardeltrans;
-      (*var)->vardata = targetdata;
    }
 
    SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*var), SCIPvarGetName(sourcevar));
