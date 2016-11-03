@@ -6144,7 +6144,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
+   SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
    );
 
 /** removes all conflicts depending on an old cutoff bound if the improvement of the incumbent is good enough
@@ -6157,7 +6157,7 @@ SCIP_RETCODE SCIPaddConflict(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcleanConflictStoreNewIncumbent(
+SCIP_RETCODE SCIPclearConflictStore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENT*           event               /**< event data */
    );
@@ -10385,7 +10385,7 @@ EXTERN
 SCIP_RETCODE SCIPinitConflictAnalysis(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFTYPE         conftype,           /**< type of conflict */
-   SCIP_Bool             usescutoffbound     /**< is the current cutoff bound involved? */
+   SCIP_Bool             iscutoffinvolved    /**< is the current cutoff bound involved? */
    );
 
 /** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;

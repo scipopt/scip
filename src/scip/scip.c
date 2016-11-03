@@ -12508,7 +12508,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_NODE*            validnode,          /**< node at whichaddConf the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
+   SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
    )
 {
    SCIP_Real primalbound;
@@ -12518,11 +12518,11 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip->conflictstore != NULL);
    assert(scip->set->conf_enable);
    assert(conftype != SCIP_CONFTYPE_UNKNOWN);
-   assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || cutoffinvolved);
+   assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
    SCIP_CALL( checkStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( cutoffinvolved )
+   if( iscutoffinvolved )
       primalbound = SCIPgetCutoffbound(scip);
    else
       primalbound = -SCIPinfinity(scip);
@@ -12540,7 +12540,7 @@ SCIP_RETCODE SCIPaddConflict(
 
    /* add the conflict to the conflict store */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->eventfilter, cons, conftype, cutoffinvolved, primalbound) );
+         scip->transprob, scip->eventfilter, cons, conftype, iscutoffinvolved, primalbound) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -12550,7 +12550,7 @@ SCIP_RETCODE SCIPaddConflict(
    return SCIP_OKAY;
 }
 
-/** removes all conflicts depending on an old cutoff bound if the improvement of the new incumbent is good enough
+/** tries to remove conflicts depending on an old cutoff bound if the improvement of the new incumbent is good enough
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -12559,7 +12559,7 @@ SCIP_RETCODE SCIPaddConflict(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPcleanConflictStoreNewIncumbent(
+SCIP_RETCODE SCIPclearConflictStore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENT*           event               /**< event data */
    )
@@ -25540,12 +25540,12 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
 SCIP_RETCODE SCIPinitConflictAnalysis(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFTYPE         conftype,           /**< type of conflict */
-   SCIP_Bool             usescutoffbound     /**< is the current cutoff bound involved? */
+   SCIP_Bool             iscutoffinvolved    /**< is the current cutoff bound involved? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPinitConflictAnalysis", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictInit(scip->conflict, scip->set, scip->stat, scip->transprob, conftype, usescutoffbound) );
+   SCIP_CALL( SCIPconflictInit(scip->conflict, scip->set, scip->stat, scip->transprob, conftype, iscutoffinvolved) );
 
    return SCIP_OKAY;
 }

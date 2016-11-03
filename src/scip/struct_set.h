@@ -222,6 +222,9 @@ struct SCIP_Set
    SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
                                               *   valid, use both rays otherwise
                                               */
+   SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
+                                              *   an previous incumbent.
+                                              */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

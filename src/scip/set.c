@@ -142,6 +142,7 @@
 #define SCIP_DEFAULT_CONF_WEIGHTSIZE      0.001 /**< weight of the size of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH 0.1 /**< weight of the repropagation depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
+#define SCIP_DEFAULT_CONF_MINIMPROVE       0.05 /**< minimal improvement of primal bound to remove conflicts based on previous incumbent */
 
 
 /* Conflict Analysis (dual ray) */
@@ -1360,6 +1361,10 @@ SCIP_RETCODE SCIPsetCreate(
          "prefer a ray after applying the MIR function if the proof is still valid, use both rays otherwise",
          &(*set)->conf_prefermir, TRUE, SCIP_DEFAULT_CONF_PREFERMIR,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "conflict/minimprove",
+         "minimal improvement of primal bound to remove conflicts based on previous incumbent",
+         &(*set)->conf_minimprove, TRUE, SCIP_DEFAULT_CONF_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/weightsize",
          "weight of the size of a conflict used in score calculation",

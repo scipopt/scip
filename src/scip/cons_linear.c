@@ -129,6 +129,9 @@
                                            *   type
                                            */
 
+#define MAXVALRECOMP                1e+06 /**< maximal abolsute value we trust without recomputing the activity */
+#define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
+
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
@@ -8668,9 +8671,6 @@ SCIP_RETCODE tightenSides(
 
    return SCIP_OKAY;
 }
-
-#define MAXVALRECOMP  1e+06
-#define MINVALRECOMP  1e-05
 
 /** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
  *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continuous variable  li <= xi <= ui
