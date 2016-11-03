@@ -177,7 +177,8 @@ SCIP_Bool varHasName(
  * problem creation
  */
 
-/** creates problem data structure by copying the source problem; 
+/** creates problem data structure by copying the source problem
+ *
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
  */
@@ -195,8 +196,8 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
-   SCIP_PROBDATA* targetdata;
-   SCIP_RESULT result;
+   SCIP_PROBDATA* targetdata = NULL;
+   SCIP_RESULT result = SCIP_DIDNOTRUN;
 
    assert(prob != NULL);
    assert(set != NULL);
@@ -205,9 +206,6 @@ SCIP_RETCODE SCIPprobCopy(
    assert(sourceprob != NULL);
    assert(varmap != NULL);
    assert(consmap != NULL);
-
-   result = SCIP_DIDNOTRUN;
-   targetdata = NULL;
 
    /* create problem and initialize callbacks with NULL */
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
@@ -225,19 +223,19 @@ SCIP_RETCODE SCIPprobCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
-   }
 
-   /* if copying was successful, add data and callbacks */
-   if( result == SCIP_SUCCESS )
-   {
-      assert( targetdata != NULL );
-      (*prob)->probdelorig = sourceprob->probdelorig;
-      (*prob)->probtrans = sourceprob->probtrans;
-      (*prob)->probdeltrans = sourceprob->probdeltrans;
-      (*prob)->probinitsol = sourceprob->probinitsol;
-      (*prob)->probexitsol = sourceprob->probexitsol;
-      (*prob)->probcopy = sourceprob->probcopy;
-      (*prob)->probdata = targetdata;
+      /* if copying was successful, add data and callbacks */
+      if( result == SCIP_SUCCESS )
+      {
+         assert( targetdata != NULL );
+         (*prob)->probdelorig = sourceprob->probdelorig;
+         (*prob)->probtrans = sourceprob->probtrans;
+         (*prob)->probdeltrans = sourceprob->probdeltrans;
+         (*prob)->probinitsol = sourceprob->probinitsol;
+         (*prob)->probexitsol = sourceprob->probexitsol;
+         (*prob)->probcopy = sourceprob->probcopy;
+         (*prob)->probdata = targetdata;
+      }
    }
 
    return SCIP_OKAY;
