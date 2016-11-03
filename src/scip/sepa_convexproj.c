@@ -31,7 +31,7 @@
  * \f[
  *      s.t. \; g_j(x) \le 0 \, \forall j=1,\ldots,m \\
  * \f]
- * 
+ *
  * By default, the separator is only run if the convex relaxation has at least one nonlinear convex function
  *
  * The separator generates cuts for constraints which were violated by the solution to the separate and active
@@ -42,7 +42,7 @@
  *      \langle x - z, z - x_0 \rangle \ge 0 \, \forall x \in C \\
  * \f]
  * This inequality is violated by for \f$ x = x_0 \f$. On the other hand, the optimality conditions of the projection
- * problem at the optimum look like 
+ * problem at the optimum look like
  * \f[
  *      2 (z - x_0) + \sum_j \lambda_j \nabla g_j(z) = 0
  * \f]
@@ -571,7 +571,7 @@ SCIP_RETCODE separateCuts(
    if( nlpunstable )
    {
       /* TODO: maybe change objective function to \sum [(x_i - x_i^*)/max(|x_i^*|, 1)]^2
-       * or some other scaling when unstable and try again. 
+       * or some other scaling when unstable and try again.
        *       maybe free it here */
       sepadata->skipsepa = TRUE;
    }
