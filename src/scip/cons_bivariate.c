@@ -6213,7 +6213,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0,
                consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
                0, NULL, 0, NULL,
-               consdata->f, consdata->lhs, consdata->rhs) );  /*lint !e826 !e613*/
+               consdata->f, consdata->lhs, consdata->rhs,
+               consdata->convextype == SCIP_BIVAR_ALLCONVEX ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN) );  /*lint !e826 !e613*/
 
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );

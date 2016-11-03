@@ -3148,6 +3148,7 @@ SCIP_RETCODE createNlRow(
    int elcnt;
    SCIP_VAR* lastvar;
    int lastvaridx;
+   SCIP_EXPRCURV curvature;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3229,10 +3230,24 @@ SCIP_RETCODE createNlRow(
    }
    assert(elcnt == nquadelems);
 
+   /* set curvature for the nonlinear row */
+   if( consdata->isconcave && consdata->isconvex )
+   {
+      assert(consdata->nbilinterms == 0 && consdata->nquadvars == 0);
+      curvature = SCIP_EXPRCURV_LINEAR;
+   }
+   else if( consdata->isconcave )
+      curvature = SCIP_EXPRCURV_CONCAVE;
+   else if( consdata->isconvex )
+      curvature = SCIP_EXPRCURV_CONVEX;
+   else
+      curvature = SCIP_EXPRCURV_UNKNOWN;
+
    SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
          consdata->nlinvars, consdata->linvars, consdata->lincoefs,
          nquadvars, quadvars, nquadelems, quadelems,
-         NULL, consdata->lhs, consdata->rhs) );
+         NULL, consdata->lhs, consdata->rhs,
+         curvature) );
 
    SCIP_CALL( SCIPaddLinearCoefsToNlRow(scip, consdata->nlrow, nquadlinterms, quadlinvars, quadlincoefs) );
 
@@ -10657,6 +10672,9 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       {
          if( consdata->nlrow == NULL )
          {
+            /* compute curvature for the quadratic constraint if not done yet */
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );
+
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
