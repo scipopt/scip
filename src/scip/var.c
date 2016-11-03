@@ -2131,6 +2131,9 @@ SCIP_RETCODE SCIPvarCopy(
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
 
+   /* directly copy donotmultaggr flag */
+   (*var)->donotmultaggr = sourcevar->donotmultaggr;
+
    /* insert variable into mapping between source SCIP and the target SCIP */
    assert(!SCIPhashmapExists(varmap, sourcevar));
    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
