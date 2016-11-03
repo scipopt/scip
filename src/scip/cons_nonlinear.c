@@ -9895,6 +9895,46 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    return SCIP_OKAY;
 }
 
+/** get index of a linear variable of a nonlinear constraint that may be decreased without making any other constraint infeasible, or -1 if none */
+int SCIPgetLinvarMayDecreaseNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->linvar_mayincrease == -1 && consdata->linvar_maydecrease == -1 )
+      consdataFindUnlockedLinearVar(scip, consdata);
+
+   return consdata->linvar_maydecrease;
+}
+
+/** get index of a linear variable of a nonlinear constraint that may be increased without making any other constraint infeasible, or -1 if none */
+int SCIPgetLinvarMayIncreaseNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->linvar_mayincrease == -1 && consdata->linvar_maydecrease == -1 )
+      consdataFindUnlockedLinearVar(scip, consdata);
+
+   return consdata->linvar_mayincrease;
+}
+
 /** gets expression graph of nonlinear constraint handler */
 SCIP_EXPRGRAPH* SCIPgetExprgraphNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
