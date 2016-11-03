@@ -23,7 +23,7 @@
 #    SETTINGSLIST - array of setting file basenames. script will abort if any of them doesn't exist
 #    SETCUTOFF - should optimal solution value (from solu file) be passed as objective limit?
 #    SOLUFILE - .solu file for this test set, for parsing optimal solution values
-#    VALGRINDCMD - the valgrind command to use
+#    DEBUGTOOLCMD - a debug tool command to use
 #    INSTANCELIST - list of all instances with complete path
 
 # function to capitalize a whole string
@@ -48,7 +48,7 @@ TIMELIMIT=$4     # the time limit in seconds
 TIMEFORMAT=$5    # the format for the time (sec or format)
 MEMLIMIT=$6      # the memory limit in MB
 MEMFORMAT=$7     # the format for hard memory limit (kB or MB)
-VALGRIND=$8      # should valgrind be used?
+DEBUGTOOL=$8      # which debug tool should be used, if any?
 SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the solver
 
 # get current SCIP path
@@ -130,12 +130,16 @@ elif test "$MEMFORMAT" = "B"
 then
     HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 fi
-# check if the test run should be processed in the valgrind environment
-if test "$VALGRIND" = "true"
+# check if the test run should be processed in a debug tool environment
+if test "$DEBUGTOOL" = "valgrind"
 then
-    VALGRINDCMD="valgrind --log-fd=1 --leak-check=full "
+    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full "
+elif test "$DEBUGTOOL" = "gdb"
+then
+    #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'
+    DEBUGTOOLCMD='gdb -batch-silent -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
 else
-    VALGRINDCMD=""
+    DEBUGTOOLCMD=""
 fi
 
 #check if additional instance paths are given
