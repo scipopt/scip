@@ -2325,7 +2325,6 @@ SCIP_RETCODE priceAndCutLoop(
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
          && nsepastallrounds < maxnsepastallrounds
-//         && (!(*propagateagain) || nsepastallrounds == 0)
          && !(*cutoff);
 
       /* if separators were delayed, we want to apply a final separation round with the delayed separators */
