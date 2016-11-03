@@ -90,6 +90,7 @@ interface:
 - bound reader uses angle bracket around variable names
 
 fixed bugs:
+- avoid numerically troublesome aggregations
 
 misc:
 - dropped support for Ipopt < 3.11
