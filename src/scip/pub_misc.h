@@ -471,6 +471,8 @@ void** SCIPpqueueElems(
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
 
+#define SCIPrealHashCode(x)                 ((int64_t) ((x)*256))
+
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
 EXTERN

@@ -12466,7 +12466,9 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP_CONSDATA* consdata;
-
+   int minidx;
+   int mididx;
+   int maxidx;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12480,12 +12482,17 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    assert(consdata->nvars > 0);
 
    assert(consdata->sorted);
+
+   minidx = SCIPvarGetIndex(consdata->vars[0]);
+   mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
+   maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
+   assert(minidx >= 0 && minidx <= maxidx);
+
    /* using only the variable indices as hash, since the values are compared by epsilon */
-   return SCIPhashTwo(SCIPcombineThreeInt(consdata->nvars, SCIPvarGetIndex(consdata->vars[0]),
-                                          SCIPvarGetIndex(consdata->vars[consdata->nvars / 4])),
-                      SCIPcombineThreeInt(SCIPvarGetIndex(consdata->vars[2*consdata->nvars / 4]),
-                                          SCIPvarGetIndex(consdata->vars[3*consdata->nvars / 4]),
-                                          SCIPvarGetIndex(consdata->vars[consdata->nvars - 1])));
+   return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
+                       SCIPrealHashCode(consdata->vals[0]),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2]),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1]));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
