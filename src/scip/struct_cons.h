@@ -265,7 +265,6 @@ struct SCIP_Conshdlr
    SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */
    SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the constraint handler's presolving method */
-   SCIP_QUEUE*           pendingconss;       /**< queue of pending constraints */
 };
 
 #ifdef __cplusplus
