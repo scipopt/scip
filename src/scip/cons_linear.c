@@ -15211,13 +15211,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             {
                /* add the upgraded constraint to the problem */
                SCIP_CALL( SCIPaddCons(scip, upgdcons) );
-
-               /* link the original constraint and the upgraded constraint */
-               if( SCIPconsGetTransorig(cons) != NULL && SCIPconsIsOriginal(SCIPconsGetTransorig(cons)) )
-               {
-                  SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), upgdcons);
-               }
-
                SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
                (*nupgdconss)++;
 
@@ -17014,6 +17007,7 @@ SCIP_ROW* SCIPgetRowLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

@@ -896,17 +896,6 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname               /**< file name */
    );
 
-EXTERN
-void SCIPlpiUnpack(
-   SCIP_LPISTATE*        lpistate,
-   int*                  cstat,
-   int*                  rstat,
-   int*                  ncols,
-   int*                  nrows,
-   int                   ncolsize,
-   int                   nrowsize
-   );
-
 /**@} */
 
 

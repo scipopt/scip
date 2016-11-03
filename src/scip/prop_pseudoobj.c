@@ -90,6 +90,7 @@ struct SCIP_PropData
    SCIP_VAR**            maxactvars;         /**< binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
    SCIP_Real*            maxactchgs;         /**< the maximal potential change of the objective if the binary variable
                                               *   is fixed to its best bound w.r.t. maximum activity of the objective function */
+
    SCIP_VAR**            objintvars;         /**< non-binary variable with non-zero objective coefficient */
    SCIP_HASHTABLE*       addedvars;          /**< hash table used during resolving of a bound change (conflict analysis) */
    SCIP_Real             lastlowerbound;     /**< last lower bound which was propagated */

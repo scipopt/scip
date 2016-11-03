@@ -56,7 +56,6 @@
                                               * cutpool of the original scip be copied to constraints of the subscip
                                               */
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
-
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
 #define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP           */
 #define DEFAULT_USEUCT        FALSE          /* should uct node selection be used at the beginning of the search?     */
@@ -733,10 +732,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    *result = SCIP_DELAYED;
 
-   /* return if the node is infeasible and the current LP is not constructed */
-   if( nodeinfeasible && !SCIPisLPConstructed(scip) && heurdata->uselprows )
-      return SCIP_OKAY;
-
    /* only call heuristic, if enough solutions are at hand */
    if( SCIPgetNSols(scip) < nusedsols  )
       return SCIP_OKAY;
@@ -813,6 +808,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* check whether discrete variables are available */
    if( nbinvars == 0 && nintvars == 0 )
       return SCIP_OKAY;
+
 
    /* allocate necessary buffer storage for selection of variable fixings */
    SCIP_CALL( SCIPallocBufferArray(scip, &selection, nusedsols) );

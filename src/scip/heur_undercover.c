@@ -144,7 +144,6 @@ struct SCIP_HeurData
    SCIP_Bool             reusecover;         /**< shall the cover be re-used if a conflict was added after an infeasible subproblem? */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
-   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
 };
 
 /** working memory for retrieving dense sparsity of Hessian matrices */
@@ -2125,7 +2124,6 @@ SCIP_RETCODE solveSubproblem(
 
    SCIP_RETCODE retcode;
 
-   int nsourcerows = 0;
    int nvars;
    int i;
 
@@ -2172,36 +2170,13 @@ SCIP_RETCODE solveSubproblem(
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   if( heurdata->copylpbasis )
-   {
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
-   }
-   else
-      consmap = NULL;
-
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
-      if( heurdata->copylpbasis )
-      {
-         int sourcerowssize = SCIPgetNLPRows(scip);
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
-
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, consmap, sourcerows, targetconss, sourcerowssize,
-               heurdata->globalbounds, &nsourcerows) );
-         assert(nsourcerows <= sourcerowssize);
-      }
-      else
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, heurdata->globalbounds, NULL) );
-      }
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, heurdata->globalbounds, NULL) );
    }
 
    SCIPdebugMsg(scip, "problem copied, copy %svalid\n", *validsolved ? "" : "in");
@@ -3553,10 +3528,6 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
-         "should a LP starting basis copyied from the source SCIP?",
-         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reusecover",
          "shall the cover be reused if a conflict was added after an infeasible subproblem?",

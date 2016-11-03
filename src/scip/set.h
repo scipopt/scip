@@ -1804,8 +1804,6 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetAllocBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->buffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPsetAllocClearBufferArray(scip,ptr,num) ( (BMSallocClearBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size) ( (BMSduplicateBufferMemory((set)->buffer, (ptr), (source), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( (BMSduplicateBufferMemoryArray((set)->buffer, (ptr), (source), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( (BMSreallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )

@@ -52,8 +52,7 @@
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
-#define DEFAULT_COPYLPBASIS   FALSE     /**< should a LP starting basis copyied from the source SCIP? */
-#define DEFAULT_BESTSOLLIMIT  3         /* limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_BESTSOLLIMIT   3         /* limit on number of improving incumbent solutions in sub-CIP            */
 #define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
@@ -91,7 +90,6 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
-   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
@@ -331,14 +329,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_Real memorylimit;
 
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_HASHMAP* consmapfw;
    SCIP_VAR** vars;
 
-   SCIP_ROW** sourcerows = NULL;
-   SCIP_CONS** targetconss = NULL;
-
-   int sourcerowssize = 0;
-   int nsourcerows = 0;
    int nvars;
    int i;
 
@@ -361,10 +353,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       return SCIP_OKAY;
 
    *result = SCIP_DELAYED;
-
-   /* return if the node is infeasible and the current LP is not constructed */
-   if( nodeinfeasible && !SCIPisLPConstructed(scip) && heurdata->uselprows )
-      return SCIP_OKAY;
 
    /* only call heuristic, if an IP solution is at hand */
    if( SCIPgetNSols(scip) <= 0  )
@@ -433,24 +421,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
-
-   if( heurdata->copylpbasis )
-   {
-      sourcerowssize = SCIPgetNLPRows(scip);
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
-
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
-   }
-   else
-   {
-      consmapfw = NULL;
-      sourcerows = NULL;
-      targetconss = NULL;
-   }
-
    success = FALSE;
 
    /* create a problem copy as sub SCIP */
@@ -469,28 +439,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    for (i = 0; i < nvars; ++i)
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-   if( success && heurdata->copylpbasis )
-   {
-      /* use the last LP basis as starting basis */
-      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
-   }
-
-   if( sourcerows != NULL )
-   {
-      assert(targetconss != NULL);
-      SCIPfreeBufferArray(scip, &targetconss);
-      SCIPfreeBufferArray(scip, &sourcerows);
-   }
-   else
-      assert(targetconss == NULL);
-
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( heurdata->copylpbasis )
-   {
-      assert(consmapfw != NULL);
-      SCIPhashmapFree(&consmapfw);
-   }
 
    /* if the subproblem could not be created, free memory and return */
    if( !success )
@@ -803,10 +753,6 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
-         "should a LP starting basis copyied from the source SCIP?",
-         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
          "limit on number of improving incumbent solutions in sub-CIP",

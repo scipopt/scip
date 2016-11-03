@@ -37,7 +37,6 @@
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
 #include "scip/type_reopt.h"
-#include "scip/type_basisstore.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_cutpool.h"
@@ -112,7 +111,6 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_BASISSTORE*      basisstore,         /**< starting basis storage */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
@@ -207,7 +205,6 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_BASISSTORE*      basisstore,         /**< starting basis storage */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */

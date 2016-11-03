@@ -72,7 +72,6 @@
                                          *   'p'seudocost, 'g'uided, 'd'ouble)
                                          */
 #define DEFAULT_NLPFASTFAIL        TRUE /**< should the NLP solver stop early if it converges slow? */
-#define DEFAULT_COPYLPBASIS       FALSE /**< should a LP starting basis copyied from the source SCIP? */
 
 #define MINNLPITER                   10 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
@@ -99,7 +98,6 @@ struct SCIP_HeurData
    SCIP_Bool             prefercover;        /**< should variables in a minimal cover be preferred? */
    SCIP_Bool             solvesubmip;        /**< should a sub-MIP be solved if all cover variables are fixed? */
    SCIP_Bool             nlpfastfail;        /**< should the NLP solver stop early if it converges slow? */
-   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
    char                  nlpstart;           /**< which point should be used as starting point for the NLP solver? */
    char                  varselrule;         /**< which variable selection should be used? ('f'ractionality, 'c'oefficient,
                                               *   'p'seudocost, 'g'uided, 'd'ouble)
@@ -1152,20 +1150,18 @@ SCIP_RETCODE solveSubMIP(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_VAR**            covervars,          /**< variables in the cover, should be fixed locally */
    int                   ncovervars,         /**< number of variables in the cover */
-   SCIP_Bool             copylpbasis,        /**< should a starting basis should be copied into the subscip? */
    SCIP_Bool*            success             /**< pointer to store whether a solution was found */
    )
 {
    SCIP* subscip;
    SCIP_HASHMAP* varmap;
-   SCIP_HASHMAP* consmap;
    SCIP_SOL** subsols;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
    SCIP_RETCODE retcode;
-   SCIP_Bool valid;
-   int nsubsols;
    int c;
+   int nsubsols;
+   SCIP_Bool valid;
 
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -1173,33 +1169,17 @@ SCIP_RETCODE solveSubMIP(
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
 
-   if( copylpbasis )
-   {
-      /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
-   }
-   else
-      consmap = NULL;
-
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
-#ifndef NDEBUG
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
    {
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(covervars[c]), SCIPvarGetUbLocal(covervars[c])));
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal((SCIP_VAR*) SCIPhashmapGetImage(varmap, covervars[c])),
             SCIPvarGetUbGlobal((SCIP_VAR*) SCIPhashmapGetImage(varmap, covervars[c]))));
-   }
-#endif
-
-   if( copylpbasis )
-   {
-      /* use the last LP basis as starting basis */
-      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, NULL, NULL, 0, FALSE) );
    }
 
    /* set parameters for sub-SCIP */
@@ -1341,11 +1321,6 @@ SCIP_RETCODE solveSubMIP(
    /* free sub-SCIP and hash map */
    SCIP_CALL( SCIPfree(&subscip) );
    SCIPhashmapFree(&varmap);
-   if( copylpbasis )
-   {
-      assert(consmap != NULL);
-      SCIPhashmapFree(&consmap);
-   }
 
    return SCIP_OKAY;
 }
@@ -2267,7 +2242,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIP_Bool success;
                success = FALSE;
 
-               SCIP_CALL( solveSubMIP(scip, heur, covervars, ncovervars, heurdata->copylpbasis, &success));
+               SCIP_CALL( solveSubMIP(scip, heur, covervars, ncovervars, &success));
                if( success )
                   *result = SCIP_FOUNDSOL;
                backtracked = TRUE; /* to avoid backtracking */
@@ -2706,10 +2681,6 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          "heuristics/" HEUR_NAME "/nlpfastfail",
          "should the NLP solver stop early if it converges slow?",
          &heurdata->nlpfastfail, FALSE, DEFAULT_NLPFASTFAIL, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/" HEUR_NAME "/copylpbasis",
-         "should a LP starting basis copyied from the source SCIP?",
-         &heurdata->copylpbasis, FALSE, DEFAULT_COPYLPBASIS, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "heuristics/" HEUR_NAME "/nlpstart",
          "which point should be used as starting point for the NLP solver? ('n'one, last 'f'easible, from dive's'tart)",

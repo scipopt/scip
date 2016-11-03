@@ -6082,8 +6082,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
     */
    if( isrootnode )
    {
-//      SCIP_CALL( SCIPcopyBasis(set->scip, set->scip, NULL, NULL, NULL, NULL, 0, FALSE) );
-
       if( SCIPreoptGetNDualBndchgs(reopt, node) > 0 )
       {
          goto CHECK;
@@ -7035,7 +7033,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
          /* random order */
          case 'r':
-            permuteRandom(vars, bounds, boundtypes, nvars, &randseed);
+            permuteRandom(reopt->randnumgen, vars, bounds, boundtypes, nvars);
             break;
 
       default:

@@ -720,21 +720,6 @@ int SCIPconsGetNUpgradeLocks(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** gets associated transformed or original constraint, or NULL if no associated constraint
- *  exists
- */
-EXTERN
-SCIP_CONS* SCIPconsGetTransorig(
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/* link the original and the upgraded constraint */
-EXTERN
-void SCIPconsSetUpgradedCons(
-   SCIP_CONS*            origcons,
-   SCIP_CONS*            upgdcons
-   );
-
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and

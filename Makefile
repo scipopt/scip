@@ -86,7 +86,7 @@ BUILDFLAGS=" ARCH=$(ARCH)\\n\
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.2.1
+VERSION		=	3.2.1.2
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
@@ -518,8 +518,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o
 
-SCIPLIBOBJ	=	scip/basisstore.o \
-			scip/branch.o \
+SCIPLIBOBJ	=	scip/branch.o \
 			scip/clock.o \
 			scip/conflict.o \
 			scip/cons.o \

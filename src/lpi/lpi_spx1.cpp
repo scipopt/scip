@@ -44,7 +44,7 @@
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
 #define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
 #define CHECK_START                     0    /**< skip first CHECK_START number of checks */
-#define EXIT_AT_WRONG_RESULT            true /**< shall program be exited if CPLEX returns different result than SoPlex? */
+#define EXIT_AT_WRONG_RESULT            false/**< shall program be exited if CPLEX returns different result than SoPlex? */
 #define EXIT_AT_CPXERROR                false/**< shall program be exited if CPLEX returns an error? */
 
 #define CPX_CALL(x)                     do                                                                                  \
@@ -4873,31 +4873,6 @@ SCIP_RETCODE SCIPlpiWriteState(
    return SCIP_OKAY;
 }
 
-void SCIPlpiUnpack(
-   SCIP_LPISTATE*        lpistate,
-   int*                  cstat,
-   int*                  rstat,
-   int*                  ncols,
-   int*                  nrows,
-   int                   ncolsize,
-   int                   nrowsize
-   )
-{
-   assert(lpistate != NULL);
-   assert(lpistate->ncols <= ncolsize);
-   assert(lpistate->nrows <= nrowsize);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
-   assert(ncolsize >= 0);
-   assert(nrowsize >= 0);
-
-   (*ncols) = lpistate->ncols;
-   (*nrows) = lpistate->nrows;
-
-   lpistateUnpack(lpistate, cstat, rstat);
-
-   return;
-}
 /**@} */
 
 

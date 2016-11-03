@@ -72,7 +72,6 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
-   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };

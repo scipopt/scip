@@ -297,7 +297,7 @@ SCIP_RETCODE applyOfins(
    if( heurdata->copycuts )
    {
       /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
    }
 
    SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -477,7 +477,6 @@ SCIP_RETCODE applyOfins(
       HEUR_NAME, 0.0, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
-  TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );

@@ -1034,24 +1034,6 @@ SCIP_RETCODE SCIPlpFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
-/** load a starting basis */
-extern
-SCIP_RETCODE SCIPlpSetBasis(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_VAR**            basevars,           /**< variables of the basis */
-   SCIP_CONS**           baseconss,          /**< constraints of the basis */
-   int*                  basevarstat,        /**< basis status of variables */
-   int*                  baseconsstat,       /**< basis status of constraints */
-   int                   nbasevars,          /**< number of variables */
-   int                   nbaseconss,         /**< number of constraints */
-   int                   depth,              /**< current depth */
-   SCIP_Bool*            success             /**< pointer to store the success */
-   );
-
 /** stores pricing norms into LP norms object */
 extern
 SCIP_RETCODE SCIPlpGetNorms(

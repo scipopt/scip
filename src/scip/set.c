@@ -584,6 +584,8 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useboundlp", FALSE) );
       SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usepseudo", FALSE) );
       SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usesb", FALSE) );
+//      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useinflp", TRUE) );
+//      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useprop", TRUE) );
 
       /* TODO check wheather multi aggregation can be enabled in reoptimization */
       if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )

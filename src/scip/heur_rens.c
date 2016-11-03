@@ -65,7 +65,6 @@
                                          * techniques that merely work on the dual bound, e.g., cuts?  This is only
                                          * implemented for testing and not recommended to be used!
                                          */
-#define DEFAULT_COPYLPBASIS   TRUE      /**< should a LP starting basis copyied from the source SCIP? */
 #define DEFAULT_BESTSOLLIMIT   -1       /* limit on number of improving incumbent solutions in sub-CIP            */
 #define DEFAULT_USEUCT         FALSE     /* should uct node selection be used at the beginning of the search?     */
 
@@ -94,7 +93,6 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
-   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
    SCIP_Bool             extratime;          /**< should the RENS sub-CIP get its own full time limit? This is only
                                               *   implemented for testing and not recommended to be used! */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP? */
@@ -241,6 +239,7 @@ SCIP_RETCODE restrictToBinaryBounds(
    assert(scip != NULL);
    assert(subscip != NULL);
    assert(subvars != NULL);
+
    assert(startsol == 'l' || startsol == 'n');
 
    /* get required variable data */
@@ -373,25 +372,20 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
    )
 {
-   SCIP* subscip;                            /* the subproblem created by RENS                      */
-   SCIP_HASHMAP* consmapfw;                  /* mapping of SCIP constraints to sub-SCIP constraints */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables     */
-   SCIP_VAR** vars;                          /* original problem's variables                        */
-   SCIP_VAR** subvars;                       /* subproblem's variables                              */
-   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure                  */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                         */
-   SCIP_ROW** sourcerows = NULL;
-   SCIP_CONS** targetconss = NULL;
+   SCIP* subscip;                            /* the subproblem created by RENS                  */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_VAR** vars;                          /* original problem's variables                    */
+   SCIP_VAR** subvars;                       /* subproblem's variables                          */
+   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure              */
+   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
-   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
-   SCIP_Real timelimit;                      /* time limit for RENS subproblem                      */
-   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                    */
-   SCIP_Real allfixingrate;                  /* percentage of all variables fixed                   */
-   SCIP_Real intfixingrate;                  /* percentage of integer variables fixed               */
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
+   SCIP_Real timelimit;                      /* time limit for RENS subproblem                  */
+   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                */
+   SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
+   SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
 
-   int nsourcerows = 0;
-   int sourcerowssize = 0;
-   int nvars;                                /* number of original problem's variables              */
+   int nvars;                                /* number of original problem's variables          */
    int i;
    SCIP_VAR** fixedvars;
    SCIP_Real* fixedvals;
@@ -496,29 +490,6 @@ SCIP_RETCODE SCIPapplyRens(
 
    SCIPdebugMsg(scip, "RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-   if( heurdata->copylpbasis )
-   {
-      /* use the last LP basis as starting basis */
-      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, uselprows) );
-   }
-
-   if( sourcerows != NULL )
-   {
-      assert(targetconss != NULL);
-      SCIPfreeBufferArray(scip, &targetconss);
-      SCIPfreeBufferArray(scip, &sourcerows);
-   }
-   else
-      assert(targetconss == NULL);
-
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
-   if( heurdata->copylpbasis )
-   {
-      assert(consmapfw != NULL);
-      SCIPhashmapFree(&consmapfw);
-   }
-
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
@@ -547,8 +518,6 @@ SCIP_RETCODE SCIPapplyRens(
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-      SCIP_CALL( SCIPsetIntParam(subscip, "propagating/maxroundsroot", 0) );
 
       /* use best estimate node selection */
       if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
@@ -918,10 +887,6 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
-         "should a LP starting basis copyied from the source SCIP?",
-         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/extratime",
          "should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!",

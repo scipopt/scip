@@ -51,7 +51,6 @@
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip
                                          */
-#define DEFAULT_COPYLPBASIS   TRUE      /**< should a LP starting basis copyied from the source SCIP? */
 #define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
@@ -325,8 +324,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
    SCIP_Real upperbound;
 
-   int sourcerowssize = 0;
-   int nsourcerows = 0;
    int nvars;
    int nbinvars;
    int nintvars;
@@ -690,10 +687,6 @@ SCIP_RETCODE SCIPincludeHeurRins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
-         "should a LP starting basis copyied from the source SCIP?",
-         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
