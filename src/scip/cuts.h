@@ -21,6 +21,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#ifndef __SCIP_CUTS_H__
+#define __SCIP_CUTS_H__
+
+
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_cons.h"
@@ -30,6 +34,10 @@
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
 #include "scip/type_lp.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0 because
  *  these rows cannot participate in an MIR cut.
@@ -161,3 +169,9 @@ void SCIPcutsCleanupRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    SCIP_Bool             islocal             /**< is the row only valid locally? */
    );
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
