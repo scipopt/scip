@@ -181,6 +181,7 @@ SCIP_RETCODE generateCut(
    SCIP_EXPRINT*         exprint,            /**< expression interpreter */
    SCIP_SOL*             projection,         /**< point where we compute gradient cut */
    SCIP_NLROW*           nlrow,              /**< constraint for which we generate gradient cut */
+   CONVEXSIDE            convexside,         /**< which side makes the nlrow convex */
    SCIP_Real             activity,           /**< activity of constraint at projection */
    SCIP_ROW**            row                 /**< storage for cut */
    )
@@ -195,36 +196,35 @@ SCIP_RETCODE generateCut(
    assert(exprint != NULL);
    assert(nlrow != NULL);
    assert(row != NULL);
+   assert(convexside != BOTH);
 
    sepadata = SCIPsepaGetData(sepa);
 
    assert(sepadata != NULL);
 
    gradx0 = 0.0;
-   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "proj_cut_%s_%u", SCIPnlrowGetName(nlrow), ++(sepadata->ncuts));
 
-   /* gradient cuts are globally valid whenever the constraint from which they are deduced is globally valid
-    * since we build the convex relaxation using only globally valid constraints, the cuts are globally valid
+   /* an nlrow has a linear part, quadratic part and expression tree; ideally one would just build the gradient but we
+    * do not know if the different parts share variables or not, so we can't just build the gradient; for this reason
+    * we create the row right away and compute the gradients of each part independently and add them to the row; the
+    * row takes care to add coeffs corresponding to the same variable when they appear in different parts of the nlrow
+    * NOTE: a gradient cut is globally valid whenever the constraint from which it is deduced is globally valid; since
+    *       we build the convex relaxation using only globally valid constraints, the cuts are globally valid
     */
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "proj_cut_%s_%u", SCIPnlrowGetName(nlrow), ++(sepadata->ncuts));
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow),
            TRUE, FALSE , TRUE) );
 
-   /* an nlrow has a linear part, quadratic part and expression tree; ideally I would just build the gradient but I do not
-    * know if some variable of the linear part belong to the quadratic part or worse, to the expression tree, so I can't
-    * just build the gradient; the solution for this is to create the row right away and compute the gradients of each
-    * part and add them to the row; this way, the row will take care to add coefficients corresponding to the same variable
-    * that belong to different parts of the nlrow
-    */
+   SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
 
    /* linear part */
-   SCIP_CALL( SCIPaddVarsToRow(scip, *row, SCIPnlrowGetNLinearVars(nlrow), SCIPnlrowGetLinearVars(nlrow), SCIPnlrowGetLinearCoefs(nlrow)) );
    for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
+   {
       gradx0 += SCIPgetSolVal(scip, projection, SCIPnlrowGetLinearVars(nlrow)[i]) * SCIPnlrowGetLinearCoefs(nlrow)[i];
+      SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
+   }
 
-   /* quadratic part; it seems (and probably is the only thing that makes sense) that the variables belonging to a quadelem
-    * are quadvars[quadelem.idx1] and quadvars[quadelem.idx2]
-    */
-   SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
+   /* quadratic part */
    for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
    {
       SCIP_VAR* var1;
@@ -242,7 +242,6 @@ SCIP_RETCODE generateCut(
 
       gradx0 += grad1 * SCIPgetSolVal(scip, projection, var1) + grad2 * SCIPgetSolVal(scip, projection, var2);
    }
-   SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
 
    /* expression tree part */
    {
@@ -251,32 +250,37 @@ SCIP_RETCODE generateCut(
 
       tree = SCIPnlrowGetExprtree(nlrow);
 
-      if( tree != NULL )
+      if( tree != NULL && SCIPexprtreeGetNVars(tree) > 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &grad, SCIPexprtreeGetNVars(tree)) );
 
          SCIP_CALL( computeGradient(scip, sepadata->exprinterpreter, projection, tree, grad) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, *row, SCIPexprtreeGetNVars(tree), SCIPexprtreeGetVars(tree), grad) );
 
          for( i = 0; i < SCIPexprtreeGetNVars(tree); i++ )
+         {
             gradx0 +=  grad[i] * SCIPgetSolVal(scip, projection, SCIPexprtreeGetVars(tree)[i]);
+            SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(tree)[i], grad[i]) );
+         }
 
          SCIPfreeBufferArray(scip, &grad);
       }
    }
 
+   SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
+
    SCIPdebugPrintf("gradient: ");
    SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *row, NULL) ) );
    SCIPdebugPrintf("gradient dot x_0: %g\n", gradx0);
 
-   /* gradient cut is lhs <= f(x_0) - <grad f(x_0), x_0> + <grad f(x_0), x> <= rhs */
-   if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) )
+   /* gradient cut is f(x_0) - <grad f(x_0), x_0> + <grad f(x_0), x> <= rhs or >= lhs */
+   if( convexside == RHS )
    {
-      assert(SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
+      assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
       SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIPnlrowGetRhs(nlrow) - activity + gradx0) );
    }
    else
    {
+      assert(convexside == LHS);
       assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
       SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIPnlrowGetLhs(nlrow) - activity + gradx0) );
    }
@@ -344,7 +348,6 @@ SCIP_RETCODE separateCuts(
    )
 {
    SCIP_SEPADATA* sepadata;
-   SCIP_NLROW*    nlrow;
    SCIP_SOL*      projection;
    SCIP_Real*     linvals;
    SCIP_Real*     nlpisol;
@@ -388,11 +391,11 @@ SCIP_RETCODE separateCuts(
       lininds[i] = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
       linvals[i] = - 2.0 * SCIPgetSolVal(scip, sol, var);
 
-      /* if coefficient is too big, don't separate */
-      if( SCIPisInfinity(scip, REALABS(linvals[i])) )
+      /* if coefficient is too large, don't separate */
+      if( SCIPisHugeValue(scip, REALABS(linvals[i])) )
       {
-         SCIPfreeBufferArray(scip, &linvals);
          SCIPfreeBufferArray(scip, &lininds);
+         SCIPfreeBufferArray(scip, &linvals);
          SCIPdebugMsg(scip, "Don't separate points too close to infinity\n");
 
          return SCIP_OKAY;
@@ -400,8 +403,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* set linear part of objective function */
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob,
-            -1, nlpinvars, lininds, linvals) );
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
    /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
     * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
@@ -459,53 +461,48 @@ SCIP_RETCODE separateCuts(
             SCIP_CALL( SCIPsetSolVal(scip, projection, var,
                      nlpisol[(int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void *)var)]) );
          }
-         SCIPprintSol(scip, projection, NULL, TRUE);
+         SCIPdebug( SCIPprintSol(scip, projection, NULL, TRUE) );
 
-         /* generate cuts for constraints that violate the solution that we want to separate (sol)
-          * NOTE: such a constraint could be not active at the projection; we only add cuts for
-          * constraints that are also active at the projection. because of numerics, it could
-          * happen that no constraint is active at the projection; therefore, we consider constraints
-          * that are: violated at sol, active or violate at the projection (nlpsol);
-          * if the projection is on the interior of the region, we do nothing
-          */
+         /* check for active or violated constraints */
          for( i = 0; i < sepadata->nnlrows; ++i )
          {
+            SCIP_NLROW* nlrow;
+            CONVEXSIDE convexside;
             SCIP_Real activity;
 
             /* ignore constraints that are not violated by `sol` */
-            if( SCIPisZero(scip, sepadata->constraintviolation[i]) )
+            if( SCIPisFeasZero(scip, sepadata->constraintviolation[i]) )
+               continue;
+
+            convexside = sepadata->convexsides[i];
+            /* ignore linear constraints, since they shouldn't be violated by `sol` */
+            if( convexside == BOTH )
                continue;
 
             nlrow = sepadata->nlrows[i];
             assert(nlrow != NULL);
 
-            /* ignore linear constraints, since there shouldn't be any violated linear constraint by `sol` */
-            if( sepadata->convexsides[i] == BOTH )
-               continue;
-
             /* check for currently active constraints at projected point */
             SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, projection, &activity) );
 
-            SCIPdebugMsg(scip, "NlRow activity at nlpi solution: %g <= %g <= %g\n",
-                  SCIPnlrowGetLhs(nlrow), activity, SCIPnlrowGetRhs(nlrow) );
-            /* in case the projection is computed optimally, we should assert this
-            assert(SCIPisFeasLE(scip, SCIPnlrowGetLhs(nlrow), activity));
-            assert(SCIPisFeasLE(scip, activity, SCIPnlrowGetRhs(nlrow)));
-            */
+            SCIPdebugMsg(scip, "NlRow activity at nlpi solution: %g <= %g <= %g\n", SCIPnlrowGetLhs(nlrow), activity,
+                  SCIPnlrowGetRhs(nlrow) );
 
             /* if nlrow is active or violates the projection, build gradient cut at projection */
-            if( SCIPisFeasGE(scip, activity, SCIPnlrowGetRhs(nlrow)) || SCIPisFeasLE(scip, activity, SCIPnlrowGetLhs(nlrow)) )
+            if( (convexside == RHS && SCIPisFeasGE(scip, activity, SCIPnlrowGetRhs(nlrow)))
+               || (convexside == LHS && SCIPisFeasLE(scip, activity, SCIPnlrowGetLhs(nlrow))) )
             {
                SCIP_ROW* row;
 
-               SCIPdebugMsg(scip, "active nlrow: (%e) ", sepadata->constraintviolation[i]);
-               SCIP_CALL( SCIPprintNlRow(scip, nlrow, NULL) );
+               SCIP_CALL( generateCut(scip, sepa, sepadata->exprinterpreter, projection, nlrow, convexside, activity,
+                        &row) );
 
-               SCIP_CALL( generateCut(scip, sepa, sepadata->exprinterpreter, projection, nlrow, activity, &row) );
-               SCIPprintRow(scip, row, NULL);
+               SCIPdebugMsg(scip, "active or violated nlrow: (sols vio: %e)\n", sepadata->constraintviolation[i]);
+               SCIPdebug( SCIP_CALL( SCIPprintNlRow(scip, nlrow, NULL) ) );
+               SCIPdebugMsg(scip, "cut with efficacy %g generated\n", SCIPgetCutEfficacy(scip, sol, row));
+               SCIPdebug( SCIPprintRow(scip, row, NULL) );
 
                /* add cut if it is efficacious for the point we want to separate (sol) */
-               SCIPdebugMsg(scip, "cut with efficacy %g generated\n", SCIPgetCutEfficacy(scip, sol, row));
                if( SCIPisCutEfficacious(scip, sol, row) )
                {
                   SCIP_Bool infeasible;
@@ -583,22 +580,19 @@ SCIP_RETCODE separateCuts(
    /* if nlp is detected to be unstable, don't try to separate again */
    if( nlpunstable )
    {
-      /* TODO: maybe change objective function to \sum [(x_i - x_i^*)/max(|x_i^*|, 1)]^2
+      /* @todo: maybe change objective function to \sum [(x_i - x_i^*)/max(|x_i^*|, 1)]^2
        * or some other scaling when unstable and try again.
        *       maybe free it here */
       sepadata->skipsepa = TRUE;
    }
 
-   /* reset objective
-    * TODO: BMS clear buffer memory?
-    */
-   for( i = 0; i < nlpinvars; i++ )
-      linvals[i] = 0.0;
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob,
-            -1, nlpinvars, lininds, linvals) );
-   SCIPfreeBufferArray(scip, &linvals);
-   SCIPfreeBufferArray(scip, &lininds);
+   /* reset objective */
+   BMSclearMemoryArray(linvals, nlpinvars);
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
+   /* free memory */
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
 
    return SCIP_OKAY;
 }
