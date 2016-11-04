@@ -760,7 +760,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    if( conflictstore->maxstoresize == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( conflictstoreEnsureMem(conflictstore, set, nconflicts+1) );
+   SCIP_CALL( conflictstoreEnsureMem(conflictstore, set, blkmem, nconflicts+1) );
 
    /* return if the store has size zero */
    if( conflictstore->conflictsize == 0 )
