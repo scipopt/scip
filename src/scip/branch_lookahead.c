@@ -52,6 +52,7 @@
 #define DEFAULT_USEIMPLIEDDOMRED             TRUE
 #define DEFAULT_USEIMPLIEDBINARYCONSTRAINTS  TRUE
 #define DEFAULT_ADDBINCONSROW                FALSE
+#define DEFAULT_MAXNUMBERVIOLATEDCONS        10000
 
 /*
  * Data structures
@@ -75,11 +76,13 @@ struct SCIP_BranchruleData
                                               *   only non-violating implied binary constraints were added */
    SCIP_Real             prevbinbranchsol;   /**< the previous branching value in case that in the previous run only
                                               *   non-violating implied binary constraints were added */
+   int                   maxnviolatedcons;
    SCIP_Real             prevbestup;
    SCIP_Bool             prevbestupvalid;
    SCIP_Real             prevbestdown;
    SCIP_Bool             prevbestdownvalid;
    SCIP_Real             prevprovedbound;
+   int                   restartindex;
 #ifdef SCIP_STATISTICS
    int                   nbinconst;          /**< counter for the nubmer of "normal" binary constraints added */
    int                   nfirstlvllps;       /**< counter for the number of lps that were solved on the first level */
@@ -104,6 +107,7 @@ typedef struct
    SCIP_Bool             domred;             /**<  */
    SCIP_Bool             propagationdomred;  /**<  */
    SCIP_Bool             limitreached;       /**<  */
+   SCIP_Bool             maxnconsreached;    /**<  */
 } STATUS;
 
 /**
@@ -199,6 +203,7 @@ SCIP_RETCODE allocateStatus(
    (*status)->domredcutoff = FALSE;
    (*status)->propagationdomred = FALSE;
    (*status)->limitreached = FALSE;
+   (*status)->maxnconsreached = FALSE;
 
    return SCIP_OKAY;
 }
@@ -926,6 +931,10 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                   /* if the up branching was cutoff and both branching variables are binary we can deduce a binary
                    * constraint. add the constraint to the buffer and add them all later to the problem */
                   SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepbranchvar, baselpsol) );
+                  if( binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons )
+                  {
+                     status->maxnconsreached = TRUE;
+                  }
                }
 
                if( branchruledata->useimplieddomred )
@@ -955,6 +964,10 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                    * f(x) >= 1, the constraint f(x) + (1-y) <= 1.*/
                   SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
                   SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound, baselpsol) );
+                  if( binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons )
+                  {
+                     status->maxnconsreached = TRUE;
+                  }
                }
 
                if( branchruledata->useimplieddomred )
@@ -980,7 +993,7 @@ SCIP_Bool isExecuteDeepBranchingLoop(
    SCIP_Bool             fullcutoff
    )
 {
-   SCIP_Bool result = !status->lperror && !fullcutoff;
+   SCIP_Bool result = !status->lperror && !fullcutoff && !status->maxnconsreached;;
    if( status->lperror )
    {
       /* an error occurred during one of the second level lps */
@@ -991,6 +1004,14 @@ SCIP_Bool isExecuteDeepBranchingLoop(
       /* if both second level branches for a variable are cutoff, we stop the calculation, as the current first level
        * branch has to be cutoff */
       SCIPdebugMessage("A deeper lp is cutoff, as both lps are cutoff.\n");
+   }
+   if( !status->maxnconsreached )
+   {
+      /*
+       * if the maximum number of violated constraints to be added is reached we want to stop the current loop, add the
+       * constraints and restart everything.
+       */
+      SCIPdebugMessage("The max number of violated constraints to be added is reached.\n");
    }
    return result;
 }
@@ -1245,7 +1266,7 @@ SCIP_Bool isExecuteFirstLevelBranching(
    STATUS*               status
    )
 {
-   return !status->lperror && !status->firstlvlfullcutoff && !status->limitreached;
+   return !status->lperror && !status->firstlvlfullcutoff && !status->limitreached && !status->maxnconsreached;
 }
 
 static
@@ -1276,6 +1297,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
    SCIP_Real*            lpcandsfrac,
    int                   nlpcands,           /**< number of fractional variables/solution values */
+   int*                  start,
    STATUS*               status,             /**< a container to store the algo status in */
    int*                  bestcand,           /**< calculated index of the branching variable */
    SCIP_Real*            bestdown,
@@ -1317,6 +1339,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIP_Real highestscorelowerbound = -SCIPinfinity(scip);
       int highestscoreindex = -1;
       int i;
+      int c;
 
       VALIDDOMREDDATA* validbounds = NULL;
       SUPPOSEDDOMREDDATA* supposedbounds = NULL;
@@ -1358,7 +1381,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPenableVarHistory(scip);
       SCIPdebugMessage("Start Probing Mode\n");
 
-      for( i = 0; i < nlpcands && isExecuteFirstLevelBranching(status) && !SCIPisStopped(scip); i++ )
+      for( i = 0, c = *start; i < nlpcands && isExecuteFirstLevelBranching(status) && !SCIPisStopped(scip); i++, c++ )
       {
          SCIP_VAR* branchvar;
          SCIP_Real branchval;
@@ -1366,7 +1389,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIP_Real downdualbound;
          SCIP_Real updualbound;
 
-         assert(lpcands[i] != NULL);
+         c = c % nlpcands;
+         assert(lpcands[c] != NULL);
 
          /* init theses structs for each var, as the contained data is read at the end of the loop */
          if( branchruledata->useimplieddomred )
@@ -1375,9 +1399,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
          initScoreData(scoredata);
 
-         branchvar = lpcands[i];
-         branchval = lpcandssol[i];
-         branchfrac = lpcandsfrac[i];
+         branchvar = lpcands[c];
+         branchval = lpcandssol[c];
+         branchfrac = lpcandsfrac[c];
 
          SCIPdebugMessage("Start branching on variable <%s>\n", SCIPvarGetName(branchvar));
 
@@ -1507,7 +1531,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                *provedbound = MAX(*provedbound, updualbound);
             }
-            else if( !status->limitreached )
+            else if( !status->limitreached && !status->maxnconsreached )
             {
                /* if neither of both branches was cutoff we can calculate the weight for the current variable */
                SCIP_Real currentScore;
@@ -1518,7 +1542,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                {
                   /* if the new weight is higher than the old one: replace it and update the index accordingly */
                   highestscore = currentScore;
-                  highestscoreindex = i;
+                  highestscoreindex = c;
                   highestscorelowerbound = SCIPvarGetLbLocal(branchvar);
                   highestscoreupperbound = SCIPvarGetUbLocal(branchvar);
                   *bestdown = downdualbound;
@@ -1543,6 +1567,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPdebugMessage("End Probing Mode\n");
       SCIP_CALL( SCIPendProbing(scip) );
 
+      *start = c;
+
       if( !status->lperror && !status->depthtoosmall && !status->firstlvlfullcutoff
          && branchruledata->useimpliedbincons && !isBinaryBoundDataEmpty(binarybounddata) && highestscoreindex != -1 )
       {
@@ -1552,17 +1578,20 @@ SCIP_RETCODE selectVarLookaheadBranching(
           * so the solution will be the same). In this case we can save the execution time and return directly with the
           * already obtained branching decision. */
          SCIP_CALL( handleImpliedBinaryBounds(scip, branchruledata, basenode, binarybounddata) );
-         SCIP_CALL( SCIPlinkLPSol(scip, branchruledata->prevbinsolution) );
-         SCIP_CALL( SCIPunlinkSol(scip, branchruledata->prevbinsolution) );
-         branchruledata->prevbinbranchvar = lpcands[highestscoreindex];
-         branchruledata->prevbinbranchsol = lpcandssol[highestscoreindex];
-         branchruledata->prevbestup = *bestup;
-         branchruledata->prevbestupvalid = *bestupvalid;
-         branchruledata->prevbestdown = *bestdown;
-         branchruledata->prevbestdownvalid = *bestdownvalid;
-         branchruledata->prevprovedbound = *provedbound;
-
          status->addimpbinconst = TRUE;
+
+         if( !status->maxnconsreached )
+         {
+            SCIP_CALL( SCIPlinkLPSol(scip, branchruledata->prevbinsolution) );
+            SCIP_CALL( SCIPunlinkSol(scip, branchruledata->prevbinsolution) );
+            branchruledata->prevbinbranchvar = lpcands[highestscoreindex];
+            branchruledata->prevbinbranchsol = lpcandssol[highestscoreindex];
+            branchruledata->prevbestup = *bestup;
+            branchruledata->prevbestupvalid = *bestupvalid;
+            branchruledata->prevbestdown = *bestdown;
+            branchruledata->prevbestdownvalid = *bestdownvalid;
+            branchruledata->prevprovedbound = *provedbound;
+         }
       }
 
       if( !status->lperror && !status->depthtoosmall && !status->firstlvlfullcutoff
@@ -1728,6 +1757,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    /* Create an empty solution. Gets filled in case of implied binary bounds. */
    SCIP_CALL( SCIPcreateSol(scip, &branchruledata->prevbinsolution, NULL) );
    branchruledata->prevbinbranchvar = NULL;
+   branchruledata->restartindex = 0;
 
    return SCIP_OKAY;
 }
@@ -1849,7 +1879,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
       /* execute the main logic */
       SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata, baselpsol, lpcands, lpcandssol, lpcandsfrac, nlpcands,
-            status, &bestcand, &bestdown, &bestdownvalid, &bestup, &bestupvalid, &provedbound) );
+            &branchruledata->restartindex, status, &bestcand, &bestdown, &bestdownvalid, &bestup, &bestupvalid, &provedbound) );
       SCIPdebugMessage("Result is <%i>\n", *result);
 
       if( status->firstlvlfullcutoff || status->domredcutoff )
@@ -1999,5 +2029,8 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/addbinconsrow",
          "should implied binary constraints be added as a row to the LP?",
          &branchruledata->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedcons",
+         "how many constraints that are violated by the base lp solution should be gathered until they are added?",
+         &branchruledata->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, -1, 100000000, NULL, NULL) );
    return SCIP_OKAY;
 }
