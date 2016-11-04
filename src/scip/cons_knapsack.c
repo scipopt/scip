@@ -7301,8 +7301,8 @@ SCIP_RETCODE applyFixings(
             ++v;
       }
    }
-   assert(consdata->onesweightsum == 0 || SCIPgetDepth(scip) > 0);
-   assert(consdata->zerosweightsum == 0 || SCIPgetDepth(scip) > 0);
+   assert(consdata->onesweightsum == 0);
+   assert(consdata->zerosweightsum == 0);
 
    SCIPdebugMsg(scip, "after applyFixings, before merging:\n");
    SCIPdebugPrintCons(scip, cons, NULL);
@@ -7375,15 +7375,14 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
-   /* clean data structures first, if variables have been added or fixed */
-   if( usenegatedclique && ! consdata->merged )
+#ifndef NDEBUG
+   /* assert that only active or negated variables are present */
+   for( i = 0; i < consdata->nvars && consdata->merged; ++i )
    {
-      SCIP_CALL( applyFixings(scip, cons, cutoff) );
-      if( *cutoff )
-         return SCIP_OKAY;
+      assert(SCIPvarIsActive(consdata->vars[i]) || SCIPvarIsNegated(consdata->vars[i]) || SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_FIXED);
    }
-
-   assert(consdata->merged);
+#endif
+   usenegatedclique = usenegatedclique && consdata->merged;
    nnegcliques = -1;
 
    /* init for debugging */
@@ -7452,8 +7451,6 @@ SCIP_RETCODE propagateCons(
             /* ignore variables of the negated clique which are fixed to one since these are counted in
              * consdata->onesweightsum
              */
-            /* assert that only active or negated variables are present */
-            assert(SCIPvarIsActive(myvars[i]) || SCIPvarIsNegated(myvars[i]));
 
             /* if there are only one variable negated cliques left we can stop */
             if( nnegcliques - c == nvars - i )
@@ -7516,7 +7513,6 @@ SCIP_RETCODE propagateCons(
                   /* fix all other variables of the negated clique to 1 */
                   for( v = cliquestartposs[c - 1]; v < cliquestartposs[c]; ++v )
                   {
-                     assert(SCIPvarIsActive(myvars[v]) || SCIPvarIsNegated(myvars[v]));
                      if( v != i && SCIPvarGetLbLocal(myvars[v]) < 0.5 )
                      {
                         SCIPdebugMsg(scip, " -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[v]));
@@ -13041,7 +13037,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
                eventdata->consdata->existmultaggr = TRUE;
                /* lint -fallthrough */
             case SCIP_VARSTATUS_AGGREGATED:
-            case SCIP_VARSTATUS_FIXED:
                eventdata->consdata->merged = FALSE;
             default:
                break;
