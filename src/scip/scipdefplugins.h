@@ -177,6 +177,7 @@
 #include "scip/sepa_cmir.h"
 #include "scip/sepa_disjunctive.h"
 #include "scip/sepa_flowcover.h"
+#include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
