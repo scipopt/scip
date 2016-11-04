@@ -68,7 +68,6 @@ struct SCIP_SepaData
    SCIP_HASHMAP*         var2nlpiidx;        /**< mapping between variables and nlpi indices */
    int                   nlpinvars;          /**< total number of nlpi variables */
 
-   SCIP_Bool             cutoff;             /**< whether the separator detected a cutoff */
    SCIP_Bool             skipsepa;           /**< should separator be skipped? */
 
    SCIP_NLROW**          nlrows;             /**< convex nlrows */
@@ -330,7 +329,8 @@ static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
-   SCIP_SOL*             sol                 /**< solution that should be separated */
+   SCIP_SOL*             sol,                /**< solution that should be separated */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
    SCIP_SEPADATA* sepadata;
@@ -351,6 +351,7 @@ SCIP_RETCODE separateCuts(
 
    sepadata = SCIPsepaGetData(sepa);
 
+   assert(result != NULL);
    assert(sepadata != NULL);
    assert(sepadata->constraintviolation != NULL);
 
@@ -489,15 +490,21 @@ SCIP_RETCODE separateCuts(
                   SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
 
                   if( infeasible )
-                     sepadata->cutoff = TRUE;
+                  {
+                     *result = SCIP_CUTOFF;
+                     SCIP_CALL( SCIPreleaseRow(scip, &row) );
+                     break;
+                  }
                   else
+                  {
+                     *result = SCIP_SEPARATED;
                      sepadata->ncutsadded++;
+                  }
                }
 
                /* release the row */
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
-
          }
 
 #ifdef SCIP_DEBUG
@@ -864,18 +871,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 
    /* run the separator */
    *result = SCIP_DIDNOTFIND;
-   sepadata->cutoff = FALSE;
    sepadata->ncutsadded = 0;
 
-   /* separateCuts computes the projection and then gradient cuts on each constraint that was originally violated;
-    * when adding the cuts determines whether there was a cutoff, but the result is set here
-    */
-   SCIP_CALL( separateCuts(scip, sepa, lpsol) );
-
-   if( sepadata->ncutsadded > 0 )
-      *result = SCIP_SEPARATED;
-   if( sepadata->cutoff )
-      *result = SCIP_CUTOFF;
+   /* separateCuts computes the projection and then gradient cuts on each constraint that was originally violated */
+   SCIP_CALL( separateCuts(scip, sepa, lpsol, result) );
 
    /* free memory */
    SCIP_CALL( SCIPfreeSol(scip, &lpsol) );
