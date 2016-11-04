@@ -34,16 +34,17 @@
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
-#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
-#define SEPA_DELAY                 TRUE /**< should separation method be delayed, if other separators found cuts? */
+#define SEPA_USESSUBSCIP          FALSE      /**< does the separator use a secondary SCIP instance? */
+#define SEPA_DELAY                 TRUE      /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXDEPTH             -1 /* maximum depth at which the separator is applied; -1 means no limit */
+#define DEFAULT_MAXDEPTH             -1      /* maximum depth at which the separator is applied; -1 means no limit */
+#define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for no limit */
+#define DEFAULT_NLPITERLIM          250      /**< default NLP iteration limit */
 
-#define MIN_VIOLATION              1e-4 /* minimum violation of point to be separated */
+#define MIN_VIOLATION              1e-4      /* minimum violation of point to be separated */
 
-#define NLPITERLIM                  250 /**< default NLP iteration limit */
-#define NLPFEASTOL                 1e-6 /**< NLP feasibility tolerance */
-#define NLPVERBOSITY                  0 /**< NLP solver verbosity */
+#define NLPFEASTOL                 1e-6      /**< NLP feasibility tolerance */
+#define NLPVERBOSITY                  0      /**< NLP solver verbosity */
 
 /*
  * Data structures
@@ -77,6 +78,8 @@ struct SCIP_SepaData
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
 
    /* parameter */
+   SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for no limit */
+   int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
    int                   maxdepth;           /**< maximal depth at which the separator is applied */
 
    /* statistic variables */
@@ -335,8 +338,10 @@ SCIP_RETCODE separateCuts(
    SCIP_SOL*      projection;
    SCIP_Real*     linvals;
    SCIP_Real*     nlpisol;
+   SCIP_Real      timelimit;
    int            nlpinvars;
    int            i;
+   int            iterlimit;
    int*           lininds;
    SCIP_Bool      nlpunstable;
 
@@ -380,8 +385,26 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob,
             -1, nlpinvars, lininds, linvals) );
 
-   /* set parameters in nlpi; iterations limit, tolerance, verbosity */
-   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, NLPITERLIM) );
+   /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
+    * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
+    * for scip and the timelimit setting
+    */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+   {
+      timelimit -= SCIPgetSolvingTime(scip);
+      if( timelimit <= 1.0 )
+      {
+         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
+         return SCIP_OKAY;
+      }
+   }
+   if( sepadata->nlptimelimit > 0.0 )
+      timelimit = MIN(sepadata->nlptimelimit, timelimit);
+   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+
+   iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
+   SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
    SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASTOL) );
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
@@ -895,6 +918,14 @@ SCIP_RETCODE SCIPincludeSepaConvexproj(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxdepth",
          "maximal depth at which the separator is applied (-1: unlimited)",
          &sepadata->maxdepth, FALSE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/nlpiterlimit",
+         "iteration limit of NLP solver; 0 for no limit",
+         &sepadata->nlpiterlimit, TRUE, DEFAULT_NLPITERLIM, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/nlptimelimit",
+         "time limit of NLP solver; 0.0 for no limit",
+         &sepadata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
