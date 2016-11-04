@@ -856,7 +856,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
    /* remove all conflicts depending on a primalbound*improvement > cutoffbound
     *
-    * note: we cannot remove conlicts that are marked as deleted because at this point in time we would distroy
+    * note: we cannot remove conflicts that are marked as deleted because at this point in time we would destroy
     *       the internal data structure
     */
    for( i = 0; i < conflictstore->nconflicts; )

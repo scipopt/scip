@@ -223,7 +223,7 @@ struct SCIP_Set
                                               *   valid, use both rays otherwise
                                               */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
-                                              *   an previous incumbent.
+                                              *   a previous incumbent.
                                               */
 
    /* constraint settings */
