@@ -28,8 +28,8 @@ features:
   though the solutions required an addition NLP solve
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
-- add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
-- add separator which projects onto convex relaxation and build gradient cuts at the projection
+- add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
+- add sepa_convexproj, a separator which projects onto convex relaxation and build gradient cuts at the projection
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
