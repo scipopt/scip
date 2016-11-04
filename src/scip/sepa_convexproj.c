@@ -59,7 +59,10 @@ enum ConvexSide
 };
 typedef enum ConvexSide CONVEXSIDE;
 
-/** separator data */
+/** separator data
+ * it keeps the nlpi which represents the projection problem (see sepa_convexproj.h); it also keeps the convex nlrows
+ * and the side which actually makes them convex; when separating, we use the nlpi to compute the projection and then
+ * the convex nlrows to compute the actual gradient cuts */
 struct SCIP_SepaData
 {
    SCIP_NLPI*            nlpi;               /**< nlpi used to create the nlpi problem */
@@ -130,8 +133,8 @@ SCIP_RETCODE computeGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_SOL*             projection,         /**< point where we compute gradient */
-   SCIP_EXPRTREE*        exprtree,           /**< exprtree to which we compute the gradient */
-   SCIP_Real*            grad                /**< buffer to store the gradient; order ?? */
+   SCIP_EXPRTREE*        exprtree,           /**< exprtree for which we compute the gradient */
+   SCIP_Real*            grad                /**< buffer to store the gradient */
    )
 {
    SCIP_Real* x;
@@ -139,13 +142,15 @@ SCIP_RETCODE computeGradient(
    int nvars;
    int i;
 
-   /*
-   SCIPdebugMsg(scip, "Computing gradient of: ");
-   SCIPexprtreePrint(exprtree, SCIPgetMessagehdlr(scip), NULL, NULL ,NULL);
-   SCIPdebugMsg(scip, "\n");
-   */
+   assert(scip != NULL);
+   assert(exprint != NULL);
+   assert(projection != NULL);
+   assert(exprtree != NULL);
+   assert(grad != NULL);
 
    nvars = SCIPexprtreeGetNVars(exprtree);
+   assert(nvars > 0);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &x, nvars) );
 
    /* compile expression exprtree, if not done before */
@@ -162,7 +167,6 @@ SCIP_RETCODE computeGradient(
    SCIP_CALL( SCIPexprintGrad(exprint, exprtree, x, TRUE, &val, grad) );
 
    /*SCIPdebug( for( i = 0; i < nvars; ++i ) printf("%e [%s]\n", grad[i], SCIPvarGetName(SCIPexprtreeGetVars(exprtree)[i])) );*/
-
 
    SCIPfreeBufferArray(scip, &x);
 
@@ -283,9 +287,9 @@ SCIP_RETCODE generateCut(
    return SCIP_OKAY;
 }
 
-/** set quadratic part of objective function: \sum_i x_i^2; the objective function is ||x - x_0||^2, where x_0 is the
- * point to separate; the only part that changes is the term -2 x_0 \cdot x which is linear. The linear part is set
- * every time we want to separate a point, see separateCuts
+/** set quadratic part of objective function: \f$ \sum_i x_i^2 \f$; the objective function is \f$ ||x - x_0||^2 \f$,
+ * where \f$ x_0 \f$ is the point to separate; the only part that changes is the term \f$ -2 \langle x_0, x \rangle \f$
+ * which is linear and is set every time we want to separate a point, see separateCuts
  */
 static
 SCIP_RETCODE setQuadraticObj(
@@ -295,6 +299,13 @@ SCIP_RETCODE setQuadraticObj(
 {
    SCIP_QUADELEM* quadelems;
    int i;
+
+   assert(scip != NULL);
+   assert(sepadata != NULL);
+   assert(sepadata->nlpi != NULL);
+   assert(sepadata->nlpiprob != NULL);
+   assert(sepadata->var2nlpiidx != NULL);
+   assert(sepadata->nlpinvars > 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, sepadata->nlpinvars) );
    for( i = 0; i < sepadata->nlpinvars; i++ )
@@ -322,7 +333,6 @@ SCIP_RETCODE setQuadraticObj(
 /** projects sol onto convex relaxation (stored in sepadata) and tries to generate gradient cuts at the projection
  * it generates cuts only for the constraints that were violated by the LP solution and are now active or still
  * violated (in case we don't solve to optimality).
- * @note: this method modifies the sepadata, for instance sepadata->ncutsadded stores how many cuts where added.
  * @todo: store a feasible solution if one is found to use as warmstart
  */
 static
@@ -353,6 +363,13 @@ SCIP_RETCODE separateCuts(
 
    assert(result != NULL);
    assert(sepadata != NULL);
+   assert(sepadata->nnlrows > 0);
+   assert(sepadata->nlpi != NULL);
+   assert(sepadata->nlpinvars > 0);
+   assert(sepadata->nlrows != NULL);
+   assert(sepadata->nlpiprob != NULL);
+   assert(sepadata->var2nlpiidx != NULL);
+   assert(sepadata->convexsides != NULL);
    assert(sepadata->constraintviolation != NULL);
 
    nlpinvars = sepadata->nlpinvars;
@@ -413,7 +430,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPnlpiSolve(sepadata->nlpi, sepadata->nlpiprob) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(sepadata->nlpi, sepadata->nlpiprob));
 
-   /* if solution is feasible, add a cuts */
+   /* if solution is feasible, add cuts */
    switch( SCIPnlpiGetSolstat(sepadata->nlpi, sepadata->nlpiprob) )
    {
       case SCIP_NLPSOLSTAT_GLOBOPT:
@@ -422,9 +439,15 @@ SCIP_RETCODE separateCuts(
           * even though this cut is implied by all the gradient cuts of the rows active at the projection,
           * we do not add them all (only the gradient cuts of constraints that violated the LP solution */
       case SCIP_NLPSOLSTAT_FEASIBLE:
+         /* generate cuts for violated constraints (at sol) that are active or still violated at the projection, since
+          * a suboptimal solution or numerical issues could give a solution of the projection problem where constraints
+          * are not active; if the solution of the projection problem is in the interior of the region, we do nothing
+          */
 
          /* get solution: build SCIP_SOL out of nlpi sol */
          SCIP_CALL( SCIPnlpiGetSolution(sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL) );
+         assert(nlpisol != NULL);
+
          SCIP_CALL( SCIPcreateSol(scip, &projection, NULL) );
          for( i = 0; i < nlpinvars; i++ )
          {
@@ -541,11 +564,9 @@ SCIP_RETCODE separateCuts(
          SCIP_CALL( SCIPfreeSol(scip, &projection) );
          break;
 
-
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
-         /* one would like to do something smart here, e.g. cut off the node;
-          * but most likely we are here because of numerics, so fallthrough
-          */
+         /* fallthrough;
+          * @todo: write what it means to be locinfeasible and why it can't be used to cutoff the node */
       case SCIP_NLPSOLSTAT_UNKNOWN:
          /* unknown... assume numerical issues */
          nlpunstable = TRUE;
@@ -596,6 +617,9 @@ SCIP_RETCODE computeMaxViolation(
    int            i;
 
    assert(sepadata != NULL);
+   assert(sepadata->nnlrows > 0);
+   assert(sepadata->nlrows != NULL);
+   assert(sepadata->convexsides != NULL);
    assert(sepadata->constraintviolation != NULL);
 
    *maxviolation = 0.0;
@@ -671,7 +695,8 @@ SCIP_RETCODE storeConvexNlrows(
       assert(nlrow != NULL);
 
       /* linear case */
-      /* TODO: this should be equivalent to the curvature being convex */
+      /* @todo: this should be equivalent to the curvature being convex; maybe it is enough to set it to LINEAR in
+       *        SCIPaddNlrow when this condition is satisfied */
       if( SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL )
       {
          ++(sepadata->nlinearnlrows);
@@ -837,15 +862,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
             SCIPcalcHashtableSize(sepadata->nlpinvars)) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
-      /* I shouldn't care about the cutoff, just assert that the lp solution satisfies the cutoff bound */
+      /* @todo: assert that the lp solution satisfies the cutoff bound; if this fails then we shouldn't have a cutoff
+       * bound in the nlpi, since then the projection could be in the interior of the actual convex relaxation */
       SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip)) );
 
       /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPaddConvexNlpRowsNlobbt(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx, SCIPgetLPRows(scip),
-               SCIPgetNLPRows(scip)) );
+         SCIP_CALL( SCIPaddConvexNlpRowsNlobbt(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+                  SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
       }
 
       /* set quadratic part of objective function */
