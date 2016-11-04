@@ -205,6 +205,7 @@ static
 SCIP_RETCODE conflictstoreEnsureMem(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   num                 /**< minimal number of slots in array */
    )
 {
@@ -225,14 +226,16 @@ SCIP_RETCODE conflictstoreEnsureMem(
       if( conflictstore->conflictsize == 0 )
       {
          newsize = MIN(conflictstore->storesize, CONFLICTSTORE_SIZE);
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->conflicts, newsize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->primalbounds, newsize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->conflicts, newsize) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->primalbounds, newsize) );
       }
       else
       {
          newsize = MIN(conflictstore->maxstoresize, SCIPsetCalcMemGrowSize(set, num));
-         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->conflicts, newsize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->primalbounds, newsize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->conflicts, conflictstore->conflictsize,
+               newsize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->primalbounds, conflictstore->conflictsize,
+               newsize) );
       }
 
 #ifndef NDEBUG
@@ -582,8 +585,8 @@ SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_CALL( SCIPconflictstoreClean(*conflictstore, blkmem, set, stat) );
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->origconfs, (*conflictstore)->origconflictsize);
-   BMSfreeMemoryArrayNull(&(*conflictstore)->conflicts);
-   BMSfreeMemoryArrayNull(&(*conflictstore)->primalbounds);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->conflicts, (*conflictstore)->conflictsize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->primalbounds, (*conflictstore)->conflictsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualrayconfs, CONFLICTSTORE_DUALSIZE);
    BMSfreeMemoryNull(conflictstore);
 
