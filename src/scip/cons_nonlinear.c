@@ -241,10 +241,7 @@ SCIP_RETCODE catchLinearVarEvents(
    consdata->maxlinactivity = SCIP_INVALID;
 
    /* mark constraint for propagation */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-   }
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }

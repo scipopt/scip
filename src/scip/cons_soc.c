@@ -164,10 +164,7 @@ SCIP_RETCODE catchLhsVarEvents(
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], &consdata->lhsbndchgeventdata[varidx].filterpos) );
 
    /* since bound changes were not catched before, a possibly stored activity may have become outdated */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-   }
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -194,10 +191,7 @@ SCIP_RETCODE catchRhsVarEvents(
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
 
    /* since bound changes were not catched before, a possibly stored activity may have become outdated */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-   }
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }

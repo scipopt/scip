@@ -212,10 +212,7 @@ SCIP_RETCODE catchLinearVarEvents(
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, &consdata->eventfilterpos) );
 
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-   }
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }

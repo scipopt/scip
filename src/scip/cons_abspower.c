@@ -228,10 +228,7 @@ SCIP_RETCODE catchVarEvents(
 
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, &consdata->xeventfilterpos) );
 
-      if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-      {
-         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-      }
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    /* if x is multiaggregated, then bound changes on z could not be propagated, so we do not need to catch them */
@@ -255,10 +252,7 @@ SCIP_RETCODE catchVarEvents(
 
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, &consdata->zeventfilterpos) );
 
-      if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-      {
-         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-      }
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    return SCIP_OKAY;
