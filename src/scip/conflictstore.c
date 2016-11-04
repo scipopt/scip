@@ -190,9 +190,9 @@ SCIP_RETCODE initConflictstore(
 
 #ifdef NDEBUG
       if( conflictstore->maxstoresize == 0 )
-         SCIPdebugMessage("usage of conflict pool is disabled.\n");
+         SCIPsetDebugMsg(set, "usage of conflict pool is disabled.\n");
       else
-         SCIPdebugMessage("[init,max] size of conflict pool is [%d,%d].\n",
+         SCIPsetDebugMsg(set, "[init,max] size of conflict pool is [%d,%d].\n",
                conflictstore->initstoresize, conflictstore->maxstoresize);
 #endif
    }
@@ -352,7 +352,7 @@ SCIP_RETCODE delPosDualray(
    assert(dualray != NULL);
 
 #ifdef SCIP_PRINT_DETAILS
-   SCIPdebugMessage("-> remove dual ray at pos=%d with age=%g\n", pos, SCIPconsGetAge(dualray));
+   SCIPsetDebugMsg(set, "-> remove dual ray at pos=%d with age=%g\n", pos, SCIPconsGetAge(dualray));
 #endif
 
    /* mark the constraint as deleted */
@@ -415,7 +415,7 @@ SCIP_RETCODE cleanDeletedConflicts(
          i++;
    }
 
-   SCIPdebugMessage("removed %d/%d as deleted marked conflicts.\n", *ndelconfs, conflictstore->nconflicts);
+   SCIPsetDebugMsg(set, "removed %d/%d as deleted marked conflicts.\n", *ndelconfs, conflictstore->nconflicts);
 
    return SCIP_OKAY;
 }
@@ -477,7 +477,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    assert(conflictstore->storesize <= conflictstore->maxstoresize);
 
   TERMINATE:
-   SCIPdebugMessage("clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
+   SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
    return SCIP_OKAY;
