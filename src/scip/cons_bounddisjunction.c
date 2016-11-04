@@ -504,11 +504,13 @@ SCIP_RETCODE switchWatchedvars(
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
    }
 
    /* catch events on new watched variables */
@@ -2651,11 +2653,13 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
    }
    if( consdata->watchedvar2 != -1 )
    {
       assert(consdata->filterpos2 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
    }
 
    return SCIP_OKAY;

@@ -119,7 +119,27 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
    else if ( SCIPconsGetAge(cons1) < SCIPconsGetAge(cons2) )
       return +1;
    else
+#if 0
+   /* if both constraints have the same age we prefere the constraint with more non-zeros */
+   {
+      SCIP_Bool success;
+      int nvars1;
+      int nvars2;
+
+      SCIP_CALL( SCIPgetConsNVars(scip, cons1, &nvars1, &success) );
+      assert(success)
+
+      SCIP_CALL( SCIPgetConsNVars(scip, cons2, &nvars2, &success) );
+      assert(success)
+
+      if( nvars1 >= nvars2 )
+         return -1;
+      else
+         return +1;
+   }
+#else
       return 0;
+#endif
 }
 
 /* initializes the conflict store */
@@ -410,10 +430,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real maxage;
-   int i;
    int ndelconfs;
-   int ndelconfstmp;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
@@ -430,12 +447,9 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    ++conflictstore->ncleanups;
 
    ndelconfs = 0;
-   ndelconfstmp = 0;
 
    /* remove all as deleted marked conflicts */
-   SCIP_CALL( cleanDeletedConflicts(conflictstore, set, stat, blkmem, &ndelconfstmp) );
-   ndelconfs += ndelconfstmp;
-   ndelconfstmp = 0;
+   SCIP_CALL( cleanDeletedConflicts(conflictstore, set, stat, blkmem, &ndelconfs) );
 
    /* return if at least one conflict could be deleted */
    if( ndelconfs > 0 )
@@ -450,45 +464,11 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->conflicts[0]),
          SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])));
 
-   maxage = SCIPconsGetAge(conflictstore->conflicts[0]);
+   assert(conflictstore->nconflicts > 0);
 
-   /* all conflicts have the same age, remove only the first */
-   if( SCIPsetIsEQ(set, maxage, SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])) )
-   {
-      /* remove conflict at first position */
-      SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
-      ++ndelconfstmp;
-   }
-   else
-   {
-      assert(ndelconfstmp == 0);
-
-      /* remove all conflicts with max. age */
-      for( i = 0; i < conflictstore->nconflicts; i++ )
-      {
-         if( SCIPsetIsEQ(set, maxage, SCIPconsGetAge(conflictstore->conflicts[i])) )
-         {
-            /* remove conflict at first position */
-            SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
-            ++ndelconfstmp;
-
-            /* delPos() decreases number of stored conflicts, we need to increase the number of conflicts again and
-             * subtract it later, otherwise it could happen that i > nconflicts but there are conflicts with
-             * max. age left.
-             */
-            ++conflictstore->nconflicts;
-         }
-         else
-         {
-            /* subtract number of deleted conflicts */
-            conflictstore->nconflicts -= ndelconfstmp;
-            break;
-         }
-      }
-   }
-
-   /* update statistics */
-   ndelconfs += ndelconfstmp;
+   /* remove conflict at first position */
+   SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
+   ++ndelconfs;
 
    /* adjust size of the storage if we use a dynamic store */
    if( set->conf_maxstoresize == -1 )

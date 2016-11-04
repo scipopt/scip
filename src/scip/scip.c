@@ -14797,6 +14797,13 @@ SCIP_RETCODE freeTransform(
       }
    }
 
+   /* clean the conflict store
+    *
+    * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
+    * freed in SCIPfreeProb().
+    */
+   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat) );
+
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
