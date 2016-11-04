@@ -6248,7 +6248,7 @@ SCIP_RETCODE performDualRayAnalysis(
 
    /* it can happen that the proof is not valid anymore after removing small coefficients in SCIPcutsCleanupRow */
    if( SCIPsetIsLE(set, activity, mirrhs) )
-      return SCIP_OKAY;
+      goto TERMINATE;
 
    success = FALSE;
 
@@ -6294,6 +6294,7 @@ SCIP_RETCODE performDualRayAnalysis(
       }
    }
 
+  TERMINATE:
    /* free buffer memory */
    SCIPsetFreeBufferArray(set, &varused);
    SCIPsetFreeBufferArray(set, &varinds);
