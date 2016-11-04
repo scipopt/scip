@@ -11381,7 +11381,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    assert(minidx >= 0 && mididx >= 0 && maxidx >= 0);
 
    /* hash value depends on vectors of variable indices */
-   return SCIPhashTwo(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx), consdata->weights[0]);
+   return SCIPhashTwo(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
+                      consdata->weights[0]);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
