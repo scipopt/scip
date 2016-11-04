@@ -7589,18 +7589,17 @@ SCIP_RETCODE propagateCons(
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);
 
-               /* continue if this clique has a fixed maximum weight variable */
+               /* no need to process this negated clique because all variables are already fixed (which we detect from a fixed maxvar) */
                if( SCIPvarGetUbLocal(maxvar) - SCIPvarGetLbLocal(maxvar) < 0.5 )
                   continue;
 
                maxcliqueweight = myweights[startvarposclique];
                maxvarfixed = FALSE;
                /* if the sum of all weights of fixed variables to one plus the minimalweightsum (minimal weight which is already
-                * used in this knapsack due to negated cliques) plus any weight minus the second largest weight in this cliques
-                * exceeds the capacity the variables have to be fixed to zero (these variables should only be variables in the
-                * cliques which have maxweights)
+                * used in this knapsack due to negated cliques) plus any weight minus the second largest weight in this clique
+                * exceeds the capacity the maximum weight variable can be fixed to zero.
                 */
-               if( consdata->onesweightsum + maxcliqueweight + minweightsum - secondmaxweights[c] > consdata->capacity )
+               if( consdata->onesweightsum + minweightsum  + (maxcliqueweight - secondmaxweights[c]) > consdata->capacity )
                {
                   assert(maxcliqueweight >= secondmaxweights[c]);
                   assert(SCIPvarGetLbLocal(maxvar) < 0.5 && SCIPvarGetUbLocal(maxvar) > 0.5);
@@ -7618,15 +7617,22 @@ SCIP_RETCODE propagateCons(
                 */
                else if( nnegcliques - c == nvars - startvarposclique )
                   break;
-               /* the sorting regarding the knapsack weights is a gain upper bound for the maximum elements of all subsequent elements
+               /* early termination of the remaining loop because no further variable fixings are possible:
+                *
+                * the gain in any of the following negated cliques (the additional term if the maximum weight variable was set to 1, and the second
+                * largest was set to 0) does not suffice to infer additional variable fixings because
+                *
+                * - the cliques are sorted by decreasing maximum weight -> for all c' >= c: maxweights[c'] <= maxcliqueweight
+                * - their second largest elements are at least as large as the smallest weight of the knapsack
                 */
-               else if( consdata->onesweightsum + minweightsum + maxcliqueweight - consdata->weights[nvars - 1] <= consdata->capacity )
+               else if( consdata->onesweightsum + minweightsum + (maxcliqueweight - consdata->weights[nvars - 1]) <= consdata->capacity )
                   break;
 
                /* loop over items with non-maximal weight (omitting the first position) */
                for( i = endvarposclique; i > startvarposclique; --i )
                {
-                  /* there should be no variables fixed to 0 here */
+                  /* there should be no variable fixed to 0 between and startvarposclique + 1 and endvarposclique unless we
+                   * messed up the clique preprocessing in the previous loop to filter those variables out */
                   assert(SCIPvarGetUbLocal(myvars[i]) > 0.5);
 
                   /* only check variables of negated cliques for which no variable is locally fixed */
@@ -7639,7 +7645,7 @@ SCIP_RETCODE propagateCons(
                       *
                       * the maxvar was already fixed to 0 because it has a huge gain.
                       *
-                      * if for i \in C (a negated clique) minweightsum - wi + W(C) > capacity => xi = 1
+                      * if for i \in C (a negated clique) onesweightsum - wi + W_max(c) > capacity  => xi = 1
                       * since replacing i with the element of maximal weight leads to infeasibility */
                      if( maxvarfixed || consdata->onesweightsum + minweightsum - myweights[i] + maxcliqueweight > consdata->capacity  )
                      {
