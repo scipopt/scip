@@ -10051,7 +10051,7 @@ SCIP_RETCODE propagateBounds(
             }
             if( redundant )
             {
-            SCIPdebugMsg(scip, "deleting constraint <%s> locally\n", SCIPconsGetName(conss[c]));
+               SCIPdebugMsg(scip, "deleting constraint <%s> locally\n", SCIPconsGetName(conss[c]));
                SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
             }
          }
@@ -11736,7 +11736,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
                if( propresult == SCIP_CUTOFF )
                {
-               SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));
+                  SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n",
+                     SCIPconsGetName(conss[c]));
                   *result = SCIP_CUTOFF;
                   return SCIP_OKAY;
                }
