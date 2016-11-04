@@ -107,7 +107,6 @@ struct SCIP_HeurData
 
 
 /** TODO GENERAL TODOS:
- *  - implement a minfixingrate-parameter
  *  - concentrate on the binary and integer variables for the fixing.
  *  - fold the methods extendedProgram and variableFixings into one that does both (and calls subroutines where necessary)
  */
@@ -163,16 +162,13 @@ SCIP_RETCODE getObjectiveFactor(
          if( SCIPisInfinity(scip, upperbound) || SCIPisInfinity(scip, -upperbound) )
          {
             /* TODO fancy diving function to find a solution for the max problem */
-            *factor = 1 / SCIP_REAL_MAX;
+            *factor = 1 / SCIPinfinity(scip);
             return SCIP_OKAY;
          }
          else if( SCIPisZero(scip, upperbound) )
          {
             continue;
          }
-         /* author bzfhende: TODO I think you should treat infinite bounds explicitly. By the way, it seems that you should
-          * exchange the use of lower and upper bounds for obtaining an "antipseudo"-solution-like upperbound */
-
          else if( SCIPisGT(scip, 0.0, upperbound) )
          {
             *factor += upperbound * SCIPvarGetLbGlobal(vars[i]);
@@ -437,7 +433,9 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/**  todo comment better: problem has to be transformed in advance */
+/**
+ * extends the problem with slack variables, so that the given infeasible solutions is feasible in the extended program.
+ */
 static
 SCIP_RETCODE extendedProgramm(
    SCIP*                 scip,             /**< SCIP data structure of the problem */
@@ -680,21 +678,6 @@ SCIP_RETCODE extendedProgramm(
       SCIPfreeBufferArray(scip, &consvars);
    }
 
-   /*if( 0 >= heurdata->nviolatedcons && 0 >= heurdata->nviolatedvars )
-   {
-      SCIP_CALL( SCIPaddSolFree(scip, &subsol, &success) );
-      if( !success )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Given repair-solution was feasible, but not good enough.\n");
-      }
-      else
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Given repair-solution was feasible.\n");
-      }
-      *result = SCIP_FOUNDSOL;
-      return SCIP_OKAY;
-   }*/
-
    /*Adds the given solution to the subscip. */
    heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, subsol);
    SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
@@ -723,16 +706,11 @@ SCIP_RETCODE extendedProgramm(
       goto TERMINATE;
 
    /* set limits for the subproblem */
-   /*heurdata->nodelimit = nstallnodes;
-   SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes));*/
-   {
-      SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
-      SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
-      SCIP_CALL(SCIPsetObjlimit(subscip,1.0));
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
-   }
-   /*SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", 1));*/
+   SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nnodes));
+   SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
+   SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
+   SCIP_CALL(SCIPsetObjlimit(subscip,1.0));
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL(SCIPsetSubscipsOff(subscip, TRUE));
@@ -794,9 +772,6 @@ SCIP_RETCODE extendedProgramm(
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    assert(SCIPgetNSols(subscip) > 0);
-   /* author bzfhende: TODO in the case of continuous slack variables, you would need to check the feasibility of the
-    * returned solution by checking all slack variables
-    */
    if( SCIPisFeasEQ(scip, SCIPgetPrimalbound(subscip), 0.0) )
    {
       SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
@@ -813,7 +788,6 @@ SCIP_RETCODE extendedProgramm(
    /* terminates the solving process  */
 TERMINATE:
    SCIPfreeSol(scip, &sol);
-   /*SCIPfreeSol(subscip, &subsol);*/
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
@@ -1019,16 +993,6 @@ SCIP_RETCODE varFixings(
          consvars[j] = subvars[pos];
 
          /* compute potentials */
-         /*if( 0 > sgn * vals[j] )
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[pos])));
-            potential[i] += vals[j] * (SCIPvarGetLbGlobal(vars[pos]) - SCIPgetSolVal(scip, sol, vars[pos]));
-         }
-         else
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[pos])));
-            potential[i] += vals[j] * (SCIPvarGetUbGlobal(vars[pos]) - SCIPgetSolVal(scip, sol, vars[pos]));
-         }*/
          contribution = getPotentialContributed(scip, sol, vars[pos], vals[j], sgn);
          if( !SCIPisInfinity(scip, REALABS(contribution)) )
          {
@@ -1091,7 +1055,6 @@ SCIP_RETCODE varFixings(
 
    if( heurdata->minfixingrate > ((SCIP_Real)nfixeddiscvars/MAX((SCIP_Real)ndiscvars,1.0)) )
    {
-      /*goto NOTFIXEDTERMINATE;*/
       goto TERMINATE;
    }
 
@@ -1120,7 +1083,6 @@ SCIP_RETCODE varFixings(
          char consvarname[1024];
 
          sla = 0.0;
-         /**todo*/
          lborig = SCIPvarGetLbGlobal(subvars[i]);
          uborig = SCIPvarGetUbGlobal(subvars[i]);
          value = SCIPgetSolVal(scip, sol, vars[i]);
@@ -1321,7 +1283,6 @@ SCIP_RETCODE varFixings(
 
       assert(SCIPgetNSols(subscip) > 0);
       SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
-      /*assert(success);*/
 
       *result = SCIP_FOUNDSOL;
    }
@@ -1339,7 +1300,6 @@ SCIP_RETCODE varFixings(
    /* terminates the solving process  */
 TERMINATE:
    SCIPfreeSol(scip, &sol);
-   /*SCIPfreeSol(subscip, &subsol);*/
    SCIPfreeBufferArrayNull(scip, &nviolatedrows);
    for( i = 0; i < nvars; ++i )
    {
@@ -1647,10 +1607,8 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    heurdata = SCIPheurGetData(heur);
 
    /* use read method to enter solution from a file */
-   /*retcode = readSol(scip, heurdata->infsol, heurdata->filename);*/
    if( strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
    {
-      /*SCIPfreeSol(scip, &sol);*/
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->infsol) );
       retcode = SCIP_OKAY;
    }
