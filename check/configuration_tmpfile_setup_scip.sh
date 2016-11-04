@@ -106,23 +106,23 @@ echo set display freq $DISPFREQ        >> $TMPFILE
 # avoid switching to dfs - better abort with memory error
 
 # begin repair
-DIR="repairsol_testset_0"
-if [ -e "$DIR/" ]
-then
+# DIR="repairsol_testset_0"
+# if [ -e "$DIR/" ]
+# then
 #      echo -e "\n\n\n Hello World \n\n\n"
-    filename=`basename $INSTANCE`
+#     filename=`basename $INSTANCE`
 #     echo $filename
-    datei="`ls ${DIR} -1 | grep ${filename} | head -1`"
-    if test "$datei" = ""
-    then
-        echo "datei nicht da"
-    else
-        echo "datei da"
+#     datei="`ls ${DIR} -1 | grep ${filename} | head -1`"
+#     if test "$datei" = ""
+#     then
+#         echo "datei nicht da"
+#     else
+#         echo "datei da"
 #         echo -e "\n\n\n Datei :${datei} \n\n\n"
 #         echo -e $datei
 #        echo set heuristics repair filename "${DIR}/${datei}"  >> $TMPFILE
 #         echo set heuristic repair freq  0   >> $TMPFILE
-    fi
+#     fi
 
 
 # first trial
@@ -148,7 +148,7 @@ then
 #       echo set heuristics repair filename $file
 #       echo set heuristics/repair/freq  0
 #     done
-fi
+# fi
 # end repair
 
 

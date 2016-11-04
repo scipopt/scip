@@ -1271,7 +1271,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( roundSol(scip, roundedsol) );
 
       /* check if the tmp sol is by accident feasible */
-      SCIP_CALL( SCIPcheckSol(scip, roundedsol, FALSE, FALSE, FALSE, TRUE, &feasible) );
+      SCIP_CALL( SCIPcheckSol(scip, roundedsol, FALSE, FALSE, FALSE, FALSE, TRUE, &feasible) );
 
       if( !feasible )
       {
