@@ -1363,7 +1363,7 @@ int SCIPcalcHashtableSize(
 
 /** appends element to the hash list */
 static
-SCIP_RETCODE hashtablelistAppend(
+SCIP_RETCODE multihashtablelistAppend(
    SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 element             /**< element to append to the list */
@@ -1630,7 +1630,7 @@ SCIP_RETCODE multihashResize(
             else
             {
                /* append old element to the list at the hash position */
-               SCIP_CALL( hashtablelistAppend(&(newlists[hashval]), multihash->blkmem, hashtablelist->element) );
+               SCIP_CALL( multihashtablelistAppend(&(newlists[hashval]), multihash->blkmem, hashtablelist->element) );
             }
 
             onlyone = FALSE;
@@ -1762,7 +1762,7 @@ SCIP_RETCODE SCIPmultihashInsert(
    hashval = keyval % multihash->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
-   SCIP_CALL( hashtablelistAppend(&multihash->lists[hashval], multihash->blkmem, element) );
+   SCIP_CALL( multihashtablelistAppend(&multihash->lists[hashval], multihash->blkmem, element) );
 
    ++(multihash->nelements);
 
@@ -1995,7 +1995,7 @@ void SCIPmultihashPrintStatistics(
    }
    assert(sumslotsize == multihash->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " multihash entries, used %d/%d slots (%.1f%%)",
       multihash->nelements, usedslots, multihash->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(multihash->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
@@ -2022,8 +2022,16 @@ SCIP_RETCODE SCIPhashtableCreate(
    assert(hashkeyval != NULL);
 
    SCIP_ALLOC( BMSallocMemory(hashtable) );
-   (*hashtable)->shift = 32 - (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2));
+   /* dont create too small hashtables, i.e. at least size 32, and increase
+    * the given size by divinding it by 0.9, since then no rebuilding will
+    * be necessary if the given number of elements are inserted. Finally round
+    * to the next power of two. */
+   (*hashtable)->shift = 32;
+   (*hashtable)->shift -= (int)ceil(
+      log(MAX(32.0, tablesize / 0.9)) / log(2));
+   /* compute size from shift */
    nslots = 1<<(32 - (*hashtable)->shift);
+   /* compute mask to do a fast modulo by nslots using bitwise and */
    (*hashtable)->mask = nslots - 1;
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*hashtable)->slots, nslots) );
    SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*hashtable)->hashes, nslots) );
@@ -2099,9 +2107,6 @@ void SCIPhashtableClear(
 #define ELEM_DISTANCE(pos) (((pos) + hashtable->mask + 1 - (hashtable->hashes[(pos)]>>(hashtable->shift))) & hashtable->mask)
 
 /** inserts element in hash table (multiple inserts of same element overrides previous one)
- *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
  */
 static
 SCIP_RETCODE hashtableInsert(
@@ -2109,7 +2114,7 @@ SCIP_RETCODE hashtableInsert(
    void*                 element,            /**< element to insert into the table */
    void*                 key,                /**< key of element */
    uint32_t              hashval,            /**< hash value of element */
-   SCIP_Bool             override            /**< should element be overridden or error be returned if already existing */
+   SCIP_Bool             override            /**< should element be overridden or an error be returned if already existing */
    )
 {
    uint32_t elemdistance;
@@ -2552,9 +2557,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 
 
 /** inserts element in hash table (multiple inserts of same element overrides previous one)
- *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
  */
 static
 SCIP_RETCODE hashmapInsert(
@@ -2727,7 +2729,13 @@ SCIP_RETCODE SCIPhashmapCreate(
 
    SCIP_ALLOC( BMSallocMemory(hashmap) );
 
-   (*hashmap)->shift = 32 - (int)ceil(log(MAX(32, mapsize / 0.9)) / log(2));
+   /* dont create too small hashtables, i.e. at least size 32, and increase
+    * the given size by divinding it by 0.9, since then no rebuilding will
+    * be necessary if the given number of elements are inserted. Finally round
+    * to the next power of two. */
+   (*hashmap)->shift = 32;
+   (*hashmap)->shift -= (int)ceil(
+      log(MAX(32, mapsize / 0.9)) / log(2));
    nslots = 1<<(32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
