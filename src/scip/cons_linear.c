@@ -5567,7 +5567,7 @@ SCIP_RETCODE rangedRowPropagation(
     */
    else
    {
-      if( consdata->rangedrowpropagated )
+      if( consdata->rangedrowpropagated > 0 )
          return SCIP_OKAY;
 
       consdata->rangedrowpropagated = 1;
@@ -5669,7 +5669,7 @@ SCIP_RETCODE rangedRowPropagation(
       goto TERMINATE;
 
    /* we need at least two non-continuous variables */
-   if( ncontvars + 2 > consdata->nvars - nfixedconsvars )
+   if( ncontvars + 2 > nunfixedvars )
       goto TERMINATE;
 
    assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])));
@@ -14890,7 +14890,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
       /* constraint should not be already presolved in the initial round */
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || SCIPconsIsMarkedPropagate(cons));
-      assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || !consdata->boundstightened);
+      assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || consdata->boundstightened == 0);
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || !consdata->presolved);
       assert(!SCIPconsIsMarkedPropagate(cons) || !consdata->presolved);
 
@@ -15673,7 +15673,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          }
 
          /* check whether bound tightening might now be successful */
-         if( consdata->boundstightened )
+         if( consdata->boundstightened > 0)
          {
             switch( eventtype )
             {
