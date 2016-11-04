@@ -607,7 +607,6 @@ SCIP_RETCODE computeMaxViolation(
    )
 {
    SCIP_NLROW*    nlrow;
-   SCIP_Real      sum;
    int            i;
 
    assert(sepadata != NULL);
@@ -617,7 +616,6 @@ SCIP_RETCODE computeMaxViolation(
    assert(sepadata->constraintviolation != NULL);
 
    *maxviolation = 0.0;
-   sum = 0.0;
    for( i = 0; i < sepadata->nnlrows; i++ )
    {
       SCIP_Real activity;
@@ -643,15 +641,12 @@ SCIP_RETCODE computeMaxViolation(
          sepadata->constraintviolation[i] = MAX(SCIPnlrowGetLhs(nlrow) - activity, 0.0);
       }
 
-      sum += sepadata->constraintviolation[i];
-
       /* compute maximum */
       if( *maxviolation < sepadata->constraintviolation[i] )
          *maxviolation = sepadata->constraintviolation[i];
    }
 
    SCIPdebugMsg(scip, "Maximum violation %g\n", *maxviolation);
-   SCIPdebugMsg(scip, "Average violation %g\n", sum/sepadata->nnlrows);
 
    return SCIP_OKAY;
 }
@@ -744,26 +739,6 @@ SCIP_DECL_SEPAFREE(sepaFreeConvexproj)
 
    return SCIP_OKAY;
 }
-
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_SEPAINITSOL(sepaInitsolConvexproj)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-
-   assert(sepa != NULL);
-
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   sepadata->nlinearnlrows = 0;
-   sepadata->nconvexnlrows = 0;
-
-   return SCIP_OKAY;
-}
-
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
@@ -918,19 +893,18 @@ SCIP_RETCODE SCIPincludeSepaConvexproj(
    /* create convexproj separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
+   /* this sets all data in sepadata to 0 */
+   BMSclearMemory(sepadata);
+
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpConvexproj, NULL,
          sepadata) );
-   sepadata->ncuts = 0;
-   sepadata->ncutsadded = 0;
-   sepadata->skipsepa = FALSE;
    assert(sepa != NULL);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeConvexproj) );
-   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolConvexproj) );
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolConvexproj) );
 
    /* add convexproj separator parameters */
