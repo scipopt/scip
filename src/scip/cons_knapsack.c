@@ -7401,9 +7401,9 @@ SCIP_RETCODE propagateCons(
 
       /* (1) compute the minimum weight of the knapsack constraint using negated clique information;
        *     a negated clique means, that at most one of the clique variables can be zero
-       *     - minweightsum = sum_{negated cliques C} ( sum(wi : i \in C) - W(C) ), where W(C) is the maximal weight of C
+       *     - minweightsum = sum_{negated cliques C} ( sum(wi : i \in C) - W_max(C) ), where W_max(C) is the maximal weight of C
        *
-       *     if for i \in C (a negated clique) minweightsum - wi + W(C) > capacity => xi = 1
+       *     if for i \in C (a negated clique) oneweightsum + minweightsum - wi + W_max(C) > capacity => xi = 1
        *     since replacing i with the element of maximal weight leads to infeasibility
        */
       if( usenegatedclique && nvars > 0 )
