@@ -6234,7 +6234,7 @@ SCIP_RETCODE performDualRayAnalysis(
       mirvals[v] *= -1.0;
       varused[v] = TRUE;
 
-      /* update sparcety information */
+      /* update sparsity pattern */
       varinds[nmirvars] = v;
       ++nmirvars;
    }
@@ -6243,10 +6243,12 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIPcutsCleanupRow(set->scip, mirvals, &mirrhs, varused, varinds, &nmirvars, FALSE);
    assert(nmirvars >= 1);
 
-#ifndef NDEBUG
+   /* calculate min. activity */
    activity = getMinActivity(set, transprob, mirvals, varinds, nmirvars, curvarlbs, curvarubs);
-   assert(SCIPsetIsGT(set, activity, mirrhs));
-#endif
+
+   /* it can happen that the proof is not valid anymore after removing small coefficients in SCIPcutsCleanupRow */
+   if( SCIPsetIsLE(set, activity, mirrhs) )
+      return SCIP_OKAY;
 
    success = FALSE;
 
