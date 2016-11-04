@@ -26,7 +26,7 @@
 
 #include "scip/heur_feaspump.h"
 #include "scip/cons_linear.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 #include "scip/scipdefplugins.h"
 
 #define HEUR_NAME             "feaspump"
@@ -88,7 +88,7 @@ struct SCIP_HeurData
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    int                   neighborhoodsize;   /**< radius of the neighborhood to be searched in stage 3 */
 
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             beforecuts;         /**< should the feasibility pump be called at root node before cut separation? */
    SCIP_Bool             usefp20;            /**< should an iterative round-and-propagate scheme be used to find the integral points? */
    SCIP_Bool             pertsolfound;       /**< should a random perturbation be performed if a feasible solution was found? */
@@ -109,7 +109,7 @@ SCIP_RETCODE setupProbingSCIP(
    )
 {
    /* check if we are already at the maximal tree depth */
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       *success = FALSE;
       return SCIP_OKAY;
@@ -584,7 +584,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    heurdata->nsuccess = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -608,7 +608,7 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->roundedsol) );
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -857,7 +857,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPstartProbing(probingscip) );
 
          /* this should always be fulfilled */
-         assert(SCIPgetDepthLimit(probingscip) > SCIPgetDepth(probingscip));
+         assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(probingscip));
 
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 

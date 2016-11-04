@@ -64,9 +64,11 @@ BUILDFLAGS=" ARCH=$(ARCH)\\n\
 		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
 		NOBLKMEM=$(NOBLKMEM)\\n\
 		NOBUFMEM=$(NOBUFMEM)\\n\
+		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		PARASCIP=$(PARASCIP)\\n\
 		READLINE=$(READLINE)\\n\
+		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
@@ -75,6 +77,7 @@ BUILDFLAGS=" ARCH=$(ARCH)\\n\
 		USRFLAGS=$(USRFLAGS)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
+		VERSION=$(VERSION)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
 		ZLIB=$(ZLIB)"
@@ -421,6 +424,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_mutation.o \
+			scip/heur_multistart.o \
 			scip/heur_nlpdiving.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
@@ -472,6 +476,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
+			scip/prop_nlobbt.o \
 			scip/prop_obbt.o \
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
@@ -545,7 +550,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/primal.o \
 			scip/prob.o \
 			scip/prop.o \
-			scip/random.o \
 			scip/reader.o \
 			scip/relax.o \
 			scip/reopt.o \
@@ -734,7 +738,7 @@ check:		test
 test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: testcount
 testcount:
@@ -745,7 +749,7 @@ testcount:
 testcplex:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
 .PHONY: testxpress
 testxpress:
 		cd check; \

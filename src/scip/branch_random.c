@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "scip/branch_random.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define BRANCHRULE_NAME          "random"
@@ -40,7 +40,7 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   initseed;           /**< initial random seed value */
 };
 
@@ -160,7 +160,7 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
    assert(branchruledata->initseed >= 0);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &branchruledata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, branchruledata->initseed)) );
 
    return SCIP_OKAY;
@@ -177,7 +177,7 @@ SCIP_DECL_BRANCHEXIT(branchExitRandom)
    assert(branchruledata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
+   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }

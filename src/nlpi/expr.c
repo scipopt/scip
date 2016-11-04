@@ -35,12 +35,9 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 
-#ifndef NDEBUG
-#include "scip/random.h"
-#endif
-
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
+#define DEFAULT_RANDSEED            73       /**< initial random seed */
 
 /** sign of a value (-1 or +1)
  *
@@ -2048,12 +2045,11 @@ SCIP_DECL_EXPREVAL( exprevalSin )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalSin */
-   SCIPerrorMessage("exprevalSinInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalSin(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -2077,12 +2073,11 @@ SCIP_DECL_EXPREVAL( exprevalCos )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalCos */
-   SCIPerrorMessage("exprevalCosInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalCos(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -5169,10 +5164,17 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprParse(blkmem, messagehdlr, expr, subexpptr, subexplength, subexpendptr, nvars, varnames, vartable, recursiondepth + 1) );
       ++str;
    }
-   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+')
+         && (isdigit((unsigned char)str[1]) || str[1] == ' ')) )
    {
-      /* there is a number coming */
-      if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
+      /* check if there is a lonely minus coming, indicating a -1.0 */
+      if( str[0] == '-'  && str[1] == ' ' )
+      {
+         number = -1.0;
+         nonconstendptr = (char*) str + 1;
+      }
+      /* check if there is a number coming */
+      else if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
@@ -7055,7 +7057,8 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;
@@ -7083,6 +7086,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    userexprdata->estimate = estimate;
    userexprdata->copydata = copydata;
    userexprdata->freedata = freedata;
+   userexprdata->print = print;
 
    opdata.data = (void*) userexprdata;
 
@@ -8362,20 +8366,22 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_USER:
    {
-      /*  @todo allow for user printing callback
       SCIP_EXPRDATA_USER* exprdata;
+      int i;
 
       exprdata = (SCIP_EXPRDATA_USER*)expr->data.data;
       assert(exprdata != NULL);
 
       if( exprdata->print != NULL )
       {
-         exprdata->print(messagehdlr, file, )
+         exprdata->print(exprdata->userdata, messagehdlr, file);
       }
-      */
-      int i;
+      else
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "user");
+      }
 
-      SCIPmessageFPrintInfo(messagehdlr, file, "user(");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
       for( i = 0; i < expr->nchildren; ++i )
       {
          if( i > 0 )
@@ -8794,7 +8800,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    )
 {
 #ifndef NDEBUG
-   SCIP_RANDGEN* randnumgen;
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real* testx;
    SCIP_Real testval_before;
    SCIP_Real testval_after;
@@ -8811,7 +8817,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
       testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
 
-   SCIPrandomFree(&randnumgen, tree->blkmem);
+   SCIPrandomFree(&randnumgen);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -11757,7 +11763,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
-         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
+         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
       break;
    }
@@ -13340,7 +13346,8 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;
@@ -15770,7 +15777,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_Real* testx;
    SCIP_HASHMAP* testvalidx;
    SCIP_Real* testvals;
-   SCIP_RANDGEN* randnumgen;
+   SCIP_RANDNUMGEN* randnumgen;
    int testvalssize;
    int ntestvals;
 #endif
@@ -15781,7 +15788,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, 42) );
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, DEFAULT_RANDSEED) );
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;
@@ -15807,7 +15814,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          }
       }
 
-   SCIPrandomFree(&randnumgen, exprgraph->blkmem);
+   SCIPrandomFree(&randnumgen);
 #endif
 
 #ifdef SCIP_OUTPUT
