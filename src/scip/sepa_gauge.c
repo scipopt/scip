@@ -817,8 +817,6 @@ SCIP_DECL_SEPAFREE(sepaFreeGauge)
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   assert(sepadata->nlrows == NULL);
-   assert(sepadata->nnlrows == -1);
 
    SCIPfreeMemory(scip, &sepadata);
 

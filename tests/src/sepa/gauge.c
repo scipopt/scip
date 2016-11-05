@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,13 +40,13 @@ static SCIP_VAR* y;
 
 /* methods to test:
  * computeInteriorPoint: uses SCIP's NLP to build a convex NLP relaxation, solves it and store the solution in the sepadata.
- * findBoundary: receives the nlrows, on which sides they are convex, indices of nlrows to separate, number of indices, the interior solution, the solution to separate and the final solution
+ * findBoundaryPoint: receives the nlrows, on which sides they are convex, indices of nlrows to separate, number of indices, the interior solution, the solution to separate and the final solution
  * generateCut: receives point where to compute gradient, exprinterpreter (?), the nlrow, the side which is convex and where to store the cut
  */
 
 /* create log(exp(x) + exp(y)) <= 1 */
 static
-void createNlRow1(SCIP_Bool isrhsconvex)
+void createNlRow1(CONVEXSIDE convexside)
 {
    SCIP_EXPRTREE* exprtree;
    SCIP_EXPRCURV curvature;
@@ -76,7 +76,7 @@ void createNlRow1(SCIP_Bool isrhsconvex)
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &lgexp, SCIP_EXPR_LOG, sum_exp) );
 
    /* decide curvature */
-   if( isrhsconvex )
+   if( convexside == RHS )
    {
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -110,7 +110,7 @@ void createNlRow1(SCIP_Bool isrhsconvex)
 
 /* create x^2 <= y */
 static
-void createNlRow2(SCIP_Bool isrhsconvex)
+void createNlRow2(CONVEXSIDE convexside)
 {
    SCIP_EXPRTREE* exprtree;
    SCIP_EXPRCURV curvature;
@@ -130,7 +130,7 @@ void createNlRow2(SCIP_Bool isrhsconvex)
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &sqr_x, SCIP_EXPR_SQUARE, xexpr) );
 
    /* decide curvature */
-   if( isrhsconvex )
+   if( convexside == RHS )
    {
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -164,7 +164,7 @@ void createNlRow2(SCIP_Bool isrhsconvex)
 
 /* 1.1*x+2.4*x^2 + 0.01*x*y + 0.3*y^2 + 0.2*log(0.5*exp(0.12*x+0.1)+2*exp(0.1*y)+0.7)  <= 0.5 */
 static
-void createNlRow3(SCIP_Bool isrhsconvex)
+void createNlRow3(CONVEXSIDE convexside)
 {
    SCIP_EXPRTREE* exprtree;
    SCIP_EXPRCURV curvature;
@@ -202,7 +202,7 @@ void createNlRow3(SCIP_Bool isrhsconvex)
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &lgexp, SCIP_EXPR_LOG, arg_log) );
 
    /* decide curvature */
-   if( isrhsconvex )
+   if( convexside == RHS )
    {
       curvature = SCIP_EXPRCURV_CONVEX;
       side = 1.0;
@@ -246,7 +246,7 @@ void createNlRow3(SCIP_Bool isrhsconvex)
 }
 
 static
-void test_setup(void)
+void evaluation_setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -303,7 +303,7 @@ void teardown(void)
 }
 
 static
-void evaluate_gauge(SCIP_Bool* isrhsconvex)
+void evaluate_gauge(CONVEXSIDE* convexsides)
 {
    SCIP_SOL* interior_sol;
    SCIP_SOL* toseparate_sol;
@@ -313,8 +313,8 @@ void evaluate_gauge(SCIP_Bool* isrhsconvex)
    int nnlrowsidx = 2;
 
    /* create the nl rows */
-   createNlRow1(isrhsconvex[0]);
-   createNlRow2(isrhsconvex[1]);
+   createNlRow1(convexsides[0]);
+   createNlRow2(convexsides[1]);
    SCIP_NLROW* nlrows[2] = {nlrow1, nlrow2};
 
    /* if no IPOPT available, don't run test */
@@ -333,7 +333,7 @@ void evaluate_gauge(SCIP_Bool* isrhsconvex)
 
    /* find boundary point */
    SCIP_CALL( SCIPcreateSol(scip, &boundary_sol, NULL) );
-   SCIP_CALL( findBoundary(scip, nlrows, isrhsconvex, nlrowsidx, nnlrowsidx, interior_sol, toseparate_sol, boundary_sol) );
+   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol) );
 
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), 0.265033442069232, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y), 0.346993311586154, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
@@ -352,7 +352,7 @@ void evaluate_gauge(SCIP_Bool* isrhsconvex)
    SCIP_CALL( SCIPsetSolVal(scip, toseparate_sol, y, 0.0) );
 
    /* find boundary point */
-   SCIP_CALL( findBoundary(scip, nlrows, isrhsconvex, nlrowsidx, nnlrowsidx, interior_sol, toseparate_sol, boundary_sol) );
+   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol) );
 
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), 0.4213473910790077, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y), 0.1775336239690863, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
@@ -371,7 +371,7 @@ void evaluate_gauge(SCIP_Bool* isrhsconvex)
    SCIP_CALL( SCIPsetSolVal(scip, toseparate_sol, y,  0.0) );
 
    /* find boundary point */
-   SCIP_CALL( findBoundary(scip, nlrows, isrhsconvex, nlrowsidx, nnlrowsidx, interior_sol, toseparate_sol, boundary_sol) );
+   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol) );
 
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), -0.618033988749895, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y),  0.381966011250105, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
@@ -386,25 +386,29 @@ void evaluate_gauge(SCIP_Bool* isrhsconvex)
    SCIP_CALL( SCIPfreeSol(scip, &boundary_sol) );
 }
 
+/* TEST SUITE */
+TestSuite(evaluation, .init = evaluation_setup, .fini = teardown);
+
 /* Test: with nlrows having different convexity */
-Test(evaluation, convex_convex, .init = test_setup, .fini = teardown)
+Test(evaluation, convex_convex)
 {
-   evaluate_gauge((SCIP_Bool[]){TRUE, TRUE});
+   evaluate_gauge((CONVEXSIDE[]){RHS, RHS});
 }
-Test(evaluation, concave_convex, .init = test_setup, .fini = teardown)
+Test(evaluation, concave_convex)
 {
-   evaluate_gauge((SCIP_Bool[]){FALSE, TRUE});
+   evaluate_gauge((CONVEXSIDE[]){LHS, RHS});
 }
-Test(evaluation, concave_concave, .init = test_setup, .fini = teardown)
+Test(evaluation, concave_concave)
 {
-   evaluate_gauge((SCIP_Bool[]){FALSE, FALSE});
+   evaluate_gauge((CONVEXSIDE[]){LHS, LHS});
 }
-Test(evaluation, convex_concave, .init = test_setup, .fini = teardown)
+Test(evaluation, convex_concave)
 {
-   evaluate_gauge((SCIP_Bool[]){TRUE, FALSE});
+   evaluate_gauge((CONVEXSIDE[]){RHS, LHS});
 }
 
-Test(evaluation, gradient_cut_convex, .init = test_setup, .fini = teardown)
+/* test that we get the correct gradient cut for convex regions, defined as both, convex <= rhs and concave >= lhs */
+Test(evaluation, gradient_cut_convex)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -442,7 +446,7 @@ Test(evaluation, gradient_cut_convex, .init = test_setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
-Test(evaluation, gradient_cut_concave, .init = test_setup, .fini = teardown)
+Test(evaluation, gradient_cut_concave)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -480,7 +484,7 @@ Test(evaluation, gradient_cut_concave, .init = test_setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
-Test(evaluation, gradient_complicated_convex, .init = test_setup, .fini = teardown)
+Test(evaluation, gradient_complicated_convex)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -518,7 +522,7 @@ Test(evaluation, gradient_complicated_convex, .init = test_setup, .fini = teardo
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
-Test(evaluation, gradient_complicated_concave, .init = test_setup, .fini = teardown)
+Test(evaluation, gradient_complicated_concave)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
