@@ -418,4 +418,3 @@ SCIP_RETCODE SCIPincludeReaderBnd(
 
    return SCIP_OKAY;
 }
-

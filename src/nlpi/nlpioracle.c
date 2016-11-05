@@ -1227,7 +1227,6 @@ SCIP_RETCODE printFunction(
    )
 {  /*lint --e{715}*/
    int i;
-   int j;
    char namebuf[70];
 
    SCIPdebugMessage("%p print function\n", (void*)oracle);
@@ -1244,11 +1243,10 @@ SCIP_RETCODE printFunction(
          SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
-   j = 0;
    for( i = 0; i < cons->nquadelems; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx1] : NULL, cons->quadelems[i].idx1, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[j].coef, namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[i].coef, namebuf);
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx2] : NULL, cons->quadelems[i].idx2, 'x', NULL, longvarnames);
       SCIPmessageFPrintInfo(messagehdlr, file, "*%s", namebuf);
       if( i % 10 == 9 )
