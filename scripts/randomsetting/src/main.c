@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -31,7 +30,7 @@
 #include "scip/scipdefplugins.h"
 
 #define MAX_PARAMNAME_LEN                255 /**< maximum length of a parameter name */
-#define MAX_CHANGE                        10000 /**< maximum number of parameters changed */
+#define MAX_CHANGE                     10000 /**< maximum number of parameters changed */
 #define CHANGE_ADVANCED                 TRUE /**< should advanced parameters also be changed? */
 
 
@@ -80,7 +79,7 @@ SCIP_Bool paramIsExcluded(
 static
 SCIP_RETCODE generateRandomSettings(
    SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int*         seedp,              /**< pointer to seed value */
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    int                   maxchange,          /**< maximum number of settings to change */
    SCIP_Bool             advanced            /**< should advanced parameters also be changed? */
    )
@@ -94,15 +93,15 @@ SCIP_RETCODE generateRandomSettings(
    int i;
 
    assert(scip != NULL);
-   assert(seedp != NULL);
+   assert(randgen != NULL);
 
    params = SCIPgetParams(scip);
    nparams = SCIPgetNParams(scip);
    if( nparams <= 0 )
       return SCIP_OKAY;
 
-   start = SCIPgetRandomInt(0, nparams - 1, seedp);
-   step = SCIPgetRandomInt(0, nparams - 1, seedp);
+   start = SCIPrandomGetInt(randgen, 0, nparams - 1);
+   step = SCIPrandomGetInt(randgen, 0, nparams - 1);
    nchanged = 0;
 
    assert(params != NULL);
@@ -218,7 +217,7 @@ SCIP_RETCODE generateRandomSettings(
             {
                int newvalue;
 
-               newvalue = SCIPgetRandomInt(SCIPparamGetIntMin(param), SCIPparamGetIntMax(param), seedp);
+               newvalue = SCIPrandomGetInt(randgen, SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
                assert(newvalue >= SCIPparamGetIntMin(param));
                assert(newvalue <= SCIPparamGetIntMax(param));
 
@@ -282,7 +281,7 @@ SCIP_RETCODE generateRandomSettings(
                maxvalue = (SCIPparamGetLongintMax(param) <= (SCIP_Longint)INT_MAX)
                   ? (int)SCIPparamGetLongintMax(param)
                   : INT_MAX;
-               newvalue = (SCIP_Longint)SCIPgetRandomInt(minvalue, maxvalue, seedp);
+               newvalue = (SCIP_Longint)SCIPrandomGetInt(randgen, minvalue, maxvalue);
                assert(newvalue >= SCIPparamGetLongintMin(param));
                assert(newvalue <= SCIPparamGetLongintMax(param));
 
@@ -339,7 +338,7 @@ SCIP_RETCODE generateRandomSettings(
             {
                SCIP_Real newvalue;
 
-               newvalue = SCIPgetRandomReal(SCIPparamGetRealMin(param), SCIPparamGetRealMax(param), seedp);
+               newvalue = SCIPrandomGetReal(randgen, SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
                assert(newvalue >= SCIPparamGetRealMin(param));
                assert(newvalue <= SCIPparamGetRealMax(param));
 
@@ -390,7 +389,7 @@ SCIP_RETCODE generateRandomSettings(
 
                if( allowedvalues == NULL )
                {
-                  newvalue = (char)SCIPgetRandomInt((int)CHAR_MIN, (int)CHAR_MAX, seedp);
+                  newvalue = (char)SCIPrandomGetInt(randgen, (int)CHAR_MIN, (int)CHAR_MAX);
                }
                else
                {
@@ -400,7 +399,7 @@ SCIP_RETCODE generateRandomSettings(
                   length = strlen(allowedvalues);
                   assert(length >= 1);
 
-                  pos = SCIPgetRandomInt(0, length - 1, seedp);
+                  pos = SCIPrandomGetInt(randgen, 0, length - 1);
                   newvalue = allowedvalues[pos];
                }
 
@@ -451,6 +450,7 @@ SCIP_RETCODE createSettingsFile(
    unsigned int          seed                /**< random seed */
    )
 {
+   SCIP_RANDNUMGEN* randgen;
    SCIP* scip = NULL;
    char filename[256];
    int status;
@@ -468,12 +468,16 @@ SCIP_RETCODE createSettingsFile(
       return SCIP_ERROR;
    }
 
+   /* generate random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randgen, SCIPblkmem(scip), seed) );
+
    /* generate random setting and write it to file */
-   SCIP_CALL( generateRandomSettings(scip, &seed, MAX_CHANGE, CHANGE_ADVANCED) );
+   SCIP_CALL( generateRandomSettings(scip, randgen, MAX_CHANGE, CHANGE_ADVANCED) );
    SCIP_CALL( SCIPwriteParams(scip, filename, TRUE, TRUE) );
    SCIPinfoMessage(scip, NULL, "-> saved random settings to file <%s>\n", filename);
 
    /* close SCIP */
+   SCIPrandomFree(&randgen);
    SCIP_CALL( SCIPfree(&scip) );
    BMScheckEmptyMemory();
 
@@ -482,8 +486,8 @@ SCIP_RETCODE createSettingsFile(
 
 /** main method  */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode = SCIP_ERROR;
