@@ -2135,6 +2135,32 @@ void SCIPselectWeightedDownRealRealPtr(
    );
 
 
+/** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the \p k-th element */
+EXTERN
+void SCIPselectDownRealRealPtrPtr(
+   SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
+   int                   len                 /**< length of arrays */
+   );
+
+
+/** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity */
+EXTERN
+void SCIPselectWeightedDownRealRealPtrPtr(
+   SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   int                   len,                /**< length of arrays */
+   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   );
+
+
 /** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order around the \p k-th element */
 EXTERN
 void SCIPselectDownRealPtrPtrInt(

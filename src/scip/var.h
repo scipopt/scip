@@ -927,6 +927,15 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    );
 
+/** resets the local bounds of transformed variable to their global values */
+extern
+SCIP_RETCODE SCIPvarResetLocalBounds(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** resets the global and local bounds of original variable to their original values */
 extern
 SCIP_RETCODE SCIPvarResetBounds(

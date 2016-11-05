@@ -8718,7 +8718,7 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    return SCIP_OKAY;
 }
 
-/** resets the global and local bounds of transformed variable to their original values */
+/** resets the local bounds of transformed variable to their global values */
 SCIP_RETCODE SCIPvarResetLocalBounds(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
