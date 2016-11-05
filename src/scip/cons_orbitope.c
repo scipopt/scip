@@ -160,6 +160,7 @@ SCIP_RETCODE consdataCreate(
    )
 {
    int i;
+   int j;
 
    assert(consdata != NULL);
 
@@ -194,7 +195,13 @@ SCIP_RETCODE consdataCreate(
 
       for (i = 0; i < nspcons; ++i)
       {
-         SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nblocks, (*consdata)->vars[i], (*consdata)->vars[i]) );
+         /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_orbitope, sine one cannot
+          * easily eliminate single variables from an orbitope constraint. */
+         for (j = 0; j < nblocks; ++j)
+         {
+            SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
+         }
       }
    }
 
