@@ -6204,9 +6204,7 @@ SCIP_RETCODE performDualRayAnalysis(
    int* varinds;
    SCIP_Bool* varused;
    SCIP_Real mirrhs;
-#ifndef NDEBUG
    SCIP_Real activity;
-#endif
    SCIP_Bool success;
    int ndualrayvars;
    int nmirvars;
