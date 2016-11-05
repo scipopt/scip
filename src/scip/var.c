@@ -8738,7 +8738,7 @@ SCIP_RETCODE SCIPvarResetLocalBounds(
    /* free the global and local holelists and duplicate the original ones */
    /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
    holelistFree(&var->locdom.holelist, blkmem);
-   SCIP_CALL( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->data.original.origdom.holelist) );
+   SCIP_CALL( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->glbdom.holelist) );
 
    return SCIP_OKAY;
 }
