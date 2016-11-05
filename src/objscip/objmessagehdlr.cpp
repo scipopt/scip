@@ -16,7 +16,6 @@
 /**@file   objmessagehdlr.cpp
  * @brief  C++ wrapper for message handlers
  * @author Tobias Achterberg
- * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,22 +47,6 @@ struct SCIP_MessagehdlrData
 
 extern "C"
 {
-
-/** error message print method of message handler */
-static
-SCIP_DECL_MESSAGEERROR(messagehdlrErrorObj)
-{  /*lint --e{715}*/
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-
-   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
-
-   /* call virtual method of messagehdlr object */
-   messagehdlrdata->objmessagehdlr->scip_error(messagehdlr, file, msg);
-}
-
-
 /** warning message print method of message handler */
 static
 SCIP_DECL_MESSAGEWARNING(messagehdlrWarningObj)
@@ -107,7 +90,6 @@ SCIP_DECL_MESSAGEINFO(messagehdlrInfoObj)
    /* call virtual method of messagehdlr object */
    messagehdlrdata->objmessagehdlr->scip_info(messagehdlr, file, msg);
 }
-
 
 /** destructor of message handler to free message handler data */
 static
@@ -157,7 +139,7 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
 
    /* create message handler */
    retcode = SCIPmessagehdlrCreate(messagehdlr, objmessagehdlr->scip_bufferedoutput_, (const char*)NULL, FALSE,
-      messagehdlrErrorObj, messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
+      messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
       messagehdlrFree, messagehdlrdata); /*lint !e429*/
 
    if( retcode != SCIP_OKAY )
@@ -185,3 +167,4 @@ scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
 
    return messagehdlrdata->objmessagehdlr;
 }
+

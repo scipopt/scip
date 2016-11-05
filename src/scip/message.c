@@ -124,18 +124,29 @@ void handleMessage(
    return;
 }
 
+/** default error printing method which is used to print all occurring errors */
+static
+SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
+{  /*lint --e{715}*/
+   if ( msg != NULL )
+      fputs(msg, stderr);
+   fflush(stderr);
+}
+
+/** static variable which holds the error printing method */
+static SCIP_DECL_ERRORPRINTING((*staticErrorPrinting)) = errorPrintingDefault;
+
+/** static variable which holds a data pointer for the error prinint callback */
+static void* staticErrorPrintingData = NULL;
+
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintError(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
-{  /*lint --e{715}*/
-   if ( messagehdlr != NULL && messagehdlr->messageerror != NULL && (! messagehdlr->quiet || messagehdlr->logfile != NULL) )
-   {
-      handleMessage(messagehdlr, messagehdlr->messageerror, stderr, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL),
-         msg, messagehdlr->errorbuffer, &messagehdlr->errorbufferlen);
-   }
+{
+   if( staticErrorPrinting != NULL )
+      staticErrorPrinting(msg, staticErrorPrintingData);
 }
 
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
@@ -235,7 +246,6 @@ SCIP_RETCODE messagehdlrFree(
    if( *messagehdlr != NULL )
    {
       /* flush message buffers */
-      messagePrintError(*messagehdlr, NULL);
       messagePrintWarning(*messagehdlr, NULL);
       messagePrintDialog(*messagehdlr, NULL, NULL);
       messagePrintInfo(*messagehdlr, NULL, NULL);
@@ -253,7 +263,6 @@ SCIP_RETCODE messagehdlrFree(
       }
 
       /* free buffer arrays */
-      BMSfreeMemoryArrayNull(&(*messagehdlr)->errorbuffer);
       BMSfreeMemoryArrayNull(&(*messagehdlr)->warningbuffer);
       BMSfreeMemoryArrayNull(&(*messagehdlr)->dialogbuffer);
       BMSfreeMemoryArrayNull(&(*messagehdlr)->infobuffer);
@@ -272,7 +281,6 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
    const char*           filename,           /**< name of log file, or NULL for no log */
    SCIP_Bool             quiet,              /**< should screen messages be suppressed? */
-   SCIP_DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
    SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
    SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
    SCIP_DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
@@ -281,13 +289,11 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    )
 {
    SCIP_ALLOC( BMSallocMemory(messagehdlr) );
-   (*messagehdlr)->messageerror = messageerror;
    (*messagehdlr)->messagewarning = messagewarning;
    (*messagehdlr)->messagedialog = messagedialog;
    (*messagehdlr)->messageinfo = messageinfo;
    (*messagehdlr)->messagehdlrfree = messagehdlrfree;
    (*messagehdlr)->messagehdlrdata = messagehdlrdata;
-   (*messagehdlr)->errorbuffer = NULL;
    (*messagehdlr)->warningbuffer = NULL;
    (*messagehdlr)->dialogbuffer = NULL;
    (*messagehdlr)->infobuffer = NULL;
@@ -302,11 +308,9 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    /* allocate buffer for buffered output */
    if( bufferedoutput )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->errorbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
       SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
       SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
       SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
-      (*messagehdlr)->errorbuffer[0] = '\0';
       (*messagehdlr)->warningbuffer[0] = '\0';
       (*messagehdlr)->dialogbuffer[0] = '\0';
       (*messagehdlr)->infobuffer[0] = '\0';
@@ -401,89 +405,6 @@ void SCIPmessagehdlrSetQuiet(
    messagePrintInfo(messagehdlr, NULL, NULL);
 
    messagehdlr->quiet = quiet;
-}
-
-/** prints an error message, acting like the printf() command */
-void SCIPmessagePrintError(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
-   )
-{
-   va_list ap;
-
-   va_start(ap, formatstr); /*lint !e838*/
-   SCIPmessageVFPrintError(messagehdlr, formatstr, ap);
-   va_end(ap);
-}
-
-/** prints an error message, acting like the vprintf() command */
-void SCIPmessageVPrintError(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           formatstr,          /**< format string like in printf() function */
-   va_list               ap                  /**< variable argument list */
-   )
-{
-   SCIPmessageVFPrintError(messagehdlr, formatstr, ap);
-}
-
-/** prints an error message, acting like the fprintf() command */
-void SCIPmessageFPrintError(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
-   )
-{
-   va_list ap;
-
-   va_start(ap, formatstr); /*lint !e838*/
-   SCIPmessageVFPrintError(messagehdlr, formatstr, ap);
-   va_end(ap);
-}
-
-/** prints an error message, acting like the vfprintf() command */
-void SCIPmessageVFPrintError(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           formatstr,          /**< format string like in printf() function */
-   va_list               ap                  /**< variable argument list */
-   )
-{
-   char msg[SCIP_MAXSTRLEN];
-   int n;
-   va_list aq;
-
-   va_copy(aq, ap); /*lint !e838*/
-
-   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
-   if( n < 0 )
-      msg[SCIP_MAXSTRLEN-1] = '\0';
-   else if( n >= SCIP_MAXSTRLEN )
-   {
-      char* bigmsg;
-#ifndef NDEBUG
-      int m;
-#endif
-
-      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
-      {
-         va_end(aq);
-         return;
-      }
-
-#ifndef NDEBUG
-      m = vsnprintf(bigmsg, (size_t) n+1, formatstr, aq); /*lint !e571*/
-#else
-      vsnprintf(bigmsg, (size_t) n+1, formatstr, aq); /*lint !e571*/
-#endif
-      assert(m == n);
-      va_end(aq);
-      messagePrintError(messagehdlr, bigmsg);
-      BMSfreeMemory(&bigmsg);
-      return;
-   }
-
-   messagePrintError(messagehdlr, msg);
-   va_end(aq);
 }
 
 /** prints a warning message, acting like the printf() command */
@@ -836,38 +757,8 @@ void SCIPmessageVFPrintVerbInfo(
    }
 }
 
-
-/*
- * static error printing functions - use only if no message handler is available
- */
-
-/** default error printing method which is used to print all occurring errors */
-static
-SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
-{  /*lint --e{715}*/
-   if ( msg != NULL )
-      fputs(msg, stderr);
-   fflush(stderr);
-}
-
-/** static variable which holds the error printing method */
-static SCIP_DECL_ERRORPRINTING((*staticErrorPrinting)) = errorPrintingDefault;
-
-/** static variable which holds a data pointer for the error prinint callback */
-static void* staticErrorPrintingData = NULL;
-
-/** prints error message with the current static message handler, or buffers the message if no newline exists */
-static
-void messagePrintErrorStatic(
-   const char*           msg                 /**< message to print; NULL to flush the output buffer */
-   )
-{
-   if( staticErrorPrinting != NULL )
-      staticErrorPrinting(msg, staticErrorPrintingData);
-}
-
 /** prints the header with source file location for an error message using the static message handler */
-void SCIPmessagePrintErrorHeaderStatic(
+void SCIPmessagePrintErrorHeader(
    const char*           sourcefile,         /**< name of the source file that called the function */
    int                   sourceline          /**< line in the source file where the function was called */
    )
@@ -877,11 +768,11 @@ void SCIPmessagePrintErrorHeaderStatic(
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
    (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';
-   messagePrintErrorStatic(msg);
+   messagePrintError(msg);
 }
 
-/** prints an error message, acting like the printf() command */
-void SCIPmessagePrintErrorStatic(
+/** prints a error message, acting like the printf() command */
+void SCIPmessagePrintError(
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    )
@@ -889,12 +780,12 @@ void SCIPmessagePrintErrorStatic(
    va_list ap;
 
    va_start(ap, formatstr); /*lint !e838*/
-   SCIPmessageVPrintErrorStatic(formatstr, ap);
+   SCIPmessageVPrintError(formatstr, ap);
    va_end(ap);
 }
 
 /** prints an error message, acting like the vprintf() command using the static message handler */
-void SCIPmessageVPrintErrorStatic(
+void SCIPmessageVPrintError(
    const char*           formatstr,          /**< format string like in printf() function */
    va_list               ap                  /**< variable argument list */
    )
@@ -928,20 +819,20 @@ void SCIPmessageVPrintErrorStatic(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintErrorStatic(bigmsg);
+      messagePrintError(bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
 
-   messagePrintErrorStatic(msg);
+   messagePrintError(msg);
    va_end(aq);
 }
 
-/** Method to set the static error printing method. Setting the error printing method to NULL will suspend all error methods.
+/** Method to set the error printing method. Setting the error printing method to NULL will suspend all error methods.
  *
  *  @note The error printing method is static variable. That means all occurring errors are handled via that methods
  */
-void SCIPmessageSetStaticErrorPrinting(
+void SCIPmessageSetErrorPrinting(
    SCIP_DECL_ERRORPRINTING((*errorPrinting)),/**< error message print method of message handler, or NULL */
    void*                 data                /**< data pointer which will be passed to the error printing method, or NULL */
    )
@@ -950,20 +841,17 @@ void SCIPmessageSetStaticErrorPrinting(
    staticErrorPrintingData = data;
 }
 
-/** Method to set the static error printing method to default version prints everything the stderr.
+/** Method to set the error printing method to default version prints everything the stderr.
  *
  *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
  */
-void SCIPmessageSetStaticErrorPrintingDefault(
+void SCIPmessageSetErrorPrintingDefault(
    void
    )
 {
    staticErrorPrinting = errorPrintingDefault;
    staticErrorPrintingData = NULL;
 }
-
-
-
 
 /*
  * simple functions implemented as defines

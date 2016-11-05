@@ -16,7 +16,6 @@
 /**@file   struct_message.h
  * @brief  datastructures for problem statistics
  * @author Tobias Achterberg
- * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,7 +34,6 @@ extern "C" {
 /** message handler to redirect output */
 struct SCIP_Messagehdlr
 {
-   SCIP_DECL_MESSAGEERROR((*messageerror));  /**< error message print method of message handler */
    SCIP_DECL_MESSAGEWARNING((*messagewarning));/**< warning message print method of message handler */
    SCIP_DECL_MESSAGEDIALOG((*messagedialog));/**< dialog message print method of message handler */
    SCIP_DECL_MESSAGEINFO((*messageinfo));    /**< info message print method of message handler */
@@ -43,11 +41,9 @@ struct SCIP_Messagehdlr
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;    /**< message handler data */
    FILE*                 logfile;            /**< log file where to copy messages into */
    SCIP_Bool             quiet;              /**< should screen messages be suppressed? */
-   char*                 errorbuffer;        /**< buffer for constructing complete error output lines */
    char*                 warningbuffer;      /**< buffer for constructing complete warning output lines */
    char*                 dialogbuffer;       /**< buffer for constructing complete dialog output lines */
    char*                 infobuffer;         /**< buffer for constructing complete info output lines */
-   int                   errorbufferlen;     /**< currently used space in the error buffer */
    int                   warningbufferlen;   /**< currently used space in the warning buffer */
    int                   dialogbufferlen;    /**< currently used space in the dialog buffer */
    int                   infobufferlen;      /**< currently used space in the info buffer */

@@ -17,7 +17,6 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for message output methods
  * @author Tobias Achterberg
- * @author Marc Pfetsch
  *
  *  This file defines the interface for message handlers implemented in C.
  *
@@ -65,11 +64,10 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *  @note This function is independent of any message handler
  *
  *  input:
- *  - messagehdlr     : the message handler itself
- *  - file            : file stream to print into
  *  - msg             : string to output into the file (or NULL to flush)
+ *  - data            : data pointer
  */
-#define SCIP_DECL_MESSAGEERROR(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, void* data)
 
 /** warning message print method of message handler
  *
@@ -112,18 +110,6 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
  *  - messagehdlr     : the message handler itself
  */
 #define SCIP_DECL_MESSAGEHDLRFREE(x) SCIP_RETCODE x (SCIP_MESSAGEHDLR* messagehdlr)
-
-/** static error message print method
- *
- *  This method is invoked, if SCIP wants to display an error message to the screen or a file
- *
- *  @note This function is independent of any message handler
- *
- *  input:
- *  - msg             : string to output into the file (or NULL to flush)
- *  - data            : data pointer
- */
-#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, void* data)
 
 #ifdef __cplusplus
 }
