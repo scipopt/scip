@@ -26,6 +26,9 @@ features:
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- a print callback can now be specified for user expressions
+- added interval-evaluation of sine and cosine
+- add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -53,6 +56,7 @@ performance improvements:
   which proved to be faster on the benchmarks MMM and stableset.
 - reduce performance variability by using a small perturbation in the undercover heuristic
 - reduce performance variability by using random numbers as tie-breaker for external branching candidates
+- 1-opt heuristic can now be repeatedly executed as long as new incumbents are found
 
 interface:
 - separated header pub_misc.h from repeated methods for sorting and (weighted) median selection; those are also available in separate headers pub_misc_sort.h
@@ -86,6 +90,7 @@ interface:
 - bound reader uses angle bracket around variable names
 
 fixed bugs:
+- avoid numerically troublesome aggregations
 
 misc:
 - dropped support for Ipopt < 3.11

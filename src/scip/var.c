@@ -4942,6 +4942,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    )
 {
    SCIP_Bool easyaggr;
+   SCIP_Real maxscalar;
+   SCIP_Real absquot;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4966,6 +4968,13 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    *infeasible = FALSE;
    *aggregated = FALSE;
+
+   absquot = REALABS(scalarx / scalary);
+   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
+   maxscalar = MAX(maxscalar, 1.0);
+
+   if( absquot > maxscalar || absquot < 1 / maxscalar )
+      return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&

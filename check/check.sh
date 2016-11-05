@@ -28,7 +28,7 @@ CONTINUE=${11}
 LOCK=${12}
 VERSION=${13}
 LPS=${14}
-VALGRIND=${15}
+DEBUGTOOL=${15}
 CLIENTTMPDIR=${16}
 REOPT=${17}
 OPTCOMMAND=${18}
@@ -56,7 +56,7 @@ then
     echo "LOCK          = $LOCK"
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
-    echo "VALGRIND      = $VALGRIND"
+    echo "DEBUGTOOL      = $DEBUGTOOL"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
@@ -72,14 +72,15 @@ fi
 # of passed settings, etc
 TIMEFORMAT="sec"
 MEMFORMAT="kB"
-. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
 if test -e $SCIPPATH/../$BINNAME
 then
-   export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+   EXECNAME=$SCIPPATH/../$BINNAME
 else
-   export EXECNAME=$BINNAME
+   EXECNAME=$BINNAME
 fi
+
 
 # check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
 if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
@@ -91,6 +92,8 @@ elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
 else
    ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
 fi
+
+export EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
 
 INIT="true"
 COUNT=0
