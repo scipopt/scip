@@ -1282,44 +1282,6 @@ void SCIPsetMessagehdlrQuiet(
    }
 }
 
-/** prints an error message via the message handler */
-void SCIPerrorMessageF(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           sourcefile,         /**< name of the source file that called the function */
-   int                   sourceline,         /**< line in the source file where the function was called */
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
-   )
-{
-   va_list ap;
-
-   assert( scip != NULL );
-   assert( sourcefile != NULL );
-
-   SCIPmessagePrintError(scip->messagehdlr, NULL, "[%s:%d] ERROR: ", sourcefile, sourceline);
-
-   va_start(ap, formatstr); /*lint !e838*/
-   SCIPmessagePrintError(scip->messagehdlr, NULL, formatstr, ap);
-   va_end(ap);
-}
-
-/** prints an error message without precode */
-EXTERN
-void SCIPerrorMessagePrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
-   )
-{
-   va_list ap;
-
-   assert( scip != NULL );
-
-   va_start(ap, formatstr); /*lint !e838*/
-   SCIPmessagePrintError(scip->messagehdlr, NULL, formatstr, ap);
-   va_end(ap);
-}
-
 /** prints a warning message via the message handler */
 void SCIPwarningMessage(
    SCIP*                 scip,               /**< SCIP data structure */

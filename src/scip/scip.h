@@ -429,9 +429,6 @@ void SCIPdisableDebugSol(
 #define SCIPdebugMsgPrint(scip, ...)    while ( FALSE ) SCIPdebugMessagePrint(scip, __VA_ARGS__)
 #endif
 
-/** prints an error message */
-#define SCIPerrorMsg(scip, ...)         SCIPerrorMessageF(scip, __FILE__, __LINE__, __VA_ARGS__)
-
 #else
 /* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
 
@@ -443,9 +440,6 @@ void SCIPdisableDebugSol(
 #define SCIPdebugMsg                    while ( FALSE ) SCIPdebugMessagePrint
 #define SCIPdebugMsgPrint               while ( FALSE ) SCIPdebugMessagePrint
 #endif
-
-/** prints an error message */
-#define SCIPerrorMsg                    SCIPerrorMessagePrint
 
 #endif
 
@@ -492,27 +486,6 @@ EXTERN
 void SCIPsetMessagehdlrQuiet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should screen messages be suppressed? */
-   );
-
-/** prints an error message via the message handler
- *
- *  Note that SCIPerrorMessage() is a macro in pub_message.h.
- */
-EXTERN
-void SCIPerrorMessageF(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           sourcefile,         /**< name of the source file that called the function */
-   int                   sourceline,         /**< line in the source file where the function was called */
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
-   );
-
-/** prints an error message without precode */
-EXTERN
-void SCIPerrorMessagePrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           formatstr,          /**< format string like in printf() function */
-   ...                                       /**< format arguments line in printf() function */
    );
 
 /** prints a warning message via the message handler */
