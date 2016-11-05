@@ -5183,6 +5183,9 @@ SCIP_RETCODE SCIPreoptFree(
    assert(origprimal != NULL || set->stage == SCIP_STAGE_INIT);
    assert(blkmem != NULL);
 
+   /* free random number generator */
+   SCIPrandomFree(&(*reopt)->randnumgen);
+
    /* free reopttree */
    SCIP_CALL( freeReoptTree((*reopt)->reopttree, set, blkmem) );
 
