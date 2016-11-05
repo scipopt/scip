@@ -59,9 +59,9 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
 
 /** error message print method
  *
- *  This method is invoked, if SCIP wants to display an error message to the screen or a file
+ *  This method is invoked, if SCIP wants to display an error message to the screen or a file.
  *
- *  @note This function is independent of any message handler
+ *  @note This function is independent of any message handler.
  *
  *  input:
  *  - data            : data pointer
@@ -72,7 +72,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
 
 /** warning message print method of message handler
  *
- *  This method is invoked, if SCIP wants to display a warning message to the screen or a file
+ *  This method is invoked, if SCIP wants to display a warning message to the screen or a file.
  *
  *  input:
  *  - messagehdlr     : the message handler itself
@@ -83,7 +83,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
 
 /** dialog message print method of message handler
  *
- *  This method is invoked, if SCIP wants to display a dialog message to the screen or a file
+ *  This method is invoked, if SCIP wants to display a dialog message to the screen or a file.
  *
  *  input:
  *  - messagehdlr     : the message handler itself
@@ -94,7 +94,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
 
 /** info message print method of message handler
  *
- *  This method is invoked, if SCIP wants to display an information message to the screen or a file
+ *  This method is invoked, if SCIP wants to display an information message to the screen or a file.
  *
  *  input:
  *  - messagehdlr     : the message handler itself
@@ -105,7 +105,7 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA;   /**< message handler
 
 /** destructor of message handler to free message handler data
  *
- *  This method is invoked, if SCIP wants to display an information message to the screen or a file
+ *  This method is invoked, if SCIP wants to free a message handler.
  *
  *  input:
  *  - messagehdlr     : the message handler itself
