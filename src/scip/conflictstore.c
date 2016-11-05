@@ -40,6 +40,7 @@
 #define CONFLICTSTORE_MINSIZE     2000 /* default minimal size of a dynamic conflict store */
 #define CONFLICTSTORE_MAXSIZE    60000 /* maximal size of a dynamic conflict store (multiplied by 3) */
 #define CONFLICTSTORE_SIZE       10000 /* default size of conflict store */
+#define CONFLICTSTORE_SORTFREQ      20 /* frequency to resort the conflict array */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "ConflictStore"
@@ -446,9 +447,6 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       return SCIP_OKAY;
    assert(conflictstore->nconflicts >= 1);
 
-   /* increase the number of clean ups */
-   ++conflictstore->ncleanups;
-
    ndelconfs = 0;
 
    /* remove all as deleted marked conflicts */
@@ -462,15 +460,47 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    if( conflictstore->nconflicts < conflictstore->conflictsize )
       goto TERMINATE;
 
-   /* sort conflict */
-   SCIPsortPtrReal((void**)conflictstore->conflicts, conflictstore->primalbounds, compareConss, conflictstore->nconflicts);
-   assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->conflicts[0]),
-         SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])));
-
+   /* resort the array regularly */
+   if( conflictstore->ncleanups % CONFLICTSTORE_SORTFREQ == 0 )
+   {
+      /* sort conflict */
+      SCIPsortPtrReal((void**)conflictstore->conflicts, conflictstore->primalbounds, compareConss, conflictstore->nconflicts);
+      assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->conflicts[0]),
+            SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])));
+   }
    assert(conflictstore->nconflicts > 0);
 
-   /* remove conflict at first position */
-   SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
+   if( conflictstore->ncleanups % CONFLICTSTORE_SORTFREQ == 0 )
+   {
+      /* remove conflict at first position (array is sorted) */
+      SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, 0, TRUE) );
+   }
+   else
+   {
+      SCIP_Real maxage;
+      int oldest_i;
+      int i;
+
+      assert(!SCIPconsIsDeleted(conflictstore->conflicts[0]));
+
+      maxage = SCIPconsGetAge(conflictstore->conflicts[0]);
+      oldest_i = 0;
+
+      /* check the first 10% of conflicts and find the oldest */
+      for( i = 1; i < 0.1 * conflictstore->nconflicts; i++ )
+      {
+         assert(!SCIPconsIsDeleted(conflictstore->conflicts[i]));
+
+         if( SCIPconsGetAge(conflictstore->conflicts[i]) > maxage )
+         {
+            maxage = SCIPconsGetAge(conflictstore->conflicts[i]);
+            oldest_i = i;
+         }
+      }
+
+      /* remove conflict at position oldest_i */
+      SCIP_CALL( delPosConflict(conflictstore, set, stat, transprob, blkmem, oldest_i, TRUE) );
+   }
    ++ndelconfs;
 
    /* adjust size of the storage if we use a dynamic store */
@@ -480,6 +510,10 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    assert(conflictstore->storesize <= conflictstore->maxstoresize);
 
   TERMINATE:
+
+   /* increase the number of clean ups */
+   ++conflictstore->ncleanups;
+
    SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
