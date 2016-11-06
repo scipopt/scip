@@ -51,7 +51,7 @@
  * 3) Collecting bound changes
  *
  *    For each bound of a variable, which can trigger bound changes of other variables, the propagator catches all
- *    events informing about a global change of the bound or a local toghtening of the bound. The event handler
+ *    events informing about a global change of the bound or a local tightening of the bound. The event handler
  *    then adds the bound of the variable to a priority queue, with the key in the priority queue corresponding
  *    to the position of the bound in the topological sort.
  *
