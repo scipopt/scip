@@ -1977,8 +1977,8 @@ void optimize_run(
 						user_s_set.resize(user_n);
 					if(user_r_set.size() != user_m )
 						user_r_set.resize(user_m);
-						for(i = 0; i < user_m; i++)
-							user_r_set[i].clear();
+					for(i = 0; i < user_m; i++)
+						user_r_set[i].clear();
 				}
 				//
 				user_j     = user_n;
