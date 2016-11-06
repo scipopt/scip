@@ -26,6 +26,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
+
 #include <assert.h>
 #include <string.h>
 #include <math.h>
@@ -61,10 +63,6 @@
 #define CONSHDLR_PRESOLTIMING     SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
-
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
 
 #define UPGSCALE 10 /* scale factor used in general upgrades of quadratic cons to soc */
 

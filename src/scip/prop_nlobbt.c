@@ -745,7 +745,7 @@ SCIP_RETCODE SCIPincludePropNlobbt(
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",
-         &propdata->nlpiterlimit, TRUE, DEFAULT_NLPTIMELIMIT, 0, INT_MAX, NULL, NULL) );
+         &propdata->nlpiterlimit, TRUE, DEFAULT_NLPITERLIMIT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/nlptimelimit",
          "time limit of NLP solver; 0.0 for no limit",
