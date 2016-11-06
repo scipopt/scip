@@ -254,7 +254,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
-   SCIPdebugMessage("%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
+   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
    assert(vars != NULL);
@@ -399,7 +399,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       SCIP_CALL( SCIPfixVarProbing(scip, var, lastfixval) );
 
-      SCIPdebugMessage("iteration %d: fixing variable <%s> to %d with locks (%d, %d)\n", v, SCIPvarGetName(var), lastfixval > 0.5 ? 1 : 0, ndownlocks[v], nuplocks[v]);
+      SCIPdebugMsg(scip, "iteration %d: fixing variable <%s> to %d with locks (%d, %d)\n", v, SCIPvarGetName(var), lastfixval > 0.5 ? 1 : 0, ndownlocks[v], nuplocks[v]);
 
       if( propagate && lastfixlocks > 0 )
       {
@@ -420,7 +420,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
             }
 
-            SCIPdebugMessage("last fixing led to infeasibility trying other bound\n");
+            SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
 
             SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
             if( cutoff )
@@ -474,7 +474,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                int pos;
                int w;
 
-               SCIPdebugMessage("Row <%s> has activity [%g, %g], lhs=%g, rhs=%g\n", SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               SCIPdebugMsg(scip, "Row <%s> has activity [%g, %g], lhs=%g, rhs=%g\n", SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                if( varpos == NULL )
@@ -523,7 +523,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             {
                cutoff = TRUE;
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-               SCIPdebugMessage("row <%s> activity [%g,%g] violates bounds, lhs = %g, rhs = %g\n",
+               SCIPdebugMsg(scip, "row <%s> activity [%g,%g] violates bounds, lhs = %g, rhs = %g\n",
                   SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
                break;
             }
@@ -531,12 +531,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
          if( cutoff )
          {
-            SCIPdebugMessage("found infeasible row, stopping heur\n");
+            SCIPdebugMsg(scip, "found infeasible row, stopping heur\n");
             break;
          }
 
          nglbfulfilledrows += nfulfilledrows;
-         SCIPdebugMessage("last fixing led to %d fulfilled rows, now %d of %d rows are fulfilled\n", nfulfilledrows, nglbfulfilledrows, nlprows);
+         SCIPdebugMsg(scip, "last fixing led to %d fulfilled rows, now %d of %d rows are fulfilled\n", nfulfilledrows, nglbfulfilledrows, nlprows);
 
          if( nglbfulfilledrows == nlprows )
             break;
@@ -546,11 +546,11 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMessage("npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
 
    if( nglbfulfilledrows != nlprows && npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
-      SCIPdebugMessage("--> too few fixings\n");
+      SCIPdebugMsg(scip, "--> too few fixings\n");
 
       goto TERMINATE;
    }
@@ -560,7 +560,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    {
       SCIP_Bool lperror;
 
-      SCIPdebugMessage("solve probing LP in LOCKS heuristic: %d unfixed integer variables\n", SCIPgetNPseudoBranchCands(scip));
+      SCIPdebugMsg(scip, "solve probing LP in LOCKS heuristic: %d unfixed integer variables\n", SCIPgetNPseudoBranchCands(scip));
 
       /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -583,8 +583,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+      SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */
       if( !lperror && lpstatus == SCIP_LPSOLSTAT_OPTIMAL )
@@ -613,7 +613,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
             if( stored )
             {
-               SCIPdebugMessage("found feasible solution:\n");
+               SCIPdebugMsg(scip, "found feasible solution:\n");
                SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
                *result = SCIP_FOUNDSOL;
             }
@@ -649,7 +649,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       /* check whether we have enough nodes left to call subproblem solving */
       if( nstallnodes < heurdata->minnodes )
       {
-         SCIPdebugMessage("skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+         SCIPdebugMsg(scip, "skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
          return SCIP_OKAY;
       }
 
@@ -778,10 +778,10 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          }
          cutoffbound = MIN(upperbound, cutoffbound);
          SCIP_CALL( SCIPsetObjlimit(subscip, cutoffbound) );
-         SCIPdebugMessage("setting objlimit for subscip to %g\n", cutoffbound);
+         SCIPdebugMsg(scip, "setting objlimit for subscip to %g\n", cutoffbound);
       }
 
-      SCIPdebugMessage("starting solving locks-submip at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "starting solving locks-submip at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve the subproblem */
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -800,7 +800,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIP_CALL( SCIPpresolve(subscip) );
 #endif
 
-      SCIPdebugMessage("locks heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+      SCIPdebugMsg(scip, "locks heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
@@ -811,7 +811,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          SCIP_Bool success;
          int nsubsols;
 
-         SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
+         SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
 #ifdef NDEBUG
          {
@@ -825,7 +825,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #else
          SCIP_CALL( SCIPsolve(subscip) );
 #endif
-         SCIPdebugMessage("ending locks locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
+         SCIPdebugMsg(scip, "ending locks locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
