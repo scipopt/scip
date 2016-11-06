@@ -502,7 +502,8 @@ SCIP_RETCODE addLinearConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
             0, NULL, 0, NULL, NULL,
-            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) );
+            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -558,7 +559,8 @@ SCIP_RETCODE addVarboundConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             2, vars, coefs,
             0, NULL, 0, NULL, NULL,
-            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i])) );
+            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -623,7 +625,8 @@ SCIP_RETCODE addLogicOrConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            1.0, SCIPinfinity(scip)) );
+            1.0, SCIPinfinity(scip),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -714,7 +717,8 @@ SCIP_RETCODE addSetppcConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            lhs, rhs) );
+            lhs, rhs,
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -784,7 +788,8 @@ SCIP_RETCODE addKnapsackConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i])) );
+            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );

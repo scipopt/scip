@@ -4385,7 +4385,8 @@ SCIP_RETCODE createNlRow(
    SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), constant,
          nlinvars, linvars, lincoefs,
          nquadvars, &quadvar, nquadelems, &quadelem,
-         exprtree, consdata->lhs, consdata->rhs
+         exprtree, consdata->lhs, consdata->rhs,
+         SCIP_EXPRCURV_UNKNOWN
          ) );
 
    if( exprtree != NULL )
