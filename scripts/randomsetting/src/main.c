@@ -111,12 +111,17 @@ SCIP_RETCODE generateRandomSettings(
    assert(step >= 0);
    assert(step < nparams);
 
+   /* make sure all parameters are at their default values */
+   SCIP_CALL( SCIPresetParams(scip) );
+
    /* count number of changable parameters */
    nchangeparams = 0;
+
    for( i = 0; i < nparams; ++i )
    {
       SCIP_PARAM* param = params[i];
       assert(param != NULL);
+
       if( !advanced && SCIPparamIsAdvanced(param) )
       {
          SCIPdebugMessage("excluding advanced parameter <%s>\n", SCIPparamGetName(param));
@@ -345,7 +350,7 @@ SCIP_RETCODE generateRandomSettings(
                retcode = SCIPchgRealParam(scip, param, newvalue);
                if( retcode == SCIP_PARAMETERWRONGVAL )
                {
-                  SCIPerrorMessage("could not set parameter to random value within range - trying again\n");
+                  SCIPinfoMessage(scip, NULL, "could not set parameter to random value within range - trying again\n");
                }
             }
 
