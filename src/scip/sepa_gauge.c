@@ -658,10 +658,10 @@ SCIP_RETCODE generateCut(
 
 /** tries to generate gradient cuts at the point on the segment [intsol, tosepasol] that intersecs the boundary of the
  * convex relaxation
- * 1) checks that the relative interior of the segment actually intersects the boundary
- *    - this check is needed since intsol is not necessarily an interior point
- * 2) finds point on the boundary
- * 3) generates gradient cut at point on the boundary
+ * -# checks that the relative interior of the segment actually intersects the boundary
+ *    (this check is needed since intsol is not necessarily an interior point)
+ * -# finds point on the boundary
+ * -# generates gradient cut at point on the boundary
  */
 static
 SCIP_RETCODE separateCuts(

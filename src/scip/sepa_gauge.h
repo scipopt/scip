@@ -32,7 +32,7 @@
  * \f[
  *      l_k(x) \le 0 \, \forall k=1,\ldots,p
  * \f]
- * where each \f$ g_j \f$ is a convex function and \$ l_k \f$ is a linear function and
+ * where each \f$ g_j \f$ is a convex function and \f$ l_k \f$ is a linear function and
  * \f[
  *      C = \{ x \colon g_j(x) \le 0 \, \forall j=1,\ldots,m, l_k(x) \le 0 \, \forall k=1,\ldots,p \}
  * \f]
@@ -50,6 +50,16 @@
  * a binary search is perform on the segment \f$[\bar x, x_0]\f$ in order to find the boundary point. Gradient cuts are
  * computed for each of these nonlinear convex constraints which are active at the boundary point.
  *
+ * Technical details:
+ *    - We consider a constraint for the binary search, only when its violation is larger than MIN_VIOLATION. The
+ *    reason is that if the violation is too small, chances are that the point in the boundary is in the interior for
+ *    this constraint and we wouldn't generate a cut for it anyway. On the other hand, if we were to generate a cut for
+ *    this constraint, then it is likely that the boundary point is very close to the point to separate. Hence the
+ *    cut generate would be very similar to the gradient cut at the point to separate.
+ *    - Before separating, if a slight perturbation of the interior point in the direction of the point to separate is
+ *    gives a point outside the region, we do not separate. The reason is that the interior point we computed could be
+ *    almost at the boundary and the segment \f$[\bar x, x_0]\f$ could be tangent to the region. In that case, the cuts
+ *    we generate will not separate \f$ x_0 \f$ from the feasible region.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
