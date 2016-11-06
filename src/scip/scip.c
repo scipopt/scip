@@ -1845,7 +1845,7 @@ SCIP_RETCODE SCIPenableConsCompression(
 
 
    /* check stage */
-   SCIP_CALL( checkStage(scip, "SCIPenableProblemCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPenableConsCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* enable problem compression */
    SCIPprobEnableConsCompression(scip->origprob);
@@ -1884,7 +1884,7 @@ SCIP_Bool SCIPisConsCompressionEnabled(
    assert(scip->origprob != NULL);
 
    /* check stage */
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPisProblemCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisConsCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    /* is problem compression enabled */
    return SCIPprobIsConsCompressionEnabled(scip->origprob) && SCIPgetStage(scip) == SCIP_STAGE_PROBLEM;
@@ -36684,7 +36684,7 @@ SCIP_Bool SCIPisDualSolAvailable(
 
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintDualSolAvailable", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
    {
@@ -39060,7 +39060,7 @@ SCIP_Longint SCIPgetNFeasibleLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNFeasibleLeaves", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nfeasleaves;
 }
@@ -39087,7 +39087,7 @@ SCIP_Longint SCIPgetNInfeasibleLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNInfeasibleLeaves", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->ninfeasleaves;
 }
@@ -39111,10 +39111,10 @@ SCIP_Longint SCIPgetNInfeasibleLeaves(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNObjlimLeaves(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< Scip data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNObjlimLeaves", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nobjleaves;
 }
