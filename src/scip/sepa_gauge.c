@@ -16,8 +16,6 @@
 /**@file   sepa_gauge.c
  * @brief  gauge separator
  * @author Felipe Serrano
- *
- * @todo: one can make it more efficient by passing around the indices of the violated nlrows at each iteration
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
