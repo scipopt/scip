@@ -294,11 +294,10 @@ namespace polyscip {
                                     const ValueType& lhs,
                                     const ValueType& rhs);
 
-        SCIP_RETCODE computeNondomProjResult(SCIP_VAR *new_var,
-                                             SCIP_CONS *cons1,
-                                             SCIP_CONS *cons2,
-                                             const ValueType &rhs_cons1,
-                                             const ValueType &rhs_cons2,
+        SCIP_RETCODE computeNondomProjResult(SCIP_CONS* obj_val_cons1,
+                                             SCIP_CONS* obj_val_cons2,
+                                             ValueType obj_val_cons1_rhs,
+                                             ValueType obj_val_cons2_rhs,
                                              std::size_t obj_1,
                                              std::size_t obj_2,
                                              ResultContainer &results);
