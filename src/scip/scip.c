@@ -3392,36 +3392,36 @@ int SCIPgetSubscipDepth(
    return scip->stat->subscipdepth;
 }
 
-/* copies source SCIP data into target SCIP data structure
+/** copies source SCIP data into target SCIP data structure
  *
  * distinguishes between
  * - local and global copies
  * - copies of the original or transformed problem
  *
- * allows for constraint compression by specifying a number of source variables
- * and values that should be fixed in the copy
+ * Allows for constraint compression by specifying a number of source variables
+ * and values that should be fixed in the copy.
  */
 static
 SCIP_RETCODE doCopy(
-      SCIP*                 sourcescip,         /**< source SCIP data structure */
-      SCIP*                 targetscip,         /**< target SCIP data structure */
-      SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                                 *   target variables, or NULL */
-      SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                                 *   target constraints, or NULL */
-      const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
-      SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
-      SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
-      int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
-      SCIP_Bool             useconscompression, /**< should constraint compression be used when constraints are created? */
-      SCIP_Bool             global,             /**< create a global or a local copy? */
-      SCIP_Bool             original,           /**< copy original or transformed problem? if TRUE, a copy using local bounds is not possible */
-      SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
-                                                 *   plugins will be copied and activated, and the modifiable flag of
-                                                 *   constraints will be respected. If FALSE, valid will be set to FALSE, when
-                                                 *   there are pricers present */
-      SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-      SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             useconscompression, /**< should constraint compression be used when constraints are created? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             original,           /**< copy original or transformed problem? if TRUE, a copy using local bounds is not possible */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_HASHMAP* localvarmap;
@@ -39057,7 +39057,7 @@ int SCIPgetNNodesLeft(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNFeasibleLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
@@ -39084,7 +39084,7 @@ SCIP_Longint SCIPgetNFeasibleLeaves(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNInfeasibleLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
@@ -39111,7 +39111,7 @@ SCIP_Longint SCIPgetNInfeasibleLeaves(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNObjlimLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
