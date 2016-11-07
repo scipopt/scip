@@ -752,12 +752,14 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
          SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
                FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-         SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
          SCIPinfoMessage(scip, NULL, ";\n");
 #endif
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         /* add constraint to SCIP */
+         SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
 
          *result = SCIP_CONSADDED;
       }
@@ -3590,7 +3592,7 @@ SCIP_RETCODE propIndicator(
       assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip) );
 
       /* perform conflict analysis */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvar) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
@@ -5238,7 +5240,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          quadelem.idx2 = 1;
          quadelem.coef = 1.0;
 
-         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1, &quadelem, NULL, 0.0, 0.0) );
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1,
+               &quadelem, NULL, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
 
          /* add row to NLP and forget about it */
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );

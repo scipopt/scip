@@ -711,7 +711,7 @@ void graph_path_st(
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   unsigned int*         randseed,           /**< random seed */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    char*                 connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
@@ -725,7 +725,7 @@ void graph_path_st(
    int*  state;
    char cgt;
 
-   assert(randseed != NULL);
+   assert(randnumgen != NULL);
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
    assert(g      != NULL);
@@ -758,7 +758,8 @@ void graph_path_st(
       int node;
       int nterms = 0;
       int hnnodes = nnodes / 2;
-      z = SCIPgetRandomInt(0, nnodes - 1, randseed);
+
+      z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
       count       = 1;
       heap[count] = k;
       state[k]    = count;
@@ -770,33 +771,33 @@ void graph_path_st(
          k = nearestX(heap, state, &count, pathdist);
          state[k] = UNKNOWN;
 
-	 /* if k is terminal, connect its path to current subtree */
+         /* if k is terminal, connect its path to current subtree */
          if( Is_term(g->term[k]) )
          {
-	    assert(k == start || !connected[k]);
+            assert(k == start || !connected[k]);
             connected[k] = TRUE;
             pathdist[k] = 0.0;
-	    node = k;
-            z = SCIPgetRandomInt(0, nnodes - 1, randseed);
+            node = k;
+            z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
 
-	    if( k != start )
-	    {
+            if( k != start )
+            {
                assert(pathedge[k] != - 1);
 
                while( !connected[node = g->tail[pathedge[node]]] )
                {
-		  assert(pathedge[node] != - 1);
+                  assert(pathedge[node] != - 1);
                   connected[node] = TRUE;
                   resetX(scip, pathdist, heap, state, &count, node);
                }
-	    }
+            }
             /* have all terminals been reached? */
             if( ++nterms == g->terms )
                break;
          }
 
          z = (k + z) % nnodes;
-	 cgt = (z > hnnodes);
+         cgt = (z > hnnodes);
 
          /* update adjacent vertices */
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )

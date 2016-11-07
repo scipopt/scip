@@ -3899,7 +3899,7 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
    /* initialize conflict analysis if conflict analysis is applicable */
    if( SCIPisConflictAnalysisApplicable(scip) )
    {
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, NULL, explanation) );
@@ -4437,7 +4437,7 @@ SCIP_RETCODE tightenLbTTEF(
          relaxedbd = SCIPvarGetUbLocal(var) + 1.0;
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          /* added to upper bound (which was overcut be new lower bound) of the variable */
          SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
@@ -4551,7 +4551,7 @@ SCIP_RETCODE tightenUbTTEF(
          relaxedbd = SCIPvarGetLbLocal(var) - 1.0;
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          /* added to lower bound (which was undercut be new upper bound) of the variable */
          SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
@@ -4849,7 +4849,7 @@ SCIP_RETCODE propagateUbTTEF(
             if( SCIPisConflictAnalysisApplicable(scip) )
             {
                /* analyze infeasibilty */
-               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+               SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
                      begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN,
@@ -4889,7 +4889,7 @@ SCIP_RETCODE propagateUbTTEF(
                   SCIP_Real relaxedbd;
 
                   /* analyze infeasibilty */
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   relaxedbd = lst + 1.0;
 
@@ -5180,7 +5180,7 @@ SCIP_RETCODE propagateLbTTEF(
             if( SCIPisConflictAnalysisApplicable(scip) )
             {
                /* analyze infeasibilty */
-               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+               SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                SCIP_CALL( analyzeEnergyRequirement(scip, nvars, vars, durations, demands, capacity,
                      begin, end, NULL, SCIP_BOUNDTYPE_UPPER, NULL, SCIP_UNKNOWN,
@@ -5222,7 +5222,7 @@ SCIP_RETCODE propagateLbTTEF(
                {
                   SCIP_Real relaxedbd;
                   /* analyze infeasibilty */
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   relaxedbd = ect - duration - 1.0;
 
@@ -5405,7 +5405,7 @@ SCIP_RETCODE propagateTTEF(
             assert(var != NULL);
 
             /* initialize conflict analysis */
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+            SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
             /* convert int to inference information */
             inferinfo = intToInferInfo(ubinferinfos[v]);
@@ -6435,7 +6435,7 @@ SCIP_RETCODE analyzeConflictOverload(
    SCIPdebugMsg(scip, "time window [%d,%d) available energy %d, required energy %d\n", est, lct, energy, reportedenergy);
 
    /* initialize conflict analysis */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* flip earliest start time and latest completion time */
    if( !propest )
@@ -6676,7 +6676,7 @@ SCIP_RETCODE inferboundsEdgeFinding(
 
                   SCIPdebugMsg(scip, "edge-finder dectected an infeasibility\n");
 
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   /* add lower and upper bound of variable which leads to the infeasibilty */
                   SCIP_CALL( SCIPaddConflictLb(scip, leafdata->var, NULL) );

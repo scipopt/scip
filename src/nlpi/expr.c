@@ -2045,12 +2045,11 @@ SCIP_DECL_EXPREVAL( exprevalSin )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalSin */
-   SCIPerrorMessage("exprevalSinInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalSin(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -2074,12 +2073,11 @@ SCIP_DECL_EXPREVAL( exprevalCos )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalCos */
-   SCIPerrorMessage("exprevalCosInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalCos(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -7059,7 +7057,8 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;
@@ -7087,6 +7086,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    userexprdata->estimate = estimate;
    userexprdata->copydata = copydata;
    userexprdata->freedata = freedata;
+   userexprdata->print = print;
 
    opdata.data = (void*) userexprdata;
 
@@ -8366,20 +8366,22 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_USER:
    {
-      /*  @todo allow for user printing callback
       SCIP_EXPRDATA_USER* exprdata;
+      int i;
 
       exprdata = (SCIP_EXPRDATA_USER*)expr->data.data;
       assert(exprdata != NULL);
 
       if( exprdata->print != NULL )
       {
-         exprdata->print(messagehdlr, file, )
+         exprdata->print(exprdata->userdata, messagehdlr, file);
       }
-      */
-      int i;
+      else
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "user");
+      }
 
-      SCIPmessageFPrintInfo(messagehdlr, file, "user(");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
       for( i = 0; i < expr->nchildren; ++i )
       {
          if( i > 0 )
@@ -11761,7 +11763,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
-         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
+         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
       break;
    }
@@ -13344,7 +13346,8 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;

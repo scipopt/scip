@@ -521,6 +521,16 @@ SCIP_Bool SCIPeventqueueIsDelayed(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPeventqueueIsDelayed(eventqueue)       ((eventqueue)->delayevents)
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif
