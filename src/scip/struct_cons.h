@@ -77,6 +77,7 @@ struct SCIP_Cons
                                               *   added locally (in that case the local flag is TRUE) and the current
                                               *   node belongs to the corresponding sub tree
                                               */
+   unsigned int          conflict:1;         /**< TRUE iff constraint is a conflict */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int          markpropagate:1;    /**< TRUE iff constraint is marked to be propagated in the next round */
@@ -96,7 +97,7 @@ struct SCIP_Cons
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
-   unsigned int          nupgradelocks:29;   /**< number of times, a constraint is locked against an upgrade
+   unsigned int          nupgradelocks:28;   /**< number of times, a constraint is locked against an upgrade
                                               *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
 };
 
