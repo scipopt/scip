@@ -34,8 +34,6 @@
 
 #include "scip/heur_locks.h"
 
-/* @todo need matrix meaning columnwise */
-
 #define HEUR_NAME             "locks"
 #define HEUR_DESC             "heuristic that fixes variables based on their rounding locks"
 #define HEUR_DISPCHAR         'k'
@@ -47,6 +45,7 @@
 #define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_ROUNDUPPROBABILITY 0.67                  /**< probability for rounding a variable up in case of ties */
 #define DEFAULT_MINFIXINGRATE 0.25                       /**< minimum percentage of variables that have to be fixed */
 #define DEFAULT_MINIMPROVE    0.01                       /**< factor by which locks heuristic should at least improve the
                                                           *   incumbent
@@ -60,13 +59,17 @@
                                                           *   original scip be copied to constraints of the subscip? */
 #define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
                                                           *   solution if the LP was not roundable? */
+#define DEFAULT_RANDSEED      71                         /**< initial random seed */
+
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
    SCIP_Longint          usednodes;          /**< nodes already used by locks heuristic in earlier calls */
+   SCIP_Real             roundupprobability; /**< probability for rounding a variable up in case of ties */
    SCIP_Real             minfixingrate;      /**< minimum percentage of variables that have to be fixed */
    SCIP_Real             minimprove;         /**< factor by which locks heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
@@ -158,8 +161,41 @@ SCIP_DECL_HEURFREE(heurFreeLocks)
    return SCIP_OKAY;
 }
 
-#define heurInitLocks NULL
-#define heurExitLocks NULL
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitLocks) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
+   return SCIP_OKAY;
+}
+
 #define heurInitsolLocks NULL
 #define heurExitsolLocks NULL
 
@@ -186,6 +222,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    int* varpos = NULL;
    SCIP_LPSOLSTAT lpstatus;
    SCIP_Real lastfixval;
+   SCIP_Real randnumber;
+   SCIP_Real roundupprobability;
    SCIP_Bool cutoff;
    SCIP_Bool propagate;
    SCIP_Bool propagated;
@@ -230,6 +268,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       maxproprounds = 0;
    else
       maxproprounds = heurdata->maxproprounds;
+
+   roundupprobability = heurdata->roundupprobability;
 
    /* only run if we are allowed to solve an LP at the current node in the tree */
    if( !SCIPhasCurrentNodeLP(scip) )
@@ -387,11 +427,13 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             lastfixval = 1.0;
          else
          {
-            /* if a tie occurs, roughly every third variable will be rounded down */
-            if( v % 3 == 1 )
-               lastfixval = 0.0;
-            else
+            randnumber = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
+
+            /* if a tie occurs, we randomly round the variable based on the parameter 'roundupprobability' */
+            if( randnumber < roundupprobability )
                lastfixval = 1.0;
+            else
+               lastfixval = 0.0;
          }
       }
 
@@ -900,6 +942,10 @@ SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixable",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundupprobability",
+         "probability for rounding a variable up in case of ties",
+         &heurdata->roundupprobability, FALSE, DEFAULT_ROUNDUPPROBABILITY, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usefinalsubmip",
          "should a final sub-MIP be solved to costruct a feasible solution if the LP was not roundable?",
