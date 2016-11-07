@@ -51,6 +51,24 @@ SCIP_Longint SCIPmemGetUsed(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
+/** returns the total number of bytes used in block and buffer memory */
+extern
+SCIP_Longint SCIPmemGetUsedTotal(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   );
+
+/** returns the maximal number of bytes used in block memory */
+extern
+SCIP_Longint SCIPmemGetUsedMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   );
+
+/** returns the maximal number of bytes used in block memory */
+extern
+SCIP_Longint SCIPmemGetUsedLazyMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -425,6 +425,9 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
+#define BMSgetBlockMemoryUsedLazy(mem)        BMSgetBlockMemoryUsedLazy_call(mem)
+#define BMSgetBlockMemoryUsedMax(mem)         BMSgetBlockMemoryUsedMax_call(mem)
+#define BMSgetBlockMemoryUsedLazyMax(mem)     BMSgetBlockMemoryUsedLazyMax_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
 #define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
@@ -591,6 +594,24 @@ void BMSgarbagecollectBlockMemory_call(
 /** returns the number of allocated bytes in the block memory */
 EXTERN
 long long BMSgetBlockMemoryUsed_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUsedLazy_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUsedMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUsedLazyMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
