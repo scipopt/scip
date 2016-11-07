@@ -1855,7 +1855,7 @@ SCIP_RETCODE SCIPenableConsCompression(
 
 
    /* check stage */
-   SCIP_CALL( checkStage(scip, "SCIPenableProblemCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPenableConsCompression", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* enable problem compression */
    SCIPprobEnableConsCompression(scip->origprob);
@@ -1894,7 +1894,7 @@ SCIP_Bool SCIPisConsCompressionEnabled(
    assert(scip->origprob != NULL);
 
    /* check stage */
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPisProblemCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisConsCompressionEnabled", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    /* is problem compression enabled */
    return SCIPprobIsConsCompressionEnabled(scip->origprob) && SCIPgetStage(scip) == SCIP_STAGE_PROBLEM;
@@ -3568,36 +3568,36 @@ int SCIPgetSubscipDepth(
    return scip->stat->subscipdepth;
 }
 
-/* copies source SCIP data into target SCIP data structure
+/** copies source SCIP data into target SCIP data structure
  *
  * distinguishes between
  * - local and global copies
  * - copies of the original or transformed problem
  *
- * allows for constraint compression by specifying a number of source variables
- * and values that should be fixed in the copy
+ * Allows for constraint compression by specifying a number of source variables
+ * and values that should be fixed in the copy.
  */
 static
 SCIP_RETCODE doCopy(
-      SCIP*                 sourcescip,         /**< source SCIP data structure */
-      SCIP*                 targetscip,         /**< target SCIP data structure */
-      SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                                 *   target variables, or NULL */
-      SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                                 *   target constraints, or NULL */
-      const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
-      SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
-      SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
-      int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
-      SCIP_Bool             useconscompression, /**< should constraint compression be used when constraints are created? */
-      SCIP_Bool             global,             /**< create a global or a local copy? */
-      SCIP_Bool             original,           /**< copy original or transformed problem? if TRUE, a copy using local bounds is not possible */
-      SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
-                                                 *   plugins will be copied and activated, and the modifiable flag of
-                                                 *   constraints will be respected. If FALSE, valid will be set to FALSE, when
-                                                 *   there are pricers present */
-      SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-      SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             useconscompression, /**< should constraint compression be used when constraints are created? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             original,           /**< copy original or transformed problem? if TRUE, a copy using local bounds is not possible */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_HASHMAP* localvarmap;
@@ -26979,6 +26979,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -26987,6 +26988,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @note if a constraint is marked to be propagated, the age of the constraint will be ignored for propagation
  */
@@ -26995,9 +26997,11 @@ SCIP_RETCODE SCIPmarkConsPropagate(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPmarkConsPropagate", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsMarkPropagate(cons, scip->set) );
+
+   assert(!SCIPconsIsEnabled(cons) || SCIPconsIsMarkedPropagate(cons));
 
    return SCIP_OKAY;
 }
@@ -27024,6 +27028,8 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
    SCIP_CALL( checkStage(scip, "SCIPunmarkConsPropagate", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsUnmarkPropagate(cons, scip->set) );
+
+   assert(!SCIPconsIsEnabled(cons) || !SCIPconsIsMarkedPropagate(cons));
 
    return SCIP_OKAY;
 }
@@ -36965,7 +36971,7 @@ SCIP_Bool SCIPisDualSolAvailable(
 
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintDualSolAvailable", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
    {
@@ -39338,10 +39344,10 @@ int SCIPgetNNodesLeft(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNFeasibleLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNFeasibleLeaves", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nfeasleaves;
 }
@@ -39365,10 +39371,10 @@ SCIP_Longint SCIPgetNFeasibleLeaves(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNInfeasibleLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNInfeasibleLeaves", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->ninfeasleaves;
 }
@@ -39392,10 +39398,10 @@ SCIP_Longint SCIPgetNInfeasibleLeaves(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNObjlimLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< Scip data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNObjlimLeaves", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nobjleaves;
 }

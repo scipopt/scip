@@ -58,7 +58,6 @@ struct SCIP_Cons
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
    int                   nuses;              /**< number of times, this constraint is referenced */
-   unsigned int          markedprop:1;       /**< TRUE iff the constraint is marked to be propagated during the next node processing */
    unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int          enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
@@ -267,7 +266,6 @@ struct SCIP_Conshdlr
    SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */
    SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the constraint handler's presolving method */
-   SCIP_QUEUE*           pendingconss;       /**< queue of pending constraints */
 };
 
 #ifdef __cplusplus

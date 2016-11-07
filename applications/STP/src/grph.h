@@ -210,7 +210,7 @@ extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, int*);
 extern void   graph_path_exit(SCIP*, GRAPH*);
 extern void   graph_path_exec(SCIP*, const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
-extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, unsigned int*, char*);
+extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, char*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   get2next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   get3next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);

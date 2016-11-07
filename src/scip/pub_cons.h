@@ -756,7 +756,7 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
-#define SCIPconsIsMarkedPropagate(cons) (cons)->markpropagate
+#define SCIPconsIsMarkedPropagate(cons) ((cons)->updatemarkpropagate || ((cons)->markpropagate && !(cons)->updateunmarkpropagate))
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local

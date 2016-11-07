@@ -38,7 +38,8 @@ parameters:
 - new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
-- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
+- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP
+  iteration limit was hit
 - new parameter class randomization
 - moved permutationseed from misc to randomization
 - new parameter randomization/lpseed to set the initial seed of the LP solver
@@ -49,6 +50,8 @@ parameters:
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 
 performance improvements:
+- successful propagation with DURINGLPLOOP timing now triggers a new round of node solving, starting with BEFORELP
+  propagation
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
 - improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
@@ -95,6 +98,8 @@ interface:
 
 fixed bugs:
 - avoid numerically troublesome aggregations
+- fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
+  is the same as at the last focus node
 
 misc:
 - dropped support for Ipopt < 3.11
