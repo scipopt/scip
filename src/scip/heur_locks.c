@@ -351,6 +351,14 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          goto TERMINATE;
 
       nfulfilledrows = 0;
+
+      while( v < nbinvars && (SCIPvarGetLbLocal(sortvars[v]) > 0.5 || SCIPvarGetUbLocal(sortvars[v]) < 0.5) )
+      {
+         ++v;
+      }
+      if( v == nbinvars )
+         break;
+
       bestpos = v;
       bestscore = nuplocks[v] + ndownlocks[v];
 
@@ -359,6 +367,38 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       {
          for( i = v + 1; i < nbinvars; ++i )
          {
+            var = sortvars[i];
+
+            /* variable is already fixed; move it to the front and increment v to ignore it */
+            if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+            {
+               int locks;
+
+               sortvars[i] = sortvars[v];
+               sortvars[v] = var;
+
+               locks = nuplocks[i];
+               nuplocks[i] = nuplocks[v];
+               nuplocks[v] = locks;
+
+               locks = ndownlocks[i];
+               ndownlocks[i] = ndownlocks[v];
+               ndownlocks[v] = locks;
+
+               if( varpos != NULL )
+               {
+                  varpos[SCIPvarGetProbindex(sortvars[i])] = i;
+                  varpos[SCIPvarGetProbindex(sortvars[v])] = v;
+               }
+
+               if( bestpos == v )
+                  bestpos = i;
+
+               ++v;
+
+               continue;
+            }
+
             score = nuplocks[i] + ndownlocks[i];
             assert(score <= lastbestscore);
 
@@ -371,6 +411,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                   break;
             }
          }
+         if( v == nbinvars )
+            break;
       }
       lastbestscore = bestscore;
 
@@ -400,9 +442,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       var = sortvars[v];
 
+      /* all remaining variables are fixed, we can break the fix-and-propagate loop */
       if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
       {
-         continue;
+         assert(v == nbinvars);
+
+         break;
       }
 
       /* stop if we reached the depth limit */
