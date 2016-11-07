@@ -32,32 +32,12 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-install -m 644 -p $(SCIPPLUGININCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/pub_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/struct_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/type_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/scip.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/def.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/visual.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/scipshell.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/scipdefplugins.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/presolve.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/implics.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/set.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/history.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/intervalarith.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(OBJSCIPINCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
-		@-install -m 644 -p $(SRCDIR)/lpi/lpi.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
-		@-install -m 644 -p $(SRCDIR)/lpi/type_lpi.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/pub_*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/struct_*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/type_*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/exprinterpret.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/intervalarithext.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/nlpi.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/nlpi_ipopt.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/nlpi/nlpioracle.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
-		@-install -m 644 -p $(SRCDIR)/blockmemshell/memory.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
-		@-install -m 644 -p $(SRCDIR)/dijkstra/dijkstra.h $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
+		@-install -m 644 -p $(SRCDIR)/lpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
+		@-install -m 644 -p $(SRCDIR)/nlpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
+		@-install -m 644 -p $(SRCDIR)/blockmemshell/*.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
+		@-install -m 644 -p $(SRCDIR)/dijkstra/*.h $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
 		@-install -m 644 -p $(SRCDIR)/tclique/*.h $(INSTALLDIR)/$(INCLUDEDIR)/tclique/
 		@-install -m 644 -p $(SRCDIR)/xml/*.h $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 else

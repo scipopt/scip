@@ -11,7 +11,7 @@ testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configu
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testnodes
 testnodes:
@@ -20,7 +20,7 @@ testnodes:
                 $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:
@@ -29,7 +29,7 @@ testclustercpx:
                 $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercbc
 testclustercbc:

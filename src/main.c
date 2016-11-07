@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   main.c
  * @brief  main file for C compilation
  * @author Tobias Achterberg
  */
@@ -24,7 +24,7 @@
 /**@todo unboundness detection in presolving -> convert problem into feasibility problem to decide
  *       unboundness/infeasibility */
 /**@todo variable event PSSOLCHANGED, update pseudo activities in constraints to speed up checking of pseudo solutions */
-/**@todo branching rule acting as a filter by temporary changing the branching priority of variables and returning 
+/**@todo branching rule acting as a filter by temporary changing the branching priority of variables and returning
  *       SCIP_DIDNOTFIND to let the next branching rule select the branching variable */
 /**@todo try to not use the first but the shortest constraint as reason for a deduction */
 

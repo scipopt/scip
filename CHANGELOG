@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- implemented linear time methods for (weighted) median selection for joint arrays of various types
 - new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
 - new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
 - added leaf statistics about LP objective limit|feasible|infeasible leaves to the statistics output and
@@ -19,6 +20,15 @@ features:
 - add new presolving step to disaggregate second order cone constraints
 - added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
+- new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
+- use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
+- new random number gerator in pub_misc.h
+- the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
+  as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
+  though the solutions required an addition NLP solve
+- a print callback can now be specified for user expressions
+- added interval-evaluation of sine and cosine
+- add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -26,12 +36,41 @@ parameters:
 - new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
-- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
-- new parameter lp/randomseed to set the initial seed of the LP solver
+- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP
+  iteration limit was hit
+- new parameter class randomization
+- moved permutationseed from misc to randomization
+- new parameter randomization/lpseed to set the initial seed of the LP solver
+- setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
+- parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
+  "randomization/permuteconss", and "randomization/permutevars"
+- add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 
 performance improvements:
+- successful propagation with DURINGLPLOOP timing now triggers a new round of node solving, starting with BEFORELP
+  propagation
+- knapsack approximation algorithms use linear-time weighted median selection instead of sorting
+- improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
+- adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
+  and only create and populate a sub-SCIP if enough variables will be fixed.
+- SCIP supports constraint compression for problem copies; constraint compression denotes the immediate
+  removal of fixed variables from constraint data at creation time to reduce memory requirements.
+- changed value of parameter separating/clique/cliquedensity to 0.0 such that the separator always constructs a dense clique table
+  which proved to be faster on the benchmarks MMM and stableset.
+- reduce performance variability by using a small perturbation in the undercover heuristic
+- reduce performance variability by using random numbers as tie-breaker for external branching candidates
+- 1-opt heuristic can now be repeatedly executed as long as new incumbents are found
 
 interface:
+- separated header pub_misc.h from repeated methods for sorting and (weighted) median selection; those are also available in separate headers pub_misc_sort.h
+  and pub_misc_select.h, but included into pub_misc.h
+- new library methods SCIPenableConsCompression(), SCIPisConsCompressionEnabled(), SCIPcopyConsCompression(), SCIPcopyOrigConsCompression()
+- new method SCIPcopyLargeNeighborhoodSearch() in heuristics.h that supports compressed copying and two kinds of problem copy: the MIP-relaxation or
+  a 1-1 problem copy (by copying the constraints, and not the LP relaxation)
+- new files heuristics.c/heuristics.h to collect methods that are frequently used by heuristics
+- merged dive.c/pub_dive.h with heuristics.c/heuristics.h, removed dive.c/pub_dive.h
+- new library methods SCIPcopyConsCompression(), SCIPcopyOrigConsCompression() that accept an array of variables that are immediately fixed in the copy.
+  Alternatively, local instead of global bounds can be used for compression.
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
@@ -41,11 +80,34 @@ interface:
 - CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
   was detected while building the initial LP relaxation
 - new function SCIPisDualSolAvailable() to query the dual solution availability
+- submakefile for CrayXC systems added
+- new method SCIPinitializeRandomSeed()
+- new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
+  subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
+- add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
+- methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
+- methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
+- method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
+- bound reader uses angle bracket around variable names
 
 fixed bugs:
+- avoid numerically troublesome aggregations
+- fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
+  is the same as at the last focus node
+
+misc:
+- dropped support for Ipopt < 3.11
+- updated CppAD to 20160000
+
 
 SCIP version 3.2.2
 ==================
+
+features:
+- for users of the ampl interface, the display/logfile option has been added to set the name of a
+  file to write the SCIP log to (additionally to stdout)
 
 fixed bugs:
 - fixed bug in XML reader concerning comments
@@ -55,18 +117,36 @@ fixed bugs:
 - the AMPL interface now writes a solve status (solve_result_num) into the .sol file
 - fix wrong propagation of product expressions
 - fix memory leaks in TSP example
+- return SCIP_ERROR when a memory exception is caught in SoPlex (was SCIP_LPERROR)
+- in the cmpres.awk (allcmpres.sh) output, the counts in the time column are now with respect to the
+  whole set of processed instances (as with fail and solv), while before it was with respect to the
+  set of instances where no solver failed (eval set); thus, now proc = fail + time + solv.
+- fixed memory leak in OSiL reader
+- writing of solutions or parameters to a file now works also with the message handler set to quiet
+- fixed bug in heur_octane with uninitialized ray direction
+- fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
+- SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
+- ignore lower and upper bound tightenigs beyond +/-infinity during solving
+- fix wrong NLP representation of logic or constraints in the dual value heuristic
 
 performance improvements:
 - improve propagation of absolute-value expression in the case that the sign of the argument is fixed
 
 interface:
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
+- removed SCIPvarGetLbAtIndex() and added SCIPgetVarLbAtIndex()
+- removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
+- removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
+- removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
+- new function SCIPswapReals() to swap two real values
+- new command line parameter -v to print detailed build options
 
 Makefile:
 - revise sub-makefiles for MSVC on MinGW
 - fix bug in 'dll' target
 - make shared libraries aware of their dependencies
 - link binary to shared libs when compiling with SHARED=true
+- 'make install' copies now all header files
 
 SCIP version 3.2.1
 ==================

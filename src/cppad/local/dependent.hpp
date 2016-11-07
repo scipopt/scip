@@ -1,12 +1,12 @@
-/* $Id: dependent.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
-# ifndef CPPAD_DEPENDENT_INCLUDED
-# define CPPAD_DEPENDENT_INCLUDED
+// $Id$
+# ifndef CPPAD_DEPENDENT_HPP
+# define CPPAD_DEPENDENT_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -14,7 +14,7 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 /*
 $begin Dependent$$
-$spell 
+$spell
 	alloc
 	num
 	taylor_
@@ -26,13 +26,8 @@ $spell
 $$
 
 $section Stop Recording and Store Operation Sequence$$
+$mindex ADFun tape Dependent$$
 
-$index ADFun, operation sequence$$
-$index operation, sequence store$$
-$index sequence, operation store$$
-$index recording, stop$$
-$index tape, stop recording$$
-$index Dependent$$
 
 $head Syntax$$
 $icode%f%.Dependent(%x%, %y%)%$$
@@ -45,15 +40,15 @@ $codei%
 	Independent(%x%)
 %$$
 and store the operation sequence in $icode f$$.
-The operation sequence defines an 
+The operation sequence defines an
 $cref/AD function/glossary/AD Function/$$
 $latex \[
 	F : B^n \rightarrow B^m
 \] $$
 where $latex B$$ is the space corresponding to objects of type $icode Base$$.
-The value $latex n$$ is the dimension of the 
+The value $latex n$$ is the dimension of the
 $cref/domain/seq_property/Domain/$$ space for the operation sequence.
-The value $latex m$$ is the dimension of the 
+The value $latex m$$ is the dimension of the
 $cref/range/seq_property/Range/$$ space for the operation sequence
 (which is determined by the size of $icode y$$).
 
@@ -65,10 +60,10 @@ $codei%
 The AD of $icode Base$$ operation sequence is stored in $icode f$$; i.e.,
 it becomes the operation sequence corresponding to $icode f$$.
 If a previous operation sequence was stored in $icode f$$,
-it is deleted. 
+it is deleted.
 
 $head x$$
-The argument $icode x$$ 
+The argument $icode x$$
 must be the vector argument in a previous call to
 $cref Independent$$.
 Neither its size, or any of its values, are allowed to change
@@ -76,7 +71,7 @@ between calling
 $codei%
 	Independent(%x%)
 %$$
-and 
+and
 $codei%
 	%f%.Dependent(%x%, %y%)
 %$$.
@@ -99,7 +94,7 @@ if this is not the case.
 
 $head Taping$$
 The tape,
-that was created when $codei%Independent(%x%)%$$ was called, 
+that was created when $codei%Independent(%x%)%$$ was called,
 will stop recording.
 The AD operation sequence will be transferred from
 the tape to the object $icode f$$ and the tape will then be deleted.
@@ -108,19 +103,17 @@ $head Forward$$
 No $cref Forward$$ calculation is preformed during this operation.
 Thus, directly after this operation,
 $codei%
-	%f%.size_taylor()
-%$$ 
-is zero (see $cref size_taylor$$).
+	%f%.size_order()
+%$$
+is zero (see $cref size_order$$).
 
 $head Parallel Mode$$
-$index parallel, Dependent$$
-$index Dependent, parallel$$
 The call to $code Independent$$,
 and the corresponding call to
 $codei%
 	ADFun<%Base%> %f%( %x%, %y%)
 %$$
-or 
+or
 $codei%
 	%f%.Dependent( %x%, %y%)
 %$$
@@ -130,7 +123,7 @@ $cref/thread_alloc::thread_num/ta_thread_num/$$ must be the same.
 
 $head Example$$
 The file
-$cref fun_check.cpp$$ 
+$cref fun_check.cpp$$
 contains an example and test of this operation.
 It returns true if it succeeds and false otherwise.
 
@@ -141,6 +134,11 @@ $end
 
 // BEGIN CppAD namespace
 namespace CppAD {
+
+/*!
+\file dependent.hpp
+Different versions of Dependent function.
+*/
 
 /*!
 Determine the \c tape corresponding to this exeuction thread and then use
@@ -228,6 +226,10 @@ After this operation, all memory allocated for this tape is deleted.
 
 \param y
 The dependent variable vector for the function being stored in this object.
+
+\par
+All of the private member data in ad_fun.hpp is set to correspond to the
+new tape except for check_for_nan_.
 */
 
 template <typename Base>
@@ -245,18 +247,20 @@ void ADFun<Base>::Dependent(ADTape<Base> *tape, const ADvector &y)
 	CPPAD_ASSERT_KNOWN(
 		y.size() > 0,
 		"ADFun operation sequence dependent variable size is zero size"
-	); 
-
-	// set total number of variables in tape, parameter flag, 
-	// make a tape copy of dependent variables that are parameters, 
-	// and store tape address for each dependent variable
+	);
+	// ---------------------------------------------------------------------
+	// Begin setting ad_fun.hpp private member data
+	// ---------------------------------------------------------------------
+	// dep_parameter_, dep_taddr_
 	CPPAD_ASSERT_UNKNOWN( NumRes(ParOp) == 1 );
 	dep_parameter_.resize(m);
 	dep_taddr_.resize(m);
 	for(i = 0; i < m; i++)
 	{	dep_parameter_[i] = CppAD::Parameter(y[i]);
 		if( dep_parameter_[i] )
+		{	// make a tape copy of dependent variables that are parameters,
 			y_taddr = tape->RecordParOp( y[i].value_ );
+		}
 		else	y_taddr = y[i].taddr_;
 
 		CPPAD_ASSERT_UNKNOWN( y_taddr > 0 );
@@ -266,47 +270,60 @@ void ADFun<Base>::Dependent(ADTape<Base> *tape, const ADvector &y)
 	// put an EndOp at the end of the tape
 	tape->Rec_.PutOp(EndOp);
 
-	// total number of variables on the tape
-	total_num_var_ = tape->Rec_.num_rec_var();
+	// some size_t values in ad_fun.hpp
+	has_been_optimized_        = false;
+	compare_change_count_      = 1;
+	compare_change_number_     = 0;
+	compare_change_op_index_   = 0;
+	num_order_taylor_          = 0;
+	num_direction_taylor_      = 0;
+	cap_order_taylor_          = 0;
 
-	// conditional skip vector
-	cskip_op_.clear();
-	cskip_op_.resize( tape->Rec_.num_rec_op() );
-	for(i = 0; i < cskip_op_.size(); i++)
-		cskip_op_[i] = false;
+	// num_var_tape_
+	// Now that all the variables are in the tape, we can set this value.
+	num_var_tape_       = tape->Rec_.num_var_rec();
 
-	// now that each dependent variable has a place in the tape,
-	// and there is a EndOp at the end of the tape, we can transfer the 
+	// taylor_
+	taylor_.erase();
+
+	// cskip_op_
+	cskip_op_.erase();
+	cskip_op_.extend( tape->Rec_.num_op_rec() );
+
+	// load_op_
+	load_op_.erase();
+	load_op_.extend( tape->Rec_.num_load_op_rec() );
+
+	// play_
+	// Now that each dependent variable has a place in the tape,
+	// and there is a EndOp at the end of the tape, we can transfer the
 	// recording to the player and and erase the tape.
 	play_.get(tape->Rec_);
 
-	// now we can delete the tape
-	AD<Base>::tape_manage(tape_manage_delete);
-
-	// total number of varables in this recording 
-	CPPAD_ASSERT_UNKNOWN( total_num_var_ == play_.num_rec_var() );
-
-	// used to determine if there is an operation sequence in *this
-	CPPAD_ASSERT_UNKNOWN( total_num_var_ > 0 );
-
-	// free old buffers
-	for_jac_sparse_pack_.resize(0, 0);
-	for_jac_sparse_set_.resize(0,0);
-
-	// initial row and column dimensions
-	taylor_.erase();
-	taylor_per_var_   = 0;
-	taylor_col_dim_   = 0;
-
-	// set tape address 
+	// ind_taddr_
+	// Note that play_ has been set, we can use it to check operators
 	ind_taddr_.resize(n);
-	CPPAD_ASSERT_UNKNOWN(
-		n < total_num_var_
-	);
+	CPPAD_ASSERT_UNKNOWN( n < num_var_tape_);
 	for(j = 0; j < n; j++)
 	{	CPPAD_ASSERT_UNKNOWN( play_.GetOp(j+1) == InvOp );
 		ind_taddr_[j] = j+1;
 	}
+
+	// for_jac_sparse_pack_, for_jac_sparse_set_
+	for_jac_sparse_pack_.resize(0, 0);
+	for_jac_sparse_set_.resize(0,0);
+	// ---------------------------------------------------------------------
+	// End set ad_fun.hpp private member data
+	// ---------------------------------------------------------------------
+
+	// now we can delete the tape
+	AD<Base>::tape_manage(tape_manage_delete);
+
+	// total number of varables in this recording
+	CPPAD_ASSERT_UNKNOWN( num_var_tape_  == play_.num_var_rec() );
+
+	// used to determine if there is an operation sequence in *this
+	CPPAD_ASSERT_UNKNOWN( num_var_tape_  > 0 );
 
 }
 

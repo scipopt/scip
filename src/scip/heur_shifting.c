@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_shifting.h"
+#include "scip/pub_misc.h"
 
 
 #define HEUR_NAME             "shifting"
@@ -36,16 +37,17 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
+#define MAXSHIFTINGS          50     /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
+#define DEFAULT_RANDSEED      31     /**< initial random seed */
 
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   unsigned int          randseed;           /**< seed value for random number generator */
 };
 
 
@@ -576,7 +578,11 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
-   heurdata->randseed = 0;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
@@ -594,6 +600,10 @@ SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -697,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMessage("executing shifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing shifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
    nvars = SCIPgetNVars(scip);
@@ -773,7 +783,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       SCIP_Bool oldsolvalisfrac;
       int probindex;
 
-      SCIPdebugMessage("shifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
+      SCIPdebugMsg(scip, "shifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj),
          SCIPretransformObj(scip, SCIPgetCutoffbound(scip)));
 
@@ -801,7 +811,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
             rowidx =  nviolfracrows - 1;
          else
             /* there is no violated row containing a fractional variable, select a violated row uniformly at random */
-            rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
+            rowidx = SCIPrandomGetInt(heurdata->randnumgen, 0, nviolrows-1);
 
          assert(0 <= rowidx && rowidx < nviolrows);
          row = violrows[rowidx];
@@ -810,7 +820,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          assert(violrowpos[rowpos] == rowidx);
          assert(nfracsinrow[rowpos] == 0 || rowidx == nviolfracrows - 1);
 
-         SCIPdebugMessage("shifting heuristic: try to fix violated row <%s>: %g <= %g <= %g\n",
+         SCIPdebugMsg(scip, "shifting heuristic: try to fix violated row <%s>: %g <= %g <= %g\n",
             SCIProwGetName(row), SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
@@ -826,18 +836,18 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
 
       if( shiftvar == NULL && nfrac > 0 )
       {
-         SCIPdebugMessage("shifting heuristic: search rounding variable and try to stay feasible\n");
+         SCIPdebugMsg(scip, "shifting heuristic: search rounding variable and try to stay feasible\n");
          SCIP_CALL( selectEssentialRounding(scip, sol, minobj, lpcands, nlpcands, &shiftvar, &oldsolval, &newsolval) );
       }
 
       /* check, whether shifting was possible */
       if( shiftvar == NULL || SCIPisEQ(scip, oldsolval, newsolval) )
       {
-         SCIPdebugMessage("shifting heuristic:  -> didn't find a shifting variable\n");
+         SCIPdebugMsg(scip, "shifting heuristic:  -> didn't find a shifting variable\n");
          break;
       }
 
-      SCIPdebugMessage("shifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
+      SCIPdebugMsg(scip, "shifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
          oldsolval, newsolval, SCIPvarGetObj(shiftvar));
 
@@ -903,7 +913,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          }
       }
 
-      SCIPdebugMessage("shifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+      SCIPdebugMsg(scip, "shifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
    }
 
@@ -917,11 +927,11 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
        * done in the shifting heuristic itself; however, we better check feasibility of LP rows,
        * because of numerical problems with activity updating
        */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
 
       if( stored )
       {
-         SCIPdebugMessage("found feasible shifted solution:\n");
+         SCIPdebugMsg(scip, "found feasible shifted solution:\n");
          SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
          *result = SCIP_FOUNDSOL;
       }

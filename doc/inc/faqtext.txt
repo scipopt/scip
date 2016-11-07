@@ -228,7 +228,7 @@ SECTION: General Questions about SCIP
     </p>
     <p>
         Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.
-        <em>Note</em>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
+        <em>Note</em>, that the support for non-quadratic nonlinear constraints is not yet as
         robust as the rest of SCIP.
         Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
         which can be avoided by careful modeling.
@@ -1038,6 +1038,22 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
         bound of the current node.
         Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
         in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
+    </p>
+
+    QUESTION: SCIP does not stop although my gap is below 1.0 and all variables are binary and have objective coefficient 1. What can I do?
+    LABEL:integralobj
+    ANSWER:
+    <p>
+	SCIP tries to detect whether the objective function values of all solutions must be integral or the problem
+	can be scaled such that the former holds. If this is the case, solving will be stopped as soon as the absolute gap
+	is below 1.0 (scaled).
+    </p>
+    <p>
+
+	However, the detection does not work in case of branch-and-price, because SCIP cannot know whether any of the newly
+	created variables would violate this property. For this case, there is the possibility to inform SCIP that
+	all newly created variables will be integer and have an integer objective coefficient by calling
+	<code>SCIPsetObjIntegral()</code>. This knowledge will then be exploited by SCIP for bounding.
     </p>
 
     QUESTION: How can I delete variables?

@@ -46,13 +46,15 @@ NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
 PERMUTE         =       0
+SEEDS           =       0
+GLBSEEDSHIFT    =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-VALGRIND	=	false
+DEBUGTOOL	=	auto
 CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
@@ -74,6 +76,14 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
+
+ifeq ($(DEBUGTOOL),auto)
+   ifeq ($(OPT),dbg)
+      override DEBUGTOOL   =   gdb
+   else
+      override DEBUGTOOL   =   none
+   endif
+endif
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
@@ -163,14 +173,14 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
 
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)

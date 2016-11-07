@@ -97,7 +97,6 @@ struct SCIP_ConsData
 
    unsigned int          mayincreasez:1;     /**< whether z can be increased without harming other constraints */
    unsigned int          maydecreasez:1;     /**< whether z can be decreased without harming other constraints */
-   SCIP_Bool             ispropagated;       /**< whether bound tightenings on z have been propagated */
    int                   eventfilterpos;     /**< position of z var events in SCIP event filter */
 
    SCIP_EXPRGRAPHNODE*   exprgraphnode;      /**< node in expression graph corresponding to bivariate function */
@@ -149,13 +148,18 @@ struct SCIP_ConshdlrData
 static
 SCIP_DECL_EVENTEXEC(processLinearVarEvent)
 {
+   SCIP_CONS* cons;
+
    assert(scip != NULL);
    assert(event != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED);
 
-   *((SCIP_Bool*)eventdata) = FALSE;
+   cons = (SCIP_CONS*) eventdata;
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -206,9 +210,9 @@ SCIP_RETCODE catchLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
    }
 
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)&consdata->ispropagated, &consdata->eventfilterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, &consdata->eventfilterpos) );
 
-   consdata->ispropagated = FALSE;
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -258,7 +262,7 @@ SCIP_RETCODE dropLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
    }
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)&consdata->ispropagated, consdata->eventfilterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, consdata->eventfilterpos) );
    consdata->eventfilterpos = -1;
 
    return SCIP_OKAY;
@@ -286,7 +290,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
 
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
-      SCIPdebugMessage("changed %s bound on expression graph variable <%s> from %g to %g\n",
+      SCIPdebugMsg(scip, "changed %s bound on expression graph variable <%s> from %g to %g\n",
          eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
@@ -596,7 +600,7 @@ SCIP_RETCODE removeFixedVariables(
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );  /*lint !e826*/
       SCIP_CALL( SCIPaddCons(scip, nlcons) );
-      SCIPdebugMessage("upgraded to"); SCIPdebugPrintCons(scip, nlcons, NULL);
+      SCIPdebugMsg(scip, "upgraded to"); SCIPdebugPrintCons(scip, nlcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &nlcons) );
 
       *isupgraded = TRUE;
@@ -719,12 +723,12 @@ SCIP_RETCODE removeFixedNonlinearVariables(
       }
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
+      SCIPdebugMsg(scip, "replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
       for( j = 0; j < nvars; ++j )
       {
-         SCIPdebugPrintf(" %+g <%s>", coefs[j], SCIPvarGetName(vars[j]));
+         SCIPdebugMsgPrint(scip, " %+g <%s>", coefs[j], SCIPvarGetName(vars[j]));
       }
-      SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "\n");
 #endif
 
       SCIP_CALL( SCIPexprgraphReplaceVarByLinearSum(conshdlrdata->exprgraph, var, nvars, coefs, (void**)vars, constant) );
@@ -803,6 +807,7 @@ SCIP_RETCODE computeViolation(
    xub = SCIPvarGetUbGlobal(x);
    ylb = SCIPvarGetLbGlobal(y);
    yub = SCIPvarGetUbGlobal(y);
+   /* @todo handle case where variables are outside of bounds as in other constraint handlers, see also #627 */
    if( sol == NULL )
    {
       assert(SCIPisFeasGE(scip, xyvals[0], xlb));
@@ -1329,7 +1334,7 @@ SCIP_RETCODE solveDerivativeEquation(
    {
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &s, TRUE, &fval, &grad) );
 
-      /* SCIPdebugMessage("s = %.20g [%g,%g] f(s) = %g grad = %g\n", s, lb, ub, fval, grad); */
+      /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g grad = %g\n", s, lb, ub, fval, grad); */
 
       if( !SCIPisFinite(grad) )
       {
@@ -1350,7 +1355,7 @@ SCIP_RETCODE solveDerivativeEquation(
 
          SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &s, TRUE, &fval, &grad) );
 
-         /* SCIPdebugMessage("s = %.20g [%g,%g] f(s) = %g grad = %g (perturbed by %g)\n", s, lb, ub, fval, grad, iter <= 65 ? 0.1 / (1<<iter) : 1e-20); */
+         /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g grad = %g (perturbed by %g)\n", s, lb, ub, fval, grad, iter <= 65 ? 0.1 / (1<<iter) : 1e-20); */
 
          assert(SCIPisFinite(grad));
       }
@@ -1365,7 +1370,7 @@ SCIP_RETCODE solveDerivativeEquation(
 
       SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) );
 
-      /* SCIPdebugMessage("s = %.20g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
+      /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
 
       if( !SCIPisFinite(hess) )
       {
@@ -1492,7 +1497,7 @@ SCIP_RETCODE generateLinearizationCut(
 
       if( !SCIPisFinite(fval) || !SCIPisFinite(fgrad[0]) || !SCIPisFinite(fgrad[1]) )
       {
-         SCIPdebugMessage("could not evaluate f at given reference point and perturbed one");
+         SCIPdebugMsg(scip, "could not evaluate f at given reference point and perturbed one");
          *row = NULL;
          return SCIP_OKAY;
       }
@@ -1579,13 +1584,13 @@ SCIP_RETCODE generateEstimatingHyperplane(
 
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) || SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
    {
-      SCIPdebugMessage("skip estimating hyperplane since <%s> or <%s> is unbounded\n", SCIPvarGetName(x), SCIPvarGetName(y));
+      SCIPdebugMsg(scip, "skip estimating hyperplane since <%s> or <%s> is unbounded\n", SCIPvarGetName(x), SCIPvarGetName(y));
       return SCIP_OKAY;
    }
 
    if( SCIPisEQ(scip, xlb, xub) && SCIPisEQ(scip, ylb, yub) )
    {
-      SCIPdebugMessage("skip estimating hyperplane since both <%s> and <%s> are fixed\n", SCIPvarGetName(x), SCIPvarGetName(y));
+      SCIPdebugMsg(scip, "skip estimating hyperplane since both <%s> and <%s> are fixed\n", SCIPvarGetName(x), SCIPvarGetName(y));
       return SCIP_OKAY;
    }
 
@@ -1615,7 +1620,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
 
       if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !SCIPisFinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
       {
-         SCIPdebugMessage("skip hyperplane since function cannot be evaluated\n");
+         SCIPdebugMsg(scip, "skip hyperplane since function cannot be evaluated\n");
          return SCIP_OKAY;
       }
 
@@ -1638,7 +1643,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
 
       if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !SCIPisFinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) )
       {
-         SCIPdebugMessage("skip hyperplane since function cannot be evaluated\n");
+         SCIPdebugMsg(scip, "skip hyperplane since function cannot be evaluated\n");
          return SCIP_OKAY;
       }
 
@@ -1665,15 +1670,15 @@ SCIP_RETCODE generateEstimatingHyperplane(
       p4val = -p4val;
    }
 
-   SCIPdebugMessage("p1 = (%g, %g), f(p1) = %g\n", p1[0], p1[1], p1val);
-   SCIPdebugMessage("p2 = (%g, %g), f(p2) = %g\n", p2[0], p2[1], p2val);
-   SCIPdebugMessage("p3 = (%g, %g), f(p3) = %g\n", p3[0], p3[1], p3val);
-   SCIPdebugMessage("p4 = (%g, %g), f(p4) = %g\n", p4[0], p4[1], p4val);
+   SCIPdebugMsg(scip, "p1 = (%g, %g), f(p1) = %g\n", p1[0], p1[1], p1val);
+   SCIPdebugMsg(scip, "p2 = (%g, %g), f(p2) = %g\n", p2[0], p2[1], p2val);
+   SCIPdebugMsg(scip, "p3 = (%g, %g), f(p3) = %g\n", p3[0], p3[1], p3val);
+   SCIPdebugMsg(scip, "p4 = (%g, %g), f(p4) = %g\n", p4[0], p4[1], p4val);
 
    if( !SCIPisFinite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) || !SCIPisFinite(p2val) || SCIPisInfinity(scip, REALABS(p2val)) ||
       ! SCIPisFinite(p3val) || SCIPisInfinity(scip, REALABS(p3val)) || !SCIPisFinite(p4val) || SCIPisInfinity(scip, REALABS(p4val)) )
    {
-      SCIPdebugMessage("skip hyperplane since function cannot be evaluated\n");
+      SCIPdebugMsg(scip, "skip hyperplane since function cannot be evaluated\n");
       return SCIP_OKAY;
    }
 
@@ -1741,7 +1746,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
       }
    }
 
-   SCIPdebugMessage("alpha = %g, beta = %g, gamma = %g, delta = %g\n", alpha, beta, gamma_, delta);
+   SCIPdebugMsg(scip, "alpha = %g, beta = %g, gamma = %g, delta = %g\n", alpha, beta, gamma_, delta);
 
    /* check if bad luck: should not happen if xlb != xub and ylb != yub and numerics are fine */
    if( SCIPisInfinity(scip, delta) || SCIPisZero(scip, gamma_) )
@@ -1802,7 +1807,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
    }
    else
    {
-      SCIPdebugMessage("failed to compute overestimator for all-convex constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "failed to compute overestimator for all-convex constraint <%s>\n", SCIPconsGetName(cons));
    }
 
    return SCIP_OKAY;
@@ -1885,9 +1890,9 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    assert(!SCIPisEQ(scip,ylb,yval));
    assert(!SCIPisEQ(scip,yub,yval));
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    t = (yub - yval) / (yub - ylb);
 
@@ -2014,13 +2019,13 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    /* SCIP_CALL( SCIPexprtreeEval(vredtree, &sval, &vredval) ); */
    *convenvvalue = t * frval + (1.0 - t) * fsval;
 
-   SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-   SCIPdebugMessage("Parallel: r=%g in [%g,%g], s=%g in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
-   SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
+   SCIPdebugMsg(scip, "Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+   SCIPdebugMsg(scip, "Parallel: r=%g in [%g,%g], s=%g in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
+   SCIPdebugMsg(scip, "(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
 
    if( !SCIPisFinite(grad[0]) || SCIPisInfinity(scip, REALABS(grad[0])) )
    {
-      SCIPdebugMessage("f not differentiable in (x0,y0) w.r.t. x\n");
+      SCIPdebugMsg(scip, "f not differentiable in (x0,y0) w.r.t. x\n");
       return SCIP_OKAY;
    }
 
@@ -2030,7 +2035,7 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    cutcoeff[2]   = yub - ylb;
    cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * *convenvvalue;
 
-   SCIPdebugMessage("Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g, cutcoeff[2]=%g, cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
+   SCIPdebugMsg(scip, "Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g, cutcoeff[2]=1.0, cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
 
    *success = TRUE;
 
@@ -2117,10 +2122,10 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
 
    *success = FALSE;
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
-   SCIPdebugMessage("%s[%g,%g] = %g  %s[%g,%g] = %g\n", SCIPvarGetName(x), xlb, xub, xval, SCIPvarGetName(y), ylb, yub, yval);
+   SCIPdebugMsgPrint(scip, "\n");
+   SCIPdebugMsg(scip, "%s[%g,%g] = %g  %s[%g,%g] = %g\n", SCIPvarGetName(x), xlb, xub, xval, SCIPvarGetName(y), ylb, yub, yval);
 
    /* check in which triangle the point (xval,yval) lies */
    if( yval <= (ylb-yub) / (xub-xlb) * (xval-xlb) + yub )
@@ -2207,7 +2212,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       sval = (xval-xlb*tval)/(1-tval);
       sval = MAX(xlb, MIN(xub, sval));
 
-      SCIPdebugMessage("LowerLeft: t[%g,%g] = %g -> r = %g, s = %g\n",tlb,tub,tval,rval,sval);
+      SCIPdebugMsg(scip, "LowerLeft: t[%g,%g] = %g -> r = %g, s = %g\n",tlb,tub,tval,rval,sval);
 
       /* compute vred(tval) */
       SCIP_CALL( SCIPexprtreeEval(vredtree, &tval, convenvvalue) );
@@ -2269,10 +2274,10 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
          cutcoeff[3] = cutcoeff[0]*xlb+cutcoeff[1]*rval-cutcoeff[2]*frval;
       }
 
-      SCIPdebugMessage("LowerLeft: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("LowerLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(s,ylb)=%g, f(xlb,r)=%g\n",rval,xlb,xub,sval,ylb,yub,fsval,frval);
-      SCIPdebugMessage("(s,ylb)=(%g,%g) (xlb,r)=(%g,%g) t=%g, vredval=%g\n",sval,ylb,xlb,rval,tval,*convenvvalue);
-      SCIPdebugMessage("LowerLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
+      SCIPdebugMsg(scip, "LowerLeft: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "LowerLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(s,ylb)=%g, f(xlb,r)=%g\n",rval,xlb,xub,sval,ylb,yub,fsval,frval);
+      SCIPdebugMsg(scip, "(s,ylb)=(%g,%g) (xlb,r)=(%g,%g) t=%g, vredval=%g\n",sval,ylb,xlb,rval,tval,*convenvvalue);
+      SCIPdebugMsg(scip, "LowerLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
    }
    else
    {
@@ -2426,10 +2431,10 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
          cutcoeff[3] = cutcoeff[0]*sval+cutcoeff[1]*yub-cutcoeff[2]*fsval;
       }
 
-      SCIPdebugMessage("UpperRight: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("UpperRight: r=%g in [%g,%g], s=%g in [%g,%g], f(r,yub)=%g, f(xub,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
-      SCIPdebugMessage("(s,yub)=(%g,%g) (xub,r)=(%g,%g) t=%g, vredval=%g\n",sval,yub,xub,rval,tval,*convenvvalue);
-      SCIPdebugMessage("UpperRight: cutcoeff[0]=%g, cutcoeff[1]=%g, cutcoeff[2]=%g, cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
+      SCIPdebugMsg(scip, "UpperRight: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "UpperRight: r=%g in [%g,%g], s=%g in [%g,%g], f(r,yub)=%g, f(xub,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
+      SCIPdebugMsg(scip, "(s,yub)=(%g,%g) (xub,r)=(%g,%g) t=%g, vredval=%g\n",sval,yub,xub,rval,tval,*convenvvalue);
+      SCIPdebugMsg(scip, "UpperRight: cutcoeff[0]=%g, cutcoeff[1]=%g, cutcoeff[2]=%g, cutcoeff[3]=%g\n",cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
    }
 
    return SCIP_OKAY;
@@ -2513,9 +2518,9 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
 
    *success = FALSE;
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    /* check in which triangle the point (xval,yval) lies */
    if( yval <= (yub-ylb)/(xub-xlb)*(xval-xlb)+ylb )
@@ -2665,10 +2670,10 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       }
 
 
-      SCIPdebugMessage("LowerRight: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("LowerRight: t=%g in [%g,%g], r=%g in [%g,%g], s=%g in [%g,%g]\n",tval,tlb,tub,rval,xlb,xub,sval,ylb,yub);
-      SCIPdebugMessage("LowerRight: (r,ylb)=(%g,%g) (xub,sval)=(%g,%g) vredval=%g\n",rval,ylb,xub,sval,*convenvvalue);
-      SCIPdebugMessage("LowerRight: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
+      SCIPdebugMsg(scip, "LowerRight: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "LowerRight: t=%g in [%g,%g], r=%g in [%g,%g], s=%g in [%g,%g]\n",tval,tlb,tub,rval,xlb,xub,sval,ylb,yub);
+      SCIPdebugMsg(scip, "LowerRight: (r,ylb)=(%g,%g) (xub,sval)=(%g,%g) vredval=%g\n",rval,ylb,xub,sval,*convenvvalue);
+      SCIPdebugMsg(scip, "LowerRight: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=1.0,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
 
    }
    else
@@ -2816,10 +2821,10 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
          cutcoeff[3] = cutcoeff[0]*xlb+cutcoeff[1]*sval-cutcoeff[2]*fsval;
       }
 
-      SCIPdebugMessage("UpperLeft: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("UpperLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(r,yub)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
-      SCIPdebugMessage("t=%g in [%g,%g], (r,yub)=(%g,%g) (xlb,sval)=(%g,%g) vredval=%g\n",tval,tlb,tub,rval,yub,xlb,sval,*convenvvalue);
-      SCIPdebugMessage("UpperLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
+      SCIPdebugMsg(scip, "UpperLeft: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "UpperLeft: r=%g in [%g,%g], s=%g in [%g,%g], f(r,yub)=%g, f(xlb,s)=%g\n",rval,xlb,xub,sval,ylb,yub,frval,fsval);
+      SCIPdebugMsg(scip, "t=%g in [%g,%g], (r,yub)=(%g,%g) (xlb,sval)=(%g,%g) vredval=%g\n",tval,tlb,tub,rval,yub,xlb,sval,*convenvvalue);
+      SCIPdebugMsg(scip, "UpperLeft: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=1.0,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
    }
 
    return SCIP_OKAY;
@@ -2879,13 +2884,13 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
    if( SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
    {
-      SCIPdebugMessage("skip convex-concave underestimator, since y is unbounded\n");
+      SCIPdebugMsg(scip, "skip convex-concave underestimator, since y is unbounded\n");
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    if( SCIPisEQ(scip, xlb, xub) )
    {
@@ -2897,7 +2902,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( SCIPisEQ(scip, ylb, yub) )
       {
-         SCIPdebugMessage("skip convex-concave underestimator, since both x and y are fixed\n");
+         SCIPdebugMsg(scip, "skip convex-concave underestimator, since both x and y are fixed\n");
          return SCIP_OKAY;
       }
 
@@ -2908,7 +2913,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( !SCIPisFinite(f_ylb) )
       {
-         SCIPdebugMessage("cannot evaluate function at (xlb, ylb)\n");
+         SCIPdebugMsg(scip, "cannot evaluate function at (xlb, ylb)\n");
          return SCIP_OKAY;
       }
 
@@ -2918,7 +2923,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
       if( !SCIPisFinite(f_yub) )
       {
-         SCIPdebugMessage("cannot evaluate function at (xlb, yub)\n");
+         SCIPdebugMsg(scip, "cannot evaluate function at (xlb, yub)\n");
          return SCIP_OKAY;
       }
 
@@ -2956,7 +2961,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
 
          if( !SCIPisFinite(fval) || !SCIPisFinite(grad[0]) || SCIPisInfinity(scip, REALABS(grad[0])) )
          {
-            SCIPdebugMessage("cannot evaluate function or derivative in (xval,ylb), also after perturbation\n");
+            SCIPdebugMsg(scip, "cannot evaluate function or derivative in (xval,ylb), also after perturbation\n");
             return SCIP_OKAY;
          }
       }
@@ -3012,8 +3017,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * ylb - cutcoeff[2] * fvalylb;   /* constant */
          *convenvvalue = fvalylb;
 
-         SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n",
-            cutcoeff[0]/cutcoeff[2], cutcoeff[1]/cutcoeff[2], cutcoeff[2]/cutcoeff[2], cutcoeff[3]/cutcoeff[2]);
+         SCIPdebugMsg(scip, "alpha: %g, beta: %g, gamma: 1.0, delta: %g\n",
+            cutcoeff[0]/cutcoeff[2], cutcoeff[1]/cutcoeff[2], cutcoeff[3]/cutcoeff[2]);
 
          *success = TRUE;
          return SCIP_OKAY;
@@ -3050,9 +3055,9 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          SCIPexprtreeSetParamVal(f_yfixed, 0, yub);
          SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
-         SCIPdebugMessage("f(x,yub) = ");
+         SCIPdebugMsg(scip, "f(x,yub) = ");
          SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
-         SCIPdebugPrintf("\n");
+         SCIPdebugMsgPrint(scip, "\n");
 
          /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
          SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
@@ -3068,7 +3073,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
             SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
 
-            SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
+            SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
                xub, ylb, grad[0], xub, fxub - grad[0] * xub);
 
@@ -3092,7 +3097,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* compute f(xtilde, yub) */
             SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
 
-            SCIPdebugMessage("xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
+            SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
 
             /* setup cut coefficients */
             cutcoeff[0]   = (yub - ylb) * grad[0];                       /* coefficient of x */
@@ -3101,7 +3106,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * ylb - cutcoeff[2] * fval;   /* constant */
             *convenvvalue = fval;
 
-            SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
+            SCIPdebugMsg(scip, "alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
 
             return SCIP_OKAY;
          }
@@ -3149,7 +3154,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
             SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
 
-            SCIPdebugMessage("couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
+            SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
                xub, yub, grad[0], xub, fxub - grad[0] * xub);
 
@@ -3173,7 +3178,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* compute f(xtilde, yub) */
             SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
 
-            SCIPdebugMessage("xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
+            SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
 
             /* set up cut coefficients */
             cutcoeff[0]   = (yub - ylb) * grad[0];
@@ -3182,7 +3187,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yub - cutcoeff[2] * fval;
             *convenvvalue = fval;
 
-            SCIPdebugMessage("alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
+            SCIPdebugMsg(scip, "alpha: %g, beta: %g, gamma: %g, delta: %g\n", cutcoeff[0], cutcoeff[1], cutcoeff[2], cutcoeff[3]);
 
             return SCIP_OKAY;
          }
@@ -3224,9 +3229,9 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       SCIP_CALL( SCIPexprtreeSetParams(vred, 4, paramvals) );
       SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, vred) );
 
-      SCIPdebugMessage("vred(s;x0,y0,ylb,yub) = ");
+      SCIPdebugMsg(scip, "vred(s;x0,y0,ylb,yub) = ");
       SCIPdebug( SCIPexprtreePrint(vred, SCIPgetMessagehdlr(scip), NULL, NULL, paramnames) );
-      SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, "\n");
 
       /* compute bounds on s */
       t = (yub - yval) / (yub - ylb);
@@ -3306,13 +3311,13 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          /* compute vred(s) = t * f(rval, ylb) + (1-t) * f(sval, yub) */
          *convenvvalue = t * frval + (1.0 - t) * fsval;
 
-         SCIPdebugMessage("Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-         SCIPdebugMessage("Parallel: r=%g s=%g in [%g,%g], y in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,sval,xlb,xub,ylb,yub,frval,fsval);
-         SCIPdebugMessage("(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
+         SCIPdebugMsg(scip, "Parallel: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+         SCIPdebugMsg(scip, "Parallel: r=%g s=%g in [%g,%g], y in [%g,%g], f(r,ylb)=%g, f(xlb,s)=%g\n",rval,sval,xlb,xub,ylb,yub,frval,fsval);
+         SCIPdebugMsg(scip, "(r,ylb)=(%g,%g), (s,yub)=(%g,%g), vredval=%g\n",rval,ylb,sval,yub,*convenvvalue);
 
          if( !SCIPisFinite(grad[0]) || SCIPisInfinity(scip, REALABS(grad[0])) )
          {
-            SCIPdebugMessage("f not differentiable at (x0,y0) w.r.t. x\n");
+            SCIPdebugMsg(scip, "f not differentiable at (x0,y0) w.r.t. x\n");
             *success = FALSE;
             return SCIP_OKAY;
          }
@@ -3323,7 +3328,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          cutcoeff[2]   = yub - ylb;
          cutcoeff[3]   = cutcoeff[0] * xval + cutcoeff[1] * yval - cutcoeff[2] * *convenvvalue;
 
-         SCIPdebugMessage("Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[2]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
+         SCIPdebugMsg(scip, "Parallel: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=1.0,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
       }
    }
 
@@ -3361,7 +3366,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
    *row = NULL;
 
-   SCIPdebugMessage("generate %sestimator for convex-concave constraint <%s>\n",
+   SCIPdebugMsg(scip, "generate %sestimator for convex-concave constraint <%s>\n",
       (violside == SCIP_SIDETYPE_LEFT ? "over" : "under"), SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -3626,14 +3631,14 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
 
    *success = FALSE;
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    xval = xyref[0];
    yval = xyref[1];
 
-   SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n",xval,xlb,xub,yval,ylb,yub);
+   SCIPdebugMsg(scip, "xval=%g in [%g,%g], yval=%g in [%g,%g]\n",xval,xlb,xub,yval,ylb,yub);
 
    if( SCIPisEQ(scip, ylb, yub) )
    {
@@ -3700,9 +3705,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
       if( !*success )
          return SCIP_OKAY;
 
-      SCIPdebugMessage("Boundary x=lb: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
-      SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
+      SCIPdebugMsg(scip, "Boundary x=lb: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "convenvvalue = %g\n",*convenvvalue);
+      SCIPdebugMsg(scip, "cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
       return SCIP_OKAY;
@@ -3717,9 +3722,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
       if( !*success )
          return SCIP_OKAY;
 
-      SCIPdebugMessage("Boundary y=lb: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
-      SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
+      SCIPdebugMsg(scip, "Boundary y=lb: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "convenvvalue = %g\n",*convenvvalue);
+      SCIPdebugMsg(scip, "cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
       return SCIP_OKAY;
@@ -3742,9 +3747,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
       if( !*success )
          return SCIP_OKAY;
 
-      SCIPdebugMessage("Boundary x=ub: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
-      SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
+      SCIPdebugMsg(scip, "Boundary x=ub: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "convenvvalue = %g\n",*convenvvalue);
+      SCIPdebugMsg(scip, "cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
       return SCIP_OKAY;
@@ -3759,9 +3764,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
       if( !*success )
          return SCIP_OKAY;
 
-      SCIPdebugMessage("Boundary y=ub: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
-      SCIPdebugMessage("convenvvalue = %g\n",*convenvvalue);
-      SCIPdebugMessage("cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
+      SCIPdebugMsg(scip, "Boundary y=ub: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
+      SCIPdebugMsg(scip, "convenvvalue = %g\n",*convenvvalue);
+      SCIPdebugMsg(scip, "cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=%g,cutcoeff[3]=%g\n",
          cutcoeff[0],cutcoeff[1],cutcoeff[2],cutcoeff[3]);
 
       return SCIP_OKAY;
@@ -3796,10 +3801,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
 {
    SCIP_VAR*      x;
    SCIP_VAR*      y;
-   SCIP_Real      xval;
    SCIP_Real      xlb;
    SCIP_Real      xub;
-   SCIP_Real      yval;
    SCIP_Real      ylb;
    SCIP_Real      yub;
    SCIP_Real      xub_ylb[2];
@@ -3840,9 +3843,6 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
 
    *success = FALSE;
 
-   xval = xyref[0];
-   yval = xyref[1];
-
    xub_ylb[0] = xub;
    xub_ylb[1] = ylb;
    xlb_yub[0] = xlb;
@@ -3853,21 +3853,21 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
 
    if( !SCIPisFinite(fval_xub_ylb) || SCIPisInfinity(scip, REALABS(fval_xub_ylb)) || !SCIPisFinite(fval_xlb_yub) || SCIPisInfinity(scip, REALABS(fval_xlb_yub)) )
    {
-      SCIPdebugMessage("skip 1-convex underestimator since function cannot be evaluated\n");
+      SCIPdebugMsg(scip, "skip 1-convex underestimator since function cannot be evaluated\n");
       return SCIP_OKAY;
    }
 
    if( !SCIPisFinite(grad_xub_ylb[0]) || !SCIPisFinite(grad_xlb_yub[1]) )
    {
-      SCIPdebugMessage("skip 1-convex underestimator since function cannot be differentiated\n");
+      SCIPdebugMsg(scip, "skip 1-convex underestimator since function cannot be differentiated\n");
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n", xval, xlb, xub, yval, ylb, yub);
+   SCIPdebugMsg(scip, "xval=%g in [%g,%g], yval=%g in [%g,%g]\n", xyref[0], xlb, xub, xyref[1], ylb, yub);
 
    /* assure (xub-xlb)*f_x(xub,ylb) - (yub-ylb)*f_y(xlb,yub) >= f(xub,ylb) - f(xlb,yub) */
    /* f_y(xlb,yub)*(ylb-yub)* + f(xlb,yub) >= f_x(xub,ylb)*(xub-xlb) + f(xub,ylb) */
@@ -3929,9 +3929,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
    }
 
    /* Select the underestimator with the lowest convex envelope */
-   SCIPdebugMessage("\n");
-   SCIPdebugMessage("Triangulation: convenvvalue=%g\n", all_convenvvalue[0]);
-   SCIPdebugMessage("Parallel    Y: convenvvalue=%g\n", all_convenvvalue[1]);
+   SCIPdebugMsg(scip, "\n");
+   SCIPdebugMsg(scip, "Triangulation: convenvvalue=%g\n", all_convenvvalue[0]);
+   SCIPdebugMsg(scip, "Parallel    Y: convenvvalue=%g\n", all_convenvvalue[1]);
 
    lowest = SCIPinfinity(scip);
    lowestidx = -1;
@@ -3996,10 +3996,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
 {
    SCIP_VAR*      x;
    SCIP_VAR*      y;
-   SCIP_Real      xval;
    SCIP_Real      xlb;
    SCIP_Real      xub;
-   SCIP_Real      yval;
    SCIP_Real      ylb;
    SCIP_Real      yub;
    SCIP_Real      xlb_ylb[2];
@@ -4040,12 +4038,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
 
    *success = FALSE;
 
-   SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
-
-   xval = xyref[0];
-   yval = xyref[1];
+   SCIPdebugMsgPrint(scip, "\n");
 
    xlb_ylb[0] = xlb;
    xlb_ylb[1] = ylb;
@@ -4057,17 +4052,17 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
 
    if( !SCIPisFinite(fval_xlb_ylb) || SCIPisInfinity(scip, REALABS(fval_xlb_ylb)) || !SCIPisFinite(fval_xub_yub) || SCIPisInfinity(scip, REALABS(fval_xub_yub)) )
    {
-      SCIPdebugMessage("skip 1-convex underestimator since function cannot be evaluated\n");
+      SCIPdebugMsg(scip, "skip 1-convex underestimator since function cannot be evaluated\n");
       return SCIP_OKAY;
    }
 
    if( !SCIPisFinite(grad_xlb_ylb[1]) || !SCIPisFinite(grad_xub_yub[0]) )
    {
-      SCIPdebugMessage("skip 1-convex underestimator since function cannot be differentiated\n");
+      SCIPdebugMsg(scip, "skip 1-convex underestimator since function cannot be differentiated\n");
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n",xval,xlb,xub,yval,ylb,yub);
+   SCIPdebugMsg(scip, "xval=%g in [%g,%g], yval=%g in [%g,%g]\n",xyref[0],xlb,xub,xyref[1],ylb,yub);
 
    /* assure f_y(xlb,ylb)*(yub-ylb)* + f(xlb,ylb) >= f_x(xub,yub)*(xlb-xub) + f(xub,yub) */
    if( SCIPisGE( scip, fval_xlb_ylb+(yub-ylb)*grad_xlb_ylb[1], fval_xub_yub+(xlb-xub)*grad_xub_yub[0] ) )
@@ -4127,9 +4122,9 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
    }
 
    /* select the underestimator with the lowest convex envelope */
-   SCIPdebugMessage("\n");
-   SCIPdebugMessage("Triangulation: convenvvalue=%g\n", all_convenvvalue[0]);
-   SCIPdebugMessage("Parallel    Y: convenvvalue=%g\n", all_convenvvalue[1]);
+   SCIPdebugMsg(scip, "\n");
+   SCIPdebugMsg(scip, "Triangulation: convenvvalue=%g\n", all_convenvvalue[0]);
+   SCIPdebugMsg(scip, "Parallel    Y: convenvvalue=%g\n", all_convenvvalue[1]);
 
    lowest = SCIPinfinity(scip);
    lowestidx = -1;
@@ -4229,7 +4224,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    /* assert that the bounds are finite */
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) || SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
    {
-      SCIPdebugMessage("skip underestimate for 1-convex indefinite constraint <%s> since <%s> or <%s> is unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
+      SCIPdebugMsg(scip, "skip underestimate for 1-convex indefinite constraint <%s> since <%s> or <%s> is unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
       return SCIP_OKAY;
    }
 
@@ -4264,13 +4259,13 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
       if( hess[1] > 0.0 )
       {
          /* Pattern A: (R>=0 x R<=0) union (R<=0 x R>=0)*/
-         SCIPdebugMessage("Pattern A\n");
+         SCIPdebugMsg(scip, "Pattern A\n");
          SCIP_CALL( generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(scip, exprinterpreter, f, xyref, cutcoeff, &convenvvalue, &success) );
       }
       else
       {
          /* Pattern B: (R>=0 x R>=0) union (R<=0 x R <=0)*/
-         SCIPdebugMessage("Pattern B\n");
+         SCIPdebugMsg(scip, "Pattern B\n");
          SCIP_CALL( generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(scip, exprinterpreter, f, xyref, cutcoeff, &convenvvalue, &success) );
       }
    }
@@ -4361,17 +4356,17 @@ SCIP_RETCODE generateCut(
    x0y0[0] = MIN(MAX(SCIPvarGetLbLocal(x),x0y0[0]),SCIPvarGetUbLocal(x));  /*lint !e666*/
    x0y0[1] = MIN(MAX(SCIPvarGetLbLocal(y),x0y0[1]),SCIPvarGetUbLocal(y));  /*lint !e666*/
 
-   SCIPdebugPrintf("\n");
-   SCIPdebugMessage("generate cut for constraint <%s> with %s hand side violated by %g\n", SCIPconsGetName(cons), violside == SCIP_SIDETYPE_LEFT ? "left" : "right", violside == SCIP_SIDETYPE_LEFT ? consdata->lhsviol : consdata->rhsviol);
-   SCIPdebugMessage("convextype = %d\n",consdata->convextype);
-   SCIPdebugMessage("%s = %g with bounds [%g, %g], %s = %g with bounds [%g, %g]",
+   SCIPdebugMsgPrint(scip, "\n");
+   SCIPdebugMsg(scip, "generate cut for constraint <%s> with %s hand side violated by %g\n", SCIPconsGetName(cons), violside == SCIP_SIDETYPE_LEFT ? "left" : "right", violside == SCIP_SIDETYPE_LEFT ? consdata->lhsviol : consdata->rhsviol);
+   SCIPdebugMsg(scip, "convextype = %d\n",consdata->convextype);
+   SCIPdebugMsg(scip, "%s = %g with bounds [%g, %g], %s = %g with bounds [%g, %g]",
       SCIPvarGetName(x), SCIPgetSolVal(scip, sol, x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x),
       SCIPvarGetName(y), SCIPgetSolVal(scip, sol, y), SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y));
    if( consdata->z != NULL )
-      SCIPdebugPrintf(", %s = %g with bounds [%g, %g]", SCIPvarGetName(consdata->z), SCIPgetSolVal(scip, sol, consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
-   SCIPdebugPrintf("\n");
+      SCIPdebugMsgPrint(scip, ", %s = %g with bounds [%g, %g]", SCIPvarGetName(consdata->z), SCIPgetSolVal(scip, sol, consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
+   SCIPdebugMsgPrint(scip, "\n");
    SCIPdebugPrintCons(scip, cons, NULL);
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    switch( consdata->convextype )
    {
@@ -4413,7 +4408,7 @@ SCIP_RETCODE generateCut(
    }
    default:
    {
-      SCIPdebugMessage("cut generation for convexity type not implemented\n");
+      SCIPdebugMsg(scip, "cut generation for convexity type not implemented\n");
    }
    }  /*lint !e788*/
 
@@ -4438,12 +4433,12 @@ SCIP_RETCODE generateCut(
          int j;
 
          /* if range of coefficients is bad, find very small coefficients and make them zero */
-         SCIPdebugMessage("cut coefficients for constraint <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIPconsGetName(cons), mincoef, maxcoef);
+         SCIPdebugMsg(scip, "cut coefficients for constraint <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIPconsGetName(cons), mincoef, maxcoef);
 
          /* if minimal coefficient is given by z, then give up (probably the maximal coefficient is the problem) */
          if( mincoef == consdata->zcoef )  /*lint !e777*/
          {
-            SCIPdebugMessage("could not eliminate small coefficient, since it comes from linear part\n");
+            SCIPdebugMsg(scip, "could not eliminate small coefficient, since it comes from linear part\n");
             break;
          }
 
@@ -4460,7 +4455,7 @@ SCIP_RETCODE generateCut(
             /* try to eliminate coefficient with minimal absolute value by weakening cut and try again */
             if( ((coef > 0.0 && violside == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && violside == SCIP_SIDETYPE_LEFT)) && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
             {
-               SCIPdebugMessage("eliminate coefficient %g for <%s> = %g [%g, %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+               SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> = %g [%g, %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
                constant += coef * (SCIProwIsLocal(*row) ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var));
                SCIP_CALL( SCIPaddVarToRow(scip, *row, var, -coef) );
@@ -4469,7 +4464,7 @@ SCIP_RETCODE generateCut(
 
             if( ((coef < 0.0 && violside == SCIP_SIDETYPE_RIGHT) || (coef > 0.0 && violside == SCIP_SIDETYPE_LEFT)) && !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
             {
-               SCIPdebugMessage("eliminate coefficient %g for <%s> = %g [%g, %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+               SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> = %g [%g, %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
                constant += coef * (SCIProwIsLocal(*row) ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var));
                SCIP_CALL( SCIPaddVarToRow(scip, *row, var, -coef) );
@@ -4481,7 +4476,7 @@ SCIP_RETCODE generateCut(
 
          if( j < SCIProwGetNNonz(*row) )
          {
-            SCIPdebugMessage("could not eliminate small coefficient\n");
+            SCIPdebugMsg(scip, "could not eliminate small coefficient\n");
             SCIP_CALL( SCIPreleaseRow(scip, row) );
             break;
          }
@@ -4503,7 +4498,7 @@ SCIP_RETCODE generateCut(
       /* avoid numerically very bad cuts */
       if( maxcoef / mincoef > cutmaxrange )
       {
-         SCIPdebugMessage("drop row for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
+         SCIPdebugMsg(scip, "drop row for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
             SCIPconsGetName(cons), mincoef, maxcoef, maxcoef / mincoef);
       }
 
@@ -4511,7 +4506,7 @@ SCIP_RETCODE generateCut(
          (  (violside == SCIP_SIDETYPE_LEFT  && SCIPisInfinity(scip, -SCIProwGetLhs(*row))) ||
             (violside == SCIP_SIDETYPE_RIGHT && SCIPisInfinity(scip,  SCIProwGetRhs(*row)))) )
       {
-         SCIPdebugMessage("drop row for constraint <%s> because of very large side: %g\n", SCIPconsGetName(cons), violside == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*row) : SCIProwGetRhs(*row));
+         SCIPdebugMsg(scip, "drop row for constraint <%s> because of very large side: %g\n", SCIPconsGetName(cons), violside == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*row) : SCIProwGetRhs(*row));
          SCIP_CALL( SCIPreleaseRow(scip, row) );
       }
    }
@@ -4729,12 +4724,12 @@ SCIP_RETCODE separatePoint(
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
             if( infeasible )
             {
-               SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
+               SCIPdebugMsg(scip, "cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
                *result = SCIP_CUTOFF;
             }
             else
             {
-               SCIPdebugMessage("added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
+               SCIPdebugMsg(scip, "added cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
                *result = SCIP_SEPARATED;
             }
             if( bestefficacy != NULL && efficacy > *bestefficacy )
@@ -4746,7 +4741,7 @@ SCIP_RETCODE separatePoint(
          }
          else
          {
-            SCIPdebugMessage("abandon cut since efficacy %g is too small or not applicable\n", efficacy);
+            SCIPdebugMsg(scip, "abandon cut since efficacy %g is too small or not applicable\n", efficacy);
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -4809,7 +4804,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "catched new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    row = NULL;
 
@@ -4868,7 +4863,7 @@ SCIP_RETCODE registerBranchingVariables(
       assert(conss != NULL);
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      SCIPdebugMessage("cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+      SCIPdebugMsg(scip, "cons <%s> violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
 
       xy = SCIPexprtreeGetVars(consdata->f);
       assert(xy != NULL);
@@ -4885,7 +4880,7 @@ SCIP_RETCODE registerBranchingVariables(
             /* regarding left hand side, we are concave in x and convex in y, so branch on x, if not fixed */
             if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
             {
-               SCIPdebugMessage("register variable x = <%s>[%g,%g] in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+               SCIPdebugMsg(scip, "register variable x = <%s>[%g,%g] in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
                SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
                ++*nnotify;
             }
@@ -4895,7 +4890,7 @@ SCIP_RETCODE registerBranchingVariables(
             /* regarding right hand side, we are convex in x and concave in y, so branch on y, if not fixed */
             if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
             {
-               SCIPdebugMessage("register variable y = <%s>[%g,%g] in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+               SCIPdebugMsg(scip, "register variable y = <%s>[%g,%g] in convex-concave <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
                SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
                ++*nnotify;
             }
@@ -4912,14 +4907,14 @@ SCIP_RETCODE registerBranchingVariables(
          /* register both variables, if not fixed */
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
          {
-            SCIPdebugMessage("register variable x = <%s>[%g,%g] in 1-convex <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMsg(scip, "register variable x = <%s>[%g,%g] in 1-convex <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
 
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
          {
-            SCIPdebugMessage("register variable y = <%s>[%g,%g] in 1-convex <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMsg(scip, "register variable y = <%s>[%g,%g] in 1-convex <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
@@ -4938,14 +4933,14 @@ SCIP_RETCODE registerBranchingVariables(
          /* register both variables, if not fixed */
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0])) )
          {
-            SCIPdebugMessage("register variable x = <%s>[%g,%g] in allconvex <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMsg(scip, "register variable x = <%s>[%g,%g] in allconvex <%s> with violation %g %g\n", SCIPvarGetName(xy[0]), SCIPvarGetLbLocal(xy[0]), SCIPvarGetUbLocal(xy[0]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[0], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
 
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1])) )
          {
-            SCIPdebugMessage("register variable y = <%s>[%g,%g] in allconvex <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
+            SCIPdebugMsg(scip, "register variable y = <%s>[%g,%g] in allconvex <%s> with violation %g %g\n", SCIPvarGetName(xy[1]), SCIPvarGetLbLocal(xy[1]), SCIPvarGetUbLocal(xy[1]), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
             SCIP_CALL( SCIPaddExternBranchCand(scip, xy[1], consdata->lhsviol, SCIP_INVALID) );
             ++*nnotify;
          }
@@ -5072,7 +5067,7 @@ SCIP_RETCODE enforceViolatedFixedNonlinear(
          coef = consdata->zcoef;
          assert(!SCIPisZero(scip, coef));
 
-         SCIPdebugMessage("Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(consdata->z), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(consdata->z), rhs);
 
          /* possibly correct lhs/rhs */
          if( coef >= 0.0 )
@@ -5096,19 +5091,19 @@ SCIP_RETCODE enforceViolatedFixedNonlinear(
             else
                lhs = -SCIPinfinity(scip);
          }
-         SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(consdata->z), rhs);
+         SCIPdebugMsg(scip, "Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(consdata->z), rhs);
 
          if( !SCIPisInfinity(scip, -lhs) )
          {
             SCIP_CALL( SCIPtightenVarLb(scip, consdata->z, lhs, TRUE, infeasible, &tightened) );
             if( *infeasible )
             {
-               SCIPdebugMessage("Lower bound leads to infeasibility.\n");
+               SCIPdebugMsg(scip, "Lower bound leads to infeasibility.\n");
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               SCIPdebugMessage("Lower bound changed.\n");
+               SCIPdebugMsg(scip, "Lower bound changed.\n");
                *reduceddom = TRUE;
                return SCIP_OKAY;
             }
@@ -5119,12 +5114,12 @@ SCIP_RETCODE enforceViolatedFixedNonlinear(
             SCIP_CALL( SCIPtightenVarUb(scip, consdata->z, rhs, TRUE, infeasible, &tightened) );
             if( *infeasible )
             {
-               SCIPdebugMessage("Upper bound leads to infeasibility.\n");
+               SCIPdebugMsg(scip, "Upper bound leads to infeasibility.\n");
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               SCIPdebugMessage("Upper bound changed.\n");
+               SCIPdebugMsg(scip, "Upper bound changed.\n");
                *reduceddom = TRUE;
                return SCIP_OKAY;
             }
@@ -5166,7 +5161,7 @@ SCIP_RETCODE propagateBoundsTightenVar(
       SCIPintervalIsEmpty(SCIPinfinity(scip), bounds) )
    {
       /* domain outside [-infty, +infty] or empty -> declare node infeasible */
-      SCIPdebugMessage("found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
+      SCIPdebugMsg(scip, "found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -5177,13 +5172,13 @@ SCIP_RETCODE propagateBoundsTightenVar(
       SCIP_CALL( SCIPtightenVarLb(scip, var, bnd, FALSE, &infeas, &tightened) );
       if( infeas )
       {
-         SCIPdebugMessage("found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
+         SCIPdebugMsg(scip, "found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
       if( tightened )
       {
-         SCIPdebugMessage("tightened lower bound of variable <%s> in constraint <%s> to %g\n", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetLbLocal(var));  /*lint !e585*/
+         SCIPdebugMsg(scip, "tightened lower bound of variable <%s> in constraint <%s> to %g\n", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetLbLocal(var));  /*lint !e585*/
          ++*nchgbds;
          *result = SCIP_REDUCEDDOM;
       }
@@ -5195,13 +5190,13 @@ SCIP_RETCODE propagateBoundsTightenVar(
       SCIP_CALL( SCIPtightenVarUb(scip, var, bnd, FALSE, &infeas, &tightened) );
       if( infeas )
       {
-         SCIPdebugMessage("found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
+         SCIPdebugMsg(scip, "found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
       if( tightened )
       {
-         SCIPdebugMessage("tightened upper bound of variable <%s> in constraint <%s> to %g\n", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetUbLocal(var));  /*lint !e585*/
+         SCIPdebugMsg(scip, "tightened upper bound of variable <%s> in constraint <%s> to %g\n", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetUbLocal(var));  /*lint !e585*/
          ++*nchgbds;
          *result = SCIP_REDUCEDDOM;
       }
@@ -5276,7 +5271,7 @@ SCIP_RETCODE propagateBoundsCons(
    /* check redundancy */
    if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
    {
-      SCIPdebugMessage("found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
+      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
       *redundant = TRUE;
       return SCIP_OKAY;
@@ -5285,7 +5280,7 @@ SCIP_RETCODE propagateBoundsCons(
    /* check infeasibility */
    if( SCIPintervalAreDisjoint(consbounds, consactivity) )
    {
-      SCIPdebugMessage("found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
+      SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
          MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));  /*lint !e666*/
       *result = SCIP_CUTOFF;
@@ -5320,7 +5315,7 @@ SCIP_RETCODE propagateBoundsCons(
    SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, tmp, 0.05, INTERVALINFTY, &cutoff);
    if( cutoff )
    {
-      SCIPdebugMessage("found constraint <%s> infeasible%s\n", SCIPconsGetName(cons), SCIPinProbing(scip) ? " in probing" : "");
+      SCIPdebugMsg(scip, "found constraint <%s> infeasible%s\n", SCIPconsGetName(cons), SCIPinProbing(scip) ? " in probing" : "");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -5341,7 +5336,6 @@ SCIP_RETCODE propagateBounds(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool   redundant;
    SCIP_Bool   domainerror;
@@ -5379,9 +5373,7 @@ SCIP_RETCODE propagateBounds(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
-         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-         assert(consdata != NULL);
-         if( !consdata->ispropagated )
+         if( SCIPconsIsMarkedPropagate(conss[c]) )
             break;
       }
       if( c == nconss )
@@ -5395,7 +5387,7 @@ SCIP_RETCODE propagateBounds(
    {
       success = FALSE;
 
-      SCIPdebugMessage("starting domain propagation round %d for %d constraints\n", roundnr, nconss);
+      SCIPdebugMsg(scip, "starting domain propagation round %d for %d constraints\n", roundnr, nconss);
 
       conshdlrdata->ispropagated = TRUE;
 
@@ -5407,7 +5399,7 @@ SCIP_RETCODE propagateBounds(
 
       if( domainerror )
       {
-         SCIPdebugMessage("current bounds out of domain for some expression, do cutoff\n");
+         SCIPdebugMsg(scip, "current bounds out of domain for some expression, do cutoff\n");
          *result = SCIP_CUTOFF;
          break;
       }
@@ -5421,9 +5413,6 @@ SCIP_RETCODE propagateBounds(
          if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
             continue;
 
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
          if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
          {
@@ -5432,25 +5421,25 @@ SCIP_RETCODE propagateBounds(
          }
          if( redundant )
          {
-            SCIPdebugMessage("delete redundant constraint <%s> locally\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "delete redundant constraint <%s> locally\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
             ++*ndelconss;
          }
 
-         consdata->ispropagated = TRUE;
+         SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
       }
       if( *result == SCIP_CUTOFF )
          break;
 
       /* propagate backward through expression graph */
-      SCIPdebugMessage("start backward propagation in expression graph\n");
+      SCIPdebugMsg(scip, "start backward propagation in expression graph\n");
 
       /* compute bound tightenings for nonlinear variables */
       SCIPexprgraphPropagateNodeBounds(conshdlrdata->exprgraph, INTERVALINFTY, 0.05, &cutoff);
 
       if( cutoff )
       {
-         SCIPdebugMessage("backward propagation found problem infeasible%s\n", SCIPinProbing(scip) ? " in probing" : "");
+         SCIPdebugMsg(scip, "backward propagation found problem infeasible%s\n", SCIPinProbing(scip) ? " in probing" : "");
          *result = SCIP_CUTOFF;
          break;
       }
@@ -5566,7 +5555,7 @@ SCIP_RETCODE proposeFeasibleSolution(
                delta = SCIPceil(scip, delta);
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMessage("increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->zcoef * delta;
@@ -5596,7 +5585,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             if( SCIPvarIsIntegral(var) )
                delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMessage("increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->zcoef * delta;
@@ -5621,7 +5610,7 @@ SCIP_RETCODE proposeFeasibleSolution(
     * then pass it to the trysol heuristic */
    if( c == nconss )
    {
-      SCIPdebugMessage("pass solution with objective value %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
+      SCIPdebugMsg(scip, "pass solution with objective value %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
 
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, newsol) );
       *success = TRUE;
@@ -5785,7 +5774,7 @@ SCIP_RETCODE createConsFromQuadTerm(
       assert(mult == 1.0);
    }
 
-   SCIPdebugMessage("upgrading constraint <%s> to bivariate constraint <%s> with convexity type %d\n", SCIPconsGetName(srccons), name, convextype);
+   SCIPdebugMsg(scip, "upgrading constraint <%s> to bivariate constraint <%s> with convexity type %d\n", SCIPconsGetName(srccons), name, convextype);
 
    SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name,
          exprtree, convextype, z, coefz, lhs, rhs,
@@ -5965,7 +5954,7 @@ SCIP_RETCODE createConsFromMonomial(
       assert(mult == 1.0);
    }
 
-   SCIPdebugMessage("upgrading monomial %g<%s>^%g<%s>^%g from constraint <%s> to bivariate constraint with convexity type %d\n",  /*lint !e585*/
+   SCIPdebugMsg(scip, "upgrading monomial %g<%s>^%g<%s>^%g from constraint <%s> to bivariate constraint with convexity type %d\n",  /*lint !e585*/
       coef, SCIPvarGetName(x), p, SCIPvarGetName(y), q, srccons != NULL ? SCIPconsGetName(srccons) : "??", convextype);  /*lint !e585*/
 
    if( srccons != NULL )
@@ -6092,6 +6081,9 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
       /* reset may{in,de}creasez to FALSE in case some values are still set from a previous solve round */
       consdata->mayincreasez = FALSE;
       consdata->maydecreasez = FALSE;
+
+      /* mark the constraint to be propagated */
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
    }
 
    return SCIP_OKAY;
@@ -6199,14 +6191,14 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          {
             /* for c*z + f(x,y) \in [lhs, rhs], we can decrease z without harming other constraints */
             consdata->maydecreasez = TRUE;
-            SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
+            SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
 
          if( SCIPvarGetNLocksDown(consdata->z) - poslock == 0 )
          {
             /* for c*x + f(x,y) \in [lhs, rhs], we can increase x without harming other constraints */
             consdata->mayincreasez = TRUE;
-            SCIPdebugMessage("may increase <%s> to become feasible\n", SCIPvarGetName(consdata->z));
+            SCIPdebugMsg(scip, "may increase <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
       }
 
@@ -6218,7 +6210,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0,
                consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
                0, NULL, 0, NULL,
-               consdata->f, consdata->lhs, consdata->rhs) );  /*lint !e826 !e613*/
+               consdata->f, consdata->lhs, consdata->rhs,
+               consdata->convextype == SCIP_BIVAR_ALLCONVEX ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN) );  /*lint !e826 !e613*/
 
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -6408,7 +6401,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 
    if( nref == 0 )
    {
-      SCIPdebugMessage("skip LP initialization since ninitlprefpoints is 0\n");
+      SCIPdebugMsg(scip, "skip LP initialization since ninitlprefpoints is 0\n");
       return SCIP_OKAY;
    }
 
@@ -6477,7 +6470,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
             else
                xy[1] = (lb[1] + ub[1]) / 2.0;
 
-            SCIPdebugMessage("cons <%s>: generate cuts for <%s> = %g [%g,%g], <%s> = %g [%g,%g]\n",
+            SCIPdebugMsg(scip, "cons <%s>: generate cuts for <%s> = %g [%g,%g], <%s> = %g [%g,%g]\n",
                SCIPconsGetName(conss[c]),  /*lint !e613*/
                SCIPvarGetName(SCIPexprtreeGetVars(consdata->f)[0]), xy[0],
                SCIPvarGetLbGlobal(SCIPexprtreeGetVars(consdata->f)[0]), SCIPvarGetUbGlobal(SCIPexprtreeGetVars(consdata->f)[0]),
@@ -6549,14 +6542,14 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
             {
                if( SCIPgetRowMaxCoef(scip, row1) / SCIPgetRowMinCoef(scip, row1) > conshdlrdata->cutmaxrange )
                {
-                  SCIPdebugMessage("drop row1 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
+                  SCIPdebugMsg(scip, "drop row1 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
                      SCIPconsGetName(conss[c]), SCIPgetRowMinCoef(scip, row1), SCIPgetRowMaxCoef(scip, row1), SCIPgetRowMaxCoef(scip, row1) / SCIPgetRowMinCoef(scip, row1));  /*lint !e613*/
                }
                else if( SCIPisInfinity(scip, -SCIProwGetLhs(row1)) )
                {
                   /* row1 should be a cut with finite lhs, but infinite rhs */
                   assert(SCIPisInfinity(scip, SCIProwGetRhs(row1)));
-                  SCIPdebugMessage("drop row1 for constraint <%s> because of very large lhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row1));  /*lint !e613*/
+                  SCIPdebugMsg(scip, "drop row1 for constraint <%s> because of very large lhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row1));  /*lint !e613*/
                }
                /* add row to LP */
                else
@@ -6571,14 +6564,14 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
             {
                if( SCIPgetRowMaxCoef(scip, row2) / SCIPgetRowMinCoef(scip, row2) > conshdlrdata->cutmaxrange )
                {
-                  SCIPdebugMessage("drop row2 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
+                  SCIPdebugMsg(scip, "drop row2 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
                      SCIPconsGetName(conss[c]), SCIPgetRowMinCoef(scip, row2), SCIPgetRowMaxCoef(scip, row2), SCIPgetRowMaxCoef(scip, row2) / SCIPgetRowMinCoef(scip, row2));  /*lint !e613*/
                }
                else if( SCIPisInfinity(scip, SCIProwGetRhs(row2)) )
                {
                   /* row2 should be a cut with finite rhs, but infinite lhs */
                   assert(SCIPisInfinity(scip, SCIProwGetRhs(row2)));
-                  SCIPdebugMessage("drop row2 for constraint <%s> because of very large rhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row2));  /*lint !e613*/
+                  SCIPdebugMsg(scip, "drop row2 for constraint <%s> because of very large rhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row2));  /*lint !e613*/
                }
                /* add row to LP */
                else if( !(*infeasible) )
@@ -6721,7 +6714,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+   SCIPdebugMsg(scip, "enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
 
    /* run domain propagation */
    dummy = 0;
@@ -6742,7 +6735,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
    {
-      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g, cutoff = %d)\n", sepaefficacy, minefficacy, separateresult == SCIP_CUTOFF);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g, cutoff = %d)\n", sepaefficacy, minefficacy, separateresult == SCIP_CUTOFF);
       *result = separateresult;
       return SCIP_OKAY;
    }
@@ -6751,7 +6744,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
     * -> collect variables for branching
     */
 
-   SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conss, nconss, &nnotify) );
@@ -6799,7 +6792,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
          nnotify = 1;
       }
    }
@@ -6834,7 +6827,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBivariate)
 
    *result = SCIP_INFEASIBLE;
 
-   SCIPdebugMessage("enfops with max violation in cons <%s>\n", SCIPconsGetName(maxviolcons));
+   SCIPdebugMsg(scip, "enfops with max violation in cons <%s>\n", SCIPconsGetName(maxviolcons));
 
    /* run domain propagation */
    dummy = 0;
@@ -6882,7 +6875,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBivariate)
 
    if( nnotify == 0 )
    {
-      SCIPdebugMessage("All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
+      SCIPdebugMsg(scip, "All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
       *result = SCIP_SOLVELP;
    }
 
@@ -6936,7 +6929,7 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
             }
          }
 
-         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
+         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible && !completely )
             return SCIP_OKAY;
 
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
@@ -7043,7 +7036,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       assert(consdata != NULL);
 #endif
 
-      SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebugPrintCons(scip, conss[c], NULL);
 
       havechange = FALSE;
@@ -7057,7 +7050,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       }
       if( havechange )
       {
-         SCIPdebugMessage("removed fixed variables -> ");
+         SCIPdebugMsg(scip, "removed fixed variables -> ");
          SCIPdebugPrintCons(scip, conss[c], NULL);
       }
    }
@@ -7070,7 +7063,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       *result = SCIP_SUCCESS;
       break;
    case SCIP_CUTOFF:
-      SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
+      SCIPdebugMsg(scip, "propagation says problem is infeasible in presolve\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    default:
@@ -7143,7 +7136,7 @@ SCIP_DECL_CONSACTIVE(consActiveBivariate)
    assert(consdata != NULL);
    assert(consdata->exprgraphnode == NULL);
 
-   SCIPdebugMessage("activate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "activate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
 
    /* add exprtree to expression graph */
    SCIP_CALL( SCIPexprgraphAddExprtreeSum(conshdlrdata->exprgraph, 1, &consdata->f, NULL, &consdata->exprgraphnode, &exprtreeisnew) );
@@ -7186,7 +7179,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
    assert(consdata != NULL);
    assert(consdata->exprgraphnode != NULL);
 
-   SCIPdebugMessage("deactivate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "deactivate %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
 
    SCIP_CALL( SCIPexprgraphReleaseNode(conshdlrdata->exprgraph, &consdata->exprgraphnode) );
 
@@ -7214,7 +7207,7 @@ SCIP_DECL_CONSENABLE(consEnableBivariate)
    assert(consdata != NULL);
    assert(consdata->exprgraphnode != NULL);
 
-   SCIPdebugMessage("enable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "enable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
 
    /* enable node of expression in expression graph */
    SCIPexprgraphEnableNode(conshdlrdata->exprgraph, consdata->exprgraphnode);
@@ -7245,7 +7238,7 @@ SCIP_DECL_CONSDISABLE(consDisableBivariate)
    assert(consdata != NULL);
    assert(consdata->exprgraphnode != NULL);
 
-   SCIPdebugMessage("disable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "disable %scons <%s>\n", SCIPconsIsTransformed(cons) ? "transformed " : "", SCIPconsGetName(cons));
 
    /* disable node of expression in expression graph */
    SCIPexprgraphDisableNode(conshdlrdata->exprgraph, consdata->exprgraphnode);
@@ -7815,7 +7808,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
    if( SCIPisNegative(scip, SCIPvarGetLbGlobal(x)) || SCIPisNegative(scip, SCIPvarGetLbGlobal(y)) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("reformulate bivariate monomial in node %p\n", (void*)node);
+   SCIPdebugMsg(scip, "reformulate bivariate monomial in node %p\n", (void*)node);
 
    /* create auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%dbv", *naddcons);
