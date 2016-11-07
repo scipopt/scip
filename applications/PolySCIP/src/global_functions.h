@@ -71,11 +71,16 @@ namespace polyscip {
                    const std::string& prefix = "",
                    const std::string& suffix = "",
                    std::ostream &os = std::cout,
-                   const std::function<typename Container::value_type(typename Container::value_type)>& func = [](typename Container::value_type val){return val;},
+                   bool negate=false,
                    int prec = 9) {
             os << std::setprecision(prec) << prefix;
             for (const auto &elem : container)
-                os << func(elem) << " ";
+                if (negate) {
+                    os << -elem << " ";
+                }
+                else {
+                    os << elem << " ";
+                }
             os << suffix;
         }
 

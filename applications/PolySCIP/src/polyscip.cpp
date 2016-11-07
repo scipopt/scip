@@ -673,6 +673,7 @@ namespace polyscip {
             }
         }
 
+
         if (no_objs_ == 3) {
             auto feasible_boxes = computeFeasibleBoxes(proj_nondom_outcomes_map,
                                                        orig_vars,
@@ -1319,10 +1320,16 @@ namespace polyscip {
                                             obj_2,
                                             unsupported_);
                     auto nd_proj = TwoDProj(unsupported_.back().second, obj_1, obj_2);
+
                     nondom_projs.update(std::move(nd_proj), unsupported_.back());
 
                     // add variable 'z' back to problem
                     SCIPaddVar(scip_, z);
+
+                    //nondom_projs.update(std::move(nd_proj), unsupported_.back());
+
+                    global::print(unsupported_.back().second, "...new outcome: ", "\n");
+
                 }
                 new_proj.reset();
             }
@@ -1809,7 +1816,7 @@ namespace polyscip {
 
     void Polyscip::outputOutcome(const OutcomeType &outcome, std::ostream &os, const std::string desc) const {
         if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE) {
-            global::print(outcome, desc + "[ ", "] ", os, std::negate<ValueType>());
+            global::print(outcome, desc + "[ ", "] ", os, true);
         }
         else {
             global::print(outcome, desc + "[ ", "] ", os);
