@@ -642,19 +642,20 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             SCIP_Bool stored;
 
-
             /* check solution for feasibility, and add it to solution store if possible.
              * Neither integrality nor feasibility of LP rows have to be checked, because they
              * are guaranteed by the heuristic at this stage.
              */
-#ifdef SCIP_DEBUG
-            SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
-#else
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
-#endif
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
             if( stored )
             {
+#ifndef NDEBUG
+               SCIP_Bool feasible;
+               SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
+               assert(feasible);
+#endif
+
                SCIPdebugMsg(scip, "found feasible solution:\n");
                SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
                *result = SCIP_FOUNDSOL;
