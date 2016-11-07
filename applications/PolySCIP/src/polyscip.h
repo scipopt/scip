@@ -91,7 +91,6 @@ namespace polyscip {
         std::vector<RectangularBox> getDisjointPartsFrom(double delta, const RectangularBox &other) const;
         std::size_t size() const;
         Interval getInterval(std::size_t index) const;
-        bool contains(const OutcomeType& outcome) const;
 
     private:
         Interval getIntervalIntersection(std::size_t index, const RectangularBox& other) const;
@@ -100,7 +99,7 @@ namespace polyscip {
                        Interval second,
                        std::vector<Interval>::const_iterator third_beg, std::vector<Interval>::const_iterator third_end);
 
-        constexpr static double epsilon = 0;
+        constexpr static double epsilon_ = 0;
         std::vector<Interval> box_;
     };
 
@@ -131,8 +130,6 @@ namespace polyscip {
 
         void writeResultsToFile() const;
 
-        void writeFileForVertexEnumeration() const;
-
         void printResults(std::ostream &os = std::cout) const;
 
         void printStatus(std::ostream& os = std::cout) const;
@@ -140,6 +137,7 @@ namespace polyscip {
         PolyscipStatus getStatus() const;
 
         std::size_t numberOfBoundedResults() const;
+        std::size_t numberofUnboundedResults() const;
 
         bool dominatedPointsFound() const;
 
@@ -152,7 +150,7 @@ namespace polyscip {
 
         bool filenameIsOkay(const std::string &filename);
 
-        SCIP_RETCODE computeUnitWeightNondomResults();
+        //SCIP_RETCODE computeUnitWeightNondomResults();
 
         // computes lexicographic optimal results
         SCIP_RETCODE computeLexicographicOptResults(std::vector<std::vector<SCIP_VAR*>>& orig_vars,
@@ -164,15 +162,11 @@ namespace polyscip {
 
 
 
-        void deleteWeaklyNondomSupportedResults();
-
         /* Return true if other element exists which epsilonDominates 'it' or has objective values coinciding with 'it
          */
         bool isDominatedOrEqual(ResultContainer::const_iterator it,
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator end) const;
-
-        //bool instanceHasOnlyContVars() const;
 
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
@@ -182,7 +176,7 @@ namespace polyscip {
 
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
-        SCIP_RETCODE handleOptimalStatus();
+        //SCIP_RETCODE handleOptimalStatus();
         SCIP_RETCODE handleOptimalStatus(const WeightType& weight,
                                          ValueType current_opt_val);
 
@@ -226,17 +220,6 @@ namespace polyscip {
 
         std::vector<RectangularBox> computeDisjointBoxes(std::list<RectangularBox>&& feasible_boxes) const;
 
-        bool boxesArePairWiseDisjoint(const std::vector<RectangularBox> &boxes) const;
-
-        /*SCIP_RETCODE addLowerDimProbNondomPoints(std::size_t obj_1,
-                                                 std::size_t obj_2,
-                                                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                                                 const std::vector<std::vector<ValueType>> &orig_vals,
-                                                 const TwoDProj &proj,
-                                                 const ResultContainer &known_results,
-                                                 ResultContainer &new_results_to_be_added);*/
-
-
         std::list<RectangularBox> computeFeasibleBoxes(
                 const std::map<ObjPair, std::vector<OutcomeType>> &proj_nondom_outcomes,
                 const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
@@ -257,14 +240,6 @@ namespace polyscip {
                                              const std::vector<ValueType> &orig_vals,
                                              const ValueType &rhs,
                                              const ValueType &beta_i);
-
-        std::vector<SCIP_CONS*> createDisjunctiveCons(
-                const std::vector<SCIP_VAR *> &disj_vars,
-                const OutcomeType &outcome,
-                const std::vector<std::vector<SCIP_VAR *>> &orig_vars,
-                const std::vector<std::vector<ValueType>> &orig_vals) const;
-
-        std::vector<SCIP_VAR*> createDisjunctiveVars(std::size_t) const;
 
         /** create constraint: lhs <= c_i^T x <= rhs*
          * @param new_var
@@ -287,28 +262,20 @@ namespace polyscip {
                                              std::size_t obj_2,
                                              ResultContainer &results);
 
-        void deleteVarNameFromResult(SCIP_VAR* var, Result& res) const;
-
         bool unboundedResultsExist() const {return !unbounded_.empty();};
 
         void printSol(const SolType& sol, std::ostream& os) const;
 
-        OutcomeType extendOutcome(OutcomeType subproblem_outcome,
-                                  std::size_t obj_1,
-                                  std::size_t obj_2,
-                                  ValueType obj_1_outcome,
-                                  ValueType obj_2_outcome) const;
-
         /** Prints given point to given output stream */
         void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
 
-        /*bool lhsLessEqualrhs(const ValPair &lhs, const ValPair &rhs) const;*/
-
-        /*explicit Polyscip(const CmdLineArgs& cmd_line_args,
+        /** Constructor for 4-objective case
+        */
+        explicit Polyscip(const CmdLineArgs& cmd_line_args,
                           SCIP* scip,
                           SCIP_Objsense obj_sense,
                           std::pair<std::size_t, std::size_t> objs_to_be_ignored,
-                          SCIP_CLOCK* clock_total);*/
+                          SCIP_CLOCK* clock_total) = delete;
 
         explicit Polyscip(const CmdLineArgs& cmd_line_args,
                           SCIP *scip,

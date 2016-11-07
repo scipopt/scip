@@ -34,6 +34,8 @@ int main(int argc, char** argv) {
         SCIP_CALL( polyscip.computeNondomPoints() );
         polyscip.printStatus();
         if (polyscip.getStatus() == Polyscip::PolyscipStatus::Finished) {
+            std::cout << "Number of bounded results: " << polyscip.numberOfBoundedResults() << "\n";
+            std::cout << "Number of unbounded results: " << polyscip.numberofUnboundedResults() << "\n";
             if (polyscip.writeResults())
                 polyscip.writeResultsToFile();
             else

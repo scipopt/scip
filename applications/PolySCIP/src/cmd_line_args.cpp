@@ -57,7 +57,7 @@ namespace polyscip {
         ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.01",
                                      false, 0.01, "double");
         cmd.add(delta_arg);
-        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon used in computation of unsupported points; default value: 1e-3",
+        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon_ used in computation of unsupported points; default value: 1e-3",
                                      false, 1e-3, "double");
         cmd.add(epsilon_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
