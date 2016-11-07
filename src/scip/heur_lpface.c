@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_lpface.c
- * @brief  lpface primal heuristic that searches the optimal LP face as sub-MIP by fixing variables and LP rows based on reduced cost info
+ * @brief  lpface primal heuristic that searches the optimal LP face inside a sub-MIP
  * @author Gregor Hendel
  */
 
@@ -30,30 +30,28 @@
 #include "scip/pub_misc.h"
 
 #define HEUR_NAME             "lpface"
-#define HEUR_DESC             "LNS heuristic that searches the optimal LP face as sub-MIP by fixing variables and LP rows"
+#define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
 #define HEUR_DISPCHAR         '_'
 #define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
-#define DEFAULT_MINNODES      50LL           /* minimum number of nodes to regard in the subproblem                   */
-#define DEFAULT_MINFIXINGRATE 0.3            /* minimum percentage of integer variables that have to be fixed         */
-#define DEFAULT_NODESOFS      1500LL         /* number of nodes added to the contingent of the total nodes            */
-#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
-#define DEFAULT_LPLIMFAC      2.0            /* factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
-#define DEFAULT_USELPROWS     TRUE          /* should subproblem be created out of the rows in the LP rows,
+#define DEFAULT_MAXNODES      5000LL         /**< maximum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINNODES      50LL           /**< minimum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINFIXINGRATE 0.3            /**< required percentage of fixed integer variables in sub-MIP to run         */
+#define DEFAULT_NODESOFS      1500LL         /**< number of nodes added to the contingent of the total nodes            */
+#define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem         */
+#define DEFAULT_LPLIMFAC      2.0            /**< factor by which the limit on the number of LP depends on the node limit */
+#define DEFAULT_USELPROWS     TRUE          /** should subproblem be created out of the rows in the LP rows,
                                               * otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE           /* should all active cuts from the cutpool of the original scip be copied to
-                                              * constraints of the subscip? (if uselprows-parameter is FALSE)
-                                              */
+#define DEFAULT_COPYCUTS      TRUE           /** if uselprows == FALSE, should all active cuts from cutpool be copied
+                                              *   to constraints in subproblem?                                     */
 #define DEFAULT_DUALBASISEQUATIONS FALSE    /**< should the dually nonbasic rows be turned into equations?        */
 #define DEFAULT_KEEPSUBSCIP   FALSE         /**< should the heuristic continue solving the same sub-SCIP? */
-#define DEFAULT_MINPATHLEN        5         /**< the minimum active search tree path length along which lower bound hasn't
+#define DEFAULT_MINPATHLEN        5         /**< the minimum active search tree path length along which the lower bound hasn't
                                               *   changed before heuristic becomes active */
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lpface"
@@ -86,10 +84,9 @@ struct SCIP_HeurData
    unsigned int          nfailures;          /**< number of failures since last successful call                     */
    SCIP_Longint          nextnodenumber;     /**< number of nodes at which lpface should be called the next time */
    SCIP_Real             lastlpobjinfeas;    /**< last LP objective where the sub-MIP was run to proven infeasibility */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed     */
+   SCIP_Real             minfixingrate;      /**< required percentage of fixed integer variables in sub-MIP to run     */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
-   SCIP_Bool             dontwaitatroot;     /**< should the nwaitingnodes parameter be ignored at the root node?   */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?      */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?                                     */
@@ -102,7 +99,7 @@ struct SCIP_HeurData
    SCIP_Longint          submipnlpiters;     /**< number of LP iterations of the sub-MIP */
    SCIP_Real             submippresoltime;   /**< time required to presolve the sub-MIP */
    int                   nvarsfixed;         /**< the number of fixed variables by the heuristic */
-   int                   minpathlen;         /**< the minimum active search tree path length along which lower bound hasn't
+   int                   minpathlen;         /**< the minimum active search tree path length along which the lower bound hasn't
                                               *   changed before heuristic becomes active */
    SUBSCIPDATA*          subscipdata;        /**< sub-SCIP data structure */
 };
@@ -913,6 +910,10 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
    assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
+   /* delay heuristic if the active search tree path is not deep enough */
+   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
+      return SCIP_OKAY;
+
    /* do not run if the current focus node already has a lower bound higher than the LP value at the node, maybe due to strong branching */
    if( SCIPisLT(scip, SCIPgetLPObjval(scip), focusnodelb) )
       return SCIP_OKAY;
@@ -1286,16 +1287,12 @@ SCIP_RETCODE SCIPincludeHeurLpface(
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
-         "minimum percentage of integer variables that have to be fixed",
+         "required percentage of fixed integer variables in sub-MIP to run",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lplimfac",
          "factor by which the limit on the number of LP depends on the node limit",
          &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/dontwaitatroot",
-         "should the nwaitingnodes parameter be ignored at the root node?",
-         &heurdata->dontwaitatroot, TRUE, DEFAULT_DONTWAITATROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
@@ -1303,7 +1300,7 @@ SCIP_RETCODE SCIPincludeHeurLpface(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/dualbasisequations",
          "should dually nonbasic rows be turned into equations?",
-         &heurdata->dualbasisequations, TRUE, FALSE, NULL, NULL) );
+         &heurdata->dualbasisequations, TRUE, DEFAULT_DUALBASISEQUATIONS, NULL, NULL) );
 
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/keepsubscip",
