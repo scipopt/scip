@@ -26,6 +26,8 @@ features:
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- implement a storage for conflicts to have more control over active conflicts
+- can now analyze dual unbounded rays of primal infeasible LPs
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
 - add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
@@ -44,6 +46,7 @@ parameters:
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 
 performance improvements:
@@ -90,6 +93,7 @@ interface:
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
+- SCIPinitConflictAnalysis() gets now 2 additional values: the type of the conflict and whether the current cutoff bound is used or not
 - bound reader uses angle bracket around variable names
 
 fixed bugs:
