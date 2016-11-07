@@ -28,9 +28,8 @@
 #include <utility> // std::move, std::pair
 #include <vector>
 
-#include "polytope_representation.h"
+#include "double_description_method.h"
 #include "global_functions.h"
-#include "lemon/list_graph.h"
 #include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"

@@ -12,9 +12,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief PolySCIP types
+/**
+ * @brief PolySCIP types
+ * @author Sebastian Schenker
  *
- * Types used for PolySCIP.
+ * Types used for PolySCIP solver.
  */
 
 #ifndef POLYSCIP_SRC_POLYSCIP_TYPES_H_INCLUDED
@@ -29,17 +31,18 @@
 
 namespace polyscip {
 
-    /**< type for computed values */
+    /**< Type for computed values */
     using ValueType = SCIP_Real;
-    /**< type for points, rays in outcome space */
+    /**< Type for points, rays in outcome space */
     using OutcomeType = std::vector<ValueType>;
-    /**< type for solutions in feasible space */
+    /**< Type for solutions in feasible space */
     using SolType = std::vector< std::pair<std::string, ValueType> >;
-    /**< type for weights */
+    /**< Type for weights vectors*/
     using WeightType = std::vector<ValueType>;
     /**< A result comprises of a solution/ray in feasible space and corresponding
-     * non-dominated point in objective space */
+     * non-dominated outcome in outcome space */
     using Result = std::pair<SolType, OutcomeType>;
+    /**< Container for results */
     using ResultContainer = std::vector<Result>;
 }
 

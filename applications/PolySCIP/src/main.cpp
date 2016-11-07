@@ -12,7 +12,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  main file
+/**
+ * @brief  main file
  * @author Sebastian Schenker
  *
  * File containing main function

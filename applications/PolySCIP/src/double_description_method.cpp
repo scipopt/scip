@@ -12,7 +12,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "polytope_representation.h"
+/**
+ * @brief Double description method
+ * @author Sebastian Schenker
+ *
+ * Implements the double description method for transforming a polyhedron given
+ * via its v-representation into its h-representation.
+ */
+
+#include "double_description_method.h"
 
 #include <algorithm>
 #include <bitset>
@@ -36,7 +44,7 @@ using std::vector;
 
 namespace polyscip {
 
-    namespace polytoperepresentation {
+    namespace doubledescription {
 
         V_RepT::V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepC& h_rep)
                 : weight_(weight),

@@ -12,7 +12,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  PolySCIP functions
+/**
+ * @brief  PolySCIP solver
  * @author Sebastian Schenker
  *
  * Implements PolySCIP solver class.
@@ -41,7 +42,7 @@
 #include <utility> //std::make_pair
 #include <vector>
 
-#include "polytope_representation.h"
+#include "double_description_method.h"
 #include "scip/scip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
@@ -69,7 +70,7 @@ using std::vector;
 
 namespace polyscip {
 
-    using DDMethod = polytoperepresentation::DoubleDescriptionMethod;
+    using DDMethod = doubledescription::DoubleDescriptionMethod;
 
     TwoDProj::TwoDProj(const OutcomeType& outcome, size_t first, size_t second)
             : proj_(outcome.at(first), outcome.at(second))

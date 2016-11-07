@@ -12,7 +12,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  PolySCIP command line arguments
+/**
+ * @brief  PolySCIP command line arguments
  * @author Sebastian Schenker
  *
  * Implements PolySCIP command line arguments.

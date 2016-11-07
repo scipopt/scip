@@ -12,9 +12,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* @brief  Problem data for objectives
+/**
+ * @brief  Problem data for objectives
+ * @author Sebastian Schenker
  *
- * Problem data for objectives .
+ * Defines problem data for objectives .
  */
 
 #ifndef POLYSCIP_SRC_PROB_DATA_OBJECTIVES_H_INCLUDED

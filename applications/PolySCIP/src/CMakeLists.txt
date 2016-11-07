@@ -3,7 +3,7 @@ set(HEADERS_FILES
         global_functions.h
         polyscip.h
         polyscip_types.h
-        polytope_representation.h
+        double_description_method.h
         prob_data_objectives.h
         ReaderMOP.h
         weight_space_facet.h
@@ -15,7 +15,7 @@ set(SOURCE_FILES
         cmd_line_args.cpp
         main.cpp
         polyscip.cpp
-        polytope_representation.cpp
+        double_description_method.cpp
         prob_data_objectives.cpp
         ReaderMOP.cpp
         weight_space_facet.cpp

@@ -12,6 +12,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**
+ * @brief .mop file format reader
+ * @author Sebastian Schenker, Timo Strunk
+ *
+ * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
+ * The input file has to follow some simple conventions
+ * - It has to contain a problem in
+ * <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
+ * - The file extension must be <code>.mop</code>
+ * - Every row marked <code>N</code> is treated as an objective
+ */
+
 #include "ReaderMOP.h"
 
 #include <iostream>

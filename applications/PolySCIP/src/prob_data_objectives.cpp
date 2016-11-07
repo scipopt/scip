@@ -12,6 +12,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**
+ * @brief  Problem data for objectives
+ * @author Sebastian Schenker
+ *
+ * Implements problem data for objectives .
+ */
+
 #include "prob_data_objectives.h"
 
 #include <algorithm> // std::transform, std::find

@@ -12,7 +12,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief .mop file format reader
+/**
+ * @brief .mop file format reader
+ * @author Sebastian Schenker, Timo Strunk
  *
  * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
  * The input file has to follow some simple conventions

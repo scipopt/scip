@@ -43,13 +43,13 @@
 #include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
-#include "polytope_representation.h"
+#include "double_description_method.h"
 
 namespace polyscip {
 
-    using V_RepT = polytoperepresentation::V_RepT;
-    using V_RepC = polytoperepresentation::V_RepC;
-    using H_RepC = polytoperepresentation::H_RepC;
+    using V_RepT = doubledescription::V_RepT;
+    using V_RepC = doubledescription::V_RepC;
+    using H_RepC = doubledescription::H_RepC;
     class WeightSpaceVertex;
 
     /** 1-skeleton of the (partial) weight space polyhedron. */

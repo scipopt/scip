@@ -12,6 +12,19 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**
+ * @brief  Weight space vertex
+ * @author Sebastian Schenker, Timo Strunk
+ *
+ * Data structure storing combinatorial and geometric information
+ * about a vertex of the weight space polyhedron. A weight space
+ * vertex is represented by a weight 'w' and an weighted objective
+ * value 'a' and is a vertex of the (partial) weight space polyhedron
+ * P = {(w,a) \in \Lambda \times R : w \cdot y >= a \forall y \in Y'}
+ * where Y' is the (current) set of non-dominated points and \Lambda
+ * is the set of normalized weights
+ */
+
 #include "weight_space_vertex.h"
 
 #include <algorithm> // std::copy, std::set_intersection, std::sort
@@ -50,33 +63,6 @@ namespace polyscip {
     ValueType WeightSpaceVertex::getCurrentWOV() const {
         return weighted_obj_val_;
     }
-
-    /*WeightSpaceVertex::WeightSpaceVertex(double convCombVal,
-                                         const WeightSpaceVertex *obs,
-                                         const WeightSpaceVertex *non_obs,
-                                         const OutcomeType &outcome,
-                                         bool outcome_is_ray,
-                                         size_t wsp_dimension)
-    {
-        assert (obs != non_obs);
-        // get intersection of facets of obs and non_obs
-        std::set_intersection(obs->incident_facets_.cbegin(),
-                              obs->incident_facets_.cend(),
-                              non_obs->incident_facets_.cbegin(),
-                              non_obs->incident_facets_.cend(),
-                              std::back_inserter(incident_facets_),
-                              WeightSpaceFacet::compare_facet_ptr);
-        assert(incident_facets_.size() >= wsp_dimension-1);
-        // add additional facet with respect to outcome
-        auto wov_coeff = outcome_is_ray ? 0.0 : 1.0;
-        auto new_facet = std::make_shared<const WeightSpaceFacet>(outcome, wov_coeff);
-        auto upper_it = std::upper_bound(begin(incident_facets_),
-                                         end(incident_facets_),
-                                         new_facet, WeightSpaceFacet::compare_facet_ptr);
-        incident_facets_.insert(upper_it, std::move(new_facet));
-        weight_ = calculateWeightCombination(convCombVal, non_obs->weight_, obs->weight_);
-        weighted_obj_val_ = convCombVal*non_obs->getCurrentWOV() + (1.0-convCombVal)*obs->getCurrentWOV();
-    }*/
 
     WeightSpaceVertex::WeightSpaceVertex(double obs_coeff,
                                          double non_obs_coeff,

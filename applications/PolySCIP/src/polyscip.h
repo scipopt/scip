@@ -12,7 +12,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  PolySCIP solver class
+/**
+ * @brief  PolySCIP solver class
  * @author Sebastian Schenker
  *
  * Defines PolySCIP solver class.

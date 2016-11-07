@@ -12,10 +12,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief Class representing a facet of the weight space polyhedron
+/**
+ * @brief Class representing a facet of the weight space polyhedron
+ * @author Sebastian Schenker
  *
  * Data structure representing a facet of the (partial) weight space
- * polyhedron P={(w,a) : w \cdot y >= a \forall y \in Y} where Y is
+ * polyhedron P={(w,a) : w \cdot y >= a \forall y \in Y_N} where Y_N is
  * the (current) set of non-dominated points. A facet (w_coeffs_, wov_coeff_) is
  * represented by coefficients 'w_coeffs_' and a right hand side 'wov_coeff_'
  * yielding an inequality of the form w_coeffs_ \cdot w >= wov_coeff_ * wov
@@ -44,15 +46,6 @@ namespace polyscip {
             }
         };
 
-
-        /*static bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
-                                      const std::shared_ptr<const WeightSpaceFacet>& f2) {
-            return std::tie(f1->wov_coeff_, f1->w_coeffs_) <
-                   std::tie(f2->wov_coeff_, f2->w_coeffs_);
-        }*/
-
-        /*bool friend operator<(const WeightSpaceFacet& facet1,
-                              const WeightSpaceFacet& facet2);*/
 
         /** Creates the facet: outcome \cdot w >= wov_coeff*weighted_obj_val
          *  @param outcome outcome in objective space

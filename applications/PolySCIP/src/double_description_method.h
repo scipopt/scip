@@ -13,12 +13,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /** @brief  Double description method
+ *  @author Sebastian Schenker
  *
- * Yields v-representation from h-representation.
+ * Defines classes for double description method.
  */
 
-#ifndef POLYSCIP_SRC_POLYTOPE_REPRESENTATION_H_INCLUDED
-#define POLYSCIP_SRC_POLYTOPE_REPRESENTATION_H_INCLUDED
+#ifndef POLYSCIP_SRC_DOUBLE_DESCRIPTION_H_INCLUDED
+#define POLYSCIP_SRC_DOUBLE_DESCRIPTION_H_INCLUDED
 
 #include <algorithm>
 #include <bitset>
@@ -40,7 +41,7 @@
 
 namespace polyscip {
 
-    namespace polytoperepresentation {
+    namespace doubledescription {
 
         using H_RepT = std::pair<OutcomeType, ValueType>;
         using H_RepC = std::vector<H_RepT>;
@@ -200,4 +201,4 @@ namespace polyscip {
         };
     }
 }
-#endif //POLYSCIP_SRC_POLYTOPE_REPRESENTATION_H_INCLUDED
+#endif //POLYSCIP_SRC_DOUBLE_DESCRIPTION_H_INCLUDED

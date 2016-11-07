@@ -12,7 +12,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  Class representing a weight space vertex
+/**
+ * @brief  Weight space vertex
+ * @author Sebastian Schenker, Timo Strunk
  *
  * Data structure storing combinatorial and geometric information
  * about a vertex of the weight space polyhedron. A weight space
