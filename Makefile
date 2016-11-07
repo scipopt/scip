@@ -1396,7 +1396,7 @@ help:
 		@echo "  - doc: Creates documentation in the \"doc\" directory."
 		@echo "  - libs: Create all SCIP libaries."
 		@echo "  - lint: Run lint on all SCIP files. (Need flexelint.)"
-		@echo "  - lint: Run splint on all C SCIP files. (Need splint.)"
+		@echo "  - splint: Run splint on all C SCIP files. (Need splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
 		@echo "  - depend: Creates dependencies files. This is only needed if you add files to SCIP."
