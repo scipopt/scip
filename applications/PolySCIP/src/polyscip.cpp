@@ -12,6 +12,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/** @brief  PolySCIP functions
+ * @author Sebastian Schenker
+ *
+ * Implements PolySCIP solver class.
+ */
+
+
 #include "polyscip.h"
 
 #include <algorithm> //std::transform, std::max, std::copy
@@ -33,9 +40,6 @@
 #include <type_traits> //std::remove_const
 #include <utility> //std::make_pair
 #include <vector>
-
-//#undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
-//#include "lemon/list_graph.h"
 
 #include "polytope_representation.h"
 #include "scip/scip.h"
@@ -67,53 +71,22 @@ namespace polyscip {
 
     using DDMethod = polytoperepresentation::DoubleDescriptionMethod;
 
-    /*using Graph = lemon::ListDigraph;
-    using Node = Graph::Node;*/
-
-    TwoDProj::TwoDProj(const OutcomeType& outcome, std::size_t first, std::size_t second)
+    TwoDProj::TwoDProj(const OutcomeType& outcome, size_t first, size_t second)
             : proj_(outcome.at(first), outcome.at(second))
     {}
 
-    /*bool TwoDProj::operator<(const TwoDProj& other) const {
-        if (this->getFirst() + 0.0001 < other.getFirst())
-            return true;
-        else if (other.getFirst() + 0.0001 < this->getFirst())
-            return false;
-        else
-            return this->getSecond() < other.getSecond();
-    }*/
-
-    /*bool TwoDProj::epsilonDominates(double eps, const TwoDProj &other) const {
-        assert (eps >= 0);
-        return ((this->getFirst()-eps <= other.getFirst()) && (this->getSecond()-eps <= other.getSecond()));
-    }*/
-
-    /*bool TwoDProj::coincidesWith(const TwoDProj& other, double epsilon) const {
-        return std::max(std::fabs(this->getFirst() - other.getFirst()),
-                        std::fabs(this->getSecond() - other.getSecond())) < epsilon;
-    }*/
-
-    std::ostream& operator<<(std::ostream& os, const TwoDProj& p) {
+    ostream& operator<<(ostream& os, const TwoDProj& p) {
         os << "Proj = [" << p.proj_.first << ", " << p.proj_.second << "]";
         return os;
     }
 
 
-    std::ostream &operator<<(std::ostream& os, const NondomProjections& nd) {
+    ostream& operator<<(ostream& os, const NondomProjections& nd) {
         os << "Nondominated projections: ";
         for (const auto& p_pair : nd.nondom_projections_)
             os << p_pair.first << " ";
         return os;
     }
-
-    /*bool NondomProjections::less(const TwoDProj& lhs, const TwoDProj& rhs) {
-        if (lhs.getFirst() + epsilon_ < rhs.getFirst())
-            return true;
-        else if (rhs.getFirst() + epsilon_ < lhs.getFirst())
-            return false;
-        else
-            return lhs.getSecond() < rhs.getSecond();
-    }*/
 
     NondomProjections::ProjMap::iterator NondomProjections::add(TwoDProj proj, Result res) {
         auto ret_find = nondom_projections_.find(proj);

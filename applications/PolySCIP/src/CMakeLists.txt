@@ -13,7 +13,7 @@ set(HEADERS_FILES
 
 set(SOURCE_FILES
         cmd_line_args.cpp
-        new_main.cpp
+        main.cpp
         polyscip.cpp
         polytope_representation.cpp
         prob_data_objectives.cpp

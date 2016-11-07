@@ -13,8 +13,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /** @brief  PolySCIP solver class
+ * @author Sebastian Schenker
  *
- * The PolySCIP solver class.
+ * Defines PolySCIP solver class.
  */
 
 #ifndef POLYSCIP_SRC_POLYSCIP_H_INCLUDED
@@ -146,23 +147,14 @@ namespace polyscip {
         ResultContainer::const_iterator supportedCEnd() {return bounded_.cend();};
         ResultContainer::const_iterator unsupportedCBegin() {return unsupported_.cbegin();};
         ResultContainer::const_iterator unsupportedCEnd() {return unsupported_.cend();};
-        //ResultContainer::const_iterator unboundedCBegin() {return unbounded_.cbegin();};
-        //ResultContainer::const_iterator unboundedCEnd() {return unbounded_.cend();};
 
     private:
 
         bool filenameIsOkay(const std::string &filename);
 
-        /** Computes first non-dominated point and initializes
-         * the weight space polyhedron or finds out that there is no non-dominated point
-         * @return true if first non-dom point was found and weight space polyhedron initialized;
-         * false otherwise
-         */
-        //SCIP_RETCODE initWeightSpace();
-
         SCIP_RETCODE computeUnitWeightNondomResults();
-        // computes lexicographic optimal results
 
+        // computes lexicographic optimal results
         SCIP_RETCODE computeLexicographicOptResults(std::vector<std::vector<SCIP_VAR*>>& orig_vars,
                                                     std::vector<std::vector<ValueType>>& orig_vals);
 

@@ -12,9 +12,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  Command line arguments
+/** @brief  PolySCIP command line arguments
+ * @author Sebastian Schenker
  *
- * Class holding command line arguments.
+ * Defines PolySCIP command line arguments.
  */
 
 #ifndef POLYSCIP_SRC_CMD_LINE_ARGS_H_INCLUDED

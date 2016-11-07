@@ -12,9 +12,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  Global available functions
+/** @brief  Global helper functions
+ * @author Sebastian Schenker
  *
- * Some available template functions
+ * Defines some global helper functions.
  *
  */
 
@@ -53,7 +54,7 @@ namespace polyscip {
         }
 
         /** make_unique did not get into the C++11 standard, so we provide it ourselves
-         * until installed compiler can be expected to fully  support C++14.
+         * until installed compiler can be expected to fully support C++14.
          */
         template<typename T, typename ... Args>
         std::unique_ptr<T> make_unique(Args&&... args) {
@@ -61,18 +62,21 @@ namespace polyscip {
                     std::is_array<T>(),std::forward<Args>(args)... );
         }
 
-        /** General print function
+        /** Print helper function
          * @param container Container to be printed
-         * @param description Corresponding description
-         * @param os Output stream to print to
+         * @param prefix String printed before Container
+         * @param suffix String printed after Container
+         * @param os Used output stream
+         * @param negate If true, negative of elements in Container will be written to output stream
+         * @param prec Used precision
          */
         template<typename Container>
         void print(const Container &container,
                    const std::string& prefix = "",
                    const std::string& suffix = "",
                    std::ostream &os = std::cout,
-                   bool negate=false,
-                   int prec = 9) {
+                   bool negate = false,
+                   int prec = 6) {
             os << std::setprecision(prec) << prefix;
             for (const auto &elem : container)
                 if (negate) {
@@ -84,17 +88,16 @@ namespace polyscip {
             os << suffix;
         }
 
-        /** todo Doc - Stroustroup page 299
-         * /todo test narrow_cast
+        /** For conversion between two scalar numeric types where a value might be narrowed.
+         * Taken from Stroustroup - "The C++ programming language" 4th edition, page 299
          */
         template<typename Target, typename Source>
         Target narrow_cast(Source v) {
-            auto r = static_cast<Target>(v);
+            auto r = static_cast<Target>(v); // convert the value to the target type
             if (static_cast<Source>(r)!=v)
                 throw std::runtime_error("narrow_cast<>() failed\n");
             return r;
         }
-
 
     }
 }

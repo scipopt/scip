@@ -12,6 +12,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/** @brief  PolySCIP command line arguments
+ * @author Sebastian Schenker
+ *
+ * Implements PolySCIP command line arguments.
+ */
+
+
 #include "cmd_line_args.h"
 
 #include <string>
