@@ -55,7 +55,6 @@ namespace polyscip {
         using ProjMap = std::map<TwoDProj, ResultContainer, std::function<bool(const TwoDProj&, const TwoDProj&)>>;
         explicit NondomProjections(double epsilon,
                                    const ResultContainer& supported,
-                                   const ResultContainer& unsupported,
                                    std::size_t first,
                                    std::size_t second);
 
@@ -143,14 +142,10 @@ namespace polyscip {
 
         ResultContainer::const_iterator supportedCBegin() {return bounded_.cbegin();};
         ResultContainer::const_iterator supportedCEnd() {return bounded_.cend();};
-        ResultContainer::const_iterator unsupportedCBegin() {return unsupported_.cbegin();};
-        ResultContainer::const_iterator unsupportedCEnd() {return unsupported_.cend();};
 
     private:
 
         bool filenameIsOkay(const std::string &filename);
-
-        //SCIP_RETCODE computeUnitWeightNondomResults();
 
         // computes lexicographic optimal results
         SCIP_RETCODE computeLexicographicOptResults(std::vector<std::vector<SCIP_VAR*>>& orig_vars,
@@ -298,7 +293,6 @@ namespace polyscip {
 
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
         ResultContainer bounded_;
-        ResultContainer unsupported_;
         ResultContainer unbounded_;
     };
 
