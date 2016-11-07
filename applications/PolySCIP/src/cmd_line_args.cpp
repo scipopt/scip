@@ -47,8 +47,6 @@ namespace polyscip {
                                                "time limit in seconds for total computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
-        ValueArg<unsigned> beta_arg("b", "Beta", "beta used in Tchebycheff norm; default value: 10; in case of numerical troubles try with value like 10", false, 1, "unsigned int");
-        cmd.add(beta_arg);
         ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.01",
                                      false, 0.01, "double");
         cmd.add(delta_arg);
