@@ -64,7 +64,7 @@
 struct LinVarEventData
 {
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< the constraint handler data */
-   SCIP_CONSDATA*        consdata;           /**< the constraint data */
+   SCIP_CONS*            cons;               /**< the constraint */
    int                   varidx;             /**< the index of the linear variable which bound change is catched */
    int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 };
@@ -96,7 +96,6 @@ struct SCIP_ConsData
 
    unsigned int          iscurvchecked:1;    /**< is nonlinear function checked on convexity or concavity ? */
    unsigned int          isremovedfixingslin:1; /**< did we removed fixed/aggr/multiaggr variables in linear part? */
-   unsigned int          ispropagated:1;     /**< did we propagate the current bounds of linear variables in this constraint? */
    unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables? */
    unsigned int          forcebackprop:1;    /**< should we force to run the backward propagation on our subgraph in the exprgraph? */
 
@@ -225,7 +224,7 @@ SCIP_RETCODE catchLinearVarEvents(
    }
 
    eventdata->conshdlrdata = conshdlrdata;
-   eventdata->consdata = consdata;
+   eventdata->cons = cons;
    eventdata->varidx = linvarpos;
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
@@ -240,7 +239,9 @@ SCIP_RETCODE catchLinearVarEvents(
    /* since bound changes were not catched before, a possibly stored linear activity may have become outdated, so set to invalid */
    consdata->minlinactivity = SCIP_INVALID;
    consdata->maxlinactivity = SCIP_INVALID;
-   consdata->ispropagated   = FALSE;
+
+   /* mark constraint for propagation */
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -273,7 +274,7 @@ SCIP_RETCODE dropLinearVarEvents(
    assert(linvarpos < consdata->nlinvars);
    assert(consdata->lineventdata != NULL);
    assert(consdata->lineventdata[linvarpos] != NULL);
-   assert(consdata->lineventdata[linvarpos]->consdata == consdata);
+   assert(consdata->lineventdata[linvarpos]->cons == cons);
    assert(consdata->lineventdata[linvarpos]->varidx == linvarpos);
    assert(consdata->lineventdata[linvarpos]->filterpos >= 0);
 
@@ -675,6 +676,7 @@ void consdataUpdateLinearActivityUbChange(
 static
 SCIP_DECL_EVENTEXEC(processLinearVarEvent)
 {
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_EVENTTYPE eventtype;
    int varidx;
@@ -684,7 +686,10 @@ SCIP_DECL_EVENTEXEC(processLinearVarEvent)
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   consdata = ((LINVAREVENTDATA*)eventdata)->consdata;
+   cons = ((LINVAREVENTDATA*)eventdata)->cons;
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    varidx = ((LINVAREVENTDATA*)eventdata)->varidx;
@@ -710,7 +715,9 @@ SCIP_DECL_EVENTEXEC(processLinearVarEvent)
       {
          assert(((LINVAREVENTDATA*)eventdata)->conshdlrdata != NULL);
          ((LINVAREVENTDATA*)eventdata)->conshdlrdata->ispropagated = FALSE;
-         consdata->ispropagated = FALSE;
+
+         /* mark constraint for propagation */
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
       }
    }
 
@@ -1091,7 +1098,6 @@ SCIP_RETCODE consdataCreateEmpty(
    (*consdata)->linvarsmerged    = TRUE;
 
    (*consdata)->isremovedfixingslin = TRUE;
-   (*consdata)->ispropagated     = TRUE;
 
    (*consdata)->linvar_maydecrease = -1;
    (*consdata)->linvar_mayincrease = -1;
@@ -1330,7 +1336,6 @@ SCIP_RETCODE addLinearCoef(
    /* capture new variable */
    SCIP_CALL( SCIPcaptureVar(scip, var) );
 
-   consdata->ispropagated = FALSE;
    consdata->ispresolved = FALSE;
    consdata->isremovedfixingslin = consdata->isremovedfixingslin && SCIPvarIsActive(var);
    if( consdata->nlinvars == 1 )
@@ -1398,7 +1403,6 @@ SCIP_RETCODE delLinearCoefPos(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
-   consdata->ispropagated = FALSE;
    consdata->ispresolved  = FALSE;
 
    return SCIP_OKAY;
@@ -1482,7 +1486,6 @@ SCIP_RETCODE chgLinearCoefPos(
       }
    }
 
-   consdata->ispropagated = FALSE;
    consdata->ispresolved = FALSE;
 
    return SCIP_OKAY;
@@ -6281,14 +6284,15 @@ SCIP_RETCODE propagateBoundsCons(
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
-   if( consdata->ispropagated )
+   if( !SCIPconsIsMarkedPropagate(cons) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMsg(scip, "start linear vars domain propagation for constraint <%s>\n", SCIPconsGetName(cons));
 
-   consdata->ispropagated = TRUE;
+   /* unmark constraint for propagation */
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    /* make sure we have activity of linear term */
    consdataUpdateLinearActivity(scip, consdata);
@@ -7109,6 +7113,9 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
       /* forget expression trees */
       assert(consdata->nexprtrees == 0 || consdata->exprgraphnode != NULL);
       SCIP_CALL( consdataSetExprtrees(scip, consdata, 0, NULL, NULL, FALSE) );
+
+      /* mark constraint for propagation */
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
    }
 
    return SCIP_OKAY;
@@ -8139,7 +8146,7 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
    assert(result != NULL);
 
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, result, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nmarkedconss, TRUE, result, &dummy, &dummy) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/

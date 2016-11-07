@@ -1169,7 +1169,8 @@ SCIP_RETCODE analyzeConflictOne(
    assert(SCIPvarGetUbLocal(consdata->vars[falsepos]) < 0.5);
 
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos]) );
 
@@ -1200,7 +1201,8 @@ SCIP_RETCODE analyzeConflictZero(
    assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {

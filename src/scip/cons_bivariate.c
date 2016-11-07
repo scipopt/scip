@@ -97,7 +97,6 @@ struct SCIP_ConsData
 
    unsigned int          mayincreasez:1;     /**< whether z can be increased without harming other constraints */
    unsigned int          maydecreasez:1;     /**< whether z can be decreased without harming other constraints */
-   SCIP_Bool             ispropagated;       /**< whether bound tightenings on z have been propagated */
    int                   eventfilterpos;     /**< position of z var events in SCIP event filter */
 
    SCIP_EXPRGRAPHNODE*   exprgraphnode;      /**< node in expression graph corresponding to bivariate function */
@@ -149,13 +148,18 @@ struct SCIP_ConshdlrData
 static
 SCIP_DECL_EVENTEXEC(processLinearVarEvent)
 {
+   SCIP_CONS* cons;
+
    assert(scip != NULL);
    assert(event != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED);
 
-   *((SCIP_Bool*)eventdata) = FALSE;
+   cons = (SCIP_CONS*) eventdata;
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -206,9 +210,9 @@ SCIP_RETCODE catchLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
    }
 
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)&consdata->ispropagated, &consdata->eventfilterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, &consdata->eventfilterpos) );
 
-   consdata->ispropagated = FALSE;
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -258,7 +262,7 @@ SCIP_RETCODE dropLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
    }
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)&consdata->ispropagated, consdata->eventfilterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, consdata->eventfilterpos) );
    consdata->eventfilterpos = -1;
 
    return SCIP_OKAY;
@@ -5332,7 +5336,6 @@ SCIP_RETCODE propagateBounds(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool   redundant;
    SCIP_Bool   domainerror;
@@ -5370,9 +5373,7 @@ SCIP_RETCODE propagateBounds(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
-         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-         assert(consdata != NULL);
-         if( !consdata->ispropagated )
+         if( SCIPconsIsMarkedPropagate(conss[c]) )
             break;
       }
       if( c == nconss )
@@ -5412,9 +5413,6 @@ SCIP_RETCODE propagateBounds(
          if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
             continue;
 
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
          if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
          {
@@ -5428,7 +5426,7 @@ SCIP_RETCODE propagateBounds(
             ++*ndelconss;
          }
 
-         consdata->ispropagated = TRUE;
+         SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
       }
       if( *result == SCIP_CUTOFF )
          break;
@@ -6083,6 +6081,9 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
       /* reset may{in,de}creasez to FALSE in case some values are still set from a previous solve round */
       consdata->mayincreasez = FALSE;
       consdata->maydecreasez = FALSE;
+
+      /* mark the constraint to be propagated */
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
    }
 
    return SCIP_OKAY;

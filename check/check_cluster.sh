@@ -132,7 +132,6 @@ do
     # run different random seeds
     for ((s = 0; $s <= $SEEDS; s++))
     do
-
         # permute transformed problem
 	for ((p = 0; $p <= $PERMUTE; p++))
 	do
@@ -189,7 +188,7 @@ do
 		    export HARDMEMLIMIT
 		    export CHECKERPATH=$SCIPPATH/solchecker
 		    export SETFILE
-		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT --exclude="optc-01-14" -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
