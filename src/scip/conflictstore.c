@@ -121,7 +121,7 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
       return +1;
    else
 #if 0
-   /* if both constraints have the same age we prefere the constraint with more non-zeros */
+   /* @todo if both constraints have the same age we prefere the constraint with more non-zeros */
    {
       SCIP_Bool success;
       int nvars1;
