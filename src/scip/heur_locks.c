@@ -746,11 +746,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
       if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
-         /* free subproblem */
-         SCIPfreeBufferArray(scip, &subvars);
-         SCIP_CALL( SCIPfree(&subscip) );
-
-         goto TERMINATE;
+         goto FREESCIPANDTERMINATE;
       }
 
 #ifndef SCIP_DEBUG
@@ -837,6 +833,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( retstat != SCIP_OKAY )
          {
             SCIPwarningMessage(scip, "Error while presolving subMIP in locks heuristic; sub-SCIP terminated with code <%d>\n", retstat);
+
+            goto FREESCIPANDTERMINATE;
          }
       }
 #else
@@ -863,6 +861,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             if( retstat != SCIP_OKAY )
             {
                SCIPwarningMessage(scip, "Error while solving subMIP in locks heuristic; sub-SCIP terminated with code <%d>\n",retstat);
+
+               goto FREESCIPANDTERMINATE;
             }
          }
 #else
@@ -889,6 +889,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
+   FREESCIPANDTERMINATE:
       /* free subproblem */
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
