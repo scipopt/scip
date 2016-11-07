@@ -6245,7 +6245,7 @@ SCIP_RETCODE performDualRayAnalysis(
    activity = getMinActivity(set, transprob, mirvals, varinds, nmirvars, curvarlbs, curvarubs);
 
    /* it can happen that the proof is not valid anymore after removing small coefficients in SCIPcutsCleanupRow */
-   if( SCIPsetIsLE(set, activity, mirrhs) )
+   if( SCIPsetIsFeasLE(set, activity, mirrhs) )
       goto TERMINATE;
 
    success = FALSE;
