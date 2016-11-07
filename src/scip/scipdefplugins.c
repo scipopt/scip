@@ -163,6 +163,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropObbt(scip) );
+   SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
    SCIP_CALL( SCIPincludePropRedcost(scip) );

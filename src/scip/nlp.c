@@ -2007,7 +2007,8 @@ SCIP_RETCODE SCIPnlrowCreate(
    SCIP_QUADELEM*        quadelems,          /**< elements of quadratic term matrix, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        exprtree,           /**< expression tree, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Real             rhs                 /**< right hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
    )
 {
 #ifndef NDEBUG
@@ -2129,6 +2130,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    (*nlrow)->nlpiindex = -1;
    (*nlrow)->nuses = 0;
    (*nlrow)->dualsol = 0.0;
+   (*nlrow)->curvature = curvature;
 
    /* capture the nonlinear row */
    SCIPnlrowCapture(*nlrow);
@@ -2156,7 +2158,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
          sourcenlrow->nlinvars, sourcenlrow->linvars, sourcenlrow->lincoefs,
          sourcenlrow->nquadvars, sourcenlrow->quadvars, sourcenlrow->nquadelems, sourcenlrow->quadelems,
          sourcenlrow->exprtree,
-         sourcenlrow->lhs, sourcenlrow->rhs) );
+         sourcenlrow->lhs, sourcenlrow->rhs, sourcenlrow->curvature) );
 
    (*nlrow)->linvarssorted          = sourcenlrow->linvarssorted;
    (*nlrow)->quadelemssorted        = sourcenlrow->quadelemssorted;
@@ -2208,7 +2210,8 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
             rownz, rowvars, SCIProwGetVals(row),
             0, NULL, 0, NULL,
             NULL,
-            SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+            SCIProwGetLhs(row), SCIProwGetRhs(row),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIPsetFreeBufferArray(set, &rowvars);
    }
@@ -2223,7 +2226,8 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
             1, &rowvar, SCIProwGetVals(row),
             0, NULL, 0, NULL,
             NULL,
-            SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+            SCIProwGetLhs(row), SCIProwGetRhs(row),
+            SCIP_EXPRCURV_LINEAR) );
    }
    else
    {
@@ -2232,7 +2236,8 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
             0, NULL, NULL,
             0, NULL, 0, NULL,
             NULL,
-            SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+            SCIProwGetLhs(row), SCIProwGetRhs(row),
+            SCIP_EXPRCURV_LINEAR) );
    }
 
    return SCIP_OKAY;   
@@ -3377,6 +3382,25 @@ SCIP_Real SCIPnlrowGetRhs(
    assert(nlrow != NULL);
 
    return nlrow->rhs;
+}
+
+/** returns the curvature of a nonlinear row */
+SCIP_EXPRCURV SCIPnlrowGetCurvature(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   )
+{
+   assert(nlrow != NULL);
+   return nlrow->curvature;
+}
+
+/** sets the curvature of a nonlinear row */
+void SCIPnlrowSetCurvature(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
+   )
+{
+   assert(nlrow != NULL);
+   nlrow->curvature = curvature;
 }
 
 /** returns the name of a nonlinear row */
@@ -6217,7 +6241,8 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
             nlp->nvars, nlp->vars, coefs,
             0, NULL, 0, NULL,
             NULL,
-            -SCIPsetInfinity(set), SCIPsetInfinity(set)) );
+            -SCIPsetInfinity(set), SCIPsetInfinity(set),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIPsetFreeBufferArray(set, &coefs);
    }

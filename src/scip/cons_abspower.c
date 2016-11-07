@@ -115,8 +115,6 @@ struct SCIP_ConsData
    SCIP_Real             lhsviol;            /**< current (scaled) violation of left  hand side */
    SCIP_Real             rhsviol;            /**< current (scaled) violation of right hand side */
 
-   SCIP_Bool             isxpropagated;      /**< have all bound tightenings on x been propagated? */
-   SCIP_Bool             iszpropagated;      /**< have all bound tightenings on z been propagated? */
    int                   xeventfilterpos;    /**< position of x var event in SCIP event filter */
    int                   zeventfilterpos;    /**< position of z var event in SCIP event filter */
    unsigned int          propvarbounds:1;    /**< have variable bounds been propagated? */
@@ -184,16 +182,19 @@ DECL_MYPOW(square)
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
-   SCIP_Bool* ispropagated;
+   SCIP_CONS* cons;
 
    assert(scip  != NULL);
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED);
 
-   ispropagated = (SCIP_Bool*)eventdata;
-   assert(ispropagated != NULL);
+   cons = (SCIP_CONS*) eventdata;
+   assert(cons != NULL);
 
-   *ispropagated = FALSE;
+   assert(SCIPconsGetData(cons) != NULL);
+   assert(SCIPeventGetVar(event) == SCIPconsGetData(cons)->x || SCIPeventGetVar(event) == SCIPconsGetData(cons)->z);
+
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -225,12 +226,10 @@ SCIP_RETCODE catchVarEvents(
       if( !SCIPisInfinity(scip,  consdata->rhs) )
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->isxpropagated, &consdata->xeventfilterpos) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, &consdata->xeventfilterpos) );
 
-      consdata->isxpropagated = FALSE;
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
-   else
-      consdata->isxpropagated = TRUE;
 
    /* if x is multiaggregated, then bound changes on z could not be propagated, so we do not need to catch them */
    if( SCIPvarGetStatus(consdata->x) != SCIP_VARSTATUS_MULTAGGR )
@@ -251,11 +250,10 @@ SCIP_RETCODE catchVarEvents(
             eventtype |= SCIP_EVENTTYPE_UBTIGHTENED;
       }
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->iszpropagated, &consdata->zeventfilterpos) );
-      consdata->iszpropagated = FALSE;
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, &consdata->zeventfilterpos) );
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
-   else
-      consdata->iszpropagated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -286,7 +284,7 @@ SCIP_RETCODE dropVarEvents(
       if( !SCIPisInfinity(scip,  consdata->rhs) )
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->isxpropagated, consdata->xeventfilterpos) );
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->x, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, consdata->xeventfilterpos) );
       consdata->xeventfilterpos = -1;
    }
 
@@ -308,7 +306,7 @@ SCIP_RETCODE dropVarEvents(
             eventtype |= SCIP_EVENTTYPE_UBTIGHTENED;
       }
 
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)&consdata->iszpropagated, consdata->zeventfilterpos) );
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, eventhdlr, (SCIP_EVENTDATA*)cons, consdata->zeventfilterpos) );
       consdata->zeventfilterpos = -1;
    }
 
@@ -1131,8 +1129,7 @@ SCIP_RETCODE presolveDual(
       return SCIP_OKAY;
 
    /* we assume that domain propagation has been run and fixed variables were removed if possible */
-   assert(consdata->isxpropagated);
-   assert(consdata->iszpropagated);
+   assert(!SCIPconsIsMarkedPropagate(cons));
    assert(consdata->zcoef != 0.0);
 
    lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
@@ -2447,7 +2444,7 @@ SCIP_RETCODE analyzeConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add the bound which got violated */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -2514,7 +2511,7 @@ SCIP_RETCODE propagateCons(
    zub = SCIPvarGetUbLocal(consdata->z);
 
    /* if some bound is not tightened, tighten bounds of variables as long as possible */
-   tightenedround = !consdata->isxpropagated || !consdata->iszpropagated;
+   tightenedround = SCIPconsIsMarkedPropagate(cons);
    while( tightenedround )
    {
       tightenedround = FALSE;
@@ -2998,8 +2995,7 @@ SCIP_RETCODE propagateCons(
    }
 
    /* mark the constraint propagated */
-   consdata->isxpropagated = TRUE;
-   consdata->iszpropagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    if( *cutoff )
       return SCIP_OKAY;
@@ -4385,7 +4381,8 @@ SCIP_RETCODE createNlRow(
    SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), constant,
          nlinvars, linvars, lincoefs,
          nquadvars, &quadvar, nquadelems, &quadelem,
-         exprtree, consdata->lhs, consdata->rhs
+         exprtree, consdata->lhs, consdata->rhs,
+         SCIP_EXPRCURV_UNKNOWN
          ) );
 
    if( exprtree != NULL )
@@ -6149,7 +6146,7 @@ SCIP_DECL_CONSPROP(consPropAbspower)
 
    *result = SCIP_DIDNOTFIND;
 
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nmarkedconss; ++c )
    {
       assert(conss != NULL);
 

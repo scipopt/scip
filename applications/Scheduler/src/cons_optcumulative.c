@@ -1597,7 +1597,7 @@ SCIP_RETCODE solveSubproblem(
 
          /**@todo try to shrink the initial explanation */
 
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          for( v = 0; v < nvars; ++v )
          {
