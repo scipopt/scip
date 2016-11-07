@@ -341,7 +341,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
-   propagated = FALSE;
+   propagated = TRUE;
    lastbestscore = INT_MAX;
 
    /* fix variables */
