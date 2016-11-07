@@ -367,13 +367,13 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
    assert(redcostvars != NULL);
 
 #ifndef NDEBUG
-   /* check that the binary variables are correct sorted
+   /* check that the binary variables are correctly sorted
     *
     * @note In case the assertion fails it indicates that a new LP root solving arose after we initialized the
     *       propagator; The new LP solution destroyed the sorting of the binary variables since the reduced cost of the
-    *       variables changed. This could lead to potentially miss a domain reductions. Currently, it is not possible to
-    *       check if a new LP root changing the root reduced costs. This case, however, should not happen in the current
-    *       SCIP version.
+    *       variables changed. This could lead to potentially missing a domain reductions. Currently, it is not possible to
+    *       check if a new root LP was solved, changing the root reduced costs. This case, however, should not happen in the
+    *       current SCIP version.
     */
    for( v = 1; v < propdata->nredcostbinvars; ++v )
       assert(varCompRedcost(redcostvars[v-1], redcostvars[v]) == 1);
@@ -561,7 +561,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
-   /* the propagator should run in all nodes except the root node; for the root node the poor redcost propagator does
+   /* the propagator should run in all nodes except the root node; for the root node the redcost propagator does
     * the job already
     */
    if( SCIPgetDepth(scip) < 1 )
@@ -572,7 +572,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    if( lpobjval == SCIP_INVALID ) /*lint !e777*/
       return SCIP_OKAY;
 
-   /* do not run in probing mode since this propagator chnages globally variable bounds */
+   /* do not run in probing mode since this propagator changes global variable bounds */
    if( SCIPinProbing(scip) )
       return SCIP_OKAY;
 

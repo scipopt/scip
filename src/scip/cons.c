@@ -2199,9 +2199,6 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->duringprop = FALSE;
    (*conshdlr)->initialized = FALSE;
 
-   (*conshdlr)->pendingconss = NULL;
-   SCIP_CALL( SCIPqueueCreate( &((*conshdlr)->pendingconss), 100, 1.5 ) );
-
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -2258,8 +2255,6 @@ SCIP_RETCODE SCIPconshdlrFree(
    assert(!(*conshdlr)->initialized);
    assert((*conshdlr)->nconss == 0);
    assert(set != NULL);
-
-   SCIPqueueFree( &((*conshdlr)->pendingconss) );
 
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
@@ -2418,11 +2413,6 @@ SCIP_RETCODE SCIPconshdlrExit(
       return SCIP_INVALIDCALL;
    }
 
-   while( !SCIPqueueIsEmpty(conshdlr->pendingconss) )
-   {
-      SCIP_CALL( SCIPconshdlrPopProp(conshdlr, blkmem, set) );
-   }
-
    /* call deinitialization method of constraint handler */
    if( conshdlr->consexit != NULL )
    {
@@ -2557,12 +2547,6 @@ SCIP_RETCODE SCIPconshdlrExitpre(
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
-
-   /* empty the queue: the solving process will use a new one in any case */
-   while( !SCIPqueueIsEmpty(conshdlr->pendingconss) )
-   {
-      SCIP_CALL( SCIPconshdlrPopProp(conshdlr, blkmem, set) );
-   }
 
    /* call presolving deinitialization method of constraint handler */
    if( conshdlr->consexitpre != NULL )
@@ -5549,7 +5533,6 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
-   (*cons)->markedprop = FALSE;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
@@ -5567,9 +5550,10 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->original = original;
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
+   (*cons)->conflict = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
-   (*cons)->markpropagate = FALSE;
+   (*cons)->markpropagate = TRUE;
    (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
    (*cons)->updateinsert = FALSE;
@@ -6655,6 +6639,16 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    return SCIP_OKAY;
 }
 
+/** marks the constraint to be a conflict */
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   cons->conflict = TRUE;
+}
+
 /** marks the constraint to be propagated (update might be delayed) */
 SCIP_RETCODE SCIPconsMarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
@@ -6833,68 +6827,6 @@ SCIP_RETCODE SCIPconsResetAge(
          assert(!cons->obsolete);
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** adds an active constraint to the propagation queue(if not already marked for propagation) of corresponding
- *  constraint handler and marks the constraint to be propagated in the next propagation round
- *
- *  @note if constraint is added to the queue it will be captured
- */
-SCIP_RETCODE SCIPconsPushProp(
-   SCIP_CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-   assert(cons->conshdlr != NULL);
-
-   if( !SCIPconsIsActive(cons) )
-      return SCIP_OKAY;
-
-   if( !cons->markedprop )
-   {
-      SCIP_CALL( SCIPqueueInsert(cons->conshdlr->pendingconss, (void*)cons) );
-      SCIPconsCapture(cons);
-      cons->markedprop = TRUE;
-   }
-   assert(cons->markedprop);
-
-   return SCIP_OKAY;
-}
-
-/** returns first constraint from propagation queue(if not empty) of given constraint handler */
-SCIP_CONS* SCIPconshdlrFrontProp(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
-      return NULL;
-
-   return (SCIP_CONS*)SCIPqueueFirst(conshdlr->pendingconss);
-}
-
-/** removes constraint from propagation queue(if not empty) of given constraint handler and unmarks constraint to be
- *  propagated in the next propagation round
- *
- *  @note if constraint is removed from the queue it will be released
- */
-SCIP_RETCODE SCIPconshdlrPopProp(
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   SCIP_CONS* cons;
-
-   if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
-      return SCIP_OKAY;
-
-   cons = (SCIP_CONS*)SCIPqueueRemove(conshdlr->pendingconss);
-   assert(cons != NULL);
-
-   cons->markedprop = FALSE;
-   SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
 
    return SCIP_OKAY;
 }
@@ -7524,9 +7456,8 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
             SCIPconsCapture(conshdlr->storedpropconss[v]);
-            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->storedpropconss[v], set) );
          }
-         assert(conshdlr->nmarkedpropconss == 0);
+         /* assert(conshdlr->nmarkedpropconss == 0); this assert does not hold if updates are delayed */
       }
    }
 
@@ -7560,8 +7491,13 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
          int v;
 
+         for( v = conshdlr->nmarkedpropconss - 1; v >= 0; --v )
+         {
+            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->propconss[v], set) );
+         }
+
          /* mark all previously marked constraint, which were marked before probing */
-         for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
+         for( v = 0; v < conshdlr->storednmarkedpropconss; ++v )
          {
             SCIP_CONS* cons = conshdlr->storedpropconss[v];
             assert(cons != NULL);
@@ -7576,6 +7512,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
             SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
          }
+
          assert(conshdlr->storednmarkedpropconss - ndisabled <= conshdlr->npropconss);
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
@@ -7610,6 +7547,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsIsPropagationEnabled
 #undef SCIPconsIsDeleted
 #undef SCIPconsIsObsolete
+#undef SCIPconsIsConflict
 #undef SCIPconsGetAge
 #undef SCIPconsIsInitial
 #undef SCIPconsIsSeparated
@@ -7776,6 +7714,16 @@ SCIP_Bool SCIPconsIsObsolete(
    return cons->updateobsolete || cons->obsolete;
 }
 
+/** returns TRUE iff constraint is marked as a conflict */
+SCIP_Bool SCIPconsIsConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->conflict;
+}
+
 /** gets age of constraint */
 SCIP_Real SCIPconsGetAge(
    SCIP_CONS*            cons                /**< constraint */
@@ -7833,7 +7781,7 @@ SCIP_Bool SCIPconsIsMarkedPropagate(
 {
    assert(cons != NULL);
 
-   return cons->markpropagate;
+   return (cons->updatemarkpropagate || (cons->markpropagate && !cons->updateunmarkpropagate));
 }
 
 /** returns TRUE iff constraint should be propagated during node processing */
@@ -8004,7 +7952,7 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
+   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
    cons->nupgradelocks += (unsigned int) nlocks;
 }
 

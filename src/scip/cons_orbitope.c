@@ -887,7 +887,7 @@ SCIP_RETCODE propagateCons(
             assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip) );
 
             /* perform conflict analysis */
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+            SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
             if ( ispart )
             {
@@ -969,7 +969,7 @@ SCIP_RETCODE propagateCons(
                   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
                   /* perform conflict analysis */
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   /* add current bound */
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );

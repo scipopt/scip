@@ -522,8 +522,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 SCIPLIBOBJ	=	scip/branch.o \
 			scip/clock.o \
 			scip/conflict.o \
+			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
+			scip/cuts.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \

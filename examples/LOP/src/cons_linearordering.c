@@ -770,7 +770,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       if ( infeasible )
 	       {
 		  SCIPdebugMsg(scip, " -> node infeasible.\n");
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -789,7 +789,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       if ( infeasible )
 	       {
 		  SCIPdebugMsg(scip, " -> node infeasible.\n");
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -813,7 +813,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  if ( infeasible )
 		  {
 		     SCIPdebugMsg(scip, " -> node infeasible.\n");
-                     SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                     SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );

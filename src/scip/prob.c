@@ -35,6 +35,7 @@
 #include "scip/reopt.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/conflictstore.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
@@ -514,6 +515,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -594,6 +596,9 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* mark the transformed problem to be permuted iff the source problem is permuted */
    (*target)->permuted = source->permuted;
+
+   /* transform the conflict pool */
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -2119,6 +2124,7 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
+#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
 #undef SCIPisConsCompressedEnabled
@@ -2261,6 +2267,15 @@ SCIP_VAR** SCIPprobGetVars(
 {
    assert(prob != NULL);
    return prob->vars;
+}
+
+/** gets number of problem constraints */
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nconss;
 }
 
 /** gets the objective offset */

@@ -243,11 +243,11 @@ SCIP_RETCODE setupSCIPparamsStage3(
    }
    if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
    {
