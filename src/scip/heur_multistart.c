@@ -328,14 +328,14 @@ SCIP_RETCODE improvePoint(
 
    SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMessage("start minfeas = %e\n", *minfeas);
+   SCIPdebugMsg(scip, "start minfeas = %e\n", *minfeas);
 #endif
 
    /* stop since start point is feasible */
    if( !SCIPisFeasLT(scip, *minfeas, 0.0) )
    {
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-      SCIPdebugMessage("start point is feasible");
+      SCIPdebugMsg(scip, "start point is feasible");
 #endif
       return SCIP_OKAY;
    }
@@ -359,6 +359,8 @@ SCIP_RETCODE improvePoint(
       BMSclearMemoryArray(updatevec, nvars);
       nviolnlrows = 0;
 
+      SCIPdebugMsg(scip, "r = %d nnlrows = %d\n", r, nnlrows);
+
       for( i = 0; i < nnlrows; ++i )
       {
          int j;
@@ -380,7 +382,7 @@ SCIP_RETCODE improvePoint(
          {
             r = maxiter - 1;
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-            SCIPdebugMessage("gradient vanished at current point -> stop\n");
+            SCIPdebugMsg(scip, "gradient vanished at current point -> stop\n");
 #endif
             break;
          }
@@ -422,7 +424,7 @@ SCIP_RETCODE improvePoint(
    }
 
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMessage("niter=%d minfeas=%e\n", r, *minfeas);
+   SCIPdebugMsg(scip, "niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
    SCIPfreeBufferArray(scip, &grad);
@@ -473,7 +475,7 @@ SCIP_RETCODE filterPoints(
       meanfeas *= pow(feasibilities[i] - minfeas + 1.0, 1.0 / npoints);
    }
    meanfeas += minfeas - 1.0;
-   SCIPdebugMessage("meanfeas = %e\n", meanfeas);
+   SCIPdebugMsg(scip, "meanfeas = %e\n", meanfeas);
 
    /* keep all points with which have a feasibility not much below the geometric mean of infeasibilities */
    for( i = 0; i < npoints; ++i )
@@ -652,7 +654,7 @@ SCIP_RETCODE solveNLP(
 
    /** round point for sub-NLP heuristic */
    SCIP_CALL( SCIProundSol(scip, refpoint, success) );
-   SCIPdebugMessage("rounding of refpoint successfully? %d\n", *success);
+   SCIPdebugMsg(scip, "rounding of refpoint successfully? %d\n", *success);
 
    /* round variables manually if the locks did not allow us to round them */
    if( !(*success) )
@@ -720,7 +722,7 @@ SCIP_RETCODE applyHeur(
    assert(result != NULL);
    assert(heurdata != NULL);
 
-   SCIPdebugMessage("call applyHeur()\n");
+   SCIPdebugMsg(scip, "call applyHeur()\n");
 
    if( heurdata->exprinterpreter == NULL )
    {
@@ -748,7 +750,7 @@ SCIP_RETCODE applyHeur(
     */
    for( i = 0; i < heurdata->nrndpoints; ++i )
    {
-      SCIPdebugMessage("improve point %d / %d\n", i, heurdata->nrndpoints);
+      SCIPdebugMsg(scip, "improve point %d / %d\n", i, heurdata->nrndpoints);
       SCIP_CALL( improvePoint(scip, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), varindex, heurdata->exprinterpreter, points[i],
          heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &feasibilities[i]) );
    }
@@ -758,7 +760,7 @@ SCIP_RETCODE applyHeur(
     */
    SCIP_CALL( filterPoints(scip, points, feasibilities, heurdata->nrndpoints, &nusefulpoints) );
    assert(nusefulpoints >= 0);
-   SCIPdebugMessage("nusefulpoints = %d\n", nusefulpoints);
+   SCIPdebugMsg(scip, "nusefulpoints = %d\n", nusefulpoints);
 
    if( nusefulpoints == 0 )
       goto TERMINATE;
@@ -766,7 +768,7 @@ SCIP_RETCODE applyHeur(
    SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxboundsize,
          heurdata->maxreldist, heurdata->maxncluster) );
    assert(ncluster >= 0 && ncluster <= heurdata->maxncluster);
-   SCIPdebugMessage("ncluster = %d\n", ncluster);
+   SCIPdebugMsg(scip, "ncluster = %d\n", ncluster);
 
    SCIPsortIntPtr(clusteridx, (void**)points, nusefulpoints);
 
@@ -793,14 +795,14 @@ SCIP_RETCODE applyHeur(
       /* try to solve sub-NLP if we have enough time left */
       if( timelimit <= 1.0 )
       {
-         SCIPdebugMessage("not enough time left! (%g)\n", timelimit);
+         SCIPdebugMsg(scip, "not enough time left! (%g)\n", timelimit);
          break;
       }
 
       /* call sub-NLP heuristic */
       SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL, timelimit,
             heurdata->nlpminimpr, &success) );
-      SCIPdebugMessage("solveNLP result = %d\n", success);
+      SCIPdebugMsg(scip, "solveNLP result = %d\n", success);
 
       if( success )
          *result = SCIP_FOUNDSOL;
