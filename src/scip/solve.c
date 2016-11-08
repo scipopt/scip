@@ -4039,6 +4039,9 @@ SCIP_RETCODE solveNode(
 
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
+      
+      /* reset foundsol */
+      foundsol = FALSE;
 
       /* call primal heuristics that should be applied after the LP relaxation of the node was solved;
        * if this is the first loop of the root node, call also AFTERNODE heuristics already here, since they might help
@@ -4053,7 +4056,7 @@ SCIP_RETCODE solveNode(
                   SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, *cutoff, &foundsol) );
             *afternodeheur = TRUE; /* the AFTERNODE heuristics should not be called again after the node */
          }
-         else if( lpsolved )
+         else if( lpsolved || bestrelaxval != -SCIPsetInfinity(set) )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP,
                   *cutoff, &foundsol) );
