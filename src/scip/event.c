@@ -432,6 +432,33 @@ SCIP_Real SCIPeventhdlrGetTime(
  * Event methods
  */
 
+
+/*
+ * simple functions implemented as defines
+ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPeventGetType
+#undef SCIPeventGetOldobj
+#undef SCIPeventGetNewobj
+#undef SCIPeventGetOldbound
+#undef SCIPeventGetNewbound
+#undef SCIPeventGetNode
+#undef SCIPeventGetSol
+#undef SCIPeventGetRowCol
+#undef SCIPeventGetRowOldCoefVal
+#undef SCIPeventGetRowNewCoefVal
+#undef SCIPeventGetRowOldConstVal
+#undef SCIPeventGetRowNewConstVal
+#undef SCIPeventGetRowSide
+#undef SCIPeventGetRowOldSideVal
+#undef SCIPeventGetRowNewSideVal
+
 /** creates an event for an addition of a variable to the problem */
 SCIP_RETCODE SCIPeventCreateVarAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
@@ -1972,6 +1999,18 @@ SCIP_RETCODE SCIPeventfilterProcess(
 /*
  * Event queue methods
  */
+
+/*
+ * simple functions implemented as defines
+ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPeventqueueIsDelayed
 
 /** resizes events array to be able to store at least num entries */
 static
