@@ -393,7 +393,7 @@ SCIP_RETCODE inithashmapandtable(
 
    /* create a hash table for and-constraint data objects */
    (*conshdlrdata)->hashtablesize = HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS;
-   SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->nallconsanddatas,
+   SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->hashtablesize,
          hashGetKeyAndConsDatas, hashKeyEqAndConsDatas, hashKeyValAndConsDatas, (void*) scip) );
 
    /* create a hash table for and-resultant to and-constraint data objects */

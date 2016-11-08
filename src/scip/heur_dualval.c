@@ -933,7 +933,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX ( nvars, 5 )));
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
    SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars, SCIPblkmem(scip), heurdata->maxcalls) );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars2, SCIPblkmem(scip), heurdata->maxcalls) );
@@ -1063,7 +1063,7 @@ SCIP_RETCODE createSubSCIP(
     * we want to minimize over the sum of these variables, so set the objective to 1 */
    SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxcons, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxconsindi, SCIPblkmem(scip), nvars) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slack2var, SCIPblkmem(scip), 2 * nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slack2var, SCIPblkmem(scip), nvars) );
 
    vars = SCIPgetOrigVars(scip);
    nvars = SCIPgetNOrigVars(scip);

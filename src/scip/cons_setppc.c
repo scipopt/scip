@@ -6245,7 +6245,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(conss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = 2*nconss;
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_SETPPCCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeySetppccons, hashKeyEqSetppccons, hashKeyValSetppccons, (void*) scip) );

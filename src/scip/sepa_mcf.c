@@ -4891,7 +4891,7 @@ SCIP_RETCODE nodepairqueueCreate(
    /* create a hash table for all used node pairs
     * hash table is only needed to have unique nodepairs (identify arcs using the same nodepair)
     */
-   hashtablesize = 2*mcfnetwork->narcs;
+   hashtablesize = mcfnetwork->narcs;
    hashtablesize = MAX(hashtablesize, HASHSIZE_NODEPAIRS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, SCIPblkmem(scip), hashtablesize,
                                   hashGetKeyNodepairs, hashKeyEqNodepairs, hashKeyValNodepairs, (void*) mcfnetwork) );

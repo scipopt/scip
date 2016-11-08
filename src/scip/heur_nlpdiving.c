@@ -1823,7 +1823,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          assert(ncovervars >= 0);
 
          /* create hash map */
-         SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), 2 * ncovervars) );
+         SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), ncovervars) );
 
          /* process variables in the cover */
          for( c = 0; c < ncovervars; c++ )

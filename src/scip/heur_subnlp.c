@@ -148,7 +148,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX(nvars, 5)) );
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
    /* create sub-SCIP copy of CIP */
 

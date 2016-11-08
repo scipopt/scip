@@ -3488,7 +3488,7 @@ SCIP_RETCODE SCIPwritePip(
 
    /* create hashtable for storing aggregated variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 100, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), nvars/10, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
    for (c = 0; c < nConsQuadratic; ++c)

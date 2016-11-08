@@ -2955,7 +2955,7 @@ SCIP_RETCODE checkVarnames(
    faulty = 0;
 
    /* allocate memory */
-   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), (1.2 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, varnames, nvars) );
 
    /* check if the variable names are not to long */

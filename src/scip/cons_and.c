@@ -3313,7 +3313,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = 2*nconss;
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_ANDCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyAndcons, hashKeyEqAndcons, hashKeyValAndcons, (void*) scip) );
@@ -3907,8 +3907,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
 #ifdef GMLGATEPRINTING
 
-#define HASHTABLESIZE_FACTOR 5
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAnd)
@@ -3959,7 +3957,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
