@@ -208,7 +208,7 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_Real lincoefs[2];
    SCIP_QUADELEM quadelems[2];
    SCIP_NLROW* nlrows[2];
-   SCIP_Real nlrowgradcosts[2];;
+   SCIP_Real nlrowgradcosts[2];
    SCIP_Real gradcosts;
    SCIP_Real minfeas;
 
