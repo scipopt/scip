@@ -5503,15 +5503,7 @@ SCIP_RETCODE SCIPconsCreate(
    assert(name != NULL);
    assert(conshdlr != NULL);
    assert(!original || deleteconsdata);
-#if 0
-   /* constraints of constraint handlers that don't need constraints cannot be created */
-   if( !conshdlr->needscons )
-   {
-      SCIPerrorMessage("cannot create constraint <%s> of type [%s] - constraint handler does not need constraints\n",
-         name, conshdlr->name);
-      return SCIP_INVALIDCALL;
-   }
-#endif
+
    /* create constraint data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, cons) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*cons)->name, name, strlen(name)+1) );
