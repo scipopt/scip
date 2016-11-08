@@ -1767,7 +1767,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    /* desired structure: matrix associated to quadratic constraint is indefinite;
     * otherwise, the problem usually can be solved faster by standard methods. */
-   if ( ! conshdlrdata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
+   if ( ! presoldata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
    {
       SCIPdebugMessage("quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \
            indefinite.\n", SCIPconsGetName(cons) );
@@ -1995,7 +1995,7 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" PRESOL_NAME "/updatequadindef",
          "if TRUE then apply quadratic constraint update even if the quadratic constraint matrix is known to be indefinite",
-         &conshdlrdata->updatequadindef, TRUE, FALSE, NULL, NULL) );
+         &presoldata->updatequadindef, TRUE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
