@@ -808,7 +808,7 @@ SCIP_RETCODE applyHeur(
     * 2. improve points via consensus vectors
     */
    gradlimit = heurdata->gradlimit == 0.0 ? SCIPinfinity(scip) : heurdata->gradlimit;
-   for( npoints = 0; npoints < heurdata->nrndpoints && gradlimit >= 0; ++npoints )
+   for( npoints = 0; npoints < heurdata->nrndpoints && gradlimit >= 0 && !SCIPisStopped(scip); ++npoints )
    {
       SCIP_Real gradcosts;
 
