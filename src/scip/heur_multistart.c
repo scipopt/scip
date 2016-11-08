@@ -426,7 +426,7 @@ SCIP_RETCODE improvePoint(
       SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 
       /* check stopping criterion */
-      if( r % 5 == 0 && r > 0 )
+      if( r % minimpriter == 0 && r > 0 )
       {
          if( *minfeas <= MINFEAS || (*minfeas-lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac )
             break;
