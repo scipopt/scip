@@ -208,7 +208,12 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_Real lincoefs[2];
    SCIP_QUADELEM quadelems[2];
    SCIP_NLROW* nlrows[2];
+   SCIP_Real nlrowgradcosts[2];;
+   SCIP_Real gradcosts;
    SCIP_Real minfeas;
+
+   nlrowgradcosts[0] = 1.0;
+   nlrowgradcosts[1] = 1.0;
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
@@ -222,8 +227,9 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    lincoefs[0] = 5.0;
    lincoefs[1] = 1.0;
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas) );
+   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
    cr_expect(SCIPisFeasEQ(scip, minfeas, 0.0));
+   cr_expect(gradcosts > 0.0);
 
    /* consider one quadratic constraint of the form sqrt(x^2 + y^2) = 0.5 */
    quadelems[0].idx1 = 0;
@@ -237,20 +243,23 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    /* start inside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.2) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, INT_MAX, &minfeas) );
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 10, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
    cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
+   cr_expect(gradcosts > 0.0);
 
    /* start outside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
-   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas) );
+   SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
    cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
+   cr_expect(gradcosts > 0.0);
 
    /* consider linear and quadratic constraint */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -10.0) );
-   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas) );
+   SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, exprint, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
    cr_expect(SCIPisFeasGE(scip, minfeas, -EPS));
+   cr_expect(gradcosts > 0.0);
 
    /* free nlrows */
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[1]) );
