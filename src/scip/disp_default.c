@@ -85,17 +85,17 @@
 
 #define DISP_NAME_MEMUSED       "memused"
 #define DISP_DESC_MEMUSED       "total number of bytes used in block memory"
-#define DISP_HEAD_MEMUSED       "mem"
+#define DISP_HEAD_MEMUSED       "umem"
 #define DISP_WIDT_MEMUSED       5
-#define DISP_PRIO_MEMUSED       20000
+#define DISP_PRIO_MEMUSED       0
 #define DISP_POSI_MEMUSED       1500
 #define DISP_STRI_MEMUSED       TRUE
 
 #define DISP_NAME_MEMTOTAL      "memtotal"
 #define DISP_DESC_MEMTOTAL      "total number of bytes in block memory"
-#define DISP_HEAD_MEMTOTAL      "tmem"
+#define DISP_HEAD_MEMTOTAL      "mem"
 #define DISP_WIDT_MEMTOTAL      5
-#define DISP_PRIO_MEMTOTAL      0
+#define DISP_PRIO_MEMTOTAL      20000
 #define DISP_POSI_MEMTOTAL      1500
 #define DISP_STRI_MEMTOTAL      TRUE
 
