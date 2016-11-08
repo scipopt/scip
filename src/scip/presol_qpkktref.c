@@ -979,7 +979,7 @@ SCIP_RETCODE presolveAddKKTVarboundConss(
       rhs = SCIPgetLhsVarbound(scip, cons);
       vars[0] = SCIPgetVarVarbound(scip, cons);
       vars[1] = SCIPgetVbdvarVarbound(scip, cons);
-      vals[0] = 0.0;
+      vals[0] = 1.0;
       vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
       nvars = 2;
 
