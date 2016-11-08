@@ -367,8 +367,6 @@ SCIP_RETCODE improvePoint(
       BMSclearMemoryArray(updatevec, nvars);
       nviolnlrows = 0;
 
-      SCIPdebugMsg(scip, "r = %d nnlrows = %d\n", r, nnlrows);
-
       for( i = 0; i < nnlrows; ++i )
       {
          int j;
@@ -694,8 +692,8 @@ SCIP_RETCODE solveNLP(
    SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
-   if( nlpresult == SCIP_FOUNDSOL )
-      *success = TRUE;
+   /* let sub-NLP heuristic decide whether the solution is feasible or not */
+   *success = nlpresult == SCIP_FOUNDSOL;
 
    return SCIP_OKAY;
 }
