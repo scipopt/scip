@@ -1682,10 +1682,11 @@ SCIP_RETCODE SCIPmultihashCreate(
    void*                 userptr             /**< user pointer */
    )
 {
-   assert(multihash != NULL);
    /* only assert non negative to catch overflow errors
-    * but not zeros due to integer divison */
+    * but not zeros due to integer divison
+    */
    assert(tablesize >= 0);
+   assert(multihash != NULL);
    assert(hashgetkey != NULL);
    assert(hashkeyeq != NULL);
    assert(hashkeyval != NULL);
@@ -2020,7 +2021,8 @@ SCIP_RETCODE SCIPhashtableCreate(
    unsigned int nslots;
 
    /* only assert non negative to catch overflow errors
-    * but not zeros due to integer divison */
+    * but not zeros due to integer divison
+    */
    assert(tablesize >= 0);
    assert(hashtable != NULL);
    assert(hashgetkey != NULL);
@@ -2663,7 +2665,8 @@ SCIP_RETCODE hashmapInsert(
 }
 
 /** lookup origin in the hashmap. If element is found returns true and the position of the element,
- *  otherwise returns FALSE. */
+ *  otherwise returns FALSE.
+ */
 static
 SCIP_Bool hashmapLookup(
    SCIP_HASHMAP*         hashmap,            /**< hash table */
