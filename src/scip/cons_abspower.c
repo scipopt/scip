@@ -5295,17 +5295,17 @@ SCIP_RETCODE enforceConstraint(
          &cutoff, &sepaefficacy) );
    if( cutoff )
    {
-      SCIPdebugMessage("separation detected cutoff.\n");
+      SCIPdebugMsg(scip, "separation detected cutoff.\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
    if( success )
    {
-      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
-   SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy,
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy,
       maxviol);
 
    /* we are not feasible, the whole node is not infeasible, and we cannot find a reasonable cut
@@ -5322,7 +5322,7 @@ SCIP_RETCODE enforceConstraint(
             &success, &cutoff, &sepaefficacy) );
       if( cutoff )
       {
-         SCIPdebugMessage("separation detected cutoff.\n");
+         SCIPdebugMsg(scip, "separation detected cutoff.\n");
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
@@ -5348,7 +5348,7 @@ SCIP_RETCODE enforceConstraint(
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching. Max. viol. cons. <%s>: %g+%g\n",
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching. Max. viol. cons. <%s>: %g+%g\n",
             SCIPvarGetName(brvar), SCIPgetSolVal(scip, sol, brvar), SCIPconsGetName(maxviolcons),
             SCIPconsGetData(maxviolcons)->lhsviol, SCIPconsGetData(maxviolcons)->rhsviol);
          nnotify = 1;

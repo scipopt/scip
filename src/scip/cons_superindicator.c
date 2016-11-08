@@ -1146,7 +1146,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSuperindicator)
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("executing enforelax callback\n");
+   SCIPdebugMsg(scip, "executing enforelax callback\n");
 
    cont = TRUE;
    *result = SCIP_FEASIBLE;
@@ -1171,7 +1171,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSuperindicator)
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
 
-         SCIPdebugMessage("binvar <%s> == 1 locally --> SCIPenforelaxCons() on constraint <%s>\n",
+         SCIPdebugMsg(scip, "binvar <%s> == 1 locally --> SCIPenforelaxCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
          SCIP_CALL( SCIPenforelaxCons(scip, consdata->slackcons, sol, solinfeasible, &locresult) );
@@ -1233,7 +1233,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSuperindicator)
       }  /*lint !e788*/
    }
 
-   SCIPdebugMessage("enforelax result=%d\n", *result);
+   SCIPdebugMsg(scip, "enforelax result=%d\n", *result);
 
    return SCIP_OKAY;
 }

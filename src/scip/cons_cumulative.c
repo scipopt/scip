@@ -12465,7 +12465,7 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("constraint enforcing %d useful cumulative constraints of %d constraints\n", nusefulconss, nconss);
+   SCIPdebugMsg(scip, "constraint enforcing %d useful cumulative constraints of %d constraints\n", nusefulconss, nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

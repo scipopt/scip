@@ -110,7 +110,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
    assert(nconss == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("Enforelax method of integrality constraint\n");
+   SCIPdebugMsg(scip, "Enforelax method of integrality constraint\n");
 
    *result = SCIP_FEASIBLE;
 
@@ -125,7 +125,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
       {
          if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
          {
-            SCIPdebugMessage("Cutoff for integral variable %s with bounds [%f, %f] and value %f\n", SCIPvarGetName(vars[i]),
+            SCIPdebugMsg(scip, "Cutoff for integral variable %s with bounds [%f, %f] and value %f\n", SCIPvarGetName(vars[i]),
                   SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]), SCIPgetSolVal(scip, sol, vars[i]));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;

@@ -2156,7 +2156,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxLinking)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Enforcing %d linking constraints for relaxation solution\n", nconss);
+   SCIPdebugMsg(scip, "Enforcing %d linking constraints for relaxation solution\n", nconss);
 
    cutoff = FALSE;
    separated = FALSE;

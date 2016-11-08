@@ -7788,7 +7788,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Enforcing %d set partitioning / packing / covering constraints for relaxation solution\n", nconss);
+   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for relaxation solution\n", nconss);
 
    *result = SCIP_FEASIBLE;
 

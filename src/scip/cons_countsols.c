@@ -1688,7 +1688,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIPdebugMessage("method SCIP_DECL_CONSENFORELAX(consEnfolpCountsols)\n");
+   SCIPdebugMsg(scip, "method SCIP_DECL_CONSENFORELAX(consEnfolpCountsols)\n");
 
    assert( scip != NULL );
    assert( conshdlr != NULL );

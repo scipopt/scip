@@ -4214,7 +4214,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("relaxation enforcing %d logic or constraints\n", nconss);
+   SCIPdebugMsg(scip, "relaxation enforcing %d logic or constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 

@@ -3198,7 +3198,7 @@ SCIP_RETCODE enforceConstraint(
    }
    if( success )
    {
-      SCIPdebugMessage("enforced by separation\n");
+      SCIPdebugMsg(scip, "enforced by separation\n");
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -3214,7 +3214,7 @@ SCIP_RETCODE enforceConstraint(
       SCIP_CALL( propagateBounds(scip, conss[c], result, &nbndchg) );  /*lint !e613*/
       if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
       {
-         SCIPdebugMessage("enforced by %s\n", *result == SCIP_CUTOFF ? "cutting off node" : "reducing domain");
+         SCIPdebugMsg(scip, "enforced by %s\n", *result == SCIP_CUTOFF ? "cutting off node" : "reducing domain");
          return SCIP_OKAY;
       }
    }

@@ -7044,7 +7044,7 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMessage("enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
 
    /* we propagate and separate constraints only if they are active and enforcing by branching only does not seem much effective */
    assert(SCIPconsIsActive(maxviolcons));
@@ -7098,13 +7098,13 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
-      SCIPdebugMessage("separation found cutoff\n");
+      SCIPdebugMsg(scip, "separation found cutoff\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
    if( separateresult == SCIP_SEPARATED )
    {
-      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -7113,7 +7113,7 @@ SCIP_RETCODE enforceConstraint(
     * -> collect variables for branching
     */
 
-   SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
@@ -7145,7 +7145,7 @@ SCIP_RETCODE enforceConstraint(
          SCIP_Bool reduceddom;
          SCIP_Bool infeasible;
 
-         SCIPdebugMessage("All nonlinear variables seem to be fixed. Replace remaining violated nonlinear constraints by linear constraints.\n");
+         SCIPdebugMsg(scip, "All nonlinear variables seem to be fixed. Replace remaining violated nonlinear constraints by linear constraints.\n");
          SCIP_CALL( replaceViolatedByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
          /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP
           * when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here thus,
@@ -7167,7 +7167,7 @@ SCIP_RETCODE enforceConstraint(
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
             SCIPvarGetName(brvar), SCIPgetSolVal(scip, sol, brvar));
          nnotify = 1;
       }

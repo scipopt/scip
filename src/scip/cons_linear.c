@@ -14840,7 +14840,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("call consEnforelaxLinear\n");
+   SCIPdebugMsg(scip, "call consEnforelaxLinear\n");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -14876,7 +14876,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
       }
    }
 
-   SCIPdebugMessage("-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
+   SCIPdebugMsg(scip, "-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
 
    return SCIP_OKAY;
 }

@@ -6057,7 +6057,7 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMessage("enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
 
    /* run domain propagation */
    dummy = 0;
@@ -6089,7 +6089,7 @@ SCIP_RETCODE enforceConstraint(
     * -> collect variables for branching
     */
 
-   SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy,
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy,
       minefficacy, maxviol);
 
    /* find branching candidates */
@@ -6142,7 +6142,7 @@ SCIP_RETCODE enforceConstraint(
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
             SCIPvarGetName(brvar), SCIPgetSolVal(scip, sol, brvar));
          nnotify = 1;
       }

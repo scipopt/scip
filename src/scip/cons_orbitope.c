@@ -1647,7 +1647,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
 
       /* get solution */
       copyValues(scip, consdata, sol);
-      SCIPdebugMessage("Relaxation enforcement for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Relaxation enforcement for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
 
       /* separate */
       SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
@@ -1655,22 +1655,22 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
 
    if ( infeasible )
    {
-      SCIPdebugMessage("Infeasible node.\n");
+      SCIPdebugMsg(scip, "Infeasible node.\n");
       *result = SCIP_CUTOFF;
    }
    else if ( nfixedvars > 0 )
    {
-      SCIPdebugMessage("Fixed %d variables.\n", nfixedvars);
+      SCIPdebugMsg(scip, "Fixed %d variables.\n", nfixedvars);
       *result = SCIP_REDUCEDDOM;
    }
    else if ( ncuts > 0 )
    {
-      SCIPdebugMessage("Separated %d SCIs during enforcement.\n", ncuts);
+      SCIPdebugMsg(scip, "Separated %d SCIs during enforcement.\n", ncuts);
       *result = SCIP_SEPARATED;
    }
    else
    {
-      SCIPdebugMessage("No violated SCI found during enforcement.\n");
+      SCIPdebugMsg(scip, "No violated SCI found during enforcement.\n");
    }
 
    return SCIP_OKAY;

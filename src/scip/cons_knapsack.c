@@ -11725,7 +11725,7 @@ SCIP_RETCODE enforceConstraint(
 
    *result = SCIP_FEASIBLE;
 
-   SCIPdebugMessage("knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
+   SCIPdebugMsg(scip, "knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
 
    /* get maximal number of cuts per round */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

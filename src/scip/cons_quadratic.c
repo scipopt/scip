@@ -10368,7 +10368,7 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMessage("enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcon));
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcon));
 
    /* if we are above the 100'th enforcement round for this node, something is strange
     * (maybe the LP / relaxator does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
@@ -10417,7 +10417,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
-      SCIPdebugMessage("propagation succeeded (%s)\n", propresult == SCIP_CUTOFF ? "cutoff" : "reduceddom");
+      SCIPdebugMsg(scip, "propagation succeeded (%s)\n", propresult == SCIP_CUTOFF ? "cutoff" : "reduceddom");
       *result = propresult;
       return SCIP_OKAY;
    }
@@ -10432,13 +10432,13 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
-      SCIPdebugMessage("separation found cutoff\n");
+      SCIPdebugMsg(scip, "separation found cutoff\n");
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
    if( separateresult == SCIP_SEPARATED )
    {
-      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -10447,7 +10447,7 @@ SCIP_RETCODE enforceConstraint(
     * -> collect variables for branching
     */
 
-   SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
@@ -10460,13 +10460,13 @@ SCIP_RETCODE enforceConstraint(
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_CUTOFF )
       {
-         SCIPdebugMessage("separation found cutoff\n");
+         SCIPdebugMsg(scip, "separation found cutoff\n");
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
       if( separateresult == SCIP_SEPARATED )
       {
-         SCIPdebugMessage("separation fallback succeeded, efficacy = %g\n", sepaefficacy);
+         SCIPdebugMsg(scip, "separation fallback succeeded, efficacy = %g\n", sepaefficacy);
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
@@ -10507,7 +10507,7 @@ SCIP_RETCODE enforceConstraint(
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
             SCIPvarGetName(brvar), SCIPgetSolVal(scip, sol, brvar));
          nnotify = 1;
       }
