@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPpresolCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( timing < SCIP_PRESOLTIMING_NONE || timing > SCIP_PRESOLTIMING_FINAL )
+   if( timing < SCIP_PRESOLTIMING_NONE || timing > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> presolver instead.\n", name);
@@ -155,10 +155,10 @@ SCIP_RETCODE SCIPpresolCreate(
          &(*presol)->maxrounds, FALSE, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/timing", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of presolver <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE)",
-      name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of presolver <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
+      name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*presol)->timing, TRUE, (int)timing, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_FINAL, NULL, NULL) ); /*lint !e740*/
+         (int*)&(*presol)->timing, TRUE, (int)timing, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
