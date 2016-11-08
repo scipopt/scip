@@ -4012,7 +4012,12 @@ SCIP_RETCODE solveNode(
 
          /* time or solution limit was hit and we already created a dummy child node to terminate fast */
          if( *stopped )
+         {
+            /* free solution used to save the best relaxation solution */
+            SCIP_CALL( SCIPsolFree(&bestrelaxsol, blkmem, primal) );
+
             return SCIP_OKAY;
+         }
          
       }
       fullseparation = FALSE;
