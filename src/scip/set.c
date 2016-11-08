@@ -603,15 +603,9 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
 
    if( set->reopt_enable )
    {
-      /* disable some parts of conflict analysis
-       *
-       * TODO we may want to have usesb = TRUE
-       */
-      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useboundlp", FALSE) );
+      /* disable some parts of conflict analysis */
+      SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "conflict/useboundlp", 'o') );
       SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usepseudo", FALSE) );
-      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usesb", FALSE) );
-//      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useinflp", TRUE) );
-//      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useprop", TRUE) );
 
       /* TODO check wheather multi aggregation can be enabled in reoptimization */
       if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
