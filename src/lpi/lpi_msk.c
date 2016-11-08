@@ -877,6 +877,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+      int j;
+
+      MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+#endif
+
       SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
       MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
@@ -1053,6 +1063,16 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new cols are added - this is forbidden */
+      int ncols;
+      int j;
+
+      MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
+
       SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
       MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);

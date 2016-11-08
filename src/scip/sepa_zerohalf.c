@@ -284,7 +284,7 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
 #define BITARRAY                             BITARRAYBASETYPE*
 
 /** get the bit mask where the pos-th bit is set */
-#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))
+#define BITMASK(pos)                         ((unsigned int)(1u << (pos)))
 
 /** set the pos-th bit of var */
 #define BITSET(var, pos)                     (var) |= BITMASK(pos)
@@ -1298,21 +1298,20 @@ void debugPrintSubLpData(
    assert(lpdata != NULL);
    assert(sublpdata != NULL);
 
+   SCIPdebugMsg(scip, "\n debugPrintSubLpData:\n\n");
+   SCIPdebugMsg(scip, " rrows:   (nrrows=%d)\n", sublpdata->nrrows);
 
-   SCIPdebugMessage("\n debugPrintSubLpData:\n\n");
-
-   SCIPdebugMessage(" rrows:   (nrrows=%d)\n", sublpdata->nrrows);
    for( i = 0 ; i < sublpdata->nrrows ; ++i)
    {
-      SCIPdebugMessage(" %6d:  rrows: %6d  rhs: %6g  slack: %6g  name: %s\n",
+      SCIPdebugMsg(scip, " %6d:  rrows: %6d  rhs: %6g  slack: %6g  name: %s\n",
          i, sublpdata->rrows[i], sublpdata->rrowsrhs[i], sublpdata->rrowsslack[i],
          SCIProwGetName(lpdata->rows[sublpdata->rrows[i]]));
    }
-   SCIPdebugMessage("\n rcols:   (nrcols=%d)\n", sublpdata->nrcols);
+   SCIPdebugMsg(scip, "\n rcols:   (nrcols=%d)\n", sublpdata->nrcols);
    for( j = 0 ; j < sublpdata->nrcols ; ++j)
    {
-      SCIPdebugMessage(" %6d:  rcols: %6d  lbslack: %6g  ubslack: %6g\n",
-         i, sublpdata->rcols[i], sublpdata->rcolslbslack[i], sublpdata->rcolsubslack[i]);        
+      SCIPdebugMsg(scip, " %6d:  rcols: %6d  lbslack: %6g  ubslack: %6g\n",
+         i, sublpdata->rcols[i], sublpdata->rcolslbslack[i], sublpdata->rcolsubslack[i]);
    }
 }
 #endif
@@ -1336,88 +1335,87 @@ void debugPrintMod2Data(
    assert(lpdata != NULL);
    assert(mod2data != NULL);
 
+   SCIPdebugMsg(scip, "\n debugPrintMod2Data:\n\n");
 
-   SCIPdebugMessage("\n debugPrintMod2Data:\n\n");
-
-   SCIPdebugMessage(" nrows = %d, nvarbounds = %d, nrcols = %d, nrowsind = %d, ncolsind = %d\n",
+   SCIPdebugMsg(scip, " nrows = %d, nvarbounds = %d, nrcols = %d, nrowsind = %d, ncolsind = %d\n",
       mod2data->nrows, mod2data->nvarbounds, mod2data->relatedsubproblem->nrcols,
       mod2data->nrowsind, mod2data->ncolsind);
-   SCIPdebugMessage(" rowsbitarraysize = %d, rowaggregationsbitarraysize = %d\n",
+   SCIPdebugMsg(scip, " rowsbitarraysize = %d, rowaggregationsbitarraysize = %d\n",
       mod2data->rowsbitarraysize, mod2data->rowaggregationsbitarraysize);
 
 
-   SCIPdebugMessage("\n fracsol:\n");
+   SCIPdebugMsg(scip, "\n fracsol:\n");
    for( j = 0 ; j < mod2data->relatedsubproblem->nrcols ; ++j )
    {
       for( k = 0 ; k < mod2data->ncolsind ; ++k )
          if( mod2data->colsind[k] == j )
             break;
-      SCIPdebugMessage(" rcols[%6d]:  fracsol: %6g  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
+      SCIPdebugMsg(scip, " rcols[%6d]:  fracsol: %6g  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
          k < mod2data->ncolsind ? k : -1,
          SCIPvarGetName(SCIPcolGetVar(lpdata->cols[mod2data->relatedsubproblem->rcols[j]])));
    }
 
-   SCIPdebugMessage("\n (A mod 2, b mod 2, [#nonz] (slacks), R, name(rrows), left(-)/right(+):\n");
+   SCIPdebugMsg(scip, "\n (A mod 2, b mod 2, [#nonz] (slacks), R, name(rrows), left(-)/right(+):\n");
    if( mod2data->nrowsind == 0 )
    {
-      SCIPdebugMessage(" empty\n");
+      SCIPdebugMsg(scip, " empty\n");
    }
    for( i = 0 ; i < mod2data->nrowsind ; ++i )
    {
       int nnonz = 0;
-      SCIPdebugMessage(" ");
+      SCIPdebugMsg(scip, " ");
       for( j = 0 ; j < mod2data->ncolsind; ++j )
          if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[i]], mod2data->colsind[j]) ) /*lint !e701*/
          {
             nnonz++;
-            SCIPdebugPrintf("1");        
+            SCIPdebugMsgPrint(scip, "1");
          }
          else
          {
-            SCIPdebugPrintf(".");
+            SCIPdebugMsgPrint(scip, ".");
          }
       if( mod2data->rhs[mod2data->rowsind[i]] )
       {
-         SCIPdebugPrintf("  1");
+         SCIPdebugMsgPrint(scip, "  1");
       }
       else
       {
-         SCIPdebugPrintf("  0");
+         SCIPdebugMsgPrint(scip, "  0");
       }
-      SCIPdebugPrintf("  [%4d] ", nnonz);    
-      SCIPdebugPrintf("(%6g)  ", mod2data->slacks[mod2data->rowsind[i]]);
+      SCIPdebugMsgPrint(scip, "  [%4d] ", nnonz);
+      SCIPdebugMsgPrint(scip, "(%6g)  ", mod2data->slacks[mod2data->rowsind[i]]);
 
       if( printaggregations )
       {
          for( j = 0 ; j < mod2data->relatedsubproblem->nrrows; ++j )
             if( BITARRAYBITISSET(mod2data->rowaggregations[mod2data->rowsind[i]], j) ) /*lint !e701*/
             {
-               SCIPdebugPrintf("1");
+               SCIPdebugMsgPrint(scip, "1");
             }
             else
             {
-               SCIPdebugPrintf(".");
+               SCIPdebugMsgPrint(scip, ".");
             }
       }
 
       if( mod2data->rowsind[i] < mod2data->nrows - mod2data->nvarbounds )
       {      
-         SCIPdebugPrintf("  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
+         SCIPdebugMsgPrint(scip, "  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
          if( lpdata->rrowsindexofleftrow[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]] == mod2data->rowsind[i] )
          {
-            SCIPdebugPrintf(" -\n");
+            SCIPdebugMsgPrint(scip, " -\n");
          }
          else
          {
-            SCIPdebugPrintf(" +\n");
+            SCIPdebugMsgPrint(scip, " +\n");
          }
       }
       else
       {
-         SCIPdebugPrintf("    varbound(rows[%d])\n", mod2data->rowsind[i]);
+         SCIPdebugMsgPrint(scip, "    varbound(rows[%d])\n", mod2data->rowsind[i]);
       }
    }
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 }
 #endif
 
@@ -1437,15 +1435,15 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
    assert(scip != NULL);
    assert(lpdata != NULL);
 
-   SCIPdebugMessage("\n\nLP rows:\n");
+   SCIPdebugMsg(scip, "\n\nLP rows:\n");
    for( i = 0 ; i < lpdata->nrows ; ++i)
    {
-      SCIPdebugMessage("\nrow %d (left): %s[%d,%d] %s:\n", i,
+      SCIPdebugMsg(scip, "\nrow %d (left): %s[%d,%d] %s:\n", i,
          (lpdata->subproblemsindexofrow[i] == IRRELEVANT)
          || (lpdata->rrowsindexofleftrow[i] < 0) ? "IRRELEVANT" : "RELEVANT",
          lpdata->subproblemsindexofrow[i], lpdata->rrowsindexofleftrow[i],
          lpdata->rrowsindexofleftrow[i] < 0 ? getconstantname(temp, lpdata->rrowsindexofleftrow[i]) : "");
-      SCIPdebugMessage("row %d (right): %s[%d,%d] %s:\n", i,
+      SCIPdebugMsg(scip, "row %d (right): %s[%d,%d] %s:\n", i,
          (lpdata->subproblemsindexofrow[i] == IRRELEVANT)
          || (lpdata->rrowsindexofrightrow[i] < 0) ? "IRRELEVANT" : "RELEVANT",
          lpdata->subproblemsindexofrow[i], lpdata->rrowsindexofrightrow[i],
@@ -1453,17 +1451,14 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
       SCIP_CALL( SCIPprintRow(scip, lpdata->rows[i], NULL) );
    }
 
-   SCIPdebugMessage("\n\nLP cols:\n");
+   SCIPdebugMsg(scip, "\n\nLP cols:\n");
    for( j = 0 ; j < lpdata->ncols ; ++j)
    {
-      SCIPdebugMessage("\ncol %d: %s[%d,%d] %s:\n", j,
-         (lpdata->subproblemsindexofcol[j] == IRRELEVANT)
+      SCIPdebugMsg(scip, "\ncol %d: %s[%d,%d] %s:\n", j, (lpdata->subproblemsindexofcol[j] == IRRELEVANT)
          || (lpdata->rcolsindexofcol[j] < 0) ? "IRRELEVANT" : "RELEVANT",
          lpdata->subproblemsindexofcol[j], lpdata->rcolsindexofcol[j],
-         lpdata->rcolsindexofcol[j] < 0 ? getconstantname(temp, lpdata->rcolsindexofcol[j]) : ""); 
-      SCIPdebugMessage("%s = %f\n", 
-         SCIPvarGetName(SCIPcolGetVar(lpdata->cols[j])),
-         SCIPcolGetPrimsol(lpdata->cols[j]));    
+         lpdata->rcolsindexofcol[j] < 0 ? getconstantname(temp, lpdata->rcolsindexofcol[j]) : "");
+      SCIPdebugMsg(scip, "%s = %f\n", SCIPvarGetName(SCIPcolGetVar(lpdata->cols[j])), SCIPcolGetPrimsol(lpdata->cols[j]));
    }
 
    return SCIP_OKAY;
@@ -3111,10 +3106,10 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
       {
          assert(lpdata->rrowsindexofleftrow[lppos] == i || lpdata->rrowsindexofrightrow[lppos] == i);
 
-         SCIPdebugMessage("  %1s0.5   (int scaling: %16.4f / %16.4f)  row[%d] %s\n",
+         SCIPdebugMsg(scip, "  %1s0.5   (int scaling: %16.4f / %16.4f)  row[%d] %s\n",
             lpdata->rrowsindexofleftrow[lppos] == i ? "-" : "+",
             lpdata->intscalarsleftrow[lppos], lpdata->intscalarsrightrow[lppos],
-            lppos, SCIProwGetName(lpdata->rows[lppos]));          
+            lppos, SCIProwGetName(lpdata->rows[lppos]));
 
          if( lpdata->rrowsindexofleftrow[lppos] == i )
             (*weights)[lppos] = lpdata->intscalarsleftrow[lppos] * (-0.5);
@@ -3243,8 +3238,8 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    if( !(*cutoff) && cutdata->success )
    {
       cutdata->isfeasviolated = SCIPisFeasGT(scip, cutdata->activity, cutdata->rhs);
-      SCIPdebugMessage("Cut is %sfeasviolated: (act: %e, rhs: %e, viol: %e)\n", 
-         cutdata->isfeasviolated ? "" : "not ", cutdata->activity, cutdata->rhs, cutdata->violation);      
+      SCIPdebugMsg(scip, "Cut is %sfeasviolated: (act: %e, rhs: %e, viol: %e)\n",
+         cutdata->isfeasviolated ? "" : "not ", cutdata->activity, cutdata->rhs, cutdata->violation);
 
       if( cutdata->isfeasviolated )    
       { 
@@ -3418,7 +3413,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
       for( r = firstrowsind ; r < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r)
       {
          if( r < lastrowsind - firstrowsind )
-            while( removerow[r2] && r2 < mod2data->nrowsind )
+            while( r2 < mod2data->nrowsind && removerow[r2] )
                r2++;
          if( r < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r] = mod2data->rowsind[r2];
@@ -3551,7 +3546,7 @@ SCIP_RETCODE preprocessRows(
       for( r1 = firstrowsind ; r1 < mod2data->nrowsind && r2 < mod2data->nrowsind; ++r1)
       {
          if( r1 < lastrowsind - firstrowsind )
-            while( removerow[r2] && r2 < mod2data->nrowsind )
+            while( r2 < mod2data->nrowsind && removerow[r2] )
                r2++;
          if( r1 < r2 && r2 < mod2data->nrowsind )
             mod2data->rowsind[r1] = mod2data->rowsind[r2];
@@ -3734,7 +3729,7 @@ SCIP_RETCODE preprocessColumns(
          for( c = firstcolsind ; c < mod2data->ncolsind && j < mod2data->ncolsind; ++c)
          {
             if( c < nconsideredcols )
-               while( removecol[j] && j < mod2data->ncolsind )
+               while( j < mod2data->ncolsind && removecol[j] )
                   j++;
             if( c < j && j < mod2data->ncolsind )
                mod2data->colsind[c] = mod2data->colsind[j];
@@ -4229,7 +4224,7 @@ SCIP_RETCODE decomposeProblem(
       totalnrrows += subproblem->nrrows;
       totalnrcols += subproblem->nrcols;
 
-      SCIPdebugMessage("subproblem %d: %d rrows, %d rcols\n", k, subproblem->nrrows, subproblem->nrcols);
+      SCIPdebugMsg(scip, "subproblem %d: %d rrows, %d rcols\n", k, subproblem->nrrows, subproblem->nrcols);
    }
    if( lpdata->nsubproblems == 0 )
    {
@@ -4502,7 +4497,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
          for( i = 0 ; i < mod2data->nrowsind && j < mod2data->nrowsind; ++i)
          {
             if( i < mod2data->nrowsind )
-               while( removerow[j] && j < mod2data->nrowsind )
+               while( j < mod2data->nrowsind && removerow[j] )
                   j++;
             if( i < j && j < mod2data->nrowsind )
                mod2data->rowsind[i] = mod2data->rowsind[j];
@@ -4988,7 +4983,7 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
-   SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
+   SCIPdebugMsg(scip, "Copying the plugins was %s successful.\n", success ? "" : "not");
 
    SCIP_CALL( SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
          NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
@@ -5546,12 +5541,12 @@ SCIP_RETCODE separateBySolvingAuxIP(
 
 #ifdef SCIP_DEBUG
       SCIP_CALL( debugPrintLPRowsAndCols(scip, lpdata) );
-      SCIPdebugMessage("\n");
+      SCIPdebugMsg(scip, "\n");
       debugPrintSubLpData(scip, lpdata, mod2data->relatedsubproblem);
       debugPrintMod2Data(scip, lpdata, mod2data, TRUE);
-      SCIPdebugMessage("\n");
+      SCIPdebugMsg(scip, "\n");
       SCIP_CALL( SCIPprintOrigProblem(auxipdata->subscip, NULL, NULL, TRUE) );
-      SCIPdebugMessage("\n");
+      SCIPdebugMsg(scip, "\n");
       SCIP_CALL( SCIPprintBestSol(auxipdata->subscip, NULL , FALSE) );
 #endif
 
@@ -5903,14 +5898,12 @@ void debugPrintAuxGraphNode(
 
    assert(node != NULL);
 
-   SCIPdebugMessage("\nnode: %p\n", node);
+   SCIPdebugMsg(scip, "\nnode: %p\n", node);
    for( i = 0 ; i < node->nneighbors ; ++i)
    {
-      SCIPdebugMessage("  neighbor %4d: %p  weight: %6f  rrow: %4d\n",
-         i, node->neighbors[i], node->edgeweights[i], node->relatedrows[i]);
+      SCIPdebugMsg(scip, "  neighbor %4d: %p  weight: %6f  rrow: %4d\n", i, node->neighbors[i], node->edgeweights[i], node->relatedrows[i]);
    }
-   SCIPdebugMessage("  nneighbors: %d  distance: %6f  previous: %p\n",
-      node->nneighbors, node->distance, node->previous);  
+   SCIPdebugMsg(scip, "  nneighbors: %d  distance: %6f  previous: %p\n", node->nneighbors, node->distance, node->previous);
 }
 #endif  
 
@@ -7109,9 +7102,9 @@ s=============================================\n");
 
 #ifdef SCIP_DEBUG
          SCIP_CALL( debugPrintLPRowsAndCols(scip, lpdata) );
-         SCIPdebugMessage("\n");
+         SCIPdebugMsg(scip, "\n");
          debugPrintSubLpData(scip, lpdata, lpdata->subproblems[subproblemindex]);
-         SCIPdebugMessage("\n");
+         SCIPdebugMsg(scip, "\n");
 #endif
          /* create weightvector */
          weights = NULL;

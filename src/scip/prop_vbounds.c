@@ -51,7 +51,7 @@
  * 3) Collecting bound changes
  *
  *    For each bound of a variable, which can trigger bound changes of other variables, the propagator catches all
- *    events informing about a global change of the bound or a local toghtening of the bound. The event handler
+ *    events informing about a global change of the bound or a local tightening of the bound. The event handler
  *    then adds the bound of the variable to a priority queue, with the key in the priority queue corresponding
  *    to the position of the bound in the topological sort.
  *
@@ -577,7 +577,7 @@ SCIP_RETCODE dfs(
             assert(!visited[idx]);
             assert(j < ncliques);
 
-            SCIPdebugMessage("clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+            SCIPdebugMsg(scip, "clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
                indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
 
             /* put the adjacent node onto the stack */
@@ -640,7 +640,7 @@ SCIP_RETCODE dfs(
             {
                assert(!visited[idx]);
 
-               SCIPdebugMessage("impl: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+               SCIPdebugMsg(scip, "impl: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
                   indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
 
 
@@ -688,7 +688,7 @@ SCIP_RETCODE dfs(
          {
             assert(!visited[idx]);
 
-            SCIPdebugMessage("vbound: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+            SCIPdebugMsg(scip, "vbound: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
                indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
 
             /* put the adjacent node onto the stack */
@@ -707,7 +707,7 @@ SCIP_RETCODE dfs(
       /* the current node was completely handled, remove it from stack */
       stacksize--;
 
-      SCIPdebugMessage("topoorder[%d] = %s(%s)\n", *ndfsnodes, getBoundString(lower), SCIPvarGetName(startvar));
+      SCIPdebugMsg(scip, "topoorder[%d] = %s(%s)\n", *ndfsnodes, getBoundString(lower), SCIPvarGetName(startvar));
 
       /* store node in the sorted nodes array */
       dfsnodes[(*ndfsnodes)] = curridx;
@@ -790,7 +790,7 @@ SCIP_RETCODE initData(
    assert(propdata != NULL);
    assert(!propdata->initialized);
 
-   SCIPdebugMessage("initialize vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
+   SCIPdebugMsg(scip, "initialize vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -907,7 +907,7 @@ SCIP_RETCODE initData(
          if( SCIPvarGetType(vbvar) == SCIP_VARTYPE_BINARY
             && SCIPvarHasImplic(vbvar, isIndexLowerbound(startidx), var, getBoundtype(v)) )
          {
-            SCIPdebugMessage("varbound <%s> %s %g * <%s> + %g not added to propagator data due to reverse implication\n",
+            SCIPdebugMsg(scip, "varbound <%s> %s %g * <%s> + %g not added to propagator data due to reverse implication\n",
                SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
                SCIPvarGetName(vbvar), constant);
          }
@@ -915,7 +915,7 @@ SCIP_RETCODE initData(
          {
             SCIP_CALL( addVbound(scip, propdata, startidx, v, coef, constant) );
 
-            SCIPdebugMessage("varbound <%s> %s %g * <%s> + %g added to propagator data\n",
+            SCIPdebugMsg(scip, "varbound <%s> %s %g * <%s> + %g added to propagator data\n",
                SCIPvarGetName(var), (lower ? ">=" : "<="), coef,
                SCIPvarGetName(vbvar), constant);
 
@@ -949,7 +949,7 @@ SCIP_RETCODE resolvePropagation(
    assert(propdata != NULL);
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
 
-   SCIPdebugMessage(" -> add %s bound of variable <%s> as reason\n",
+   SCIPdebugMsg(scip, " -> add %s bound of variable <%s> as reason\n",
       getBoundtypeString(boundtype), SCIPvarGetName(var));
 
    switch( boundtype )
@@ -1051,10 +1051,10 @@ SCIP_RETCODE analyzeConflictLowerbound(
       SCIP_Real relaxedbd;
       SCIP_Real relaxedub;
 
-      SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
+      SCIPdebugMsg(scip, "try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* adjust lower bound */
       inferlb = SCIPadjustedVarLb(scip, infervar, inferlb);
@@ -1089,7 +1089,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    else
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* add upper bound of the variable for which we tried to change the lower bound */
       SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
@@ -1160,10 +1160,10 @@ SCIP_RETCODE analyzeConflictUpperbound(
       SCIP_Real relaxedbd;
       SCIP_Real relaxedlb;
 
-      SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
+      SCIPdebugMsg(scip, "try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* adjust upper bound */
       inferub = SCIPadjustedVarUb(scip, infervar, inferub);
@@ -1198,7 +1198,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
    else
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
       /* add lower bound of the variable for which we tried to change the upper bound */
       SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
@@ -1273,7 +1273,7 @@ SCIP_RETCODE tightenVarLb(
       assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
       assert(!global || SCIPisGT(scip, newlb, SCIPvarGetUbGlobal(var)));
 
-      SCIPdebugMessage("tightening%s lower bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
+      SCIPdebugMsg(scip, "tightening%s lower bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
          (global ? " global" : ""), SCIPvarGetName(var), newlb, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
 
       if( global )
@@ -1290,7 +1290,7 @@ SCIP_RETCODE tightenVarLb(
    }
    else if( tightened )
    {
-      SCIPdebugMessage("tightened%s lower bound of variable <%s> to %g due the %s bound of variable <%s>\n",
+      SCIPdebugMsg(scip, "tightened%s lower bound of variable <%s> to %g due the %s bound of variable <%s>\n",
          (global ? " global" : ""), SCIPvarGetName(var), newlb, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
       (*nchgbds)++;
    }
@@ -1357,7 +1357,7 @@ SCIP_RETCODE tightenVarUb(
       assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
       assert(!global || SCIPisLT(scip, newub, SCIPvarGetLbGlobal(var)));
 
-      SCIPdebugMessage("tightening%s upper bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
+      SCIPdebugMsg(scip, "tightening%s upper bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
          (global ? " global" : ""), SCIPvarGetName(var), newub, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
 
       if( global )
@@ -1374,7 +1374,7 @@ SCIP_RETCODE tightenVarUb(
    }
    else if( tightened )
    {
-      SCIPdebugMessage("tightened%s upper bound of variable <%s> to %g due the %s bound of variable <%s>\n",
+      SCIPdebugMsg(scip, "tightened%s upper bound of variable <%s> to %g due the %s bound of variable <%s>\n",
          (global ? " global" : ""), SCIPvarGetName(var), newub, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
       (*nchgbds)++;
    }
@@ -1464,7 +1464,7 @@ SCIP_RETCODE propagateVbounds(
 
    nchgbds = 0;
 
-   SCIPdebugMessage("varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
+   SCIPdebugMsg(scip, "varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
 
    /* get variable bound of highest priority from priority queue and try to deduce bound changes for other variables;
     * the priority queue is ordered w.r.t the topological sort of the varbound graph
@@ -1484,7 +1484,7 @@ SCIP_RETCODE propagateVbounds(
       globalbound = ( lower ? SCIPvarGetLbGlobal(startvar) : SCIPvarGetUbGlobal(startvar));
       global = SCIPisEQ(scip, startbound, globalbound);
 
-      SCIPdebugMessage("propagate new %s bound of %g of variable <%s>:\n",
+      SCIPdebugMsg(scip, "propagate new %s bound of %g of variable <%s>:\n",
          getBoundtypeString(starttype), startbound, SCIPvarGetName(startvar));
 
       /* there should be neither implications nor cliques for non-binary variables */
@@ -1642,7 +1642,7 @@ SCIP_RETCODE propagateVbounds(
       }
    }
 
-   SCIPdebugMessage("tightened %d variable bounds\n", nchgbds);
+   SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
 
    /* set the result depending on whether bound changes were found or not */
    if( nchgbds > 0 )
@@ -1779,7 +1779,7 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
    assert(startvar != NULL);
    assert(startvar != infervar);
 
-   SCIPdebugMessage("explain %s bound change of variable <%s>\n",
+   SCIPdebugMsg(scip, "explain %s bound change of variable <%s>\n",
       getBoundtypeString(boundtype), SCIPvarGetName(infervar));
 
    if( !SCIPvarIsBinary(startvar) && propdata->usebdwidening )
@@ -1849,7 +1849,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    idx = (int) (size_t) eventdata;
    assert(idx >= 0);
 
-   SCIPdebugMessage("eventexec (type=%u): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
+   SCIPdebugMsg(scip, "eventexec (type=%u): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
       idx, indexGetBoundString(propdata->topoorder[idx]),
       SCIPvarGetName(propdata->vars[getVarIndex(propdata->topoorder[idx])]));
 

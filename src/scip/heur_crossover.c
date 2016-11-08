@@ -94,7 +94,7 @@ struct SCIP_HeurData
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    SCIP_Bool             randomization;      /**< should the choice which sols to take be randomized?               */
    SCIP_Bool             dontwaitatroot;     /**< should the nwaitingnodes parameter be ignored at the root node?   */
-   unsigned int          randseed;           /**< seed value for random number generator                            */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                                           */
    SCIP_HASHTABLE*       hashtable;          /**< hashtable used to store the solution tuples already used          */
    SOLTUPLE*             lasttuple;          /**< last tuple of solutions created by crossover                      */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?      */
@@ -298,7 +298,7 @@ SCIP_RETCODE selectSolsRandomized(
       for( j = 0; j < nusedsols && validtuple; j++ )
       {
          int k;
-         k = SCIPgetRandomInt(nusedsols-j-1, lastsol-1, &heurdata->randseed);
+         k = SCIPrandomGetInt(heurdata->randnumgen, nusedsols-j-1, lastsol-1);
 
          /* ensure that the solution does not have a similar source as the others */
          while( k >= nusedsols-j-1 && !solHasNewSource(sols, selection, j, k) )
@@ -529,7 +529,7 @@ SCIP_RETCODE createNewSol(
    *solindex = SCIPsolGetIndex(newsol);
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -573,7 +573,7 @@ SCIP_DECL_EVENTEXEC(eventExecCrossover)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n", SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n", SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -635,11 +635,14 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->usednodes = 0;
    heurdata->prevlastsol = NULL;
    heurdata->prevbestsol = NULL;
-   heurdata->randseed = SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED);
    heurdata->lasttuple = NULL;
    heurdata->nfailures = 0;
    heurdata->prevnsols = 0;
    heurdata->nextnodenumber = 0;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
@@ -673,6 +676,9 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
       SCIPfreeBlockMemory(scip, &soltuple);
       soltuple = tmp;
    }
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free hash table */
    assert(heurdata->hashtable != NULL);
@@ -915,11 +921,11 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {
@@ -963,7 +969,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (unsigned int)SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* catch LP events of sub-SCIP */
@@ -975,7 +981,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIPdebug( SCIP_CALL( SCIPwriteOrigProblem(subscip, "crossoverprob.cip", "cip", FALSE) ) );
 #endif
    /* solve the subproblem */
-   SCIPdebugMessage("Solve Crossover subMIP\n");
+   SCIPdebugMsg(scip, "Solve Crossover subMIP\n");
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
@@ -998,7 +1004,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* merge histories of the subscip-variables to the SCIP variables. */
    SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-   SCIPdebugMessage("Transferring variable histories complete\n");
+   SCIPdebugMsg(scip, "Transferring variable histories complete\n");
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )

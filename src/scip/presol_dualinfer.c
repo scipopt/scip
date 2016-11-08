@@ -756,7 +756,7 @@ void updateDualBounds(
    if( val > 0 )
    {
       newubdual = (objval - mincolresact) / val;
-      assert(SCIPisGE(scip,newubdual,0));
+      assert(SCIPisGE(scip, newubdual, 0.0));
 
       if( newubdual < ubdual[part][row] )
       {
@@ -770,7 +770,7 @@ void updateDualBounds(
    else if( val < 0 )
    {
       newlbdual = (objval - mincolresact) / val;
-      assert(SCIPisGE(scip,ubdual[part][row],newlbdual));
+      assert(SCIPisGE(scip, ubdual[part][row], newlbdual));
 
       if( newlbdual > lbdual[part][row] )
       {
@@ -1206,7 +1206,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                   SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                   if( infeasible )
                   {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
+                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
                      *result = SCIP_CUTOFF;
                      break;
                   }
@@ -1285,7 +1285,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
          if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0)
          {
-            SCIPdebugMessage("### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
+            SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
                nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
          }
       }

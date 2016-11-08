@@ -352,7 +352,7 @@ SCIP_RETCODE performBranching(
 
          /* get domain value score for the first candidate */
          bestvaluescore = getValueScore(scip, cands[0], conflictweight, cutoffweight, reliablescore, &bestbranchpoint, &bestbranchdir);
-         SCIPdebugMessage("current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
+         SCIPdebugMsg(scip, "current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
             SCIPvarGetName(bestvaluecand), SCIPvarGetLbLocal(bestvaluecand), SCIPvarGetUbLocal(bestvaluecand),
             bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS ? "<=" : ">=", bestbranchpoint, bestvaluescore);
       }
@@ -385,7 +385,7 @@ SCIP_RETCODE performBranching(
             /* evaluate the candidate against the currently best candidate w.r.t. domain value score */
             evaluateValueCand(cand, valuescore, branchpoint, branchdir, &bestvaluecand, &bestvaluescore, &bestbranchpoint, &bestbranchdir);
 
-            SCIPdebugMessage("current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
+            SCIPdebugMsg(scip, "current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
                SCIPvarGetName(bestvaluecand), SCIPvarGetLbLocal(bestvaluecand), SCIPvarGetUbLocal(bestvaluecand),
                bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS ? "<=" : ">=", bestbranchpoint, bestvaluescore);
          }
@@ -395,7 +395,7 @@ SCIP_RETCODE performBranching(
          /* get aggregated score for the candidate */
          aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
 
-         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
+         SCIPdebugMsg(scip, " -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
             val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
@@ -439,7 +439,7 @@ SCIP_RETCODE performBranching(
          if( aggrscore < reliablescore )
             aggrscore = 0.0;
 
-         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
+         SCIPdebugMsg(scip, " -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
             val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate */
@@ -449,7 +449,7 @@ SCIP_RETCODE performBranching(
 
    assert(bestaggrcand != NULL);
 
-   SCIPdebugMessage(" -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, score=%g, conflict=%g cutoff=%g, inference=%g)\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, score=%g, conflict=%g cutoff=%g, inference=%g)\n",
       ncands, SCIPvarGetName(bestaggrcand), SCIPvarGetLbLocal (bestaggrcand), SCIPvarGetUbLocal(bestaggrcand), SCIPvarGetBranchPriority(bestaggrcand),
       bestval == SCIP_UNKNOWN ? SCIPgetVarSol(scip, bestaggrcand) : bestval, bestaggrscore, /*lint !e777*/
       SCIPgetVarConflictScore(scip, bestaggrcand),  SCIPgetVarAvgInferenceCutoffScore(scip, bestaggrcand, cutoffweight),
@@ -508,7 +508,7 @@ SCIP_RETCODE performBranching(
       /* change lower bound in up child */
       SCIP_CALL( SCIPchgVarLbNode(scip, upchild, bestvaluecand, uplb) );
 
-      SCIPdebugMessage("branch on variable <%s> and value <%g>\n", SCIPvarGetName(bestvaluecand), bestbranchpoint);
+      SCIPdebugMsg(scip, "branch on variable <%s> and value <%g>\n", SCIPvarGetName(bestvaluecand), bestbranchpoint);
 
       eqchild = NULL;
    }
@@ -567,7 +567,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    SCIP_VAR** cands;
    int ncands;
 
-   SCIPdebugMessage("Execlp method of inference branching\n");
+   SCIPdebugMsg(scip, "Execlp method of inference branching\n");
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
@@ -602,7 +602,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextInference)
    SCIP_Real* candsols;
    int ncands;
 
-   SCIPdebugMessage("Execext method of inference branching\n");
+   SCIPdebugMsg(scip, "Execext method of inference branching\n");
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
@@ -628,7 +628,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    SCIP_VAR** cands;
    int ncands;
 
-   SCIPdebugMessage("Execps method of inference branching\n");
+   SCIPdebugMsg(scip, "Execps method of inference branching\n");
 
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);

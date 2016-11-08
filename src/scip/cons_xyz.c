@@ -102,7 +102,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
 
    if( upgrade )
    {
-      SCIPdebugMessage("upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
 
       /* create the bin Xyz constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));

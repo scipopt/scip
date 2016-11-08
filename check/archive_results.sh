@@ -26,7 +26,8 @@ jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute rbcliwrapper if all jobs succeed
-sbatch --dependency=afterok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip check/rbcliwrapper.sh
+sbatch --dependency=afterok:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=2 --partition=mip-dbg --account=mip check/rbcliwrapper.sh
 
-# send cristina an email if there is a failure
-sbatch --dependency=afternotok:${jobidsstr} --cpus-per-task=1 --mem=100 --time=2 --partition=opt --account=mip --mail-type=BEGIN --mail-user=munoz@zib.de --output=/dev/null --job-name=failed-run <<< "#! /bin/bash"
+# send cristina an email if there is a failure (this may not behave as expected)
+# TODO: ensure that this sends email if even a single job fails
+sbatch --dependency=afternotok:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=2 --partition=mip-dbg --account=mip --mail-type=BEGIN --mail-user=munoz@zib.de --output=/dev/null --job-name=failed-run <<< "#! /bin/bash"

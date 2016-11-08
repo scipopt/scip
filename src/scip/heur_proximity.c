@@ -159,7 +159,7 @@ SCIP_RETCODE solveLp(
    }
 
    /* solve LP */
-   SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -174,12 +174,12 @@ SCIP_RETCODE solveLp(
 #endif
    }
 
-   SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-   SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+   SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    /* terminate diving mode */
@@ -274,7 +274,7 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to SCIP and free it immediately */
    if( !*success )
    {
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
@@ -383,7 +383,7 @@ SCIP_RETCODE deleteSubproblem(
       assert(heurdata->subvars != NULL);
       assert(heurdata->objcons != NULL);
 
-      SCIPdebugMessage("Freeing subproblem of proximity heuristic\n");
+      SCIPdebugMsg(scip, "Freeing subproblem of proximity heuristic\n");
       SCIPfreeBlockMemoryArray(scip, &heurdata->subvars, heurdata->nsubvars);
       SCIPhashmapFree(&heurdata->varmapfw);
       SCIP_CALL( SCIPreleaseCons(heurdata->subscip, &heurdata->objcons) );
@@ -552,14 +552,14 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping proximity: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping proximity: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
    /* do not run proximity, if the problem does not have an objective function anyway */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      SCIPdebugMessage("skipping proximity: pure feasibility problem anyway\n");
+      SCIPdebugMsg(scip, "skipping proximity: pure feasibility problem anyway\n");
       return SCIP_OKAY;
    }
 
@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPapplyProximity(
    /* use knowledge about integrality of objective to round up lower bound */
    if( SCIPisObjIntegral(scip) )
    {
-      SCIPdebugMessage(" Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
+      SCIPdebugMsg(scip, " Rounding up lower bound: %f --> %f \n", lowerbound, SCIPfeasCeil(scip, lowerbound));
       lowerbound = SCIPfeasCeil(scip, lowerbound);
    }
 
@@ -805,7 +805,7 @@ SCIP_RETCODE SCIPapplyProximity(
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
       assert(valid);
 
-      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+      SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
       /* create event handler for LP events */
       eventhdlr = NULL;

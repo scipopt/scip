@@ -5300,8 +5300,8 @@
 =opt=        pcascade_univariate_sos2_0.1         0.1851
 =opt=        pckInstMip_0_cpx                     361.5
 =opt=        pckInstMip_0_scip                    361.5
-=opt=        pcu_0.01                             0.1675
-=opt=        pcu_0.1                              0.1851
+=opt=        pcu_0.01                             0.167527525
+=opt=        pcu_0.1                              0.185145653
 =opt=        pedabox-2-m                          390.0
 =opt=        pg                                   -8674.3426
 =opt=        pg5_34                               -14339.3534

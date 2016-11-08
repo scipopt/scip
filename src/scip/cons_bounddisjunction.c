@@ -504,11 +504,13 @@ SCIP_RETCODE switchWatchedvars(
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
    }
 
    /* catch events on new watched variables */
@@ -712,7 +714,7 @@ SCIP_RETCODE applyGlobalBounds(
       }
    }
 
-   SCIPdebugMessage("after global bounds: ");
+   SCIPdebugMsg(scip, "after global bounds: ");
    SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    return SCIP_OKAY;
@@ -822,7 +824,7 @@ SCIP_RETCODE removeFixedVariables(
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || oldvar != var);
 
-      SCIPdebugMessage("in <%s>, replace <%s>[%g,%g] %c= %g by <%s>[%g,%g] %c= %g\n", SCIPconsGetName(cons),
+      SCIPdebugMsg(scip, "in <%s>, replace <%s>[%g,%g] %c= %g by <%s>[%g,%g] %c= %g\n", SCIPconsGetName(cons),
          SCIPvarGetName(consdata->vars[v]), SCIPvarGetLbGlobal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]), (consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), consdata->bounds[v],
          SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), bound);
 
@@ -943,7 +945,7 @@ SCIP_RETCODE upgradeCons(
 	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       }
 
-      SCIPdebugMessage("updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
+      SCIPdebugMsg(scip, "updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
       SCIPdebugPrintCons(scip, newcons, NULL);
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -976,7 +978,8 @@ SCIP_RETCODE analyzeConflict(
    assert(consdata != NULL);
 
    /* initialize conflict analysis, and add all bounds of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       /* the opposite bound is in conflict with this literal */
@@ -1049,7 +1052,7 @@ SCIP_RETCODE processWatchedVars(
    *reduceddom = FALSE;
    *mustcheck = FALSE;
 
-   SCIPdebugMessage("processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
 
    nvars = consdata->nvars;
    vars = consdata->vars;
@@ -1063,14 +1066,14 @@ SCIP_RETCODE processWatchedVars(
    if( consdata->watchedvar1 >= 0 && isLiteralSatisfied(scip, consdata, consdata->watchedvar1) )
    {
       /* the literal is satisfied, making the constraint redundant */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 satisfied)\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, " -> disabling constraint <%s> (watchedvar1 satisfied)\n", SCIPconsGetName(cons));
       SCIP_CALL( disableCons(scip, cons) );
       return SCIP_OKAY;
    }
    if( consdata->watchedvar2 >= 0 && isLiteralSatisfied(scip, consdata, consdata->watchedvar2) )
    {
       /* the literal is satisfied, making the constraint redundant */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 satisfied)\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, " -> disabling constraint <%s> (watchedvar2 satisfied)\n", SCIPconsGetName(cons));
       SCIP_CALL( disableCons(scip, cons) );
       return SCIP_OKAY;
    }
@@ -1129,7 +1132,7 @@ SCIP_RETCODE processWatchedVars(
             /* the literal is satisfied, making the constraint redundant;
              * make sure, the feasible variable is watched and disable the constraint
              */
-            SCIPdebugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
+            SCIPdebugMsg(scip, " -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n",
                SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
             if( consdata->watchedvar1 != -1 )
             {
@@ -1174,7 +1177,7 @@ SCIP_RETCODE processWatchedVars(
        */
       assert(watchedvar2 == -1);
 
-      SCIPdebugMessage(" -> constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, " -> constraint <%s> is infeasible\n", SCIPconsGetName(cons));
       *infeasible = TRUE;
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1218,9 +1221,10 @@ SCIP_RETCODE processWatchedVars(
 #endif
 
          /* satisfy remaining literal and disable constraint; make sure, the fixed-to-one variable is watched */
-         SCIPdebugMessage(" -> single-literal constraint <%s> (change bound <%s> %s %g) at depth %d\n", 
-            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), 
+         SCIPdebugMsg(scip, " -> single-literal constraint <%s> (change bound <%s> %s %g) at depth %d\n",
+            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]),
             boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bounds[watchedvar1], SCIPgetDepth(scip));
+
          if( boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER )
          {
             SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
@@ -1243,7 +1247,7 @@ SCIP_RETCODE processWatchedVars(
    }
    else
    {
-      SCIPdebugMessage(" -> new watched variables <%s> and <%s> of constraint <%s> are still undecided\n",
+      SCIPdebugMsg(scip, " -> new watched variables <%s> and <%s> of constraint <%s> are still undecided\n",
          SCIPvarGetName(vars[watchedvar1]), SCIPvarGetName(vars[watchedvar2]), SCIPconsGetName(cons));
 
       /* switch to the new watched variables */
@@ -1418,7 +1422,7 @@ SCIP_RETCODE enforceCurrentSol(
    assert(reduceddom != NULL);
    assert(registeredbrcand != NULL);
 
-   SCIPdebugMessage("enforce bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "enforce bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
    /* update and check the watched variables, if they were changed since last processing */
    if( SCIPconsIsPropagationEnabled(cons) )
@@ -1519,7 +1523,7 @@ SCIP_RETCODE createNAryBranch(
          SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, bounds[v]);
       estimate = SCIPcalcChildEstimate  (scip, var, bounds[v]);
 
-      SCIPdebugMessage(" -> creating child to enforce: <%s> %c= %g (priority: %g, estimate: %g)\n",
+      SCIPdebugMsg(scip, " -> creating child to enforce: <%s> %c= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(vars[v]), boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<', bounds[v], priority, estimate);
 
       SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
@@ -1687,7 +1691,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    *nupgdconss = 0;
 
-   SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    if( SCIPgetNLinearVarsQuadratic(scip, cons) != 0 )
@@ -1807,7 +1811,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-         SCIPdebugMessage("created bounddisjunction constraint:\n");
+         SCIPdebugMsg(scip, "created bounddisjunction constraint:\n");
          SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
          return SCIP_OKAY;
@@ -1839,7 +1843,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-         SCIPdebugMessage("created bounddisjunction constraints:\n");
+         SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
          SCIPdebugPrintCons(scip, upgdconss[0], NULL);
          SCIPdebugPrintCons(scip, upgdconss[1], NULL);
       }
@@ -1870,7 +1874,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-         SCIPdebugMessage("created bounddisjunction constraints:\n");
+         SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
          SCIPdebugPrintCons(scip, upgdconss[0], NULL);
          SCIPdebugPrintCons(scip, upgdconss[1], NULL);
       }
@@ -1924,7 +1928,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-         SCIPdebugMessage("created bounddisjunction constraints:\n");
+         SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
          SCIPdebugPrintCons(scip, upgdconss[0], NULL);
          SCIPdebugPrintCons(scip, upgdconss[1], NULL);
          SCIPdebugPrintCons(scip, upgdconss[2], NULL);
@@ -1985,7 +1989,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
 
-      SCIPdebugMessage("created bounddisjunction constraints:\n");
+      SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
       SCIPdebugPrintCons(scip, upgdconss[0], NULL);
       SCIPdebugPrintCons(scip, upgdconss[1], NULL);
 
@@ -2045,7 +2049,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
 
-      SCIPdebugMessage("created bounddisjunction constraints:\n");
+      SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
       SCIPdebugPrintCons(scip, upgdconss[0], NULL);
       SCIPdebugPrintCons(scip, upgdconss[1], NULL);
 
@@ -2122,7 +2126,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
       cons = conss[c];
       assert(cons != NULL);
 
-      SCIPdebugMessage("exit-presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "exit-presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
       /* remove all literals that are violated in global bounds, check redundancy due to global bounds */
       SCIP_CALL( applyGlobalBounds(scip, cons, conshdlrdata->eventhdlr, &redundant) );
@@ -2135,7 +2139,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
 
       if( redundant && SCIPconsIsAdded(cons) )
       {
-         SCIPdebugMessage("bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
       }
    }
@@ -2167,7 +2171,7 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
-   /*debugMessage("Trans method of bound disjunction constraints\n");*/
+   /*debugMsg(scip, "Trans method of bound disjunction constraints\n");*/
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2230,7 +2234,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("pseudo enforcing %d bound disjunction constraints\n", nconss);
+   SCIPdebugMsg(scip, "pseudo enforcing %d bound disjunction constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -2293,7 +2297,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
    *result = SCIP_FEASIBLE;
 
    /* check all bound disjunction constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_Bool violated;
 
@@ -2323,7 +2327,6 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
 
          /* constraint is violated */
          *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
       }
    }
 
@@ -2405,7 +2408,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIPdebugMessage("presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
@@ -2427,7 +2430,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
 
       if( redundant )
       {
-         SCIPdebugMessage("bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
          (*ndelconss)++;
          *result = SCIP_SUCCESS;
@@ -2440,13 +2443,13 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
           */
          if( consdata->nvars == 0 )
          {
-            SCIPdebugMessage("bound disjunction constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+            SCIPdebugMsg(scip, "bound disjunction constraint <%s> is infeasible\n", SCIPconsGetName(cons));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
          else if( consdata->nvars == 1 )
          {
-            SCIPdebugMessage("bound disjunction constraint <%s> has only one undecided literal\n",
+            SCIPdebugMsg(scip, "bound disjunction constraint <%s> has only one undecided literal\n",
                SCIPconsGetName(cons));
 
             assert(consdata->vars != NULL);
@@ -2465,7 +2468,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
                }
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
                   return SCIP_OKAY;
                }
@@ -2556,7 +2559,7 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
 #endif
    assert(boundtypes != NULL);
 
-   SCIPdebugMessage("conflict resolving method of bound disjunction constraint handler\n");
+   SCIPdebugMsg(scip, "conflict resolving method of bound disjunction constraint handler\n");
 
    /* the only deductions are bounds tightened to a literal's bound on bound disjunction constraints where all other
     * literals are violated
@@ -2636,7 +2639,7 @@ SCIP_DECL_CONSACTIVE(consActiveBounddisjunction)
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   SCIPdebugMessage("activating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "activating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* catch events on watched variables */
@@ -2673,7 +2676,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   SCIPdebugMessage("deactivating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "deactivating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* drop events on watched variables */
@@ -2681,11 +2684,13 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
    }
    if( consdata->watchedvar2 != -1 )
    {
       assert(consdata->filterpos2 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
    }
 
    return SCIP_OKAY;
@@ -2762,7 +2767,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
    assert( success != NULL );
    *success = TRUE;
 
-   SCIPdebugMessage("parse <%s> as bounddisjunction constraint\n", str);
+   SCIPdebugMsg(scip, "parse <%s> as bounddisjunction constraint\n", str);
 
    /* skip white space */
    while( *str != '\0' && isspace((unsigned char)*str) )
@@ -2825,7 +2830,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
       ++str;
       if( *str != '=' )
       {
-         SCIPdebugMessage("expected '=': %s\n", str);
+         SCIPdebugMsg(scip, "expected '=': %s\n", str);
          *success = FALSE;
          goto TERMINATE;
       }
@@ -2936,7 +2941,7 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   /*SCIPdebugMessage("exec method of event handler for bound disjunction constraints\n");*/
+   /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
 
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {
@@ -3035,8 +3040,10 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+
       *result = SCIP_CONSADDED;
    }
 

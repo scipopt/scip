@@ -4362,6 +4362,13 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortIntRealLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntRealLong
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntIntPtr
@@ -4763,6 +4770,13 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealPtr
@@ -7886,7 +7900,8 @@ int getRand(
 #endif
 
 /** returns a random integer between minrandval and maxrandval */
-int SCIPgetRandomInt(
+static
+int getRandomInt(
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
@@ -7905,7 +7920,8 @@ int SCIPgetRandomInt(
 }
 
 /** returns a random real between minrandval and maxrandval */
-SCIP_Real SCIPgetRandomReal(
+static
+SCIP_Real getRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
@@ -7923,6 +7939,297 @@ SCIP_Real SCIPgetRandomReal(
    return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
 }
 
+/** returns a random integer between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
+ */
+int SCIPgetRandomInt(
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return getRandomInt(minrandval, maxrandval, seedp);
+}
+
+/** returns a random real between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetReal() to request a random real.
+ */
+SCIP_Real SCIPgetRandomReal(
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return getRandomReal(minrandval, maxrandval, seedp);
+}
+
+
+/* initial seeds for KISS random number generator */
+#define DEFAULT_SEED 123456789;
+#define DEFAULT_XOR  362436000;
+#define DEFAULT_MWC  521288629;
+#define DEFAULT_CST  7654321;
+
+
+/** initialize the random number generator with a given start seed */
+static
+void randomInitialize(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          initseed            /**< initial random seed (> 0) */
+   )
+{
+   assert(randnumgen != NULL);
+   assert(initseed > 0);
+
+   randnumgen->seed = (uint32_t)DEFAULT_SEED;
+   randnumgen->seed += initseed;
+   /* this is a special case to avoid zero after over flowing */
+   if( randnumgen->seed == 0 )
+      randnumgen->seed = initseed;
+   assert(randnumgen->seed > 0);
+
+   randnumgen->xor_seed = (uint32_t)DEFAULT_XOR;
+   randnumgen->xor_seed += initseed;
+   /* this is a special case to avoid zero after over flowing */
+   if( randnumgen->xor_seed == 0 )
+      randnumgen->xor_seed = initseed;
+   assert(randnumgen->xor_seed > 0);
+
+   randnumgen->mwc_seed = (uint32_t)DEFAULT_MWC;
+   randnumgen->mwc_seed += initseed;
+
+   randnumgen->cst_seed = (uint32_t)DEFAULT_CST;
+   randnumgen->cst_seed += initseed;
+   /* this is a special case to avoid zero after over flowing */
+   if( randnumgen->mwc_seed == 0 && randnumgen->cst_seed == 0 )
+   {
+      randnumgen->mwc_seed = (uint32_t)DEFAULT_MWC;
+      randnumgen->mwc_seed -= initseed;
+
+      randnumgen->cst_seed = (uint32_t)DEFAULT_CST;
+      randnumgen->cst_seed -= initseed;
+   }
+   assert(randnumgen->mwc_seed > 0 || randnumgen->cst_seed > 0);
+
+   return;
+}
+
+/** returns a random number between 0 and INT_MAX
+ *
+ *  implementation of KISS random number generator developed by George Marsaglia.
+ *  KISS is combination of three different random number generators:
+ *   - Linear congruential generator
+ *   - Xorshift
+ *   - Lag-1 Multiply-with-carry
+ *
+ *  KISS has a period of 2^123 and passes all statistical test part of BigCrush-Test of TestU01 [1].
+ *
+ *  [1] http://dl.acm.org/citation.cfm?doid=1268776.1268777
+ */
+static
+int randomGetRand(
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+   )
+{
+   unsigned long t;
+
+   /* linear congruential */
+   randnumgen->seed = randnumgen->seed * (SCIP_Longint)1103515245 + 12345;
+
+   /* Xorshift */
+   randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);
+   randnumgen->xor_seed ^= (randnumgen->xor_seed >> 17);
+   randnumgen->xor_seed ^= (randnumgen->xor_seed << 5);
+
+   /* Multiply-with-carry */
+   t = 698769069ULL * randnumgen->mwc_seed + randnumgen->cst_seed;
+   randnumgen->cst_seed = t >> 32;
+   randnumgen->mwc_seed = (unsigned int) t;
+
+   return (int)((randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed) % INT_MAX);
+}
+
+/** creates and initializes a random number generator */
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed (> 0) */
+   )
+{
+   assert(randnumgen != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, randnumgen) );
+   (*randnumgen)->blkmem = blkmem;
+
+   randomInitialize((*randnumgen), initialseed);
+
+   return SCIP_OKAY;
+}
+
+/** frees a random number generator */
+void SCIPrandomFree(
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   )
+{
+   assert(randnumgen != NULL);
+   assert((*randnumgen) != NULL);
+
+   BMSfreeBlockMemory((*randnumgen)->blkmem, randnumgen);
+
+   return;
+}
+
+/** returns a random integer between minrandval and maxrandval */
+int SCIPrandomGetInt(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval          /**< maximal value to return */
+   )
+{
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(INT_MAX+1.0);
+   assert(randnumber >= 0.0);
+   assert(randnumber < 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
+    * apart
+    */
+   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
+}
+
+/** returns a random real between minrandval and maxrandval */
+SCIP_Real SCIPrandomGetReal(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval          /**< maximal value to return */
+   )
+{
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(SCIP_Real)INT_MAX;
+   assert(randnumber >= 0.0);
+   assert(randnumber <= 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
+    * SCIP_REAL_MAX apart
+    */
+   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
+}
+
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+void SCIPrandomPermuteIntArray(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole
+                                               *   array)
+                                               */
+   )
+{
+   int tmp;
+   int i;
+
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 )
+   {
+      --end;
+
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPrandomGetInt(randnumgen, begin, end);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+void SCIPrandomPermuteArray(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole
+                                              *   array)
+                                              */
+   )
+{
+   void* tmp;
+   int i;
+
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 )
+   {
+      end--;
+
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPrandomGetInt(randnumgen, begin, end);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+SCIP_RETCODE SCIPrandomGetSubset(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems           /**< number of elements that should be drawn and stored */
+   )
+{
+   int i;
+   int j;
+
+   /* if both sets are of equal size, we just copy the array */
+   if( nelems == nsubelems)
+   {
+      BMScopyMemoryArray(subset,set,nelems);
+      return SCIP_OKAY;
+   }
+
+   /* abort, if size of subset is too big */
+   if( nsubelems > nelems )
+   {
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
+      return SCIP_INVALIDDATA;
+   }
+#ifndef NDEBUG
+   for( i = 0; i < nsubelems; i++ )
+      for( j = 0; j < i; j++ )
+         assert(set[i] != set[j]);
+#endif
+
+   /* draw each element individually */
+   i = 0;
+   while( i < nsubelems )
+   {
+      int r;
+
+      r = SCIPrandomGetInt(randnumgen, 0, nelems-1);
+      subset[i] = set[r];
+
+      /* if we get an element that we already had, we will draw again */
+      for( j = 0; j < i; j++ )
+      {
+         if( subset[i] == subset[j] )
+         {
+            --i;
+            break;
+         }
+      }
+      ++i;
+   }
+   return SCIP_OKAY;
+}
 
 /*
  * Additional math functions
@@ -8017,10 +8324,23 @@ SCIP_Real SCIPnegateReal(
 /** swaps two ints */
 void SCIPswapInts(
    int*                  value1,             /**< pointer to first integer */
-   int*                  value2              /**< pointer ti second integer */
+   int*                  value2              /**< pointer to second integer */
    )
 {
    int tmp;
+
+   tmp = *value1;
+   *value1 = *value2;
+   *value2 = tmp;
+}
+
+/** swaps two real values */
+void SCIPswapReals(
+   SCIP_Real*            value1,             /**< pointer to first real value */
+   SCIP_Real*            value2              /**< pointer to second real value */
+   )
+{
+   SCIP_Real tmp;
 
    tmp = *value1;
    *value1 = *value2;
@@ -8040,13 +8360,16 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteIntArray()
+ */
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                               *   array)
+                                               */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8059,7 +8382,7 @@ void SCIPpermuteIntArray(
       --end;
 
       /* get a random position into which the last entry should be shuffled */
-      i = SCIPgetRandomInt(begin, end, randseed);
+      i = getRandomInt(begin, end, randseed);
 
       /* swap the last element and the random element */
       tmp = array[i];
@@ -8069,13 +8392,16 @@ void SCIPpermuteIntArray(
 }
 
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteArray()
+ */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+                                              *   array)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8088,7 +8414,7 @@ void SCIPpermuteArray(
       end--;
 
       /* get a random position into which the last entry should be shuffled */
-      i = SCIPgetRandomInt(begin, end, randseed);
+      i = getRandomInt(begin, end, randseed);
 
       /* swap the last element and the random element */
       tmp = array[i];
@@ -8099,6 +8425,8 @@ void SCIPpermuteArray(
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ *
+ *  @deprecated Please use SCIPrandomGetSubset()
  */
 SCIP_RETCODE SCIPgetRandomSubset(
    void**                set,                /**< original set, from which elements should be drawn */
@@ -8136,7 +8464,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
    {
       int r;
 
-      r = SCIPgetRandomInt(0, nelems-1, &randseed);
+      r = getRandomInt(0, nelems-1, &randseed);
       subset[i] = set[r];
 
       /* if we get an element that we already had, we will draw again */
@@ -8625,6 +8953,235 @@ void SCIPsplitFilename(
    }
 }
 
+#define MINREMAININGKEYSSIZE 25
+#define NELEMSMEDIANSEL 3
+/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
+ *  that are larger, equal, and smaller than the weighted median
+ *
+ *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
+ *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
+ *
+ *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
+ *
+ *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
+ *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
+ *  contains only elements that are smaller than the median.
+ *
+ *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
+ *  largest element by using a capacity k.
+ *
+ *  If no weights-array is passed, the algorithm assumes weights equal to 1.
+ */
+void SCIPselectWeightedMedian(
+   SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
+   int*                  indices,            /**< indices array that should be partially sorted inplace */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
+   int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
+   SCIP_Real             capacity,           /**< (positive) capacity for the weights */
+   SCIP_Real*            median,             /**< pointer to store the weighted median */
+   int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
+   int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
+   )
+{
+   SCIP_Real keysbuffer[MINREMAININGKEYSSIZE];
+   int indicesbuffer[MINREMAININGKEYSSIZE];
+   SCIP_Real weightsbuffer[MINREMAININGKEYSSIZE];
+   int left;
+   int right;
+   int j;
+   int recursiondepth;
+   SCIP_Real residualcapacity;
+
+   assert(keys != NULL);
+   assert(indices != NULL);
+   assert(median != NULL);
+
+   *median = SCIP_INVALID;
+   /* rule out the trivial case that the capacity is larger than all weights together. In this case, no median exists */
+   if( weights == NULL && capacity > nkeys )
+   {
+      *leftmedianidx = *rightmedianidx = nkeys;
+      return;
+   }
+   else if( weights != NULL )
+   {
+      int i;
+      SCIP_Real weightsum = 0;
+      /* sum up weights */
+      for( i = 0; i < nkeys; ++i )
+         weightsum += weights[i];
+
+      if( weightsum < capacity )
+      {
+         *leftmedianidx = *rightmedianidx = nkeys;
+         return;
+      }
+   }
+
+   left = 0;
+   right = nkeys - 1;
+   residualcapacity = capacity;
+   recursiondepth = 0;
+
+   while( right - left + 1 > MINREMAININGKEYSSIZE )
+   {
+      int i;
+      int smalleridx;
+      int largeridx;
+      int pivotindex;
+      int npivots;
+      SCIP_Real largeweightsum;
+      SCIP_Real equalweightsum;
+
+      SCIP_Real pivot;
+      /* select a pivot element */
+      SCIP_Real elements[NELEMSMEDIANSEL];
+      int elementidxs[NELEMSMEDIANSEL];
+
+      ++recursiondepth;
+
+      /* todo maybe select pivot randomized */
+      for( i = 0; i < NELEMSMEDIANSEL; ++i )
+      {
+         int index = left + (right - left) * i / (NELEMSMEDIANSEL - 1);
+         elements[i] = keys[indices[index]];
+         elementidxs[i] = index;
+      }
+
+      SCIPsortRealInt(elements, elementidxs, NELEMSMEDIANSEL);
+      pivot = elements[NELEMSMEDIANSEL / 2];
+      pivotindex = elementidxs[NELEMSMEDIANSEL / 2];
+
+      largeridx = left;
+      smalleridx = right - 1;
+
+      /* swap pivot to the rightmost position */
+      SCIPswapInts(&indices[right], &indices[pivotindex]);
+
+      /* loop over elements and swap if one is too small and one is too large */
+      while( largeridx <= smalleridx )
+      {
+         if( keys[indices[largeridx]] <= pivot && keys[indices[smalleridx]] > pivot )
+         {
+            SCIPswapInts(&indices[smalleridx], &indices[largeridx]);
+            ++largeridx;
+            --smalleridx;
+         }
+         /* loop until an element is detected that is larger than the key indexed by smalleridx */
+         while( smalleridx >= left && keys[indices[smalleridx]] <= pivot )
+            --smalleridx;
+
+
+         while( largeridx < right - 1 && keys[indices[largeridx]] > pivot )
+            ++largeridx;
+      }
+      assert(smalleridx == largeridx - 1);
+      npivots = 0;
+
+      /* place pivot element(s) back to where they belong */
+      for( i = largeridx; i <= right; ++i )
+      {
+         if( keys[indices[i]] == pivot )
+         {
+            SCIPswapInts(&indices[largeridx + npivots], &indices[i]);
+            ++npivots;
+         }
+      }
+
+      assert(npivots > 0);
+
+      if( weights != NULL )
+      {
+         largeweightsum = 0.0;
+         /* collect weights of elements larger than the pivot  */
+         for( i = left; i < largeridx; ++i )
+         {
+            assert(keys[indices[i]] > pivot);
+            largeweightsum += weights[indices[i]];
+         }
+
+         equalweightsum = 0.0;
+
+         /* collect weights of elements that are equal to the pivot */
+         for( ; i < largeridx + npivots; ++i )
+         {
+            assert(keys[indices[i]] == pivot);
+            equalweightsum += weights[indices[i]];
+         }
+      }
+      else
+      {
+         /* if all weights are equal to one, we directly know the larger and the equal weight sum */
+         largeweightsum = largeridx;
+         equalweightsum = npivots;
+      }
+      if( largeweightsum < residualcapacity && largeweightsum + equalweightsum >= residualcapacity)
+      {
+         *median = pivot;
+         *leftmedianidx = largeridx;
+         *rightmedianidx = largeridx + npivots - 1;
+
+         return;
+      }
+
+      /* pivot is too large; continue search in the left half of the array */
+      else if( largeweightsum >= residualcapacity )
+      {
+         right = largeridx - 1;
+      }
+      else
+      {
+         assert(largeweightsum + equalweightsum < residualcapacity);
+         left = largeridx + npivots;
+         residualcapacity -= largeweightsum + equalweightsum;
+      }
+   }
+
+   assert(left <= right);
+   assert(right - left + 1 <= MINREMAININGKEYSSIZE);
+
+   /* collect data for explicit sorting */
+   for( j = 0; j <= right - left; ++j )
+   {
+      int index = indices[left + j];
+      keysbuffer[j] = keys[index];
+      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
+      indicesbuffer[j] = index;
+   }
+
+   SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, right - left + 1);
+
+   /* insert the elements sorted back into the indices array */
+   for( j = 0; j < right - left + 1; ++j )
+   {
+      SCIP_Real weight = weightsbuffer[j];
+      /* we finally found the median element */
+      if( weight > residualcapacity )
+      {
+         *median = keysbuffer[j];
+         *leftmedianidx = left + j;
+         *rightmedianidx = left + j;
+         break;
+      }
+      else
+      {
+         residualcapacity -= weight;
+      }
+   }
+
+   if( j == right - left + 1 )
+   {
+      *median = SCIP_INVALID;
+      *leftmedianidx = nkeys;
+      *rightmedianidx = nkeys;
+   }
+
+   /* copy back the final indices sorting */
+   for( j = 0; j < right - left + 1; ++j )
+   {
+      indices[left + j] = indicesbuffer[j];
+   }
+}
 
 
 

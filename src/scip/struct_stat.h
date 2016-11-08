@@ -104,6 +104,7 @@ struct SCIP_Stat
    SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
+   SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */

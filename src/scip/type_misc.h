@@ -92,6 +92,9 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
 
+/** random number generator */
+typedef struct SCIP_RandNumGen SCIP_RANDNUMGEN;
+
 /** Resource activity data structure
  *
  *  - \ref ResourceActivity "List of all available methods"
@@ -149,6 +152,7 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+
 
 #ifdef __cplusplus
 }

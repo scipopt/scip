@@ -334,7 +334,7 @@ void checkSolutionOrig(
    /* turn off solution counting to be able to check the solution */
    conshdlrdata->active = FALSE;
 
-   SCIPdebugMessage("check solution in original space before counting\n");
+   SCIPdebugMsg(scip, "check solution in original space before counting\n");
 
    feasible = FALSE;
 
@@ -638,7 +638,7 @@ SCIP_RETCODE collectSolution(
    /* get number of active variables */
    nvars = conshdlrdata->nvars;
 
-   SCIPdebugMessage("creating solution number %d\n", conshdlrdata->nsolutions);
+   SCIPdebugMsg(scip, "creating solution number %d\n", conshdlrdata->nsolutions);
 
    /* create a solution */
    SCIP_CALL( SCIPsparseSolCreate(&solution, conshdlrdata->vars, nvars, FALSE) );
@@ -667,7 +667,7 @@ SCIP_RETCODE collectSolution(
          ubvalues[v] = lbvalues[v];
       }
 
-      SCIPdebugMessage("variable <%s> [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "]\n",
+      SCIPdebugMsg(scip, "variable <%s> [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "]\n",
          SCIPvarGetName(var), lbvalues[v], ubvalues[v]);
    }
 
@@ -711,7 +711,7 @@ SCIP_RETCODE countSparseSol(
       SCIP_Real lb;
       SCIP_Real ub;
 
-      SCIPdebugMessage("counts number of solutions represented through the given one\n");
+      SCIPdebugMsg(scip, "counts number of solutions represented through the given one\n");
 
       /**@note aggregations and multi aggregations: we do not have to care about these things
        *       since we count solution from the transformed problem and therefore, SCIP does
@@ -753,7 +753,7 @@ SCIP_RETCODE countSparseSol(
                lb = SCIPvarGetLbLocal(var);
                ub = SCIPvarGetUbLocal(var);
 
-               SCIPdebugMessage("variable <%s> Local Bounds are [%g,%g]\n", SCIPvarGetName(var), lb, ub);
+               SCIPdebugMsg(scip, "variable <%s> Local Bounds are [%g,%g]\n", SCIPvarGetName(var), lb, ub);
 
                assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
                assert( SCIPisFeasIntegral(scip, lb) );
@@ -818,7 +818,7 @@ SCIP_RETCODE checkLogicor(
    int c;
    int v;
 
-   SCIPdebugMessage("check logicor %d constraints\n", nconss);
+   SCIPdebugMsg(scip, "check logicor %d constraints\n", nconss);
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -833,7 +833,7 @@ SCIP_RETCODE checkLogicor(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("logicor constraint %d\n", c);
+      SCIPdebugMsg(scip, "logicor constraint %d\n", c);
 
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -855,7 +855,7 @@ SCIP_RETCODE checkLogicor(
 
       if( !fixedone )
       {
-         SCIPdebugMessage("constraint <%s> cannot be disabled\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "constraint <%s> cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
@@ -893,7 +893,7 @@ SCIP_RETCODE checkKnapsack(
    int c;
    int v;
 
-   SCIPdebugMessage("check knapsack %d constraints\n", nconss);
+   SCIPdebugMsg(scip, "check knapsack %d constraints\n", nconss);
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -908,7 +908,7 @@ SCIP_RETCODE checkKnapsack(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("knapsack constraint %d\n", c);
+      SCIPdebugMsg(scip, "knapsack constraint %d\n", c);
 
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -920,14 +920,14 @@ SCIP_RETCODE checkKnapsack(
       capacity = SCIPgetCapacityKnapsack(scip, conss[c]);
       weights = SCIPgetWeightsKnapsack(scip,conss[c]);
 
-      SCIPdebugMessage("knapsack capacity = %" SCIP_LONGINT_FORMAT "\n", capacity);
+      SCIPdebugMsg(scip, "knapsack capacity = %" SCIP_LONGINT_FORMAT "\n", capacity);
 
       capa = capacity + 0.1;
 
       for( v = nvars - 1; v >= 0 && capa >= 0 ; --v )
       {
          SCIPdebug( SCIP_CALL( SCIPprintVar( scip, vars[v], NULL) ) );
-         SCIPdebugMessage("weight = %" SCIP_LONGINT_FORMAT " :\n", weights[v]);
+         SCIPdebugMsg(scip, "weight = %" SCIP_LONGINT_FORMAT " :\n", weights[v]);
          assert( SCIPvarIsIntegral(vars[v]) );
 
          /* the weights should be greater or equal to zero */
@@ -951,7 +951,7 @@ SCIP_RETCODE checkKnapsack(
 
       if( SCIPisFeasLT(scip, capa, 0.0) )
       {
-         SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
@@ -1029,7 +1029,7 @@ SCIP_RETCODE checkBounddisjunction(
 
       if( !satisfiedbound )
       {
-         SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
@@ -1065,7 +1065,7 @@ SCIP_RETCODE checkVarbound(
    SCIP_Real coef;
    int c;
 
-   SCIPdebugMessage("check varbound %d constraints\n", nconss);
+   SCIPdebugMsg(scip, "check varbound %d constraints\n", nconss);
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1080,7 +1080,7 @@ SCIP_RETCODE checkVarbound(
 
    for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
-      SCIPdebugMessage("varbound constraint %d\n", c);
+      SCIPdebugMsg(scip, "varbound constraint %d\n", c);
 
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
@@ -1102,10 +1102,10 @@ SCIP_RETCODE checkVarbound(
       if(SCIPisGT(scip, SCIPvarGetUbLocal(var), rhs - SCIPvarGetUbLocal(vbdvar) * coef )
          || !SCIPisGE(scip, SCIPvarGetLbLocal(var), lhs - SCIPvarGetLbLocal(vbdvar) * coef ) )
       {
-         SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebugPrintCons(scip, conss[c], NULL);
-         SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
+         SCIPdebugMsg(scip, "<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMsg(scip, "<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
          (*satisfied) = FALSE;
       }
       else
@@ -1135,7 +1135,7 @@ SCIP_RETCODE checkFeasSubtree(
    SCIP_CONSHDLR* conshdlr;
    int nconss;
 
-   SCIPdebugMessage("check if the sparse solution is feasible\n");
+   SCIPdebugMsg(scip, "check if the sparse solution is feasible\n");
 
    assert( scip != NULL );
    assert( sol != NULL );
@@ -1165,7 +1165,7 @@ SCIP_RETCODE checkFeasSubtree(
       {
          SCIP_Bool satisfied;
 
-         SCIPdebugMessage("constraint handler %s has %d active constraint(s)\n",
+         SCIPdebugMsg(scip, "constraint handler %s has %d active constraint(s)\n",
             SCIPconshdlrGetName(conshdlr), nconss );
 
          if( strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0 )
@@ -1173,7 +1173,7 @@ SCIP_RETCODE checkFeasSubtree(
             SCIP_CALL( checkLogicor(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
             {
-               SCIPdebugMessage("a <logicor> constraint cannot be disabled\n");
+               SCIPdebugMsg(scip, "a <logicor> constraint cannot be disabled\n");
                return SCIP_OKAY;
             }
          }
@@ -1182,7 +1182,7 @@ SCIP_RETCODE checkFeasSubtree(
             SCIP_CALL( checkKnapsack(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
             {
-               SCIPdebugMessage("a <knapsack> constraint cannot be disabled\n");
+               SCIPdebugMsg(scip, "a <knapsack> constraint cannot be disabled\n");
                return SCIP_OKAY;
             }
          }
@@ -1191,7 +1191,7 @@ SCIP_RETCODE checkFeasSubtree(
             SCIP_CALL( checkBounddisjunction(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
             {
-               SCIPdebugMessage("a <bounddisjunction> constraint cannot be disabled\n");
+               SCIPdebugMsg(scip, "a <bounddisjunction> constraint cannot be disabled\n");
                return SCIP_OKAY;
             }
          }
@@ -1200,13 +1200,13 @@ SCIP_RETCODE checkFeasSubtree(
             SCIP_CALL( checkVarbound(scip, conshdlr, nconss, &satisfied) );
             if( !satisfied )
             {
-               SCIPdebugMessage("a <varbound> constraint cannot be disabled\n");
+               SCIPdebugMsg(scip, "a <varbound> constraint cannot be disabled\n");
                return SCIP_OKAY;
             }
          }
          else
          {
-            SCIPdebugMessage("sparse solution is infeasible since the following constraint (and maybe more) is(/are) enabled\n");
+            SCIPdebugMsg(scip, "sparse solution is infeasible since the following constraint (and maybe more) is(/are) enabled\n");
             SCIPdebugPrintCons(scip, SCIPconshdlrGetConss(conshdlr)[0], NULL);
             return SCIP_OKAY;
          }
@@ -1214,7 +1214,7 @@ SCIP_RETCODE checkFeasSubtree(
    }
 
    *feasible = TRUE;
-   SCIPdebugMessage("sparse solution is feasible\n");
+   SCIPdebugMsg(scip, "sparse solution is feasible\n");
 
    return SCIP_OKAY;
 }
@@ -1233,7 +1233,7 @@ SCIP_RETCODE checkSolution(
    SCIP_Bool feasible;
    SCIP_Bool valid;
 
-   SCIPdebugMessage("start to add sparse solution\n");
+   SCIPdebugMsg(scip, "start to add sparse solution\n");
 
    assert( scip != NULL );
    assert( sol != NULL );
@@ -1271,7 +1271,7 @@ SCIP_RETCODE checkSolution(
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
-         SCIPdebugMessage("variables <%s> Local Bounds are [%g,%g] Global Bounds are [%g,%g]\n",
+         SCIPdebugMsg(scip, "variables <%s> Local Bounds are [%g,%g] Global Bounds are [%g,%g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       }
    }
@@ -1286,7 +1286,7 @@ SCIP_RETCODE checkSolution(
       addOne(&conshdlrdata->nsols); /*lint !e545*/
       conshdlrdata->nNonSparseSols++;
 
-      SCIPdebugMessage("-> add one to number of solutions\n");
+      SCIPdebugMsg(scip, "-> add one to number of solutions\n");
 
       if( conshdlrdata->collect )
       {
@@ -1320,7 +1320,7 @@ SCIP_RETCODE checkSolution(
    }
 
    assert( *result == SCIP_INFEASIBLE || *result == SCIP_CUTOFF );
-   SCIPdebugMessage("result is %s\n", *result == SCIP_INFEASIBLE ? "SCIP_INFEASIBLE" : "SCIP_CUTOFF" );
+   SCIPdebugMsg(scip, "result is %s\n", *result == SCIP_INFEASIBLE ? "SCIP_INFEASIBLE" : "SCIP_CUTOFF" );
 
    return SCIP_OKAY;
 }
@@ -1651,7 +1651,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIPdebugMessage("method SCIP_DECL_CONSENFOLP(consEnfolpCountsols)\n");
+   SCIPdebugMsg(scip, "method SCIP_DECL_CONSENFOLP(consEnfolpCountsols)\n");
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1720,7 +1720,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsCountsols)
 { /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIPdebugMessage("method SCIP_DECL_CONSENFOPS(consEnfopsCountsols)\n");
+   SCIPdebugMsg(scip, "method SCIP_DECL_CONSENFOPS(consEnfopsCountsols)\n");
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1761,7 +1761,7 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
     *       generated these solution; later we should analyze this problem */
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   SCIPdebugMessage("method SCIP_DECL_CONSCHECK(consCheckCountsols)\n");
+   SCIPdebugMsg(scip, "method SCIP_DECL_CONSCHECK(consCheckCountsols)\n");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );

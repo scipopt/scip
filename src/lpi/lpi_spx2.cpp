@@ -1133,6 +1133,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new rows are added - this is likely to be a mistake */
+      int nrows = lpi->spx->numRowsReal();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
+
    SPxSCIP* spx = lpi->spx;
    try
    {
@@ -1250,6 +1260,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols = lpi->spx->numColsReal();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    try
    {

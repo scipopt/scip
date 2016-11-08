@@ -70,7 +70,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    assert(nconss == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
+   SCIPdebugMsg(scip, "Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
    /* if the root LP is unbounded, we want to terminate with UNBOUNDED or INFORUNBOUNDED,
     * depending on whether we are able to construct an integral solution; in any case we do not want to branch
@@ -158,7 +158,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
+   SCIPdebugMsg(scip, "Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
 
@@ -180,7 +180,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
                SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
                   SCIPvarGetName(vars[v]), solval);
             }
-            break;
+            if( !completely )
+               break;
          }
       }
    }
@@ -208,7 +209,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
                SCIPvarGetName(vars[v]), solval);
          }
-         break;
+         if( !completely )
+            break;
       }
    }
 
@@ -246,7 +248,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("integral constraint handler: determine diving bound changes\n");
+   SCIPdebugMsg(scip, "integral constraint handler: determine diving bound changes\n");
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
 

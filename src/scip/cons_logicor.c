@@ -744,7 +744,7 @@ SCIP_RETCODE dualPresolving(
                assert(!infeasible);
                assert(fixed);
 
-               SCIPdebugMessage(" -> dual fixing <%s> == 0.0\n", SCIPvarGetName(var));
+               SCIPdebugMsg(scip, " -> dual fixing <%s> == 0.0\n", SCIPvarGetName(var));
                ++(*nfixedvars);
             }
 
@@ -801,7 +801,7 @@ SCIP_RETCODE dualPresolving(
       assert(!infeasible);
       assert(fixed);
 
-      SCIPdebugMessage(" -> dual fixing <%s> == %g\n", SCIPvarGetName(var), fixval);
+      SCIPdebugMsg(scip, " -> dual fixing <%s> == %g\n", SCIPvarGetName(var), fixval);
       ++(*nfixedvars);
    }
 
@@ -815,7 +815,7 @@ SCIP_RETCODE dualPresolving(
       assert(!infeasible);
       assert(fixed);
 
-      SCIPdebugMessage(" -> fixed <%s> == 1.0\n", SCIPvarGetName(vars[idx]));
+      SCIPdebugMsg(scip, " -> fixed <%s> == 1.0\n", SCIPvarGetName(vars[idx]));
       ++(*nfixedvars);
 
       /* remove constraint since it is now redundant */
@@ -1029,7 +1029,7 @@ SCIP_RETCODE applyFixings(
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-            SCIPdebugMessage("added linear constraint: ");
+            SCIPdebugMsg(scip, "added linear constraint: ");
             SCIPdebugPrintCons(scip, newcons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
@@ -1068,7 +1068,7 @@ SCIP_RETCODE applyFixings(
       }
    }
 
-   SCIPdebugMessage("after fixings: ");
+   SCIPdebugMsg(scip, "after fixings: ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
  TERMINATE:
@@ -1099,7 +1099,8 @@ SCIP_RETCODE analyzeConflict(
    assert(consdata != NULL);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
@@ -1127,7 +1128,7 @@ SCIP_RETCODE disableCons(
    }
    else
    {
-      SCIPdebugMessage("disabling constraint cons <%s> at depth %d\n", SCIPconsGetName(cons), SCIPgetDepth(scip));
+      SCIPdebugMsg(scip, "disabling constraint cons <%s> at depth %d\n", SCIPconsGetName(cons), SCIPgetDepth(scip));
       SCIP_CALL( SCIPdisableCons(scip, cons) );
    }
 
@@ -1244,7 +1245,7 @@ SCIP_RETCODE mergeMultiples(
       {
          if( negarray[v] )
          {
-            SCIPdebugMessage("logicor constraint <%s> redundant: variable <%s> and its negation are present\n",
+            SCIPdebugMsg(scip, "logicor constraint <%s> redundant: variable <%s> and its negation are present\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
 
             *redundant = TRUE;
@@ -1261,7 +1262,7 @@ SCIP_RETCODE mergeMultiples(
       {
          if( !negarray[v] )
          {
-            SCIPdebugMessage("logicor constraint <%s> redundant: variable <%s> and its negation are present\n",
+            SCIPdebugMsg(scip, "logicor constraint <%s> redundant: variable <%s> and its negation are present\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
 
             *redundant = TRUE;
@@ -1319,7 +1320,7 @@ SCIP_RETCODE processWatchedVars(
    *addcut = FALSE;
    *mustcheck = FALSE;
 
-   SCIPdebugMessage("processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
 
    vars = consdata->vars;
    nvars = consdata->nvars;
@@ -1329,14 +1330,14 @@ SCIP_RETCODE processWatchedVars(
    if( consdata->watchedvar1 >= 0 && SCIPvarGetLbLocal(vars[consdata->watchedvar1]) > 0.5 )
    {
       /* the variable is fixed to one, making the constraint redundant -> disable the constraint */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, " -> disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
       SCIP_CALL( disableCons(scip, cons) );
       return SCIP_OKAY;
    }
    if( consdata->watchedvar2 >= 0 && SCIPvarGetLbLocal(vars[consdata->watchedvar2]) > 0.5 )
    {
       /* the variable is fixed to one, making the constraint redundant -> disable the constraint */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, " -> disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
       SCIP_CALL( disableCons(scip, cons) );
       return SCIP_OKAY;
    }
@@ -1393,7 +1394,7 @@ SCIP_RETCODE processWatchedVars(
             /* the variable is fixed to one, making the constraint redundant;
              * make sure, the feasible variable is watched and disable the constraint
              */
-            SCIPdebugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
+            SCIPdebugMsg(scip, " -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n",
                SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
             if( consdata->watchedvar1 != -1 )
             {
@@ -1438,7 +1439,7 @@ SCIP_RETCODE processWatchedVars(
        */
       assert(watchedvar2 == -1);
 
-      SCIPdebugMessage(" -> constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, " -> constraint <%s> is infeasible\n", SCIPconsGetName(cons));
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if( SCIPconsIsModifiable(cons) )
@@ -1468,7 +1469,7 @@ SCIP_RETCODE processWatchedVars(
          SCIP_Bool infbdchg;
 
          /* fixed remaining variable to one and disable constraint; make sure, the fixed-to-one variable is watched */
-         SCIPdebugMessage(" -> single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
+         SCIPdebugMsg(scip, " -> single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, 0, &infbdchg, NULL) );
          assert(!infbdchg);
@@ -1483,7 +1484,7 @@ SCIP_RETCODE processWatchedVars(
    }
    else
    {
-      SCIPdebugMessage(" -> new watched variables <%s> and <%s> of constraint <%s> are still unfixed\n",
+      SCIPdebugMsg(scip, " -> new watched variables <%s> and <%s> of constraint <%s> are still unfixed\n",
          SCIPvarGetName(vars[watchedvar1]), SCIPvarGetName(vars[watchedvar2]), SCIPconsGetName(cons));
 
       /* switch to the new watched variables */
@@ -1593,7 +1594,7 @@ SCIP_RETCODE addCut(
    /* insert LP row as cut */
    if( !SCIProwIsInLP(consdata->row) )
    {
-      SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
       SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
    }
 
@@ -1623,7 +1624,7 @@ SCIP_RETCODE separateCons(
    assert(reduceddom != NULL);
 
    *cutoff = FALSE;
-   SCIPdebugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* update and check the watched variables, if they were changed since last processing */
    if( sol == NULL && SCIPconsIsPropagationEnabled(cons) )
@@ -1997,7 +1998,7 @@ SCIP_RETCODE removeRedundantCons(
 {
    assert(ndelconss != NULL);
 
-   SCIPdebugMessage(" -> removing logicor constraint <%s> which is redundant to <%s>\n",
+   SCIPdebugMsg(scip, " -> removing logicor constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
    SCIPdebugPrintCons(scip, cons0, NULL);
    SCIPdebugPrintCons(scip, cons1, NULL);
@@ -2584,7 +2585,8 @@ SCIP_RETCODE removeRedundantNonZeros(
                   assert(artvar == consdata1->vars[pos]);
 
                   /* remove redudant entry in cons1 */
-                  SCIPdebugMessage("variable %s in logicor constraint <%s> is redundant and will be removed (used constraint %s)\n", SCIPvarGetName(artvar), SCIPconsGetName(cons1), SCIPconsGetName(cons));
+                  SCIPdebugMsg(scip, "variable %s in logicor constraint <%s> is redundant and will be removed (used constraint %s)\n",
+                     SCIPvarGetName(artvar), SCIPconsGetName(cons1), SCIPconsGetName(cons));
                   SCIPdebugPrintCons(scip, cons1, NULL);
                   conspos = pos;
 
@@ -2614,7 +2616,8 @@ SCIP_RETCODE removeRedundantNonZeros(
                      assert(consdata1->nvars == nvars);
 
                      /* delete cons */
-                     SCIPdebugMessage("logicor constraint <%s> is redundant due to constraint <%s> after removing variable <%s>\n", SCIPconsGetName(cons), SCIPconsGetName(cons1), SCIPvarGetName(artvar));
+                     SCIPdebugMsg(scip, "logicor constraint <%s> is redundant due to constraint <%s> after removing variable <%s>\n",
+                        SCIPconsGetName(cons), SCIPconsGetName(cons1), SCIPvarGetName(artvar));
 
                      /* remove cons from columns representation */
                      removeConsFromOccurList(cons, varstopos, occurlist, noccurlistentries, occurlistlength);
@@ -2799,7 +2802,7 @@ SCIP_RETCODE prepareCons(
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
 
-      SCIPdebugMessage(" -> fix last remaining variable and delete constraint\n");
+      SCIPdebugMsg(scip, " -> fix last remaining variable and delete constraint\n");
 
       SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
       assert(!infeasible);
@@ -2881,7 +2884,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    if( *firstchange > nconss || nconss < 2 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("starting removeRedundantConssAndNonzeros(), pairwise comparison to detect covered logicor constraints\n");
+   SCIPdebugMsg(scip, "starting removeRedundantConssAndNonzeros(), pairwise comparison to detect covered logicor constraints\n");
 
    /* copy constraints to re-order them */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &myconss, conss, nconss) );
@@ -3237,7 +3240,7 @@ SCIP_RETCODE shortenConss(
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
 
-            SCIPdebugMessage(" -> fix last remaining variable and delete constraint\n");
+            SCIPdebugMsg(scip, " -> fix last remaining variable and delete constraint\n");
 
             SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
             assert(!infeasible);
@@ -3446,7 +3449,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 	    {
 	       if( neg1 != neg2 )
 	       {
-		  SCIPdebugMessage("logicor constraint <%s> is redundant, because variable <%s> and its negation <%s> exist\n", SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+		  SCIPdebugMsg(scip, "logicor constraint <%s> is redundant, because variable <%s> and its negation <%s> exist\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
 
 		  SCIP_CALL( SCIPdelCons(scip, cons) );
 
@@ -3457,7 +3461,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 #ifndef NDEBUG
 		  SCIP_VAR* lastvar = consdata->vars[consdata->nvars - 1];
 #endif
-		  SCIPdebugMessage("in logicor constraint <%s>, active variable of <%s> and active variable of <%s> are the same, removing the first\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
+		  SCIPdebugMsg(scip, "in logicor constraint <%s>, active variable of <%s> and active variable of <%s> are the same, removing the first\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
 
 		  SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
 
@@ -3506,8 +3511,9 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
-               SCIPdebugMessage("logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n", SCIPconsGetName(cons));
-               SCIPdebugMessage("variable <%s> and variable <%s> are in a negated clique\n", SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
+               SCIPdebugMsg(scip, "logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n",
+                  SCIPconsGetName(cons));
+               SCIPdebugMsg(scip, "variable <%s> and variable <%s> are in a negated clique\n", SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
 
                SCIP_CALL( SCIPdelCons(scip, cons) );
                ++(*nupgdconss);
@@ -3614,7 +3620,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
 
             if( redundant )
             {
-               SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
+               SCIPdebugMsg(scip, "logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
 
                SCIP_CALL( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
@@ -3647,7 +3653,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
 
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
-         SCIPdebugMessage("logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
 
          SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*nupgdconss);
@@ -3659,13 +3665,13 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
     */
    if( consdata->nvars == 0 )
    {
-      SCIPdebugMessage("logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
 
       *cutoff = TRUE;
    }
    else if( consdata->nvars == 1 )
    {
-      SCIPdebugMessage("logic or constraint <%s> has only one variable not fixed to 0.0\n",
+      SCIPdebugMsg(scip, "logic or constraint <%s> has only one variable not fixed to 0.0\n",
          SCIPconsGetName(cons));
 
       assert(consdata->vars != NULL);
@@ -3673,12 +3679,12 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
 
       if( SCIPvarGetStatus(consdata->vars[0]) != SCIP_VARSTATUS_MULTAGGR )
       {
-         SCIPdebugMessage(" -> fix variable and delete constraint\n");
+         SCIPdebugMsg(scip, " -> fix variable and delete constraint\n");
 
          SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
          if( infeasible )
          {
-            SCIPdebugMessage(" -> infeasible fixing\n");
+            SCIPdebugMsg(scip, " -> infeasible fixing\n");
 
             *cutoff = TRUE;
             return SCIP_OKAY;
@@ -3695,7 +3701,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* conslinear;
          char consname[SCIP_MAXSTRLEN];
 
-         SCIPdebugMessage(" -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
+         SCIPdebugMsg(scip, " -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
             SCIPvarGetName(consdata->vars[0]));
 
          coef = 1.0;
@@ -3813,7 +3819,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
    {
       int mult;
 
-      SCIPdebugMessage("upgrading constraint <%s> to logic or constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to logic or constraint\n", SCIPconsGetName(cons));
 
       /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
       mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
@@ -4005,7 +4011,7 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
-   /*debugMessage("Trans method of logic or constraints\n");*/
+   /*debugMsg(scip, "Trans method of logic or constraints\n");*/
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -4064,7 +4070,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
+   SCIPdebugMsg(scip, "separating %d/%d logic or constraints\n", nusefulconss, nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -4111,7 +4117,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
+   SCIPdebugMsg(scip, "separating %d/%d logic or constraints\n", nusefulconss, nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -4158,7 +4164,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("LP enforcing %d logic or constraints\n", nconss);
+   SCIPdebugMsg(scip, "LP enforcing %d logic or constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -4259,7 +4265,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("pseudo enforcing %d logic or constraints\n", nconss);
+   SCIPdebugMsg(scip, "pseudo enforcing %d logic or constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -4306,7 +4312,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
    *result = SCIP_FEASIBLE;
 
    /* check all logic or constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
@@ -4336,8 +4342,6 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                SCIPinfoMessage(scip, NULL, ";\n");
                SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
             }
-
-            return SCIP_OKAY;
          }
       }
    }
@@ -4376,7 +4380,7 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    {
       assert(inpresolve || !(SCIPconsGetData(conss[c])->existmultaggr));
 
-      SCIPdebugMessage(" propagate constraint %s\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, " propagate constraint %s\n", SCIPconsGetName(conss[c]));
       SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
 
@@ -4439,7 +4443,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIPdebugMessage("presolving logic or constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "presolving logic or constraint <%s>\n", SCIPconsGetName(cons));
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
@@ -4466,7 +4470,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
       if( redundant )
       {
-         SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
          (*ndelconss)++;
          *result = SCIP_SUCCESS;
@@ -4622,7 +4626,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("conflict resolving method of logic or constraint handler\n");
+   SCIPdebugMsg(scip, "conflict resolving method of logic or constraint handler\n");
 
    /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
     * are assigned to zero
@@ -4694,7 +4698,7 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   SCIPdebugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    /* catch events on watched variables */
@@ -4733,7 +4737,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   SCIPdebugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    /* drop events on watched variables */
@@ -4808,7 +4812,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    int varssize;
    int nvars;
 
-   SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
+   SCIPdebugMsg(scip, "parse <%s> as logicor constraint\n", str);
 
    *success = FALSE;
 
@@ -4940,11 +4944,11 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   SCIPdebugMessage("exec method of event handler for logic or constraints\n");
+   SCIPdebugMsg(scip, "exec method of event handler for logic or constraints\n");
 
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
    {
-      SCIPdebugMessage("enabling constraint cons <%s> at depth %d\n", SCIPconsGetName((SCIP_CONS*)eventdata), SCIPgetDepth(scip));
+      SCIPdebugMsg(scip, "enabling constraint cons <%s> at depth %d\n", SCIPconsGetName((SCIP_CONS*)eventdata), SCIPgetDepth(scip));
 
       SCIP_CALL( SCIPenableCons(scip, (SCIP_CONS*)eventdata) );
       SCIP_CALL( SCIPenableConsPropagation(scip, (SCIP_CONS*)eventdata) );
@@ -5046,8 +5050,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
    }
@@ -5259,7 +5264,7 @@ SCIP_RETCODE SCIPaddCoefLogicor(
 {
    assert(var != NULL);
 
-   /*debugMessage("adding variable <%s> to logicor constraint <%s>\n",
+   /*debugMsg(scip, "adding variable <%s> to logicor constraint <%s>\n",
      SCIPvarGetName(var), SCIPconsGetName(cons));*/
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
