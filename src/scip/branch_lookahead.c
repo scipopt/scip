@@ -863,8 +863,8 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             /* in SCIP we minimize, so the (non-negative) gain is difference between the new obj value and the base lp one */
             globaldowngain = downresultdata->objval - globallpobjval;
             globalupgain = upresultdata->objval - globallpobjval;
-            localdowngain = downresultdata->objval - localpobjval;
-            localupgain = upresultdata->objval - localpobjval;
+            localdowngain = MAX(0, downresultdata->objval - localpobjval);
+            localupgain = MAX(0, upresultdata->objval - localpobjval);
 
             SCIPdebugMessage("The difference between the objective values of the base lp and the upper bounded lp is <%g>\n",
                globaldowngain);
