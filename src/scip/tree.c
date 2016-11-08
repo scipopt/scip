@@ -8138,25 +8138,3 @@ void SCIPtreeMarkProbingObjChanged(
 
    tree->probingobjchanged = TRUE;
 }
-
-
-/** ?????????????????? */
-int SCIPnodeGetNComponents(
-   SCIP_NODE*            node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return node->ncomponents;
-}
-
-/** ?????????????????? */
-void SCIPnodeSetNComponents(
-   SCIP_NODE*            node,               /**< node */
-   int                   ncomponents
-   )
-{
-   assert(node != NULL);
-
-   node->ncomponents = ncomponents;
-}

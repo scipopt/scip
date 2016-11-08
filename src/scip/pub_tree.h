@@ -246,18 +246,6 @@ SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
 
 #endif
 
-/** ?????????????????? */
-int SCIPnodeGetNComponents(
-   SCIP_NODE*            node                /**< node */
-   );
-
-/** ?????????????????? */
-void SCIPnodeSetNComponents(
-   SCIP_NODE*            node,               /**< node */
-   int                   ncomponents
-   );
-
-
 #ifdef __cplusplus
 }
 #endif
