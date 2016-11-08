@@ -586,8 +586,8 @@ SCIP_RETCODE presolveFindDuplicates(
    SCIP_Bool*            infeas              /**< pointer to store whether infeasibility was detected */
    )
 {
-   SCIP_MULTIHASH*     hashtable;
-   SCIP_HASHTABLELIST* hashtablelist;
+   SCIP_MULTIHASH*     multihash;
+   SCIP_MULTIHASHLIST* multihashlist;
    SCIP_CONSHDLRDATA*  conshdlrdata;
    int c;
 
@@ -613,7 +613,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the x variable */
 
-   SCIP_CALL( SCIPmultihashCreate(&hashtable, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ, presolveFindDuplicatesKeyVal, (void*)scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -627,7 +627,7 @@ SCIP_RETCODE presolveFindDuplicates(
       assert(!SCIPconsIsLocal(cons0));       /* shouldn't have local constraints in presolve */
       assert(SCIPconsIsActive(cons0));       /* shouldn't get inactive constraints here */
 
-      hashtablelist = NULL;
+      multihashlist = NULL;
 
       do
       {
@@ -635,11 +635,11 @@ SCIP_RETCODE presolveFindDuplicates(
          SCIP_CONSDATA* consdata1;
 
          /* get constraint from current hash table with same x variable as cons0 and same exponent */
-         cons1 = (SCIP_CONS*)(SCIPmultihashRetrieveNext(hashtable, &hashtablelist, (void*)cons0));
+         cons1 = (SCIP_CONS*)(SCIPmultihashRetrieveNext(multihash, &multihashlist, (void*)cons0));
          if( cons1 == NULL )
          {
             /* processed all constraints like cons0 from hash table, so insert cons0 and go to conss[c+1] */
-            SCIP_CALL( SCIPmultihashInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
 
@@ -723,7 +723,7 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIPdebugMsg(scip, "substitute <%s> in <%s> to make linear constraint\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
                SCIP_CALL( presolveFindDuplicatesUpgradeCons(scip, cons1, cons0, infeas, nupgdconss, ndelconss, naggrvars) );
 
-               SCIP_CALL( SCIPmultihashRemove(hashtable, cons1) );
+               SCIP_CALL( SCIPmultihashRemove(multihash, cons1) );
                *success = TRUE;
 
                if( *infeas )
@@ -807,7 +807,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
                SCIP_CALL( SCIPdelCons(scip, cons1) );
-               SCIP_CALL( SCIPmultihashRemove(hashtable, cons1) );
+               SCIP_CALL( SCIPmultihashRemove(multihash, cons1) );
                *success = TRUE;
 
                break;
@@ -913,16 +913,16 @@ SCIP_RETCODE presolveFindDuplicates(
 
             SCIP_CALL( SCIPdelCons(scip, cons0) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
-            SCIP_CALL( SCIPmultihashRemove(hashtable, cons1) );
+            SCIP_CALL( SCIPmultihashRemove(multihash, cons1) );
             *success = TRUE;
 
             break;
          }
 
-         if( hashtablelist == NULL )
+         if( multihashlist == NULL )
          {
             /* processed all constraints like cons0 from hash table, but cons0 could not be removed, so insert cons0 into hashmap and go to conss[c+1] */
-            SCIP_CALL( SCIPmultihashInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
       }
@@ -930,7 +930,7 @@ SCIP_RETCODE presolveFindDuplicates(
    }
 
    /* free hash table */
-   SCIPmultihashFree(&hashtable);
+   SCIPmultihashFree(&multihash);
 
    if( *infeas )
       return SCIP_OKAY;
@@ -938,7 +938,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the z variable */
 
-   SCIP_CALL( SCIPmultihashCreate(&hashtable, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ2, presolveFindDuplicatesKeyVal2, (void*) scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -966,18 +966,18 @@ SCIP_RETCODE presolveFindDuplicates(
       if( !SCIPisEQ(scip, consdata0->lhs, consdata0->rhs) )
          continue;
 
-      hashtablelist = NULL;
+      multihashlist = NULL;
 
       do
       {
          SCIP_CONSDATA* consdata1;
 
          /* get constraint from current hash table with same z variable as cons0 and same exponent */
-         cons1 = (SCIP_CONS*)(SCIPmultihashRetrieveNext(hashtable, &hashtablelist, (void*)cons0));
+         cons1 = (SCIP_CONS*)(SCIPmultihashRetrieveNext(multihash, &multihashlist, (void*)cons0));
          if( cons1 == NULL )
          {
             /* processed all constraints like cons0 from hash table, so insert cons0 and go to conss[c+1] */
-            SCIP_CALL( SCIPmultihashInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
 
@@ -1065,10 +1065,10 @@ SCIP_RETCODE presolveFindDuplicates(
             break;
          }
 
-         if( hashtablelist == NULL )
+         if( multihashlist == NULL )
          {
             /* processed all constraints like cons0 from hash table, but cons0 could not be removed, so insert cons0 into hashmap and go to conss[c+1] */
-            SCIP_CALL( SCIPmultihashInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
       }
@@ -1076,7 +1076,7 @@ SCIP_RETCODE presolveFindDuplicates(
    }
 
    /* free hash table */
-   SCIPmultihashFree(&hashtable);
+   SCIPmultihashFree(&multihash);
 
    return SCIP_OKAY;
 }

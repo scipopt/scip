@@ -85,20 +85,20 @@ struct SCIP_HashTable
 };
 
 /** element list to store single elements of a hash table */
-struct SCIP_HashTableList
+struct SCIP_MultiHashList
 {
    void*                 element;            /**< this element */
-   SCIP_HASHTABLELIST*   next;               /**< rest of the hash table list */
+   SCIP_MULTIHASHLIST*   next;               /**< rest of the hash table list */
 };
 
-/** hash table data structure */
+/** multihash table data structure */
 struct SCIP_MultiHash
 {
    SCIP_DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
-   SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
+   SCIP_MULTIHASHLIST**  lists;              /**< multihash table lists of the hash table */
    int                   nlists;             /**< number of lists stored in the hash table */
    void*                 userptr;            /**< user pointer */
    SCIP_Longint          nelements;          /**< number of elements in the hashtable */

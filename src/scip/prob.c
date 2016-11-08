@@ -1228,11 +1228,6 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      /* TODO constraint names can be duplicated and than they are removed twice which is
-       * fine for the hashmap implementation but lets the assert fail
-       * since multiple constriants with the same name where never retrieved the
-       * multihash (equal to the old hashtable implementation) was not used */
-      /* assert(SCIPhashtableExists(prob->consnames, (void*)cons)); */
       SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
    }
 

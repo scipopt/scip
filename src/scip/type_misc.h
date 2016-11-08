@@ -70,12 +70,12 @@ typedef struct SCIP_HashTable SCIP_HASHTABLE;
 
 /** Hash table data structure which allows multiple occurences of an element
  *
- *  - \ref HashTable "List of all available methods"
+ *  - \ref MultiHash "List of all available methods"
  */
 typedef struct SCIP_MultiHash SCIP_MULTIHASH;
 
 /** Hash table element list to store single elements of a multi hash table */
-typedef struct SCIP_HashTableList SCIP_HASHTABLELIST;
+typedef struct SCIP_MultiHashList SCIP_MULTIHASHLIST;
 
 /** Hash map entry */
 typedef struct SCIP_HashMapEntry SCIP_HASHMAPENTRY;

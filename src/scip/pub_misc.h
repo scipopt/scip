@@ -513,7 +513,7 @@ void SCIPhashtableClear(
 
 /** inserts element in hash table (multiple inserts of same element possible)
  *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
  *        to the hash table, due to dynamic resizing.
  */
 EXTERN
@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPhashtableInsert(
 
 /** inserts element in hash table (multiple insertion of same element is checked and results in an error)
  *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
  *        element to the hash table, due to dynamic resizing.
  */
 EXTERN
@@ -543,12 +543,12 @@ void* SCIPhashtableRetrieve(
 /** retrieve element with key from hash table, returns NULL if not existing
  *  can be used to retrieve all entries with the same key (one-by-one)
  *
- *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ *  @note The returned multihashlist pointer might get invalid when adding a new element to the hash table.
  */
 EXTERN
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
                                               *   output: entry in hash table list corresponding to element after
                                               *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
@@ -597,11 +597,11 @@ void SCIPhashtablePrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
-/** creates a hash table */
+/** creates a multihash table */
 EXTERN
 SCIP_RETCODE SCIPmultihashCreate(
-   SCIP_MULTIHASH**      hashtable,          /**< pointer to store the created hash table */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash table entries */
+   SCIP_MULTIHASH**      multihash,          /**< pointer to store the created multihash table */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store multihash table entries */
    int                   tablesize,          /**< size of the hash table */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -609,95 +609,95 @@ SCIP_RETCODE SCIPmultihashCreate(
    void*                 userptr             /**< user pointer */
    );
 
-/** frees the hash table */
+/** frees the multihash table */
 EXTERN
 void SCIPmultihashFree(
-   SCIP_MULTIHASH**      hashtable           /**< pointer to the hash table */
+   SCIP_MULTIHASH**      multihash           /**< pointer to the multihash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible)
+/** inserts element in multihash table (multiple inserts of same element possible)
  *
- *  @note A pointer to a hashtablelist returned by SCIPmultihashRetrieveNext() might get invalid when adding an element
+ *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding an element
  *        to the hash table, due to dynamic resizing.
  */
 EXTERN
 SCIP_RETCODE SCIPmultihashInsert(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+/** inserts element in multihash table (multiple insertion of same element is checked and results in an error)
  *
- *  @note A pointer to a hashtablelist returned by SCIPmultihashRetrieveNext() might get invalid when adding a new
- *        element to the hash table, due to dynamic resizing.
+ *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding a new
+ *        element to the multihash table, due to dynamic resizing.
  */
 EXTERN
 SCIP_RETCODE SCIPmultihashSafeInsert(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** retrieve element with key from hash table, returns NULL if not existing */
+/** retrieve element with key from multihash table, returns NULL if not existing */
 EXTERN
 void* SCIPmultihashRetrieve(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 key                 /**< key to retrieve */
    );
 
-/** retrieve element with key from hash table, returns NULL if not existing
+/** retrieve element with key from multihash table, returns NULL if not existing
  *  can be used to retrieve all entries with the same key (one-by-one)
  *
- *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ *  @note The returned multimultihashlist pointer might get invalid when adding a new element to the multihash table.
  */
 EXTERN
 void* SCIPmultihashRetrieveNext(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
                                               *   output: entry in hash table list corresponding to element after
                                               *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
-/** returns whether the given element exists in the table */
+/** returns whether the given element exists in the multihash table */
 EXTERN
 SCIP_Bool SCIPmultihashExists(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to search in the table */
    );
 
-/** removes element from the hash table, if it exists */
+/** removes element from the multihash table, if it exists */
 EXTERN
 SCIP_RETCODE SCIPmultihashRemove(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to remove from the table */
    );
 
-/** removes all elements of the hash table
+/** removes all elements of the multihash table
  *
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
  */
 EXTERN
 void SCIPmultihashRemoveAll(
-   SCIP_MULTIHASH*       hashtable           /**< hash table */
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
    );
 
-/** returns number of hash table elements */
+/** returns number of multihash table elements */
 EXTERN
 SCIP_Longint SCIPmultihashGetNElements(
-   SCIP_MULTIHASH*       hashtable           /**< hash table */
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
    );
 
-/** returns the load of the given hash table in percentage */
+/** returns the load of the given multihash table in percentage */
 EXTERN
 SCIP_Real SCIPmultihashGetLoad(
-   SCIP_MULTIHASH*       hashtable           /**< hash table */
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
    );
 
-/** prints statistics about hash table usage */
+/** prints statistics about multihash table usage */
 EXTERN
 void SCIPmultihashPrintStatistics(
-   SCIP_MULTIHASH*       hashtable,          /**< hash table */
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 

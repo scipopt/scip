@@ -150,8 +150,9 @@ SCIP_DECL_HASHKEYEQ(hashdataKeyEqCons)
    assert(hashdata1->nvars == 2);
    assert(hashdata2->nvars == 2);
    /* at least one data object needs to be have a real set packing constraint */
-   /*TODO why does this assert fail on one instance when problem is freed
-    * using the new hashing: assert(hashdata1->cons != NULL || hashdata2->cons != NULL);*/
+   /* TODO why does this assert fail on one instance when problem is freed
+    * using the new hashing: assert(hashdata1->cons != NULL || hashdata2->cons != NULL);
+    */
 
    for( v = 1; v >= 0; --v )
    {
@@ -303,9 +304,12 @@ SCIP_RETCODE presoldataInitHashtables(
    assert(presoldata->logicorhashtable == NULL);
 
    /* create hashtables */
-   SCIP_CALL( SCIPhashtableCreate(&(presoldata->hashdatatable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, SCIPhashGetKeyStandard, hashdataKeyEqCons, hashdataKeyValCons, (void*) scip) );
-   SCIP_CALL( SCIPhashtableCreate(&(presoldata->setppchashtable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, (void*) scip) );
-   SCIP_CALL( SCIPhashtableCreate(&(presoldata->logicorhashtable), SCIPblkmem(scip), HASHSIZE_LOGICORCONS, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&(presoldata->hashdatatable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS,
+                                  SCIPhashGetKeyStandard, hashdataKeyEqCons, hashdataKeyValCons, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&(presoldata->setppchashtable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS,
+                                  SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&(presoldata->logicorhashtable), SCIPblkmem(scip), HASHSIZE_LOGICORCONS,
+                                  SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, (void*) scip) );
 
    return SCIP_OKAY;
 }
