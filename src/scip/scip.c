@@ -14918,7 +14918,7 @@ SCIP_RETCODE displayRelevantStats(
             SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
 
          printf("\nMax Block-Memory      : %" SCIP_LONGINT_FORMAT "\n", SCIPmemGetUsedMax(scip->mem));
-         printf("Max Block-Memory Lazy : %" SCIP_LONGINT_FORMAT "\n", SCIPmemGetUsedLazyMax(scip->mem));
+         printf("Max Block-Memory Lazy : %" SCIP_LONGINT_FORMAT "\n", SCIPmemGetLazyMax(scip->mem));
       }
 
       /* check solution for feasibility in original problem */
@@ -43503,17 +43503,17 @@ SCIP_Longint SCIPgetMemUsed(
    return SCIPmemGetUsed(scip->mem);
 }
 
-/** returns the total number of bytes allocated and used in block and buffer memory
+/** returns the total number of bytes in block and buffer memory
  *
- *  @return the total number of bytes allocated used in block and buffer memory.
+ *  @return the total number of bytes in block and buffer memory.
  */
-SCIP_Longint SCIPgetMemUsedTotal(
+SCIP_Longint SCIPgetMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   return SCIPmemGetUsedTotal(scip->mem);
+   return SCIPmemGetTotal(scip->mem);
 }
 
 /** returns the estimated number of bytes used by external software, e.g., the LP solver

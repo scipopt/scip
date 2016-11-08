@@ -91,13 +91,13 @@
 #define DISP_POSI_MEMUSED       1500
 #define DISP_STRI_MEMUSED       TRUE
 
-#define DISP_NAME_MEMUSEDTOTAL  "tmemused"
-#define DISP_DESC_MEMUSEDTOTAL  "total number of bytes allocated and used in block memory"
-#define DISP_HEAD_MEMUSEDTOTAL  "tmem"
-#define DISP_WIDT_MEMUSEDTOTAL  5
-#define DISP_PRIO_MEMUSEDTOTAL  19000
-#define DISP_POSI_MEMUSEDTOTAL  1500
-#define DISP_STRI_MEMUSEDTOTAL  TRUE
+#define DISP_NAME_MEMTOTAL      "memtotal"
+#define DISP_DESC_MEMTOTAL      "total number of bytes in block memory"
+#define DISP_HEAD_MEMTOTAL      "tmem"
+#define DISP_WIDT_MEMTOTAL      5
+#define DISP_PRIO_MEMTOTAL      0
+#define DISP_POSI_MEMTOTAL      1500
+#define DISP_STRI_MEMTOTAL      TRUE
 
 #define DISP_NAME_DEPTH         "depth"
 #define DISP_DESC_DEPTH         "depth of current node"
@@ -568,10 +568,10 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMUSEDTOTAL) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMTOTAL) == 0);
    assert(scip != NULL);
 
-   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemUsedTotal(scip), DISP_WIDT_MEMUSEDTOTAL);
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMTOTAL);
 
    return SCIP_OKAY;
 }
@@ -1108,14 +1108,14 @@ SCIP_RETCODE SCIPincludeDispDefault(
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsed, NULL, 
             DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
    }
-   tmpdisp = SCIPfindDisp(scip, DISP_NAME_MEMUSEDTOTAL);
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_MEMTOTAL);
    if( tmpdisp == NULL )
    {
-      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MEMUSEDTOTAL, DISP_DESC_MEMUSEDTOTAL, DISP_HEAD_MEMUSEDTOTAL,
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MEMTOTAL, DISP_DESC_MEMTOTAL, DISP_HEAD_MEMTOTAL,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsedTotal, NULL,
-            DISP_WIDT_MEMUSEDTOTAL, DISP_PRIO_MEMUSEDTOTAL, DISP_POSI_MEMUSEDTOTAL, DISP_STRI_MEMUSEDTOTAL) );
+            DISP_WIDT_MEMTOTAL, DISP_PRIO_MEMTOTAL, DISP_POSI_MEMTOTAL, DISP_STRI_MEMTOTAL) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_DEPTH);
    if( tmpdisp == NULL )

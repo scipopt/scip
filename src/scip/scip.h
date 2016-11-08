@@ -21305,12 +21305,12 @@ SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the total number of bytes allocated and used in block and buffer memory
+/** returns the total number of bytes in block and buffer memory
  *
- *  @return the total number of bytes allocated used in block and buffer memory.
+ *  @return the total number of bytes in block and buffer memory.
  */
 EXTERN
-SCIP_Longint SCIPgetMemUsedTotal(
+SCIP_Longint SCIPgetMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
