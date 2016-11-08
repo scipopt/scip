@@ -108,6 +108,8 @@ struct SCIP_PresolData
    SCIP_Bool             updatequadbounded;  /**< if TRUE then only apply the update to QPs with bounded variables; if
                                               *   the variables are not bounded then a finite optimal solution might not
                                               *   exist and the KKT conditions would then be invalid */
+   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic 
+                                              *   constraint matrix is known to be indefinite */
 };
 
 
@@ -1757,20 +1759,20 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    cons = conss[0];
    assert( cons != NULL );
 
-   /* desired structure: matrix associated to quadratic constraint is indefinite;
-    * otherwise, the problem usually can be solved faster by standard methods. */
-   if ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) )
-   {
-      SCIPdebugMessage("quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \
-           indefinite.\n", SCIPconsGetName(cons) );
-      return SCIP_OKAY;
-   }
-
    SCIPdebugMessage("tries to add the KKT conditions for constraint <%s>\n", SCIPconsGetName(cons));
 
    /* get presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
+
+   /* desired structure: matrix associated to quadratic constraint is indefinite;
+    * otherwise, the problem usually can be solved faster by standard methods. */
+   if ( ! conshdlrdata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
+   {
+      SCIPdebugMessage("quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \
+           indefinite.\n", SCIPconsGetName(cons) );
+      return SCIP_OKAY;
+   }
 
    /* first, check whether the problem is equivalent to
     *
@@ -1990,6 +1992,10 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
          "if TRUE then only apply the update to QPs with bounded variables; if the variables are not bounded then a \
          finite optimal solution might not exist and the KKT conditions would then be invalid",
          &presoldata->updatequadbounded, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" PRESOL_NAME "/updatequadindef",
+         "if TRUE then apply quadratic constraint update even if the quadratic constraint matrix is known to be indefinite",
+         &conshdlrdata->updatequadindef, TRUE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
