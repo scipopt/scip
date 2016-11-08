@@ -39,7 +39,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_undercover.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 #include "nlpi/exprinterpret.h"
 
 #define HEUR_NAME               "undercover"
@@ -107,7 +107,7 @@ struct SCIP_HeurData
 {
    SCIP_CONSHDLR**       nlconshdlrs;        /**< array of nonlinear constraint handlers */
    SCIP_HEUR*            nlpheur;            /**< pointer to NLP local search heuristics */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    char*                 fixingalts;         /**< sequence of fixing values used: 'l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
@@ -2387,7 +2387,7 @@ SCIP_RETCODE performFixing(
    if( SCIPisUbBetter(scip, val, oldlb, oldub) )
    {
       /* we only want to open a new probing node if we do not exceed the maximal tree depth */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          /* create next probing node */
          SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -2432,7 +2432,7 @@ SCIP_RETCODE performFixing(
    if( SCIPisLbBetter(scip, val, oldlb, oldub) )
    {
       /* we only want to open a new probing node if we do not exceed the maximal tree depth */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          /* create next probing node */
          SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -2989,7 +2989,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIP_RESULT nlpresult;
 
-                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL) );
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL, NULL) );
                   SCIPdebugMsg(scip, "NLP local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
 
                   if( nlpresult == SCIP_FOUNDSOL )
@@ -3112,9 +3112,6 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
-
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -3136,8 +3133,27 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic */
+static
+SCIP_DECL_HEUREXIT(heurExitUndercover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -3398,6 +3414,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitUndercover) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 

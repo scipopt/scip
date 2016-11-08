@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "scip/branch_pscost.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define BRANCHRULE_NAME          "pscost"
 #define BRANCHRULE_DESC          "branching on pseudo cost values"
@@ -51,7 +51,7 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
    char                  strategy;           /**< strategy for computing score of external candidates */
    SCIP_Real             scoreminweight;     /**< weight for minimum of scores of a branching candidate */
@@ -559,9 +559,6 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &branchruledata->randnumgen) );
-
    /* free branching rule data */
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -580,8 +577,24 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    assert(branchruledata != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &branchruledata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of branching rule */
+static
+SCIP_DECL_BRANCHEXIT(branchExitPscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -749,6 +762,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 

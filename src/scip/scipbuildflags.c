@@ -13,34 +13,20 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_random.h
- * @brief  data structures for random number generator
- * @author Jakob Witzig
+/**@file   scipbuildflags.c
+ * @brief  build flags methods
+ * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_RANDOM_H__
-#define __SCIP_STRUCT_RANDOM_H__
+#include "scipbuildflags.h"
+#include "buildflags.c"
 
-#include "scip/def.h"
-#include "scip/type_random.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** random number generator data */
-struct SCIP_RandGen
+/** returns the flags that were used to build SCIP */
+const char* SCIPgetBuildFlags(
+   void
+   )
 {
-   unsigned int          seed;               /**< start seed */
-   unsigned int          xor_seed;           /**< Xorshift seed */
-   unsigned int          mwc_seed;           /**< Multiply-with-carry seed */
-   unsigned int          cst_seed;           /**< constant seed */
-};
-
-#ifdef __cplusplus
+   return SCIP_BUILDFLAGS;
 }
-#endif
-
-#endif

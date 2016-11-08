@@ -280,6 +280,7 @@ void SCIPstatReset(
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
+   stat->externmemestim = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -582,6 +583,14 @@ void SCIPstatUpdateMemsaveMode(
    }
    else
       stat->memsavemode = FALSE;
+}
+
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+SCIP_Longint SCIPstatGetMemExternEstim(
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   )
+{
+   return stat->externmemestim;
 }
 
 /** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.

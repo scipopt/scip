@@ -94,7 +94,7 @@
 /** eventdata for variable bound change events in quadratic constraints */
 struct SCIP_QuadVarEventData
 {
-   SCIP_CONSDATA*        consdata;           /**< the constraint data */
+   SCIP_CONS*            cons;               /**< the constraint */
    int                   varidx;             /**< the index of the variable which bound change is caught, positive for linear variables, negative for quadratic variables */
    int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 };
@@ -288,7 +288,7 @@ SCIP_RETCODE catchLinearVarEvents(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventdata) );
 
-   eventdata->consdata = consdata;
+   eventdata->cons = cons;
    eventdata->varidx = linvarpos;
 
    eventtype = SCIP_EVENTTYPE_VARFIXED;
@@ -350,7 +350,7 @@ SCIP_RETCODE dropLinearVarEvents(
    assert(linvarpos < consdata->nlinvars);
    assert(consdata->lineventdata != NULL);
    assert(consdata->lineventdata[linvarpos] != NULL);
-   assert(consdata->lineventdata[linvarpos]->consdata == consdata);
+   assert(consdata->lineventdata[linvarpos]->cons == cons);
    assert(consdata->lineventdata[linvarpos]->varidx == linvarpos);
    assert(consdata->lineventdata[linvarpos]->filterpos >= 0);
 
@@ -411,7 +411,7 @@ SCIP_RETCODE catchQuadVarEvents(
 #ifdef CHECKIMPLINBILINEAR
    eventtype |= SCIP_EVENTTYPE_IMPLADDED;
 #endif
-   eventdata->consdata = consdata;
+   eventdata->cons = cons;
    eventdata->varidx   = -quadvarpos-1;
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvarterms[quadvarpos].var, eventtype, eventhdlr, (SCIP_EVENTDATA*)eventdata, &eventdata->filterpos) );
 
@@ -448,7 +448,7 @@ SCIP_RETCODE dropQuadVarEvents(
    assert(quadvarpos >= 0);
    assert(quadvarpos < consdata->nquadvars);
    assert(consdata->quadvarterms[quadvarpos].eventdata != NULL);
-   assert(consdata->quadvarterms[quadvarpos].eventdata->consdata == consdata);
+   assert(consdata->quadvarterms[quadvarpos].eventdata->cons == cons);
    assert(consdata->quadvarterms[quadvarpos].eventdata->varidx == -quadvarpos-1);
    assert(consdata->quadvarterms[quadvarpos].eventdata->filterpos >= 0);
 
@@ -997,6 +997,7 @@ SCIP_Bool hasQuadvarHpProperty(
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
+   SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_EVENTTYPE eventtype;
    int varidx;
@@ -1006,7 +1007,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   consdata = ((SCIP_QUADVAREVENTDATA*)eventdata)->consdata;
+   cons = ((SCIP_QUADVAREVENTDATA*)eventdata)->cons;
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    varidx = ((SCIP_QUADVAREVENTDATA*)eventdata)->varidx;
@@ -1051,7 +1054,10 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       }
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
+      {
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
          consdata->ispropagated = FALSE;
+      }
    }
 
    if( eventtype & SCIP_EVENTTYPE_VARFIXED )
@@ -3142,6 +3148,7 @@ SCIP_RETCODE createNlRow(
    int elcnt;
    SCIP_VAR* lastvar;
    int lastvaridx;
+   SCIP_EXPRCURV curvature;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3223,10 +3230,24 @@ SCIP_RETCODE createNlRow(
    }
    assert(elcnt == nquadelems);
 
+   /* set curvature for the nonlinear row */
+   if( consdata->isconcave && consdata->isconvex )
+   {
+      assert(consdata->nbilinterms == 0 && consdata->nquadvars == 0);
+      curvature = SCIP_EXPRCURV_LINEAR;
+   }
+   else if( consdata->isconcave )
+      curvature = SCIP_EXPRCURV_CONCAVE;
+   else if( consdata->isconvex )
+      curvature = SCIP_EXPRCURV_CONVEX;
+   else
+      curvature = SCIP_EXPRCURV_UNKNOWN;
+
    SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
          consdata->nlinvars, consdata->linvars, consdata->lincoefs,
          nquadvars, quadvars, nquadelems, quadelems,
-         NULL, consdata->lhs, consdata->rhs) );
+         NULL, consdata->lhs, consdata->rhs,
+         curvature) );
 
    SCIP_CALL( SCIPaddLinearCoefsToNlRow(scip, consdata->nlrow, nquadlinterms, quadlinvars, quadlincoefs) );
 
@@ -9494,9 +9515,6 @@ SCIP_RETCODE propagateBoundsCons(
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
-   if( consdata->ispropagated )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
    intervalinfty = 1000 * SCIPinfinity(scip) * SCIPinfinity(scip);
@@ -9506,8 +9524,6 @@ SCIP_RETCODE propagateBoundsCons(
    quadmaxactinf = -1;
 
    SCIPdebugMsg(scip, "start domain propagation for constraint <%s>\n", SCIPconsGetName(cons));
-
-   consdata->ispropagated = TRUE;
 
    /* make sure we have activity of linear term and that they are consistent */
    consdataUpdateLinearActivity(scip, consdata, intervalinfty);
@@ -10037,16 +10053,22 @@ SCIP_RETCODE propagateBounds(
          if( !SCIPconsIsEnabled(conss[c]) )
             continue;
 
-         SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
-         if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
+         if( SCIPconsIsMarkedPropagate(conss[c]) )
          {
-            *result = propresult;
-            success = TRUE;
-         }
-         if( redundant )
-         {
-            SCIPdebugMsg(scip, "deleting constraint <%s> locally\n", SCIPconsGetName(conss[c]));
-            SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+            /* unmark constraint for propagation */
+            SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
+
+            SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
+            if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
+            {
+               *result = propresult;
+               success = TRUE;
+            }
+            if( redundant )
+            {
+               SCIPdebugMsg(scip, "deleting constraint <%s> locally\n", SCIPconsGetName(conss[c]));
+               SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+            }
          }
       }
 
@@ -10650,6 +10672,9 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       {
          if( consdata->nlrow == NULL )
          {
+            /* compute curvature for the quadratic constraint if not done yet */
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );
+
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
@@ -10693,6 +10718,10 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          }
 
       }
+
+      /* mark constraint for propagation */
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      consdata->ispropagated = FALSE;
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
@@ -11537,7 +11566,7 @@ SCIP_DECL_CONSPROP(consPropQuadratic)
    assert(result != NULL);
 
    nchgbds = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, result, &nchgbds) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nmarkedconss, result, &nchgbds) );
 
    return SCIP_OKAY;
 }  /*lint !e715 */
@@ -11717,30 +11746,35 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
             SCIPdebugMsg(scip, "starting domain propagation round %d of %d\n", roundnr, conshdlrdata->maxproproundspresolve);
 
-            SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
-
-            if( propresult == SCIP_CUTOFF )
+            if( !consdata->ispropagated )
             {
-               SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
+               consdata->ispropagated = TRUE;
 
-            /* delete constraint if found redundant by bound tightening */
-            if( redundant )
-            {
-               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-               ++*ndelconss;
-               *result = SCIP_SUCCESS;
-               break;
-            }
+               SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
 
-            if( propresult == SCIP_REDUCEDDOM )
-            {
-               *result = SCIP_SUCCESS;
-               havechange = TRUE;
-            }
+               if( propresult == SCIP_CUTOFF )
+               {
+                  SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n",
+                     SCIPconsGetName(conss[c]));
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
 
+               /* delete constraint if found redundant by bound tightening */
+               if( redundant )
+               {
+                  SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+                  ++*ndelconss;
+                  *result = SCIP_SUCCESS;
+                  break;
+               }
+
+               if( propresult == SCIP_REDUCEDDOM )
+               {
+                  *result = SCIP_SUCCESS;
+                  havechange = TRUE;
+               }
+            }
          }
          while( !consdata->ispropagated && roundnr < conshdlrdata->maxproproundspresolve );
 

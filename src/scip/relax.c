@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxation handler <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*relax)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }

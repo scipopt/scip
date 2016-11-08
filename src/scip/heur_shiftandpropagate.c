@@ -23,7 +23,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 #include "scip/heur_shiftandpropagate.h"
 
 #define HEUR_NAME             "shiftandpropagate"
@@ -74,7 +74,7 @@
 struct SCIP_HeurData
 {
    SCIP_COL**            lpcols;             /**< stores lp columns with discrete variables before cont. variables */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generation */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    int*                  rowweights;         /**< row weight storage */
    SCIP_Bool             relax;              /**< should continuous variables be relaxed from the problem */
    SCIP_Bool             probing;            /**< should probing be executed? */
@@ -1305,7 +1305,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
@@ -1339,7 +1339,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    SCIPstatistic(
@@ -1545,7 +1545,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIPdisableVarHistory(scip);
 
    /* this should always be fulfilled becase we perform shift and propagate only at the root node */
-   assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+   assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
    /* @todo check if this node is necessary (I don't think so) */
    SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -1976,7 +1976,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       assert(SCIPisFeasGE(scip, origsolval, lb) && SCIPisFeasLE(scip, origsolval, ub));
 
       /* check if propagation should still be performed
-       * @todo do we need the hard coded value? we could use SCIPgetDepthLimit
+       * @todo do we need the hard coded value? we could use SCIP_MAXTREEDEPTH
        */
       if( nprobings > DEFAULT_PROPBREAKER )
          probing = FALSE;
@@ -1989,7 +1989,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
           * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
           */
-         assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+         assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
          SCIP_CALL( SCIPnewProbingNode(scip) );
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) );
@@ -2028,7 +2028,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
           * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
           */
-         assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+         assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
          /* if the variable upper and lower bound are equal to the solution value to which we tried to fix the variable,
           * we are trapped at an infeasible node and break; this can only happen due to an intermediate global bound change of the variable,

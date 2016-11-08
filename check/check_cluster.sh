@@ -50,7 +50,7 @@ NOWAITCLUSTER=${17}
 EXCLUSIVE=${18}
 PERMUTE=${19}
 SEEDS=${20}
-VALGRIND=${21}
+DEBUGTOOL=${21}
 REOPT=${22}
 OPTCOMMAND=${23}
 SETCUTOFF=${24}
@@ -80,7 +80,7 @@ then
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
-    echo "VALGRIND      = $VALGRIND"
+    echo "DEBUGTOOL      = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
@@ -103,7 +103,7 @@ else
 fi
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
-. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
 
 # at the first time, some files need to be initialized. set to "" after the innermost loop
@@ -123,10 +123,15 @@ do
     # increase the index for the instance tried to solve, even if the filename does not exist
     COUNT=`expr $COUNT + 1`
 
+    # we need the DONE keyword for the check.sh script to automatically run evalcheck, here it is not needed
+    if test "$INSTANCE" = "DONE"
+    then
+        continue
+    fi
+
     # run different random seeds
     for ((s = 0; $s <= $SEEDS; s++))
     do
-
         # permute transformed problem
 	for ((p = 0; $p <= $PERMUTE; p++))
 	do
@@ -166,7 +171,7 @@ do
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
 		if test "$SOLVER" = "scip"
 		then
-		    export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
 		else
 		    export EXECNAME=$BINNAME
 		fi
@@ -183,7 +188,7 @@ do
 		    export HARDMEMLIMIT
 		    export CHECKERPATH=$SCIPPATH/solchecker
 		    export SETFILE
-		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT --exclude="optc-01-14" -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \

@@ -13,21 +13,27 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_random.h
- * @brief  type definitions for random number generator
- * @author Jakob Witzig
+/**@file   scipbuildflags.h
+ * @brief  build flags methods
+ * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TYPE_RANDOM_H__
-#define __SCIP_TYPE_RANDOM_H__
+#ifndef __SCIPBUILDFLAGS_H__
+#define __SCIPBUILDFLAGS_H__
+
+#include "scip/def.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct SCIP_RandGen SCIP_RANDGEN;    /**< random number generator data */
+/** returns the flags that were used to build SCIP */
+EXTERN
+const char* SCIPgetBuildFlags(
+   void
+   );
 
 #ifdef __cplusplus
 }
