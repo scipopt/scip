@@ -26,6 +26,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
+
 #include <assert.h>
 #include <string.h>
 #include <math.h>
@@ -62,10 +64,6 @@
 
 #define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
-
 #define UPGSCALE 10 /* scale factor used in general upgrades of quadratic cons to soc */
 
 /*
@@ -75,7 +73,7 @@
 /** Eventdata for variable bound change events. */
 struct VarEventData
 {
-   SCIP_CONSDATA*        consdata;           /**< the constraint data */
+   SCIP_CONS*            cons;               /**< the constraint */
    int                   varidx;             /**< the index of a variable on the left hand side which bound change is caught, or -1 for variable on right hand side */
    int                   filterpos;          /**< position of corresponding event in event filter */
 };
@@ -101,7 +99,6 @@ struct SCIP_ConsData
 
    VAREVENTDATA*         lhsbndchgeventdata; /**< eventdata for bound change events on left  hand side variables */
    VAREVENTDATA          rhsbndchgeventdata; /**< eventdata for bound change event  on right hand side variable  */
-   SCIP_Bool             ispropagated;       /**< does the domains need to be propagated? */
    SCIP_Bool             isapproxadded;      /**< has a linear outer approximation be added? */
 };
 
@@ -160,11 +157,12 @@ SCIP_RETCODE catchLhsVarEvents(
    assert(varidx < consdata->nvars);
    assert(consdata->lhsbndchgeventdata != NULL);
 
-   consdata->lhsbndchgeventdata[varidx].consdata = consdata;
+   consdata->lhsbndchgeventdata[varidx].cons = cons;
    consdata->lhsbndchgeventdata[varidx].varidx   = varidx;
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], &consdata->lhsbndchgeventdata[varidx].filterpos) );
 
-   consdata->ispropagated = FALSE;
+   /* since bound changes were not catched before, a possibly stored activity may have become outdated */
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -186,11 +184,12 @@ SCIP_RETCODE catchRhsVarEvents(
    consdata = SCIPconsGetData(cons);
    assert(consdata  != NULL);
 
-   consdata->rhsbndchgeventdata.consdata = consdata;
+   consdata->rhsbndchgeventdata.cons = cons;
    consdata->rhsbndchgeventdata.varidx   = -1;
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
 
-   consdata->ispropagated = FALSE;
+   /* since bound changes were not catched before, a possibly stored activity may have become outdated */
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -322,17 +321,17 @@ SCIP_RETCODE dropVarEvents(
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
-   SCIP_CONSDATA* consdata;
+   SCIP_CONS* cons;
 
    assert(scip      != NULL);
    assert(event     != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   consdata = ((VAREVENTDATA*)eventdata)->consdata;
-   assert(consdata  != NULL);
+   cons = ((VAREVENTDATA*)eventdata)->cons;
+   assert(cons != NULL);
 
-   consdata->ispropagated = FALSE;
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    /* @todo look at bounds on x_i to decide whether propagation makes sense */
 
    return SCIP_OKAY;
@@ -457,7 +456,8 @@ SCIP_RETCODE createNlRow(
                0.0,
                0, NULL, NULL,
                0, NULL, 0, NULL,
-               exprtree, -SCIPinfinity(scip), 1.0) );
+               exprtree, -SCIPinfinity(scip), 1.0,
+               SCIP_EXPRCURV_CONVEX) );
 
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -528,7 +528,8 @@ SCIP_RETCODE createNlRow(
             -consdata->rhscoeff * consdata->rhsoffset,
             1, &consdata->rhsvar, &lincoef,
             0, NULL, 0, NULL,
-            exprtree, -SCIPinfinity(scip), 0.0) );
+            exprtree, -SCIPinfinity(scip), 0.0,
+            SCIP_EXPRCURV_CONVEX) );
 
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -539,14 +540,19 @@ SCIP_RETCODE createNlRow(
    {
       /* construct quadratic form gamma + sum_{i=1}^{n} (alpha_i (x_i + beta_i))^2 <= (alpha_{n+1} (x_{n+1} + beta_{n+1})^2 */
       SCIP_QUADELEM sqrterm;
+      SCIP_EXPRCURV curvature;
       SCIP_Real rhs;
       int rhsvarpos;
+
+      /* the expression is convex if alpha_{n+1} is zero */
+      curvature = consdata->rhscoeff == 0.0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN;
 
       /* create initial empty row with left hand side variables */
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             0, NULL, NULL,
             consdata->nvars, consdata->vars, 0, NULL,
-            NULL, -SCIPinfinity(scip), 0.0) );
+            NULL, -SCIPinfinity(scip), 0.0,
+            curvature) );
 
       /* add gamma + sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
       rhs = -consdata->constant;
@@ -652,7 +658,8 @@ SCIP_RETCODE createNlRow(
             -consdata->rhscoeff * consdata->rhsoffset,
             1, &consdata->rhsvar, &lincoef,
             0, NULL, 0, NULL,
-            exprtree, -SCIPinfinity(scip), 0.0) );
+            exprtree, -SCIPinfinity(scip), 0.0,
+            SCIP_EXPRCURV_UNKNOWN) );
 
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -2667,7 +2674,7 @@ SCIP_RETCODE propagateBounds(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->ispropagated )
+   if( !SCIPconsIsMarkedPropagate(cons) )
    {
       SCIPdebugMsg(scip, "skip propagation for constraint %s\n", SCIPconsGetName(cons));
       *result = SCIP_DIDNOTRUN;
@@ -2679,7 +2686,7 @@ SCIP_RETCODE propagateBounds(
    }
 
    *result = SCIP_DIDNOTFIND;
-   consdata->ispropagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    /* @todo do something clever to decide whether propagation should be tried */
 
@@ -3977,9 +3984,11 @@ static
 SCIP_DECL_CONSINIT(consInitSOC)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3987,6 +3996,12 @@ SCIP_DECL_CONSINIT(consInitSOC)
    conshdlrdata->subnlpheur  = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->trysolheur  = SCIPfindHeur(scip, "trysol");
    conshdlrdata->haveexprint = (strcmp(SCIPexprintGetName(), "NONE") != 0);
+
+   /* mark constraints for propagation */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+   }
 
    return SCIP_OKAY;
 }
@@ -4231,7 +4246,6 @@ SCIP_DECL_CONSTRANS(consTransSOC)
 
    consdata->nlrow = NULL;
    consdata->lhsbndchgeventdata = NULL;
-   consdata->ispropagated  = FALSE;
    consdata->isapproxadded = FALSE;
 
    /* create transformed constraint with the same flags */
@@ -4653,7 +4667,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
    *result = SCIP_DIDNOTFIND;
    nchgbds = 0;
 
-   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   for( c = 0; c < nmarkedconss && *result != SCIP_CUTOFF; ++c )
    {
       SCIP_CALL( propagateBounds(scip, conss[c], &propresult, &nchgbds) );  /*lint !e613*/
       if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
@@ -5367,7 +5381,6 @@ SCIP_RETCODE SCIPcreateConsSOC(
    consdata->nlrow = NULL;
 
    consdata->lhsbndchgeventdata = NULL;
-   consdata->ispropagated        = FALSE;
    consdata->isapproxadded       = FALSE;
 
    /* create constraint */
