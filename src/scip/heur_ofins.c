@@ -102,64 +102,6 @@ SCIP_DECL_EVENTEXEC(eventExecOfins)
    return SCIP_OKAY;
 }
 
-/** creates a subproblem by fixing a number of variables */
-static
-SCIP_RETCODE createSubproblem(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_Bool*            chgcoeffs,          /**< array indicating which coefficients have changed */
-   SCIP_Bool*            success
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_SOL* sol;
-   int nvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-
-   /* get all integer variables; all continuous variables remain unfixed */
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
-
-   /* get optimal solution of the last iteration */
-   sol = SCIPgetReoptLastOptSol(scip);
-
-   /* if the solution is NULL the last problem was infeasible */
-   if( sol == NULL )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-   /* change bounds of variables of the subproblem */
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_Real solval;
-
-      if( !chgcoeffs[i] )
-      {
-         assert(subvars[i] != NULL);
-
-         solval = SCIPgetSolVal(scip, sol, vars[i]);
-
-         /* perform the bound change */
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
-      }
-   }
-
-   /* set an objective limit */
-   SCIPdebugMsg(scip, "set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
-   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
-
-   *success = TRUE;
-
-   return SCIP_OKAY;
-}
-
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
 SCIP_RETCODE createNewSol(
@@ -223,16 +165,21 @@ SCIP_RETCODE applyOfins(
    SCIP_VAR** subvars;                            /* subproblem's variables */
    SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
 
+   SCIP_SOL* sol;
+   SCIP_VAR** fixedvars;
+   SCIP_Real* fixedvals;
+   int nfixedvars;
+
    SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
    SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
 
    int nvars;                                     /* number of source problem's variables */
+   int nintvars;
    int i;
 
    SCIP_SOL** subsols;
    int nsubsols;
 
-   SCIP_Bool valid;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
    SCIP_STATUS status;
@@ -283,26 +230,40 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
-   eventhdlr = NULL;
+   /* get optimal solution of the last iteration */
+   sol = SCIPgetReoptLastOptSol(scip);
 
-   valid = FALSE;
+   /* if the solution is NULL the last problem was infeasible */
+   if( sol == NULL )
+      return SCIP_OKAY;
 
-   /* copy complete SCIP instance */
-   /* todo determine number of variables to fix beforehand */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", TRUE, FALSE, TRUE, &valid) );
+   nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nvars) );
 
-   if( heurdata->copycuts )
+   /* determine variables to fix in the sub-SCIP */
+   nfixedvars = 0;
+   for( i = 0; i < nintvars; i++ )
    {
-      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
+      if( !chgcoeffs[i] )
+      {
+         fixedvars[nfixedvars] = vars[i];
+         fixedvals[nfixedvars] = SCIPgetSolVal(scip, sol, vars[i]);
+         ++nfixedvars;
+      }
    }
 
-   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "ofins", fixedvars, fixedvals, nfixedvars, FALSE,
+         heurdata->copycuts, &success) );
+
+   SCIPfreeBufferArrayNull(scip, &fixedvals);
+   SCIPfreeBufferArrayNull(scip, &fixedvars);
 
    /* create event handler for LP events */
+   eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecOfins, NULL) );
    if( eventhdlr == NULL )
    {
@@ -310,20 +271,23 @@ SCIP_RETCODE applyOfins(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for( i = 0; i < nvars; i++ )
    {
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
      assert(subvars[i] != NULL);
    }
 
-   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs, &success) );
-
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
    if( !success )
       goto TERMINATE;
+
+
+   /* set an objective limit */
+   SCIPdebugMsg(scip, "set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
+   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
 
    SCIPdebugMsg(scip, "OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
