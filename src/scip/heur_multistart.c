@@ -336,14 +336,14 @@ SCIP_RETCODE improvePoint(
 
    SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMsg(scip, "start minfeas = %e\n", *minfeas);
+   printf("start minfeas = %e\n", *minfeas);
 #endif
 
    /* stop since start point is feasible */
    if( !SCIPisFeasLT(scip, *minfeas, 0.0) )
    {
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-      SCIPdebugMsg(scip, "start point is feasible");
+      printf("start point is feasible");
 #endif
       return SCIP_OKAY;
    }
@@ -393,7 +393,7 @@ SCIP_RETCODE improvePoint(
          {
             r = maxiter - 1;
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-            SCIPdebugMsg(scip, "gradient vanished at current point -> stop\n");
+            printf("gradient vanished at current point -> stop\n");
 #endif
             break;
          }
@@ -435,7 +435,7 @@ SCIP_RETCODE improvePoint(
    }
 
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMsg(scip, "niter=%d minfeas=%e\n", r, *minfeas);
+   printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
    SCIPfreeBufferArray(scip, &grad);
