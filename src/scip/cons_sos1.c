@@ -10271,7 +10271,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maximplcuts",
          "maximal number of implied bound cuts separated per branching node",
-         &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXIMPLCUTS, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maximplcuts, TRUE, DEFAULT_MAXIMPLCUTS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maximplcutsroot",
          "maximal number of implied bound cuts separated per iteration in the root node",

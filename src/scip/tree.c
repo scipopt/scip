@@ -36,6 +36,7 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
+#include "scip/conflictstore.h"
 #include "scip/solve.h"
 #include "scip/cons.h"
 #include "scip/nodesel.h"
@@ -1127,8 +1128,6 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real oldlowerbound;
-
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
@@ -3018,11 +3017,18 @@ SCIP_RETCODE treeSwitchPath(
    }
    assert(fork != NULL || !(*cutoff));
 
-   /* apply domain and constraint set changes of the new path by activating the path's nodes;
+   /* Apply domain and constraint set changes of the new path by activating the path's nodes;
     * on the way, domain propagation might be applied again to the path's nodes, which can result in the cutoff of
-    * the node (and its subtree)
+    * the node (and its subtree).
+    * We only activate all nodes down to the parent of the new focus node, because the events in this process are
+    * delayed, which means that multiple changes of a bound of a variable are merged (and might even be cancelled out,
+    * if the bound is first relaxed when deactivating a node on the old path and then tightened to the same value
+    * when activating a node on the new path).
+    * This is valid for all nodes down to the parent of the new focus node, since they have already been propagated.
+    * Bound change events on the new focus node, however, must not be cancelled out, since they need to be propagated
+    * and thus, the event must be thrown and catched by the constraint handlers to mark constraints for propagation.
     */
-   for( i = forkdepth+1; i <= focusnodedepth && !(*cutoff); ++i )
+   for( i = forkdepth+1; i < focusnodedepth && !(*cutoff); ++i )
    {
       assert(!tree->path[i]->cutoff);
       assert(tree->pathlen == i);
@@ -3030,6 +3036,21 @@ SCIP_RETCODE treeSwitchPath(
       /* activate the node, and apply domain propagation if the reprop flag is set */
       tree->pathlen++;
       SCIP_CALL( nodeActivate(tree->path[i], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
+            conflict, eventfilter, eventqueue, cliquetable, cutoff) );
+   }
+
+   /* process the delayed events */
+   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
+
+   /* activate the new focus node; there is no need to delay these events */
+   if( !(*cutoff) && (i == focusnodedepth) )
+   {
+      assert(!tree->path[focusnodedepth]->cutoff);
+      assert(tree->pathlen == focusnodedepth);
+
+      /* activate the node, and apply domain propagation if the reprop flag is set */
+      tree->pathlen++;
+      SCIP_CALL( nodeActivate(tree->path[focusnodedepth], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
             conflict, eventfilter, eventqueue, cliquetable, cutoff) );
    }
 
@@ -3043,9 +3064,6 @@ SCIP_RETCODE treeSwitchPath(
 
    /* count the new LP sizes of the path */
    SCIP_CALL( treeUpdatePathLPSize(tree, forkdepth+1) );
-
-   /* process the delayed events */
-   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
 
    SCIPsetDebugMsg(set, "switch path: new pathlen=%d\n", tree->pathlen);
 
@@ -4140,6 +4158,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -4797,6 +4816,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
@@ -4817,7 +4837,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
 
    /* install the temporary root node as focus node */
    SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-         conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
+         conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
    assert(!cutoff);
 
    return SCIP_OKAY;
@@ -4837,6 +4857,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
@@ -4853,7 +4874,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    /* unfocus the temporary root node */
    node = NULL;
    SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-         conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
+         conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
    assert(!cutoff);
    assert(tree->root == NULL);
    assert(tree->focusnode == NULL);

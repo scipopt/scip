@@ -3372,9 +3372,9 @@ SCIP_RETCODE saveGlobalCons(
       nintvars = 0;
       for( v = 0; v < nbranchvars; v++ )
       {
-         if( SCIPvarIsBinary(vars[v]) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
             ++nbinvars;
-         if( SCIPvarIsBinary(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsBinary(vars[v]) == SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT )
             ++nintvars;
       }
       assert(nbinvars + nintvars == nbranchvars);

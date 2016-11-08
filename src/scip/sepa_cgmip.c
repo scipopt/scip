@@ -2108,8 +2108,8 @@ SCIP_RETCODE subscipSetParams(
 
       /* disable conflict analysis */
       /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); */
-      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) ); */
-      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); */
+      /*     SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') ); */
+      /*     SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') ); */
       /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); */
       /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) ); */
 
