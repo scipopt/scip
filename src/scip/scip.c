@@ -14916,9 +14916,6 @@ SCIP_RETCODE displayRelevantStats(
             SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
          else
             SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
-
-         printf("\nMax Block-Memory      : %" SCIP_LONGINT_FORMAT "\n", SCIPmemGetUsedMax(scip->mem));
-         printf("Max Block-Memory Lazy : %" SCIP_LONGINT_FORMAT "\n", SCIPmemGetLazyMax(scip->mem));
       }
 
       /* check solution for feasibility in original problem */
