@@ -243,6 +243,16 @@ namespace polyscip {
         return true;
     }
 
+    bool RectangularBox::isDominated(const OutcomeType& outcome) const {
+        assert (outcome.size() == box_.size());
+        for (size_t i=0; i<box_.size(); ++i) {
+            if (outcome[i] > box_[i].first) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     RectangularBox::Interval RectangularBox::getIntervalIntersection(std::size_t index, const RectangularBox& other) const {
         assert (box_.size() == other.box_.size());
         auto int_beg = std::max(box_[index].first, other.box_[index].first);
@@ -285,7 +295,6 @@ namespace polyscip {
               no_objs_(0),
               clock_total_(nullptr),
               only_weight_space_phase_(false), // re-set in readProblem()
-              is_lower_dim_prob_(false),
               is_sub_prob_(false)
     {
         SCIPcreate(&scip_);
@@ -315,25 +324,6 @@ namespace polyscip {
         }
     }
 
-    /*Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
-                       SCIP *scip,
-                       SCIP_Objsense obj_sense,
-                       pair<size_t, size_t> objs_to_be_ignored,
-                       SCIP_CLOCK *clock_total)
-            : cmd_line_args_{cmd_line_args},
-              polyscip_status_{PolyscipStatus::ProblemRead},
-              scip_{scip},
-              obj_sense_{obj_sense},
-              clock_total_{clock_total},
-              only_weight_space_phase_{false},
-              is_lower_dim_prob_(true),
-              is_sub_prob_(false)
-    {
-        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
-        obj_probdata->ignoreObjectives(objs_to_be_ignored.first, objs_to_be_ignored.second);
-        no_objs_ = obj_probdata->getNoObjs();
-    }*/
-
     Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
                        SCIP *scip,
                        size_t no_objs,
@@ -345,16 +335,11 @@ namespace polyscip {
               no_objs_{no_objs},
               clock_total_{clock_total},
               only_weight_space_phase_{false},
-              is_lower_dim_prob_(false),
               is_sub_prob_(true)
     {}
 
     Polyscip::~Polyscip() {
-        if (is_lower_dim_prob_) {
-            auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
-            obj_probdata->unignoreObjectives();
-        }
-        else if (!is_sub_prob_) {
+        if (!is_sub_prob_) {
             SCIPfreeClock(scip_, addressof(clock_total_));
             SCIPfree(addressof(scip_));
         }
@@ -419,7 +404,7 @@ namespace polyscip {
                     SCIP_CALL(computeWeightSpaceResults());
                 }
                 else {
-                    SCIP_CALL(computeTwoProjResults(nonzero_orig_vars, nonzero_orig_vals));
+                    SCIP_CALL(computeNonLexicographicNondomResults(nonzero_orig_vars, nonzero_orig_vals));
                 }
             }
             SCIP_CALL(SCIPstopClock(scip_, clock_total_));
@@ -500,15 +485,15 @@ namespace polyscip {
         // release and delete added constraints
         for (auto cons : obj_val_cons) {
             SCIP_CALL( SCIPfreeTransform(scip_) );
-            SCIP_CALL( SCIPdelCons(scip_, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip_, addressof(cons)) );
+            SCIP_CALL( SCIPdelCons(scip_,cons) );
+            SCIP_CALL( SCIPreleaseCons(scip_,addressof(cons)) );
         }
         return SCIP_OKAY;
     }
 
 
-    SCIP_RETCODE Polyscip::computeTwoProjResults(const vector<vector<SCIP_VAR*>>& orig_vars,
-                                                 const vector<vector<ValueType>>& orig_vals) {
+    SCIP_RETCODE Polyscip::computeNonLexicographicNondomResults(const vector<vector<SCIP_VAR *>> &orig_vars,
+                                                                const vector<vector<ValueType>> &orig_vals) {
         polyscip_status_ = PolyscipStatus::TwoProjPhase;
 
         // consider all (k over 2 ) combinations of considered objective functions
@@ -535,10 +520,19 @@ namespace polyscip {
             assert (feasible_boxes.size() <= disjoint_boxes.size());
 
             for (const auto& box : disjoint_boxes) {
+                if (std::any_of(begin(bounded_),
+                                end(bounded_),
+                                [&box](const Result& res){return box.isDominated(res.second);})) {
+                    continue;
+                }
+                if (cmd_line_args_.beVerbose()) {
+                    cout << "Checking  box = " << box << "\n";
+                }
+
                 auto new_res = computeNondomPointsInBox(box,
                                                         orig_vars,
                                                         orig_vals);
-                for (const auto& res : new_res) {
+                for (const auto &res : new_res) {
                     if (is_sub_prob_) {
                         bounded_.push_back(res);
                     }
@@ -939,7 +933,6 @@ namespace polyscip {
             if (scip_status == SCIP_STATUS_OPTIMAL) {
                 assert (SCIPisGE(scip_, SCIPgetPrimalbound(scip_), 0.));
                 auto res = getOptimalResult();
-                global::print(res.second, "computed outcome: ", "\n");
                 new_proj = global::make_unique<TwoDProj>(res.second, obj_1, obj_2);
                 assert (new_proj);
             }
@@ -947,12 +940,12 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::TimeLimitReached;
             }
             else if (scip_status == SCIP_STATUS_INFEASIBLE) {
-                cout << "Numerical troubles between " << left_proj << " and " << right_proj << "\n";
-                cout << "Continuing with next subproblem.\n";
+                std::cerr << "Numerical troubles between " << left_proj << " and " << right_proj << "\n";
+                std::cerr << "Continuing with next subproblem.\n";
                 nondom_projs.update();
             }
             else {
-                cout << "Unexpected SCIP status in solveWeightedTchebycheff: " +
+                std::cerr << "Unexpected SCIP status in solveWeightedTchebycheff: " +
                         std::to_string(SCIPgetStatus(scip_)) + "\n";
                 polyscip_status_ = PolyscipStatus::Error;
             }
@@ -1000,8 +993,6 @@ namespace polyscip {
             }
 
         }
-
-        std::cout << nondom_projs << "\n";
 
         // clean up
         SCIP_Bool var_deleted = FALSE;
@@ -1286,19 +1277,32 @@ namespace polyscip {
     }
 
     void Polyscip::printResults(ostream &os) const {
+        auto new_line = false;
         for (const auto& result : bounded_) {
-            if (cmd_line_args_.outputOutcomes())
+            if (cmd_line_args_.outputOutcomes()) {
                 outputOutcome(result.second, os);
-            if (cmd_line_args_.outputSols())
+                new_line = true;
+            }
+            if (cmd_line_args_.outputSols()) {
                 printSol(result.first, os);
-            os << "\n";
+                new_line = true;
+            }
+            if (new_line) {
+                os << "\n";
+            }
         }
         for (const auto& result : unbounded_) {
-            if (cmd_line_args_.outputOutcomes())
+            if (cmd_line_args_.outputOutcomes()) {
                 outputOutcome(result.second, os, "Ray = ");
-            if (cmd_line_args_.outputSols())
+                new_line = true;
+            }
+            if (cmd_line_args_.outputSols()) {
                 printSol(result.first, os);
-            os << "\n";
+                new_line = true;
+            }
+            if (new_line) {
+                os << "\n";
+            }
         }
     }
 

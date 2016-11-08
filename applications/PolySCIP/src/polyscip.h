@@ -91,6 +91,7 @@ namespace polyscip {
         std::vector<RectangularBox> getDisjointPartsFrom(double delta, const RectangularBox &other) const;
         std::size_t size() const;
         Interval getInterval(std::size_t index) const;
+        bool isDominated(const OutcomeType& outcome) const;
 
     private:
         Interval getIntervalIntersection(std::size_t index, const RectangularBox& other) const;
@@ -172,7 +173,6 @@ namespace polyscip {
 
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
-        //SCIP_RETCODE handleOptimalStatus();
         SCIP_RETCODE handleOptimalStatus(const WeightType& weight,
                                          ValueType current_opt_val);
 
@@ -201,12 +201,10 @@ namespace polyscip {
                             const std::vector< std::vector<SCIP_Real> >& obj_to_nonzero_values,
                             std::size_t index) const;
 
-        /** Computes the supported solutions/rays and corresponding non-dominated points */
         SCIP_RETCODE computeWeightSpaceResults();
 
-        /** Computes the unsupported solutions and corresponding non-dominated points */
-        SCIP_RETCODE computeTwoProjResults(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
-                                           const std::vector<std::vector<ValueType>>& orig_vals);
+        SCIP_RETCODE computeNonLexicographicNondomResults(const std::vector<std::vector<SCIP_VAR *>>& orig_vars,
+                                                          const std::vector<std::vector<ValueType>>& orig_vals);
 
         // return proj nondominated outcomes
         std::vector<OutcomeType> solveWeightedTchebycheff(const std::vector<std::vector<SCIP_VAR*>>& orig_vars,
@@ -265,14 +263,6 @@ namespace polyscip {
         /** Prints given point to given output stream */
         void outputOutcome(const OutcomeType &outcome, std::ostream& os, const std::string desc ="") const;
 
-        /** Constructor for 4-objective case
-        */
-        explicit Polyscip(const CmdLineArgs& cmd_line_args,
-                          SCIP* scip,
-                          SCIP_Objsense obj_sense,
-                          std::pair<std::size_t, std::size_t> objs_to_be_ignored,
-                          SCIP_CLOCK* clock_total) = delete;
-
         explicit Polyscip(const CmdLineArgs& cmd_line_args,
                           SCIP *scip,
                           std::size_t no_objs,
@@ -289,7 +279,6 @@ namespace polyscip {
         SCIP_CLOCK* clock_total_;
 
         bool only_weight_space_phase_;
-        bool is_lower_dim_prob_;
         bool is_sub_prob_;
 
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;

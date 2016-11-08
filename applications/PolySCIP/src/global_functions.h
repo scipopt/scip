@@ -12,7 +12,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  Global helper functions
+/**
+ * @brief  Global helper functions
  * @author Sebastian Schenker
  *
  * Defines some global helper functions.
