@@ -4014,27 +4014,28 @@ SCIP_RETCODE solveNode(
          if( *stopped )
             return SCIP_OKAY;
          
-         /* reset relaxation solution to best solution found, this might be important for heuristics depending on the relaxation solution */
-         if( bestrelaxval != -SCIPsetInfinity(set) )
-         {
-            SCIP_Real val;
-            int i;
-
-            assert(bestrelaxsol != NULL);
-
-            for( i = 0; i < transprob->nvars; ++i )
-            {
-               assert(transprob->vars[i] != NULL);
-
-               val = SCIPsolGetVal(bestrelaxsol, set, stat, transprob->vars[i]);
-               SCIP_CALL( SCIPvarSetRelaxSol(transprob->vars[i], set, relaxation, val, TRUE) );
-            }
-
-            /* we have found at least one valid relaxation solution -> validate values stored in the variables */
-            SCIPrelaxationSetSolValid(relaxation, TRUE);
-         }
       }
       fullseparation = FALSE;
+      
+      /* reset relaxation solution to best solution found, this might be important for heuristics depending on the relaxation solution */
+      if( bestrelaxval != -SCIPsetInfinity(set) )
+      {
+         SCIP_Real val;
+         int i;
+
+         assert(bestrelaxsol != NULL);
+
+         for( i = 0; i < transprob->nvars; ++i )
+         {
+            assert(transprob->vars[i] != NULL);
+
+            val = SCIPsolGetVal(bestrelaxsol, set, stat, transprob->vars[i]);
+            SCIP_CALL( SCIPvarSetRelaxSol(transprob->vars[i], set, relaxation, val, TRUE) );
+         }
+
+         /* we have found at least one valid relaxation solution -> validate values stored in the variables */
+         SCIPrelaxationSetSolValid(relaxation, TRUE);
+      }
 
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
