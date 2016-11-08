@@ -785,7 +785,6 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
-      node->ncomponents = parent->ncomponents;
       if( parent->depth >= SCIP_MAXTREEDEPTH-1 )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
@@ -941,7 +940,6 @@ SCIP_RETCODE nodeCreate(
    (*node)->estimate = -SCIPsetInfinity(set);
    (*node)->reoptid = 0;
    (*node)->reopttype = (unsigned int) SCIP_REOPTTYPE_NONE;
-   (*node)->ncomponents = 1;
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -3745,7 +3743,6 @@ SCIP_RETCODE focusnodeToLeaf(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -3753,7 +3750,7 @@ SCIP_RETCODE focusnodeToLeaf(
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
 
    )
-{  /*lint --e{715}*/
+{
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);
@@ -3773,13 +3770,11 @@ static
 SCIP_RETCODE focusnodeToJunction(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
-{  /*lint --e{715}*/
+{
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode != NULL);
@@ -3935,7 +3930,7 @@ SCIP_RETCODE focusnodeToFork(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
 
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, eventqueue, tree, lp) );
 
       return SCIP_OKAY;
    }
@@ -4059,7 +4054,7 @@ SCIP_RETCODE focusnodeToSubroot(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
 
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, eventqueue, tree, lp) );
 
       return SCIP_OKAY;
    }
@@ -4257,7 +4252,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
-   //assert(lpfork == NULL || fork != NULL);
+   assert(postponed || lpfork == NULL || fork != NULL);
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 
@@ -4348,7 +4343,7 @@ SCIP_RETCODE SCIPnodeFocus(
       }
       else
       {
-         SCIP_CALL( focusnodeToLeaf(blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, tree->focuslpstatefork,
+         SCIP_CALL( focusnodeToLeaf(blkmem, set, stat, eventqueue, tree, reopt, lp, tree->focuslpstatefork,
                SCIPsetInfinity(set)) );
       }
    }
@@ -4432,7 +4427,7 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIPlpMarkSize(lp);
 
          /* convert old focus node into junction */
-         SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp) );
+         SCIP_CALL( focusnodeToJunction(blkmem, set, eventqueue, tree, lp) );
       }
    }
    else if( tree->focusnode != NULL )

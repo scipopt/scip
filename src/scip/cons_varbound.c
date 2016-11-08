@@ -1455,7 +1455,9 @@ SCIP_RETCODE propagateCons(
          SCIPvarGetName(consdata->var), SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var),
          SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-#if 0
+
+      /* this did not seem to help but should be tested again, there might also still be a bug in there */
+#ifdef SCIP_DISABLED_CODE
       /* local duality fixing of variables in the constraint */
       if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksDown(consdata->vbdvar) == 1
          && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
@@ -1463,7 +1465,7 @@ SCIP_RETCODE propagateCons(
          && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
             || (consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
       {
-         SCIPdebugMessage(" --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
             SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
          SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
       }
@@ -1473,7 +1475,7 @@ SCIP_RETCODE propagateCons(
          && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
             || (consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
       {
-         SCIPdebugMessage(" --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
             SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
          SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
       }
@@ -1482,7 +1484,7 @@ SCIP_RETCODE propagateCons(
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
          && !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIPdebugMessage(" --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
             SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
          SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
       }
@@ -1491,7 +1493,7 @@ SCIP_RETCODE propagateCons(
          && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
          && !SCIPisInfinity(scip, consdata->rhs) )
       {
-         SCIPdebugMessage(" --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
             SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var));
          SCIP_CALL( SCIPchgVarLb(scip, consdata->var, SCIPvarGetUbLocal(consdata->var)) );
       }
@@ -3997,7 +3999,7 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    cutoff = FALSE;
    nchgbds = 0;
 
-   SCIPdebugMessage("propagating %d variable bound constraints\n", nmarkedconss);
+   SCIPdebugMsg(scip, "propagating %d variable bound constraints\n", nmarkedconss);
 
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )

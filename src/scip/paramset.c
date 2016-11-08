@@ -3724,8 +3724,14 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off components presolver since we are currently not able to handle that in case of counting */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
-      break;
+#ifndef NDEBUG
+      if( SCIPsetFindConshdlr(set, "components") != NULL )
+#endif
+      {
+         SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
+         SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
+         break;
+      }
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
       /* shrink the minimal maximum value for the conflict length */
@@ -3967,7 +3973,13 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       }
    }
 
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
+   /* turn off components constraint handler */
+   #ifndef NDEBUG
+   if( SCIPsetFindConshdlr(set, "components") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
+   }
 
    return SCIP_OKAY;
 }

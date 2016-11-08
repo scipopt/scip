@@ -198,7 +198,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DIDNOTFIND : the propagator searched, but did not find a domain reduction
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
- *  - SCIP_DELAYNODE  : the current node should be postponed
+ *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
 #define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop,  SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 

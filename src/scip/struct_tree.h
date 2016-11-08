@@ -138,7 +138,6 @@ struct SCIP_Node
    SCIP_NODE*            parent;             /**< parent node in the tree */
    SCIP_CONSSETCHG*      conssetchg;         /**< constraint set changes at this node or NULL */
    SCIP_DOMCHG*          domchg;             /**< domain changes at this node or NULL */
-   int                   ncomponents;        /**< ??????????????????? */
    unsigned int          depth:16;           /**< depth in the tree */
    unsigned int          nodetype:4;         /**< type of node */
    unsigned int          active:1;           /**< is node in the path to the current node? */
