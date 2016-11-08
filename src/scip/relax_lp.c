@@ -15,7 +15,7 @@
 
 /**@file   relax_lp.c
  * @brief  lp relaxator
- * @author Tobias Achterberg
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,7 +28,7 @@
 #define RELAX_NAME             "lp"
 #define RELAX_DESC             "relaxator template"
 #define RELAX_PRIORITY         0
-#define RELAX_FREQ             1
+#define RELAX_FREQ             -1
 #define RELAX_FULLLPINFO       TRUE
 
 
