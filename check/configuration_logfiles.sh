@@ -59,15 +59,15 @@ then
     # if number of seeds is positive, add postfix
     if test $SEEDS -gt 0
     then
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#s"$s"#p"$p.eval
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s"-p"$p.eval
     else
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-p"$p.eval
     fi
 else
     # if number of seeds is positive, add postfix
     if test $SEEDS -gt 0
     then
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#s"$s.eval
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s.eval
     else
         EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
     fi
@@ -117,15 +117,15 @@ then
     # if number of seeds is positive, add postfix
     if test $SEEDS -gt 0
     then
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"s"$s#"p"$p
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s-"p"$p
     else
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"p"$p
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"p"$p
     fi
 else
     # if number of seeds is positive, add postfix
     if test $SEEDS -gt 0
     then
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"s"$s
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s
     else
         FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
     fi
