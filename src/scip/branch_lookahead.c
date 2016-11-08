@@ -83,6 +83,10 @@ struct SCIP_BranchruleData
    SCIP_Bool             prevbestdownvalid;
    SCIP_Real             prevprovedbound;
    int                   restartindex;
+
+   SCIP_Longint*         nlpsonlastbranch;
+   SCIP_Longint*         nodeidonlastbranch;
+
 #ifdef SCIP_STATISTICS
    int                   nbinconst;          /**< counter for the nubmer of "normal" binary constraints added */
    int                   nfirstlvllps;       /**< counter for the number of lps that were solved on the first level */
@@ -781,6 +785,46 @@ SCIP_RETCODE createImpliedBinaryConstraint(
    return SCIP_OKAY;
 }
 
+static
+SCIP_Bool isUseOldBranchingResult(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata,
+   SCIP_VAR*             branchvar
+   )
+{
+   int varindex;
+   SCIP_Longint currentnlps;
+   SCIP_Longint reevalage;
+   SCIP_Longint currentnodeid;
+
+   varindex = SCIPvarGetProbindex(branchvar);
+   currentnlps = SCIPgetNNodeLPs(scip);
+   reevalage = 8;
+   currentnodeid = SCIPgetNNodes(scip);
+
+   /* only use the last branching result, if we are on the same node and not more than 'reevalage' LPs were solved. */
+   return currentnodeid == branchruledata->nodeidonlastbranch[varindex] &&
+      currentnlps - branchruledata->nlpsonlastbranch[varindex] < reevalage;
+}
+
+static
+void useOldBranchingResult(
+
+   )
+{
+   /* TODO: before implementing this, refactor the calling code, such that this method receives both (up and down) result
+    * structs, which we then can fill with the old data. */
+}
+
+static
+void updateOldBranchingResult(
+
+   )
+{
+
+}
+
+
 /**
  * Executes the second level branching on a given variable.
  * Set the value of result to SCIP_CONSADDED, if a constraint was added to the base node.
@@ -814,6 +858,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    BRANCHINGRESULTDATA* downresultdata;
    BRANCHINGRESULTDATA* upresultdata;
    SCIP_Real currentweight;
+   SCIP_Bool useoldbranchingresult;
 
    assert(scip != NULL);
    assert(deepbranchvar != NULL);
@@ -825,13 +870,24 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    initBranchingResultData(scip, downresultdata);
    initBranchingResultData(scip, upresultdata);
 
-   SCIPdebugMessage("Second level down branching on variable <%s> and value <%g>\n", SCIPvarGetName(deepbranchvar),
-      deepbranchvarsolval);
-   /* execute the second level down branching */
-   SCIP_CALL( executeDownBranching(scip, deepbranchvar, deepbranchvarsolval, downresultdata, status) );
-   SCIPstatistic(
-      branchruledata->nsecondlvllps++;
-   )
+   useoldbranchingresult = isUseOldBranchingResult(scip, branchruledata, deepbranchvar);
+
+   if( useoldbranchingresult )
+   {
+      useOldBranchingResult();
+   }
+   else
+   {
+      SCIPdebugMessage("Second level down branching on variable <%s> and value <%g>\n", SCIPvarGetName(deepbranchvar),
+         deepbranchvarsolval);
+      /* execute the second level down branching */
+      SCIP_CALL( executeDownBranching(scip, deepbranchvar, deepbranchvarsolval, downresultdata, status) );
+      SCIPstatistic(
+         branchruledata->nsecondlvllps++;
+      )
+
+      updateOldBranchingResult();
+   }
 
    if( !status->limitreached && !status->lperror )
    {
@@ -839,12 +895,21 @@ SCIP_RETCODE executeDeepBranchingOnVar(
       /* go back one layer (we are currently in depth 2) */
       SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
 
-      SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
-      /* execute the second level up branching */
-      SCIP_CALL( executeUpBranching(scip, deepbranchvar, deepbranchvarsolval, upresultdata, status) );
-      SCIPstatistic(
-         branchruledata->nsecondlvllps++;
-      )
+      if( useoldbranchingresult )
+      {
+         useOldBranchingResult();
+      }
+      else
+      {
+         SCIPdebugMessage("Second level up branching on variable <%s>\n", SCIPvarGetName(deepbranchvar));
+         /* execute the second level up branching */
+         SCIP_CALL( executeUpBranching(scip, deepbranchvar, deepbranchvarsolval, upresultdata, status) );
+         SCIPstatistic(
+            branchruledata->nsecondlvllps++;
+         )
+
+         updateOldBranchingResult();
+      }
 
       if( !status->limitreached && !status->lperror )
       {
@@ -1741,8 +1806,11 @@ static
 SCIP_DECL_BRANCHINIT(branchInitLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+   int nvars;
+   int i;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
+   nvars = SCIPgetNVars(scip);
 
    SCIPstatistic(
       {
@@ -1758,6 +1826,11 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    SCIP_CALL( SCIPcreateSol(scip, &branchruledata->prevbinsolution, NULL) );
    branchruledata->prevbinbranchvar = NULL;
    branchruledata->restartindex = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchruledata->nlpsonlastbranch, nvars) );
+   for( i = 0; i < nvars; i++ )
+   {
+      branchruledata->nlpsonlastbranch[i] = SCIP_LONGINT_MIN;
+   }
 
    return SCIP_OKAY;
 }
@@ -1769,6 +1842,9 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
    branchruledata = SCIPbranchruleGetData(branchrule);
+
+   SCIPfreeBufferArray(scip, &branchruledata->nlpsonlastbranch);
+
    /* Free the solution that was used for implied binary bounds. */
    SCIP_CALL( SCIPfreeSol(scip, &branchruledata->prevbinsolution) );
 
