@@ -1664,7 +1664,8 @@ struct BMS_BlkMem
    long long             memused;            /**< total number of used bytes in the memory header */
    long long             memlazy;            /**< total number of allocated but not used bytes in the memory header */
    long long             maxmemused;         /**< maximal number of used bytes in the memory header */
-   long long             maxmemlazy;         /**< maximal number of allocated bit not used bytes in the memory header */
+   long long             maxmemlazy;         /**< maximal number of allocated but not used bytes in the memory header */
+   long long             maxmemtotal;        /**< maximal number of allocated and used bytes in the memory header */
    int                   initchunksize;      /**< number of elements in the first chunk of each chunk block */
    int                   garbagefactor;      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
                                               *   elements are free (-1: disable garbage collection) */
@@ -1765,6 +1766,7 @@ BMS_BLKMEM* BMScreateBlockMemory_call(
       blkmem->memlazy = 0;
       blkmem->maxmemused = 0;
       blkmem->maxmemlazy = 0;
+      blkmem->maxmemtotal = 0;
    }
    else
    {
@@ -1893,6 +1895,7 @@ void* BMSallocBlockMemory_work(
    {
       blkmem->memlazy += ((*chkmemptr)->lazyfreesize * (*chkmemptr)->elemsize);
       blkmem->maxmemlazy = MAX(blkmem->maxmemlazy, blkmem->memlazy);
+      blkmem->maxmemtotal = MAX(blkmem->maxmemtotal, blkmem->memlazy + blkmem->memused);
    }
    else
       /* we have not allocated memory, we decrease the counter by the size of a chunk element */
@@ -2260,6 +2263,16 @@ long long BMSgetBlockMemoryLazyMax_call(
    return blkmem->maxmemlazy;
 }
 
+/** returns the maximal number of allocated and used bytes in the block memory */
+long long BMSgetBlockMemoryTotalMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return blkmem->maxmemtotal;
+}
+
 /** returns the size of the given memory element; returns 0, if the element is not member of the block memory */
 size_t BMSgetBlockPointerSize_call(
    const BMS_BLKMEM*     blkmem,             /**< block memory */
@@ -2315,63 +2328,63 @@ void BMSdisplayBlockMemory_call(
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL )
       {
-	 const CHUNK* chunk;
-	 int nchunks = 0;
-	 int nelems = 0;
-	 int neagerchunks = 0;
-	 int neagerelems = 0;
+         const CHUNK* chunk;
+         int nchunks = 0;
+         int nelems = 0;
+         int neagerchunks = 0;
+         int neagerelems = 0;
 
          for( c = 0; c < chkmem->nchunks; ++c )
          {
             chunk = chkmem->chunks[c];
             assert(chunk != NULL);
-	    assert(chunk->elemsize == chkmem->elemsize);
-	    assert(chunk->chkmem == chkmem);
-	    nchunks++;
-	    nelems += chunk->storesize;
-	    if( chunk->eagerfree != NULL )
-	    {
-	       neagerchunks++;
-	       neagerelems += chunk->eagerfreesize;
-	    }
-	 }
+            assert(chunk->elemsize == chkmem->elemsize);
+            assert(chunk->chkmem == chkmem);
+            nchunks++;
+            nelems += chunk->storesize;
+            if( chunk->eagerfree != NULL )
+            {
+               neagerchunks++;
+               neagerelems += chunk->eagerfreesize;
+            }
+         }
 
-	 assert(nchunks == chkmem->nchunks);
-	 assert(nelems == chkmem->storesize);
-	 assert(neagerelems == chkmem->eagerfreesize);
+         assert(nchunks == chkmem->nchunks);
+         assert(nelems == chkmem->storesize);
+         assert(neagerelems == chkmem->eagerfreesize);
 
-	 if( nelems > 0 )
-	 {
-	    nblocks++;
-	    allocedmem += (long long)chkmem->elemsize * (long long)nelems;
-	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
+         if( nelems > 0 )
+         {
+            nblocks++;
+            allocedmem += (long long)chkmem->elemsize * (long long)nelems;
+            freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
 #ifndef NDEBUG
-	    printInfo("%7d %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
-	       chkmem->elemsize, nchunks, neagerchunks, nelems,
-	       neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
-	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems), 
+            printInfo("%7d %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
+            chkmem->elemsize, nchunks, neagerchunks, nelems,
+            neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
+            100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
                (double)chkmem->elemsize * nelems / (1024.0*1024.0),
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7d %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
-	       chkmem->elemsize, nchunks, neagerchunks, nelems,
-	       neagerelems, chkmem->lazyfreesize,
-	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
+            printInfo("%7d %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
+            chkmem->elemsize, nchunks, neagerchunks, nelems,
+            neagerelems, chkmem->lazyfreesize,
+            100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
                (double)chkmem->elemsize * nelems / (1024.0*1024.0));
 #endif
-	 }
-	 else
-	 {
+         }
+         else
+         {
 #ifndef NDEBUG
-	    printInfo("%7d <unused>                            %5d %4d        %s:%d\n",
-	       chkmem->elemsize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
+            printInfo("%7d <unused>                            %5d %4d        %s:%d\n",
+            chkmem->elemsize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7d <unused>\n", chkmem->elemsize);
+            printInfo("%7d <unused>\n", chkmem->elemsize);
 #endif
-	    nunusedblocks++;
-	 }
+            nunusedblocks++;
+         }
          totalnchunks += nchunks;
          totalneagerchunks += neagerchunks;
          totalnelems += nelems;
@@ -2381,7 +2394,7 @@ void BMSdisplayBlockMemory_call(
          totalngarbagecalls += chkmem->ngarbagecalls;
          totalngarbagefrees += chkmem->ngarbagefrees;
 #endif
-	 chkmem = chkmem->nextchkmem;
+         chkmem = chkmem->nextchkmem;
       }
    }
 #ifndef NDEBUG
@@ -2400,7 +2413,11 @@ void BMSdisplayBlockMemory_call(
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
-   printInfo("\n");
+   printInfo("\n\n");
+
+   printInfo("Memory Peaks:    Used    Lazy   Total\n");
+   printInfo("               %6.1f  %6.1f  %6.1f MBytes\n", (double)blkmem->maxmemused / (1024.0 * 1024.0),
+         (double)blkmem->maxmemlazy / (1024.0 * 1024.0), (double)blkmem->maxmemtotal / (1024.0 * 1024.0));
 }
 
 /** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */

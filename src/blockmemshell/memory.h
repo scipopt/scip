@@ -428,6 +428,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSgetBlockMemoryLazy(mem)            BMSgetBlockMemoryLazy_call(mem)
 #define BMSgetBlockMemoryUsedMax(mem)         BMSgetBlockMemoryUsedMax_call(mem)
 #define BMSgetBlockMemoryLazyMax(mem)         BMSgetBlockMemoryLazyMax_call(mem)
+#define BMSgetBlockMemoryTotalMax(mem)        BMSgetBlockMemoryTotalMax_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
 #define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
@@ -612,6 +613,11 @@ long long BMSgetBlockMemoryUsedMax_call(
 /** returns the number of allocated but not used bytes in the block memory */
 EXTERN
 long long BMSgetBlockMemoryLazyMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the maximal number of allocated and used bytes in the block memory */
+long long BMSgetBlockMemoryTotalMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 

@@ -69,6 +69,12 @@ SCIP_Longint SCIPblkmemGetLazyMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
+/** returns the maximal number of bytes in block memory */
+extern
+SCIP_Longint SCIPblkmemGetTotalMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

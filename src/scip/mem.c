@@ -123,3 +123,13 @@ SCIP_Longint SCIPblkmemGetLazyMax(
 
    return BMSgetBlockMemoryLazyMax(mem->setmem) + BMSgetBlockMemoryLazyMax(mem->probmem);
 }
+
+/** returns the maximal number of bytes in block memory */
+SCIP_Longint SCIPblkmemGetTotalMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryTotalMax(mem->setmem) + BMSgetBlockMemoryTotalMax(mem->probmem);
+}
