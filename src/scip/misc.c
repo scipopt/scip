@@ -2028,6 +2028,7 @@ SCIP_RETCODE SCIPhashtableCreate(
    assert(hashgetkey != NULL);
    assert(hashkeyeq != NULL);
    assert(hashkeyval != NULL);
+   assert(blkmem != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashtable) );
 
@@ -2243,10 +2244,9 @@ SCIP_RETCODE hashtableCheckLoad(
 }
 
 
-/** inserts element in hash table (multiple inserts of same element overrides previous one)
+/** inserts element in hash table
  *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
+ *  @note multiple inserts of same element overrides previous one
  */
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -2276,10 +2276,9 @@ SCIP_RETCODE SCIPhashtableInsert(
    return hashtableInsert(hashtable, element, key, hashval, TRUE);
 }
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+/** inserts element in hash table
  *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
- *        element to the hash table, due to dynamic resizing.
+ *  @note multiple insertion of same element is checked and results in an error
  */
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -2456,11 +2455,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    return SCIP_OKAY;
 }
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- */
+/** removes all elements of the hash table */
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
@@ -2590,7 +2585,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 #define ELEM_DISTANCE(pos) (((pos) + hashmap->mask + 1 - (hashmap->hashes[(pos)]>>(hashmap->shift))) & hashmap->mask)
 
 
-/** inserts element in hash table (multiple inserts of same element overrides previous one) */
+/** inserts element in hash table */
 static
 SCIP_RETCODE hashmapInsert(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
@@ -2762,13 +2757,10 @@ SCIP_RETCODE hashmapCheckLoad(
    return SCIP_OKAY;
 }
 
-/** creates a hash map mapping pointers to pointers 
- *
- * @note if possible always use a blkmem pointer instead of NULL, otherwise it could slow down the map
- */
+/** creates a hash map mapping pointers to pointers */
 SCIP_RETCODE SCIPhashmapCreate(
    SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries, or NULL */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries */
    int                   mapsize             /**< size of the hash map */
    )
 {
@@ -2776,6 +2768,7 @@ SCIP_RETCODE SCIPhashmapCreate(
 
    assert(hashmap != NULL);
    assert(mapsize >= 0);
+   assert(blkmem != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashmap) );
 
@@ -2843,7 +2836,10 @@ void SCIPhashmapFree(
    BMSfreeBlockMemory((*hashmap)->blkmem, hashmap);
 }
 
-/** inserts new origin->image pair in hash map (overrides existing origins!) */
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsert(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -2870,7 +2866,10 @@ SCIP_RETCODE SCIPhashmapInsert(
    return SCIP_OKAY;
 }
 
-/** inserts new origin->image pair in hash map (overrides existing origins!) */
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -2935,8 +2934,8 @@ SCIP_Real SCIPhashmapGetImageReal(
    return SCIP_INVALID;
 }
 
-/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
- *  new origin->image pair
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair
+ *  or by appending a new origin->image pair
  */
 SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
@@ -2963,8 +2962,8 @@ SCIP_RETCODE SCIPhashmapSetImage(
    return SCIP_OKAY;
 }
 
-/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
- *  new origin->image pair
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair
+ *  or by appending a new origin->image pair
  */
 SCIP_RETCODE SCIPhashmapSetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
