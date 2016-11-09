@@ -113,11 +113,6 @@ namespace polyscip {
          */
         void printObsoleteVertices(std::ostream& os = std::cout, bool printFacets = false) const;
 
-        double calculateConvexCombValue(const WeightSpaceVertex* obsolete,
-                                        const WeightSpaceVertex* non_obsolete,
-                                        const OutcomeType& outcome,
-                                        bool outcome_is_ray);
-
         bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
 
     private:
@@ -132,15 +127,9 @@ namespace polyscip {
         using ObsoleteVertexContainer = std::vector<WeightSpaceVertex*>;
 
 
-        void createInitialFacets(H_RepC h_rep) = delete;
-
         void createInitialVerticesAndSkeleton(SCIP* scip,
                                               H_RepC h_rep,
                                               V_RepC v_rep);
-
-        FacetContainer computeIncidentFacets(SCIP* scip,
-                                             const FacetContainer& initial_facets,
-                                             const V_RepT& v) const = delete;
 
         FacetContainer getIncidentFacets(const V_RepT& v,
                                          const FacetContainer& initial_facets) const;

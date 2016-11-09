@@ -396,11 +396,7 @@ namespace polyscip {
             SCIP_CALL( computeLexicographicOptResults(nonzero_orig_vars, nonzero_orig_vals) );
 
             if (polyscip_status_ == PolyscipStatus::LexOptPhase) {
-                if (no_objs_ > 3) {
-                    cout << "Number of objectives > 3: only computing SNDE Points\n";
-                    SCIP_CALL(computeWeightSpaceResults());
-                }
-                else if (only_weight_space_phase_) {
+                if (no_objs_ > 3 || only_weight_space_phase_) {
                     SCIP_CALL(computeWeightSpaceResults());
                 }
                 else {
@@ -1110,7 +1106,7 @@ namespace polyscip {
                                                    result.second.cbegin(),
                                                    0.);
 
-        if (SCIPisLT(scip_, weighted_outcome, current_opt_val)) {
+        if (weighted_outcome + cmd_line_args_.getEpsilon() <= current_opt_val) {
             bounded_.push_back(std::move(result));
         }
 
@@ -1247,8 +1243,8 @@ namespace polyscip {
                 //if (SCIPisLT(scip_, SCIPgetPrimalbound(scip_), weight_space_poly_->getUntestedVertexWOV(untested_weight))) {
                 auto supported_size_before = bounded_.size();
                 SCIP_CALL(handleOptimalStatus(untested_weight,
-                                              weight_space_poly_->getUntestedVertexWOV(
-                                                      untested_weight))); //might add bounded result to bounded_
+                                              weight_space_poly_->getUntestedVertexWOV(untested_weight))); //might add bounded result to bounded_
+
                 if (supported_size_before < bounded_.size()) {
                     weight_space_poly_->incorporateNewOutcome(scip_,
                                                               untested_weight,
@@ -1524,6 +1520,8 @@ namespace polyscip {
                                 end(curr->second),
                                 begin(it->second),
                                 std::less_equal<ValueType>())) {
+                outputOutcome(it->second, std::cout, "outcome ");
+                outputOutcome(curr->second, std::cout, " dominated by ");
                 return true;
             }
         }

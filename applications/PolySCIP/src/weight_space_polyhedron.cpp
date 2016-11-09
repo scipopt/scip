@@ -202,32 +202,32 @@ namespace polyscip {
         assert (SCIPisNegative(scip, curr_investigated_vertex_->computeSlack(outcome, outcome_is_ray)));
 
 
-        auto tmp_plus = vector<WeightSpaceVertex*> {};
-        auto tmp_minus = vector<WeightSpaceVertex*> {};
-        auto tmp_zero = vector<WeightSpaceVertex*> {};
+        auto plus = vector<WeightSpaceVertex*> {};
+        auto minus = vector<WeightSpaceVertex*> {};
+        auto zero = vector<WeightSpaceVertex*> {};
 
         for (auto vertex : marked_and_special_vertices_) {
             addVertexToCorrespondingPartition(scip,
                                               vertex,
                                               outcome,
                                               outcome_is_ray,
-                                              tmp_minus,
-                                              tmp_plus,
-                                              tmp_zero);
+                                              minus,
+                                              plus,
+                                              zero);
         }
         for (auto vertex : unmarked_vertices_) {
             addVertexToCorrespondingPartition(scip,
                                               vertex,
                                               outcome,
                                               outcome_is_ray,
-                                              tmp_minus,
-                                              tmp_plus,
-                                              tmp_zero);
+                                              minus,
+                                              plus,
+                                              zero);
         }
-        tmp_minus.push_back(curr_investigated_vertex_);
+        minus.push_back(curr_investigated_vertex_);
 
-        for (const auto& non_obs : tmp_plus) {
-            for (const auto& obs : tmp_minus) {
+        for (const auto& non_obs : plus) {
+            for (const auto& obs : minus) {
                 if (areAdjacent(non_obs, obs)) {
                     obs_nonobs_pairs.push_back({obs, non_obs});
                 }
@@ -255,30 +255,12 @@ namespace polyscip {
             new_edges.push_back({new_vertex, non_obs_vertex});
         }
 
-        for (auto vertex : tmp_minus) {
+        for (auto vertex : minus) {
             makeObsolete(vertex);
         }
 
         std::cout << "NO UNMARKED VERTICES: " << unmarked_vertices_.size() << "\n";
         std::cout << "NO MARKED VERTICES: " << marked_and_special_vertices_.size() << "\n";
-    }
-
-    double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,
-                                                           const WeightSpaceVertex* non_obs,
-                                                           const OutcomeType& outcome,
-                                                           bool outcome_is_ray) {
-        auto wov_obs = outcome_is_ray ? 0. : obs->getCurrentWOV();
-        auto wov_non_obs = outcome_is_ray ? 0. : non_obs->getCurrentWOV();
-        double numerator = wov_obs - std::inner_product(begin(obs->weight_),
-                                                             end(obs->weight_),
-                                                             begin(outcome),
-                                                             0.);
-        double denominator = numerator - wov_non_obs + std::inner_product(begin(non_obs->weight_),
-                                                                               end(non_obs->weight_),
-                                                                               begin(outcome),
-                                                                               0.);
-        assert (denominator != 0.);
-        return numerator / denominator;
     }
 
 
