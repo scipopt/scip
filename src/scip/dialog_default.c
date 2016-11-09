@@ -1936,7 +1936,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
 /** dialog execution method for the set parameter command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 {  /*lint --e{715}*/
-   SCIP_RETCODE retcode;
    SCIP_PARAM* param;
    char prompt[SCIP_MAXSTRLEN];
    char* valuestr;
@@ -1972,13 +1971,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( !error )
       {
-         retcode = SCIPchgBoolParam(scip, param, boolval);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
-         if( retcode != SCIP_PARAMETERWRONGVAL )
+         if ( ! SCIPisBoolParamValid(scip, param, boolval) )
          {
-            SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
-
-            SCIP_CALL( retcode );
+            SCIPwarningMessage(scip, "Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", boolval, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
+            SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
          }
       }
 
@@ -2003,12 +2003,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPchgIntParam(scip, param, intval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
-      {
-         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
 
-         SCIP_CALL( retcode );
+      if ( ! SCIPisIntParamValid(scip, param, intval) )
+      {
+         SCIPwarningMessage(scip, "Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].\n",
+            intval, SCIPparamGetName(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgIntParam(scip, param, intval) );
       }
 
       break;
@@ -2032,12 +2035,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPchgLongintParam(scip, param, longintval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
-      {
-         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
 
-         SCIP_CALL( retcode );
+      if ( ! SCIPisLongintParamValid(scip, param, longintval) )
+      {
+         SCIPwarningMessage(scip, "Invalid value <%" SCIP_LONGINT_FORMAT "> for longint parameter <%s>. Must be in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n",
+            longintval, SCIPparamGetName(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgLongintParam(scip, param, longintval) );
       }
       break;
 
@@ -2060,12 +2066,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPchgRealParam(scip, param, realval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
-      {
-         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
 
-         SCIP_CALL( retcode );
+      if ( ! SCIPisRealParamValid(scip, param, realval) )
+      {
+         SCIPwarningMessage(scip, "Invalid real parameter value <%.15g> for parameter <%s>. Must be in range [%.15g,%.15g].\n",
+            realval, SCIPparamGetName(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRealParam(scip, param, realval) );
       }
       break;
 
@@ -2087,12 +2096,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPchgCharParam(scip, param, charval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
-      {
-         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
 
-         SCIP_CALL( retcode );
+      if ( ! SCIPisCharParamValid(scip, param, charval) )
+      {
+         SCIPwarningMessage(scip, "Invalid char parameter value <%c>. Must be in set {%s}.\n",
+            charval, SCIPparamGetCharAllowedValues(param));
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgCharParam(scip, param, charval) );
       }
       break;
 
@@ -2109,12 +2121,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      retcode = SCIPchgStringParam(scip, param, valuestr);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
+      if ( ! SCIPisStringParamValid(scip, param, valuestr) )
       {
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
-
-         SCIP_CALL( retcode );
+         SCIPwarningMessage(scip, "Invalid character in string parameter.\n");
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgStringParam(scip, param, valuestr) );
       }
       break;
 
