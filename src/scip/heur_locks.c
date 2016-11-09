@@ -171,6 +171,9 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* initialize data */
+   heurdata->usednodes = 0;
+
    /* create random number generator */
    SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
@@ -933,6 +936,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #ifdef SCIP_DEBUG
       SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
+
+      heurdata->usednodes += SCIPgetNNodes(subscip);
 
    FREESCIPANDTERMINATE:
       /* free subproblem */
