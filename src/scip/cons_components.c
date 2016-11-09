@@ -1107,6 +1107,11 @@ SCIP_RETCODE solveComponent(
       {
          component->lastsolindex = SCIPsolGetIndex(sol);
 
+         if( SCIPsolGetHeur(sol) != NULL )
+            SCIPsolSetHeur(problem->bestsol, SCIPfindHeur(scip, SCIPheurGetName(SCIPsolGetHeur(sol))));
+         else
+            SCIPsolSetHeur(problem->bestsol, NULL);
+
          /* increase counter for feasible problems if no solution was known before */
          if( SCIPisInfinity(scip, component->lastprimalbound) )
             ++(problem->nfeascomps);
