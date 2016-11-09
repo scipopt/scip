@@ -17,6 +17,8 @@
  * @brief  methods for primal heuristics
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -102,6 +104,11 @@ void SCIPdivesetReset(
    diveset->nbestsolsfound = 0;
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
+
+   BMSfreeMemoryArrayNull(&diveset->subscipsstat);
+   BMSfreeMemoryArrayNull(&diveset->lastmergedstat);
+   diveset->lastmergedstat = NULL;
+   diveset->subscipsstat = NULL;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -220,6 +227,8 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_CALL( heurAddDiveset(heur, *diveset) );
    (*diveset)->sol = NULL;
    (*diveset)->divetypemask = divetypemask;
+   (*diveset)->lastmergedstat = NULL;
+   (*diveset)->subscipsstat = NULL;
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
@@ -502,6 +511,7 @@ SCIP_Real SCIPdivesetGetAvgQuotNoSol(
 {
    return diveset->maxdiveavgquotnosol;
 }
+
 /** get the maximum upper bound quotient parameter of the diving settings if an incumbent solution exists */
 SCIP_Real SCIPdivesetGetUbQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
@@ -591,6 +601,8 @@ void divesetFree(
    assert(*diveset != NULL);
    assert((*diveset)->name != NULL);
 
+   BMSfreeMemoryArrayNull(&(*diveset)->subscipsstat);
+   BMSfreeMemoryArrayNull(&(*diveset)->lastmergedstat);
    BMSfreeMemoryArray(&(*diveset)->name);
    BMSfreeMemory(diveset);
 }
@@ -1058,83 +1070,6 @@ SCIP_RETCODE SCIPheurExec(
    return SCIP_OKAY;
 }
 
-
-/** create statistic data for merging statistics from source heuristic into target heuristic */
-SCIP_RETCODE SCIPheurCreateMergeStatistics(
-   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   SCIP_HEUR*            targetheur          /**< target primal heuristic data structure */
-   )
-{
-   assert(sourceheur != NULL);
-   assert(targetheur != NULL);
-
-   if( sourceheur->lastmergedstat == NULL )
-   {
-      SCIP_ALLOC( BMSallocMemory(&sourceheur->lastmergedstat) );
-      sourceheur->lastmergedstat->origheur = targetheur;
-      sourceheur->lastmergedstat->ncalls = 0;
-      sourceheur->lastmergedstat->nsolsfound = 0;
-      sourceheur->lastmergedstat->nbestsolsfound = 0;
-      sourceheur->lastmergedstat->setuptime = 0.0;
-      sourceheur->lastmergedstat->heurclock = 0.0;
-
-      if( targetheur->subscipsstat == NULL )
-      {
-         SCIP_ALLOC( BMSallocMemory(&targetheur->subscipsstat) );
-         targetheur->subscipsstat->origheur = NULL;
-         targetheur->subscipsstat->ncalls = 0;
-         targetheur->subscipsstat->nsolsfound = 0;
-         targetheur->subscipsstat->nbestsolsfound = 0;
-         targetheur->subscipsstat->setuptime = 0.0;
-         targetheur->subscipsstat->heurclock = 0.0;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** merge primal heuristic statistics from source heuristic data structure to target heuristic data structure */
-SCIP_RETCODE SCIPheurMergeStatistics(
-   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
-   )
-{
-   SCIP_HEUR* targetheur;
-
-   assert(sourceheur != NULL);
-   assert(sourceheur->lastmergedstat != NULL);
-
-   targetheur = sourceheur->lastmergedstat->origheur;
-   assert(targetheur != NULL);
-   assert(targetheur->subscipsstat != NULL);
-
-   /* copy delta to last merged values */
-   targetheur->subscipsstat->ncalls += (sourceheur->ncalls - sourceheur->lastmergedstat->ncalls);
-   targetheur->subscipsstat->nsolsfound += (sourceheur->nsolsfound - sourceheur->lastmergedstat->nsolsfound);
-   targetheur->subscipsstat->nbestsolsfound += (sourceheur->nbestsolsfound - sourceheur->lastmergedstat->nbestsolsfound);
-   targetheur->subscipsstat->setuptime += SCIPclockGetTime(sourceheur->setuptime) - sourceheur->lastmergedstat->setuptime;
-   targetheur->subscipsstat->heurclock += SCIPclockGetTime(sourceheur->heurclock) - sourceheur->lastmergedstat->heurclock;
-
-   /* save the merged values */
-   sourceheur->lastmergedstat->ncalls = sourceheur->ncalls;
-   sourceheur->lastmergedstat->nsolsfound = sourceheur->nsolsfound;
-   sourceheur->lastmergedstat->nbestsolsfound = sourceheur->nbestsolsfound;
-   sourceheur->lastmergedstat->setuptime = SCIPclockGetTime(sourceheur->setuptime);
-   sourceheur->lastmergedstat->heurclock = SCIPclockGetTime(sourceheur->heurclock);
-
-   return SCIP_OKAY;
-}
-
-/** return whether primal heuristic has data for statistic merging */
-SCIP_RETCODE SCIPheurHasMergeStatistics(
-   SCIP_HEUR*            heur                /**< primal heuristic data structure */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->lastmergedstat != NULL);
-}
-
 /** gets user data of primal heuristic */
 SCIP_HEURDATA* SCIPheurGetData(
    SCIP_HEUR*            heur                /**< primal heuristic */
@@ -1442,6 +1377,81 @@ int SCIPheurGetNDivesets(
    return heur->ndivesets;
 }
 
+/** create statistic data for merging statistics from source heuristic into target heuristic */
+SCIP_RETCODE SCIPheurInitMergeStatistics(
+   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
+   SCIP_HEUR*            targetheur          /**< target primal heuristic data structure */
+   )
+{
+   assert(sourceheur != NULL);
+   assert(targetheur != NULL);
+
+   if( sourceheur->lastmergedstat == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemory(&sourceheur->lastmergedstat) );
+      sourceheur->lastmergedstat->origheur = targetheur;
+      sourceheur->lastmergedstat->ncalls = 0;
+      sourceheur->lastmergedstat->nsolsfound = 0;
+      sourceheur->lastmergedstat->nbestsolsfound = 0;
+      sourceheur->lastmergedstat->setuptime = 0.0;
+      sourceheur->lastmergedstat->heurclock = 0.0;
+
+      if( targetheur->subscipsstat == NULL )
+      {
+         SCIP_ALLOC( BMSallocMemory(&targetheur->subscipsstat) );
+         targetheur->subscipsstat->origheur = NULL;
+         targetheur->subscipsstat->ncalls = 0;
+         targetheur->subscipsstat->nsolsfound = 0;
+         targetheur->subscipsstat->nbestsolsfound = 0;
+         targetheur->subscipsstat->setuptime = 0.0;
+         targetheur->subscipsstat->heurclock = 0.0;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** merge primal heuristic statistics from source heuristic data structure to target heuristic data structure */
+SCIP_RETCODE SCIPheurMergeStatistics(
+   SCIP_HEUR*            sourceheur          /**< source primal heuristic data structure */
+   )
+{
+   SCIP_HEUR* targetheur;
+
+   assert(sourceheur != NULL);
+   assert(sourceheur->lastmergedstat != NULL);
+
+   targetheur = sourceheur->lastmergedstat->origheur;
+   assert(targetheur != NULL);
+   assert(targetheur->subscipsstat != NULL);
+
+   /* copy delta to last merged values */
+   targetheur->subscipsstat->ncalls += (sourceheur->ncalls - sourceheur->lastmergedstat->ncalls);
+   targetheur->subscipsstat->nsolsfound += (sourceheur->nsolsfound - sourceheur->lastmergedstat->nsolsfound);
+   targetheur->subscipsstat->nbestsolsfound += (sourceheur->nbestsolsfound - sourceheur->lastmergedstat->nbestsolsfound);
+   targetheur->subscipsstat->setuptime += (SCIPclockGetTime(sourceheur->setuptime) - sourceheur->lastmergedstat->setuptime);
+   targetheur->subscipsstat->heurclock += (SCIPclockGetTime(sourceheur->heurclock) - sourceheur->lastmergedstat->heurclock);
+
+   /* save the merged values */
+   sourceheur->lastmergedstat->ncalls = sourceheur->ncalls;
+   sourceheur->lastmergedstat->nsolsfound = sourceheur->nsolsfound;
+   sourceheur->lastmergedstat->nbestsolsfound = sourceheur->nbestsolsfound;
+   sourceheur->lastmergedstat->setuptime = SCIPclockGetTime(sourceheur->setuptime);
+   sourceheur->lastmergedstat->heurclock = SCIPclockGetTime(sourceheur->heurclock);
+
+   return SCIP_OKAY;
+}
+
+/** return whether primal heuristic has data for statistic merging */
+SCIP_RETCODE SCIPheurIsMergeStatisticsInitialized(
+   SCIP_HEUR*            heur                /**< primal heuristic data structure */
+   )
+{
+   assert(heur != NULL);
+
+   return (heur->lastmergedstat != NULL);
+}
+
 /** gets the number of times, the heuristic was called in sub-SCIPs and tried to find a solution */
 SCIP_Longint SCIPheurGetSubscipNCalls(
    SCIP_HEUR*            heur                /**< primal heuristic */
@@ -1490,4 +1500,233 @@ SCIP_Real SCIPheurGetSubscipTime(
    assert(heur != NULL);
 
    return (heur->subscipsstat == 0 ? 0 : heur->subscipsstat->heurclock);
+}
+
+/** create statistic data for merging statistics from source diving setting into target diving setting */
+SCIP_RETCODE SCIPdivesetInitMergeStatistics(
+   SCIP_DIVESET*            sourcediveset,         /**< source diving setting */
+   SCIP_DIVESET*            targetdiveset          /**< target diving setting */
+   )
+{
+   assert(sourcediveset != NULL);
+   assert(targetdiveset != NULL);
+
+   if( sourcediveset->lastmergedstat == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemory(&sourcediveset->lastmergedstat) );
+      sourcediveset->lastmergedstat->origdiveset = targetdiveset;
+      sourcediveset->lastmergedstat->nlpiterations = 0;
+      sourcediveset->lastmergedstat->nlps = 0;
+      sourcediveset->lastmergedstat->totaldepth = 0;
+      sourcediveset->lastmergedstat->totalsoldepth = 0;
+      sourcediveset->lastmergedstat->totalnnodes = 0;
+      sourcediveset->lastmergedstat->totalnbacktracks = 0;
+      sourcediveset->lastmergedstat->nsolsfound = 0;
+      sourcediveset->lastmergedstat->nbestsolsfound = 0;
+      sourcediveset->lastmergedstat->maxlpiterofs = 0;
+      sourcediveset->lastmergedstat->mindepth = 0;
+      sourcediveset->lastmergedstat->maxdepth = 0;
+      sourcediveset->lastmergedstat->minsoldepth = 0;
+      sourcediveset->lastmergedstat->maxsoldepth = 0;
+      sourcediveset->lastmergedstat->ncalls = 0;
+      sourcediveset->lastmergedstat->nsolcalls = 0;
+
+      if( targetdiveset->subscipsstat == NULL )
+      {
+         SCIP_ALLOC( BMSallocMemory(&targetdiveset->subscipsstat) );
+         targetdiveset->subscipsstat->origdiveset = NULL;
+         targetdiveset->subscipsstat->nlpiterations = 0;
+         targetdiveset->subscipsstat->nlps = 0;
+         targetdiveset->subscipsstat->totaldepth = 0;
+         targetdiveset->subscipsstat->totalsoldepth = 0;
+         targetdiveset->subscipsstat->totalnnodes = 0;
+         targetdiveset->subscipsstat->totalnbacktracks = 0;
+         targetdiveset->subscipsstat->nsolsfound = 0;
+         targetdiveset->subscipsstat->nbestsolsfound = 0;
+         targetdiveset->subscipsstat->maxlpiterofs = 0;
+         targetdiveset->subscipsstat->mindepth = 0;
+         targetdiveset->subscipsstat->maxdepth = 0;
+         targetdiveset->subscipsstat->minsoldepth = 0;
+         targetdiveset->subscipsstat->maxsoldepth = 0;
+         targetdiveset->subscipsstat->ncalls = 0;
+         targetdiveset->subscipsstat->nsolcalls = 0;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** merge statistics from source diving setting to target diving setting */
+SCIP_RETCODE SCIPdivesetMergeStatistics(
+   SCIP_DIVESET*         sourcediveset       /**< source diving setting */
+   )
+{
+   SCIP_DIVESET* targetdiveset;
+
+   assert(sourcediveset != NULL);
+   assert(sourcediveset->lastmergedstat != NULL);
+
+   targetdiveset = sourcediveset->lastmergedstat->origdiveset;
+   assert(targetdiveset != NULL);
+   assert(targetdiveset->subscipsstat != NULL);
+
+   /* copy delta to last merged values */
+   targetdiveset->subscipsstat->nlpiterations    += (sourcediveset->nlpiterations     - sourcediveset->lastmergedstat->nlpiterations);
+   targetdiveset->subscipsstat->nlps             += (sourcediveset->nlps              - sourcediveset->lastmergedstat->nlps);
+   targetdiveset->subscipsstat->totaldepth       += (sourcediveset->totaldepth        - sourcediveset->lastmergedstat->totaldepth);
+   targetdiveset->subscipsstat->totalsoldepth    += (sourcediveset->totalsoldepth     - sourcediveset->lastmergedstat->totalsoldepth);
+   targetdiveset->subscipsstat->totalnnodes      += (sourcediveset->totalnnodes       - sourcediveset->lastmergedstat->totalnnodes);
+   targetdiveset->subscipsstat->totalnbacktracks += (sourcediveset->totalnbacktracks  - sourcediveset->lastmergedstat->totalnbacktracks);
+   targetdiveset->subscipsstat->nsolsfound       += (sourcediveset->nsolsfound        - sourcediveset->lastmergedstat->nsolsfound);
+   targetdiveset->subscipsstat->nbestsolsfound   += (sourcediveset->nbestsolsfound    - sourcediveset->lastmergedstat->nbestsolsfound);
+   targetdiveset->subscipsstat->maxlpiterofs     += (sourcediveset->maxlpiterofs      - sourcediveset->lastmergedstat->maxlpiterofs);
+   targetdiveset->subscipsstat->ncalls           += (sourcediveset->ncalls            - sourcediveset->lastmergedstat->ncalls);
+   targetdiveset->subscipsstat->nsolcalls        += (sourcediveset->nsolcalls         - sourcediveset->lastmergedstat->nsolcalls);
+   targetdiveset->subscipsstat->mindepth          = MIN(sourcediveset->mindepth, sourcediveset->lastmergedstat->mindepth);
+   targetdiveset->subscipsstat->maxdepth          = MAX(sourcediveset->maxdepth, sourcediveset->lastmergedstat->maxdepth);
+   targetdiveset->subscipsstat->minsoldepth       = MIN(sourcediveset->minsoldepth, sourcediveset->lastmergedstat->minsoldepth);
+   targetdiveset->subscipsstat->maxsoldepth       = MAX(sourcediveset->maxsoldepth, sourcediveset->lastmergedstat->maxsoldepth);
+
+   /* save the merged values */
+   sourcediveset->lastmergedstat->nlpiterations    = sourcediveset->nlpiterations;
+   sourcediveset->lastmergedstat->nlps             = sourcediveset->nlps;
+   sourcediveset->lastmergedstat->totaldepth       = sourcediveset->totaldepth;
+   sourcediveset->lastmergedstat->totalsoldepth    = sourcediveset->totalsoldepth;
+   sourcediveset->lastmergedstat->totalnnodes      = sourcediveset->totalnnodes;
+   sourcediveset->lastmergedstat->totalnbacktracks = sourcediveset->totalnbacktracks;
+   sourcediveset->lastmergedstat->nsolsfound       = sourcediveset->nsolsfound;
+   sourcediveset->lastmergedstat->nbestsolsfound   = sourcediveset->nbestsolsfound;
+   sourcediveset->lastmergedstat->maxlpiterofs     = sourcediveset->maxlpiterofs;
+   sourcediveset->lastmergedstat->mindepth         = sourcediveset->mindepth;
+   sourcediveset->lastmergedstat->maxdepth         = sourcediveset->maxdepth;
+   sourcediveset->lastmergedstat->minsoldepth      = sourcediveset->minsoldepth;
+   sourcediveset->lastmergedstat->maxsoldepth      = sourcediveset->maxsoldepth;
+   sourcediveset->lastmergedstat->ncalls           = sourcediveset->ncalls;
+   sourcediveset->lastmergedstat->nsolcalls        = sourcediveset->nsolcalls;
+
+   return SCIP_OKAY;
+}
+
+/** return whether diving setting has data for statistic merging */
+SCIP_RETCODE SCIPdivesetIsMergeStatisticsInitialized(
+   SCIP_DIVESET*         diveset             /**< diving setting data structure */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->lastmergedstat != NULL);
+}
+
+/** get the number of calls to this dive set in sub-SCIPs */
+int SCIPdivesetGetSubscipNCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? 0 : diveset->subscipsstat->ncalls);
+}
+
+/** get the number of calls in sub-SCIPs successfully terminated at a feasible leaf node */
+int SCIPdivesetGetSubscipNSolutionCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? 0 : diveset->subscipsstat->nsolcalls);
+}
+
+/** get the minimum depth reached by this dive set in sub-SCIPs */
+int SCIPdivesetGetSubscipMinDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? INT_MAX : diveset->subscipsstat->mindepth);
+}
+
+/** get the maximum depth reached by this dive set in sub-SCIPs */
+int SCIPdivesetGetSubscipMaxDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->maxdepth);
+}
+
+/** get the average depth this dive set reached during execution in sub-SCIPs */
+SCIP_Real SCIPdivesetGetSubscipAvgDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? 0.0 :
+      (diveset->subscipsstat->ncalls == 0 ? 0.0 :
+         diveset->subscipsstat->totaldepth / (SCIP_Real)diveset->subscipsstat->ncalls));
+}
+
+/** get the minimum depth at which this dive set found a solution in sub-SCIPs */
+int SCIPdivesetGetSubscipMinSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? INT_MAX : diveset->subscipsstat->minsoldepth);
+}
+
+/** get the maximum depth at which this dive set found a solution in sub-SCIPs */
+int SCIPdivesetGetSubscipMaxSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->maxsoldepth);
+}
+
+/** get the average depth at which this dive set found a solution in sub-SCIPs */
+SCIP_Real SCIPdivesetGetSubscipAvgSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? 0.0 :
+      (diveset->subscipsstat->nsolcalls == 0 ? 0.0 :
+         diveset->subscipsstat->totalsoldepth / (SCIP_Real)diveset->subscipsstat->nsolcalls));
+}
+
+/** get the total number of LP iterations used by this dive set in sub-SCIPs */
+SCIP_Longint SCIPdivesetGetSubscipNLPIterations(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->nlpiterations);
+}
+
+/** get the total number of probing nodes used by this dive set in sub-SCIPs */
+SCIP_Longint SCIPdivesetGetSubscipNProbingNodes(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->totalnnodes);
+}
+
+/** get the total number of backtracks performed by this dive set in sub-SCIPs */
+SCIP_Longint SCIPdivesetGetSubscipNBacktracks(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->totalnbacktracks);
 }

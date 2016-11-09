@@ -17,6 +17,8 @@
  * @ingroup PUBLICMETHODS
  * @brief  public methods for primal heuristics
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -350,7 +352,7 @@ SCIP_Bool SCIPdivesetSupportsType(
 
 /** create statistic data for merging statistics from source heuristic into target heuristic */
 EXTERN
-SCIP_RETCODE SCIPheurCreateMergeStatistics(
+SCIP_RETCODE SCIPheurInitMergeStatistics(
    SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
    SCIP_HEUR*            targetheur          /**< target primal heuristic data structure */
    );
@@ -358,13 +360,12 @@ SCIP_RETCODE SCIPheurCreateMergeStatistics(
 /** merge primal heuristic statistics from source heuristic data structure to target heuristic data structure */
 EXTERN
 SCIP_RETCODE SCIPheurMergeStatistics(
-   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
+   SCIP_HEUR*            sourceheur          /**< source primal heuristic data structure */
    );
 
 /** return whether primal heuristic has data for statistic merging */
 EXTERN
-SCIP_RETCODE SCIPheurHasMergeStatistics(
+SCIP_RETCODE SCIPheurIsMergeStatisticsInitialized(
    SCIP_HEUR*            heur                /**< primal heuristic data structure */
    );
 
@@ -398,6 +399,90 @@ SCIP_Real SCIPheurGetSubscipTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/** create statistic data for merging statistics from source diving setting into target diving setting */
+EXTERN
+SCIP_RETCODE SCIPdivesetInitMergeStatistics(
+   SCIP_DIVESET*            sourcediveset,         /**< source diving setting */
+   SCIP_DIVESET*            targetdiveset          /**< target diving setting */
+   );
+
+/** merge statistics from source diving setting to target diving setting */
+EXTERN
+SCIP_RETCODE SCIPdivesetMergeStatistics(
+   SCIP_DIVESET*         sourcediveset       /**< source diving setting */
+   );
+
+/** return whether diving setting has data for statistic merging */
+EXTERN
+SCIP_RETCODE SCIPdivesetIsMergeStatisticsInitialized(
+   SCIP_DIVESET*         diveset             /**< diving setting data structure */
+   );
+
+/** get the number of calls to this dive set in sub-SCIPs */
+EXTERN
+int SCIPdivesetGetSubscipNCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the number of calls in sub-SCIPs successfully terminated at a feasible leaf node */
+EXTERN
+int SCIPdivesetGetSubscipNSolutionCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum depth reached by this dive set in sub-SCIPs */
+EXTERN
+int SCIPdivesetGetSubscipMinDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum depth reached by this dive set in sub-SCIPs */
+EXTERN
+int SCIPdivesetGetSubscipMaxDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average depth this dive set reached during execution in sub-SCIPs */
+EXTERN
+SCIP_Real SCIPdivesetGetSubscipAvgDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum depth at which this dive set found a solution in sub-SCIPs */
+EXTERN
+int SCIPdivesetGetSubscipMinSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum depth at which this dive set found a solution in sub-SCIPs */
+EXTERN
+int SCIPdivesetGetSubscipMaxSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average depth at which this dive set found a solution in sub-SCIPs */
+EXTERN
+SCIP_Real SCIPdivesetGetSubscipAvgSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of LP iterations used by this dive set in sub-SCIPs */
+EXTERN
+SCIP_Longint SCIPdivesetGetSubscipNLPIterations(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of probing nodes used by this dive set in sub-SCIPs */
+EXTERN
+SCIP_Longint SCIPdivesetGetSubscipNProbingNodes(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of backtracks performed by this dive set in sub-SCIPs */
+EXTERN
+SCIP_Longint SCIPdivesetGetSubscipNBacktracks(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
 
 #ifdef __cplusplus
 }

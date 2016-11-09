@@ -120,6 +120,7 @@ struct SCIP_HeurStat
 /** diving heuristics statistics */
 struct SCIP_DivesetStat
 {
+   SCIP_DIVESET*         origdiveset;        /**< pointer to diving settings in original SCIP instance (target SCIP in merge call) */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
    SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
    SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */

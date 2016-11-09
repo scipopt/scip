@@ -2511,8 +2511,10 @@ SCIP_RETCODE SCIPmergeStatistics(
    SCIP*                 targetscip          /**< target SCIP data structure */
    )
 {
+   SCIP_DIVESET** sourcedivesets;
    SCIP_Longint nnodes;
    int i;
+   int s;
 
    assert(sourcescip != targetscip);
 
@@ -2520,17 +2522,53 @@ SCIP_RETCODE SCIPmergeStatistics(
    if( SCIPgetStage(sourcescip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   /* merge heuristic and diving setting statistics */
    for( i = 0; i < sourcescip->set->nheurs; ++i )
    {
+      SCIP_HEUR* sourceheur = sourcescip->set->heurs[i];
       /* create merge and sub-SCIP statistic data, if not done yet */
-      if( !SCIPheurHasMergeStatistics(sourcescip->set->heurs[i]) )
+      if( !SCIPheurIsMergeStatisticsInitialized(sourceheur) )
       {
-         SCIP_HEUR* targetheur = SCIPfindHeur(targetscip, SCIPheurGetName(sourcescip->set->heurs[i]));
-         SCIP_CALL( SCIPheurCreateMergeStatistics(sourcescip->set->heurs[i], targetheur) );
+         SCIP_HEUR* targetheur = SCIPfindHeur(targetscip, SCIPheurGetName(sourceheur));
+         SCIP_CALL( SCIPheurInitMergeStatistics(sourceheur, targetheur) );
+
+         sourcedivesets = SCIPheurGetDivesets(sourceheur);
+
+         /* create merge and sub-SCIP statistic data for diving settings */
+         for( s = SCIPheurGetNDivesets(sourceheur) - 1; s >= 0 ; --s )
+         {
+            SCIP_DIVESET** targetdivesets;
+            int t;
+
+            assert(!SCIPdivesetIsMergeStatisticsInitialized(sourcedivesets[s]));
+            targetdivesets = SCIPheurGetDivesets(targetheur);
+
+            for( t = SCIPheurGetNDivesets(targetheur) - 1; t >= 0 ; --t )
+            {
+               if( strcmp(SCIPdivesetGetName(targetdivesets[t]), SCIPdivesetGetName(sourcedivesets[t])) == 0 )
+                  break;
+            }
+
+            if( t >= 0 )
+            {
+               SCIP_CALL( SCIPdivesetInitMergeStatistics(sourcedivesets[s], targetdivesets[t]) );
+            }
+         }
       }
 
       /* merge statistics */
-      SCIP_CALL( SCIPheurMergeStatistics(sourcescip->set->heurs[i], sourcescip->mem->setmem) );
+      SCIP_CALL( SCIPheurMergeStatistics(sourceheur) );
+
+      sourcedivesets = SCIPheurGetDivesets(sourceheur);
+
+      for( s = SCIPheurGetNDivesets(sourceheur) - 1; s >= 0 ; --s )
+      {
+         if( SCIPdivesetIsMergeStatisticsInitialized(sourcedivesets[s]) )
+         {
+            /* merge statistics */
+            SCIP_CALL( SCIPdivesetMergeStatistics(sourcedivesets[s]) );
+         }
+      }
    }
 
    nnodes = sourcescip->stat->ntotalnodes - sourcescip->stat->ntotalnodesmerged;
@@ -42047,23 +42085,23 @@ void printHeuristicSubscipStatistics(
          for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
          {
             SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
-            if( SCIPdivesetGetNCalls(diveset) > 0 )
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetSubscipNCalls(diveset));
+            if( SCIPdivesetGetSubscipNCalls(diveset) > 0 )
             {
                SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f",
-                  SCIPdivesetGetNProbingNodes(diveset),
-                  SCIPdivesetGetNLPIterations(diveset),
-                  SCIPdivesetGetNBacktracks(diveset),
-                  SCIPdivesetGetMinDepth(diveset),
-                  SCIPdivesetGetMaxDepth(diveset),
-                  SCIPdivesetGetAvgDepth(diveset));
-               if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
+                  SCIPdivesetGetSubscipNProbingNodes(diveset),
+                  SCIPdivesetGetSubscipNLPIterations(diveset),
+                  SCIPdivesetGetSubscipNBacktracks(diveset),
+                  SCIPdivesetGetSubscipMinDepth(diveset),
+                  SCIPdivesetGetSubscipMaxDepth(diveset),
+                  SCIPdivesetGetSubscipAvgDepth(diveset));
+               if( SCIPdivesetGetSubscipNSolutionCalls(diveset) > 0 )
                {
                   SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
-                     SCIPdivesetGetNSolutionCalls(diveset),
-                     SCIPdivesetGetMinSolutionDepth(diveset),
-                     SCIPdivesetGetMaxSolutionDepth(diveset),
-                     SCIPdivesetGetAvgSolutionDepth(diveset));
+                     SCIPdivesetGetSubscipNSolutionCalls(diveset),
+                     SCIPdivesetGetSubscipMinSolutionDepth(diveset),
+                     SCIPdivesetGetSubscipMaxSolutionDepth(diveset),
+                     SCIPdivesetGetSubscipAvgSolutionDepth(diveset));
                }
                else
                   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
