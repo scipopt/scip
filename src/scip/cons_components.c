@@ -212,6 +212,7 @@ SCIP_RETCODE initComponent(
    component->solved = FALSE;
    component->ncalls = 0;
    component->lastsolindex = -1;
+   component->lastbestsolindex = -1;
    component->nvars = 0;
    component->nfixedvars = 0;
    component->number = problem->ncomponents;
