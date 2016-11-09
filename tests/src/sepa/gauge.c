@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_nonlinear.h"
 #include "nlpi/nlpi_ipopt.h"
 
 #include "scip/sepa_gauge.c"
@@ -267,7 +266,7 @@ void evaluation_setup(void)
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
    /* change SCIP's stage to be able to create nlrows and rows */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    /* create and add variables */
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.5, 3.1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -565,4 +564,75 @@ Test(evaluation, gradient_complicated_concave)
    SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
+}
+
+/* test that check interior point, notice that it doesn't belong to the test suite evaluation evaluation */
+Test(interior_point, compute_interior_point)
+{
+   SCIP_SEPADATA* sepadata;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include NLPI's */
+   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
+
+   /* if no IPOPT available, don't run test */
+   if( nlpi == NULL )
+      return;
+   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+
+   /* include gauge separator */
+   SCIP_CALL( SCIPincludeSepaGauge(scip) );
+
+   /* create a problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
+
+   /* change SCIP's stage to be able to create nlrows and rows; ask SCIP to generate an NLP */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
+
+   /* create and add variables */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.5, 3.1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -2.5, 3.1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* create nlrows, add them to SCIP and release them */
+   createNlRow1(TRUE);
+   createNlRow2(TRUE);
+   createNlRow3(TRUE);
+
+   SCIP_CALL( SCIPaddNlRow(scip, nlrow1) );
+   SCIP_CALL( SCIPaddNlRow(scip, nlrow2) );
+   SCIP_CALL( SCIPaddNlRow(scip, nlrow3) );
+
+   SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow1) );
+   SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow2) );
+   SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow3) );
+
+   /* get sepadata */
+   sepadata = SCIPsepaGetData(SCIPfindSepa(scip, "gauge"));
+
+   /* compute interior point */
+   SCIP_CALL( computeInteriorPoint(scip, sepadata) );
+
+   /* check sepadata stuff changed in call */
+   cr_assert_not(sepadata->skipsepa);
+   cr_assert(sepadata->isintsolavailable);
+   cr_assert_not_null(sepadata->intsol);
+
+   /* check interior solution */
+   cr_expect_float_eq(-0.275971168224138, SCIPgetSolVal(scip, sepadata->intsol, x), 1e-5, "received %.10f instead", SCIPgetSolVal(scip, sepadata->intsol, x));
+   cr_expect_float_eq( 0.318323856389092, SCIPgetSolVal(scip, sepadata->intsol, y), 1e-5, "received %g instead", SCIPgetSolVal(scip, sepadata->intsol, y));
+
+   /* free memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+
+   /* free SCIP */
+   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) ); /* so that it doesn't complain */
+   SCIP_CALL( SCIPfree(&scip) );
+
+   /* check for memory leaks */
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
