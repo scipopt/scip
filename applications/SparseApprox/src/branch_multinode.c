@@ -169,6 +169,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    ncluster = SCIPspaGetNrCluster(scip);
    *result = SCIP_DIDNOTRUN;
 
+   if( SCIPspaGetModel(scip) == 't')
+      return SCIP_OKAY;
 
    assert(nbins > 0);
    assert(ncluster > 0 && ncluster <= nbins);

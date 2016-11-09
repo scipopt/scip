@@ -31,7 +31,6 @@
 
 /** project plugins **/
 #include "reader_spa.h"
-#include "heur_spaswitch.h"
 
 
 #ifdef __cplusplus

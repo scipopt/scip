@@ -81,7 +81,7 @@ SCIP_RETCODE createVariables(
          for( c1 = 0; c1 < 3; ++c1 )
          {
             (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d_%d_%d", i+1, j+1, c1+1 );
-            SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][c1], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][c1], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
             SCIP_CALL( SCIPaddVar(scip, probdata->edgevars[i][j][c1]) );
          }
       }
@@ -142,6 +142,8 @@ SCIP_RETCODE createProbSimplified(
    {
       for( j = 0; j < i; ++j )
       {
+         if( 0 == (probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) )
+            continue;
          /* set the objective weight for the edge-variables */
 
          /* these edges are not within a cluster */
@@ -161,6 +163,22 @@ SCIP_RETCODE createProbSimplified(
             SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c1], 1.0) );
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+            /*(void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d", i+1, j+1, c1+1 );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c1], 1.0) );
+            SCIP_CALL( SCIPaddCons(scip, temp) );
+            SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+            (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d", i+1, j+1, c1+1 );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c1], -1.0) );
+            SCIP_CALL( SCIPaddCons(scip, temp) );
+            SCIP_CALL( SCIPreleaseCons(scip, &temp) );*/
 
             /* constraints for edges between clusters */
             for( c2 = 0; c2 < ncluster; ++c2 )
@@ -184,6 +202,22 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPaddCons(scip, temp) );
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
+               /*(void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_inclusters_%d_%d", i+1, j+1, c1+1, c2+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, var, 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], -1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c2], 1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_inclusters_%d_%d", i+1, j+1, c1+1, c2+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, var, 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c2], -1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );*/
+
             }
          }
       }
@@ -197,8 +231,8 @@ SCIP_RETCODE createProbSimplified(
          if( NULL == probdata->edgevars[i][j][0] )
             continue;
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i+1, j+1 );
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 1.0, 1.0 ) );
-         for( c1 = 0; c1 < 3; ++c1 )
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 0.0, 1.0 ) );
+         for( c1 = 0; c1 < 2; ++c1 )
          {
             SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1], 1.0) );
          }
@@ -419,6 +453,240 @@ SCIP_RETCODE createProbWeightedCoh(
 
    SCIP_CALL( SCIPaddCons(scip, temp) );
    SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+   return SCIP_OKAY;
+}
+
+
+/** create the problem without variable amount of clusters */
+static
+SCIP_RETCODE createProbExperimental(
+   SCIP*                 scip,               /**< SCIP Data Structure */
+   SCIP_PROBDATA*        probdata            /**< The problem data */
+)
+{
+   int i;
+   int j;
+   int k;
+   char consname[SCIP_MAXSTRLEN];
+   SCIP_CONS* temp;
+   int nbins = probdata->nbins;
+   SCIP_Real scale;
+
+   SCIPgetRealParam(scip, "scale_coherence", &scale);
+   probdata->scale = scale;
+   /*
+    *  create constraints
+    */
+
+   /* create constraints for the edge-cut variables */
+   SCIPinfoMessage(scip, NULL, "Using edge-representation with simplified structure. No variable amount of cluster. \n");
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < nbins; ++j )
+      {
+         /* these are the edges that are between consequtive clusters */
+         if( i > j )
+            SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][0], scale * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) );
+         SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][1], (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) );
+         for( k = 0; k < nbins; ++k )
+         {
+            if( i > j && j > k )
+            {
+               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_%d", i+1, j+1, k+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][0], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][0], -1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_%d", i+1, j+1, k+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][0], -1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][0], 1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_%d", i+1, j+1, k+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], -1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][0], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][0], 1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+            }
+            if( !(i > k && j < k) && !(i < k && j > k) )
+            {
+               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_%d", i+1, j+1, k+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], -1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+            }
+            if( !(i > k && i < j) && !(i < k && i > j))
+            {
+               (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_%d", i+1, j+1, k+1 );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE ) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(j,k)][MIN(j,k)][0], -1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], 1.0) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], 1.0) );
+               SCIP_CALL( SCIPaddCons(scip, temp) );
+               SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+            }
+         }
+      }
+   }
+
+   /*  only one cluster-pair at the same time can be active for an edge*/
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < i; ++j )
+      {
+         if( NULL == probdata->edgevars[i][j][0] )
+            continue;
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 0.0, 1.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][1], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+
+
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** create the problem without variable amount of clusters */
+static
+SCIP_RETCODE createProbExperimental2(
+   SCIP*                 scip,               /**< SCIP Data Structure */
+   SCIP_PROBDATA*        probdata            /**< The problem data */
+)
+{
+   int i;
+   int j;
+   int l;
+   char consname[SCIP_MAXSTRLEN];
+   SCIP_CONS* temp;
+   int nbins = probdata->nbins;
+   probdata->ncluster = 2;
+   for( i = 0; i < nbins; ++i )
+   {
+      SCIP_Real source = -(probdata->cmatrix[i][(i+1) % nbins] - probdata->cmatrix[(i+1) % nbins][i]);
+      SCIP_Real sink = -(probdata->cmatrix[(i+1) % nbins][i] - probdata->cmatrix[i][(i+1) % nbins]);
+      SCIP_CALL( SCIPchgVarObj(scip, probdata->binvars[i][0], source ) );
+      SCIP_CALL( SCIPchgVarObj(scip, probdata->binvars[i][1], sink ) );
+      for( j = 0; j < nbins; ++j )
+      {
+         source += MAX((probdata->cmatrix[i][j] - probdata->cmatrix[j][i]), 0);
+         sink += MAX((probdata->cmatrix[j][i] - probdata->cmatrix[i][j]), 0);
+      }
+
+      if( source < 0 )
+         SCIP_CALL( SCIPchgVarUb(scip, probdata->binvars[i][0], 0.0) );
+      if( sink < 0 )
+         SCIP_CALL( SCIPchgVarUb(scip, probdata->binvars[i][1], 0.0) );
+
+
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d",  i+1 );
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 0.0, 1.0 ) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][0], 1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][1], 1.0) );
+      SCIP_CALL( SCIPaddCons(scip, temp) );
+      SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+      for( j = 0; j < nbins; ++j )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][0], (probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) ) );
+         /*if( j < i )
+         {
+            SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][1], 0.001 * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) ) );
+            SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][2], 0.001 * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) ) );
+         }*/
+      }
+   }
+   /*for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < i; ++j )
+      {
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][0], -1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][0], -1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][2], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][1], -1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][2], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][1], -1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+      }
+   }*/
+
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < nbins; ++j )
+      {
+         if( j == i )
+            continue;
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0.0, 0.0 ) );
+         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->edgevars[i][j][0], -1.0) );
+         SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][0], probdata->binvars[j][1], 1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+        /* (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][1], -1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0 ) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], -1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][0], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][1], 1.0) );
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );*/
+         for( l = 0; l < nbins; ++l )
+         {
+            if( j == l || l == i )
+               continue;
+            /*(void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 2.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][l][0], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][l][0], 1.0) );
+            SCIP_CALL( SCIPaddCons(scip, temp) );
+            SCIP_CALL( SCIPreleaseCons(scip, &temp) );*/
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -831,6 +1099,12 @@ SCIP_RETCODE SCIPcreateProbSpa(
       break;
    case 's':
       SCIP_CALL( createProbSimplified(scip, probdata) );
+      break;
+   case 'e':
+      SCIP_CALL( createProbExperimental(scip, probdata) );
+      break;
+   case 't':
+      SCIP_CALL( createProbExperimental2(scip, probdata) );
       break;
    default:
       break;

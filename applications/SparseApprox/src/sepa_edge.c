@@ -29,7 +29,7 @@
 
 #define SEPA_NAME              "edge"
 #define SEPA_DESC              "separator for graph partitioning in sparse approximation project"
-#define SEPA_PRIORITY               5000
+#define SEPA_PRIORITY               536870911
 #define SEPA_FREQ                   1
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
@@ -60,18 +60,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    SCIP_VAR**** edgevars;
 
    int nbins;
-   int ncluster;
    int ncuts;
    int i;
    int j;
    int k;
+   int l;
    char cutname[SCIP_MAXSTRLEN];
+   int** sign;
    SCIP_ROW* cut;
    SCIP_Bool infeasible;
    int rounds;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
-   if( rounds >= MAXROUNDS && SCIPgetDepth(scip) == 0 )
+   if( (rounds >= MAXROUNDS && SCIPgetDepth(scip) == 0) || SCIPspaGetModel(scip) == 't' )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -79,54 +80,118 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
 
-   assert(nbins > 0 && ncluster > 0);
+   assert(nbins > 0);
    assert(NULL != edgevars);
 
    ncuts = 0;
 
    *result = SCIP_DIDNOTFIND;
 
-   /* separate edges by the valied inequality y_ij1 + y_ik1 - y_jk0 <= 1 */
+   SCIPallocClearMemoryArray(scip, &sign, 3);
+   for( i = 0; i < 3; ++i )
+   {
+      SCIPallocClearMemoryArray(scip, &sign[i], 3);
+      for( j = 0; j < 3; ++j )
+      {
+         sign[i][j] = 1;
+      }
+      sign[i][i] = -1;
+   }
+
+   /* separate edges by the valid inequality y_ij1 + y_ik1 - y_jk0 <= 1 */
    for( i = 0; i < nbins; ++i )
    {
       for( j = 0; j < nbins; ++j )
       {
-         for( k = 0; k < j; ++k )
+         for( k = 0; k < nbins; ++k )
          {
-            if( (i > j) || (i < k) )
+            if( !(i == j || j == k || i == k) )
             {
-               if( SCIPvarGetLPSol(edgevars[i][j][1]) + SCIPvarGetLPSol(edgevars[i][k][1]) - SCIPvarGetLPSol(edgevars[j][k][0]) > 1 )
+               if( (i > k && j > k) || (i < k && j < k ) )
                {
-                  (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
-                  SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                  SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], 1) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][1], 1) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][k][0], -1) );
-                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-                  if( SCIPisCutEfficacious(scip, NULL, cut) )
+                  if( SCIPvarGetLPSol(edgevars[MAX(i,j)][MIN(i,j)][0]) + SCIPvarGetLPSol(edgevars[j][k][1]) - SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                     if( !infeasible )
+                     (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
+                     SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(i,j)][MIN(i,j)][0], 1.0) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][k][1], 1.0) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][1], -1.0) );
+
+                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+                     if( SCIPisCutEfficacious(scip, NULL, cut) )
                      {
                         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                         *result = SCIP_SEPARATED;
+                        ncuts++;
                      }
-                     else
-                        *result = SCIP_CUTOFF;
-                     ncuts++;
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                     if( ncuts == MAXCUTS )
+                        goto end;
                   }
-                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               }
+
+               if( ( i < j && i < k ) || ( i > j && i > k ) )
+               {
+                  if( -SCIPvarGetLPSol(edgevars[MAX(j,k)][MIN(j,k)][0]) + SCIPvarGetLPSol(edgevars[i][j][1]) + SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
+                  {
+                     (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
+                     SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(j,k)][MIN(j,k)][0], -1.0) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], 1.0) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][1], 1.0) );
+
+                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+                     if( SCIPisCutEfficacious(scip, NULL, cut) )
+                     {
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                        *result = SCIP_SEPARATED;
+                        ncuts++;
+                     }
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                     if( ncuts == MAXCUTS )
+                        goto end;
+                  }
                }
             }
          }
       }
    }
 
-   /* separate edges by the valied inequality y_ij1 + y_jk1 - y_ki0 <= 1 */
-   if ( ncluster == 3 )
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < i; ++j )
+      {
+         for( k = 0; k < j; ++k )
+         {
+            for( l = 0; l < 3; ++l )
+            {
+               if( sign[l][0] * SCIPvarGetLPSol(edgevars[i][j][0]) + sign[l][1] * SCIPvarGetLPSol(edgevars[i][k][0]) + sign[l][2] * SCIPvarGetLPSol(edgevars[j][k][0]) > 1 )
+               {
+                  (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
+                  SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+                  SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][0], sign[l][0]) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][0], sign[l][1]) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][k][0], sign[l][2]) );
+                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+                  if( SCIPisCutEfficacious(scip, NULL, cut) )
+                  {
+                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                     *result = SCIP_SEPARATED;
+                     ncuts++;
+                  }
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                  if( ncuts == MAXCUTS )
+                     goto end;
+               }
+            }
+         }
+      }
+   }
+   if ( SCIPspaGetNrCluster(scip) == 3 )
    {
       for( i = 0; i < nbins; ++i )
       {
@@ -134,56 +199,58 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
          {
             for( k = 0; k < j; ++k )
             {
-               if( SCIPvarGetLPSol(edgevars[i][j][1]) + SCIPvarGetLPSol(edgevars[j][k][1]) - SCIPvarGetLPSol(edgevars[k][i][1]) > 1 )
+               for( l = 0; l < 3; ++l )
                {
-                  (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
-                  SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                  SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], 1) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][k][1], 1) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[k][i][1], -1) );
-                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-                  if( SCIPisCutEfficacious(scip, NULL, cut) )
+                  if( sign[l][0] * SCIPvarGetLPSol(edgevars[i][j][1]) + sign[l][1] * SCIPvarGetLPSol(edgevars[j][k][1]) + sign[l][2] * SCIPvarGetLPSol(edgevars[k][i][1]) > 1 )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                     if( !infeasible )
+                     (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
+                     SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], sign[l][0]) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][k][1], sign[l][1]) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[k][i][1], sign[l][2]) );
+                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+                     if( SCIPisCutEfficacious(scip, NULL, cut) )
                      {
                         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                         *result = SCIP_SEPARATED;
+                        ncuts++;
                      }
-                     else
-                        *result = SCIP_CUTOFF;
-                     ncuts++;
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                     if( ncuts == MAXCUTS )
+                        goto end;
                   }
-                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-               }
-               if( SCIPvarGetLPSol(edgevars[k][j][1]) + SCIPvarGetLPSol(edgevars[j][i][1]) - SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
-               {
-                  (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
-                  SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                  SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[k][j][1], 1) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][i][1], 1) );
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][1], -1) );
-                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-                  if( SCIPisCutEfficacious(scip, NULL, cut) )
+
+                  if( sign[l][0] * SCIPvarGetLPSol(edgevars[k][j][1]) + sign[l][1] * SCIPvarGetLPSol(edgevars[j][i][1]) + sign[l][2] * SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                     if( !infeasible )
+                     (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
+                     SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[k][j][1], sign[l][0]) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][i][1], sign[l][1]) );
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][1], sign[l][2]) );
+                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+                     if( SCIPisCutEfficacious(scip, NULL, cut) )
                      {
                         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                         *result = SCIP_SEPARATED;
+                        ncuts++;
                      }
-                     else
-                        *result = SCIP_CUTOFF;
-                     ncuts++;
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+                     if( ncuts == MAXCUTS )
+                        goto end;
                   }
-                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                }
             }
          }
       }
    }
+   end:
+   for( i = 0; i < 3; ++i )
+   {
+      SCIPfreeMemoryArray(scip, &sign[i]);
+   }
+   SCIPfreeMemoryArray(scip, &sign);
    return SCIP_OKAY;
 }
 
