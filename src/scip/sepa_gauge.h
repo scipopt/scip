@@ -45,17 +45,17 @@
  *
  * By default, the separator runs only if the convex relaxation has at least two nonlinear convex constraints.
  *
- * In order to compute the boundary point, only nonlinear convex constraints that are violated by the point we want to
- * separate are consider. These constraints define a convex region for which \f$ \bar x \f$ is an interior point. Then,
+ * In order to compute the boundary point, we consider only nonlinear convex constraints that are violated by the point
+ * we want to separate. These constraints define a convex region for which \f$ \bar x \f$ is an interior point. Then,
  * a binary search is perform on the segment \f$[\bar x, x_0]\f$ in order to find the boundary point. Gradient cuts are
  * computed for each of these nonlinear convex constraints which are active at the boundary point.
  *
  * Technical details:
- *    - We consider a constraint for the binary search, only when its violation is larger than MIN_VIOLATION. The
- *    reason is that if the violation is too small, chances are that the point in the boundary is in the interior for
- *    this constraint and we wouldn't generate a cut for it anyway. On the other hand, if we were to generate a cut for
- *    this constraint, then it is likely that the boundary point is very close to the point to separate. Hence the
- *    cut generate would be very similar to the gradient cut at the point to separate.
+ *    - We consider a constraint for the binary search, only when its violation is larger than \f$ 10^{-4} \f$, see
+ *    MIN_VIOLATION in sepa_gauge.c. The reason is that if the violation is too small, chances are that the point in the
+ *    boundary is in the interior for this constraint and we wouldn't generate a cut for it anyway. On the other hand,
+ *    even if we generate a cut for this constraint, it is likely that the boundary point is very close to the point to
+ *    separate. Hence the cut generate would be very similar to the gradient cut at the point to separate.
  *    - Before separating, if a slight perturbation of the interior point in the direction of the point to separate is
  *    gives a point outside the region, we do not separate. The reason is that the interior point we computed could be
  *    almost at the boundary and the segment \f$[\bar x, x_0]\f$ could be tangent to the region. In that case, the cuts

@@ -16,6 +16,8 @@
 /**@file   sepa_gauge.c
  * @brief  gauge separator
  * @author Felipe Serrano
+ *
+ * @todo add SCIPisStopped(scip) to the condition of time consuming loops
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,15 +41,16 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define MIN_VIOLATION              1e-4 /* minimum violation of a constraint to be considered for separation */
+#define VIOLATIONFAC                100 /* constraints regarded as violated when violation > VIOLATIONFAC*SCIPfeastol */
 #define MAX_ITER                     75 /* maximum number of iterations for the line search */
 
 #define DEFAULT_NLPTIMELIMIT        0.0 /**< default time limit of NLP solver; 0.0 for no limit */
 #define DEFAULT_NLPITERLIM         1000 /**< default NLP iteration limit */
 
-#define NLPFEASTOL                 1e-7 /**< NLP feasibility tolerance */
+#define NLPFEASFAC                  0.1 /**< NLP feasibility tolerance = NLPFEASFAC * SCIP's feasibility tolerance */
 #define NLPVERBOSITY                  0 /**< NLP solver verbosity */
 
+#define INTERIOROBJVARLB           -100 /**< lower bound of the objective variable when computing interior point */
 /*
  * Data structures
  */
@@ -57,7 +60,6 @@ enum ConvexSide
 {
    LHS = 0,                                  /**< left hand side */
    RHS = 1,                                  /**< right hand side */
-   BOTH = 2                                  /**< both sides, ie, nlrow is linear */
 };
 typedef enum ConvexSide CONVEXSIDE;
 
@@ -129,8 +131,8 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
       assert(nlrow != NULL);
 
       /* linear case */
-      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR
-         || (SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL) )
+      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR ||
+            (SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL) )
          continue;
 
       /* nonlinear case */
@@ -140,7 +142,7 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
          sepadata->nlrows[sepadata->nnlrows] = nlrow;
          ++(sepadata->nnlrows);
       }
-      else if( !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE )
+      else if( !SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE )
       {
          sepadata->convexsides[sepadata->nnlrows] = LHS;
          sepadata->nlrows[sepadata->nnlrows] = nlrow;
@@ -151,12 +153,10 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
    return SCIP_OKAY;
 }
 
-/** computes an interior point of a convex NLP relaxation; builds the convex relaxation, modifies it to find an find an
- * interior point, solves it and frees it; if convex relaxation is \f$ \{ g(x) \le 0, l(x) \le 0 \} \f$ where \f$ g \f$
- * are nonlinear convex functions and \f$ l \f$ are linear functions, then we build the following problem to find an
- * interior point \f$ \min \{ t \colon g(x) \le t, l(x) \le 0 \} \f$
- * @note: we are giving \f$ t \f$ a lower bound of -100, so that the NLP is bounded
- * @note: the method also counts the number of nonlinear convex constraints and if there are < 2, then the convex
+/** computes an interior point of a convex NLP relaxation; builds the convex relaxation, modifies it to find an interior
+ * point, solves it and frees it; more details in @ref sepa_gauge.h
+ *
+ * @note the method also counts the number of nonlinear convex constraints and if there are < 2, then the convex
  * relaxation is not interesting and the separator will not run again
  */
 static
@@ -184,9 +184,11 @@ SCIP_RETCODE computeInteriorPoint(
    assert(sepadata != NULL);
    assert(!sepadata->skipsepa);
 
-   SCIPdebugMessage("Computing interior point\n");
+   SCIPdebugMsg(scip, "Computing interior point\n");
 
    /* create convex relaxation NLP */
+   assert(SCIPgetNNlpis(scip) > 0);
+
    nlpi = SCIPgetNlpis(scip)[0];
    assert(nlpi != NULL);
 
@@ -198,7 +200,7 @@ SCIP_RETCODE computeInteriorPoint(
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
    objvaridx = nvars;
-   objvarlb = -100;
+   objvarlb = INTERIOROBJVARLB;
    one = 1.0;
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, 1, &objvarlb, NULL, NULL) );
    SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, 0, NULL, NULL, NULL, 0) );
@@ -206,6 +208,8 @@ SCIP_RETCODE computeInteriorPoint(
    /* add objective variables to constraints; for this we need to get nlpi oracle to have access to number of
     * constraints and which constraints are nonlinear
     */
+   /* @todo: this code is only valid when using IPOPT and needs to be changed when new NLP solvers get interfaced */
+   assert(strcmp(SCIPnlpiGetName(nlpi), "ipopt") == 0);
    nlpioracle = (SCIP_NLPIORACLE *)SCIPgetNlpiOracleIpopt(nlpiprob);
    assert(nlpioracle != NULL);
    assert(SCIPnlpiOracleGetNVars(nlpioracle) == objvaridx + 1);
@@ -226,7 +230,7 @@ SCIP_RETCODE computeInteriorPoint(
    /* check if convex relaxation is interesting */
    if( nconvexnlrows < 2 )
    {
-      SCIPdebugMessage("convex relaxation is not interesting, only %d nonlinear convex rows; abort\n", nconvexnlrows);
+      SCIPdebugMsg(scip, "convex relaxation is not interesting, only %d nonlinear convex rows; abort\n", nconvexnlrows);
       sepadata->skipsepa = TRUE;
       goto CLEANUP;
    }
@@ -246,7 +250,7 @@ SCIP_RETCODE computeInteriorPoint(
       if( timelimit <= 1.0 )
       {
          SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         return SCIP_OKAY;
+         goto CLEANUP;
       }
    }
    if( sepadata->nlptimelimit > 0.0 )
@@ -255,13 +259,13 @@ SCIP_RETCODE computeInteriorPoint(
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASTOL) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute interior point */
-   SCIPdebugMessage("starting interior point computation\n");
+   SCIPdebugMsg(scip, "starting interior point computation\n");
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-   SCIPdebugMessage("finish interior point computation\n");
+   SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG
    {
@@ -271,7 +275,7 @@ SCIP_RETCODE computeInteriorPoint(
       SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
       SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, nlpistatistics) );
 
-      SCIPdebugMessage("nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
+      SCIPdebugMsg(scip, "nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
             SCIPnlpStatisticsGetNIterations(nlpistatistics), SCIPnlpStatisticsGetTotalTime(nlpistatistics),
             SCIPnlpiGetSolstat(nlpi, nlpiprob));
    }
@@ -282,12 +286,14 @@ SCIP_RETCODE computeInteriorPoint(
       SCIP_Real* nlpisol;
 
       SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL) );
-      SCIPdebugMessage("NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);
+
+      assert(nlpisol != NULL);
+      SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);
 
       /* if we found an interior point store it */
       if( SCIPisFeasNegative(scip, nlpisol[objvaridx]) )
       {
-         SCIPdebugMessage("Interior point found!, storing it\n");
+         SCIPdebugMsg(scip, "Interior point found!, storing it\n");
          SCIP_CALL( SCIPcreateSol(scip, &sepadata->intsol, NULL) );
          for( i = 0; i < nvars; i ++ )
          {
@@ -305,13 +311,13 @@ SCIP_RETCODE computeInteriorPoint(
       }
       else
       {
-         SCIPdebugMessage("We got a feasible point but not interior (objval: %g)\n", nlpisol[objvaridx]);
+         SCIPdebugMsg(scip, "We got a feasible point but not interior (objval: %g)\n", nlpisol[objvaridx]);
          sepadata->skipsepa = TRUE;
       }
    }
    else
    {
-      SCIPdebugMessage("We couldn't get an interior point (stat: %d)\n", SCIPnlpiGetSolstat(nlpi, nlpiprob));
+      SCIPdebugMsg(scip, "We couldn't get an interior point (stat: %d)\n", SCIPnlpiGetSolstat(nlpi, nlpiprob));
       sepadata->skipsepa = TRUE;
    }
 
@@ -324,7 +330,7 @@ CLEANUP:
 }
 
 
-/** find whether sol is in the interior, at the boundary or in the exterior of the region described by the
+/** find whether point is in the interior, at the boundary or in the exterior of the region described by the
  * intersection of nlrows[i] <= rhs if convexsides[i] = RHS or lhs <= nlrows[i] if convexsides[i] = LHS
  * @note: point corresponds to a convex combination between the lp solution and the interior point
  */
@@ -337,7 +343,7 @@ SCIP_RETCODE findPointPosition(
    CONVEXSIDE*           convexsides,        /**< sides of the nlrows involved in the region */
    SCIP_SOL*             point,              /**< point for which we want to know its position */
    POSITION*             position            /**< buffer to store position of sol */
-)
+   )
 {
    int i;
 
@@ -363,11 +369,13 @@ SCIP_RETCODE findPointPosition(
 
       if( convexside == RHS )
       {
+         assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
+
          /* if nlrow <= rhs is violated, then we are in the exterior */
          if( SCIPisFeasGT(scip, activity, SCIPnlrowGetRhs(nlrow)) )
          {
             *position = EXTERIOR;
-            SCIPdebugMessage("exterior because cons <%s> has activity %g. rhs: %g\n", SCIPnlrowGetName(nlrow),
+            SCIPdebugMsg(scip, "exterior because cons <%s> has activity %g. rhs: %g\n", SCIPnlrowGetName(nlrow),
                   activity, SCIPnlrowGetRhs(nlrow));
             SCIPdebug( SCIPprintNlRow(scip, nlrow, NULL) );
 
@@ -380,6 +388,7 @@ SCIP_RETCODE findPointPosition(
       }
       else
       {
+         assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
          assert(convexside == LHS);
 
          /* if lhs <= nlrow is violated, then we are in the exterior */
@@ -413,6 +422,11 @@ SCIP_RETCODE buildConvexCombination(
    SCIP_VAR** vars;
    int        nvars;
    int        i;
+
+   assert(scip != NULL);
+   assert(startpoint != NULL);
+   assert(endpoint != NULL);
+   assert(convexcomb != NULL);
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -452,31 +466,39 @@ SCIP_RETCODE findBoundaryPoint(
    CONVEXSIDE*           convexsides,        /**< sides of the nlrows involved in the region */
    SCIP_SOL*             intsol,             /**< point acting as 'interior point' */
    SCIP_SOL*             tosepasol,          /**< solution that should be separated */
-   SCIP_SOL*             sol                 /**< convex combination of intsol and lpsol */
+   SCIP_SOL*             sol,                /**< convex combination of intsol and lpsol */
+   POSITION*             position            /**< buffer to store position of sol */
    )
 {
    SCIP_Real lb;
    SCIP_Real ub;
    int i;
 
-   SCIPdebugMessage("starting binary search\n");
+   assert(scip != NULL);
+   assert(nlrows != NULL);
+   assert(nlrowsidx != NULL);
+   assert(convexsides != NULL);
+   assert(intsol != NULL);
+   assert(tosepasol != NULL);
+   assert(sol != NULL);
+   assert(position != NULL);
+
+   SCIPdebugMsg(scip, "starting binary search\n");
    lb = 0.0; /* corresponds to intsol */
    ub = 1.0; /* corresponds to tosepasol */
    for( i = 0; i < MAX_ITER; i++ )
    {
-      POSITION position;
-
       /* sol = (ub+lb)/2 * lpsol + (1 - (ub+lb)/2) * intsol */
       SCIP_CALL( buildConvexCombination(scip, (ub + lb)/2.0, intsol, tosepasol, sol) );
 
       /* find poisition of point: boundary, interior, exterior */
-      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
-      SCIPdebugMessage("Position: %d, lambda: %g\n", position, (ub + lb)/2.0);
+      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, position) );
+      SCIPdebugMsg(scip, "Position: %d, lambda: %g\n", position, (ub + lb)/2.0);
 
-      switch( position )
+      switch( *position )
       {
          case BOUNDARY:
-            SCIPdebugMessage("Done\n");
+            SCIPdebugMsg(scip, "Done\n");
             return SCIP_OKAY;
             break;
 
@@ -491,7 +513,7 @@ SCIP_RETCODE findBoundaryPoint(
             break;
       }
    }
-   SCIPdebugMessage("Done\n");
+   SCIPdebugMsg(scip, "Done\n");
    return SCIP_OKAY;
 }
 
@@ -629,9 +651,9 @@ SCIP_RETCODE generateCut(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
 #ifdef CUT_DEBUG
-   SCIPdebugMessage("gradient: ");
+   SCIPdebugMsg(scip, "gradient: ");
    SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-   SCIPdebugMessage("gradient dot x_0: %g\n", gradx0);
+   SCIPdebugMsg(scip, "gradient dot x_0: %g\n", gradx0);
 #endif
 
    /* gradient cut is f(x_0) - <grad f(x_0), x_0> + <grad f(x_0), x> <= rhs or >= lhs */
@@ -649,7 +671,7 @@ SCIP_RETCODE generateCut(
    }
 
 #ifdef CUT_DEBUG
-   SCIPdebugMessage("gradient cut: ");
+   SCIPdebugMsg(scip, "gradient cut: ");
    SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 #endif
 
@@ -703,18 +725,20 @@ SCIP_RETCODE separateCuts(
 
    /* don't separate if, under SCIP tolerances, only a slight perturbation of the interior point in the direction of
     * tosepasol gives a point that is in the exterior */
-   buildConvexCombination(scip, MIN_VIOLATION, intsol, tosepasol, sol);
+   buildConvexCombination(scip, VIOLATIONFAC * SCIPfeastol(scip), intsol, tosepasol, sol);
    SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
 
    if( position == EXTERIOR )
    {
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("segment joining intsol and tosepasol seems to be contained in the exterior of the region, can't separate\n");
+      SCIPdebugMsg(scip, "segment joining intsol and tosepasol seems to be contained in the exterior of the region, can't separate\n");
       /* move from intsol in the direction of -tosepasol to check if we are really tangent to the region */
       buildConvexCombination(scip, -1e-3, intsol, tosepasol, sol);
       SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, sol, &position) );
       if( position == EXTERIOR )
-         SCIPdebugMessage("line through intsol and tosepasol is tangent to region; can't separate\n");
+      {
+         SCIPdebugMsg(scip, "line through intsol and tosepasol is tangent to region; can't separate\n");
+      }
       SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, intsol, &position) );
       printf("Position of intsol is %s\n", position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
       SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, tosepasol, &position) );
@@ -736,9 +760,20 @@ SCIP_RETCODE separateCuts(
    }
 
    /* find point on boundary */
-   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, intsol, tosepasol, sol) );
+   if( position != BOUNDARY )
+   {
+      SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, intsol, tosepasol, sol,
+               &position) );
 
-   /* generate cuts */
+      /* if MAX_ITER weren't enough to find a point in the boundary we don't separate */
+      if( position != BOUNDARY )
+      {
+         SCIPdebugMsg(scip, "couldn't find boundary point, don't separate\n");
+         goto CLEANUP;
+      }
+   }
+
+   /* generate cuts at sol */
    for( i = 0; i < nnlrowsidx; i++ )
    {
       SCIP_NLROW* nlrow;
@@ -754,27 +789,25 @@ SCIP_RETCODE separateCuts(
 
       /* only separate nlrows that are tight at the boundary point */
       SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, sol, &activity) );
-      SCIPdebugMessage("cons <%s> at boundary point has activity: %g\n", SCIPnlrowGetName(nlrow), activity);
+      SCIPdebugMsg(scip, "cons <%s> at boundary point has activity: %g\n", SCIPnlrowGetName(nlrow), activity);
 
       if( (convexside == RHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetRhs(nlrow)))
             || (convexside == LHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetLhs(nlrow))) )
          continue;
 
-      /* cut is globally valid if called from root node; if nlrow doesn't come from a local cons, then it is also
-       * globally valid but since I don't know right now how to test this I just set it to local
-       * @todo: find out how to do it
-       */
+      /* cut is globally valid, since we work on nlrows from the NLP built at the root node, which are globally valid */
+      /* @todo: when local nlrows get supported in SCIP, one can think of recomputing the interior point */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip),
                FALSE, FALSE , TRUE) );
       SCIP_CALL( generateCut(scip, sol, sepadata->exprinterpreter, nlrow, convexside, row) );
 
       /* add cut */
-      SCIPdebugMessage("cut <%s> has efficacy %g\n", SCIProwGetName(row), SCIPgetCutEfficacy(scip, NULL, row));
+      SCIPdebugMsg(scip, "cut <%s> has efficacy %g\n", SCIProwGetName(row), SCIPgetCutEfficacy(scip, NULL, row));
       if( SCIPisCutEfficacious(scip, NULL, row) )
       {
          SCIP_Bool infeasible;
 
-         SCIPdebugMessage("adding cut\n");
+         SCIPdebugMsg(scip, "adding cut\n");
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 
          if( infeasible )
@@ -838,8 +871,9 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolGauge)
 
    if( sepadata->isintsolavailable )
    {
-      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrowsidx, sepadata->nlrowssize);
       SCIPfreeBlockMemoryArray(scip, &sepadata->convexsides, sepadata->nlrowssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
       SCIP_CALL( SCIPfreeSol(scip, &sepadata->intsol) );
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
    }
@@ -874,14 +908,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
       SCIPdebugMsg(scip, "not running because convex relaxation is uninteresting\n");
       return SCIP_OKAY;
    }
-   /* only call separator, if we are not close to terminating */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
 
    /* do not run if SCIP has not constructed an NLP */
    if( !SCIPisNLPConstructed(scip) )
    {
-      SCIPdebugMessage("NLP not constructed, skipping gauge separator\n");
+      SCIPdebugMsg(scip, "NLP not constructed, skipping gauge separator\n");
       return SCIP_OKAY;
    }
 
@@ -890,6 +921,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
     */
    if( !sepadata->isintsolavailable )
    {
+      /* @todo: one could store the convex nonlinear rows inside computeInteriorPoint */
       SCIP_CALL( computeInteriorPoint(scip, sepadata) );
       assert(sepadata->skipsepa || sepadata->isintsolavailable);
 
@@ -899,7 +931,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
       SCIP_CALL( storeNonlinearConvexNlrows(scip, sepadata, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip)) );
       SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) );
    }
-
 
 #ifdef SCIP_DISABLED_CODE
    /* get interior point: try to compute an interior point, otherwise use primal solution, otherwise use NLP solution */
@@ -922,25 +953,25 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
    {
       if( SCIPgetNSols(scip) > 0 )
       {
-         SCIPdebugMessage("Using current primal solution as interior point!\n");
+         SCIPdebugMsg(scip, "Using current primal solution as interior point!\n");
          SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->intsol, SCIPgetBestSol(scip)) );
          sepadata->isintsolavailable = TRUE;
       }
       else if( SCIPhasNLPSolution(scip, NULL) )
       {
-         SCIPdebugMessage("Using NLP solution as interior point!\n");
+         SCIPdebugMsg(scip, "Using NLP solution as interior point!\n");
          SCIP_CALL( SCIPcreateNLPSol(scip, &sepadata->intsol, NULL) );
          sepadata->isintsolavailable = TRUE;
       }
       else
       {
-         SCIPdebugMessage("We couldn't find an interior point, don't have a feasible nor an NLP solution; skip separator\n");
+         SCIPdebugMsg(scip, "We couldn't find an interior point, don't have a feasible nor an NLP solution; skip separator\n");
          return SCIP_OKAY;
       }
    }
 #endif
 
-   /* store lp sol to be able to use it to compute nlrows' activities */
+   /* store lp sol (or pseudo sol when lp is not solved) to be able to use it to compute nlrows' activities */
    SCIP_CALL( SCIPcreateCurrentSol(scip, &lpsol, NULL) );
 
    /* store indices of relevant constraints, ie, the ones that violate the lp sol */
@@ -958,15 +989,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
       {
          assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
 
-         if( activity - SCIPnlrowGetRhs(nlrow) < MIN_VIOLATION )
+         if( activity - SCIPnlrowGetRhs(nlrow) < VIOLATIONFAC * SCIPfeastol(scip) )
             continue;
       }
       else
       {
          assert(sepadata->convexsides[i] == LHS);
-         assert(!SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrow)));
+         assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
 
-         if( SCIPnlrowGetLhs(nlrow) - activity < MIN_VIOLATION )
+         if( SCIPnlrowGetLhs(nlrow) - activity < VIOLATIONFAC * SCIPfeastol(scip) )
             continue;
       }
 
@@ -975,13 +1006,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
    }
 
    /* separate only if there are violated nlrows */
+   SCIPdebugMsg(scip, "there are %d violated nlrows\n", sepadata->nnlrowsidx);
    if( sepadata->nnlrowsidx > 0 )
    {
       SCIP_CALL( separateCuts(scip, sepa, lpsol, result) );
-   }
-   else
-   {
-      SCIPdebugMessage("No violated nlrow, skip separation\n");
    }
 
    /* free lpsol */
