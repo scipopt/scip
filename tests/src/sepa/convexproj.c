@@ -49,7 +49,7 @@ static SCIP_VAR* y;
  * etc.
  *
  * In the test we use the following methods:
- *    storeConvexNlrows
+ *    storeNonlinearConvexNlrows
  *    setQuadraticObj
  */
 
@@ -264,9 +264,7 @@ void setup_sepadata(void)
    sepadata = SCIPsepaGetData(sepa);
    cr_assert(sepadata != NULL);
 
-   SCIP_CALL( storeConvexNlrows(scip, sepadata, nlrows, 3) );
-   cr_assert_eq(sepadata->nconvexnlrows, 3, "error: received %d convex nlrows", sepadata->nconvexnlrows);
-   cr_assert_eq(sepadata->nlinearnlrows, 0, "error: received %d linear nlrows", sepadata->nlinearnlrows);
+   SCIP_CALL( storeNonlinearConvexNlrows(scip, sepadata, nlrows, 3) );
    cr_assert_eq(sepadata->nnlrows, 3, "error: received %d nlrows", sepadata->nnlrows);
 
    /* initialize some of the sepadata */
@@ -361,6 +359,7 @@ void project(SCIP_Bool* isrhsconvex)
    SCIP_ROW* gradcut;
    SCIP_Real* coefs;
    SCIP_Real maxvio;
+   SCIP_RESULT result;
 
    test_setup();
    /* if no IPOPT available, don't run test */
@@ -389,9 +388,10 @@ void project(SCIP_Bool* isrhsconvex)
    cr_expect_float_eq(1.937730557, sepadata->constraintviolation[2], EPS, "got %f\n", sepadata->constraintviolation[2]);
 
    /* project and compute cuts */
-   SCIP_CALL( separateCuts(scip, sepa, toseparate_sol) );
+   SCIP_CALL( separateCuts(scip, sepa, toseparate_sol, &result) );
 
    /* check cut */
+   cr_assert_eq(result, SCIP_SEPARATED, "result is %d instead of SEPARATED", result);
    cr_assert_eq(SCIPgetNCuts(scip), 1, "got %d cuts", SCIPgetNCuts(scip));
    gradcut = SCIPgetCuts(scip)[0];
    coefs = SCIProwGetVals(gradcut);
