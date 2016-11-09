@@ -79,7 +79,7 @@ interface:
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new optional callback CONSENFORELAX for enforcement of relaxation solutions
-- new parameter fulllpinfo for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear constraints and can be
+- new parameter fulllpinfo for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear rows and can be
   enforced
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
