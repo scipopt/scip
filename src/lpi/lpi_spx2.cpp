@@ -1597,7 +1597,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
       assert( lpi->spx->preStrongbranchingBasisFreed() );
 
       /* get the row vector and the row's sides */
-      SVector rowvec = lpi->spx->rowVectorReal(row);
+      SVector rowvec = lpi->spx->rowVectorRealInternal(row);
       lhs = lpi->spx->lhsReal(row);
       rhs = lpi->spx->rhsReal(row);
 
@@ -1668,7 +1668,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
       assert( lpi->spx->preStrongbranchingBasisFreed() );
 
       /* get the col vector and the col's bounds and objective value */
-      SVector colvec = lpi->spx->colVectorReal(col);
+      SVector colvec = lpi->spx->colVectorRealInternal(col);
       obj = lpi->spx->objReal(col);
       lb = lpi->spx->lowerReal(col);
       ub = lpi->spx->upperReal(col);
@@ -1782,12 +1782,12 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    if( lpi->spx->numRowsReal() < lpi->spx->numColsReal() )
    {
       for( i = 0; i < lpi->spx->numRowsReal(); ++i )
-         (*nnonz) += lpi->spx->rowVectorReal(i).size();
+         (*nnonz) += lpi->spx->rowVectorRealInternal(i).size();
    }
    else
    {
       for( i = 0; i < lpi->spx->numColsReal(); ++i )
-         (*nnonz) += lpi->spx->colVectorReal(i).size();
+         (*nnonz) += lpi->spx->colVectorRealInternal(i).size();
    }
 
    return SCIP_OKAY;
@@ -1822,8 +1822,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
-      const Vector& lbvec = lpi->spx->lowerReal();
-      const Vector& ubvec = lpi->spx->upperReal();
+      const Vector& lbvec = lpi->spx->lowerRealInternal();
+      const Vector& ubvec = lpi->spx->upperRealInternal();
       for( i = firstcol; i <= lastcol; ++i )
       {
          lb[i-firstcol] = lbvec[i];
@@ -1839,7 +1839,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       for( i = firstcol; i <= lastcol; ++i )
       {
          beg[i-firstcol] = *nnonz;
-         const SVector& cvec = lpi->spx->colVectorReal(i);
+         const SVector& cvec = lpi->spx->colVectorRealInternal(i);
          for( j = 0; j < cvec.size(); ++j )
          {
             ind[*nnonz] = cvec.index(j);
@@ -1887,12 +1887,29 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       assert(rhs != NULL);
 
-      const Vector& lhsvec = lpi->spx->lhsReal();
-      const Vector& rhsvec = lpi->spx->rhsReal();
-      for( i = firstrow; i <= lastrow; ++i )
+      if( lpi->spx->persistentScaling() )
       {
-         lhs[i-firstrow] = lhsvec[i];
-         rhs[i-firstrow] = rhsvec[i];
+         DVector lhsvec;
+         DVector rhsvec;
+         lpi->spx->getRhsReal(rhsvec);
+         lpi->spx->getLhsReal(lhsvec);
+
+         for( i = firstrow; i <= lastrow; ++i )
+         {
+            lhs[i-firstrow] = lhsvec[i];
+            rhs[i-firstrow] = rhsvec[i];
+         }
+      }
+      else
+      {
+         const Vector& lhsvec = lpi->spx->lhsRealInternal();
+         const Vector& rhsvec = lpi->spx->rhsRealInternal();
+
+         for( i = firstrow; i <= lastrow; ++i )
+         {
+            lhs[i-firstrow] = lhsvec[i];
+            rhs[i-firstrow] = rhsvec[i];
+         }
       }
    }
    else
@@ -1904,12 +1921,29 @@ SCIP_RETCODE SCIPlpiGetRows(
       for( i = firstrow; i <= lastrow; ++i )
       {
          beg[i-firstrow] = *nnonz;
-         const SVector& rvec = lpi->spx->rowVectorReal(i);
-         for( j = 0; j < rvec.size(); ++j )
+
+
+         if( lpi->spx->persistentScaling() )
          {
-            ind[*nnonz] = rvec.index(j);
-            val[*nnonz] = rvec.value(j);
-            (*nnonz)++;
+            DSVector rvec;
+            lpi->spx->getRowVectorReal(i, rvec);
+
+            for( j = 0; j < rvec.size(); ++j )
+            {
+               ind[*nnonz] = rvec.index(j);
+               val[*nnonz] = rvec.value(j);
+               (*nnonz)++;
+            }
+         }
+         else
+         {
+            const SVector& rvec = lpi->spx->rowVectorRealInternal(i);
+            for( j = 0; j < rvec.size(); ++j )
+            {
+               ind[*nnonz] = rvec.index(j);
+               val[*nnonz] = rvec.value(j);
+               (*nnonz)++;
+            }
          }
       }
    }
@@ -2087,7 +2121,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
    assert(0 <= row && row < lpi->spx->numRowsReal());
    assert(val != NULL);
 
-   *val = lpi->spx->colVectorReal(col)[row];
+   *val = lpi->spx->colVectorRealInternal(col)[row];
 
    return SCIP_OKAY;
 }
@@ -3451,7 +3485,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* calculate the scalar product of the row in B^-1 and A */
    Vector binvvec(nrows, binv);
    for( c = 0; c < ncols; ++c )
-      coef[c] = binvvec * lpi->spx->colVectorReal(c);  /* scalar product */ /*lint !e1702*/
+      coef[c] = binvvec * lpi->spx->colVectorRealInternal(c);  /* scalar product */ /*lint !e1702*/
 
    /* free memory if it was temporarily allocated */
    BMSfreeMemoryArrayNull(&buf);
@@ -3494,7 +3528,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    /* col needs to be cleared because copying colVectorReal only regards nonzeros */
    col.clear();
-   col = lpi->spx->colVectorReal(c);
+   col = lpi->spx->colVectorRealInternal(c);
 
    /* solve */
    if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )
@@ -3963,6 +3997,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
       lpi->spx->setRandomSeed((unsigned int) ival);
+      break;
+#endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+   case SCIP_LPPAR_PERSISTENTSCALING:
+      lpi->spx->setBoolPar((bool) ival);
       break;
 #endif
    default:

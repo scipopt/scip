@@ -365,6 +365,7 @@ struct SCIP_Lp
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
+   SCIP_Bool             lpipersistentscaling;/**< use persistent LP scaling during branch and bound */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
 };

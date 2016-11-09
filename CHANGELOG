@@ -44,6 +44,7 @@ parameters:
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
+- new parameter "lp/persistentscaling" to preserve the LP scaling factors during branch and bound
 
 performance improvements:
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
