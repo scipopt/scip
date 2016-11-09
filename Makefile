@@ -1026,14 +1026,15 @@ depend:		scipdepend lpidepend nlpidepend maindepend objscipdepend
 -include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
+# make binary
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		-$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LDFLAGS) $(LINKCC_o)$@
+		-$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
-		-$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@ \
+		-$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 
