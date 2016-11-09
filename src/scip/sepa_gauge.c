@@ -49,7 +49,7 @@
 #define DEFAULT_NLPTIMELIMIT        0.0 /**< default time limit of NLP solver; 0.0 for no limit */
 #define DEFAULT_NLPITERLIM         1000 /**< default NLP iteration limit */
 
-#define NLPFEASFAC                  0.1 /**< NLP feasibility tolerance = NLPFEASFAC * SCIP's feasibility tolerance */
+#define NLPFEASFAC                  1e-1/**< NLP feasibility tolerance = NLPFEASFAC * SCIP's feasibility tolerance */
 #define NLPVERBOSITY                  0 /**< NLP solver verbosity */
 
 #define INTERIOROBJVARLB           -100 /**< lower bound of the objective variable when computing interior point */
@@ -271,15 +271,17 @@ SCIP_RETCODE computeInteriorPoint(
 
 #ifdef SCIP_DEBUG
    {
-      SCIP_NLPSTATISTICS* nlpistatistics;
+      SCIP_NLPSTATISTICS* nlpstatistics;
 
       /* get statistics */
       SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
-      SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, nlpistatistics) );
+      SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, nlpstatistics) );
 
       SCIPdebugMsg(scip, "nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
-            SCIPnlpStatisticsGetNIterations(nlpistatistics), SCIPnlpStatisticsGetTotalTime(nlpistatistics),
+            SCIPnlpStatisticsGetNIterations(nlpstatistics), SCIPnlpStatisticsGetTotalTime(nlpstatistics),
             SCIPnlpiGetSolstat(nlpi, nlpiprob));
+
+      SCIPnlpStatisticsFree(&nlpstatistics);
    }
 #endif
 
@@ -736,25 +738,29 @@ SCIP_RETCODE separateCuts(
       SCIPdebugMsg(scip, "segment joining intsol and tosepasol seems to be contained in the exterior of the region, can't separate\n");
       /* move from intsol in the direction of -tosepasol to check if we are really tangent to the region */
       buildConvexCombination(scip, -1e-3, intsol, tosepasol, sol);
-      SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, sol, &position) );
+      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
       if( position == EXTERIOR )
       {
          SCIPdebugMsg(scip, "line through intsol and tosepasol is tangent to region; can't separate\n");
       }
-      SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, intsol, &position) );
-      printf("Position of intsol is %s\n", position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
-      SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, tosepasol, &position) );
-      printf("Position of tosepasol is %s\n", position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
+      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, intsol, &position) );
+      printf("Position of intsol is %s\n",
+            position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
+      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, tosepasol, &position) );
+      printf("Position of tosepasol is %s\n",
+            position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
 
       /* slightly move from intsol in the direction of +-tosepasol */
-      buildConvexCombination(scip, 1e-5, intsol, tosepasol, sol);
-      SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, sol, &position) );
-      printf("Position of intsol + 0.00001(tosepasol - inisol) is %s\n", position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
+      SCIP_CALL( buildConvexCombination(scip, 1e-5, intsol, tosepasol, sol) );
+      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
+      printf("Position of intsol + 0.00001(tosepasol - inisol) is %s\n",
+            position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
       SCIPdebug( SCIPprintSol(scip, sol, NULL, FALSE) );
 
-      buildConvexCombination(scip, -1e-5, intsol, tosepasol, sol);
-      SCIP_CALL( findPointPosition(scip, sepadata->nlrows, sepadata->isrhsconvex, nlrowsidx, nnlrowsidx, sol, &position) );
-      printf("Position of intsol - 0.00001(tosepasol - inisol) is %s\n", position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
+      SCIP_CALL( buildConvexCombination(scip, -1e-5, intsol, tosepasol, sol) );
+      SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
+      printf("Position of intsol - 0.00001(tosepasol - inisol) is %s\n",
+            position == EXTERIOR ? "exterior" : position == INTERIOR ? "interior": "boundary");
       SCIPdebug( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
       *result = SCIP_DIDNOTFIND;
