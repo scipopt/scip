@@ -1941,6 +1941,7 @@ SCIP_RETCODE SCIPsetRealParam(
    );
 
 /** checks whether parameter value of an existing SCIP_Real paramter is valid */
+EXTERN
 SCIP_Bool SCIPisRealParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
