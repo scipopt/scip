@@ -756,7 +756,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
       SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_locks", FALSE, FALSE, TRUE, &valid) );
 
