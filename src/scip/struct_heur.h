@@ -90,6 +90,7 @@ struct SCIP_Heur
    SCIP_DIVESET**        divesets;           /**< array of diving controllers of this heuristic */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this heuristic for the next stages */
    SCIP_CLOCK*           heurclock;          /**< heuristic execution time */
+   SCIP_HEURSTAT*        lastmergedstat;     /**< last merged statistics */
    int                   priority;           /**< priority of the primal heuristic */
    int                   freq;               /**< frequency for calling primal heuristic */
    int                   freqofs;            /**< frequency offset for calling primal heuristic */
@@ -100,6 +101,16 @@ struct SCIP_Heur
    SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */
+};
+
+/** primal heuristics data */
+struct SCIP_HeurStat
+{
+   SCIP_Longint          ncalls;             /**< number of times, this heuristic was called */
+   SCIP_Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
+   SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found so far by this heuristic */
+   SCIP_Real             setuptime;          /**< time spend for setting up this heuristic for the next stages */
+   SCIP_Real              heurclock;          /**< heuristic execution time */
 };
 
 #ifdef __cplusplus

@@ -48,6 +48,7 @@ extern "C" {
 typedef unsigned int SCIP_DIVETYPE;
 
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
+typedef struct SCIP_HeurStat SCIP_HEURSTAT;       /**< primal heuristic statistics */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
 
