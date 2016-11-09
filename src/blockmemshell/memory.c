@@ -2223,6 +2223,16 @@ void BMSgarbagecollectBlockMemory_call(
    }
 }
 
+/** returns the total number of bytes in the block memory */
+long long BMSgetBlockMemoryTotal_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return BMSgetBlockMemoryUsed_call(blkmem) + BMSgetBlockMemoryLazy_call(blkmem);
+}
+
 /** returns the number of allocated bytes in the block memory */
 long long BMSgetBlockMemoryUsed_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */

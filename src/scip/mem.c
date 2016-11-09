@@ -105,7 +105,7 @@ SCIP_Longint SCIPmemGetTotal(
 }
 
 /** returns the maximal number of bytes used in block memory */
-SCIP_Longint SCIPblkmemGetUsedMax(
+SCIP_Longint SCIPmemGetUsedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    )
 {
@@ -115,7 +115,7 @@ SCIP_Longint SCIPblkmemGetUsedMax(
 }
 
 /** returns the maximal number of bytes unused in block memory */
-SCIP_Longint SCIPblkmemGetLazyMax(
+SCIP_Longint SCIPmemGetLazyBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    )
 {
@@ -125,7 +125,7 @@ SCIP_Longint SCIPblkmemGetLazyMax(
 }
 
 /** returns the maximal number of bytes in block memory */
-SCIP_Longint SCIPblkmemGetTotalMax(
+SCIP_Longint SCIPmemGetTotalBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    )
 {

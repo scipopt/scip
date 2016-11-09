@@ -424,6 +424,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
+#define BMSgetBlockMemoryTotal(mem)           BMSgetBlockMemoryTotal_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
 #define BMSgetBlockMemoryLazy(mem)            BMSgetBlockMemoryLazy_call(mem)
 #define BMSgetBlockMemoryUsedMax(mem)         BMSgetBlockMemoryUsedMax_call(mem)
@@ -590,6 +591,12 @@ void BMSfreeBlockMemoryNull_call(
 EXTERN
 void BMSgarbagecollectBlockMemory_call(
    BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** returns the total number of bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryTotal_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 /** returns the number of allocated bytes in the block memory */
