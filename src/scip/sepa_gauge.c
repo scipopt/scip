@@ -17,7 +17,9 @@
  * @brief  gauge separator
  * @author Felipe Serrano
  *
+ * @todo should separator only be run when SCIPallColsInLP is true?
  * @todo add SCIPisStopped(scip) to the condition of time consuming loops
+ * @todo check if it makes sense to implement the copy callback
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
