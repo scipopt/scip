@@ -64,7 +64,6 @@ struct SCIP_HeurData
 {
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
    int                   nrndpoints;         /**< number of random points generated per execution call */
-   unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_Real             maxboundsize;       /**< maximum variable domain size for unbounded variables */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_HEUR*            heursubnlp;         /**< sub-NLP heuristic */
@@ -136,8 +135,8 @@ SCIP_RETCODE sampleRandomPoints(
 
       for( i = 0; i < nvars; ++i )
       {
-         lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
-         ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
+         lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
+         ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
 
          if( SCIPisEQ(scip, lb, ub) )
             val = (lb + ub) / 2.0;
@@ -414,8 +413,8 @@ SCIP_RETCODE improvePoint(
       {
          /* adjust point */
          updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
-         updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i]));
-         updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i]));
+         updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
+         updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i])); /*lint !e666*/
 
          SCIP_CALL( SCIPsetSolVal(scip, point, vars[i], updatevec[i]) );
       }
@@ -426,7 +425,8 @@ SCIP_RETCODE improvePoint(
       /* check stopping criterion */
       if( r % minimpriter == 0 && r > 0 )
       {
-         if( *minfeas <= MINFEAS || (*minfeas-lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac )
+         if( *minfeas <= MINFEAS
+            || (*minfeas-lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac ) /*lint !e666*/
             break;
          lastminfeas = *minfeas;
       }
@@ -663,7 +663,7 @@ SCIP_RETCODE solveNLP(
 
    /** round point for sub-NLP heuristic */
    SCIP_CALL( SCIProundSol(scip, refpoint, success) );
-   SCIPdebugMsg(scip, "rounding of refpoint successfully? %d\n", *success);
+   SCIPdebugMsg(scip, "rounding of refpoint successfully? %u\n", *success);
 
    /* round variables manually if the locks did not allow us to round them */
    if( !(*success) )
@@ -679,8 +679,8 @@ SCIP_RETCODE solveNLP(
 
             /* round and adjust value */
             val = SCIPround(scip, val);
-            val = MIN(val, SCIPvarGetUbLocal(vars[i]));
-            val = MAX(val, SCIPvarGetLbLocal(vars[i]));
+            val = MIN(val, SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
+            val = MAX(val, SCIPvarGetLbLocal(vars[i])); /*lint !e666*/
             assert(SCIPisFeasIntegral(scip, val));
 
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, vars[i], val) );
@@ -689,7 +689,8 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL, NULL) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove,
+         NULL, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
    /* let sub-NLP heuristic decide whether the solution is feasible or not */
