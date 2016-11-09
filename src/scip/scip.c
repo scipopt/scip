@@ -43500,6 +43500,19 @@ SCIP_Longint SCIPgetMemUsed(
    return SCIPmemGetUsed(scip->mem);
 }
 
+/** returns the total number of bytes in block and buffer memory
+ *
+ *  @return the total number of bytes in block and buffer memory.
+ */
+SCIP_Longint SCIPgetMemTotal(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPmemGetTotal(scip->mem);
+}
+
 /** returns the estimated number of bytes used by external software, e.g., the LP solver
  *
  *  @return the estimated number of bytes used by external software, e.g., the LP solver.
