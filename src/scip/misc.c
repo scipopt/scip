@@ -3042,6 +3042,7 @@ SCIP_RETCODE SCIPhashmapRemove(
          /* element should be moved to the left and next element needs to be checked */
          hashmap->slots[pos].origin = hashmap->slots[nextpos].origin;
          hashmap->slots[pos].image = hashmap->slots[nextpos].image;
+         hashmap->hashes[pos] = hashmap->hashes[nextpos];
          hashmap->hashes[nextpos] = 0;
 
          pos = nextpos;

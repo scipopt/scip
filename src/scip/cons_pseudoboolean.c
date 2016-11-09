@@ -8976,6 +8976,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
          }
 
          /* insert new mapping */
+         assert(!SCIPhashmapExists(conshdlrdata->hashmap, (void*)res));
          SCIP_CALL( SCIPhashmapInsert(conshdlrdata->hashmap, (void*)res, (void*)newdata) );
       }
       else
