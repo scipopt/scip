@@ -458,7 +458,12 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySize(mem,ptr,size)                 BMSfreeMemory(ptr)
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size)             BMSfreeMemoryNull(ptr)
 #define BMSgarbagecollectBlockMemory(mem)                    /**/
+#define BMSgetBlockMemoryTotal(mem)                          0LL
 #define BMSgetBlockMemoryUsed(mem)                           0LL
+#define BMSgetBlockMemoryLazy(mem)                           0LL
+#define BMSgetBlockMemoryUsedMax(mem)                        0LL
+#define BMSgetBlockMemoryLazyMax(mem)                        0LL
+#define BMSgetBlockMemoryTotalMax(mem)                       0LL
 #define BMSgetBlockPointerSize(mem,ptr)                      0
 #define BMSdisplayBlockMemory(mem)                           /**/
 #define BMSblockMemoryCheckEmpty(mem)                        0LL
