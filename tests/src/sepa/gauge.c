@@ -308,6 +308,7 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_SOL* interior_sol;
    SCIP_SOL* toseparate_sol;
    SCIP_SOL* boundary_sol;
+   POSITION position;
    SCIP_Real feas;
    int nlrowsidx[2] = {0, 1};
    int nnlrowsidx = 2;
@@ -332,8 +333,10 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_CALL( SCIPsetSolVal(scip, toseparate_sol, y, 0.25) );
 
    /* find boundary point */
+   position = EXTERIOR;
    SCIP_CALL( SCIPcreateSol(scip, &boundary_sol, NULL) );
-   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol) );
+   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol, &position) );
+   cr_expect_eq(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
 
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), 0.265033442069232, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y), 0.346993311586154, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
@@ -352,7 +355,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_CALL( SCIPsetSolVal(scip, toseparate_sol, y, 0.0) );
 
    /* find boundary point */
-   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol) );
+   position = EXTERIOR;
+   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol, &position) );
+   cr_expect_eq(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
 
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), 0.4213473910790077, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y), 0.1775336239690863, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
@@ -371,7 +376,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_CALL( SCIPsetSolVal(scip, toseparate_sol, y,  0.0) );
 
    /* find boundary point */
-   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol) );
+   position = EXTERIOR;
+   SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol, &position) );
+   cr_expect_eq(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
 
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), -0.618033988749895, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
    cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y),  0.381966011250105, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
