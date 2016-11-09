@@ -20,7 +20,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/prop_nlobbt.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/nlpi.h"
@@ -167,7 +166,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
 
    /* create convex NLP relaxation */
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5) );
+   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5, FALSE) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);
