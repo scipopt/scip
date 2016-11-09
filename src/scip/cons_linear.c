@@ -14853,14 +14853,14 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
    /* check all linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
          /* insert LP row as cut; note that the LP might contain the LP row but it is not contained in the, to the
           * solution corresponding, relaxator
           */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
 
          if ( cutoff )
          {
