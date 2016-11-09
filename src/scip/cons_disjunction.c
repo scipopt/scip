@@ -371,6 +371,41 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool branch;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
+
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
+   {
+      /* check the disjunction */
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
+
+      if( *result == SCIP_INFEASIBLE && branch )
+      {
+         SCIP_CALL( branchCons(scip, conss[c], result) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -474,27 +509,7 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool branch;
-   int c;
-
-   *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
-
-   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
-   {
-      /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
-
-      if( *result == SCIP_INFEASIBLE && branch )
-      {
-         SCIP_CALL( branchCons(scip, conss[c], result) );
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
 
    return SCIP_OKAY;
 }
@@ -504,27 +519,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool branch;
-   int c;
-
-   *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
-
-   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
-   {
-      /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, FALSE, FALSE, result) );
-
-      if( *result == SCIP_INFEASIBLE && branch )
-      {
-         SCIP_CALL( branchCons(scip, conss[c], result) );
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
 
    return SCIP_OKAY;
 }
@@ -534,27 +529,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxDisjunction)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool branch;
-   int c;
-
-   *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
-
-   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
-   {
-      /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
-
-      if( *result == SCIP_INFEASIBLE && branch )
-      {
-         SCIP_CALL( branchCons(scip, conss[c], result) );
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
 
    return SCIP_OKAY;
 }
