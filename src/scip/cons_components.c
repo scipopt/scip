@@ -19,8 +19,8 @@
  *
  * This constraint handler looks for independent components.
  */
-#define DETAILED_OUTPUT
-#define SCIP_DEBUG
+//#define DETAILED_OUTPUT
+//#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -981,7 +981,7 @@ SCIP_RETCODE solveComponent(
    {
       assert(component->laststatus != SCIP_STATUS_OPTIMAL);
 
-      printf("solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
+      SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
          SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
       if( component->ncalls == 0 )
@@ -1029,7 +1029,7 @@ SCIP_RETCODE solveComponent(
       component->laststatus = status;
       ++component->ncalls;
 
-      printf("--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
+      SCIPdebugMsg(scip, "--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
          status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
          SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
@@ -1469,7 +1469,7 @@ SCIP_RETCODE createAndSplitProblem(
             else
                ++ncontvars;
          }
-         SCIPinfoMessage(scip, NULL, "component %d at node %lld, depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
+         SCIPdebugMsg(scip, "component %d at node %lld, depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
             comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth,
             component->nvars, nbinvars, nintvars, ncontvars, ncompconss);
       }
@@ -2013,7 +2013,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPinfoMessage(scip, NULL, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d (%d)\n",
+         SCIPdebugMsg(scip, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d (%d)\n",
             ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
          /* if there are components with size smaller than the limit, we merge them with the smallest component */
@@ -2162,7 +2162,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       int ncompconss;
       int comp;
 
-      SCIPinfoMessage(scip, NULL, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d int, %d bin, %d cont), %d conss\n",
+      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d int, %d bin, %d cont), %d conss\n",
          ncomponents, ncompsmaxsize, SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip), SCIPgetNConss(scip));
 
       /* build subscip */
@@ -2214,7 +2214,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
                else
                   ++ncontvars;
             }
-            SCIPinfoMessage(scip, NULL, "solve component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+            SCIPdebugMsg(scip, "solve component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
                comp, ncompvars, nbinvars, nintvars, ncontvars, ncompconss);
          }
 #endif
