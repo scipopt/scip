@@ -1558,8 +1558,6 @@ SCIP_RETCODE copyCuts(
    return SCIP_OKAY;
 }
 
-#define HASHTABLESIZE_FACTOR 5
-
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -1674,7 +1672,7 @@ SCIP_RETCODE copyProb(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -1682,7 +1680,7 @@ SCIP_RETCODE copyProb(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -1994,7 +1992,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    /* create the variable mapping hash map */
    if( uselocalvarmap )
    {
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2002,7 +2000,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2209,7 +2207,7 @@ SCIP_RETCODE copyVars(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2217,7 +2215,7 @@ SCIP_RETCODE copyVars(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2594,7 +2592,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2603,7 +2601,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    if( uselocalconsmap )
    {
       /* create local constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
    {
@@ -2718,7 +2716,7 @@ SCIP_RETCODE SCIPcopyConss(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2726,7 +2724,7 @@ SCIP_RETCODE SCIPcopyConss(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2918,7 +2916,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2926,7 +2924,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -3208,7 +3206,7 @@ SCIP_RETCODE SCIPcopyConflicts(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -3216,7 +3214,7 @@ SCIP_RETCODE SCIPcopyConflicts(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -3639,7 +3637,7 @@ SCIP_RETCODE doCopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -3647,7 +3645,7 @@ SCIP_RETCODE doCopy(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -23461,7 +23459,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * 2 * (nbinvars+nimplvars))) );
+   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -35796,7 +35794,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* copy the original problem to the sub-SCIP */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * norigvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
       SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
 
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
@@ -43498,6 +43496,19 @@ SCIP_Longint SCIPgetMemUsed(
    assert(scip != NULL);
 
    return SCIPmemGetUsed(scip->mem);
+}
+
+/** returns the total number of bytes in block and buffer memory
+ *
+ *  @return the total number of bytes in block and buffer memory.
+ */
+SCIP_Longint SCIPgetMemTotal(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPmemGetTotal(scip->mem);
 }
 
 /** returns the estimated number of bytes used by external software, e.g., the LP solver

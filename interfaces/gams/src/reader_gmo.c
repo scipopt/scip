@@ -460,7 +460,7 @@ SCIP_RETCODE makeExprtree(
    nvars = 0;
    varssize = 10;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-   SCIP_CALL( SCIPhashmapCreate(&var2idx, blkmem, SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&var2idx, blkmem, SCIPgetNVars(scip)) );
 
    nargs = -1;
 
