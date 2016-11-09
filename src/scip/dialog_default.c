@@ -1355,6 +1355,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display subscipstatistics command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubscipStatistics)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPprintSubscipStatistics(scip, NULL) );
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display reoptstatistics command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics)
 {  /*lint --e{715}*/
@@ -3601,6 +3615,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayStatistics, NULL, NULL,
             "statistics", "display problem and optimization statistics", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display sub-SCIP statistics */
+   if( !SCIPdialogHasEntry(submenu, "subscipstatistics") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplaySubscipStatistics, NULL, NULL,
+            "subscipstatistics", "display sub-SCIP statistics", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

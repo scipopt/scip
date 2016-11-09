@@ -38,6 +38,8 @@ struct SCIP_Diveset
    SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
+   SCIP_DIVESETSTAT*     subscipsstat;       /**< subscip statistics for this heuristic */
+   SCIP_DIVESETSTAT*     lastmergedstat;     /**< last merged statistics */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -90,6 +92,7 @@ struct SCIP_Heur
    SCIP_DIVESET**        divesets;           /**< array of diving controllers of this heuristic */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this heuristic for the next stages */
    SCIP_CLOCK*           heurclock;          /**< heuristic execution time */
+   SCIP_HEURSTAT*        subscipsstat;       /**< subscip statistics for this heuristic */
    SCIP_HEURSTAT*        lastmergedstat;     /**< last merged statistics */
    int                   priority;           /**< priority of the primal heuristic */
    int                   freq;               /**< frequency for calling primal heuristic */
@@ -103,15 +106,37 @@ struct SCIP_Heur
    char                  dispchar;           /**< display character of primal heuristic */
 };
 
-/** primal heuristics data */
+/** primal heuristics statistics */
 struct SCIP_HeurStat
 {
+   SCIP_HEUR*            origheur;           /**< pointer to heuristic data in original SCIP instance (target SCIP in merge call) */
    SCIP_Longint          ncalls;             /**< number of times, this heuristic was called */
    SCIP_Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
    SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found so far by this heuristic */
    SCIP_Real             setuptime;          /**< time spend for setting up this heuristic for the next stages */
-   SCIP_Real              heurclock;          /**< heuristic execution time */
+   SCIP_Real             heurclock;          /**< heuristic execution time */
 };
+
+/** diving heuristics statistics */
+struct SCIP_DivesetStat
+{
+   SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
+   SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
+   SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */
+   SCIP_Longint          totalsoldepth;      /**< the sum of depths at which this dive set found solutions */
+   SCIP_Longint          totalnnodes;        /**< the total number of probing nodes explored by this dive set */
+   SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
+   SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
+   SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
+   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
+   int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
+   int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */
+   int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
+   int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
+   int                   ncalls;             /**< the total number of calls of this dive set */
+   int                   nsolcalls;          /**< number of calls with a leaf solution */
+};
+
 
 #ifdef __cplusplus
 }
