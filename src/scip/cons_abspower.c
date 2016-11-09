@@ -2173,8 +2173,8 @@ SCIP_Real proposeBranchingPoint(
       xlb += consdata->xoffset;
       xub += consdata->xoffset;
 
-      xref = (sol == NULL) ? SCIPgetVarSol(scip, x) + consdata->xoffset : SCIPgetSolVal(scip, sol, x) + consdata->xoffset;
-      zref = (sol == NULL) ? SCIPgetVarSol(scip, consdata->z) : SCIPgetSolVal(scip, sol, consdata->z);
+      xref = SCIPgetSolVal(scip, sol, x) + consdata->xoffset;
+      zref = SCIPgetSolVal(scip, sol, consdata->z);
       if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* signpow(x,n,offset) + c*z <= 0 is violated
