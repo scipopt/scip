@@ -73,7 +73,7 @@
 #define DEFAULT_UPGRRESULTANT      TRUE /**< should all binary resultant variables be upgraded to implicit binary variables */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving be performed? */
 
-#define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
+#define HASHSIZE_ANDCONS            500 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -3272,7 +3272,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -3287,9 +3286,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -3315,7 +3313,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_ANDCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyAndcons, hashKeyEqAndcons, hashKeyValAndcons, (void*) scip) );
@@ -3909,8 +3907,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
 #ifdef GMLGATEPRINTING
 
-#define HASHTABLESIZE_FACTOR 5
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAnd)
@@ -3961,7 +3957,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);

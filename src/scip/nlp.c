@@ -254,7 +254,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
    /* create hash map from variable to indices in tree->vars and check if there is a non-fixed variable */
    havefixedvar = FALSE;
-   SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, SCIPcalcHashtableSize(5 * tree->nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, tree->nvars) );
    for( i = 0; i < tree->nvars; ++i )
    {
       SCIP_CALL( SCIPhashmapInsert(varhash, tree->vars[i], (void*)(size_t)i) );
@@ -1078,7 +1078,7 @@ SCIP_RETCODE nlrowSetupQuadVarsHash(
    if( nlrow->nquadvars < 3 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPhashmapCreate(&nlrow->quadvarshash, blkmem, SCIPcalcHashtableSize(5 * nlrow->nquadvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&nlrow->quadvarshash, blkmem, nlrow->nquadvars) );
    assert(nlrow->quadvarshash != NULL);
 
    for( i = 0; i < nlrow->nquadvars; ++i )
@@ -5105,7 +5105,7 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->nvars = 0;
    (*nlp)->sizevars = 0;
    (*nlp)->vars = NULL;
-   SCIP_CALL( SCIPhashmapCreate(&(*nlp)->varhash, blkmem, SCIPcalcHashtableSize(5 * nvars_estimate)) );
+   SCIP_CALL( SCIPhashmapCreate(&(*nlp)->varhash, blkmem, nvars_estimate) );
 
    (*nlp)->nvars_solver = 0;
    (*nlp)->sizevars_solver = 0;

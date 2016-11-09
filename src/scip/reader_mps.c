@@ -2955,7 +2955,7 @@ SCIP_RETCODE checkVarnames(
    faulty = 0;
 
    /* allocate memory */
-   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, varnames, nvars) );
 
    /* check if the variable names are not to long */
@@ -3710,14 +3710,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* create hashtable for storing aggregated variables */
    if( nfixedvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), 5 * nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
    else
       varFixedHash = NULL;
 
    if( nvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 5 * nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
    else
       indicatorSlackHash = NULL;

@@ -131,10 +131,10 @@
                                            *   type
                                            */
 
+#define HASHSIZE_LINEARCONS           500 /**< minimal size of hash table in linear constraint tables */
 #define MAXVALRECOMP                1e+06 /**< maximal abolsute value we trust without recomputing the activity */
 #define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
 
-#define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
@@ -12683,12 +12683,9 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real maxabsrealval;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
-   unsigned int addval;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12708,23 +12705,11 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   addval = (unsigned int) REALABS(consdata->vals[0]);
-   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
-   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
-
-   maxabsrealval = consdataGetMaxAbsval(consdata);
-   /* hash value depends on vectors of variable indices */
-   if( maxabsrealval < (SCIP_Real) INT_MAX )
-   {
-      if( maxabsrealval < 1.0 )
-         addval += (unsigned int) (MULTIPLIER * maxabsrealval);
-      else
-         addval += (unsigned int) maxabsrealval;
-   }
-
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx + addval; /*lint !e701*/
-
-   return hashval;
+   /* using only the variable indices as hash, since the values are compared by epsilon */
+   return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
+                       SCIPrealHashCode(consdata->vals[0]),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2]),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1]));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -12755,7 +12740,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(nchgsides != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_LINEARCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyLinearcons, hashKeyEqLinearcons, hashKeyValLinearcons, (void*) scip) );
