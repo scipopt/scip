@@ -16,6 +16,8 @@
 /**@file   sepa_convexproj.c
  * @brief  convexproj separator
  * @author Felipe Serrano
+ *
+ * @todo should separator only be run when SCIPallColsInLP is true?
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -55,7 +57,6 @@ enum ConvexSide
 {
    LHS = 0,                                  /**< left hand side */
    RHS = 1,                                  /**< right hand side */
-   BOTH = 2                                  /**< both sides, ie, nlrow is linear */
 };
 typedef enum ConvexSide CONVEXSIDE;
 
@@ -76,6 +77,8 @@ struct SCIP_SepaData
    SCIP_NLROW**          nlrows;             /**< convex nlrows */
    CONVEXSIDE*           convexsides;        /**< which sides make the nlrows convex */
    SCIP_Real*            constraintviolation;/**< array storing the violation of constraint by current solution; 0.0 if it is not violated */
+   int                   nnlrows;            /**< total number of nlrows */
+   int                   nlrowssize;         /**< memory allocated for nlrows, convexsides and nlrowsidx */
 
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
 
@@ -84,12 +87,7 @@ struct SCIP_SepaData
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
    int                   maxdepth;           /**< maximal depth at which the separator is applied */
 
-   /* statistic variables */
-   int                   nconvexnlrows;      /**< total number of convex nonlinear nlrows */
-   int                   nlinearnlrows;      /**< total number of linear nlrows */
-   int                   nnlrows;            /**< total number of nlrows */
    int                   ncuts;              /**< number of cuts generated */
-   int                   ncutsadded;         /**< number of cuts added in current call */
 };
 
 
@@ -111,9 +109,10 @@ SCIP_RETCODE sepadataClear(
       assert(sepadata->nlpi != NULL);
 
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlpivars, sepadata->nlpinvars);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nnlrows);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->convexsides, sepadata->nnlrows);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->constraintviolation, sepadata->nnlrows);
+
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->convexsides, sepadata->nlrowssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->constraintviolation, sepadata->nlrowssize);
       SCIPhashmapFree(&sepadata->var2nlpiidx);
       SCIPnlpiFreeProblem(sepadata->nlpi, &sepadata->nlpiprob);
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
@@ -196,7 +195,6 @@ SCIP_RETCODE generateCut(
    assert(exprint != NULL);
    assert(nlrow != NULL);
    assert(row != NULL);
-   assert(convexside != BOTH);
 
    sepadata = SCIPsepaGetData(sepa);
 
@@ -475,10 +473,6 @@ SCIP_RETCODE separateCuts(
                continue;
 
             convexside = sepadata->convexsides[i];
-            /* ignore linear constraints, since they shouldn't be violated by `sol` */
-            if( convexside == BOTH )
-               continue;
-
             nlrow = sepadata->nlrows[i];
             assert(nlrow != NULL);
 
@@ -518,7 +512,6 @@ SCIP_RETCODE separateCuts(
                   else
                   {
                      *result = SCIP_SEPARATED;
-                     sepadata->ncutsadded++;
                   }
                }
 
@@ -620,10 +613,6 @@ SCIP_RETCODE computeMaxViolation(
    {
       SCIP_Real activity;
 
-      /* skip linear constraints */
-      if( sepadata->convexsides[i] == BOTH )
-         continue;
-
       nlrow = sepadata->nlrows[i];
 
       /* get activity of nlrow */
@@ -633,11 +622,15 @@ SCIP_RETCODE computeMaxViolation(
       if( sepadata->convexsides[i] == RHS )
       {
          assert(SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX);
+         assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
+
          sepadata->constraintviolation[i] = MAX(activity - SCIPnlrowGetRhs(nlrow), 0.0);
       }
       if( sepadata->convexsides[i] == LHS )
       {
          assert(SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE);
+         assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
+
          sepadata->constraintviolation[i] = MAX(SCIPnlrowGetLhs(nlrow) - activity, 0.0);
       }
 
@@ -652,10 +645,9 @@ SCIP_RETCODE computeMaxViolation(
 }
 
 
-/** stores, from the constraints represented by nlrows, the convex ones in sepadata
- * counts the number of linear and nonlinear constraints as well */
+/** stores, from the constraints represented by nlrows, the nonlinear convex ones in sepadata */
 static
-SCIP_RETCODE storeConvexNlrows(
+SCIP_RETCODE storeNonlinearConvexNlrows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_NLROW**          nlrows,             /**< nlrows from which to store convex ones */
@@ -669,12 +661,12 @@ SCIP_RETCODE storeConvexNlrows(
 
    SCIPdebugMsg(scip, "storing convex nlrows\n");
 
+   sepadata->nlrowssize = nnlrows;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(sepadata->nlrows), nnlrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(sepadata->convexsides), nnlrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(sepadata->constraintviolation), nnlrows) );
 
-   /* count the number of convex, linear and non-convex nonlinear rows; store the convex ones */
-   sepadata->nconvexnlrows = 0;
-   sepadata->nlinearnlrows = 0;
+   /* count the number of nonlinear convex rows and store them */
    sepadata->nnlrows = 0;
    for( i = 0; i < nnlrows; ++i )
    {
@@ -684,26 +676,19 @@ SCIP_RETCODE storeConvexNlrows(
       assert(nlrow != NULL);
 
       /* linear case */
-      /* @todo: this should be equivalent to the curvature being convex; maybe it is enough to set it to LINEAR in
-       *        SCIPaddNlrow when this condition is satisfied */
-      if( SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL )
-      {
-         ++(sepadata->nlinearnlrows);
-         sepadata->convexsides[sepadata->nnlrows] = BOTH;
-         sepadata->nlrows[sepadata->nnlrows] = nlrow;
-         ++(sepadata->nnlrows);
-      }
+      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR ||
+            (SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL) )
+         continue;
+
       /* nonlinear case */
-      else if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX )
+      if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX )
       {
-         ++(sepadata->nconvexnlrows);
          sepadata->convexsides[sepadata->nnlrows] = RHS;
          sepadata->nlrows[sepadata->nnlrows] = nlrow;
          ++(sepadata->nnlrows);
       }
-      else if( !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE )
+      else if( !SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)) && SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE )
       {
-         ++(sepadata->nconvexnlrows);
          sepadata->convexsides[sepadata->nnlrows] = LHS;
          sepadata->nlrows[sepadata->nnlrows] = nlrow;
          ++(sepadata->nnlrows);
@@ -797,7 +782,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
    }
 
-   /* recompute convex NLP relaxation if the variable set changed and we are still at the root node */
+   /* recompute convex NLP relaxation if the variable set changed and we are still at the root node
+    * @todo: does it make sense to do this??? */
    if( sepadata->nlpiprob != NULL && SCIPgetNVars(scip) != sepadata->nlpinvars  && SCIPgetDepth(scip) == 0 )
    {
       SCIP_CALL( sepadataClear(scip, sepadata) );
@@ -808,18 +794,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
    if( sepadata->nlpiprob == NULL )
    {
       /* store convex nonlinear constraints */
-      SCIP_CALL( storeConvexNlrows(scip, sepadata, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip)) );
+      SCIP_CALL( storeNonlinearConvexNlrows(scip, sepadata, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip)) );
 
       /* check that convex NLP relaxation is interesting (more than one nonlinear constraint) */
-      if( sepadata->nconvexnlrows < 1 )
+      if( sepadata->nnlrows < 1 )
       {
          SCIPdebugMsg(scip, "convex relaxation uninteresting, don't run\n");
          sepadata->skipsepa = TRUE;
          return SCIP_OKAY;
       }
 
-      /* initialize some of the sepadata */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(sepadata->constraintviolation), sepadata->nnlrows) );
+      /* create the expression interpreter */
       SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) );
 
       sepadata->nlpinvars = SCIPgetNVars(scip);
@@ -831,8 +816,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
             SCIPcalcHashtableSize(sepadata->nlpinvars)) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
-      /* @todo: assert that the lp solution satisfies the cutoff bound; if this fails then we shouldn't have a cutoff
-       * bound in the nlpi, since then the projection could be in the interior of the actual convex relaxation */
       SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip)) );
 
@@ -852,6 +835,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
             sepadata->nlpivars, sepadata->nlpinvars) );
    }
 
+   /* assert that the lp solution satisfies the cutoff bound; if this fails then we shouldn't have a cutoff bound in the
+    * nlpi, since then the projection could be in the interior of the actual convex relaxation */
+   assert(SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ||
+         SCIPisLE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)));
+
    /* get current sol: LP or pseudo solution if LP sol is not available */
    SCIP_CALL( SCIPcreateCurrentSol(scip, &lpsol, NULL) );
 
@@ -866,7 +854,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 
    /* run the separator */
    *result = SCIP_DIDNOTFIND;
-   sepadata->ncutsadded = 0;
 
    /* separateCuts computes the projection and then gradient cuts on each constraint that was originally violated */
    SCIP_CALL( separateCuts(scip, sepa, lpsol, result) );
