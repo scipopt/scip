@@ -4206,48 +4206,94 @@ void SCIPparamSetFixed(
    param->isfixed = fixed;
 }
 
-/** checks value of SCIP_Bool parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckBool(
+/** checks whether value of bool parameter is valid */
+SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to check */
    )
 {
+   return ( value == TRUE || value == FALSE );
+}
+
+/** checks whether value of integer parameter is valid */
+SCIP_Bool SCIPparamIsValidInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   int                   value               /**< value to check */
+   )
+{
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( paramTestBool(param, messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return ( value >= param->data.intparam.minvalue && value <= param->data.intparam.maxvalue );
 }
 
-/** checks value of string parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckString(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           value               /**< value to check */
-   )
-{
-   return paramTestString(param, messagehdlr, value);
-}
-
-/** checks value of character parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckChar(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char            value               /**< value to check */
-   )
-{
-   return paramTestChar(param, messagehdlr, value);
-}
-
-/** checks value of SCIP_Longint parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckLongint(
+/** checks whether value of SCIP_Longint parameter is valid */
+SCIP_Bool SCIPparamIsValidLongint(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value               /**< value to check */
    )
 {
-   return paramTestLongint(param, messagehdlr, value);
+   assert( param != NULL );
+
+   return ( value >= param->data.longintparam.minvalue && value <= param->data.longintparam.maxvalue );
+}
+
+/** checks whether value of SCIP_Real parameter is valid */
+SCIP_Bool SCIPparamIsValidReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Real             value               /**< value to check */
+   )
+{
+   assert( param != NULL );
+
+   return ( value >= param->data.realparam.minvalue && value <= param->data.realparam.maxvalue );
+}
+
+/** checks whether value of char parameter is valid */
+SCIP_Bool SCIPparamIsValidChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Real             value               /**< value to check */
+   )
+{
+   assert( param != NULL );
+
+   if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
+      return FALSE;
+
+   if( param->data.charparam.allowedvalues != NULL )
+   {
+      char* c;
+
+      c = param->data.charparam.allowedvalues;
+      while( *c != '\0' && *c != value )
+         c++;
+
+      if( *c != value )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** checks whether value of string parameter is valid */
+SCIP_Bool SCIPparamIsValidString(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           value               /**< value to check */
+   )
+{
+   unsigned int i;
+
+   for( i = 0; i < (unsigned int) strlen(value); ++i )
+   {
+      if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
+         return FALSE;
+   }
+   return TRUE;
 }
 
 /** sets value of SCIP_Bool parameter */
