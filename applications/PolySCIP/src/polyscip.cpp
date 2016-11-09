@@ -1234,7 +1234,6 @@ namespace polyscip {
                                                                         no_objs_,
                                                                         v_rep.moveVRep(),
                                                                         v_rep.moveHRep());
-        assert (weight_space_poly_->hasValidSkeleton(no_objs_));
 
         while (weight_space_poly_->hasUntestedWeight() && polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
             auto untested_weight = weight_space_poly_->getUntestedWeight();
@@ -1395,8 +1394,6 @@ namespace polyscip {
 
         if (retcode != SCIP_OKAY)
             throw std::runtime_error("no SCIP_OKAY for SCIPlpiLoadColLP\n");
-
-        //SCIPlpiWriteLP(lpi, "redundancy_check.lp");
 
         retcode = SCIPlpiSolvePrimal(lpi);
         if (retcode != SCIP_OKAY)

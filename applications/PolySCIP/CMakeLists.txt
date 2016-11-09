@@ -22,7 +22,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Werror -pedantic -Wno-
 configure_file("${PROJECT_SOURCE_DIR}/${CMAKE}/PolySCIPConfig.h.in" "${PROJECT_SOURCE_DIR}/${SRC}/PolySCIPConfig.h" ESCAPE_QUOTES)
 
 include(FindPackageHandleStandardArgs)
-find_package(LEMON REQUIRED)
 find_package(SCIP REQUIRED)
 #find_package(SOPLEX REQUIRED)
 find_package(ZLIB)
@@ -32,7 +31,6 @@ find_package(Readline)
 
 include_directories(${PROJECT_SOURCE_DIR}/${SRC})
 include_directories(${SCIP_INC})
-include_directories(${LEMON_INC})
 
 add_subdirectory(${SRC})
 add_subdirectory(${DOC})

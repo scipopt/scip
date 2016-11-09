@@ -51,20 +51,12 @@ namespace polyscip {
                                                  V_RepC v_rep,
                                                  H_RepC h_rep)
             : wsp_dimension_(dimension),
-              curr_investigated_vertex_(nullptr),
-              skeleton_(),
-              nodes_to_vertices_(skeleton_) {
+              curr_investigated_vertex_(nullptr) {
         assert (!v_rep.empty());
         assert (!h_rep.empty());
-        //createInitialFacets(h_rep);
         createInitialVerticesAndSkeleton(scip, std::move(h_rep), std::move(v_rep));
     }
 
-    /*void WeightSpacePolyhedron::createInitialFacets(polytoperepresentation::H_RepC h_rep) {
-        for (auto& h : h_rep) {
-            facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));  //todo check for std::move in computeWeightSpaceResults...
-        }
-    }*/
 
     void WeightSpacePolyhedron::createInitialVerticesAndSkeleton(SCIP* scip,
                                                                  H_RepC h_rep,
@@ -74,30 +66,21 @@ namespace polyscip {
             initial_facets.emplace_back(make_shared<WeightSpaceFacet>(std::move(h.first), std::move(h.second)));  //todo check for std::move in computeWeightSpaceResults...
         }
         for (auto& v : v_rep) {
-            //if (v->hasNonZeroWeight()) { // do not consider (0,0,...,0 | -1)
-                auto inc_facets = getIncidentFacets(*v, initial_facets);
-                auto vertex = new WeightSpaceVertex(inc_facets,
-                                                    v->moveWeight(),
-                                                    v->getWov());
-                auto node = skeleton_.addNode();
-                nodes_to_vertices_[node] = vertex;
-                vertices_to_nodes_.insert({vertex, node});
-                if (vertex->hasUnitWeight()) {
-                    vertex->setStatus(WeightSpaceVertex::VertexStatus::marked);
-                    marked_vertices_.push_back(vertex);
-                }
-                else if (vertex->hasZeroWeight()) {
-                    vertex->setStatus(WeightSpaceVertex::VertexStatus::special);
-                }
-                else {
-                    unmarked_vertices_.push_back(vertex);
-                }
+            auto inc_facets = getIncidentFacets(*v, initial_facets);
+            auto vertex = new WeightSpaceVertex(inc_facets,
+                                                v->moveWeight(),
+                                                v->getWov());
+
+            if (vertex->hasUnitWeight()) {
+                vertex->setStatus(WeightSpaceVertex::VertexStatus::marked);
+                marked_and_special_vertices_.push_back(vertex);
             }
-        //}
-        for (Graph::NodeIt node(skeleton_); node != lemon::INVALID; ++node) {
-            for (Graph::NodeIt succ_node(node); succ_node != lemon::INVALID; ++succ_node) {
-                if (succ_node != node && areAdjacent(getVertex(node), getVertex(succ_node)))
-                    skeleton_.addEdge(node, succ_node);
+            else if (vertex->hasZeroWeight()) {
+                vertex->setStatus(WeightSpaceVertex::VertexStatus::special);
+                marked_and_special_vertices_.push_back(vertex);
+            }
+            else {
+                unmarked_vertices_.push_back(vertex);  // VertexStatus::unmarked
             }
         }
     }
@@ -112,30 +95,9 @@ namespace polyscip {
         return facets;
     }
 
-    /*vector<pair<OutcomeType, OutcomeType>> WeightSpacePolyhedron::getConstraintsForUnsupported() const {
-        auto pairs = vector<pair<OutcomeType,OutcomeType >>{};
-        for (auto v : marked_vertices_) {
-            if (v->hasUnitWeight())
-                continue;
-            v->print(std::cout, true);
-            pairs.emplace_back(v->getIncFacetsUpperBounds(), v->getIncFacetsLowerBounds());
-        }
-        return pairs;
-    }*/
-
-    /*WeightSpacePolyhedron::FacetContainer WeightSpacePolyhedron::computeIncidentFacets(SCIP* scip,
-                                                                                       const FacetContainer& initial_facets,
-                                                                                       const polytoperepresentation::V_RepT& v) const {
-        auto facets = FacetContainer {};
-        for (const auto& f : initial_facets) {
-            if (SCIPisEQ(scip, f->getWeightedWeight(v.getWeight()), f->getWOVCoeff()*v.getWov()))
-                facets.push_back(f);
-        }
-        return facets;
-    }*/
 
     WeightSpacePolyhedron::~WeightSpacePolyhedron() {
-        for (auto v_ptr : marked_vertices_)
+        for (auto v_ptr : marked_and_special_vertices_)
             delete v_ptr;
         for (auto v_ptr : unmarked_vertices_)
             delete v_ptr;
@@ -165,43 +127,7 @@ namespace polyscip {
     }
 
 
-    void WeightSpacePolyhedron::addEdgesOfAdjacentVerticesToSkeleton(const vector<WeightSpaceVertex*>& new_vertices,
-                                                                     const vector<WeightSpaceVertex*>& zero_vertices) {
-
-        if (!new_vertices.empty()) {
-            for (auto it = new_vertices.cbegin(); it != std::prev(new_vertices.cend()); ++it) {
-                for (auto succ_it = std::next(it); succ_it != new_vertices.cend(); ++succ_it) {
-                    if (areAdjacent(*it, *succ_it))
-                        skeleton_.addEdge(getNode(*it), getNode(*succ_it));
-                }
-                for (auto zero = zero_vertices.cbegin(); zero!=zero_vertices.cend(); ++zero) {
-                    if (areAdjacent(*it, *zero))
-                        skeleton_.addEdge(getNode(*it), getNode(*zero));
-                }
-            }
-        }
-    }
-
-    void WeightSpacePolyhedron::addToSkeleton(const vector<WeightSpaceVertex*>& new_vertices,
-                                              const vector<pair<WeightSpaceVertex*, WeightSpaceVertex*> >& new_edges) {
-        for (const auto& v : new_vertices) {  // add new nodes
-            auto new_node = skeleton_.addNode();
-            nodes_to_vertices_[new_node] = v;
-            vertices_to_nodes_.insert({v, new_node});
-        }
-        for (const auto& edge : new_edges) { // add new edges
-            skeleton_.addEdge(getNode(edge.first), getNode(edge.second));
-        }
-    }
-
-
-    void WeightSpacePolyhedron::deleteFromSkeleton(WeightSpaceVertex* v) {
-        skeleton_.erase(getNode(v));
-        auto ret = vertices_to_nodes_.erase(v);
-        assert (ret == 1);
-    }
-
-    void WeightSpacePolyhedron::removeFrom(WeightSpaceVertex* v) {
+    void WeightSpacePolyhedron::makeObsolete(WeightSpaceVertex *v) {
         if (v != curr_investigated_vertex_) {
             auto v_status = v->getStatus();
             if (v_status == WeightSpaceVertex::VertexStatus::unmarked) {
@@ -212,27 +138,26 @@ namespace polyscip {
                     v->print(std::cout, true);
                     throw std::runtime_error("Weight space vertex expected in Unmarked Vertex Container.\n");
                 }
-                    unmarked_vertices_.erase(pos);
+                unmarked_vertices_.erase(pos);
             }
             else if (v_status == WeightSpaceVertex::VertexStatus::marked) { // v must be weakly-non-dominated point
-                auto pos = std::find(begin(marked_vertices_),
-                                     end(marked_vertices_),
+                auto pos = std::find(begin(marked_and_special_vertices_),
+                                     end(marked_and_special_vertices_),
                                      v);
-                if (pos == end(marked_vertices_)) {
+                if (pos == end(marked_and_special_vertices_)) {
                     v->print(std::cout, true);
                     throw std::runtime_error("Weight space vertex expected in Marked Vertex Container.\n");
                 }
-                marked_vertices_.erase(pos);
+                marked_and_special_vertices_.erase(pos);
             }
             else {
                 throw std::runtime_error("Unexpected weight space vertex status.\n");
             }
-            v->setStatus(WeightSpaceVertex::VertexStatus::obsolete);
         }
         assert (std::find(obsolete_vertices_.cbegin(),
                           obsolete_vertices_.cend(),
                           v) == obsolete_vertices_.cend());
-
+        v->setStatus(WeightSpaceVertex::VertexStatus::obsolete);
         obsolete_vertices_.push_back(v);
     }
 
@@ -247,21 +172,27 @@ namespace polyscip {
         return inc_facets.size() >= wsp_dimension_-1;
     }
 
-    bool WeightSpacePolyhedron::hasValidSkeleton(size_t dim) const {
-        for (Graph::NodeIt node(skeleton_); node!=lemon::INVALID; ++node) {
-            size_t adj_count{0};
-            for (Graph::IncEdgeIt edge(skeleton_, node); edge != lemon::INVALID; ++edge) {
-                ++adj_count;
-            }
-            if (adj_count < dim) {
-                auto v = nodes_to_vertices_[node];
-                v->print(std::cout, true);
-                std::cout << "No of adjacent verts: " << adj_count << " Expected: " << dim << "\n";
-                return false;
-            }
+    void WeightSpacePolyhedron::addVertexToCorrespondingPartition(SCIP* scip,
+                                                                  WeightSpaceVertex* vertex,
+                                                                  const OutcomeType& outcome,
+                                                                  bool outcome_is_ray,
+                                                                  vector<WeightSpaceVertex*>& minus_vertices,
+                                                                  vector<WeightSpaceVertex*>& plus_vertices,
+                                                                  vector<WeightSpaceVertex*>& zero_vertices) const {
+        auto result = vertex->computeSlack(outcome, outcome_is_ray);
+
+        if (SCIPisNegative(scip, result)) {
+            minus_vertices.push_back(vertex);
         }
-        return true;
+        else if (SCIPisPositive(scip, result)) {
+            plus_vertices.push_back(vertex);
+        }
+        else {
+            assert(SCIPisZero(scip, result));
+            zero_vertices.push_back(vertex);
+        }
     }
+
 
     void WeightSpacePolyhedron::updateWeightSpacePolyhedron(SCIP* scip,
                                                             const OutcomeType& outcome,
@@ -275,23 +206,26 @@ namespace polyscip {
         auto tmp_minus = vector<WeightSpaceVertex*> {};
         auto tmp_zero = vector<WeightSpaceVertex*> {};
 
-        for (const auto& elem : vertices_to_nodes_) {
-            if (elem.first->getStatus() == WeightSpaceVertex::VertexStatus::obsolete)
-                continue;
-            auto facet_partition = getFacetPartition(scip, elem.first, outcome, outcome_is_ray);
-            if (facet_partition == FacetPartition::plus) {
-                tmp_plus.push_back(elem.first);
-            }
-            else if (facet_partition == FacetPartition::minus) {
-                tmp_minus.push_back(elem.first);
-            }
-            else if (facet_partition == FacetPartition::zero) {
-                tmp_zero.push_back(elem.first);
-            }
-            else {
-                throw std::runtime_error("Unexpected Facet Partition Status\n");
-            }
+        for (auto vertex : marked_and_special_vertices_) {
+            addVertexToCorrespondingPartition(scip,
+                                              vertex,
+                                              outcome,
+                                              outcome_is_ray,
+                                              tmp_minus,
+                                              tmp_plus,
+                                              tmp_zero);
         }
+        for (auto vertex : unmarked_vertices_) {
+            addVertexToCorrespondingPartition(scip,
+                                              vertex,
+                                              outcome,
+                                              outcome_is_ray,
+                                              tmp_minus,
+                                              tmp_plus,
+                                              tmp_zero);
+        }
+        tmp_minus.push_back(curr_investigated_vertex_);
+
         for (const auto& non_obs : tmp_plus) {
             for (const auto& obs : tmp_minus) {
                 if (areAdjacent(non_obs, obs)) {
@@ -300,54 +234,9 @@ namespace polyscip {
             }
         }
 
-        curr_investigated_vertex_->setStatus(WeightSpaceVertex::VertexStatus::obsolete);
-        /*auto unscanned = std::list<WeightSpaceVertex*> {curr_investigated_vertex_};
-        auto obsolete = std::unordered_map<WeightSpaceVertex*, bool>({{curr_investigated_vertex_, true}});
-        auto zeros = std::unordered_map<WeightSpaceVertex*, bool>{};*/
+
         auto new_facet = outcome_is_ray ? make_shared<const WeightSpaceFacet>(outcome, 0) :
                          make_shared<const WeightSpaceFacet>(outcome, 1);
-        /*while (!unscanned.empty()) {
-            auto obs_vertex = unscanned.front();
-            unscanned.pop_front();
-            for (Graph::IncEdgeIt edge(skeleton_, getNode(obs_vertex)); edge != lemon::INVALID; ++edge) {
-                auto adj_node = skeleton_.oppositeNode(getNode(obs_vertex), edge);
-                auto adj_vertex = getVertex(adj_node);
-                auto facet_partition = getFacetPartition(scip, adj_vertex, outcome, outcome_is_ray);
-                if (facet_partition == FacetPartition::plus && obsolete.count(obs_vertex) == 1) {
-                    obs_nonobs_pairs.push_back({obs_vertex, adj_vertex});
-                }
-                else if (facet_partition == FacetPartition::minus) {
-                    if (obsolete.count(adj_vertex) == 0) {
-                        obsolete[adj_vertex] = true;
-                        unscanned.push_back(adj_vertex);
-                    }
-                }
-                else if (facet_partition == FacetPartition::zero) {
-                    if (zeros.count(adj_vertex) == 0) {
-                        zeros[adj_vertex] = true;
-                        unscanned.push_back(adj_vertex);
-                    }
-                }
-                else {
-                    std::runtime_error("Unexpected Facet Partiton Status\n");
-                }
-            }
-        }*/
-
-       /* std::cout << "size of obs_nonobs_pairs: " << obs_nonobs_pairs.size() << "\n";
-        std::cout << "size of tmp_obs_non_pairs: " << tmp_nonobs_obs.size() << "\n";
-        std::cout << "size of zeros: " << zeros.size() << "\n";
-        for (const auto& zero : zeros)
-            zero.first->print(std::cout, true);
-        std::cout << "size of tmp_zeros: " << tmp_zero.size() << "\n";
-        for (const auto& zero : tmp_zero)
-            zero->print(std::cout, true);
-        std::cout << "okay\n";
-
-        assert (zeros.size() == tmp_zero.size());
-        assert (obs_nonobs_pairs.size() == tmp_nonobs_obs.size());
-
-        assert (obs_nonobs_pairs.size() + zeros.size() > 0);*/
 
         auto new_vertices = vector<WeightSpaceVertex*> {};
         auto new_edges = vector< pair<WeightSpaceVertex*, WeightSpaceVertex*> > {}; // pair: new vertex, adjacent vertex
@@ -364,20 +253,14 @@ namespace polyscip {
             unmarked_vertices_.push_back(new_vertex);
             new_vertices.push_back(new_vertex);
             new_edges.push_back({new_vertex, non_obs_vertex});
-            /*}
-            else {
-                throw std::runtime_error("Unexpected convex combination of obsolete and non-obsolete weight space vertices\n");
-            }*/
         }
 
-        addToSkeleton(new_vertices, new_edges);
-        addEdgesOfAdjacentVerticesToSkeleton(new_vertices, tmp_zero);
-        for (auto obs : tmp_minus) {
-            removeFrom(obs);
-            deleteFromSkeleton(obs);
+        for (auto vertex : tmp_minus) {
+            makeObsolete(vertex);
         }
+
         std::cout << "NO UNMARKED VERTICES: " << unmarked_vertices_.size() << "\n";
-        std::cout << "NO MARKED VERTICES: " << marked_vertices_.size() << "\n";
+        std::cout << "NO MARKED VERTICES: " << marked_and_special_vertices_.size() << "\n";
     }
 
     double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,
@@ -398,23 +281,6 @@ namespace polyscip {
         return numerator / denominator;
     }
 
-    WeightSpacePolyhedron::FacetPartition WeightSpacePolyhedron::getFacetPartition(SCIP* scip,
-                                                                                   const WeightSpaceVertex *vertex,
-                                                                                   const OutcomeType &outcome,
-                                                                                   bool outcome_is_ray) const {
-        auto result = vertex->computeSlack(outcome, outcome_is_ray);
-
-        if (SCIPisNegative(scip, result)) {
-            return FacetPartition::minus;
-        }
-        else if (SCIPisPositive(scip, result)) {
-            return FacetPartition::plus;
-        }
-        else {
-            assert(SCIPisZero(scip, result));
-            return FacetPartition::zero;
-        }
-    }
 
     void WeightSpacePolyhedron::incorporateNewOutcome(SCIP* scip,
                                                       const WeightType& used_weight,
@@ -431,7 +297,7 @@ namespace polyscip {
         assert (curr_investigated_vertex_ != nullptr);
         assert (curr_investigated_vertex_->hasSameWeight(used_weight));
         curr_investigated_vertex_->setStatus(WeightSpaceVertex::VertexStatus::marked);
-        marked_vertices_.push_back(curr_investigated_vertex_);
+        marked_and_special_vertices_.push_back(curr_investigated_vertex_);
         resetCurrentInvestigatedVertex();
     }
 
@@ -440,7 +306,7 @@ namespace polyscip {
     }
 
     void WeightSpacePolyhedron::printMarkedVertices(ostream &os, bool printFacets) const {
-        printVertices(marked_vertices_, "MARKED VERTICES:", os, printFacets);
+        printVertices(marked_and_special_vertices_, "MARKED VERTICES:", os, printFacets);
     }
 
     void WeightSpacePolyhedron::printObsoleteVertices(ostream &os, bool printFacets) const {

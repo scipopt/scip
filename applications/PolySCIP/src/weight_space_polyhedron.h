@@ -24,6 +24,7 @@
 #define POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED
 
 #include <cstddef>
+#include <deque>
 #include <list>
 #include <iomanip> //std::set_precision
 #include <iostream>
@@ -37,9 +38,6 @@
 #include <utility> // std::pair
 #include <vector>
 
-
-#undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
-#include "lemon/list_graph.h"
 #include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
@@ -100,10 +98,6 @@ namespace polyscip {
 
         void incorporateKnownOutcome(const WeightType& weight);
 
-        //void addEdgesToSkeleton() = delete {addEdgesToSkeleton(unmarked_vertices_);};
-
-        //std::vector<std::pair<OutcomeType, OutcomeType>> getConstraintsForUnsupported() const;
-
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
          */
@@ -126,33 +120,17 @@ namespace polyscip {
 
         bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
 
-        bool hasValidSkeleton(std::size_t dim) const;
-
     private:
-        enum class FacetPartition {minus, plus, zero};
 
-        using Graph = lemon::ListGraph;
-        using Node = Graph::Node;
-        /** Container used to store the marked weight space vertices
-         *  Needs to support: push_back, size()
-         */
         using MarkedVertexContainer = std::vector<WeightSpaceVertex*>;
         /** Container used to store the unmarked weight space vertices
          *  Needs to support: empty(), size(), valid iterators of objects after erasing another object
          */
         using UnmarkedVertexContainer = std::list<WeightSpaceVertex*>;
 
+
         using ObsoleteVertexContainer = std::vector<WeightSpaceVertex*>;
 
-        using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
-        using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
-        /*using FacetMapValueT = std::vector<const WeightSpaceVertex*>;
-        using FacetMap = std::map<std::shared_ptr<const WeightSpaceFacet>, FacetMapValueT , WeightSpaceFacet::Compare>;*/
-
-        FacetPartition getFacetPartition(SCIP* scip,
-                                         const WeightSpaceVertex *vertex,
-                                         const OutcomeType &outcome,
-                                         bool outcome_is_ray) const;
 
         void createInitialFacets(H_RepC h_rep) = delete;
 
@@ -176,19 +154,15 @@ namespace polyscip {
             curr_investigated_vertex_ = nullptr;
         }
 
-        void addToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
-                           const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >& new_edges);
+        void addVertexToCorrespondingPartition(SCIP* scip,
+                                               WeightSpaceVertex* vertex,
+                                               const OutcomeType& outcome,
+                                               bool outcome_is_ray,
+                                               std::vector<WeightSpaceVertex*>& minus_vertices,
+                                               std::vector<WeightSpaceVertex*>& plus_vertices,
+                                               std::vector<WeightSpaceVertex*>& zero_vertices) const;
 
-        void addEdgesOfAdjacentVerticesToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
-                                                  const std::vector<WeightSpaceVertex*>& zero_vertices);
-
-        void deleteFromSkeleton(WeightSpaceVertex* v);
-
-        void removeFrom(WeightSpaceVertex *v);
-
-        Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
-
-        WeightSpaceVertex* getVertex(Node n) {return nodes_to_vertices_[n];};
+        void makeObsolete(WeightSpaceVertex *v);
 
         /** Template function to print vertices; is used by public print{Marked,Obsolete,Unmarked}Vertices
          * functions
@@ -204,8 +178,9 @@ namespace polyscip {
                            bool printFacets) const;
 
         std::size_t wsp_dimension_;
+
         /**< all marked weight space vertices */
-        MarkedVertexContainer marked_vertices_;
+        MarkedVertexContainer marked_and_special_vertices_;
         /**< all unmarked weight space vertices */
         UnmarkedVertexContainer unmarked_vertices_;
         /**< all obsolete weight space vertices */
@@ -213,12 +188,6 @@ namespace polyscip {
         /**< unmarked weight space vertex currently investigated */
         WeightSpaceVertex* curr_investigated_vertex_;
         /**< 1-skeleton of the weight space polyhedron */
-        Graph skeleton_;
-        /**< maps nodes to vertices */
-        NodeMap nodes_to_vertices_;
-        /**< maps vertices to nodes */
-        VertexMap vertices_to_nodes_;
-
     };
 
 
