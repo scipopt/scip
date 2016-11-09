@@ -78,7 +78,7 @@ interface:
   Alternatively, local instead of global bounds can be used for compression.
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
-- new callback CONSENFORELAX for enforcement of relaxation solutions
+- new optional callback CONSENFORELAX for enforcement of relaxation solutions
 - new parameter fulllpinfo for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear constraints and can be
   enforced
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
