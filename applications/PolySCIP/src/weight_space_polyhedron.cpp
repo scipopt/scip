@@ -266,7 +266,7 @@ namespace polyscip {
 
     void WeightSpacePolyhedron::incorporateNewOutcome(SCIP* scip,
                                                       const WeightType& used_weight,
-                                                      const OutcomeType &outcome,
+                                                      const OutcomeType& outcome,
                                                       bool outcome_is_ray) {
         assert (curr_investigated_vertex_ != nullptr);
         assert (curr_investigated_vertex_->hasSameWeight(used_weight));

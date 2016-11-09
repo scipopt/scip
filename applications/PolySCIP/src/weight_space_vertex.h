@@ -57,13 +57,6 @@ namespace polyscip {
                                     ValueType weighted_obj_val,
                                     bool sort_facets = true);
 
-        explicit WeightSpaceVertex(double convCombValue,
-                                   const WeightSpaceVertex* obs,
-                                   const WeightSpaceVertex* non_obs,
-                                   const OutcomeType& outcome,
-                                   bool outcome_is_ray,
-                                   std::size_t wsp_dimension) = delete;
-
         explicit WeightSpaceVertex(double obs_coeff,
                                    double non_obs_coeff,
                                    const WeightSpaceVertex* obs,
@@ -113,10 +106,10 @@ namespace polyscip {
     private:
 
         friend bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
-        friend double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,
+        /*friend double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,
                                                                       const WeightSpaceVertex* non_obs,
                                                                       const OutcomeType& outcome,
-                                                                      bool outcome_is_ray);
+                                                                      bool outcome_is_ray);*/
 
 
         /** Returns the weight h * weight1 + (1-h) * weight2

@@ -1079,7 +1079,7 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::handleOptimalStatus(const WeightType& weight,
+/*    SCIP_RETCODE Polyscip::handleOptimalStatus(const WeightType& weight,
                                                ValueType current_opt_val) {
         auto best_sol = SCIPgetBestSol(scip_);
         SCIP_SOL *finite_sol{nullptr};
@@ -1112,7 +1112,7 @@ namespace polyscip {
 
         SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
         return SCIP_OKAY;
-    }
+    }*/
 
     Result Polyscip::getResult(bool outcome_is_bounded, SCIP_SOL *primal_sol) {
         SolType sol;
@@ -1240,15 +1240,17 @@ namespace polyscip {
                 scip_status = separateINFORUNBD(untested_weight);
             }
             if (scip_status == SCIP_STATUS_OPTIMAL) {
-                //if (SCIPisLT(scip_, SCIPgetPrimalbound(scip_), weight_space_poly_->getUntestedVertexWOV(untested_weight))) {
-                auto supported_size_before = bounded_.size();
-                SCIP_CALL(handleOptimalStatus(untested_weight,
-                                              weight_space_poly_->getUntestedVertexWOV(untested_weight))); //might add bounded result to bounded_
-
-                if (supported_size_before < bounded_.size()) {
+                auto res = getOptimalResult();
+                auto weighted_outcome = std::inner_product(begin(untested_weight),
+                                                           end(untested_weight),
+                                                           begin(res.second),
+                                                           0.);
+                if (weighted_outcome + cmd_line_args_.getEpsilon() <
+                    weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
                     weight_space_poly_->incorporateNewOutcome(scip_,
                                                               untested_weight,
-                                                              bounded_.back().second); // was added by handleOptimalStatus()
+                                                              res.second);
+                    bounded_.push_back(std::move(res));
                 }
                 else {
                     weight_space_poly_->incorporateKnownOutcome(untested_weight);

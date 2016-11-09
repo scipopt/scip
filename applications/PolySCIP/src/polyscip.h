@@ -173,8 +173,8 @@ namespace polyscip {
 
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
-        SCIP_RETCODE handleOptimalStatus(const WeightType& weight,
-                                         ValueType current_opt_val);
+        /*SCIP_RETCODE handleOptimalStatus(const WeightType& weight,
+                                         ValueType current_opt_val);*/
 
 
         SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=false);
