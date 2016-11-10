@@ -89,7 +89,7 @@ fi
 
 # filter all parseable file format extensions
 SHORTPROBNAME=`basename $INSTANCE .gz`
-for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflist .bnp
+for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflist
 do
     SHORTPROBNAME=`basename $SHORTPROBNAME $EXTENSION`
 done

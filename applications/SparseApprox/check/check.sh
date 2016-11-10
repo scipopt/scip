@@ -1,4 +1,4 @@
-  #!/usr/bin/env bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -23,18 +23,18 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-DISPFREQ=${10}    
-CONTINUE=false   
+DISPFREQ=${10}
+CONTINUE=${11}
 LOCK=${12}
 VERSION=${13}
 LPS=${14}
-VALGRIND=false        
-CLIENTTMPDIR=/usr/local/tmp  
-REOPT=false
-OPTCOMMAND=optimize
-SETCUTOFF=0
-MAXJOBS=1
-VISUALIZE=false
+VALGRIND=${15}
+CLIENTTMPDIR=${16}
+REOPT=${17}
+OPTCOMMAND=${18}
+SETCUTOFF=${19}
+MAXJOBS=${20}
+VISUALIZE=${21}
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
@@ -72,7 +72,7 @@ MEMFORMAT="kB"
 
 INIT="true"
 COUNT=0
-for INSTANCE in `cat testset/$TSTNAME.test` DONE
+for INSTANCE in $INSTANCELIST DONE
 do
     COUNT=`expr $COUNT + 1`
 
@@ -93,8 +93,6 @@ do
         p=0 # currently, noone uses permutations here
         PERMUTE=0
         QUEUE=`hostname`
-        # infer the names of all involved files from the arguments
-        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
         if test "$INSTANCE" = "DONE"
         then
@@ -103,22 +101,9 @@ do
             ./evalcheck_cluster.sh -r $EVALFILE
             continue
         fi
-        # check if problem instance exists
-        SCIP_INSTANCEPATH=$SCIPPATH
-        for IPATH in ${POSSIBLEPATHS[@]}
-        do
-            echo $IPATH
-            if test "$IPATH" = "DONE"
-            then
-                echo "input file $INSTANCE not found!"
-                SKIPINSTANCE="true"
-            elif test -f $IPATH/$INSTANCE
-            then
-                SCIP_INSTANCEPATH=$IPATH
-                break
-            fi
 
-        done
+        # infer the names of all involved files from the arguments
+        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
         if test "$SKIPINSTANCE" = "true"
         then
@@ -130,32 +115,38 @@ do
 
         CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
+        # we don't have separate configuration files for most examples and applications, use SCIP configuration file instead
+        if ! test -f "$CONFFILE"
+        then
+            CONFFILE="configuration_tmpfile_setup_scip.sh"
+        fi
+
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./$CONFFILE $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+        . ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
             $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH
         EXECNAME=$BINNAME
 
-        if test "$SOLVER" = "scip"
-        then
+	if test -e $SCIPPATH/../$BINNAME
+	then
             export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
         else
             export EXECNAME=$BINNAME
         fi
         export BASENAME=$FILENAME
-        export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
+        export FILENAME=$INSTANCE
         export SOLNAME=$SOLCHECKFILE
         export CLIENTTMPDIR
         export CHECKERPATH=$SCIPPATH/solchecker
-        echo Solving instance $SCIP_INSTANCEPATH/$INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
+        echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
         if [ $MAXJOBS -eq 1 ]
         then
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh $INSTANCE $SETTINGS"
+            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
         else
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh $INSTANCE $SETTINGS" &
+            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh" &
         fi
         #./run.sh
     done

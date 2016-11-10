@@ -110,6 +110,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
             {
                if( (i > k && j > k) || (i < k && j < k ) )
                {
+                  if( NULL == edgevars[MAX(i,j)][MIN(i,j)] || NULL == edgevars[j][k] || NULL == edgevars[i][k] )
+                     continue;
                   if( SCIPvarGetLPSol(edgevars[MAX(i,j)][MIN(i,j)][0]) + SCIPvarGetLPSol(edgevars[j][k][1]) - SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
                   {
                      (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
@@ -134,6 +136,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                if( ( i < j && i < k ) || ( i > j && i > k ) )
                {
+                  if( NULL == edgevars[MAX(j,k)][MIN(j,k)] || NULL == edgevars[i][j] || NULL == edgevars[i][k] )
+                     continue;
                   if( -SCIPvarGetLPSol(edgevars[MAX(j,k)][MIN(j,k)][0]) + SCIPvarGetLPSol(edgevars[i][j][1]) + SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
                   {
                      (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
@@ -166,6 +170,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       {
          for( k = 0; k < j; ++k )
          {
+            if( NULL == edgevars[i][j] || NULL == edgevars[j][k] || NULL == edgevars[i][k] )
+               continue;
             for( l = 0; l < 3; ++l )
             {
                if( sign[l][0] * SCIPvarGetLPSol(edgevars[i][j][0]) + sign[l][1] * SCIPvarGetLPSol(edgevars[i][k][0]) + sign[l][2] * SCIPvarGetLPSol(edgevars[j][k][0]) > 1 )
@@ -199,6 +205,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
          {
             for( k = 0; k < j; ++k )
             {
+               if( NULL == edgevars[j][k] || NULL == edgevars[i][j] || NULL == edgevars[k][i] )
+                  continue;
                for( l = 0; l < 3; ++l )
                {
                   if( sign[l][0] * SCIPvarGetLPSol(edgevars[i][j][1]) + sign[l][1] * SCIPvarGetLPSol(edgevars[j][k][1]) + sign[l][2] * SCIPvarGetLPSol(edgevars[k][i][1]) > 1 )

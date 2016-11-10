@@ -71,12 +71,14 @@ SCIP_RETCODE createVariables(
 
 
    /* create variables for the edges in each cluster combination. Index 0 are edges within cluster, 1 edges between consequtive clusters and 2 edges between non-consequtive clusters */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars), nbins) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars), nbins) );
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
+         if( SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) )
+            continue;
          SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) );
          for( c1 = 0; c1 < 3; ++c1 )
          {
@@ -87,7 +89,7 @@ SCIP_RETCODE createVariables(
       }
    }
    /* add indicator variable that marks after which cluster the cycle is closed. Only used in model with variable amount of clusters*/
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->indicatorvar), ncluster) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->indicatorvar), ncluster) );
    for( i = 0; i < ncluster; ++i )
    {
       (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "ind_%d", i+1  );
@@ -142,7 +144,7 @@ SCIP_RETCODE createProbSimplified(
    {
       for( j = 0; j < i; ++j )
       {
-         if( 0 == (probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) )
+         if( SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) )
             continue;
          /* set the objective weight for the edge-variables */
 
@@ -228,7 +230,7 @@ SCIP_RETCODE createProbSimplified(
    {
       for( j = 0; j < i; ++j )
       {
-         if( NULL == probdata->edgevars[i][j][0] )
+         if( NULL == probdata->edgevars[i][j] || SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) )
             continue;
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i+1, j+1 );
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 0.0, 1.0 ) );
@@ -659,7 +661,7 @@ SCIP_RETCODE createProbExperimental2(
          SCIP_CALL( SCIPaddCons(scip, temp) );
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
-        /* (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
+         /* (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "edge_%d_%d",  i+1, j+1 );
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0 ) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][1], -1.0) );
@@ -731,15 +733,17 @@ SCIP_DECL_PROBTRANS(probtransSpa)
 
    /* copy the variables */
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->binvars), nbins) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars), nbins) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars), nbins) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->indicatorvar), ncluster) );
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
+         if( sourcedata->edgevars[i][j] == NULL )
+            continue;
+         SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
          for( c1 = 0; c1 < 3; ++c1 )
          {
             if( sourcedata->edgevars[i][j][c1] != NULL )
@@ -813,12 +817,15 @@ SCIP_DECL_PROBDELORIG(probdelorigSpa)
    {
       for( j = 0; j < (*probdata)->nbins; ++j )
       {
-         for ( c1 = 0; c1 < 3; ++c1 )
+         if( (*probdata)->edgevars[i][j] != NULL )
          {
-            if( (*probdata)->edgevars[i][j][c1] != NULL )
-               SCIP_CALL( SCIPreleaseVar( scip, &((*probdata)->edgevars[i][j][c1])) );
+            for ( c1 = 0; c1 < 3; ++c1 )
+            {
+               if( (*probdata)->edgevars[i][j][c1] != NULL )
+                  SCIP_CALL( SCIPreleaseVar( scip, &((*probdata)->edgevars[i][j][c1])) );
+            }
+            SCIPfreeMemoryArray( scip, &((*probdata)->edgevars[i][j]) );
          }
-         SCIPfreeMemoryArray( scip, &((*probdata)->edgevars[i][j]) );
       }
       SCIPfreeMemoryArray( scip, &((*probdata)->edgevars[i]) );
    }
@@ -874,12 +881,15 @@ SCIP_DECL_PROBDELORIG(probdeltransSpa)
    {
       for( j = 0; j < (*probdata)->nbins; ++j )
       {
-         for ( c1 = 0; c1 < 3; ++c1 )
+         if( (*probdata)->edgevars[i][j] != NULL )
          {
-            if( (*probdata)->edgevars[i][j][c1] != NULL )
-               SCIP_CALL( SCIPreleaseVar( scip, &((*probdata)->edgevars[i][j][c1])) );
+            for ( c1 = 0; c1 < 3; ++c1 )
+            {
+               if( (*probdata)->edgevars[i][j][c1] != NULL )
+                  SCIP_CALL( SCIPreleaseVar( scip, &((*probdata)->edgevars[i][j][c1])) );
+            }
+            SCIPfreeMemoryArray( scip, &((*probdata)->edgevars[i][j]) );
          }
-         SCIPfreeMemoryArray( scip, &((*probdata)->edgevars[i][j]) );
       }
       SCIPfreeMemoryArray( scip, &((*probdata)->edgevars[i]) );
    }
@@ -946,16 +956,19 @@ SCIP_DECL_PROBCOPY(probcopySpa)
 
    /* copy the variables */
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->binvars), nbins) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars), nbins) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars), nbins) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->indicatorvar), ncluster) );
 
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
+         if( (sourcedata)->edgevars[i][j] == NULL )
+            continue;
          SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
+
          for( c1 = 0; c1 < 3; ++c1 )
          {
             if( sourcedata->edgevars[i][j][c1] != NULL )

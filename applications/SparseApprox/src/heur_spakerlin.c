@@ -126,7 +126,7 @@ void getSolutionValues(
                   }
                   if( j < nbins )
                   {
-                     if( NULL != edgevars[i][j][k] && SCIPvarIsActive(edgevars[i][j][k]) )
+                     if( NULL != edgevars[i][j] && NULL != edgevars[i][j][k] && SCIPvarIsActive(edgevars[i][j][k]) )
                      {
                         solclustering[i][c] = 1;
                         clusterofbin[i] = c;
@@ -459,7 +459,7 @@ SCIP_RETCODE assignVars(
       {
          for( j = 0; j < i; ++j )
          {
-            if( NULL == edgevars[i][j][0] )
+            if( NULL == edgevars[i][j] )
                continue;
             if( SCIPvarIsTransformed(edgevars[i][j][0]) )
                var = edgevars[i][j][0];
@@ -632,13 +632,13 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    bestsol = SCIPgetBestSol(scip);
    scale = SCIPspaGetScale(scip);
 
-   if ( heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
+   if( bestsol == NULL || heurdata->currentrounds == MAXROUNDS )
+      return SCIP_OKAY;
+
+   if( heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
       heurdata->currentrounds++;
    else
       heurdata->currentrounds = 0;
-
-   if( bestsol == NULL || heurdata->currentrounds == MAXROUNDS )
-      return SCIP_OKAY;
 
 
    /* reset the timing mask to its default value (at the root node it could be different) */

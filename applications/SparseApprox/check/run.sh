@@ -43,8 +43,7 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
-$EXECNAME "-f" $INSTANCE "-s" $SETTINGS 2>>$ERRFILE | tee -a $OUTFILE
-
+$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then
