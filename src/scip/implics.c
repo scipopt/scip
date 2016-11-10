@@ -1782,7 +1782,7 @@ SCIP_RETCODE SCIPcliquetableCreate(
    SCIP_ALLOC( BMSallocMemory(cliquetable) );
 
    /* create hash table to test for multiple cliques */
-   hashtablesize = SCIPcalcHashtableSize(HASHTABLE_CLIQUETABLE_SIZE);
+   hashtablesize = HASHTABLE_CLIQUETABLE_SIZE;
    hashtablesize = MAX(hashtablesize, (set->misc_usesmalltables ? SCIP_HASHSIZE_CLIQUES_SMALL : SCIP_HASHSIZE_CLIQUES));
    SCIP_CALL( SCIPhashtableCreate(&((*cliquetable)->hashtable), blkmem, hashtablesize,
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );

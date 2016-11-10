@@ -54,7 +54,7 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-VALGRIND	=	false
+DEBUGTOOL	=	auto
 CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
@@ -76,6 +76,14 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
+
+ifeq ($(DEBUGTOOL),auto)
+   ifeq ($(OPT),dbg)
+      override DEBUGTOOL   =   gdb
+   else
+      override DEBUGTOOL   =   none
+   endif
+endif
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false

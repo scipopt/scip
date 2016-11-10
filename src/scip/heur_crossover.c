@@ -56,7 +56,7 @@
                                               * cutpool of the original scip be copied to constraints of the subscip
                                               */
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
-#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
+#define HASHSIZE_SOLS         500            /* size of hash table for solution tuples in crossover heuristic         */
 #define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP           */
 #define DEFAULT_USEUCT        FALSE          /* should uct node selection be used at the beginning of the search?     */
 #define DEFAULT_RANDSEED         7           /* initial random seed                                                   */
@@ -839,7 +839,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    success = FALSE;
 
    /* create a copy of the transformed problem to be used by the heuristic */
@@ -921,11 +921,11 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {

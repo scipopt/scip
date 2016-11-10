@@ -101,6 +101,7 @@ struct SCIP_NlRow
    int                   nlpindex;           /**< index of this row in NLP, or -1 if not added */
    int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if not in there */
    SCIP_Real             dualsol;            /**< dual value associated with row in last NLP solve */
+   SCIP_EXPRCURV         curvature;          /**< curvature of the nonlinear row */
 };
 
 /** current NLP data */

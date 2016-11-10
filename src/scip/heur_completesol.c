@@ -711,7 +711,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    eventhdlr = NULL;

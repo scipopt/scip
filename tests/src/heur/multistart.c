@@ -60,7 +60,7 @@ void setup(void)
    y = SCIPvarGetTransVar(origy);
 
    /* create mapping between variables and 0,..,SCIPgetNVars(scip)-1 */
-   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(2)) );
+   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), 2) );
    SCIP_CALL( SCIPhashmapInsert(varindex, (void*)x, (void*)(size_t)0) );
    SCIP_CALL( SCIPhashmapInsert(varindex, (void*)y, (void*)(size_t)1) );
 
@@ -154,7 +154,8 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    /* compute the gradient for 2.3*x - 3.1*y at point (x,y) = (-2,3) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 3.0) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0,
+         SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
@@ -162,7 +163,8 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    cr_assert( SCIPisEQ(scip, grad[1], -3.1) );
 
    /* compute the gradient for 2*x^2 -4*y^2 at point (x,y) = (-2,3) */
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 0, NULL, NULL, 2, quadvars, 2, quadelems, NULL, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 0, NULL, NULL, 2, quadvars, 2, quadelems, NULL, 1.0, 1.0,
+         SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
@@ -172,7 +174,8 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    /* compute the gradient for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy at point (x,y) = (1,-7) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -7.0) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 2, quadvars, 3, quadelems, NULL, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 2, quadvars, 3, quadelems, NULL, 1.0, 1.0,
+         SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
@@ -190,7 +193,8 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_PRODUCT, 2, exprs) );
    SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &tree, expr, 2, 0, NULL) );
    SCIP_CALL( SCIPexprtreeSetVars(tree, 2, linvars) );
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 2, quadvars, 3, quadelems, tree, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, 2, quadvars, 3, quadelems, tree, 1.0, 1.0,
+         SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( computeGradient(scip, nlrow, exprint, sol, varindex, grad, &norm) );
 
    cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 3 + 5 * 3 + exp(3)) );
@@ -221,7 +225,8 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
     */
    lincoefs[0] = 5.0;
    lincoefs[1] = 1.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0,
+         SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas) );
    cr_expect(SCIPisFeasEQ(scip, minfeas, 0.0));
 
@@ -232,7 +237,8 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    quadelems[1].idx1 = 1;
    quadelems[1].idx2 = 1;
    quadelems[1].coef = 1.0;
-   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow2", 0.0, 0, NULL, NULL, 2, vars, 2, quadelems, NULL, 0.25, 0.25) );
+   SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[1], "nlrow2", 0.0, 0, NULL, NULL, 2, vars, 2, quadelems, NULL, 0.25, 0.25,
+         SCIP_EXPRCURV_UNKNOWN) );
 
    /* start inside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );

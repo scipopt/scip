@@ -4266,7 +4266,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       setIntParam(lpi, CPX_PARAM_THREADS, ival);
       break;
    case SCIP_LPPAR_RANDOMSEED:
-      setIntParam(lpi, CPX_PARAM_RANDOMSEED, ival);
+      setIntParam(lpi, CPX_PARAM_RANDOMSEED, ival % CPX_INT_MAX);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

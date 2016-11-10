@@ -396,7 +396,7 @@ SCIP_RETCODE copyAndSolveComponent(
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* create variable hashmap */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), 10 * nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -1035,7 +1035,7 @@ SCIP_RETCODE splitProblem(
    *nsolvedprobs = 0;
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
-   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * SCIPgetNConss(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conscomponent, nconss) );
 
