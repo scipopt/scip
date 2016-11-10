@@ -24,6 +24,8 @@
 #include <string.h>
 
 #include "scip/disp_default.h"
+#include "scip/concurrent.h"
+#include "scip/syncstore.h"
 
 
 #define DISP_NAME_SOLFOUND      "solfound"
@@ -33,6 +35,14 @@
 #define DISP_PRIO_SOLFOUND      80000
 #define DISP_POSI_SOLFOUND      0
 #define DISP_STRI_SOLFOUND      FALSE
+
+#define DISP_NAME_CONCSOLFOUND      "concsolfound"
+#define DISP_DESC_CONCSOLFOUND      "indicator that a new solution was found in concurrent solve"
+#define DISP_HEAD_CONCSOLFOUND      " "
+#define DISP_WIDT_CONCSOLFOUND      1
+#define DISP_PRIO_CONCSOLFOUND      80000
+#define DISP_POSI_CONCSOLFOUND      0
+#define DISP_STRI_CONCSOLFOUND      FALSE
 
 #define DISP_NAME_TIME          "time"
 #define DISP_DESC_TIME          "total solution time"
@@ -90,6 +100,14 @@
 #define DISP_PRIO_MEMUSED       0
 #define DISP_POSI_MEMUSED       1500
 #define DISP_STRI_MEMUSED       TRUE
+
+#define DISP_NAME_CONCMEMUSED       "concmemused"
+#define DISP_DESC_CONCMEMUSED       "total number of bytes used in block memory"
+#define DISP_HEAD_CONCMEMUSED       "mem"
+#define DISP_WIDT_CONCMEMUSED       5
+#define DISP_PRIO_CONCMEMUSED       20000
+#define DISP_POSI_CONCMEMUSED       1500
+#define DISP_STRI_CONCMEMUSED       TRUE
 
 #define DISP_NAME_MEMTOTAL      "memtotal"
 #define DISP_DESC_MEMTOTAL      "total number of bytes in block memory"
@@ -267,6 +285,14 @@
 #define DISP_POSI_DUALBOUND     9000
 #define DISP_STRI_DUALBOUND     TRUE
 
+#define DISP_NAME_CONCDUALBOUND     "concdualbound"
+#define DISP_DESC_CONCDUALBOUND     "current global dual bound in concurrent solve"
+#define DISP_HEAD_CONCDUALBOUND     "dualbound"
+#define DISP_WIDT_CONCDUALBOUND     14
+#define DISP_PRIO_CONCDUALBOUND     70000
+#define DISP_POSI_CONCDUALBOUND     9000
+#define DISP_STRI_CONCDUALBOUND     TRUE
+
 #define DISP_NAME_PRIMALBOUND   "primalbound"
 #define DISP_DESC_PRIMALBOUND   "current primal bound"
 #define DISP_HEAD_PRIMALBOUND   "primalbound"
@@ -274,6 +300,14 @@
 #define DISP_PRIO_PRIMALBOUND   80000
 #define DISP_POSI_PRIMALBOUND   10000
 #define DISP_STRI_PRIMALBOUND   TRUE
+
+#define DISP_NAME_CONCPRIMALBOUND   "concprimalbound"
+#define DISP_DESC_CONCPRIMALBOUND   "current primal bound in concurrent solve"
+#define DISP_HEAD_CONCPRIMALBOUND   "primalbound"
+#define DISP_WIDT_CONCPRIMALBOUND   14
+#define DISP_PRIO_CONCPRIMALBOUND   80000
+#define DISP_POSI_CONCPRIMALBOUND   10000
+#define DISP_STRI_CONCPRIMALBOUND   TRUE
 
 #define DISP_NAME_CUTOFFBOUND   "cutoffbound"
 #define DISP_DESC_CUTOFFBOUND   "current cutoff bound"
@@ -290,6 +324,14 @@
 #define DISP_PRIO_GAP           60000
 #define DISP_POSI_GAP           20000
 #define DISP_STRI_GAP           TRUE
+
+#define DISP_NAME_CONCGAP           "concgap"
+#define DISP_DESC_CONCGAP           "current (relative) gap in concurrent solve using |primal-dual|/MIN(|dual|,|primal|)"
+#define DISP_HEAD_CONCGAP           "gap"
+#define DISP_WIDT_CONCGAP           8
+#define DISP_PRIO_CONCGAP           60000
+#define DISP_POSI_CONCGAP           20000
+#define DISP_STRI_CONCGAP           TRUE
 
 #define DISP_NAME_PRIMALGAP          "primalgap"
 #define DISP_DESC_PRIMALGAP          "current (relative) gap using |primal-dual|/|primal|"
@@ -393,6 +435,71 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       SCIPinfoMessage(scip, file, "%c", c);
 
       SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
+   }
+   else
+      SCIPinfoMessage(scip, file, " ");
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of display column (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_DISPINITSOL(SCIPdispInitsolConcSolFound)
+{  /*lint --e{715}*/
+   SCIP_Real* bestupper;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND) == 0);
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &bestupper) );
+   *bestupper = SCIPinfinity(scip);
+
+   SCIPdispSetData(disp, (SCIP_DISPDATA*) bestupper);
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of display column (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_DISPINITSOL(SCIPdispExitsolConcSolFound)
+{  /*lint --e{715}*/
+   SCIP_Real* bestupper;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND) == 0);
+   assert(scip != NULL);
+
+   bestupper = (SCIP_Real*) SCIPdispGetData(disp);
+   SCIPfreeBlockMemory(scip, &bestupper);
+
+   SCIPdispSetData(disp, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' for character of best solution */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcSolFound)
+{  /*lint --e{715}*/
+   SCIP_Real* bestupper;
+   SCIP_Real  newbestupper;
+   SCIP_SYNCSTORE*  syncstore;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND) == 0);
+   assert(scip != NULL);
+
+   bestupper = (SCIP_Real*) SCIPdispGetData(disp);
+
+   syncstore = SCIPgetSyncstore(scip);
+   assert(syncstore != NULL);
+   newbestupper = SCIPsyncstoreGetLastUpperbound(syncstore);
+
+   if( SCIPsyncstoreGetLastNSols(syncstore) > 0 && SCIPisFeasLT(scip, newbestupper, *bestupper) )
+   {
+      SCIPinfoMessage(scip, file, "$");
+      *bestupper = newbestupper;
    }
    else
       SCIPinfoMessage(scip, file, " ");
@@ -559,6 +666,23 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsed)
    assert(scip != NULL);
 
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemUsed(scip), DISP_WIDT_MEMUSED);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' for used memory */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcMemUsed)
+{  /*lint --e{715}*/
+   SCIP_SYNCSTORE* syncstore;
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCMEMUSED) == 0);
+   assert(scip != NULL);
+
+   syncstore = SCIPgetSyncstore(scip);
+   assert(syncstore != NULL);
+
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPsyncstoreGetLastMemTotal(syncstore), DISP_WIDT_MEMUSED);
 
    return SCIP_OKAY;
 }
@@ -912,6 +1036,47 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    return SCIP_OKAY;
 }
 
+/** output method of display column to output file stream 'file' for dualbound */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcDualbound)
+{  /*lint --e{715}*/
+   SCIP_Real dualbound;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCDUALBOUND) == 0);
+   assert(scip != NULL);
+
+   dualbound = SCIPgetConcurrentDualbound(scip);
+
+   if( SCIPisInfinity(scip, (SCIP_Real) SCIPgetObjsense(scip) * dualbound ) )
+      SCIPinfoMessage(scip, file, "    cutoff    ");
+   else if( SCIPisInfinity(scip, -1.0 * (SCIP_Real) SCIPgetObjsense(scip) * dualbound ) )
+      SCIPinfoMessage(scip, file, "      --      ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e ", dualbound);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' for primalbound */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcPrimalbound)
+{  /*lint --e{715}*/
+   SCIP_Real primalbound;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCPRIMALBOUND) == 0);
+   assert(scip != NULL);
+
+   primalbound = SCIPgetConcurrentPrimalbound(scip);
+   if( SCIPisInfinity(scip, REALABS(primalbound)) )
+      SCIPinfoMessage(scip, file, "      --      ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e ", primalbound);
+
+   return SCIP_OKAY;
+}
+
 /** output method of display column to output file stream 'file' for cutoffbound */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutoffbound)
@@ -942,6 +1107,28 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
    assert(scip != NULL);
 
    gap = SCIPgetGap(scip);
+
+   if( SCIPisInfinity(scip, gap) )
+      SCIPinfoMessage(scip, file, "    Inf ");
+   else if( gap >= 100.00 )
+      SCIPinfoMessage(scip, file, "  Large ");
+   else
+      SCIPinfoMessage(scip, file, "%7.2f%%", 100.0*gap);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' for gap */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcGap)
+{  /*lint --e{715}*/
+   SCIP_Real gap;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCGAP) == 0);
+   assert(scip != NULL);
+
+   gap = SCIPgetConcurrentGap(scip);
 
    if( SCIPisInfinity(scip, gap) )
       SCIPinfoMessage(scip, file, "    Inf ");
@@ -1027,14 +1214,27 @@ SCIP_RETCODE SCIPincludeDispDefault(
             NULL, NULL, NULL, SCIPdispInitsolSolFound, NULL, SCIPdispOutputSolFound, NULL,
             DISP_WIDT_SOLFOUND, DISP_PRIO_SOLFOUND, DISP_POSI_SOLFOUND, DISP_STRI_SOLFOUND) );
    }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCSOLFOUND);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONCSOLFOUND, DISP_DESC_CONCSOLFOUND, DISP_HEAD_CONCSOLFOUND,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, SCIPdispInitsolConcSolFound, SCIPdispExitsolConcSolFound, SCIPdispOutputConcSolFound, NULL,
+            DISP_WIDT_CONCSOLFOUND, DISP_PRIO_CONCSOLFOUND, DISP_POSI_CONCSOLFOUND, DISP_STRI_CONCSOLFOUND) );
+      tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCSOLFOUND);
+      SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_CONCURRENT);
+   }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_TIME);
    if( tmpdisp == NULL )
    {
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_TIME, DISP_DESC_TIME, DISP_HEAD_TIME,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolvingTime, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolvingTime, NULL,
             DISP_WIDT_TIME, DISP_PRIO_TIME, DISP_POSI_TIME, DISP_STRI_TIME) );
+      tmpdisp = SCIPfindDisp(scip, DISP_NAME_TIME);
+      SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_ALL);
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NNODES);
    if( tmpdisp == NULL )
@@ -1107,6 +1307,17 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsed, NULL, 
             DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCMEMUSED);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONCMEMUSED, DISP_DESC_CONCMEMUSED, DISP_HEAD_CONCMEMUSED,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputConcMemUsed, NULL,
+            DISP_WIDT_CONCMEMUSED, DISP_PRIO_CONCMEMUSED, DISP_POSI_CONCMEMUSED, DISP_STRI_CONCMEMUSED) );
+      tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCMEMUSED);
+      SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_CONCURRENT);
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_MEMTOTAL);
    if( tmpdisp == NULL )
@@ -1315,6 +1526,28 @@ SCIP_RETCODE SCIPincludeDispDefault(
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPrimalbound, NULL, 
             DISP_WIDT_PRIMALBOUND, DISP_PRIO_PRIMALBOUND, DISP_POSI_PRIMALBOUND, DISP_STRI_PRIMALBOUND) );
    }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCDUALBOUND);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONCDUALBOUND, DISP_DESC_CONCDUALBOUND, DISP_HEAD_CONCDUALBOUND,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputConcDualbound, NULL,
+            DISP_WIDT_CONCDUALBOUND, DISP_PRIO_CONCDUALBOUND, DISP_POSI_CONCDUALBOUND, DISP_STRI_CONCDUALBOUND) );
+      tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCDUALBOUND);
+      SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_CONCURRENT);
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCPRIMALBOUND);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONCPRIMALBOUND, DISP_DESC_CONCPRIMALBOUND, DISP_HEAD_CONCPRIMALBOUND,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputConcPrimalbound, NULL,
+            DISP_WIDT_CONCPRIMALBOUND, DISP_PRIO_CONCPRIMALBOUND, DISP_POSI_CONCPRIMALBOUND, DISP_STRI_CONCPRIMALBOUND) );
+      tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCPRIMALBOUND);
+      SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_CONCURRENT);
+   }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CUTOFFBOUND);
    if( tmpdisp == NULL )
    {
@@ -1332,6 +1565,17 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputGap, NULL, 
             DISP_WIDT_GAP, DISP_PRIO_GAP, DISP_POSI_GAP, DISP_STRI_GAP) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCGAP);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONCGAP, DISP_DESC_CONCGAP, DISP_HEAD_CONCGAP,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputConcGap, NULL,
+            DISP_WIDT_CONCGAP, DISP_PRIO_CONCGAP, DISP_POSI_CONCGAP, DISP_STRI_CONCGAP) );
+      tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONCGAP);
+      SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_CONCURRENT);
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_PRIMALGAP);
    if( tmpdisp == NULL )

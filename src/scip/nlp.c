@@ -2240,7 +2240,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
             SCIP_EXPRCURV_LINEAR) );
    }
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** frees a nonlinear row */
@@ -4994,7 +4994,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
-      SCIPdebugMessage("-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling bound changed event %llx, variable <%s>\n", etype, SCIPvarGetName(var) );
       SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )

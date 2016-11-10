@@ -46,6 +46,7 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
+#include "scip/type_concsolver.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -80,6 +81,7 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
+   SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
@@ -116,6 +118,8 @@ struct SCIP_Set
    int                   dialogssize;        /**< size of dialogs array */
    int                   nnlpis;             /**< number of NLPIs */
    int                   nlpissize;          /**< size of NLPIs array */
+   int                   nconcsolvertypes;   /**< number of concurrent solver types */
+   int                   concsolvertypessize;/**< size of concurrent solver types array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
@@ -285,7 +289,7 @@ struct SCIP_Set
                                               *   freed at end of diving? */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
-   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
+   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP
                                               *   (-1: don't delete rows due to aging) */
    SCIP_Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
    SCIP_Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */
@@ -459,6 +463,31 @@ struct SCIP_Set
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
+
+   /* parallel settings */
+   int                   parallel_spimode;           /**< the mode for the parallel implementation. 0: opportunistic or
+                                                      *   1: deterministic */
+   int                   parallel_minnthreads;       /**< the minimum number of threads used for parallel code */
+   int                   parallel_maxnthreads;       /**< the maximum number of threads used for parallel code */
+   int                   parallel_queuesize ;        /**< size of job queue */
+   SCIP_Bool             parallel_blockqueuewhenfull;/**< shall the job queue block when it is full? */
+
+   /* concurrent solver settings */
+   SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */
+   SCIP_Bool             concurrent_changechildsel; /**< change the child selection rule in different solvers? */
+   SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound changes? */
+   SCIP_Bool             concurrent_presolvebefore; /**< should the problem be presolved before it is copied to the concurrent solvers? */
+   int                   concurrent_initseed;       /**< the seed for computing the concurrent solver seeds */
+   SCIP_Real             concurrent_freqinit;       /**< initial frequency of synchronization */
+   SCIP_Real             concurrent_freqmax;        /**< maximal frequency of synchronization */
+   SCIP_Real             concurrent_freqfactor;     /**< factor by which the frequency of synchronization changes */
+   SCIP_Real             concurrent_targetprogress; /**< when adapting the synchronization frequency this value is the targeted
+                                                     *   relative difference by which the absolute gap decreases per synchronization */
+   int                   concurrent_maxnsols;       /**< maximum number of solutions that will get stored in one synchronization */
+   int                   concurrent_nbestsols;      /**< number of best solutions that should be considered for synchronization */
+   int                   concurrent_maxnsyncdelay;  /**< max number of synchronizations before data is used */
+   SCIP_Real             concurrent_minsyncdelay;   /**< min offset before synchronization data is used */
+   char*                 concurrent_paramsetprefix; /**< path prefix for parameter setting files of concurrent solver scip-custom */
 
    /* timing settings */
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */

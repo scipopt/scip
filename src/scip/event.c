@@ -257,7 +257,7 @@ SCIP_RETCODE SCIPeventhdlrExec(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPsetDebugMsg(set, "execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
+   SCIPsetDebugMsg(set, "execute event of handler <%s> with event %p of type 0x%llx\n", eventhdlr->name, (void*)event, event->eventtype);
 
 #ifdef TIMEEVENTEXEC
    /* start timing */
@@ -432,6 +432,21 @@ SCIP_Real SCIPeventhdlrGetTime(
  * Event methods
  */
 
+
+/** creates a synchronization event */
+SCIP_RETCODE SCIPeventCreateSynch(
+   SCIP_EVENT**          event,             /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem             /**< block memory */
+   )
+{
+   assert(event != NULL);
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_SYNCH;
+
+   return SCIP_OKAY;
+}
 
 /*
  * simple functions implemented as defines
@@ -971,7 +986,7 @@ SCIP_VAR* SCIPeventGetVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       return event->data.eventvaradded.var;
@@ -1028,7 +1043,7 @@ SCIP_RETCODE SCIPeventChgVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       event->data.eventvaradded.var = var;
@@ -1127,7 +1142,7 @@ SCIP_Real SCIPeventGetOldbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_GLBCHANGED:
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1151,7 +1166,7 @@ SCIP_Real SCIPeventGetNewbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  
+   {
    case SCIP_EVENTTYPE_GLBCHANGED:
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1458,13 +1473,14 @@ SCIP_RETCODE SCIPeventProcess(
    assert((event->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
    assert((event->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
 
-   SCIPsetDebugMsg(set, "processing event of type 0x%x\n", event->eventtype);
+   SCIPsetDebugMsg(set, "processing event of type 0x%llx\n", event->eventtype);
 
    switch( event->eventtype )
    {
    case SCIP_EVENTTYPE_DISABLED:
       break;
 
+   case SCIP_EVENTTYPE_SYNCH:
    case SCIP_EVENTTYPE_VARADDED:
    case SCIP_EVENTTYPE_PRESOLVEROUND:
    case SCIP_EVENTTYPE_NODEFOCUSED:
@@ -1601,7 +1617,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
-         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound, 
+         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -1951,7 +1967,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPsetDebugMsg(set, "processing event filter %p (len %d, mask 0x%x) with event type 0x%x\n",
+   SCIPsetDebugMsg(set, "processing event filter %p (len %d, mask 0x%x) with event type 0x%llx\n",
       (void*)eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
 
    eventtype = event->eventtype;
@@ -1984,7 +2000,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    if( !processed )
    {
       eventfilter->eventmask &= ~event->eventtype;
-      SCIPsetDebugMsg(set, " -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
+      SCIPsetDebugMsg(set, " -> event type 0x%llx not processed. new mask of event filter %p: 0x%llx\n",
          event->eventtype, (void*)eventfilter, eventfilter->eventmask);
    }
 
@@ -2080,7 +2096,7 @@ SCIP_RETCODE eventqueueAppend(
    assert(event != NULL);
    assert(*event != NULL);
 
-   SCIPsetDebugMsg(set, "appending event %p of type 0x%x to event queue %p at position %d\n",
+   SCIPsetDebugMsg(set, "appending event %p of type 0x%llx to event queue %p at position %d\n",
       (void*)*event, (*event)->eventtype, (void*)eventqueue, eventqueue->nevents);
 
    SCIP_CALL( eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1) );
@@ -2124,7 +2140,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    else
    {
       /* delay processing of event by appending it to the event queue */
-      SCIPsetDebugMsg(set, "adding event %p of type 0x%x to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
+      SCIPsetDebugMsg(set, "adding event %p of type 0x%llx to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
 
       switch( (*event)->eventtype )
       {
@@ -2132,6 +2148,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
          SCIPerrorMessage("cannot add a disabled event to the event queue\n");
          return SCIP_INVALIDDATA;
 
+      case SCIP_EVENTTYPE_SYNCH:
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
@@ -2180,7 +2197,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             SCIPsetDebugMsg(set, " -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventobjchg.var), (*event)->data.eventobjchg.oldobj,
                (*event)->data.eventobjchg.newobj,
-               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj, 
+               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj,
                qevent->data.eventobjchg.newobj);
 
             qevent->data.eventobjchg.newobj = (*event)->data.eventobjchg.newobj;
@@ -2222,7 +2239,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             SCIPsetDebugMsg(set, " -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
-               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound, 
+               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound,
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
@@ -2372,7 +2389,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
       event = eventqueue->events[i];
       assert(event != NULL);
 
-      SCIPsetDebugMsg(set, "processing event %d of %d events in queue: eventtype=0x%x\n", i, eventqueue->nevents, event->eventtype);
+      SCIPsetDebugMsg(set, "processing event %d of %d events in queue: eventtype=0x%llx\n", i, eventqueue->nevents, event->eventtype);
 
       /* unmark the event queue index of a variable with changed objective value or bounds, and unmark the event queue
        * member flag of a variable with added implication

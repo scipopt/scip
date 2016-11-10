@@ -43,6 +43,15 @@ ifeq ($(OPENSOURCE),false)
 	override IPOPT	=	false
 endif
 
+# use PARASCIP=true if compiled with TPI not equal to none
+ifeq ($(TPI),omp)
+	override PARASCIP        =       true
+endif
+ifeq ($(TPI),tny)
+        override PARASCIP        =       true
+endif
+
+
 #-----------------------------------------------------------------------------
 # load default settings and detect host architecture
 #-----------------------------------------------------------------------------
@@ -240,7 +249,41 @@ ALLSRC		+=	$(LPILIBSRC)
 ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR) $(LPSLDFLAGS) $(LINKRPATH)$(realpath $(LIBDIR))
 endif
+#-----------------------------------------------------------------------------
+# Parallel Interface
+#-----------------------------------------------------------------------------
 
+TPILIBSHORTNAME	=	tpi$(TPI)
+TPILIBNAME	=	$(TPILIBSHORTNAME)-$(VERSION)
+TPILIBOBJ	=
+
+TPIOPTIONS	+=	none
+ifeq ($(TPI),none)
+FLAGS		+=	-DTPI_NONE
+endif
+
+TPIOPTIONS	+=	omp
+ifeq ($(TPI),omp)
+TPILIBOBJ	=	tpi/tpi_openmp.o
+TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
+FLAGS		+=	-DTPI_OMP
+endif
+
+TPIOPTIONS	+=	tny
+ifeq ($(TPI),tny)
+TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
+			tinycthread/tinycthread.o
+TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
+FLAGS		+=	-DTPI_TNYC
+endif
+
+TPILIB		=	$(TPILIBNAME).$(BASE)
+TPILIBFILE	=	$(LIBDIR)/lib$(TPILIB).$(LIBEXT)
+TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
+TPILIBDEP	=	$(SRCDIR)/depend.tpilib.$(TPI).$(OPT)
+TPILIBLINK	=	$(LIBDIR)/lib$(TPILIBSHORTNAME).$(BASE).$(LIBEXT)
+TPILIBSHORTLINK = 	$(LIBDIR)/lib$(TPILIBSHORTNAME).$(LIBEXT)
+ALLSRC		+=	$(TPILIBSRC)
 
 #-----------------------------------------------------------------------------
 # NLP Solver Interfaces and expression interpreter
@@ -376,6 +419,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_abspower.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
+			scip/concsolver_scip.o \
 			scip/cons_and.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
@@ -405,6 +449,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
 			scip/event_solvingphase.o \
+			scip/event_synchpoint.o \
+			scip/prop_synch.o \
+			scip/event_globalbnd.o \
+			scip/heur_synch.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_bound.o \
 			scip/heur_clique.o \
@@ -521,8 +569,11 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o
 
-SCIPLIBOBJ	=	scip/branch.o \
+SCIPLIBOBJ	=	scip/boundstore.o \
+			scip/branch.o \
 			scip/clock.o \
+			scip/concsolver.o \
+			scip/concurrent.o \
 			scip/conflict.o \
 			scip/conflictstore.o \
 			scip/cons.o \
@@ -569,6 +620,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sol.o \
 			scip/solve.o \
 			scip/stat.o \
+			scip/syncstore.o \
 			scip/tree.o \
 			scip/var.o \
 			scip/visual.o \
@@ -643,9 +695,9 @@ MAINOBJ		=	main.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.main.$(OPT)
 
-MAINFILE	=	$(BINDIR)/$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+MAINFILE	=	$(BINDIR)/$(MAINNAME).$(BASE).$(LPS).$(TPI)$(EXEEXTENSION)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
-MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS).$(TPI)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
 ALLSRC		+=	$(MAINSRC)
 
@@ -659,11 +711,11 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) \
+.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) \
 		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(MAINLINK) $(MAINSHORTLINK) \
-		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
+		$(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 MAKE		+= -s
 endif
 
@@ -673,8 +725,8 @@ all:		libs
 
 .PHONY: libs
 libs:     	makesciplibfile
-		@$(MAKE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		@$(MAKE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
 		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 
 .PHONY: preprocess
@@ -687,7 +739,7 @@ preprocess:     checkdefines
 		@$(MAKE) touchexternal
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
@@ -714,7 +766,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBSRC) $(LPILIBSRC)
+splint:		$(SCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
@@ -837,6 +889,16 @@ $(LPILIBSHORTLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
 
+$(TPILIBLINK):	$(TPILIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(TPILIBFILE)) $(notdir $@)
+
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(TPILIBSHORTLINK)
+$(TPILIBSHORTLINK):	$(TPILIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(TPILIBFILE)) $(notdir $@)
+
 $(NLPILIBLINK):	$(NLPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
@@ -914,6 +976,8 @@ cleanlib:       | $(LIBDIR)
 		@-rm -f $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 		@echo "-> remove library $(LPILIBFILE)"
 		@-rm -f $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
+		@echo "-> remove library $(TPILIBFILE)"
+		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 		@echo "-> remove library $(NLPILIBFILE)"
 		@-rm -f $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK)
 
@@ -940,6 +1004,19 @@ ifeq ($(LINKER),CPP)
 endif
 		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define
 		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
+
+.PHONY: tpidepend
+tpidepend:
+ifeq ($(LINKER),C)
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(TPILIBSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(TPILIBDEP)'
+endif
+ifeq ($(LINKER),CPP)
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(TPILIBSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(TPILIBDEP)'
+endif
 
 .PHONY: nlpidepend
 nlpidepend:
@@ -976,42 +1053,43 @@ scipdepend:
 		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
 
-depend:		scipdepend lpidepend nlpidepend maindepend
+depend:		scipdepend lpidepend tpidepend nlpidepend maindepend
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
 -include	$(OBJSCIPLIBDEP)
 -include	$(LPILIBDEP)
+-include	$(TPILIBDEP)
 -include	$(NLPILIBDEP)
 
 ifeq ($(SHARED),true)
-$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCC_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
+		$(LINKCC_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(TPILIB) $(LINKCXX_l)$(NLPILIB) \
 		$(LINKRPATH)\$$ORIGIN/../$(LIBDIR) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
 		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(TPILIB) $(LINKCXX_l)$(NLPILIB) \
 		$(LINKRPATH)\$$ORIGIN/../$(LIBDIR) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 else
-$(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		-$(LINKCC) $(MAINOBJFILES) $(OFLAGS) \
-		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
+		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) \
+		$(LINKCC_L)$(LIBDIR) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
 		-$(LINKCXX) $(MAINOBJFILES) $(OFLAGS) \
-		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
+		$(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) \
+		$(LINKCXX_L)$(LIBDIR) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 endif
@@ -1047,6 +1125,14 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
+$(TPILIBFILE):	$(TPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
+		@echo "-> generating library $@"
+		-rm -f $@
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(TPILIBOBJFILES)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
@@ -1057,19 +1143,19 @@ endif
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.c | $(BINOBJDIR)
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 ifeq ($(GAMS),true)
 $(LIBOBJDIR)/scip/%.o:	$(GAMSDIR)/apifiles/C/api/%.c | $(LIBOBJDIR)
@@ -1149,7 +1235,7 @@ ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
 		@-touch $(ALLSRC)
 endif
 ifneq ($(USRLDFLAGS),$(LAST_USRLDFLAGS))
-		@-touch -c $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
+		@-touch -c $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)
 endif
 ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
 		@-touch -c $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
@@ -1255,6 +1341,13 @@ endif
 checkdefines:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
+endif
+ifneq ($(TPI),none)
+ifneq ($(TPI),omp)
+ifneq ($(TPI),tny)
+		$(error invalid TPI flag selected: TPI=$(TPI). Possible options are: $(TPIOPTIONS))
+endif
+endif
 endif
 ifneq ($(GMP),true)
 ifneq ($(GMP),false)

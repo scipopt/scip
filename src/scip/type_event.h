@@ -88,6 +88,9 @@ extern "C" {
 #define SCIP_EVENTTYPE_ROWCONSTCHANGED 0x40000000u/**< the constant of a row has been changed (row specific event) */
 #define SCIP_EVENTTYPE_ROWSIDECHANGED 0x80000000u /**< a side of a row has been changed (row specific event) */
 
+/* synch event */
+#define SCIP_EVENTTYPE_SYNCH          0x100000000u /**< synchronization event */
+
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
 #define SCIP_EVENTTYPE_LBCHANGED      (SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED)
@@ -120,7 +123,7 @@ extern "C" {
 #define SCIP_EVENTTYPE_ROWCHANGED     (SCIP_EVENTTYPE_ROWCOEFCHANGED | SCIP_EVENTTYPE_ROWCONSTCHANGED | SCIP_EVENTTYPE_ROWSIDECHANGED)
 #define SCIP_EVENTTYPE_ROWEVENT       (SCIP_EVENTTYPE_ROWADDEDSEPA | SCIP_EVENTTYPE_ROWDELETEDSEPA | SCIP_EVENTTYPE_ROWADDEDLP | SCIP_EVENTTYPE_ROWDELETEDLP | SCIP_EVENTTYPE_ROWCHANGED)
 
-typedef unsigned int SCIP_EVENTTYPE;         /**< type of event (bit field) */
+typedef unsigned long long int SCIP_EVENTTYPE;         /**< type of event (bit field) */
 
 
 typedef struct SCIP_Eventhdlr SCIP_EVENTHDLR;     /**< event handler for a specific events */

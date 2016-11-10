@@ -3770,7 +3770,7 @@ SCIP_RETCODE propIndicator(
             {
                /* In this case we would like to fix the binary variable to 1, if it is not locked up
                   except by this indicator constraint. If more than one indicator constraint is
-                  effected, we have to hope that they are all fulfilled - in this case the last
+                  affected, we have to hope that they are all fulfilled - in this case the last
                   constraint will fix the binary variable to 1. */
                if ( SCIPvarGetNLocksUp(binvar) <= 1 )
                {

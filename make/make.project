@@ -68,6 +68,7 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
+TPI		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -113,6 +114,7 @@ CXX_o		=	-o # the trailing space is important
 LINKCC		=	gcc
 LINKCC_L	=	-L
 LINKCC_l	=	-l
+LINKCC_f	=	-f
 LINKCC_o	=	-o # the trailing space is important
 LINKCXX		=	g++
 LINKCXX_L	=	-L
@@ -192,9 +194,11 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/tpi \
 			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
-			$(LIBOBJDIR)/dijkstra
+			$(LIBOBJDIR)/dijkstra \
+			$(LIBOBJDIR)/tinycthread
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -327,6 +331,34 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(LPILIB).$(LIBEXT)
 LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/lib$(LPILIBNAME).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# Parallel Interface
+#-----------------------------------------------------------------------------
+
+TPILIBNAME	=	tpi$(TPI)
+
+ifeq ($(TPI),omp)
+ifeq ($(COMP),gnu)
+TPICFLAGS  += $(LINKCC_f)openmp$(LINKLIBSUFFIX)
+TPILDFLAGS  += $(LINKCC_f)openmp$(LINKLIBSUFFIX)
+else ifeq ($(COMP),intel)
+TPICFLAGS  += -openmp$(LINKLIBSUFFIX)
+TPILDFLAGS  += -openmp$(LINKLIBSUFFIX)
+else
+TPICFLAGS  +=
+TPILDFLAGS  +=
+endif
+endif
+
+ifeq ($(TPI),none)
+TPILDFLAGS	+=
+endif
+
+TPILIB		=	$(TPILIBNAME).$(BASE)
+TPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(TPILIB).$(LIBEXT)
+TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/lib$(TPILIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------

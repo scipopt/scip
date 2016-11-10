@@ -320,7 +320,6 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
-
 /*
  * Define to mark deprecated API functions
  */
