@@ -199,7 +199,7 @@ static
 SCIP_RETCODE catchVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */      
    )
 {
    SCIP_CONSDATA* consdata;
@@ -286,7 +286,7 @@ static
 SCIP_RETCODE dropVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */      
    )
 {
    SCIP_CONSDATA* consdata;
@@ -678,7 +678,7 @@ SCIP_RETCODE createNlRow(
    return SCIP_OKAY;
 }
 
-/** evaluates the left hand side of a SOC constraint */
+/** evaluates the left hand side of a SOC constraint */ 
 static
 SCIP_RETCODE evalLhs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -711,14 +711,14 @@ SCIP_RETCODE evalLhs(
       }
 
       val = consdata->coefs[i] * (val + consdata->offsets[i]);
-      consdata->lhsval += val * val;
+      consdata->lhsval += val * val;      
    }
    consdata->lhsval = sqrt(consdata->lhsval);
 
    return SCIP_OKAY;
 }
 
-/* computes the norm of the gradient of the SOC function */
+/* computes the norm of the gradient of the SOC function */ 
 static
 SCIP_Real getGradientNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -973,7 +973,7 @@ SCIP_RETCODE generateCutPoint(
       assert(!SCIPisInfinity(scip, ABS(x[i])));
 
       val = consdata->coefs[i] * (x[i] + consdata->offsets[i]);
-      lhsval += val * val;
+      lhsval += val * val;      
    }
    lhsval = sqrt(lhsval);
 
@@ -1013,16 +1013,16 @@ SCIP_RETCODE generateCutPoint(
    return SCIP_OKAY;
 }
 
-/** generate supporting hyperplane w.r.t. solution projected on feasible set
- *
+/** generate supporting hyperplane w.r.t. solution projected on feasible set 
+ * 
  * Instead of linearizing the SOC constraint in the given solution point, this function projects the point
  * first onto the feasible set of the SOC constraint (w.r.t. euclidean norm (scaled by alpha))
  * and linearizes the SOC constraint there.
  * The hope is that this produces somewhat tighter cuts.
- *
+ * 
  * The projection has only be computed for the case gamma = 0.
- * If gamma > 0, generateCut is called.
- *
+ * If gamma > 0, generateCut is called. 
+ * 
  * Let \f$\hat x\f$ be sol or the LP solution if sol == NULL.
  * Then the projected point \f$\tilde x\f$ is given by
  * \f[
@@ -1031,12 +1031,12 @@ SCIP_RETCODE generateCutPoint(
  * \f]
  * where
  * \f[
- *   \lambda = \frac{1-A}{1+A}, \qquad
+ *   \lambda = \frac{1-A}{1+A}, \qquad 
  *   A = \frac{\alpha_{n+1}(\hat x_{n+1}+\beta_{n+1})}{\sqrt{\sum_{i=1}^n (\alpha_i(\hat x_i+\beta_i))^2}}
  * \f]
- *
+ * 
  * If lambda is very close to 1, generateCut is called.
- *
+ * 
  * The generated cut is very similar to the unprojected form.
  * The only difference is in the right hand side, which is (in the case beta = 0) multiplied by 1/(1-lambda).
  * */
@@ -1082,7 +1082,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    SCIPdebugMsg(scip, "A = %g \t lambda = %g\n", A, lambda);
 
    if( SCIPisFeasEQ(scip, lambda, 1.0) )
-   {  /* avoid numerical difficulties when dividing by (1-lambda) below */
+   {  /* avoid numerical difficulties when dividing by (1-lambda) below */ 
       SCIP_CALL( generateCutSol(scip, cons, sol, row) );
       return SCIP_OKAY;
    }
@@ -1382,7 +1382,7 @@ SCIP_RETCODE separatePoint(
 
       /* enforce only useful constraints
        * others are only checked and enforced if we are still feasible or have not found a separating cut yet
-       */
+       */ 
       if( c >= nusefulconss && *success )
          break;
    }
@@ -1559,7 +1559,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
 /** removes fixed variables, replace aggregated and negated variables
  *
  * repeats replacements until no further change is found;
- * takes care of capture/release and locks, but not of variable events (assumes that var events are not caught yet)
+ * takes care of capture/release and locks, but not of variable events (assumes that var events are not caught yet) 
  */
 static
 SCIP_RETCODE presolveRemoveFixedVariables(
@@ -1993,7 +1993,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
 
 /** adds the linear outer-approximation of Glineur et.al. for a SOC constraint of dimension 3
- *
+ * 
  * Input is the data for a constraint \f$\sqrt{(\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2) \leq \alpha_3(x_3+offset3)}\f$.
  * Here constant >= 0.0, alpha3 > 0.0, and the lower bound of x3 >= -offset3.
  * Also x2 = NULL is allowed, in which case the second term is assumed to be constant, and offset2 != 0 is needed.
@@ -2048,7 +2048,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    for( i = 1; i <= N; ++i )
    {
       (void) SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
-      SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, 
             SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, avars[i]) );
 
@@ -2060,7 +2060,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
 
    /* create linear constraints for the first case
     * cos(pi) = -1, sin(pi) = 0
-    * -> a_1  = - alpha1 (x1 + offset1)    ->  -alpha1*x1 - a_1  =  alpha1*offset1
+    * -> a_1  = - alpha1 (x1 + offset1)    ->  -alpha1*x1 - a_1  =  alpha1*offset1 
     * -> b_1 >= | alpha2 (x2 + offset2) |  ->   alpha2*x2 - b_1 <= -alpha2*offset2
     *                                           alpha2*x2 + b_1 >= -alpha2*offset2
     */
@@ -2226,7 +2226,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
 }
 
 /** adds the linear outer-approximation of Ben-Tal and Nemirovski for a SOC constraint of dimension 3
- *
+ * 
  * Input is the data for a constraint \f$\sqrt{constant + (\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2) \leq \alpha_3(x_3+offset3)}\f$.
  * Here constant >= 0.0, alpha3 > 0.0, and the lower bound of x3 >= -offset3.
  * Also x2 = NULL is allowed, in which case the second term is assumed to be constant, and offset2 != 0 is needed.
@@ -2283,7 +2283,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       SCIP_CALL( SCIPaddVar(scip, avars[i]) );
 
       (void) SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
-      SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, 0.0, SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, 0.0, SCIPinfinity(scip), 0.0, 
             SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, bvars[i]) );
    }
@@ -2474,7 +2474,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
 }
 
 /** adds a linear outer approx for a three dimensional SOC constraint
- *
+ * 
  * chooses between Ben-Tan/Nemirovski and Glineur and calls the corresponding function
  */
 static
@@ -2509,7 +2509,7 @@ SCIP_RETCODE presolveCreateOuterApproxDim3(
 }
 
 /** adds linear outer approximation of Ben-Tal and Nemirovski for a constraint \f$\gamma + \sum_{i=1}^n (\alpha_i (x_i + \beta_i))^2 <= (\alpha_{n+1} (x_{n+1} + \beta_{n+1}))^2\f$ to the LP
- *
+ * 
  * if n>2, calls same function recursively;
  * if n=2, calls presolveCreateBenTalNemirovskiApproxDim3
  */
@@ -2572,7 +2572,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    }
 
    if( nlhsvars == 3 || (nlhsvars == 2 && !SCIPisZero(scip, constant)) )
-   {
+   { 
       /* a bit special case too */
       /* for first two variables on lhs, create a new aux.var and a new SOC3 */
       (void) SCIPsnprintf(name, 255, "%s#z1", basename);
@@ -2624,7 +2624,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
          constant, name, origcons, soc3_nr_auxvars, glineur, naddconss) );
 
    (void) SCIPsnprintf(name, 255, "%s#z2", basename);
-   SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0.0,
+   SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0.0, 
          SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar2) );
 
@@ -3154,7 +3154,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    SCIP_Real      lhsconstant;
    int            lhscount;
    int            lhsnvars;
-   SCIP_VAR*      rhsvar;
+   SCIP_VAR*      rhsvar; 
    SCIP_Real      rhscoef;
    SCIP_Real      rhsoffset;
    SCIP_VAR*      bilinvar1;
@@ -3963,7 +3963,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOC)
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeSOC)
-{
+{  
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
@@ -4053,7 +4053,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_CONSINITSOL(consInitsolSOC)
-{
+{  
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -4194,10 +4194,10 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
 }
 
 
-/** transforms constraint data into data belonging to the transformed problem */
+/** transforms constraint data into data belonging to the transformed problem */ 
 static
 SCIP_DECL_CONSTRANS(consTransSOC)
-{
+{  
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     sourcedata;
@@ -4265,7 +4265,7 @@ SCIP_DECL_CONSTRANS(consTransSOC)
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOC)
-{
+{  
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          sepasuccess;
@@ -4395,7 +4395,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
 /** separation method of constraint handler for arbitrary primal solutions */
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOC)
-{
+{  
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          sepasuccess;
    SCIP_Bool          cutoff;
@@ -4588,7 +4588,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
          if( !SCIPisInfinity(scip, unscaledviol) )
             unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
 
-         SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/
+         SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
          SCIPinfoMessage(scip, NULL, ";\n\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
       }
 
@@ -4631,7 +4631,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
          break;
    }
 
-   /* if we failed to polish solution, clear the solution */
+   /* if we failed to polish solution, clear the solution */ 
    if( !dolinfeasshift && polishedsol != NULL )
    {
       SCIP_CALL( SCIPfreeSol(scip, &polishedsol) );
@@ -4800,7 +4800,7 @@ SCIP_DECL_CONSLOCK(consLockSOC)
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSOC)
-{
+{  
    SCIP_CONSDATA* consdata;
    int            i;
 
@@ -4861,18 +4861,18 @@ SCIP_DECL_CONSCOPY(consCopySOC)
    consdata = SCIPconsGetData(sourcecons);
    assert(consdata != NULL);
 
-   *valid = TRUE;
+   *valid = TRUE; 
 
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &vars, consdata->nvars) );
 
-   /* map variables to active variables of the target SCIP */
+   /* map variables to active variables of the target SCIP */   
    for( i = 0; i < consdata->nvars && *valid; ++i )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->vars[i], &vars[i], varmap, consmap, global, valid) );
       assert(!(*valid) || vars[i] != NULL);
    }
 
-   /* map rhs variable to active variable of the target SCIP */
+   /* map rhs variable to active variable of the target SCIP */   
    if( *valid )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->rhsvar, &rhsvar, varmap, consmap, global, valid) );

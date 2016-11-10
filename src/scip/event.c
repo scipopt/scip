@@ -986,7 +986,7 @@ SCIP_VAR* SCIPeventGetVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {
+   {  
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       return event->data.eventvaradded.var;
@@ -1043,7 +1043,7 @@ SCIP_RETCODE SCIPeventChgVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {
+   {  
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       event->data.eventvaradded.var = var;
@@ -1142,7 +1142,7 @@ SCIP_Real SCIPeventGetOldbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {
+   {  
    case SCIP_EVENTTYPE_GLBCHANGED:
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1166,7 +1166,7 @@ SCIP_Real SCIPeventGetNewbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {
+   {  
    case SCIP_EVENTTYPE_GLBCHANGED:
    case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1617,7 +1617,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
-         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
+         SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound, 
                event->data.eventbdchg.newbound) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -2197,7 +2197,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             SCIPsetDebugMsg(set, " -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventobjchg.var), (*event)->data.eventobjchg.oldobj,
                (*event)->data.eventobjchg.newobj,
-               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj,
+               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj, 
                qevent->data.eventobjchg.newobj);
 
             qevent->data.eventobjchg.newobj = (*event)->data.eventobjchg.newobj;
@@ -2239,7 +2239,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             SCIPsetDebugMsg(set, " -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
                SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
-               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound,
+               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound, 
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;

@@ -1594,7 +1594,7 @@ void coefChanged(
       assert(row->lpipos < lp->nlpirows);
       assert(col->lpipos < lp->nlpicols);
 
-      /* we have to remember the change only in the row or in the column,
+      /* we have to remember the change only in the row or in the column, 
        * because the readdition of one vector would change the other automatically.
        */
       if( row->lpipos >= lp->lpifirstchgrow )
@@ -2286,7 +2286,7 @@ SCIP_RETCODE rowSideChanged(
 
 
 /*
- * double linked coefficient matrix methods
+ * double linked coefficient matrix methods 
  */
 
 /** insert column coefficients in corresponding rows */
@@ -4775,7 +4775,7 @@ SCIP_RETCODE rowScale(
    SCIP_Real ub;
    SCIP_Bool mindeltainf;
    SCIP_Bool maxdeltainf;
-   int oldlen;
+   int oldlen; 
    int c;
 
    assert(row != NULL);
@@ -4857,8 +4857,8 @@ SCIP_RETCODE rowScale(
          SCIP_CALL( rowChgCoefPos(row, blkmem, set, eventqueue, lp, c, newval) );
 
          /* current coefficient has been deleted from the row because it was almost zero */
-         if( oldlen != row->len )
-         {
+         if( oldlen != row->len ) 
+         {  
             assert(row->len == oldlen - 1);
             c--;
             oldlen = row->len;
@@ -5614,7 +5614,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
 
       return SCIP_OKAY;
    }
-   assert(minval > MIN(-mindelta, maxdelta));
+   assert(minval > MIN(-mindelta, maxdelta)); 
    assert(SCIPsetIsPositive(set, minval));
    assert(!SCIPsetIsInfinity(set, minval));
 
@@ -5834,7 +5834,7 @@ void SCIProwSort(
 }
 
 /** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry; removes
- *  zero entries from row
+ *  zero entries from row 
  *  the row must not be linked to the columns; otherwise, we would need to update the columns as
  *  well, which is too expensive
  */
@@ -9851,7 +9851,7 @@ SCIP_RETCODE lpPrimalSimplex(
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
+      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -9992,8 +9992,8 @@ SCIP_RETCODE lpDualSimplex(
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
+      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
@@ -10011,7 +10011,7 @@ SCIP_RETCODE lpDualSimplex(
    else
    {
       SCIPclockStart(stat->duallptime, set);
-      timedelta = -SCIPclockGetTime(stat->duallptime);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
    }
 
    /* call dual simplex */
@@ -10129,7 +10129,7 @@ SCIP_RETCODE lpDualSimplex(
  *  We stop the process once we do not find candidates or have performed a maximum number of
  *  iterations.
  *
- *  @todo Does this really produce a lexicographically minimal solution?
+ *  @todo Does this really produce a lexicographically minimal solution? 
  *  @todo Can we skip the consideration of basic variables that are at their lower bound? How can we
  *    guarantee that these variables will not be changed in later stages? We can fix these variables
  *    to their lower bound, but this destroys the basis.
@@ -10176,7 +10176,7 @@ SCIP_RETCODE lpLexDualSimplex(
    else
    {
       SCIPclockStart(stat->duallptime, set);
-      timedelta = -SCIPclockGetTime(stat->duallptime);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
    }
 
    /* call dual simplex for first lp */
@@ -10373,7 +10373,7 @@ SCIP_RETCODE lpLexDualSimplex(
                switch( (SCIP_BASESTAT) cstat[j] )
                {
                case SCIP_BASESTAT_LOWER:
-                  type = 'l';
+                  type = 'l'; 
                   break;
                case SCIP_BASESTAT_UPPER:
                   type = 'u';
@@ -10509,7 +10509,7 @@ SCIP_RETCODE lpLexDualSimplex(
                      ++nDualDeg;
                   else
                   {
-                     if( SCIPsetIsFeasPositive(set, dualsol[r]) )
+                     if( SCIPsetIsFeasPositive(set, dualsol[r]) ) 
                      {
                         assert(!SCIPsetIsInfinity(set, -oldlhs[r]));
                         newlhs[cntrow] = oldlhs[r];
@@ -10598,18 +10598,18 @@ SCIP_RETCODE lpLexDualSimplex(
                      switch( (SCIP_BASESTAT) cstat[j] )
                      {
                      case SCIP_BASESTAT_LOWER:
-                        type = 'l';
+                        type = 'l'; 
                         break;
                      case SCIP_BASESTAT_UPPER:
                         type = 'u';
                         break;
                      case SCIP_BASESTAT_ZERO:
-                        type = 'z';
+                        type = 'z'; 
                         break;
                      case SCIP_BASESTAT_BASIC:
-                        type = 'b';
+                        type = 'b'; 
                         break;
-                     default:
+                     default: 
                         type = '?';
                         SCIPerrorMessage("unknown base state %d\n", cstat[j]);
                         SCIPABORT();
@@ -10765,7 +10765,7 @@ SCIP_RETCODE lpBarrier(
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
+      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -10784,7 +10784,7 @@ SCIP_RETCODE lpBarrier(
    else
    {
       SCIPclockStart(stat->barrierlptime, set);
-      timedelta = -SCIPclockGetTime(stat->duallptime);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
    }
 
    /* call barrier algorithm */
@@ -10812,7 +10812,7 @@ SCIP_RETCODE lpBarrier(
    else
    {
       SCIPclockStop(stat->barrierlptime, set);
-      timedelta = -SCIPclockGetTime(stat->duallptime);
+      timedelta = -SCIPclockGetTime(stat->duallptime);      
    }
 
    /* count number of iterations */
@@ -11048,12 +11048,12 @@ SCIP_RETCODE lpSolveStable(
       }
    }
 
-   /* In the following, whenever the LP iteration limit is exceeded in an LP solving call, we leave out the
+   /* In the following, whenever the LP iteration limit is exceeded in an LP solving call, we leave out the 
     * remaining resolving calls with changed settings and go directly to solving the LP from scratch.
     */
 
    /* if FASTMIP is turned on, solve again without FASTMIP (starts from the solution of the last LP solving call);
-    * do this only if the iteration limit was not exceeded in the last LP solving call
+    * do this only if the iteration limit was not exceeded in the last LP solving call 
     */
    if( fastmip > 0 && simplex && ((*lperror) || !SCIPlpiIsIterlimExc(lp->lpi)) )
    {
@@ -11083,7 +11083,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* if the iteration limit was exceeded in the last LP solving call, we leave out the remaining resolving calls with changed settings
-    * and go directly to solving the LP from scratch
+    * and go directly to solving the LP from scratch 
     */
    if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
@@ -11153,7 +11153,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* solve again with a tighter feasibility tolerance (starts from the solution of the last LP solving call);
-    * do this only if the iteration limit was not exceeded in the last LP solving call
+    * do this only if the iteration limit was not exceeded in the last LP solving call 
     */
    if( ((simplex && (!tightprimfeastol || !tightdualfeastol)) || (!tightprimfeastol && !tightdualfeastol)) &&
       ((*lperror) || !SCIPlpiIsIterlimExc(lp->lpi)) )
@@ -11487,7 +11487,7 @@ SCIP_RETCODE lpSolve(
    }
 
    /* only one should return true */
-   assert(!(SCIPlpiIsOptimal(lp->lpi) && SCIPlpiIsObjlimExc(lp->lpi) && SCIPlpiIsPrimalInfeasible(lp->lpi) &&
+   assert(!(SCIPlpiIsOptimal(lp->lpi) && SCIPlpiIsObjlimExc(lp->lpi) && SCIPlpiIsPrimalInfeasible(lp->lpi) && 
          SCIPlpiExistsPrimalRay(lp->lpi) && SCIPlpiIsIterlimExc(lp->lpi) && SCIPlpiIsTimelimExc(lp->lpi)));
 
    /* evaluate solution status */
@@ -13164,7 +13164,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
-         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var),
+         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
                SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
       }
    }
@@ -13232,7 +13232,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
-         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub,
+         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
                SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
       }
    }
@@ -14255,7 +14255,7 @@ SCIP_RETCODE lpDelColset(
    assert(lp->ncols == lp->nlpicols);
    assert(!lp->diving);
    assert(coldstat != NULL);
-   assert(lp->nlazycols <= lp->ncols);
+   assert(lp->nlazycols <= lp->ncols); 
 
    ncols = lp->ncols;
 
@@ -15507,7 +15507,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    /* print comments */
    if( genericnames )
-      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
    else
    {
       SCIPmessageFPrintInfo(messagehdlr, file, "\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
@@ -15516,8 +15516,8 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    if( origobj && objoffset != 0.0 )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "\\ An artificial variable 'objoffset' has been added and fixed to 1.\n");
-      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ An artificial variable 'objoffset' has been added and fixed to 1.\n"); 
+      SCIPmessageFPrintInfo(messagehdlr, file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
    }
 
    /* print objective function */
@@ -15566,9 +15566,9 @@ SCIP_RETCODE SCIPlpWriteMip(
          continue;
 
       /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
-       * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B',
+       * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
        * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
-       * type 'i' means: lhs and rhs are both infinite */
+       * type 'i' means: lhs and rhs are both infinite */      
       if( SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
          type = 'r';
       else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
@@ -15658,9 +15658,9 @@ SCIP_RETCODE SCIPlpWriteMip(
             continue;
 
          /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
-          * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B',
+          * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
           * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
-          * type 'i' means: lhs and rhs are both infinite */
+          * type 'i' means: lhs and rhs are both infinite */      
          if( SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
             type = 'r';
          else if( !SCIPsetIsInfinity(set, REALABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, REALABS(lp->rows[i]->rhs)) )
@@ -16648,8 +16648,8 @@ void SCIPlpSetIsRelax(
    lp->isrelax = relax;
 }
 
-/** returns whether the current LP is a relaxation of the problem for which it has been solved and its
- *  solution value a valid local lower bound?
+/** returns whether the current LP is a relaxation of the problem for which it has been solved and its 
+ *  solution value a valid local lower bound? 
  */
 SCIP_Bool SCIPlpIsRelax(
    SCIP_LP*              lp                  /**< LP data */

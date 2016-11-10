@@ -7360,7 +7360,7 @@ SCIP_DECL_CONSDELETE(consDeleteNonlinear)
    return SCIP_OKAY;
 }
 
-/** transforms constraint data into data belonging to the transformed problem */
+/** transforms constraint data into data belonging to the transformed problem */ 
 static
 SCIP_DECL_CONSTRANS(consTransNonlinear)
 {

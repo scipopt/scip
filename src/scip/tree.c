@@ -202,7 +202,7 @@ void subrootCaptureLPIState(
    assert(nuses > 0);
 
    subroot->nlpistateref += nuses;
-   SCIPdebugMessage("captured LPI state of subroot %p %d times -> new nlpistateref=%d\n",
+   SCIPdebugMessage("captured LPI state of subroot %p %d times -> new nlpistateref=%d\n", 
       (void*)subroot, nuses, subroot->nlpistateref);
 }
 
@@ -243,7 +243,7 @@ SCIP_RETCODE SCIPnodeCaptureLPIState(
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
 
    switch( SCIPnodeGetType(node) )
-   {
+   {  
    case SCIP_NODETYPE_FORK:
       forkCaptureLPIState(node->data.fork, nuses);
       break;
@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPnodeReleaseLPIState(
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node),
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
    switch( SCIPnodeGetType(node) )
-   {
+   {  
    case SCIP_NODETYPE_FORK:
       return forkReleaseLPIState(node->data.fork, blkmem, lp);
    case SCIP_NODETYPE_SUBROOT:
@@ -1480,7 +1480,7 @@ SCIP_RETCODE nodeDeactivate(
 
    /* free node if it is a dead-end node, i.e., has no children */
    freeNode = FALSE;
-   switch( SCIPnodeGetType(node) )
+   switch( SCIPnodeGetType(node) )   
    {
    case SCIP_NODETYPE_FOCUSNODE:
    case SCIP_NODETYPE_PROBINGNODE:
@@ -1492,22 +1492,22 @@ SCIP_RETCODE nodeDeactivate(
       freeNode = FALSE;
       break;
    case SCIP_NODETYPE_JUNCTION:
-      freeNode = (node->data.junction.nchildren == 0);
+      freeNode = (node->data.junction.nchildren == 0); 
       break;
    case SCIP_NODETYPE_PSEUDOFORK:
-      freeNode = (node->data.pseudofork->nchildren == 0);
+      freeNode = (node->data.pseudofork->nchildren == 0); 
       break;
    case SCIP_NODETYPE_FORK:
-      freeNode = (node->data.fork->nchildren == 0);
+      freeNode = (node->data.fork->nchildren == 0); 
       break;
    case SCIP_NODETYPE_SUBROOT:
-      freeNode = (node->data.subroot->nchildren == 0);
+      freeNode = (node->data.subroot->nchildren == 0); 
       break;
    default:
       SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
       return SCIP_INVALIDDATA;
    }
-   if( freeNode )
+   if( freeNode ) 
    {
       SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
    }
@@ -1853,7 +1853,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), conflictingdepth);
 
          /* remember the pending bound change */
-         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newbound, boundtype, infercons, inferprop, inferinfo,
+         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newbound, boundtype, infercons, inferprop, inferinfo, 
                probingchange) );
 
          /* mark the node with the conflicting bound change to be cut off */
@@ -1918,7 +1918,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       /* update the child's lower bound */
@@ -1935,7 +1935,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype,
-            infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
+            infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER, 
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
    }
 
@@ -1957,7 +1957,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
        *       the end of the array), and we should identify now redundant bound changes that are applied at a
        *       later node on the active path
        */
-      assert(SCIPtreeGetCurrentNode(tree) == node);
+      assert(SCIPtreeGetCurrentNode(tree) == node); 
       SCIP_CALL( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
             blkmem, set, stat, lp, branchcand, eventqueue, node->depth, node->domchg->domchgdyn.nboundchgs-1, &cutoff) );
       assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
@@ -3224,7 +3224,7 @@ void treeCheckPath(
       assert(node != NULL);
       assert((int)(node->depth) == d);
       switch( SCIPnodeGetType(node) )
-      {
+      {  
       case SCIP_NODETYPE_PROBINGNODE:
          assert(SCIPtreeProbing(tree));
          assert(d >= 1);
@@ -3354,7 +3354,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
       if( tree->focussubroot != NULL )
       {
          SCIP_CALL( subrootConstructLP(tree->focussubroot, blkmem, set, eventqueue, eventfilter, lp) );
-         tree->correctlpdepth = tree->focussubroot->depth;
+         tree->correctlpdepth = tree->focussubroot->depth; 
       }
    }
 
@@ -3881,7 +3881,7 @@ SCIP_RETCODE focusnodeToFork(
    assert(lp->solved || lperror || lp->resolvelperror);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
-    *  - The primal heuristics (called after the current node's LP was solved) found a new
+    *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
     *    into a dead-end instead of a fork.)
@@ -4416,7 +4416,7 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_NODE* bestleaf;
 
       switch( SCIPnodeGetType(*node) )
-      {
+      {  
       case SCIP_NODETYPE_SIBLING:
          /* reset plunging depth, if the selected node is better than all leaves */
          bestleaf = SCIPtreeGetBestLeaf(tree);
@@ -4445,7 +4445,7 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
 
-         /* remove selected child from the children array */
+         /* remove selected child from the children array */      
          treeRemoveChild(tree, *node);
 
          /* move remaining children to the siblings array, make them SIBLINGs */
@@ -4557,7 +4557,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;
-}
+}   
 
 
 
@@ -5007,8 +5007,8 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed
-                                              * fixed should only be used, when both bounds changed
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
+                                              * fixed should only be used, when both bounds changed 
                                               */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    )
@@ -5075,7 +5075,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          }
          break;
       default:
-         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n",
+         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
             SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
          prio = 0.0;
          break;
@@ -5129,7 +5129,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          break;
 
       default:
-         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n",
+         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
             SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
          prio = 0.0;
          break;
@@ -5140,7 +5140,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
       break;
    case SCIP_BRANCHDIR_AUTO:
    default:
-      SCIPerrorMessage("invalid branching direction <%d> of variable <%s>\n",
+      SCIPerrorMessage("invalid branching direction <%d> of variable <%s>\n", 
          SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
       prio = 0.0;
       break;
@@ -5149,7 +5149,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    return prio;
 }
 
-/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
  *  branching; this estimate can be given to the SCIPcreateChild() call
  */
 SCIP_Real SCIPtreeCalcChildEstimate(
@@ -5223,7 +5223,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to branch on */
-   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution.
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution. 
                                               *   A branching value is required for branching on continuous variables */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
@@ -5276,7 +5276,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
       /* we should have givenvariable = scalar * activevariable + constant */
       val = (val - constant) / scalar;
-   }
+   }   
    else
       var = SCIPvarGetProbvar(var);
 
@@ -5322,7 +5322,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
          {
             assert(SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-            assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+            assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));         
             val = 0.0;
          }
       }
@@ -5418,7 +5418,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
       /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
        * solution is one of the bounds, we branch in the center of the domain */
-      if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub)
+      if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) 
          && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
       {
          SCIP_Real center;
@@ -6642,7 +6642,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             lp->resolvelperror = TRUE;
             tree->focusnodehaslp = FALSE;
          }
-         else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL
+         else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
@@ -6877,14 +6877,14 @@ SCIP_Real SCIPtreeGetLowerbound(
    for( i = 0; i < tree->nchildren; ++i )
    {
       assert(tree->children[i] != NULL);
-      lowerbound = MIN(lowerbound, tree->children[i]->lowerbound);
+      lowerbound = MIN(lowerbound, tree->children[i]->lowerbound); 
    }
 
    /* compare lower bound with siblings */
    for( i = 0; i < tree->nsiblings; ++i )
    {
       assert(tree->siblings[i] != NULL);
-      lowerbound = MIN(lowerbound, tree->siblings[i]->lowerbound);
+      lowerbound = MIN(lowerbound, tree->siblings[i]->lowerbound); 
    }
 
    /* compare lower bound with focus node */
@@ -6923,8 +6923,8 @@ SCIP_NODE* SCIPtreeGetLowerboundNode(
       {
          if( SCIPsetIsLT(set, tree->children[i]->lowerbound, lowerbound) || tree->childrenprio[i] > bestprio )
          {
-            lowerboundnode = tree->children[i];
-            lowerbound = lowerboundnode->lowerbound;
+            lowerboundnode = tree->children[i]; 
+            lowerbound = lowerboundnode->lowerbound; 
             bestprio = tree->childrenprio[i];
          }
       }
@@ -6938,8 +6938,8 @@ SCIP_NODE* SCIPtreeGetLowerboundNode(
       {
          if( SCIPsetIsLT(set, tree->siblings[i]->lowerbound, lowerbound) || tree->siblingsprio[i] > bestprio )
          {
-            lowerboundnode = tree->siblings[i];
-            lowerbound = lowerboundnode->lowerbound;
+            lowerboundnode = tree->siblings[i]; 
+            lowerbound = lowerboundnode->lowerbound; 
             bestprio = tree->siblingsprio[i];
          }
       }
@@ -7024,7 +7024,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetFocusNode
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
-#undef SCIPtreeSetFocusNodeLP
+#undef SCIPtreeSetFocusNodeLP 
 #undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeInRepropagation
 #undef SCIPtreeGetCurrentNode
@@ -7724,7 +7724,7 @@ void SCIPnodeGetAncestorBranchingPath(
       /* calculate the start position for the current node and the maximum remaining slots in the arrays */
       start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
       size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
-      if( *nnodes < nodeswitchsize )
+      if( *nnodes < nodeswitchsize )         
          nodeswitches[*nnodes] = start;
 
       /* get branchings for a single node */

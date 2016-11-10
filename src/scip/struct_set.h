@@ -289,7 +289,7 @@ struct SCIP_Set
                                               *   freed at end of diving? */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
-   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP
+   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
                                               *   (-1: don't delete rows due to aging) */
    SCIP_Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
    SCIP_Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */

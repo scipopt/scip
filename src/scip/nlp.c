@@ -2240,7 +2240,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
             SCIP_EXPRCURV_LINEAR) );
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;   
 }
 
 /** frees a nonlinear row */

@@ -1231,7 +1231,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_TIME, DISP_DESC_TIME, DISP_HEAD_TIME,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolvingTime, NULL,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolvingTime, NULL, 
             DISP_WIDT_TIME, DISP_PRIO_TIME, DISP_POSI_TIME, DISP_STRI_TIME) );
       tmpdisp = SCIPfindDisp(scip, DISP_NAME_TIME);
       SCIPchgDispMode(tmpdisp, SCIP_DISPMODE_ALL);
