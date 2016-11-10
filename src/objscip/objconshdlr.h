@@ -262,7 +262,12 @@ public:
     *
     *  @see SCIP_DECL_CONSENFORELAX(x) in @ref type_cons.h
     */
-   virtual SCIP_DECL_CONSENFORELAX(scip_enforelax) = 0;
+   virtual SCIP_DECL_CONSENFORELAX(scip_enforelax)
+   {  /*lint --e{715}*/
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /** constraint enforcing method of constraint handler for pseudo solutions
     *
