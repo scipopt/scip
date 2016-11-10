@@ -39,7 +39,7 @@
 
 #ifdef SCIP_DEBUG_SOLUTION
 
-#define SCIP_HASHSIZE_DEBUG        131101    /**< minimum size of hash map for storing whether a solution is valid for the node */
+#define SCIP_HASHSIZE_DEBUG        500    /**< minimum size of hash map for storing whether a solution is valid for the node */
 
 struct SCIP_DebugSolData
 {
@@ -539,7 +539,7 @@ SCIP_RETCODE isSolutionInNode(
    /* generate the hashmap */
    if( debugsoldata->solinnode == NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(&debugsoldata->solinnode, blkmem, SCIPcalcHashtableSize(SCIP_HASHSIZE_DEBUG)) );
+      SCIP_CALL( SCIPhashmapCreate(&debugsoldata->solinnode, blkmem, SCIP_HASHSIZE_DEBUG) );
    }
 
    /* check, whether we know already whether the solution is contained in the given node */

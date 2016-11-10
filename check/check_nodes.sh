@@ -50,7 +50,7 @@ CLIENTTMPDIR=${17}
 NOWAITCLUSTER=${18}
 EXCLUSIVE=${19}
 PERMUTE=${20}
-VALGRIND=${21}
+DEBUGTOOL=${21}
 REOPT=${22}
 OPTCOMMAND=${23}
 SETCUTOFF=${24}
@@ -79,7 +79,7 @@ then
     echo "NOWAITCLUSTER = $NOWAITCLUSTER"
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
-    echo "VALGRIND      = $VALGRIND"
+    echo "DEBUGTOOL      = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
@@ -102,7 +102,7 @@ else
 fi
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
-. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
 
 # at the first time, some files need to be initialized. set to "" after the innermost loop
@@ -162,7 +162,7 @@ do
             JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
             if test "$SOLVER" = "scip"
             then
-                export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+                export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
             else
                 export EXECNAME=$BINNAME
             fi
