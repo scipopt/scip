@@ -102,6 +102,17 @@ interface:
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 - SCIPinitConflictAnalysis() gets now 2 additional values: the type of the conflict and whether the current cutoff bound is used or not
 - bound reader uses angle bracket around variable names
+- in param.c/h: rename SCIPparamCheckBool() to SCIPparamIsValidBool(), SCIPparamCheckString() to SCIPparamIsValidString(),
+  SCIPparamCheckChar() to SCIPparamIsValidChar(), SCIPparamCheckLongint() to SCIPparamIsValidLongint(); the new methods return
+  a bool whether the given value is valid for the parameter instead of printing a warning message and returning an error code
+  if the value is invalid
+- add SCIPparamIsValidInt() and SCIPparamIsValidReal() to param.c/h
+- in scip.c/h: rename SCIPcheckBoolParam() to SCIPisBoolParamValid(), SCIPcheckLongintParam() to SCIPisLongintParamValid(),
+  SCIPcheckCharParam() to SCIPisCharParamValid(), SCIPcheckStringParam() to SCIPisStringParamValid(); the new methods return
+  a bool whether the given value is valid for the parameter instead of printing a warning message and returning an error code
+  if the value is invalid
+- add missing functions SCIPisIntParamValid() and SCIPisRealParamValid() to scip.c/h
+- Setting a parameter to a non-valid value now produces an error message instead of a warning.
 - add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
 
 fixed bugs:
