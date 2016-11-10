@@ -6028,6 +6028,9 @@ SCIP_RETCODE SCIPconsDelete(
    else
       cons->updateactivate = FALSE;
 
+   if( set->reopt_enable && set->stage >= SCIP_STAGE_PRESOLVED && cons->initial )
+      return SCIP_OKAY;
+
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
 

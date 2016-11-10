@@ -5131,6 +5131,9 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->addedconss = NULL;
    (*reopt)->naddedconss = 0;
    (*reopt)->addedconsssize = 0;
+   (*reopt)->glblb = NULL;
+   (*reopt)->glbub = NULL;
+   (*reopt)->activeconss = NULL;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize) );
@@ -5282,6 +5285,11 @@ SCIP_RETCODE SCIPreoptFree(
 
       BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
    }
+
+   SCIPhashmapFree(&(*reopt)->glblb);
+   SCIPhashmapFree(&(*reopt)->glbub);
+   SCIPhashmapFree(&(*reopt)->activeconss);
+
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
    BMSfreeMemoryArray(&(*reopt)->objs);
@@ -8286,10 +8294,14 @@ SCIP_RETCODE SCIPreoptAddCons(
    return SCIP_OKAY;
 }
 
+/** save global lower and bounds
+ *
+ *  @note this method can only called once, i.e., after fishing presolving of the first problem
+ */
 SCIP_RETCODE SCIPreoptSaveGlobalBounds(
-   SCIP_REOPT*           reopt,
-   SCIP_PROB*            transprob,
-   BMS_BLKMEM*           blkmem
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    SCIP_VAR** vars;
@@ -8304,8 +8316,8 @@ SCIP_RETCODE SCIPreoptSaveGlobalBounds(
    vars = SCIPprobGetVars(transprob);
 
    /* create hashmaps */
-   SCIP_CALL( SCIPhashmapCreate(&reopt->glbub, blkmem, SCIPcalcHashtableSize(5 * nvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&reopt->glblb, blkmem, SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&reopt->glbub, blkmem, nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&reopt->glblb, blkmem, nvars) );
 
    /* store the global bounds */
    for( i = 0; i < nvars; i++ )
@@ -8313,7 +8325,129 @@ SCIP_RETCODE SCIPreoptSaveGlobalBounds(
       assert(!SCIPhashmapExists(reopt->glblb, (void*)vars[i]));
       assert(!SCIPhashmapExists(reopt->glbub, (void*)vars[i]));
 
-      SCIP_CALL( SCIPhashmapInsert(reopt->glblb, (void)) );
+      SCIP_CALL( SCIPhashmapInsertReal(reopt->glblb, (void*)vars[i], SCIPvarGetLbGlobal(vars[i])) );
+      SCIP_CALL( SCIPhashmapInsertReal(reopt->glbub, (void*)vars[i], SCIPvarGetUbGlobal(vars[i])) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** save active constraints
+ *
+ *  @note this method can only called once, i.e., after fishing presolving of the first problem
+ */
+SCIP_RETCODE SCIPreoptSaveActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   assert(reopt != NULL);
+   assert(transprob != NULL);
+   assert(reopt->activeconss == NULL);
+
+   conss = transprob->conss;
+   nconss = transprob->nconss;
+
+   /* create hashmap */
+      SCIP_CALL( SCIPhashmapCreate(&reopt->activeconss, blkmem, nconss) );
+
+   for( i = 0; i < nconss; i++ )
+   {
+      assert(SCIPconsIsActive(conss[i]));
+      assert(!SCIPhashmapExists(reopt->activeconss, (void*)conss[i]));
+
+      SCIP_CALL( SCIPhashmapInsert(reopt->activeconss, (void*)conss[i], (void*)conss[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** installs global lower and upper bounds */
+SCIP_RETCODE SCIPreoptInstallBounds(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert(reopt != NULL);
+   assert(transprob != NULL);
+   assert(reopt->glblb != NULL && reopt->glbub != NULL);
+   assert(SCIPprobIsTransformed(transprob));
+
+   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPprobGetVars(transprob);
+
+   /* install global lower and upper bounds */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      assert(SCIPhashmapExists(reopt->glblb, (void*)vars[i]));
+      assert(SCIPhashmapExists(reopt->glbub, (void*)vars[i]));
+
+      lb = SCIPhashmapGetImageReal(reopt->glblb, (void*)vars[i]);
+      ub = SCIPhashmapGetImageReal(reopt->glbub, (void*)vars[i]);
+      assert(lb < SCIP_INVALID && ub < SCIP_INVALID);
+
+      /* reset the global bounds back */
+      SCIP_CALL( SCIPvarChgLbGlobal(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, lb) );
+      SCIP_CALL( SCIPvarChgUbGlobal(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, ub) );
+
+      /* reset the local bounds back */
+      SCIP_CALL( SCIPvarChgLbLocal(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, lb) );
+      SCIP_CALL( SCIPvarChgUbLocal(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, ub) );
+   }
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPreoptResetActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   )
+{
+   int nentries;
+   int i;
+
+   assert(reopt != NULL);
+   assert(reopt->activeconss != NULL);
+
+   nentries = SCIPhashmapGetNEntries(reopt->activeconss);
+
+   for( i = 0; i < nentries; i++ )
+   {
+      SCIP_CONS* cons;
+      SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(reopt->activeconss, i);
+
+      if( entry == NULL )
+         continue;
+
+      cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
+      assert(cons != NULL);
+      assert(!SCIPconsIsDeleted(cons));
+
+      if( SCIPconsIsActive(cons) )
+      {
+         SCIP_CALL( SCIPconsDeactivate(cons, set, stat) );
+      }
+      SCIP_CALL( SCIPconsActivate(cons, set, stat, -1, TRUE) );
    }
 
    return SCIP_OKAY;

@@ -561,6 +561,49 @@ SCIP_RETCODE SCIPreoptAddCons(
    SCIP_CONS*            cons                /**< constraint to add */
    );
 
+/** save global lower and bounds
+ *
+ *  @note this method can only called once, i.e., after fishing presolving of the first problem
+ */
+extern
+SCIP_RETCODE SCIPreoptSaveGlobalBounds(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** save active constraints
+ *
+ *  @note this method can only called once, i.e., after fishing presolving of the first problem
+ */
+extern
+SCIP_RETCODE SCIPreoptSaveActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** installs global lower and upper bounds */
+extern
+SCIP_RETCODE SCIPreoptInstallBounds(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+extern
+SCIP_RETCODE SCIPreoptResetActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   );
+
 #ifdef __cplusplus
 }
 #endif

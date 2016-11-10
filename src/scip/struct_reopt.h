@@ -144,6 +144,11 @@ struct SCIP_Reopt
    SCIP_Bool             objhaschanged;           /**< TRUE iff the objective fucntion has changd */
    SCIP_Bool             consadded;               /**< TRUE iff a constraint was added */
 
+   /* hashmaps to track global bound reductions and constraints deletion during presolving */
+   SCIP_HASHMAP*         glblb;                   /**< global lower bounds after presolving of the first problem */
+   SCIP_HASHMAP*         glbub;                   /**< global upper bounds after presolving of the first problem */
+   SCIP_HASHMAP*         activeconss;
+
    /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */
    int                   run;                     /**< number of the current reoptimization run */

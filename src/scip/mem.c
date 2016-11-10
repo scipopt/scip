@@ -91,3 +91,45 @@ SCIP_Longint SCIPmemGetUsed(
    return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem)
       + BMSgetBufferMemoryUsed(mem->buffer) + BMSgetBufferMemoryUsed(mem->cleanbuffer);
 }
+
+/** returns the total number of bytes in block and buffer memory */
+SCIP_Longint SCIPmemGetTotal(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem)
+      + BMSgetBlockMemoryLazy(mem->setmem) + BMSgetBlockMemoryLazy(mem->probmem)
+      + BMSgetBufferMemoryUsed(mem->buffer) + BMSgetBufferMemoryUsed(mem->cleanbuffer);
+}
+
+/** returns the maximal number of bytes used in block memory */
+SCIP_Longint SCIPmemGetUsedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryUsedMax(mem->setmem) + BMSgetBlockMemoryUsedMax(mem->probmem);
+}
+
+/** returns the maximal number of bytes unused in block memory */
+SCIP_Longint SCIPmemGetLazyBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryLazyMax(mem->setmem) + BMSgetBlockMemoryLazyMax(mem->probmem);
+}
+
+/** returns the maximal number of bytes in block memory */
+SCIP_Longint SCIPmemGetTotalBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryTotalMax(mem->setmem) + BMSgetBlockMemoryTotalMax(mem->probmem);
+}

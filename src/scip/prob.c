@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probexitsol = probexitsol;
    if( set->misc_usevartable )
    {
-      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, 
+      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem,
             (set->misc_usesmalltables ? SCIP_HASHSIZE_NAMES_SMALL : SCIP_HASHSIZE_NAMES),
             SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    }
@@ -1227,7 +1227,6 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
       SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
    }
 
