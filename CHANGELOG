@@ -109,6 +109,7 @@ interface:
   if the value is invalid
 - add missing functions SCIPisIntParamValid() and SCIPisRealParamValid() to scip.c/h
 - Setting a parameter to a non-valid value now produces an error message instead of a warning.
+- add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
 
 fixed bugs:
 - avoid numerically troublesome aggregations
