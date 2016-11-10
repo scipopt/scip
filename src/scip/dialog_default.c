@@ -1966,13 +1966,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
+
       boolval = parseBoolValue(scip, valuestr, &error);
 
       if( error )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for bool parameter <%s>. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
             valuestr, SCIPparamGetName(param));
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       else
       {
@@ -1980,8 +1981,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
          SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
-
       }
 
       break;
@@ -2002,7 +2001,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( sscanf(valuestr, "%d", &intval) != 1 || !SCIPisIntParamValid(scip, param, intval) )
       {
-         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for int parameter <%s>. Must be integral value in range [%d,%d].\n\n",
+         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for int parameter <%s>. Must be integral in range [%d,%d].\n\n",
             valuestr, SCIPparamGetName(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
       }
       else
@@ -2029,7 +2028,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 || !SCIPisLongintParamValid(scip, param, longintval) )
       {
-         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for longint parameter <%s>. Must be integral value in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n\n",
+         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for longint parameter <%s>. Must be integral in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n\n",
             valuestr, SCIPparamGetName(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       }
       else
