@@ -132,6 +132,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
          }
          else
          {
+            /* @todo better way to handle this would be a BRANCHEXECRELAX callback that could also implement pseudo costs for
+             * relaxation solutions instead of using the enforelaxcallback which is mainly intended for spatial branching
+             */
             SCIP_CALL( SCIPaddExternBranchCand(scip, vars[i], 0.2, SCIPgetSolVal(scip, sol, vars[i])) );
             *result = SCIP_INFEASIBLE;
          }
