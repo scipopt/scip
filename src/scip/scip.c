@@ -42005,7 +42005,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
 
    /* Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS    #EnfoRelax  #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoRelax  #EnfoPS    #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -42026,8 +42026,8 @@ void printConstraintStatistics(
             SCIPconshdlrGetNSepaCalls(conshdlr),
             SCIPconshdlrGetNPropCalls(conshdlr),
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
-            SCIPconshdlrGetNEnfoPSCalls(conshdlr),
             SCIPconshdlrGetNEnfoRelaxCalls(conshdlr),
+            SCIPconshdlrGetNEnfoPSCalls(conshdlr),
             SCIPconshdlrGetNCheckCalls(conshdlr),
             SCIPconshdlrGetNRespropCalls(conshdlr),
             SCIPconshdlrGetNCutoffs(conshdlr),
