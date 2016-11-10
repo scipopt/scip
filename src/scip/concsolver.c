@@ -196,6 +196,7 @@ SCIP_RETCODE SCIPconcsolverDestroyInstance(
    assert((*concsolver)->type->concsolverdestroyinst != NULL);
 
    SCIP_CALL( (*concsolver)->type->concsolverdestroyinst(set->scip, *concsolver) );
+   --(*concsolver)->type->ninstances;
 
    SCIP_CALL( SCIPfreeClock(set->scip, &(*concsolver)->totalsynctime) );
    BMSfreeMemoryArray(&(*concsolver)->name);
