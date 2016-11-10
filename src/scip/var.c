@@ -8727,31 +8727,6 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    return SCIP_OKAY;
 }
 
-/** resets the local bounds of transformed variable to their global values */
-SCIP_RETCODE SCIPvarResetLocalBounds(
-   SCIP_VAR*             var,                /**< problem variable */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(var != NULL);
-   assert(set != NULL);
-   assert(var->scip == set->scip);
-   assert(SCIPvarIsTransformed(var));
-
-   /* copy the original bounds back to the local bounds if the */
-   SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->glbdom.lb) );
-   SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->glbdom.ub) );
-
-   /* free the global and local holelists and duplicate the original ones */
-   /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
-   holelistFree(&var->locdom.holelist, blkmem);
-   SCIP_CALL( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->glbdom.holelist) );
-
-   return SCIP_OKAY;
-}
-
 /** resets the global and local bounds of original variable to their original values */
 SCIP_RETCODE SCIPvarResetBounds(
    SCIP_VAR*             var,                /**< problem variable */

@@ -79,7 +79,7 @@ SCIP_RETCODE readSol(
          assert(!SCIPsolIsPartial(sol));
 
          /* use display/allviols to decide whether to print all violations or just the first one */
-         SCIP_CALL( SCIPgetBoolParam(scip, "display/allvios", &completely) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "display/allviols", &completely) );
 
          SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, completely, TRUE, TRUE, TRUE, &stored) );
 

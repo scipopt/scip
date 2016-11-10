@@ -1072,7 +1072,7 @@ SCIP_RETCODE SCIPinitConssLP(
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
 
-   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
+   if( FALSE && set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
    {
       /* add stored cuts */
       SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, cutpool, blkmem, set, stat, eventqueue, eventfilter, lp,
@@ -3754,7 +3754,7 @@ SCIP_RETCODE solveNode(
    int actdepth;
    int nlperrors;
    int nloops;
-   SCIP_Bool foundsol;
+   SCIP_Bool foundsol = FALSE;
    SCIP_Bool focusnodehaslp;
    SCIP_Bool lpsolved;
    SCIP_Bool initiallpsolved;

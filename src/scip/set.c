@@ -622,36 +622,8 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       {
          SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
       }
-      SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", 9000000) );
+      SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", INT_MAX/4) );
       SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", TRUE) );
-
-      /* change priorities of reoptimization heuristics */
-      if( SCIPsetFindHeur(set, "ofins") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/ofins/freq", 0) );
-      }
-
-      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/reoptsols/freq", 0) );
-      }
-
-      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/trivialnegation/freq", 0) );
-      }
    }
    else
    {
@@ -669,7 +641,7 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       }
       SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "presolving/donotmultaggr") );
 
-      /* set the priorities to defeault */
+      /* set priority to defeault */
       if( SCIPsetFindBranchrule(set, "nodereopt") != NULL )
       {
          if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
@@ -677,34 +649,6 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
             SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
          }
          SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "branching/nodereopt/priority") );
-      }
-
-      /* change priorities of reoptimization heuristics */
-      if( SCIPsetFindHeur(set, "ofins") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/ofins/freq") );
-      }
-
-      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/reoptsols/freq") );
-      }
-
-      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/trivialnegation/freq") );
       }
    }
 

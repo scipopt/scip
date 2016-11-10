@@ -14246,7 +14246,7 @@ SCIP_RETCODE presolve(
    *infeasible = FALSE;
    *unbounded = SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
 
-   finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds) || (*unbounded);
+   finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds) || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
@@ -14713,11 +14713,17 @@ SCIP_RETCODE freeReoptSolve(
       assert(!cutoff);
    }
 
+   /* invalidate the dual bound */
+   SCIPprobInvalidateDualbound(scip->transprob);
+
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, FALSE) );
+
+   /* call exit methods of plugins */
+   SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
    /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
@@ -14746,6 +14752,8 @@ SCIP_RETCODE freeReoptSolve(
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, FALSE) );
 
    /* free solution process data structures */
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
+
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
@@ -14773,7 +14781,7 @@ SCIP_RETCODE freeReoptSolve(
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPprimalClear(&scip->primal, scip->mem->probmem) );
 
-   if( FALSE && scip->set->misc_resetstat )
+   if( scip->set->misc_resetstat )
    {
       /* reset statistics to the point before the problem was transformed */
       SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
@@ -14787,10 +14795,10 @@ SCIP_RETCODE freeReoptSolve(
    /* reset objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
 
-   /* reset original variable's local and global bounds to their original values */
-   SCIP_CALL( SCIPprobResetBounds(scip->transprob, scip->mem->probmem, scip->set, scip->stat) );
+   /* install globally valid lower and upper bounds */
+   SCIP_CALL( SCIPreoptInstallBound(scip->reopt) );
 
-   scip->transprob->objoffset *= scip->transprob->objscale;
+   scip->transprob->objoffset = 0.0;
    scip->transprob->objscale = 1.0;
    scip->transprob->objisintegral = FALSE;
 
@@ -15131,6 +15139,86 @@ SCIP_RETCODE compressReoptTree(
    return SCIP_OKAY;
 }
 
+/* prepare all plugins and data structures for a reoptimization run */
+static
+SCIP_RETCODE prepareReoptimization(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Bool reoptrestart;
+
+   assert(scip != NULL);
+   assert(scip->set->reopt_enable);
+
+   /* @ todo: we could check if the problem is feasible, eg, by backtracking */
+
+   /* increase number of reopt_runs */
+   ++scip->stat->nreoptruns;
+
+   /* inform the reoptimization plugin that a new iteration starts */
+   SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->origprob->vars,
+         scip->origprob->nvars, scip->set->limit_maxsol) );
+
+   /* check whether we need to add globally valid constraints */
+   if( scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol )
+   {
+      SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
+   }
+
+   /* */
+   if( scip->stat->nreoptruns == 0 )
+   {
+      assert(scip->stat->stage == SCIP_STAGE_PRESOLVED);
+
+      SCIP_CALL( SCIPreoptSaveGlobalBounds(scip->reopt, scip->transprob) );
+   }
+   /* we are at least in the second run */
+   else
+   {
+      int i;
+
+      assert(scip->transprob != NULL);
+
+      SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
+            scip->origprob->vars, scip->origprob->nvars) );
+
+      SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation) );
+
+      /* mark statistics before solving */
+      SCIPstatMark(scip->stat);
+
+//      SCIP_CALL( SCIPlpClear(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
+      SCIPbranchcandInvalidate(scip->branchcand);
+
+      /* check whether we want to restart the tree search */
+      SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
+            scip->transprob->nvars, &reoptrestart) );
+
+      /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+       * cutoff bound if primal solution is already known
+       */
+      SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
+
+      /* if possible, scale objective function such that it becomes integral with gcd 1 */
+      SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+            scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
+
+      /* call initialization methods of plugins */
+      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+
+      SCIPlpRecomputeLocalAndGlobalPseudoObjval(scip->lp, scip->set, scip->transprob);
+   }
+
+   /* try to compress the search tree */
+   if( scip->set->compr_enable )
+   {
+      SCIP_CALL( compressReoptTree(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** transforms and presolves problem
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -15387,12 +15475,6 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
-         if( scip->set->stage == SCIP_STAGE_PROBLEM
-               && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) && scip->set->reopt_enable )
-         {
-            SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
-         }
-
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -15410,43 +15492,7 @@ SCIP_RETCODE SCIPsolve(
          /* check if reoptimization is enabled and global constraints are saved */
          if( scip->set->reopt_enable )
          {
-            SCIP_Bool reoptrestart;
-            /* @ todo: we could check if the problem is feasible, eg, by backtracking */
-
-            /* increase number of reopt_runs */
-            ++scip->stat->nreoptruns;
-
-            /* inform the reoptimization plugin that a new iteration starts */
-            SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->origprob->vars,
-                  scip->origprob->nvars, scip->set->limit_maxsol) );
-
-            if( scip->stat->nreoptruns >= 2 )
-            {
-               assert(scip->transprob != NULL);
-               SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob, scip->origprob->vars, scip->origprob->nvars) );
-            }
-
-            if( scip->stat->nreoptruns > 1 )
-            {
-               SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
-                     scip->transprob->nvars, &reoptrestart) );
-
-               /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
-                * cutoff bound if primal solution is already known
-                */
-               SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-                scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
-
-               /* if possible, scale objective function such that it becomes integral with gcd 1 */
-               SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-                     scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
-            }
-         }
-
-         /* try to compress the search tree if reoptimization is enabled */
-         if( scip->set->reopt_enable && scip->set->compr_enable )
-         {
-            SCIP_CALL( compressReoptTree(scip) );
+            SCIP_CALL( prepareReoptimization(scip) );
          }
 
          /* initialize solving process data structures */
@@ -15653,40 +15699,6 @@ SCIP_RETCODE SCIPenableReoptimization(
       {
          SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
          SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
-
-         assert(SCIPfindBranchrule(scip, "nodereopt") != NULL);
-
-         if( SCIPisParamFixed(scip, "branching/nodereopt/priority") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "branching/nodereopt/priority") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "branching/nodereopt/priority", 9000000) );
-
-         /* change priority od heuristics */
-         assert(SCIPfindHeur(scip, "ofins") != NULL);
-         assert(SCIPfindHeur(scip, "reoptsols") != NULL);
-         assert(SCIPfindHeur(scip, "trivialnegation") != NULL);
-
-         if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/ofins/freq", 0) );
-
-         if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/reoptsols/freq", 0) );
-
-         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivialnegation/freq", 0) );
-
-         /* fix all parameters */
-         SCIP_CALL( SCIPfixParam(scip, "branching/nodereopt/priority") );
       }
       /* disable all reoptimization plugins and free the structure if necessary */
       else if( (!enable && scip->reopt != NULL) || (!enable && scip->set->reopt_enable && scip->reopt == NULL) )
@@ -20878,6 +20890,7 @@ SCIP_RETCODE SCIPchgVarObj(
       SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->origprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
@@ -20920,6 +20933,7 @@ SCIP_RETCODE SCIPaddVarObj(
             scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:

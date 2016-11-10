@@ -32,7 +32,7 @@
 #define HEUR_DESC             "primal heuristic for reoptimization, objective function induced neighborhood search"
 #define HEUR_DISPCHAR         'A'
 #define HEUR_PRIORITY         60000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -141,7 +141,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, TRUE, TRUE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -257,7 +257,8 @@ SCIP_RETCODE applyOfins(
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "ofins", fixedvars, fixedvals, nfixedvars, FALSE,
-         heurdata->copycuts, &success) );
+         FALSE, &success) );
+   assert(success);
 
    SCIPfreeBufferArrayNull(scip, &fixedvals);
    SCIPfreeBufferArrayNull(scip, &fixedvars);

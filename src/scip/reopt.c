@@ -5123,7 +5123,7 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->nglbrestarts = 0;
    (*reopt)->nlocrestarts = 0;
    (*reopt)->ntotallocrestarts = 0;
-   (*reopt)->firstrestart = 0;
+   (*reopt)->firstrestart = -1;
    (*reopt)->lastrestart = 0;
    (*reopt)->nobjvars = 0;
    (*reopt)->objhaschanged = FALSE;
@@ -5577,7 +5577,7 @@ int SCIPreoptGetNSavedSols(
  *    1. the objective function has changed too much
  *    2. the number of stored nodes is exceeded
  *    3. the last n optimal solutions were found by heur_reoptsols (in this case, the stored tree was only needed to
- *    prove the optimality and this can be probably faster by solving from scratch)
+ *       prove the optimality and this can be probably faster by solving from scratch)
  *
  *  If the current node is different to the root node we calculate the local similarity, i.e., exclude all variable
  *  that are already fixed by bounding.
@@ -7791,8 +7791,6 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    assert(stat != NULL);
    assert(blkmem != NULL);
 
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM);
-
    if( (reopt->glbconss == NULL || reopt->nglbconss == 0) && !set->reopt_sepabestsol )
       return SCIP_OKAY;
 
@@ -7829,6 +7827,8 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       }
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "glb_%s_%d", reopt->glbconss[c]->constype == REOPT_CONSTYPE_CUT ? "cut" : "inf", reopt->run);
+
+      // @todo use active representatives!!!!
 
       /* all variables are binary, we can create a logic-or constraint */
       if( nbinvars == reopt->glbconss[c]->nvars )
@@ -8282,6 +8282,39 @@ SCIP_RETCODE SCIPreoptAddCons(
 
    /* capture the constraint */
    SCIPconsCapture(cons);
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPreoptSaveGlobalBounds(
+   SCIP_REOPT*           reopt,
+   SCIP_PROB*            transprob,
+   BMS_BLKMEM*           blkmem
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert(reopt != NULL);
+   assert(transprob != NULL);
+   assert(reopt->glblb == NULL && reopt->glbub == NULL);
+
+   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPprobGetVars(transprob);
+
+   /* create hashmaps */
+   SCIP_CALL( SCIPhashmapCreate(&reopt->glbub, blkmem, SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&reopt->glblb, blkmem, SCIPcalcHashtableSize(5 * nvars)) );
+
+   /* store the global bounds */
+   for( i = 0; i < nvars; i++ )
+   {
+      assert(!SCIPhashmapExists(reopt->glblb, (void*)vars[i]));
+      assert(!SCIPhashmapExists(reopt->glbub, (void*)vars[i]));
+
+      SCIP_CALL( SCIPhashmapInsert(reopt->glblb, (void)) );
+   }
 
    return SCIP_OKAY;
 }

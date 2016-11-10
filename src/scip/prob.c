@@ -600,14 +600,7 @@ SCIP_RETCODE SCIPprobResetBounds(
 
    for( v = 0; v < prob->nvars; ++v )
    {
-      if( !SCIPprobIsTransformed(prob) )
-      {
-         SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPvarResetLocalBounds(prob->vars[v], blkmem, set, stat) );
-      }
+      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
    }
 
    return SCIP_OKAY;
@@ -1548,6 +1541,16 @@ void SCIPprobUpdateDualbound(
          SCIPABORT();
       }
    }
+}
+
+/** invalidates the dual bound */
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = SCIP_INVALID;
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */

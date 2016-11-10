@@ -2491,6 +2491,9 @@ SCIP_RETCODE separateCons(
 
    if( addcut )
    {
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
       /* insert LP row as cut */
       SCIP_CALL( addCut(scip, cons, sol, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );

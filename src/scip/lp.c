@@ -780,7 +780,7 @@ void recomputePseudoObjectiveValue(
    assert(lp != NULL);
    assert(set != NULL);
    assert(prob != NULL);
-   assert(!lp->pseudoobjvalid);
+//   assert(!lp->pseudoobjvalid);
 
    vars = prob->vars;
    nvars = prob->nvars;
@@ -12556,7 +12556,7 @@ SCIP_Real SCIPlpGetPseudoObjval(
    else
    {
       /* recalculate the pseudo solution value, if needed */
-      if( !lp->pseudoobjvalid )
+      if( TRUE || !lp->pseudoobjvalid )
          recomputePseudoObjectiveValue(lp, set, prob);
 
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
