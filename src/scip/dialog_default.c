@@ -1966,14 +1966,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
-
       boolval = parseBoolValue(scip, valuestr, &error);
 
       if( error )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for bool parameter <%s>. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
             valuestr, SCIPparamGetName(param));
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       else
       {
@@ -1981,6 +1980,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
          SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
+
       }
 
       break;
