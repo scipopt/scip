@@ -1832,7 +1832,7 @@ SCIP_RETCODE enforceConstraint(
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Enforcing %d linking constraints for relaxation solution\n", nconss);
+   SCIPdebugMsg(scip, "Enforcing %d linking constraints\n", nconss);
 
    cutoff = FALSE;
    separated = FALSE;
