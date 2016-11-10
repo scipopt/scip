@@ -433,373 +433,6 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/**
- * extends the problem with slack variables, so that the given infeasible solutions is feasible in the extended program.
- */
-static
-SCIP_RETCODE extendedProgramm(
-   SCIP*                 scip,             /**< SCIP data structure of the problem */
-   SCIP_HEUR*            heur,             /**< pointer to this heuristic instance */
-   SCIP_RESULT*          result,           /**< pointer to return the result status */
-   SCIP_Longint          nnodes            /**< nodelimit for subscip */
-   )
-{
-   SCIP* subscip = NULL;
-   SCIP_VAR** vars;
-   SCIP_VAR** subvars = NULL;
-   SCIP_ROW** rows;
-   SCIP_SOL* sol;
-   SCIP_SOL* subsol;
-   SCIP_HEURDATA* heurdata;
-   SCIP_RETCODE retcode = SCIP_OKAY;
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
-   SCIP_Real factor;
-   char probname[SCIP_MAXSTRLEN];
-   int i;
-   int nbinvars;
-   int nintvars;
-   int nvars;
-   int nrows;
-   SCIP_Bool success;
-
-   heurdata = SCIPheurGetData(heur);
-   sol = heurdata->infsol;
-
-   /* initializes the subscip */
-   SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-   SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
-
-   /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-    }
-
-   /* get name of the original problem and add the string "_repairsub" */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub",
-         SCIPgetProbName(scip));
-
-   SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
-
-   /* gets all original variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-
-   SCIPdebugMsg(scip,"\n\n Calling objective factor calculation \n\n");
-
-   if( heurdata->useobjfactor )
-   {
-      SCIP_CALL( getObjectiveFactor(scip, subscip, &factor, &success) );
-   }
-   else
-   {
-      factor = 0.0;
-   }
-
-   SCIPdebugMsg(scip,"\n\n  Calculated objective factor %15.9f\n\n",factor);
-
-   if( !success )
-   {
-      factor = 0.0;
-      SCIPwarningMessage(scip,"Repair could not set a factor!\n");
-   }
-
-   /* Adds all original variables and adapts their bounds */
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_CONS* cons;
-      SCIP_Real lborig;
-      SCIP_Real uborig;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real objval;
-      SCIP_Real value;
-      SCIP_Real slack;
-      SCIP_VARTYPE vartype;
-      char varname[1024];
-
-      heurdata->norvars++;
-      slack = 0.0;
-      lborig = SCIPvarGetLbGlobal(vars[i]);
-      uborig = SCIPvarGetUbGlobal(vars[i]);
-      value = SCIPgetSolVal(scip, sol, vars[i]);
-      vartype = SCIPvarGetType(vars[i]);
-      objval = SCIPvarGetObj(vars[i])*factor;
-
-      if( SCIPisZero(scip, objval) )
-      {
-         objval = 0.0;
-      }
-
-      sprintf(varname, "sub_%s", SCIPvarGetName(vars[i]));
-
-      /* if the value of x is lower than the lower bound, sets the slack to an correcting value */
-      if( SCIPisFeasLT(scip, value, lborig) )
-      {
-         lb = value;
-         slack = lborig - value;
-      }
-      else
-      {
-         lb = lborig;
-      }
-
-      /* if the value of x is bigger than the upper bound, sets the slack to an correcting value*/
-      if( SCIPisFeasGT(scip, value, uborig) )
-      {
-         ub = value;
-         slack = uborig - value;
-      }
-      else
-      {
-         ub = uborig;
-      }
-
-      /* if an binary variable is out of bound, generalize it to an integer variable */
-      if( !SCIPisFeasZero(scip, slack) && SCIP_VARTYPE_BINARY == vartype )
-         vartype = SCIP_VARTYPE_INTEGER;
-
-      /* Adds the sub representing variable to the subscip. */
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
-      SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
-      SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
-
-      /* if necessary adds an constraint to represent the original bounds of x.*/
-      if( !SCIPisFeasEQ(scip, slack, 0.0) )
-      {
-         SCIP_VAR* newvar;
-         char consvarname[1024];
-         char slackvarname[1024];
-
-         sprintf(slackvarname, "artificialslack_%s", SCIPvarGetName(vars[i]));
-         sprintf(consvarname, "boundcons_%s", SCIPvarGetName(vars[i]));
-
-         /* initialize and add an artificial slack variable */
-         SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, slackvarname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS));
-         SCIP_CALL(SCIPaddVar(subscip, newvar));
-
-         /* set the value of the slack variable to 1 to make subsolution feasible */
-         SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
-
-         /* adds a linear constraint to represent the old bounds */
-         SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, slack, lborig, uborig) );
-         SCIP_CALL( SCIPaddCons(subscip, cons) );
-         SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-         /* increases the counter for violated vars */
-         heurdata->nviolatedvars++;
-      }
-   }
-
-   /* check solution for feasibility regarding the LP rows (SCIPgetRowSolActivity()) */
-   rows = SCIPgetLPRows(scip);
-   nrows = SCIPgetNLPRows(scip);
-
-   /* Adds all original constraints and adapts their bounds */
-   for( i = 0; i < nrows; ++i )
-   {
-      SCIP_COL** cols;
-      SCIP_VAR** consvars;
-      SCIP_CONS* cons;
-      SCIP_VAR* newvar;
-      SCIP_Real* vals;
-      SCIP_Real slack;
-      int nnonz;
-      SCIP_Real constant;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real rowsolact;
-      int j;
-
-      heurdata->norcons++;
-
-      /* gets the values to check the constraint */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) ?
-            SCIProwGetLhs(rows[i]) : SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) ?
-            SCIProwGetRhs(rows[i]) : SCIProwGetRhs(rows[i]) - constant;
-      rowsolact = SCIPgetRowSolActivity(scip, rows[i], sol) - constant;
-      vals = SCIProwGetVals(rows[i]);
-
-      assert(SCIPisFeasLE(scip, lhs, rhs));
-
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-
-      /* translate all variables from the original scip to the subscip with subscip variables. */
-      for( j = 0; j < nnonz; ++j )
-      {
-         int pos;
-         pos = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
-         assert(pos >= 0);
-         consvars[j] = subvars[pos];
-      }
-
-      /* create a new linear constraint, representing the old one */
-      SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &cons, SCIProwGetName(rows[i]),
-               nnonz, consvars, vals, lhs, rhs) );
-
-      /* sets the slack if its necessary: negative slack for right hand side violation, positive slack for left hand side violation */
-      if( SCIPisFeasLT(scip, rowsolact, lhs) )
-      {
-         slack = lhs - rowsolact;
-      }
-      else if( SCIPisFeasGT(scip, rowsolact, rhs) )
-      {
-         slack = rhs - rowsolact;
-      }
-      else
-      {
-         slack = 0;
-      }
-
-      /*if necessary adds an new artificial slack variable*/
-      if( !SCIPisFeasEQ(subscip, slack, 0.0) )
-      {
-         char varname[1024];
-         sprintf(varname, "artificialslack_%s", SCIProwGetName(rows[i]));
-         SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL( SCIPaddVar(subscip, newvar) );
-         SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
-         SCIP_CALL( SCIPaddCoefLinear(subscip, cons, newvar, slack) );
-         SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
-         heurdata->nviolatedcons++;
-      }
-      /*Adds the Constraint and release it.*/
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-      SCIPfreeBufferArray(scip, &consvars);
-   }
-
-   /*Adds the given solution to the subscip. */
-   heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, subsol);
-   SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
-
-   if( !success )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Solution found by repair has a to bad objective value.\n");
-   }
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &timelimit));
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL(SCIPgetRealParam(scip, "limits/memory", &memorylimit));
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip) / 1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip) / 1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0
-         || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
-      goto TERMINATE;
-
-   /* set limits for the subproblem */
-   SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nnodes));
-   SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
-   SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
-   SCIP_CALL(SCIPsetObjlimit(subscip,1.0));
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
-
-   /* forbid recursive call of heuristics and separators solving sub-SCIPs */
-   SCIP_CALL(SCIPsetSubscipsOff(subscip, TRUE));
-
-   /* disable output to console */
-   SCIP_CALL(SCIPsetIntParam(subscip, "display/verblevel", 0));
-
-#ifdef SCIP_DEBUG
-   /* for debugging Repair, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#endif
-
-   /* presolve the subproblem */
-   retcode = SCIPpresolve(subscip);
-
-   /* errors in solving the subproblem should not kill the overall solving process;
-    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL(retcode);
-#endif
-      SCIPwarningMessage(scip,
-            "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-            retcode);
-
-      /* free */
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL(SCIPfree(&subscip));
-      return SCIP_OKAY;
-   }
-
-   /* solve the subproblem */
-   retcode = SCIPsolve(subscip);
-   heurdata->improovedoldsol = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
-
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL(retcode);
-#endif
-      SCIPwarningMessage(scip,
-            "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-            retcode);
-
-      /* free */
-      for( i = 0; i < nvars; ++i )
-      {
-         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-      }
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL(SCIPfree(&subscip));
-      return SCIP_OKAY;
-   }
-
-   /* print solving statistics of subproblem if we are in SCIP's debug mode */
-   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
-
-   assert(SCIPgetNSols(subscip) > 0);
-   if( SCIPisFeasEQ(scip, SCIPgetPrimalbound(subscip), 0.0) )
-   {
-      SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
-
-      if( success )
-         *result = SCIP_FOUNDSOL;
-   }
-
-   heurdata->subiters = SCIPgetNLPIterations(subscip);
-   heurdata->subnodes = SCIPgetNTotalNodes(subscip);
-   heurdata->subpresoltime = SCIPgetPresolvingTime(subscip);
-   heurdata->runs = SCIPgetNRuns(subscip);
-
-   /* terminates the solving process  */
-TERMINATE:
-   SCIPfreeSol(scip, &sol);
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-   }
-   SCIPfreeBufferArrayNull(scip, &subvars);
-   if( NULL != subscip )
-   {
-      SCIP_CALL( SCIPfree(&subscip) );
-   }
-
-   return SCIP_OKAY;
-}
 
 /**
  * tries to fix variables as an approach to repair a solution.
@@ -886,20 +519,71 @@ SCIP_RETCODE varFixings(
    ndiscvars = 0;
    for( i = 0; i < nvars; ++i )
    {
+      SCIP_CONS* cons;
       SCIP_Real lb;
       SCIP_Real ub;
+      SCIP_Real lborig;
+      SCIP_Real uborig;
+      SCIP_Real sla;
       SCIP_Real objval;
       SCIP_Real value;
       SCIP_VARTYPE vartype;
       char varname[1024];
+      char slackvarname[1024];
+      char consvarname[1024];
 
       heurdata->norvars++;
-      lb = SCIPvarGetLbGlobal(vars[i]);
+      /*lb = SCIPvarGetLbGlobal(vars[i]);
       ub = SCIPvarGetUbGlobal(vars[i]);
+      value = SCIPgetSolVal(scip, sol, vars[i]);
+      vartype = SCIPvarGetType(vars[i]);*/
+
+      sla = 0.0;
+      lborig = SCIPvarGetLbGlobal(vars[i]);
+      uborig = SCIPvarGetUbGlobal(vars[i]);
       value = SCIPgetSolVal(scip, sol, vars[i]);
       vartype = SCIPvarGetType(vars[i]);
 
-      nviolatedrows[i]=0;
+      nviolatedrows[i] = 0;
+
+      sprintf(varname, "sub_%s", SCIPvarGetName(vars[i]));
+
+      /* if the value of x is lower than the lower bound, sets the slack to an correcting value */
+      if( heurdata->useslackvars && SCIPisFeasLT(scip, value, lborig) )
+      {
+         lb = value;
+         sla = lborig - value;
+         SCIPchgVarLbGlobal(subscip,subvars[i],lb);
+      }
+      else
+      {
+         lb = lborig;
+      }
+
+      /* if the value of x is bigger than the upper bound, sets the slack to an correcting value*/
+      if( heurdata->useslackvars && SCIPisFeasGT(scip, value, uborig) )
+      {
+         ub = value;
+         sla = uborig - value;
+         SCIPchgVarUbGlobal(subscip,subvars[i],ub);
+      }
+      else
+      {
+         ub = uborig;
+      }
+
+      objval = SCIPvarGetObj(vars[i])*factor;
+
+      if(SCIPisZero(scip, objval))
+      {
+         objval = 0.0;
+      }
+      /* if an binary variable is out of bound, generalize it to an integer variable */
+      if( !SCIPisFeasZero(scip, sla) && SCIP_VARTYPE_BINARY == vartype )
+      {
+         vartype = SCIP_VARTYPE_INTEGER;
+         SCIPchgVarType(subscip,subvars[i],vartype, &success);
+      }
 
       sprintf(varname, "sub_%s", SCIPvarGetName(vars[i]));
 
@@ -908,6 +592,38 @@ SCIP_RETCODE varFixings(
       SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
+
+      /* if necessary adds an constraint to represent the original bounds of x.*/
+      if( !SCIPisFeasEQ(scip, sla, 0.0) )
+      {
+         SCIP_VAR* newvar;
+         sprintf(slackvarname, "artificialslack_%s", SCIPvarGetName(vars[i]));
+         sprintf(consvarname, "boundcons_%s", SCIPvarGetName(vars[i]));
+
+         /* initialize and add an artificial slack variable */
+         if(heurdata->useobjfactor)
+         {
+            SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, slackvarname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS));
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, slackvarname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY));
+         }
+         SCIP_CALL(SCIPaddVar(subscip, newvar));
+
+         /* set the value of the slack variable to 1 to punish the use of it. */
+         SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
+
+         /* adds a linear constraint to represent the old bounds */
+         SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, sla, lb, ub) );
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+         /* increases the counter for violated vars */
+         heurdata->nviolatedvars++;
+         }
+
 
       if( SCIPisFeasLT(scip, value, lb) || SCIPisFeasGT(scip,value,ub) )
       {
@@ -1014,155 +730,7 @@ SCIP_RETCODE varFixings(
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &subcons[i], SCIProwGetName(rows[i]),
                nnonz, consvars, vals, lhs, rhs) );
 
-      /*Adds the Constraint and release it.*/
-      SCIP_CALL( SCIPaddCons(subscip, subcons[i]) );
-      SCIPfreeBufferArray(subscip, &consvars);
-   }
-
-   /* get the greedy order */
-   for( i = 0; i < nvars; ++i )
-   {
-      permutation[i] = i;
-   }
-   SCIPsortIntInt(nviolatedrows, permutation, nvars);
-
-   /* loops over variables and greedily fix variables, but preserve the cover property that enough slack is given to violated rows */
-   nfixeddiscvars = 0;
-   heurdata->nvarfixed = 0;
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIPdebugMsg(scip,"Try to fix %s",SCIPvarGetName(vars[permutation[i]]));
-      if( tryFixVar(scip, sol, potential, slack, vars[permutation[i]], inftycounter, heurdata) )
-      {
-         SCIP_Bool infeasible = FALSE;
-         SCIP_Bool fixed = TRUE;
-         SCIP_CALL( SCIPfixVar(subscip, subvars[permutation[i]], SCIPgetSolVal(scip, sol, vars[permutation[i]]), &infeasible, &fixed) );
-         assert(!infeasible && fixed);
-         heurdata->nvarfixed++;
-         SCIPdebugMsg(scip,"  fixed!!!");
-         if( SCIP_VARTYPE_BINARY == SCIPvarGetType(subvars[permutation[i]]) || SCIP_VARTYPE_INTEGER == SCIPvarGetType(subvars[permutation[i]]) )
-         {
-            nfixeddiscvars++;
-         }
-      }
-      else
-      {
-         SCIPdebugMsg(scip,"  not.");
-      }
-      SCIPdebugMsg(scip,"\n");
-    }
-   SCIPdebugMsg(scip,"fixings finished\n\n");
-
-   if( heurdata->minfixingrate > ((SCIP_Real)nfixeddiscvars/MAX((SCIP_Real)ndiscvars,1.0)) )
-   {
-      goto TERMINATE;
-   }
-
-   if( heurdata->useslackvars )
-   {
-      SCIP_ROW** tmprows = NULL;
-      int ntmprows;
-      /* Gets all original variables */
-      tmprows = SCIPgetLPRows(scip);
-      ntmprows = SCIPgetNLPRows(scip);
-
-      /* Adds all original variables and decides which variables should be fixed */
-      for( i = 0; i < nvars; ++i )
-      {
-         SCIP_CONS* cons;
-         SCIP_Real lborig;
-         SCIP_Real uborig;
-         SCIP_Real lb;
-         SCIP_Real ub;
-         SCIP_Real objval;
-         SCIP_Real value;
-         SCIP_Real sla;
-         SCIP_VARTYPE vartype;
-         char varname[1024];
-         char slackvarname[1024];
-         char consvarname[1024];
-
-         sla = 0.0;
-         lborig = SCIPvarGetLbGlobal(subvars[i]);
-         uborig = SCIPvarGetUbGlobal(subvars[i]);
-         value = SCIPgetSolVal(scip, sol, vars[i]);
-         vartype = SCIPvarGetType(subvars[i]);
-
-         nviolatedrows[i] = 0;
-
-         sprintf(varname, "sub_%s", SCIPvarGetName(subvars[i]));
-
-         /* if the value of x is lower than the lower bound, sets the slack to an correcting value */
-         if( SCIPisFeasLT(scip, value, lborig) )
-         {
-            lb = value;
-            sla = lborig - value;
-            SCIPchgVarLbGlobal(subscip,subvars[i],lb);
-         }
-         else
-         {
-            lb = lborig;
-         }
-
-         /* if the value of x is bigger than the upper bound, sets the slack to an correcting value*/
-         if( SCIPisFeasGT(scip, value, uborig) )
-         {
-            ub = value;
-            sla = uborig - value;
-            SCIPchgVarUbGlobal(subscip,subvars[i],ub);
-         }
-         else
-         {
-            ub = uborig;
-         }
-
-         objval = SCIPvarGetObj(vars[i])*factor;
-
-         if(SCIPisZero(scip, objval))
-         {
-            objval = 0.0;
-         }
-         /* if an binary variable is out of bound, generalize it to an integer variable */
-         if( !SCIPisFeasZero(scip, sla) && SCIP_VARTYPE_BINARY == vartype )
-         {
-            vartype = SCIP_VARTYPE_INTEGER;
-            SCIPchgVarType(subscip,subvars[i],vartype, &success);
-         }
-
-         /* if necessary adds an constraint to represent the original bounds of x.*/
-         if( !SCIPisFeasEQ(scip, sla, 0.0) )
-         {
-            SCIP_VAR* newvar;
-            sprintf(slackvarname, "artificialslack_%s", SCIPvarGetName(vars[i]));
-            sprintf(consvarname, "boundcons_%s", SCIPvarGetName(vars[i]));
-
-            /* initialize and add an artificial slack variable */
-            if(heurdata->useobjfactor)
-            {
-               SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, slackvarname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS));
-            }
-            else
-            {
-               SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, slackvarname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY));
-            }
-            SCIP_CALL(SCIPaddVar(subscip, newvar));
-
-            /* set the value of the slack variable to 1 to punish the use of it. */
-            SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
-
-            /* adds a linear constraint to represent the old bounds */
-            SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, sla, lb, ub) );
-            SCIP_CALL( SCIPaddCons(subscip, cons) );
-            SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
-            SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-            /* increases the counter for violated vars */
-            heurdata->nviolatedvars++;
-            }
-         }
-
-      /* Adds all original constraints and decides which variables should be fixed */
-      for (i = 0; i < ntmprows; ++i)
+      if(heurdata->useslackvars)
       {
          SCIP_VAR* newvar;
          char varname[1024];
@@ -1170,7 +738,7 @@ SCIP_RETCODE varFixings(
          /*if necessary adds an new artificial slack variable*/
          if( !SCIPisFeasEQ(subscip, slack[i], 0.0) )
          {
-            sprintf(varname, "artificialslack_%s", SCIProwGetName(tmprows[i]));
+            sprintf(varname, "artificialslack_%s", SCIProwGetName(rows[i]));
             SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(subscip, newvar) );
             SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
@@ -1178,7 +746,55 @@ SCIP_RETCODE varFixings(
             SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
          }
       }
+
+      /*Adds the Constraint and release it.*/
+      SCIP_CALL( SCIPaddCons(subscip, subcons[i]) );
+      SCIPfreeBufferArray(subscip, &consvars);
    }
+
+   if(heurdata->usevarfix)
+   {
+      /* get the greedy order */
+      for( i = 0; i < nvars; ++i )
+      {
+         permutation[i] = i;
+      }
+      SCIPsortIntInt(nviolatedrows, permutation, nvars);
+
+      /* loops over variables and greedily fix variables, but preserve the cover property that enough slack is given to violated rows */
+      nfixeddiscvars = 0;
+      heurdata->nvarfixed = 0;
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIPdebugMsg(scip,"Try to fix %s",SCIPvarGetName(vars[permutation[i]]));
+         if( tryFixVar(scip, sol, potential, slack, vars[permutation[i]], inftycounter, heurdata) )
+         {
+            SCIP_Bool infeasible = FALSE;
+            SCIP_Bool fixed = TRUE;
+            SCIP_CALL( SCIPfixVar(subscip, subvars[permutation[i]], SCIPgetSolVal(scip, sol, vars[permutation[i]]), &infeasible, &fixed) );
+            assert(!infeasible && fixed);
+            heurdata->nvarfixed++;
+            SCIPdebugMsg(scip,"  fixed!!!");
+            if( SCIP_VARTYPE_BINARY == SCIPvarGetType(subvars[permutation[i]]) || SCIP_VARTYPE_INTEGER == SCIPvarGetType(subvars[permutation[i]]) )
+            {
+               nfixeddiscvars++;
+            }
+         }
+         else
+         {
+            SCIPdebugMsg(scip,"  not.");
+         }
+         SCIPdebugMsg(scip,"\n");
+       }
+      SCIPdebugMsg(scip,"fixings finished\n\n");
+      if( heurdata->minfixingrate > ((SCIP_Real)nfixeddiscvars/MAX((SCIP_Real)ndiscvars,1.0)) )
+      {
+         goto TERMINATE;
+      }
+   }
+
+
+
 
    for(i=0;i<nrows;++i){
       SCIP_CALL( SCIPreleaseCons(subscip, &subcons[i]) );
@@ -1564,7 +1180,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIPdebugMsg(scip,"%s\n",heurdata->filename);
 
    /* if repair allready run, stop*/
-   if(0 < SCIPheurGetNCalls(heur)){
+   if(0 < SCIPheurGetNCalls(heur) && !(heurdata->usevarfix || heurdata->useslackvars) ){
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
@@ -1646,13 +1262,13 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    *result = SCIP_DIDNOTFIND;
 
 
-   if(heurdata->usevarfix)
+   if(heurdata->usevarfix || heurdata->useslackvars)
    {
       retcode = varFixings(scip, heur, result, nnodes);
    }
    else
    {
-      retcode = extendedProgramm(scip, heur, result, nnodes);
+      retcode = SCIP_OKAY;
    }
    return retcode;
 }
