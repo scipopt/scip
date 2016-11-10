@@ -2015,9 +2015,6 @@ SCIP_RETCODE SCIPgetVarCopy(
    switch( SCIPvarGetStatus(sourcevar) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat,
-            sourcescip, sourcevar, localvarmap, localconsmap, global) );
-      break;
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
@@ -4484,11 +4481,8 @@ SCIP_RETCODE SCIPsetBoolParam(
    return SCIP_OKAY;
 }
 
-/** checks the value of an existing SCIP_Bool parameter; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckBoolParam(
+/** checks whether the value of an existing SCIP_Bool parameter is valid */
+SCIP_Bool SCIPisBoolParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Bool             value               /**< value to check */
@@ -4497,9 +4491,7 @@ SCIP_RETCODE SCIPcheckBoolParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckBool(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidBool(param, value);
 }
 
 /** changes the value of an existing int parameter
@@ -4547,6 +4539,19 @@ SCIP_RETCODE SCIPsetIntParam(
    return SCIP_OKAY;
 }
 
+/** checks whether parameter value of an existing int paramter is valid */
+SCIP_Bool SCIPisIntParamValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   return SCIPparamIsValidInt(param, value);
+}
+
 /** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4592,11 +4597,8 @@ SCIP_RETCODE SCIPsetLongintParam(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckLongintParam(
+/** checks whether parameter value of an existing SCIP_Longint paramter is valid */
+SCIP_Bool SCIPisLongintParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Longint          value               /**< value to check */
@@ -4605,9 +4607,7 @@ SCIP_RETCODE SCIPcheckLongintParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckLongint(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidLongint(param, value);
 }
 
 /** changes the value of an existing SCIP_Real parameter
@@ -4655,6 +4655,19 @@ SCIP_RETCODE SCIPsetRealParam(
    return SCIP_OKAY;
 }
 
+/** checks whether parameter value of an existing SCIP_Real paramter is valid */
+SCIP_Bool SCIPisRealParamValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   return SCIPparamIsValidReal(param, value);
+}
+
 /** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4700,11 +4713,8 @@ SCIP_RETCODE SCIPsetCharParam(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckCharParam(
+/** checks whether parameter value for a given SCIP_Real parameter is valid */
+SCIP_Bool SCIPisCharParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char            value               /**< value to check */
@@ -4713,9 +4723,7 @@ SCIP_RETCODE SCIPcheckCharParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckChar(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidChar(param, value);
 }
 
 /** changes the value of an existing string(char*) parameter
@@ -4763,11 +4771,8 @@ SCIP_RETCODE SCIPsetStringParam(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckStringParam(
+/** checks whether parameter value for a given string parameter is valid */
+SCIP_Bool SCIPisStringParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char*           value               /**< value to check */
@@ -4776,9 +4781,7 @@ SCIP_RETCODE SCIPcheckStringParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckString(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidString(param, value);
 }
 
 /** reads parameters from a file
