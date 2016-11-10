@@ -1049,7 +1049,6 @@ SCIP_RETCODE SCIPinitConssLP(
    )
 {
    int h;
-   SCIP_Bool cutadded;
 
    assert(set != NULL);
    assert(lp != NULL);
@@ -1065,7 +1064,7 @@ SCIP_RETCODE SCIPinitConssLP(
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-         eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff, &cutadded) );
+         eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -2478,13 +2477,15 @@ SCIP_RETCODE priceAndCutLoop(
          }
          else
          {
-            SCIP_Bool cutadded;
+            int oldncutsapplied;
+            
+            oldncutsapplied = SCIPsepastoreGetNCutsApplied(sepastore);
             
             /* apply found cuts */
             SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                  branchcand, eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff, &cutadded) );
+                  branchcand, eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
             
-            *solverelaxagain = *solverelaxagain || cutadded;
+            *solverelaxagain = *solverelaxagain || (SCIPsepastoreGetNCutsApplied(sepastore) != oldncutsapplied);
 
             if( !(*cutoff) )
             {
@@ -2497,6 +2498,7 @@ SCIP_RETCODE priceAndCutLoop(
                   SCIPsetDebugMsg(set, " -> separation changed bound: propagate again\n");
 
                   *propagateagain = TRUE;
+                  *solverelaxagain = TRUE;
 
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
@@ -2513,6 +2515,8 @@ SCIP_RETCODE priceAndCutLoop(
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, reopt, lp,
                         branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, cutoff) );
+                  
+                  *solverelaxagain = TRUE;
                }
 
                if( !(*cutoff) )
@@ -2874,7 +2878,6 @@ SCIP_RETCODE solveNodeLP(
       SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob,
             origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE,
             cutoff) );
-      *solverelaxagain = TRUE;
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -3409,13 +3412,14 @@ SCIP_RETCODE applyCuts(
    else if( SCIPsepastoreGetNCuts(sepastore) > 0 )
    {
       SCIP_Longint olddomchgcount;
-      SCIP_Bool cutadded;
+      int oldncutsapplied;
 
       olddomchgcount = stat->domchgcount;
+      oldncutsapplied = SCIPsepastoreGetNCutsApplied(sepastore);
       SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-            eventqueue, eventfilter, cliquetable, root, efficiacychoice, cutoff, &cutadded) );
+            eventqueue, eventfilter, cliquetable, root, efficiacychoice, cutoff) );
       *propagateagain = *propagateagain || (stat->domchgcount != olddomchgcount);
-      *solverelaxagain = *solverelaxagain || cutadded;
+      *solverelaxagain = *solverelaxagain || (stat->domchgcount != olddomchgcount) || (SCIPsepastoreGetNCutsApplied(sepastore) != oldncutsapplied);
       *solvelpagain = TRUE;
    }
 
@@ -3596,6 +3600,7 @@ SCIP_RETCODE propAndSolve(
        * we also have to solve the LP if new intial constraints were added which need to be added to the LP
        */
       solvelp = solvelp || (lpwasflushed && (!lp->flushed || newinitconss));
+      solverelax = solverelax || newinitconss;
 
       /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
       if( stat->nboundchgs > oldnboundchgs )
