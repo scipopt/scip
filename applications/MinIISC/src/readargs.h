@@ -26,7 +26,7 @@
 
 /** get problem name
  *
- *  Returns 0 on error
+ *  Returns 0 if maxsize is not sufficient and 1 otherwise.
  */
 extern
 int getProblemName(

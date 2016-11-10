@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3069,7 +3069,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       }
 
       /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, TRUE, TRUE, TRUE, success) );
 
       /* free local arrays */
       SCIPfreeMemoryArrayNull(scip, &flowvals);
@@ -3149,7 +3149,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          SCIP_CALL( SCIPsetSolVal(scip, sol, probdata->offsetvar, 1.0) );
       }
 
-      SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
+      SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
       SCIPdebugMessage("checked sol: feasible=%u\n", feasible);
 
@@ -3186,7 +3186,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       if( feasible )
       {
 #ifndef NDEBUG
-         SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, &feasible) );
+         SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, TRUE, TRUE, TRUE, &feasible) );
          assert(feasible);
 #endif
 

@@ -27,7 +27,7 @@
 
 
 #define PRESOL_NAME            "trivial"
-#define PRESOL_DESC            "trivial presolver: round fractional bounds on integers, fix variables with equal bounds"
+#define PRESOL_DESC            "round fractional bounds on integers, fix variables with equal bounds"
 #define PRESOL_PRIORITY        +9000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
@@ -109,12 +109,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
          /* fix variables with equal bounds */
          if( newlb > newub - 0.5 )
          {
-            SCIPdebugMessage("fixing integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
-               SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
+            SCIPdebugMsg(scip, "fixing integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n", SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
             SCIP_CALL( SCIPfixVar(scip, vars[v], newlb, &infeasible, &fixed) );
             if( infeasible )
             {
-               SCIPdebugMessage(" -> infeasible fixing\n");
+               SCIPdebugMsg(scip, " -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -126,14 +125,14 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
             /* round fractional bounds */
             if( !SCIPisFeasEQ(scip, lb, newlb) )
             {
-               SCIPdebugMessage("rounding lower bound of integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+               SCIPdebugMsg(scip, "rounding lower bound of integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                   SCIPvarGetName(vars[v]), lb, ub, newlb, ub);
                SCIP_CALL( SCIPchgVarLb(scip, vars[v], newlb) );
                (*nchgbds)++;
             }
             if( !SCIPisFeasEQ(scip, ub, newub) )
             {
-               SCIPdebugMessage("rounding upper bound of integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+               SCIPdebugMsg(scip, "rounding upper bound of integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                   SCIPvarGetName(vars[v]), newlb, ub, newlb, newub);
                SCIP_CALL( SCIPchgVarUb(scip, vars[v], newub) );
                (*nchgbds)++;
@@ -162,12 +161,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
 #else
             fixval = (lb + ub)/2;
 #endif
-            SCIPdebugMessage("fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", 
-               SCIPvarGetName(vars[v]), lb, ub, fixval);
+            SCIPdebugMsg(scip, "fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", SCIPvarGetName(vars[v]), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, vars[v], fixval, &infeasible, &fixed) );
             if( infeasible )
             {
-               SCIPdebugMessage(" -> infeasible fixing\n");
+               SCIPdebugMsg(scip, " -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }

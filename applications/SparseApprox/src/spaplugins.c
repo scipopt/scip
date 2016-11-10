@@ -46,9 +46,7 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
 
    SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.05, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddCharParam(scip, "model_variant", "which variant of the problem should be used", NULL, FALSE, 's', "ewpsbt", NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "savesol", "true if the solution should be saved to a file", NULL, FALSE, FALSE, NULL, NULL) );
 
 
    return SCIP_OKAY;

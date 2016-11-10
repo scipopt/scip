@@ -18,7 +18,6 @@
  * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation
  * @author Leon Eifler
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -35,7 +34,7 @@
 #define HEUR_DESC             "primal heuristic that constructs a feasible solution from the lp-relaxation"
 #define HEUR_DISPCHAR         '&'
 #define HEUR_PRIORITY         1000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -99,7 +98,7 @@ SCIP_RETCODE assignVars(
       {
          for( j = 0; j < i; ++j )
          {
-            if( NULL == edgevars[i][j][0] )
+            if( NULL == edgevars[i][j] )
                continue;
             if( SCIPvarIsTransformed(edgevars[i][j][0]) )
                var = edgevars[i][j][0];
@@ -238,6 +237,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
+   SCIPdebugMsg(scip, "Number of Fractional variables is: %d\n", SCIPgetNLPBranchCands(scip));
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    assert(nbins > 0);
@@ -277,7 +277,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    assignVars(scip, sol, clustering, nbins, ncluster, qmatrix);
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
    if( feasible )
       *result = SCIP_FOUNDSOL;
    else

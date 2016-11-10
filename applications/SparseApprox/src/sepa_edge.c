@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_edge.c
- * @brief  edge-separator
- *  @author Leon Eifler
+ * @brief  edge-separator. Separates triangle-inequalities in SparseApprox Problem
+ * @author Leon Eifler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -68,11 +68,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    char cutname[SCIP_MAXSTRLEN];
    int** sign;
    SCIP_ROW* cut;
-   SCIP_Bool infeasible;
    int rounds;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
-   if( (rounds >= MAXROUNDS && SCIPgetDepth(scip) == 0) || SCIPspaGetModel(scip) == 't' )
+   if( (rounds >= MAXROUNDS && SCIPgetDepth(scip) == 0) )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -164,6 +163,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       }
    }
 
+   /* separate edges by the valid inequality y_ij0 + y_ik0 - y_jk0 <= 1 */
    for( i = 0; i < nbins; ++i )
    {
       for( j = 0; j < i; ++j )
@@ -192,62 +192,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                   if( ncuts == MAXCUTS )
                      goto end;
-               }
-            }
-         }
-      }
-   }
-   if ( SCIPspaGetNrCluster(scip) == 3 )
-   {
-      for( i = 0; i < nbins; ++i )
-      {
-         for( j = 0; j < i; ++j )
-         {
-            for( k = 0; k < j; ++k )
-            {
-               if( NULL == edgevars[j][k] || NULL == edgevars[i][j] || NULL == edgevars[k][i] )
-                  continue;
-               for( l = 0; l < 3; ++l )
-               {
-                  if( sign[l][0] * SCIPvarGetLPSol(edgevars[i][j][1]) + sign[l][1] * SCIPvarGetLPSol(edgevars[j][k][1]) + sign[l][2] * SCIPvarGetLPSol(edgevars[k][i][1]) > 1 )
-                  {
-                     (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
-                     SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                     SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], sign[l][0]) );
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][k][1], sign[l][1]) );
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[k][i][1], sign[l][2]) );
-                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-                     if( SCIPisCutEfficacious(scip, NULL, cut) )
-                     {
-                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                        *result = SCIP_SEPARATED;
-                        ncuts++;
-                     }
-                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-                     if( ncuts == MAXCUTS )
-                        goto end;
-                  }
-
-                  if( sign[l][0] * SCIPvarGetLPSol(edgevars[k][j][1]) + sign[l][1] * SCIPvarGetLPSol(edgevars[j][i][1]) + sign[l][2] * SCIPvarGetLPSol(edgevars[i][k][1]) > 1 )
-                  {
-                     (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i+1, j+1, k+1 );
-                     SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-                     SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[k][j][1], sign[l][0]) );
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[j][i][1], sign[l][1]) );
-                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][k][1], sign[l][2]) );
-                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-                     if( SCIPisCutEfficacious(scip, NULL, cut) )
-                     {
-                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                        *result = SCIP_SEPARATED;
-                        ncuts++;
-                     }
-                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-                     if( ncuts == MAXCUTS )
-                        goto end;
-                  }
                }
             }
          }

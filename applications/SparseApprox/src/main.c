@@ -61,15 +61,6 @@ SCIP_RETCODE fromCommandLine(
 )
 {
    SCIP_RETCODE retcode;
-   SCIP_Bool savesol = FALSE;
-   SCIP_Real scale;
-   FILE* solufile = NULL;
-   int ncluster;
-   int nsols = 0;
-   char out_name[COL_MAX_LINELEN];
-   char tmp[COL_MAX_LINELEN];
-   char ending[COL_MAX_LINELEN] ;
-   char* split;
    /********************
     * Problem Creation *
     ********************/
@@ -134,54 +125,11 @@ SCIP_RETCODE fromCommandLine(
     * Solution Output *
     *******************/
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "savesol", &savesol) );
-   if( savesol )
-   {
+   SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
+   SCIPinfoMessage(scip, NULL, "====================================\n\n");
 
-      /*create the filename */
-      snprintf(out_name, 50, "solutions/");
-      split = strrchr(filename, '/');
-      strcat(out_name, split);
-
-      /* create the output-name */
-      if ( SCIPspaGetModel(scip) == 'w' )
-      {
-         SCIPgetRealParam( scip, "scale_coherence", &scale );
-         snprintf(ending, 50, "_scale_%.4f", scale);
-         strcat(out_name, ending);
-      }
-      SCIP_CALL( SCIPgetIntParam(scip, "ncluster", &ncluster) );
-      snprintf(ending, 50, "_%dcluster", ncluster);
-      strcat(out_name, ending);
-      strcat(out_name, ".sol");
-
-      strcpy(tmp, out_name);
-      while( access( tmp, F_OK ) != -1 )
-      {
-         nsols++;
-         strcpy(tmp, out_name);
-         snprintf(ending, 50, "_%d", nsols);
-         strcat( tmp, ending);
-      }
-
-      solufile = fopen(tmp, "w+");
-   }
-   else
-   {
-      SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
-      SCIPinfoMessage(scip, NULL, "====================================\n\n");
-   }
-
-   if( savesol )
-   {
-      SCIP_CALL( SCIPprintBestSol(scip, solufile, FALSE) );
-      fclose(solufile);
-   }
-   else
-   {
-      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-      SCIP_CALL( SCIPspaPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
-   }
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   SCIP_CALL( SCIPspaPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
    /**************
     * Statistics *
     **************/

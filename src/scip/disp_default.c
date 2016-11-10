@@ -27,7 +27,7 @@
 
 
 #define DISP_NAME_SOLFOUND      "solfound"
-#define DISP_DESC_SOLFOUND      "letter that indicates the heuristic, that found the solution"
+#define DISP_DESC_SOLFOUND      "letter that indicates the heuristic which found the solution"
 #define DISP_HEAD_SOLFOUND      " "
 #define DISP_WIDT_SOLFOUND      1
 #define DISP_PRIO_SOLFOUND      80000
@@ -58,6 +58,7 @@
 #define DISP_POSI_NODESLEFT     200
 #define DISP_STRI_NODESLEFT     TRUE
 
+
 #define DISP_NAME_LPITERATIONS  "lpiterations"
 #define DISP_DESC_LPITERATIONS  "number of simplex iterations"
 #define DISP_HEAD_LPITERATIONS  "LP iter"
@@ -84,11 +85,19 @@
 
 #define DISP_NAME_MEMUSED       "memused"
 #define DISP_DESC_MEMUSED       "total number of bytes used in block memory"
-#define DISP_HEAD_MEMUSED       "mem"
+#define DISP_HEAD_MEMUSED       "umem"
 #define DISP_WIDT_MEMUSED       5
-#define DISP_PRIO_MEMUSED       20000
+#define DISP_PRIO_MEMUSED       0
 #define DISP_POSI_MEMUSED       1500
 #define DISP_STRI_MEMUSED       TRUE
+
+#define DISP_NAME_MEMTOTAL      "memtotal"
+#define DISP_DESC_MEMTOTAL      "total number of bytes in block memory"
+#define DISP_HEAD_MEMTOTAL      "mem"
+#define DISP_WIDT_MEMTOTAL      5
+#define DISP_PRIO_MEMTOTAL      20000
+#define DISP_POSI_MEMTOTAL      1500
+#define DISP_STRI_MEMTOTAL      TRUE
 
 #define DISP_NAME_DEPTH         "depth"
 #define DISP_DESC_DEPTH         "depth of current node"
@@ -298,6 +307,24 @@
 #define DISP_POSI_NSOLS         30000
 #define DISP_STRI_NSOLS         TRUE
 
+/* display for the number of leaves passing the objective limit */
+#define DISP_NAME_NOBJLEAVES    "nobjleaves"
+#define DISP_DESC_NOBJLEAVES    "current number of encountered objective limit leaves"
+#define DISP_HEAD_NOBJLEAVES    "objleav"
+#define DISP_WIDT_NOBJLEAVES    7
+#define DISP_PRIO_NOBJLEAVES    0
+#define DISP_POSI_NOBJLEAVES    31000
+#define DISP_STRI_NOBJLEAVES    TRUE
+
+
+/* display for number of encountered infeasible leaf nodes */
+#define DISP_NAME_NINFEASLEAVES  "ninfeasleaves"
+#define DISP_DESC_NINFEASLEAVES  "number of encountered infeasible leaves"
+#define DISP_HEAD_NINFEASLEAVES  "infleav"
+#define DISP_WIDT_NINFEASLEAVES  7
+#define DISP_PRIO_NINFEASLEAVES  0
+#define DISP_POSI_NINFEASLEAVES  32000
+#define DISP_STRI_NINFEASLEAVES  TRUE
 
 /*
  * Callback methods
@@ -412,6 +439,34 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNNodesLeft)
    return SCIP_OKAY;
 }
 
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNObjLeaves)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NOBJLEAVES) == 0);
+   assert(scip != NULL);
+
+   /* ouput number of leaves that hit the objective */
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNObjlimLeaves(scip), DISP_WIDT_NOBJLEAVES);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNInfeasLeaves)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NINFEASLEAVES) == 0);
+   assert(scip != NULL);
+
+   /* output number of encountered infeasible leaf nodes */
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNInfeasibleLeaves(scip), DISP_WIDT_NINFEASLEAVES);
+
+   return SCIP_OKAY;
+}
+
 /** output method of display column to output file stream 'file' for number of LP iterations */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPIterations)
@@ -504,6 +559,19 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsed)
    assert(scip != NULL);
 
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemUsed(scip), DISP_WIDT_MEMUSED);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' for allocated and used memory */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMTOTAL) == 0);
+   assert(scip != NULL);
+
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMTOTAL);
 
    return SCIP_OKAY;
 }
@@ -986,6 +1054,24 @@ SCIP_RETCODE SCIPincludeDispDefault(
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNNodesLeft, NULL, 
             DISP_WIDT_NODESLEFT, DISP_PRIO_NODESLEFT, DISP_POSI_NODESLEFT, DISP_STRI_NODESLEFT) );
    }
+
+   /* add objective leaves display */
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_NOBJLEAVES);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NOBJLEAVES, DISP_DESC_NOBJLEAVES, DISP_HEAD_NOBJLEAVES, SCIP_DISPSTATUS_AUTO,
+            NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNObjLeaves, NULL, DISP_WIDT_NOBJLEAVES, DISP_PRIO_NOBJLEAVES, DISP_POSI_NOBJLEAVES,
+            DISP_STRI_NOBJLEAVES) );
+   }
+
+   /* add infeasible leaves display */
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_NINFEASLEAVES);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NINFEASLEAVES, DISP_DESC_NINFEASLEAVES, DISP_HEAD_NINFEASLEAVES, SCIP_DISPSTATUS_AUTO,
+            NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNInfeasLeaves, NULL, DISP_WIDT_NINFEASLEAVES, DISP_PRIO_NINFEASLEAVES, DISP_POSI_NINFEASLEAVES,
+            DISP_STRI_NINFEASLEAVES) );
+   }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_LPITERATIONS);
    if( tmpdisp == NULL )
    {
@@ -1021,6 +1107,15 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsed, NULL, 
             DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_MEMTOTAL);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MEMTOTAL, DISP_DESC_MEMTOTAL, DISP_HEAD_MEMTOTAL,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsedTotal, NULL,
+            DISP_WIDT_MEMTOTAL, DISP_PRIO_MEMTOTAL, DISP_POSI_MEMTOTAL, DISP_STRI_MEMTOTAL) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_DEPTH);
    if( tmpdisp == NULL )

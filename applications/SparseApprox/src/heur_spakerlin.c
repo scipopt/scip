@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -257,29 +258,6 @@ SCIP_Real getObjective(
    }
    /* if we have no transitions at all then irreversibility should be set to 0 */
    return objective;
-}
-
-static
-void rotateSolution(
-   SCIP_Real**           clustering,
-   SCIP_Real**           qmatrix,
-   SCIP_Real**           cmatrix,
-   int                   nbins,
-   int                   ncluster
-)
-{
-   int i;
-   SCIP_Real temp;
-   if( qmatrix[0][1] - qmatrix[1][0] < 0 )
-   {
-      for( i = 0; i < nbins; ++i )
-      {
-         temp = clustering[i][0];
-         clustering[i][0] = clustering[i][1];
-         clustering[i][1] = temp;
-      }
-   }
-   computeIrrevMat(clustering, qmatrix, cmatrix, nbins, ncluster);
 }
 
 /** exchange another bin to a different cluster. No bin may be changed twice */
@@ -696,13 +674,20 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    while( heurpossible )
    {
       /* copy the solution so that we may change it        */
+      for( c = 0; c < ncluster; ++c )
+      {
+         nbinsincluster[c] = 0;
+      }
       for( i = 0; i < nbins; ++i )
       {
          for( c = 0; c < ncluster; ++c )
          {
             clustering[i][c] = solclustering[i][c];
             if( SCIPisEQ(scip, solclustering[i][c], 1.0) )
+            {
                clusterofbin[i] = c;
+               nbinsincluster[c]++;
+            }
          }
          binprocessed[i] = FALSE;
       }
@@ -732,10 +717,9 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       feasible = FALSE;
       if( max > objective )
       {
-         rotateSolution(clustering, qmatrix, cmatrix, nbins, ncluster);
          SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
          assignVars(scip, worksol, solclustering, nbins, ncluster, qmatrix, cmatrix);
-         SCIPtrySolFree(scip, &worksol, TRUE, TRUE, TRUE, TRUE, &feasible);
+         SCIPtrySolFree(scip, &worksol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible);
       }
       if( feasible )
       {

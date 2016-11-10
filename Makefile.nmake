@@ -29,7 +29,7 @@ ARCH			=	x86
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION			=	3.2.0.2
+VERSION			=	3.2.1.2
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc

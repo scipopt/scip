@@ -104,7 +104,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	    SCIPdebug( SCIProwPrint(row, NULL) );
+	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -138,7 +138,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	       SCIPdebug( SCIProwPrint(row, NULL) );
+	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	       SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -192,7 +192,7 @@ SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
    assert( *consdata != NULL);
    assert( (*consdata)->vars != NULL );
 
-   SCIPdebugMessage("deleting linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "deleting linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
    n = (*consdata)->n;
    for (i = 0; i < n; ++i)
@@ -220,7 +220,7 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
 
-   SCIPdebugMessage("transforming linear ordering constraint <%s>.\n", SCIPconsGetName(sourcecons) );
+   SCIPdebugMsg(scip, "transforming linear ordering constraint <%s>.\n", SCIPconsGetName(sourcecons) );
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -270,6 +270,9 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( infeasible != NULL );
+
+   *infeasible = FALSE;
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -280,7 +283,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
-      SCIPdebugMessage("adding initial rows for linear ordering constraint <%s>.\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "adding initial rows for linear ordering constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
@@ -294,7 +297,6 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	 for (j = i+1; j < n; ++j)
 	 {
 	    char s[SCIP_MAXSTRLEN];
-            SCIP_Bool infeasible;
 	    SCIP_ROW* row;
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
@@ -304,19 +306,19 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	    SCIPdebug( SCIProwPrint(row, NULL) );
+	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
-	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
 	    ++nGen;
 
             /* cannot handle infeasible case here - just exit */
-            if ( infeasible )
+            if ( *infeasible )
                return SCIP_OKAY;
 	 }
       }
    }
-   SCIPdebugMessage("added %d equations.\n", nGen);
+   SCIPdebugMsg(scip, "added %d equations.\n", nGen);
 
    return SCIP_OKAY;
 }
@@ -345,7 +347,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("separating LP solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "separating LP solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
@@ -360,7 +362,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
-   SCIPdebugMessage("separated %d cuts.\n", nGen);
+   SCIPdebugMsg(scip, "separated %d cuts.\n", nGen);
 
    return SCIP_OKAY;
 }
@@ -389,7 +391,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("separating solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "separating solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
@@ -436,7 +438,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("enforcing lp solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "enforcing lp solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
@@ -470,7 +472,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-	       SCIPdebug( SCIProwPrint(row, NULL) );
+	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -508,7 +510,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 		  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
-		  SCIPdebug( SCIProwPrint(row, NULL) );
+		  SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
 		  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
 		  SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -529,7 +531,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	 return SCIP_OKAY;
       }
    }
-   SCIPdebugMessage("all linear ordering constraints are feasible.\n");
+   SCIPdebugMsg(scip, "all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
@@ -559,7 +561,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("enforcing pseudo solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "enforcing pseudo solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
@@ -583,7 +585,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 
 	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][i]), 0.5) )
 	    {
-	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
+	       SCIPdebugMsg(scip, "constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
 	       return SCIP_OKAY;
 	    }
@@ -602,7 +604,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 	       /* if triangle inequality is violated */
 	       if ( oneIJ && oneJK && oneKI )
 	       {
-		  SCIPdebugMessage("constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
+		  SCIPdebugMsg(scip, "constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
 		  *result = SCIP_INFEASIBLE;
 		  return SCIP_OKAY;
 	       }
@@ -610,7 +612,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 	 }
       }
    }
-   SCIPdebugMessage("all linear ordering constraints are feasible.\n");
+   SCIPdebugMsg(scip, "all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
@@ -640,7 +642,7 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("checking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "checking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
@@ -665,7 +667,7 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	    /* check symmetry equations */
 	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[j][i]), 0.5) )
 	    {
-	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
+	       SCIPdebugMsg(scip, "constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
                if( printreason )
                {
@@ -691,7 +693,7 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       /* if triangle inequality is violated */
 	       if ( oneIJ && oneJK && oneKI )
 	       {
-		  SCIPdebugMessage("constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
+		  SCIPdebugMsg(scip, "constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
 		  *result = SCIP_INFEASIBLE;
                   if( printreason )
                   {
@@ -708,7 +710,7 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	 }
       }
    }
-   SCIPdebugMessage("all linear ordering constraints are feasible.\n");
+   SCIPdebugMsg(scip, "all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
@@ -741,7 +743,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("propagating linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "propagating linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       *result = SCIP_DIDNOTFIND;
 
@@ -767,8 +769,8 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
 	       if ( infeasible )
 	       {
-		  SCIPdebugMessage(" -> node infeasible.\n");
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+		  SCIPdebugMsg(scip, " -> node infeasible.\n");
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -786,8 +788,8 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], TRUE, cons, i*n + j, &infeasible, &tightened) );
 	       if ( infeasible )
 	       {
-		  SCIPdebugMessage(" -> node infeasible.\n");
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+		  SCIPdebugMsg(scip, " -> node infeasible.\n");
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -810,8 +812,8 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
 		  if ( infeasible )
 		  {
-		     SCIPdebugMessage(" -> node infeasible.\n");
-                     SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+		     SCIPdebugMsg(scip, " -> node infeasible.\n");
+                     SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );
@@ -830,7 +832,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
    }
    if (nGen > 0)
       *result = SCIP_REDUCEDDOM;
-   SCIPdebugMessage("propagated %d domains.\n", nGen);
+   SCIPdebugMsg(scip, "propagated %d domains.\n", nGen);
 
    return SCIP_OKAY;
 }
@@ -851,7 +853,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
    assert( bdchgidx != NULL );
    assert( result != NULL );
 
-   SCIPdebugMessage("Propagation resolution of constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Propagation resolution of constraint <%s>.\n", SCIPconsGetName(cons));
    *result = SCIP_DIDNOTFIND;
 
    consdata = SCIPconsGetData(cons);
@@ -878,7 +880,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
       /* if the variable was fixed to 0 */
       if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
       {
-	 SCIPdebugMessage(" -> reason for x[%d][%d] == 0 was x[%d][%d] = 1.\n", index2, index1, index1, index2);
+	 SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = 1.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 1 */
 	 SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
 	 *result = SCIP_SUCCESS;
@@ -888,7 +890,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
       /* if the variable was fixed to 1 */
       if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
       {
-	 SCIPdebugMessage(" -> reason for x[%d][%d] == 1 was x[%d][%d] = 0.\n", index2, index1, index1, index2);
+	 SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 1 was x[%d][%d] = 0.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 0 */
 	 SCIP_CALL( SCIPaddConflictUb(scip, vars[index1][index2], bdchgidx) );
 	 *result = SCIP_SUCCESS;
@@ -916,7 +918,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
       assert( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 );
 
       /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
-      SCIPdebugMessage(" -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);
+      SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);
       SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
       SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
       *result = SCIP_SUCCESS;
@@ -940,7 +942,7 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
 
-   SCIPdebugMessage("Locking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Locking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
@@ -1028,7 +1030,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
    *valid = TRUE;
 
-   SCIPdebugMessage("Copying method for linear ordering constraint handler.\n");
+   SCIPdebugMsg(scip, "Copying method for linear ordering constraint handler.\n");
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );

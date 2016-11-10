@@ -234,7 +234,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
    unsigned int keyval;
-   int maxabsval;
+   uint64_t maxabsval;
    SCIP_Real maxval;  
    SCIP_SET* set;
 
@@ -246,14 +246,14 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert(row->nummaxval > 0);
    assert(row->validminmaxidx);
 
-   if( maxval > (SCIP_Real) INT_MAX )
+   if( maxval > (SCIP_Real)(uint64_t)-1 )
       maxabsval = 0;
    else if( maxval < 1.0 )
-      maxabsval = (int) (10000*maxval);
+      maxabsval = (uint64_t) (8192*maxval);
    else
-      maxabsval = (int) maxval;
+      maxabsval = (uint64_t) (256*maxval);
 
-   keyval = (row->maxidx << 29) + (row->len << 22) + (row->minidx << 11) + maxabsval; /*lint !e701*/
+   keyval = SCIPhashTwo(SCIPcombineThreeInt(row->maxidx, row->len, row->minidx), maxabsval);
 
    return keyval;
 }
@@ -724,7 +724,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    cutpool->ncalls++;
    found = FALSE;
 
-   SCIPdebugMessage("separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
+   SCIPsetDebugMsg(set, "separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);
@@ -773,7 +773,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
             {
                /* insert cut in separation storage */
-               SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
+               SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
 

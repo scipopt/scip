@@ -57,11 +57,6 @@ SCIP_VAR**** SCIPspaGetEdgevars(
 );
 
 extern
-SCIP_VAR** SCIPspaGetIndvars(
-   SCIP*                 scip                /**< SCIP data structure*/
-);
-
-extern
 SCIP_VAR** SCIPspaGetAbsvars(
    SCIP*                 scip                /**< SCIP data structure*/
 );
@@ -73,11 +68,6 @@ SCIP_VAR* SCIPspaGetTargetvar(
 
 extern
 SCIP_Real SCIPspaGetCoherence(
-   SCIP*                 scip                /**< SCIP data structure */
-);
-
-extern
-char SCIPspaGetModel(
    SCIP*                 scip                /**< SCIP data structure */
 );
 

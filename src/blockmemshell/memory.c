@@ -42,6 +42,8 @@
 
 /*#define CHECKMEM*/
 
+/* Uncomment the following for a warnings if buffers are not freed in the reverse order of allocation. */
+/* #define CHECKBUFFERORDER */
 
 /* if we are included in SCIP, use SCIP's message output methods */
 #ifdef SCIPdebugMessage
@@ -1100,14 +1102,16 @@ int createChunk(
 
    debugMessage("allocated new chunk %p: %d elements with size %d\n", (void*)newchunk, newchunk->storesize, newchunk->elemsize);
 
-   /* add new memory to the lazy free list */
+   /* add new memory to the lazy free list
+    * (due to the BMSisAligned assert above, we know that elemsize is divisible by the size of pointers)
+    */
    for( i = 0; i < newchunk->storesize - 1; ++i )
    {
-      freelist = (FREELIST*) ((char*) (newchunk->store) + i * chkmem->elemsize); /*lint !e826*/
-      freelist->next = (FREELIST*) ((char*) (newchunk->store) + (i + 1) * chkmem->elemsize); /*lint !e826*/
+      freelist = (FREELIST*) newchunk->store + i * chkmem->elemsize / sizeof(FREELIST*);
+      freelist->next = (FREELIST*) newchunk->store + (i + 1) * chkmem->elemsize / sizeof(FREELIST*);
    }
 
-   freelist = (FREELIST*) ((char*) (newchunk->store) + (newchunk->storesize - 1) * chkmem->elemsize); /*lint !e826*/
+   freelist = (FREELIST*) newchunk->store + (newchunk->storesize - 1) * chkmem->elemsize / sizeof(FREELIST*);
    freelist->next = chkmem->lazyfree;
    chkmem->lazyfree = (FREELIST*) (newchunk->store);
    chkmem->lazyfreesize += newchunk->storesize;
@@ -1330,11 +1334,11 @@ void* allocChkmemElement(
 
       /* check for a free element in the eager freelists */
       if( chkmem->firsteager != NULL )
-	 return allocChunkElement(chkmem->firsteager);
+         return allocChunkElement(chkmem->firsteager);
 
       /* allocate a new chunk */
       if( !createChunk(chkmem) )
-	 return NULL;
+         return NULL;
    }
 
    /* now the lazy freelist should contain an element */
@@ -1637,16 +1641,9 @@ long long BMSgetChunkMemoryUsed_call(
    const BMS_CHKMEM*     chkmem              /**< chunk block */
    )
 {
-   long long chkmemused;
-   int i;
-
    assert(chkmem != NULL);
 
-   chkmemused = 0;
-   for( i = 0; i < chkmem->nchunks; ++i )
-      chkmemused += (long long)(chkmem->chunks[i]->elemsize) * (long long)(chkmem->chunks[i]->storesize);
-
-   return chkmemused;
+   return ((long long)(chkmem->elemsize) * (long long)(chkmem->storesize));
 }
 
 
@@ -1665,6 +1662,10 @@ struct BMS_BlkMem
 {
    BMS_CHKMEM*           chkmemhash[CHKHASH_SIZE]; /**< hash table with chunk blocks */
    long long             memused;            /**< total number of used bytes in the memory header */
+   long long             memlazy;            /**< total number of allocated but not used bytes in the memory header */
+   long long             maxmemused;         /**< maximal number of used bytes in the memory header */
+   long long             maxmemlazy;         /**< maximal number of allocated but not used bytes in the memory header */
+   long long             maxmemtotal;        /**< maximal number of allocated and used bytes in the memory header */
    int                   initchunksize;      /**< number of elements in the first chunk of each chunk block */
    int                   garbagefactor;      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
                                               *   elements are free (-1: disable garbage collection) */
@@ -1762,6 +1763,10 @@ BMS_BLKMEM* BMScreateBlockMemory_call(
       blkmem->initchunksize = initchunksize;
       blkmem->garbagefactor = garbagefactor;
       blkmem->memused = 0;
+      blkmem->memlazy = 0;
+      blkmem->maxmemused = 0;
+      blkmem->maxmemlazy = 0;
+      blkmem->maxmemtotal = 0;
    }
    else
    {
@@ -1787,16 +1792,17 @@ void BMSclearBlockMemory_call(
    {
       for( i = 0; i < CHKHASH_SIZE; ++i )
       {
-	 chkmem = blkmem->chkmemhash[i];
-	 while( chkmem != NULL )
-	 {
-	    nextchkmem = chkmem->nextchkmem;
-	    destroyChkmem(&chkmem);
-	    chkmem = nextchkmem;
-	 }
-	 blkmem->chkmemhash[i] = NULL;
+         chkmem = blkmem->chkmemhash[i];
+         while( chkmem != NULL )
+         {
+            nextchkmem = chkmem->nextchkmem;
+            destroyChkmem(&chkmem);
+            chkmem = nextchkmem;
+         }
+         blkmem->chkmemhash[i] = NULL;
       }
       blkmem->memused = 0;
+      blkmem->memlazy = 0;
    }
    else
    {
@@ -1837,6 +1843,7 @@ void* BMSallocBlockMemory_work(
    )
 {
    BMS_CHKMEM** chkmemptr;
+   SCIP_Bool newchkmem;
    int hashnumber;
    void* ptr;
 
@@ -1852,14 +1859,14 @@ void* BMSallocBlockMemory_work(
       chkmemptr = &((*chkmemptr)->nextchkmem);
 
    /* create new chunk block if necessary */
-   if( *chkmemptr == NULL )
+   if( *chkmemptr == NULL  )
    {
       *chkmemptr = createChkmem((int)size, blkmem->initchunksize, blkmem->garbagefactor);
       if( *chkmemptr == NULL )
       {
-	 printErrorHeader(filename, line);
+         printErrorHeader(filename, line);
          printError("Insufficient memory for chunk block.\n");
-	 return NULL;
+         return NULL;
       }
 #ifndef NDEBUG
       BMSduplicateMemoryArray(&(*chkmemptr)->filename, filename, strlen(filename) + 1);
@@ -1867,8 +1874,11 @@ void* BMSallocBlockMemory_work(
 #endif
    }
 
+   newchkmem = ((*chkmemptr)->lazyfree == NULL);
+
    /* get memory inside the chunk block */
    ptr = allocChkmemElement(*chkmemptr);
+
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
@@ -1876,7 +1886,22 @@ void* BMSallocBlockMemory_work(
    }
    debugMessage("alloced %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, ptr, filename, line);
 
+   /* add the used memory */
    blkmem->memused += (long long) size;
+   blkmem->maxmemused = MAX(blkmem->maxmemused, blkmem->memused);
+
+   /* we have allocated new memory and the lazyfreesize was already decreased by 1 in allocChkmemElement() */
+   if( newchkmem )
+   {
+      blkmem->memlazy += ((*chkmemptr)->lazyfreesize * (*chkmemptr)->elemsize);
+      blkmem->maxmemlazy = MAX(blkmem->maxmemlazy, blkmem->memlazy);
+      blkmem->maxmemtotal = MAX(blkmem->maxmemtotal, blkmem->memlazy + blkmem->memused);
+   }
+   else
+      /* we have not allocated memory, we decrease the counter by the size of a chunk element */
+      blkmem->memlazy -= (*chkmemptr)->elemsize;
+
+   assert(blkmem->memlazy >= 0);
 
    checkBlkmem(blkmem);
 
@@ -2074,6 +2099,7 @@ void BMSfreeBlockMemory_work(
 {
    BMS_CHKMEM* chkmem;
    int hashnumber;
+   int oldlazysize;
 
    assert(ptr != NULL);
    assert(*ptr != NULL);
@@ -2097,11 +2123,28 @@ void BMSfreeBlockMemory_work(
    }
    assert(chkmem->elemsize == (int)size);
 
+   oldlazysize = chkmem->lazyfreesize;
+
    /* free memory in chunk block */
    freeChkmemElement(chkmem, *ptr, filename, line);
 
+   /* the chunk was not freed and is still available as lazyfree */
+   if( chkmem->lazyfreesize > oldlazysize )
+   {
+      assert(chkmem->lazyfreesize - oldlazysize == 1);
+      blkmem->memlazy += (long long) size;
+      blkmem->maxmemlazy = MAX(blkmem->maxmemlazy, blkmem->memlazy);
+   }
+   else
+   {
+      /* the chunk was freed */
+      assert(chkmem->lazyfreesize == 0);
+      blkmem->memlazy -= oldlazysize * (long long) size;
+   }
+
    blkmem->memused -= (long long) size;
    assert(blkmem->memused >= 0);
+   assert(blkmem->memlazy >= 0);
 
    *ptr = NULL;
 }
@@ -2180,6 +2223,16 @@ void BMSgarbagecollectBlockMemory_call(
    }
 }
 
+/** returns the total number of bytes in the block memory */
+long long BMSgetBlockMemoryTotal_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return BMSgetBlockMemoryUsed_call(blkmem) + BMSgetBlockMemoryLazy_call(blkmem);
+}
+
 /** returns the number of allocated bytes in the block memory */
 long long BMSgetBlockMemoryUsed_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
@@ -2188,6 +2241,46 @@ long long BMSgetBlockMemoryUsed_call(
    assert( blkmem != NULL );
 
    return blkmem->memused;
+}
+
+/** returns the number of allocated but not used bytes in the block memory */
+long long BMSgetBlockMemoryLazy_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return blkmem->memlazy;
+}
+
+/** returns the maximal number of allocated bytes in the block memory */
+long long BMSgetBlockMemoryUsedMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return blkmem->maxmemused;
+}
+
+/** returns the maximal number of allocated but not used bytes in the block memory */
+long long BMSgetBlockMemoryLazyMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return blkmem->maxmemlazy;
+}
+
+/** returns the maximal number of allocated and used bytes in the block memory */
+long long BMSgetBlockMemoryTotalMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
+{
+   assert( blkmem != NULL );
+
+   return blkmem->maxmemtotal;
 }
 
 /** returns the size of the given memory element; returns 0, if the element is not member of the block memory */
@@ -2245,63 +2338,63 @@ void BMSdisplayBlockMemory_call(
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL )
       {
-	 const CHUNK* chunk;
-	 int nchunks = 0;
-	 int nelems = 0;
-	 int neagerchunks = 0;
-	 int neagerelems = 0;
+         const CHUNK* chunk;
+         int nchunks = 0;
+         int nelems = 0;
+         int neagerchunks = 0;
+         int neagerelems = 0;
 
          for( c = 0; c < chkmem->nchunks; ++c )
          {
             chunk = chkmem->chunks[c];
             assert(chunk != NULL);
-	    assert(chunk->elemsize == chkmem->elemsize);
-	    assert(chunk->chkmem == chkmem);
-	    nchunks++;
-	    nelems += chunk->storesize;
-	    if( chunk->eagerfree != NULL )
-	    {
-	       neagerchunks++;
-	       neagerelems += chunk->eagerfreesize;
-	    }
-	 }
+            assert(chunk->elemsize == chkmem->elemsize);
+            assert(chunk->chkmem == chkmem);
+            nchunks++;
+            nelems += chunk->storesize;
+            if( chunk->eagerfree != NULL )
+            {
+               neagerchunks++;
+               neagerelems += chunk->eagerfreesize;
+            }
+         }
 
-	 assert(nchunks == chkmem->nchunks);
-	 assert(nelems == chkmem->storesize);
-	 assert(neagerelems == chkmem->eagerfreesize);
+         assert(nchunks == chkmem->nchunks);
+         assert(nelems == chkmem->storesize);
+         assert(neagerelems == chkmem->eagerfreesize);
 
-	 if( nelems > 0 )
-	 {
-	    nblocks++;
-	    allocedmem += (long long)chkmem->elemsize * (long long)nelems;
-	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
+         if( nelems > 0 )
+         {
+            nblocks++;
+            allocedmem += (long long)chkmem->elemsize * (long long)nelems;
+            freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
 #ifndef NDEBUG
-	    printInfo("%7d %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
-	       chkmem->elemsize, nchunks, neagerchunks, nelems,
-	       neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
-	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems), 
+            printInfo("%7d %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
+            chkmem->elemsize, nchunks, neagerchunks, nelems,
+            neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
+            100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
                (double)chkmem->elemsize * nelems / (1024.0*1024.0),
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7d %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
-	       chkmem->elemsize, nchunks, neagerchunks, nelems,
-	       neagerelems, chkmem->lazyfreesize,
-	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
+            printInfo("%7d %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
+            chkmem->elemsize, nchunks, neagerchunks, nelems,
+            neagerelems, chkmem->lazyfreesize,
+            100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
                (double)chkmem->elemsize * nelems / (1024.0*1024.0));
 #endif
-	 }
-	 else
-	 {
+         }
+         else
+         {
 #ifndef NDEBUG
-	    printInfo("%7d <unused>                            %5d %4d        %s:%d\n",
-	       chkmem->elemsize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
+            printInfo("%7d <unused>                            %5d %4d        %s:%d\n",
+            chkmem->elemsize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7d <unused>\n", chkmem->elemsize);
+            printInfo("%7d <unused>\n", chkmem->elemsize);
 #endif
-	    nunusedblocks++;
-	 }
+            nunusedblocks++;
+         }
          totalnchunks += nchunks;
          totalneagerchunks += neagerchunks;
          totalnelems += nelems;
@@ -2311,7 +2404,7 @@ void BMSdisplayBlockMemory_call(
          totalngarbagecalls += chkmem->ngarbagecalls;
          totalngarbagefrees += chkmem->ngarbagefrees;
 #endif
-	 chkmem = chkmem->nextchkmem;
+         chkmem = chkmem->nextchkmem;
       }
    }
 #ifndef NDEBUG
@@ -2330,7 +2423,11 @@ void BMSdisplayBlockMemory_call(
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
-   printInfo("\n");
+   printInfo("\n\n");
+
+   printInfo("Memory Peaks:    Used    Lazy   Total\n");
+   printInfo("               %6.1f  %6.1f  %6.1f MBytes\n", (double)blkmem->maxmemused / (1024.0 * 1024.0),
+         (double)blkmem->maxmemlazy / (1024.0 * 1024.0), (double)blkmem->maxmemtotal / (1024.0 * 1024.0));
 }
 
 /** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
@@ -2946,6 +3043,13 @@ void BMSfreeBufferMemory_work(
    bufnum = buffer->firstfree-1;
    while ( bufnum > 0 && buffer->data[bufnum] != *ptr )
       --bufnum;
+
+#ifdef CHECKBUFFERORDER
+   if ( bufnum < buffer->firstfree - 1 )
+   {
+      warningMessage("[%s:%d]: freeing buffer in wrong order.\n", filename, line);
+   }
+#endif
 
 #ifndef NDEBUG
    if ( bufnum == 0 && buffer->data[bufnum] != *ptr )

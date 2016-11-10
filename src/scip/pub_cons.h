@@ -456,6 +456,17 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/*
+ * Methods for constraint change sets
+ */
+/** gets added constraints data for a constraint set change */
+EXTERN
+void SCIPconssetchgGetAddedConsData(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
+   SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
+   int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   );
+
 /** sets the timing mask of the propagation method of the constraint handler */
 EXTERN
 void SCIPconshdlrSetPropTiming(
@@ -476,7 +487,6 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
-
 
 /*
  * Constraint methods
@@ -562,6 +572,12 @@ SCIP_Bool SCIPconsIsDeleted(
 /** returns TRUE iff constraint is marked obsolete */
 EXTERN
 SCIP_Bool SCIPconsIsObsolete(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is marked as a conflict */
+EXTERN
+SCIP_Bool SCIPconsIsConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
@@ -734,12 +750,13 @@ int SCIPconsGetNUpgradeLocks(
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
+#define SCIPconsIsConflict(cons)        ((cons)->conflict)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
-#define SCIPconsIsMarkedPropagate(cons) (cons)->markpropagate
+#define SCIPconsIsMarkedPropagate(cons) ((cons)->updatemarkpropagate || ((cons)->markpropagate && !(cons)->updateunmarkpropagate))
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local

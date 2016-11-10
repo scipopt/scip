@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -71,7 +71,7 @@ typedef enum Lockcompensation LOCKCOMPENSATION;
 static
 SCIP_RETCODE compensateVarLock(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< variable fixing candidate */
    int                   row,                /**< row index with opposite lock */
    SCIP_Real             val,                /**< value of fixing candidate in the opposite lock constraint */
@@ -422,7 +422,7 @@ SCIP_RETCODE compensateVarLock(
 
 #ifdef SCIP_MORE_DEBUG
             SCIPmatrixPrintRow(scip, matrix, row);
-            SCIPdebugMessage("%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
+            SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
                SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
                SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
                SCIPmatrixGetColNNonzs(matrix, col),
@@ -437,7 +437,7 @@ SCIP_RETCODE compensateVarLock(
 
 #ifdef SCIP_MORE_DEBUG
             SCIPmatrixPrintRow(scip, matrix, row);
-            SCIPdebugMessage("%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
+            SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
                SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
                SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
                SCIPmatrixGetColNNonzs(matrix, col),
@@ -473,7 +473,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualcomp)
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
@@ -535,6 +535,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          /* cases with exactly one uplock */
          if( SCIPvarGetNLocksUp(var) == 1 && SCIPisLE(scip, SCIPvarGetObj(var), 0.0) )
          {
+            row = -1;
+            val = 0.0;
             inspect = FALSE;
             colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
@@ -574,6 +576,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 
             if( inspect )
             {
+               assert(row >= 0);
+               assert(!SCIPisZero(scip, val));
+
                /* try to fix variable i at the upper bound */
                SCIP_CALL( compensateVarLock(scip, matrix, i, row, val,
                      twosides, COMPENSATE_UPLOCK, varstofix, &nfixings) );
@@ -582,6 +587,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          /* cases with exactly one downlock */
          else if( SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, SCIPvarGetObj(var), 0.0) )
          {
+            row = -1;
+            val = 0.0;
             inspect = FALSE;
             colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
@@ -617,12 +624,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                   twosides = TRUE;
                   break;
                }
-               else
-                  assert(0);
             }
 
             if( inspect )
             {
+               assert(row >= 0);
+               assert(!SCIPisZero(scip, val));
+
                /* try to fix variable i at the lower bound */
                SCIP_CALL( compensateVarLock(scip, matrix, i, row, val,
                      twosides, COMPENSATE_DOWNLOCK, varstofix, &nfixings) );
@@ -669,13 +677,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, -lb));
 
-               SCIPdebugMessage("Fix variable %s at lower bound %.15g\n", SCIPvarGetName(var), lb);
+               SCIPdebugMsg(scip, "Fix variable %s at lower bound %.15g\n", SCIPvarGetName(var), lb);
 
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -698,13 +706,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, ub));
 
-               SCIPdebugMessage("Fix variable %s at upper bound %.15g\n", SCIPvarGetName(var), ub);
+               SCIPdebugMsg(scip, "Fix variable %s at upper bound %.15g\n", SCIPvarGetName(var), ub);
 
                /* fix at upper bound */
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -723,7 +731,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          if( *result != SCIP_CUTOFF && *nfixedvars > oldnfixedvars )
             *result = SCIP_SUCCESS;
 
-         SCIPdebugMessage("### lbfixes: %d, ubfixes: %d, con: %d, dis: %d\n",
+         SCIPdebugMsg(scip, "### lbfixes: %d, ubfixes: %d, con: %d, dis: %d\n",
             numlowerboundfixings, numupperboundfixings,
             numcontinuousfixings, numdiscretefixings);
       }

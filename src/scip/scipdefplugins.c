@@ -66,6 +66,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderMps(scip) );
+   SCIP_CALL( SCIPincludeReaderMst(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
    SCIP_CALL( SCIPincludeReaderOsil(scip) );
    SCIP_CALL( SCIPincludeReaderPip(scip) );
@@ -108,12 +109,14 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
    SCIP_CALL( SCIPincludeHeurBound(scip) );
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurCompletesol(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
    SCIP_CALL( SCIPincludeHeurDistributiondiving(scip) );
@@ -128,8 +131,10 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
+   SCIP_CALL( SCIPincludeHeurLocks(scip) );
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
+   SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
@@ -157,6 +162,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropObbt(scip) );
+   SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
    SCIP_CALL( SCIPincludePropRedcost(scip) );

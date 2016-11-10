@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dirreduce.c
+/**@file   reduce_bnd.c
  * @brief  bound based reductions for Steiner tree problems
  * @author Daniel Rehfeldt
  *
@@ -140,7 +140,6 @@ static
 void compTMstarts(
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< starting points array */
-   unsigned int*         seed,               /**< random seed */
    int                   runs                /**< number of runs */
    )
 {
@@ -163,7 +162,7 @@ void compTMstarts(
    r = 0;
    if( graph->mark[root] )
       starts[r++] = root;
-   randval = SCIPgetRandomInt(0, nnodes - 1, seed);
+   randval = nnodes - nterms;
 
    /* use non-isolated terminals as starting points for TM heuristic */
    for( k = 0; k < nnodes; k++ )
@@ -248,14 +247,12 @@ SCIP_RETCODE da_reduce(
    int nnodes;
    int nfixed;
    int best_start;
-   unsigned int seed;
    char* marked;
 
    assert(scip != NULL);
    assert(graph != NULL);
    assert(nelims != NULL);
 
-   seed = 0;
    root = graph->source[0];
    rpc = (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING);
    nfixed = 0;
@@ -324,7 +321,7 @@ SCIP_RETCODE da_reduce(
    {
       /* choose starting points for TM heuristic */
       starts = heursources;
-      compTMstarts(graph, starts, &seed, runs);
+      compTMstarts(graph, starts, runs);
    }
    else
    {
@@ -894,7 +891,6 @@ SCIP_RETCODE bound_reduce(
    int nnodes;
    int nedges;
    int best_start;
-   unsigned int seed;
    char* stnode;
    SCIP_Bool ub;
    SCIP_Bool pc;
@@ -917,7 +913,6 @@ SCIP_RETCODE bound_reduce(
 
    mst = NULL;
    obj = DEFAULT_HOPFACTOR;
-   seed = 0;
    perm = NULL;
    root = graph->source[0];
    nedges = graph->edges;
@@ -992,47 +987,7 @@ SCIP_RETCODE bound_reduce(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &starts, nnodes) );
 
-      compTMstarts(graph, starts, &seed, runs);
-#if 0
-      int randval;
-
-      r = 0;
-      if( graph->mark[root] )
-         starts[r++] = root;
-      randval = SCIPgetRandomInt(0, nnodes - 1, &seed);
-
-      /* use non-isolated terminals as starting points for TM heuristic */
-      for( k = 0; k < nnodes; k++ )
-      {
-         if( r >= runs || r >= nterms )
-            break;
-
-         l = (k + randval) % nnodes;
-         if( Is_term(graph->term[l]) && graph->mark[l] && l != root )
-            starts[r++] = l;
-      }
-
-      /* still empty slots in start array? */
-
-      /* fill empty slots with terminal neighbours */
-      for( k = 0; k < r && r < runs; k++ )
-      {
-         for( e = graph->outbeg[starts[k]]; e != EAT_LAST && r < runs; e = graph->oeat[e] )
-         {
-            l = graph->head[e];
-            if( !Is_term(graph->term[l]) && graph->mark[l] )
-               starts[r++] = l;
-         }
-      }
-
-      /* fill empty slots randomly */
-      for( k = 0; k < nnodes && r < runs; k++ )
-      {
-         l = (k + randval) % nnodes;
-         if( !Is_term(graph->term[l]) && graph->mark[l] )
-            starts[r++] = l;
-      }
-#endif
+      compTMstarts(graph, starts, runs);
    }
    else
    {

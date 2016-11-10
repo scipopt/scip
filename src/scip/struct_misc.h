@@ -69,13 +69,6 @@ struct SCIP_PQueue
    int                   size;               /**< total number of available element slots */
 };
 
-/** element list to store single elements of a hash table */
-struct SCIP_HashTableList
-{
-   void*                 element;            /**< this element */
-   SCIP_HASHTABLELIST*   next;               /**< rest of the hash table list */
-};
-
 /** hash table data structure */
 struct SCIP_HashTable
 {
@@ -83,26 +76,55 @@ struct SCIP_HashTable
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
-   SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
+   void*                 userptr;            /**< user pointer */
+   void**                slots;              /**< slots of the hash table */
+   uint32_t*             hashes;             /**< hash values of elements stored in slots */
+   uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
+   uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
+};
+
+/** element list to store single elements of a hash table */
+struct SCIP_MultiHashList
+{
+   void*                 element;            /**< this element */
+   SCIP_MULTIHASHLIST*   next;               /**< rest of the hash table list */
+};
+
+/** multihash table data structure */
+struct SCIP_MultiHash
+{
+   SCIP_DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
+   SCIP_MULTIHASHLIST**  lists;              /**< multihash table lists of the hash table */
    int                   nlists;             /**< number of lists stored in the hash table */
    void*                 userptr;            /**< user pointer */
    SCIP_Longint          nelements;          /**< number of elements in the hashtable */
 };
 
-/** element list to store single mappings of a hash map */
-struct SCIP_HashMapList
+typedef union {
+   void*                 ptr;                /**< pointer image */
+   SCIP_Real             real;               /**< real image */
+} SCIP_HASHMAPIMAGE;
+
+/** hash map entry */
+struct SCIP_HashMapEntry
 {
-   void*                 origin;             /**< origin of the mapping origin -> image */
-   void*                 image;              /**< image of the mapping origin -> image */
-   SCIP_HASHMAPLIST*     next;               /**< rest of the hash map list */
+   void*                 origin;             /**< origin of element */
+   SCIP_HASHMAPIMAGE     image;              /**< image of element */
 };
 
 /** hash map data structure to map pointers on pointers */
 struct SCIP_HashMap
 {
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
-   SCIP_HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
-   int                   nlists;             /**< number of lists stored in the hash map */
+   SCIP_HASHMAPENTRY*    slots;              /**< buffer for hashmap entries */
+   uint32_t*             hashes;             /**< hashes of elements */
+   uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
+   uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
 };
 
 /** dynamic array for storing real values */
@@ -196,6 +218,30 @@ struct SCIP_Bt
 {
    SCIP_BTNODE*          root;               /**< pointer to the dummy root node; root is left child */
    BMS_BLKMEM*           blkmem;             /**< block memory used to store tree nodes */
+};
+
+/** data structure for incremental linear regression of data points (X_i, Y_i)  */
+struct SCIP_Regression
+{
+   SCIP_Real             intercept;          /**< the current axis intercept of the regression */
+   SCIP_Real             slope;              /**< the current slope of the regression */
+   SCIP_Real             meanx;              /**< mean of all X observations */
+   SCIP_Real             meany;              /**< mean of all Y observations */
+   SCIP_Real             sumxy;              /**< accumulated sum of all products X * Y */
+   SCIP_Real             variancesumx;       /**< incremental variance term for X observations  */
+   SCIP_Real             variancesumy;       /**< incremental variance term for Y observations */
+   SCIP_Real             corrcoef;           /**< correlation coefficient of X and Y */
+   int                   nobservations;      /**< number of observations so far */
+};
+
+/** random number generator data */
+struct SCIP_RandNumGen
+{
+   unsigned int          seed;               /**< start seed */
+   unsigned int          xor_seed;           /**< Xorshift seed */
+   unsigned int          mwc_seed;           /**< Multiply-with-carry seed */
+   unsigned int          cst_seed;           /**< constant seed */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
 };
 
 #ifdef __cplusplus

@@ -39,6 +39,7 @@
 #include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
+#include "scip/type_conflictstore.h"
 
 #include "scip/struct_prob.h"
 
@@ -155,6 +156,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
 
@@ -381,6 +383,7 @@ extern
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    );
@@ -613,6 +616,12 @@ SCIP_VAR** SCIPprobGetVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets number of problem constraints */
+extern
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** gets the objective offset */
 extern
 SCIP_Real SCIPprobGetObjoffset(
@@ -622,6 +631,18 @@ SCIP_Real SCIPprobGetObjoffset(
 /** gets the objective scalar */
 extern
 SCIP_Real SCIPprobGetObjscale(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** is constraint compression enabled for this problem? */
+extern
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
+extern
+void SCIPprobEnableConsCompression(
    SCIP_PROB*            prob                /**< problem data */
    );
 
@@ -647,8 +668,11 @@ SCIP_Real SCIPprobGetObjscale(
 #define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
+#define SCIPprobGetNConss(prob)         ((prob)->nconss)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
+#define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
+#define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
 
 

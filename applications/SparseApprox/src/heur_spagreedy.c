@@ -830,7 +830,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       /* set the variables the problem to the found clustering and test feasibility */
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
       SCIP_CALL( assignVars( scip, sol, clustering, nbins, ncluster, qmatrix, cmatrix) );
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &feasible) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &feasible) );
    }
    if( feasible )
       *result = SCIP_FOUNDSOL;

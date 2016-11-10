@@ -35,6 +35,7 @@
 #include "scip/clock.h"
 #include "scip/visual.h"
 #include "scip/mem.h"
+#include "scip/var.h"
 #include "scip/history.h"
 
 
@@ -44,6 +45,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
@@ -79,6 +82,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
    SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
 
+   SCIP_CALL( SCIPregressionCreate(&(*stat)->regressioncandsobjval) );
+
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
@@ -91,7 +96,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->subscipdepth = 0;
    (*stat)->nreoptruns = 0;
 
-   SCIPstatReset(*stat, set);
+   SCIPstatReset(*stat, set, transprob, origprob);
 
    return SCIP_OKAY;
 }
@@ -128,6 +133,8 @@ SCIP_RETCODE SCIPstatFree(
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvisualFree(&(*stat)->visual);
+
+   SCIPregressionFree(&(*stat)->regressioncandsobjval);
 
    BMSfreeMemory(stat);
 
@@ -169,7 +176,9 @@ void SCIPstatMark(
 /** reset statistics to the data before solving started */
 void SCIPstatReset(
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    )
 {
    assert(stat != NULL);
@@ -271,6 +280,7 @@ void SCIPstatReset(
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
+   stat->externmemestim = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -296,7 +306,7 @@ void SCIPstatReset(
    stat->totaldivesetdepth = 0;
 
    SCIPstatResetImplications(stat);
-   SCIPstatResetPresolving(stat);
+   SCIPstatResetPresolving(stat, set, transprob, origprob);
    SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
 }
 
@@ -312,7 +322,10 @@ void SCIPstatResetImplications(
 
 /** reset presolving and current run specific statistics */
 void SCIPstatResetPresolving(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL if not yet existing */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    )
 {
    assert(stat != NULL);
@@ -332,7 +345,7 @@ void SCIPstatResetPresolving(
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;
 
-   SCIPstatResetCurrentRun(stat, FALSE);
+   SCIPstatResetCurrentRun(stat, set, transprob, origprob, FALSE);
 }
 
 /** reset primal-dual integral */
@@ -455,6 +468,9 @@ void SCIPstatUpdatePrimalDualIntegral(
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_Bool             solved              /**< is problem already solved? */
    )
 {
@@ -475,6 +491,7 @@ void SCIPstatResetCurrentRun(
    stat->bestsolnode = 0;
    stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
+   stat->rootlpbestestimate = SCIP_INVALID;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
@@ -483,11 +500,27 @@ void SCIPstatResetCurrentRun(
    stat->nseparounds = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+   stat->nobjleaves = 0;
+   stat->ninfeasleaves = 0;
+   stat->nfeasleaves = 0;
+
+   stat->nearlybacktracks = 0;
+   stat->nnodesaboverefbound = 0;
+
+   assert(transprob == NULL || origprob != NULL);
+   /* calculate the reference bound in transformed space from the reference value */
+   if( transprob != NULL && !SCIPsetIsInfinity(set, SCIPsetGetReferencevalue(set)) )
+      stat->referencebound = SCIPprobInternObjval(transprob, origprob, set, SCIPsetGetReferencevalue(set));
+   else
+      stat->referencebound = SCIPsetInfinity(set);
+
 
    if( !solved )
       stat->status = SCIP_STATUS_UNKNOWN;
 
    SCIPhistoryReset(stat->glbhistorycrun);
+
+   SCIPregressionReset(stat->regressioncandsobjval);
 
    SCIPstatResetDisplay(stat);
 }
@@ -552,6 +585,14 @@ void SCIPstatUpdateMemsaveMode(
       stat->memsavemode = FALSE;
 }
 
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+SCIP_Longint SCIPstatGetMemExternEstim(
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   )
+{
+   return stat->externmemestim;
+}
+
 /** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
  *
  *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
@@ -580,4 +621,109 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->nlpsoltime, enable);
    SCIPclockEnableOrDisable(stat->copyclock, enable);
    SCIPclockEnableOrDisable(stat->strongpropclock, enable);
+}
+
+/** recompute root LP best-estimate from scratch */
+void SCIPstatComputeRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootlpobjval,       /**< root LP objective value */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of variables */
+   )
+{
+   int v;
+   stat->rootlpbestestimate = rootlpobjval;
+
+   /* compute best-estimate contribution for every variable */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_Real rootlpsol;
+      SCIP_Real varminpseudoscore;
+
+      /* stop at the first continuous variable */
+      if( !SCIPvarIsIntegral(vars[v]) )
+         break;
+
+      rootlpsol = SCIPvarGetRootSol(vars[v]);
+      varminpseudoscore = SCIPvarGetMinPseudocostScore(vars[v], stat, set, rootlpsol);
+      assert(varminpseudoscore >= 0);
+      stat->rootlpbestestimate += varminpseudoscore;
+
+      SCIPstatDebugMsg(stat, "Root LP Estimate initialization: <%s> + %15.9f\n", SCIPvarGetName(vars[v]), varminpseudoscore);
+   }
+}
+
+/** update root LP best-estimate with changed variable pseudo-costs */
+SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed pseudo costs */
+   SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
+   )
+{
+   SCIP_Real rootlpsol;
+   SCIP_Real varminpseudoscore;
+
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE );
+
+   /* entire root LP best-estimate must be computed from scratch first */
+   if( stat->rootlpbestestimate == SCIP_INVALID ) /*lint !e777*/
+      return SCIP_OKAY;
+
+   rootlpsol = SCIPvarGetRootSol(var);
+
+   /* LP root estimate only works for variables with fractional LP root solution */
+   if( SCIPsetIsFeasIntegral(set, rootlpsol) )
+      return SCIP_OKAY;
+
+   /* subtract old pseudo cost contribution and add new contribution afterwards */
+   stat->rootlpbestestimate -= oldrootpscostscore;
+
+   varminpseudoscore = SCIPvarGetMinPseudocostScore(var, stat, set, rootlpsol);
+   assert(varminpseudoscore >= 0.0);
+   stat->rootlpbestestimate += varminpseudoscore;
+
+   SCIPstatDebugMsg(stat, "Root LP estimate update: <%s> - %15.9f + %15.9f\n", SCIPvarGetName(var), oldrootpscostscore, varminpseudoscore);
+
+   return SCIP_OKAY;
+}
+
+/** prints a debug message */
+void SCIPstatPrintDebugMessage(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( stat != NULL );
+
+   if ( stat->subscipdepth > 0 )
+      printf("%d: [%s:%d] debug: ", stat->subscipdepth, sourcefile, sourceline);
+   else
+      printf("[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMessagePrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{  /*lint --e{715}*/
+   va_list ap;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
 }

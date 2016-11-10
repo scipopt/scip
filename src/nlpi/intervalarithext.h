@@ -251,10 +251,11 @@ SCIPInterval cos(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement cosine for intervals */
-   SCIPerrorMessage("Cosine of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPInterval resultant;
 
-   return SCIPInterval(-1.0, 1.0);
+   SCIPintervalCos(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** exponential of an interval */
@@ -331,10 +332,11 @@ SCIPInterval sin(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement sine for intervals */
-   SCIPerrorMessage("Sine of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPInterval resultant;
 
-   return SCIPInterval(-1.0, 1.0);
+   SCIPintervalSin(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** square an interval */
@@ -402,12 +404,17 @@ SCIPInterval function(                                                          
 
 SCIP_INTERVALARITH_UNDEFFUNC(tan)
 SCIP_INTERVALARITH_UNDEFFUNC(acos)
+SCIP_INTERVALARITH_UNDEFFUNC(acosh)
 SCIP_INTERVALARITH_UNDEFFUNC(asin)
+SCIP_INTERVALARITH_UNDEFFUNC(asinh)
 SCIP_INTERVALARITH_UNDEFFUNC(atan)
+SCIP_INTERVALARITH_UNDEFFUNC(atanh)
 SCIP_INTERVALARITH_UNDEFFUNC(cosh)
 SCIP_INTERVALARITH_UNDEFFUNC(sinh)
 SCIP_INTERVALARITH_UNDEFFUNC(tanh)
 SCIP_INTERVALARITH_UNDEFFUNC(erf)
+SCIP_INTERVALARITH_UNDEFFUNC(expm1)
+SCIP_INTERVALARITH_UNDEFFUNC(log1p)
 #undef SCIP_INTERVALARITH_UNDEFFUNC
 
 #ifdef SCIPInterval_NAMESPACE

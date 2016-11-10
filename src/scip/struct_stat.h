@@ -44,6 +44,7 @@ extern "C" {
 /** problem and runtime specific statistics */
 struct SCIP_Stat
 {
+   SCIP_REGRESSION*      regressioncandsobjval;/**< linear regression of pairs (nbranchcands, lpobjval) for every node */
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
    SCIP_Longint          nrootlpiterations;  /**< total number of LP iterations in root node */
    SCIP_Longint          nrootfirstlpiterations;/**< number of LP iterations for first LP solved at the root node */
@@ -64,12 +65,17 @@ struct SCIP_Stat
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
+   SCIP_Longint          nobjleaves;         /**< number of leaf nodes processed that reached the cutoff bound */
+   SCIP_Longint          nfeasleaves;        /**< number of leaf nodes processed with feasible relaxation solution */
+   SCIP_Longint          ninfeasleaves;      /**< number of infeasible leaf nodes processed */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    SCIP_Longint          ntotalinternalnodes;/**< total number of nodes processed in all runs where a branching was performed */
    SCIP_Longint          ncreatednodes;      /**< total number of nodes created */
    SCIP_Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    SCIP_Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
    SCIP_Longint          ndeactivatednodes;  /**< number of times, a node got deactivated in current run */
+   SCIP_Longint          nearlybacktracks;   /**< counter for early switches (if children dual bound is below reference value) */
+   SCIP_Longint          nnodesaboverefbound;/**< counter for the number of focus nodes exceeding the reference bound */
    SCIP_Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    SCIP_Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    SCIP_Longint          nreprops;           /**< number of times, a solved node is repropagated again */
@@ -94,8 +100,9 @@ struct SCIP_Stat
    SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
    SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
    SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
-   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
+   SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
@@ -117,6 +124,8 @@ struct SCIP_Stat
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
+   SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
+   SCIP_Real             referencebound;     /**< objective bound for reference purposes */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */

@@ -1,4 +1,4 @@
-from pyscipopt import Model, Pricer, SCIP_RESULT, SCIP_PARAMSETTING
+from pyscipopt import Model, Pricer, SCIP_RESULT, SCIP_PARAMSETTING, quicksum
 
 class CutPricer(Pricer):
 
@@ -29,8 +29,8 @@ class CutPricer(Pricer):
             cutWidthVars.append(subMIP.addVar(varNames[i], vtype = "I", obj = -1.0 * dualSolutions[i]))
 
         # Adding the knapsack constraint
-        knapsackCoeffs = {cutWidthVars[i] : self.data['widths'][i] for i in range(len(self.data['widths']))}
-        knapsackCons = subMIP.addCons(knapsackCoeffs, lhs = None, rhs = self.data['rollLength'])
+        knapsackCons = subMIP.addCons(
+            quicksum(w*v for (w,v) in zip(self.data['widths'], cutWidthVars)) <= self.data['rollLength'])
 
         # Solving the subMIP to generate the most negative reduced cost pattern
         subMIP.optimize()
@@ -55,9 +55,6 @@ class CutPricer(Pricer):
             # Storing the new variable in the pricer data.
             self.data['patterns'].append(newPattern)
             self.data['var'].append(newVar)
-
-        # Freeing the subMIP
-        subMIP.free()
 
         return {'result':SCIP_RESULT.SUCCESS}
 
@@ -100,8 +97,8 @@ def test_cuttingstock():
     demandCons = []
     for i in range(len(widths)):
         numWidthsPerRoll = float(int(rollLength/widths[i]))
-        coeffs = {cutPatternVars[i] : numWidthsPerRoll}
-        demandCons.append(s.addCons(coeffs, lhs = demand[i], separate = False, modifiable = True))
+        demandCons.append(s.addCons(numWidthsPerRoll*cutPatternVars[i] >= demand[i],
+                                    separate = False, modifiable = True))
         newPattern = [0]*len(widths)
         newPattern[i] = numWidthsPerRoll
         patterns.append(newPattern)

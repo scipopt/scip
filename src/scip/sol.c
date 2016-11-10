@@ -169,6 +169,7 @@ SCIP_Real solGetArrayVal(
       case SCIP_SOLORIGIN_PSEUDOSOL:
          return SCIPvarGetPseudoSol(var);
 
+      case SCIP_SOLORIGIN_PARTIAL:
       case SCIP_SOLORIGIN_UNKNOWN:
          return SCIP_UNKNOWN;
 
@@ -199,7 +200,7 @@ SCIP_RETCODE solUnlinkVar(
    if( SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
+   SCIPsetDebugMsg(set, "unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
 
    /* store the correct solution value into the solution array */
    switch( sol->solorigin )
@@ -231,6 +232,7 @@ SCIP_RETCODE solUnlinkVar(
       SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       return SCIP_OKAY;
 
+   case SCIP_SOLORIGIN_PARTIAL:
    case SCIP_SOLORIGIN_UNKNOWN:
       SCIP_CALL( solSetArrayVal(sol, set, var, SCIP_UNKNOWN) );
       return SCIP_OKAY;
@@ -668,6 +670,39 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    return SCIP_OKAY;
 }
 
+/** creates partial primal CIP solution, initialized to unknown values */
+SCIP_RETCODE SCIPsolCreatePartial(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(primal != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
+   SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
+   (*sol)->heur = heur;
+   (*sol)->solorigin = SCIP_SOLORIGIN_PARTIAL;
+   (*sol)->obj = SCIP_UNKNOWN;
+   (*sol)->primalindex = -1;
+   (*sol)->index = stat->solindex;
+   (*sol)->hasinfval = FALSE;
+   stat->solindex++;
+   solStamp(*sol, stat, NULL, TRUE);
+
+   SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
+
+   return SCIP_OKAY;
+}
+
 /** creates primal CIP solution, initialized to unknown values */
 SCIP_RETCODE SCIPsolCreateUnknown(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -736,7 +771,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    assert(lp->solved);
    assert(SCIPlpDiving(lp) || SCIPtreeProbing(tree) || !SCIPlpDivingObjChanged(lp));
 
-   SCIPdebugMessage("linking solution to LP\n");
+   SCIPsetDebugMsg(set, "linking solution to LP\n");
 
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
@@ -772,7 +807,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    solStamp(sol, stat, tree, TRUE);
 
-   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+   SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
@@ -791,7 +826,7 @@ SCIP_RETCODE SCIPsolLinkNLPSol(
    assert(nlp != NULL);
    assert(SCIPnlpGetSolstat(nlp) <= SCIP_NLPSOLSTAT_FEASIBLE);
 
-   SCIPdebugMessage("linking solution to NLP\n");
+   SCIPstatDebugMsg(stat, "linking solution to NLP\n");
 
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
@@ -823,7 +858,7 @@ SCIP_RETCODE SCIPsolLinkNLPSol(
    sol->solorigin = SCIP_SOLORIGIN_NLPSOL;
    solStamp(sol, stat, tree, TRUE);
 
-   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+   SCIPstatDebugMsg(stat, " -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
@@ -843,7 +878,7 @@ SCIP_RETCODE SCIPsolLinkRelaxSol(
    assert(relaxation != NULL);
    assert(SCIPrelaxationIsSolValid(relaxation));
 
-   SCIPdebugMessage("linking solution to relaxation\n");
+   SCIPsetDebugMsg(set, "linking solution to relaxation\n");
 
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
@@ -853,7 +888,7 @@ SCIP_RETCODE SCIPsolLinkRelaxSol(
    sol->solorigin = SCIP_SOLORIGIN_RELAXSOL;
    solStamp(sol, stat, tree, TRUE);
 
-   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+   SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
@@ -872,7 +907,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    assert(stat != NULL);
    assert(tree != NULL);
 
-   SCIPdebugMessage("linking solution to pseudo solution\n");
+   SCIPsetDebugMsg(set, "linking solution to pseudo solution\n");
 
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
@@ -882,7 +917,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    solStamp(sol, stat, tree, TRUE);
 
-   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+   SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
@@ -899,7 +934,7 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
 {
    assert(tree != NULL);
 
-   SCIPdebugMessage("linking solution to current solution\n");
+   SCIPsetDebugMsg(set, "linking solution to current solution\n");
 
    if( SCIPtreeHasCurrentNodeLP(tree) && SCIPlpIsSolved(lp) )
    {
@@ -963,7 +998,7 @@ SCIP_RETCODE SCIPsolUnlink(
    if( !SCIPsolIsOriginal(sol) && sol->solorigin != SCIP_SOLORIGIN_ZERO
       && sol->solorigin != SCIP_SOLORIGIN_UNKNOWN )
    {
-      SCIPdebugMessage("completing solution %p\n", (void*)sol);
+      SCIPsetDebugMsg(set, "completing solution %p\n", (void*)sol);
 
       for( v = 0; v < prob->nvars; ++v )
       {
@@ -991,13 +1026,14 @@ SCIP_RETCODE SCIPsolSetVal(
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
+      || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(var != NULL);
    assert(SCIPisFinite(val));
 
-   SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
+   SCIPsetDebugMsg(set, "setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -1006,6 +1042,7 @@ SCIP_RETCODE SCIPsolSetVal(
       if( SCIPsolIsOriginal(sol) )
       {
          oldval = solGetArrayVal(sol, var);
+
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
             SCIP_Real obj;
@@ -1013,31 +1050,35 @@ SCIP_RETCODE SCIPsolSetVal(
 
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            /* update objective: an unknown solution value does not count towards the objective */
-            obj = SCIPvarGetObj(var);
-            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+            /* update the objective value; we do not need to do this for partial solutions */
+            if( !SCIPsolIsPartial(sol) )
             {
-               objcont = obj * oldval;
+               /* an unknown solution value does not count towards the objective */
+               obj = SCIPvarGetObj(var);
+               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+               {
+                  objcont = obj * oldval;
 
-               /* we want to use a clean infinity */
-               if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
-                  sol->obj = SCIPsetInfinity(set);
-               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
-                  sol->obj = -SCIPsetInfinity(set);
-               else
-                  sol->obj -= objcont;
-            }
-            if( val != SCIP_UNKNOWN ) /*lint !e777*/
-            {
-               objcont = obj * val;
+                  /* we want to use a clean infinity */
+                  if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
+                     sol->obj = SCIPsetInfinity(set);
+                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
+                     sol->obj = -SCIPsetInfinity(set);
+                  else
+                     sol->obj -= objcont;
+               }
+               if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               {
+                  objcont = obj * val;
 
-               /* we want to use a clean infinity */
-               if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
-                  sol->obj = SCIPsetInfinity(set);
-               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
-                  sol->obj = -SCIPsetInfinity(set);
-               else
-                  sol->obj += objcont;
+                  /* we want to use a clean infinity */
+                  if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+                     sol->obj = SCIPsetInfinity(set);
+                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+                     sol->obj = -SCIPsetInfinity(set);
+                  else
+                     sol->obj += objcont;
+               }
             }
 
             solStamp(sol, stat, tree, FALSE);
@@ -1185,7 +1226,7 @@ SCIP_RETCODE SCIPsolIncVal(
    assert(var != NULL);
    assert(!SCIPsetIsInfinity(set, incval) && !SCIPsetIsInfinity(set, -incval));
 
-   SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
+   SCIPsetDebugMsg(set, "increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
@@ -1259,6 +1300,7 @@ SCIP_Real SCIPsolGetVal(
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
+      || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
@@ -1470,7 +1512,72 @@ void SCIPsolUpdateVarObj(
       sol->obj += (newobj - oldobj) * solval;
 }
 
-/** checks primal CIP solution for feasibility */
+/* mark the given solution as partial solution */
+SCIP_RETCODE SCIPsolMarkPartial(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of problem variables */
+   )
+{
+   SCIP_Real* vals;
+   int v;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(nvars == 0 || vars != NULL);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;;
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, nvars) );
+
+   /* get values */
+   for( v = 0; v < nvars; v++ )
+   {
+      assert(!SCIPvarIsTransformed(vars[v]));
+      vals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
+   }
+
+   /* change origin to partial */
+   sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
+
+   /* set values */
+   for( v = 0; v < nvars; v++ )
+   {
+      int idx = SCIPvarGetIndex(vars[v]);
+
+      if( vals[v] != SCIP_UNKNOWN ) /*lint !e777*/
+      {
+         /* from now on, variable must not be deleted */
+         SCIPvarMarkNotDeletable(vars[v]);
+
+         /* mark the variable valid */
+         SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
+
+         /* set the value in the solution array */
+         SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, vals[v]) );
+      }
+      else
+      {
+         /* mark the variable invalid */
+         SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, FALSE) );
+      }
+   }
+
+   /* free buffer */
+   SCIPsetFreeBufferArray(set, &vals);
+
+   return SCIP_OKAY;
+}
+
+/** checks primal CIP solution for feasibility
+ *
+ *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
+ *        differently. There might be some variables which do not have an original counter part (e.g. in
+ *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
+ */
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1479,6 +1586,7 @@ SCIP_RETCODE SCIPsolCheck(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -1494,17 +1602,20 @@ SCIP_RETCODE SCIPsolCheck(
    assert(prob != NULL);
    assert(feasible != NULL);
 
-   SCIPdebugMessage("checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
+   SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
 
+   if( !printreason )
+      completely = FALSE;
+
    /* check whether the solution respects the global bounds of the variables */
-   if( checkbounds )
+   if( checkbounds || sol->hasinfval )
    {
       int v;
 
-      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
+      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -1520,73 +1631,65 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
 
-            /* check finite lower bound */
-            if( !SCIPsetIsInfinity(set, -lb) )
-               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
-
-            /* check finite upper bound */
-            if( !SCIPsetIsInfinity(set, ub) )
-               *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
-
-            if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
+            if( checkbounds )
             {
-               SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
-                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+               /* check finite lower bound */
+               if( !SCIPsetIsInfinity(set, -lb) )
+                  *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+
+               /* check finite upper bound */
+               if( !SCIPsetIsInfinity(set, ub) )
+                  *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
+
+               /* if one of current bounds is violated */
+               if( SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub) )
+               {
+                  if( printreason )
+                  {
+                     SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+                  }
+#ifdef SCIP_DEBUG
+                  else
+                  {
+                     SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+                  }
+#endif
+               }
+            }
+
+            /* check whether there are infinite variable values that lead to an objective value of +infinity */
+            if( *feasible && sol->hasinfval )
+            {
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
+
+               if( ((SCIPsetIsInfinity(set, solval) && SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) || (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
+               {
+                  if( printreason )
+                  {
+                     SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+                  }
+#ifdef SCIP_DEBUG
+                  else
+                  {
+                     SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+                  }
+#endif
+               }
             }
          }
-
-#ifdef SCIP_DEBUG
-         if( !(*feasible) && !printreason )
-         {
-            SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-               SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         }
-#endif
-      }
-   }
-
-   /* check whether there are infinite variable values that lead to an objective value of +infinity */
-   if( *feasible && sol->hasinfval )
-   {
-      int v;
-
-      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-
-         var = prob->vars[v];
-         solval = SCIPsolGetVal(sol, set, stat, var);
-         assert(solval != SCIP_INVALID); /*lint !e777*/
-
-         if( solval != SCIP_UNKNOWN ) /*lint !e777*/
-         {
-            *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
-            *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
-
-            if( printreason && ((SCIPsetIsInfinity(set, solval) &&  SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) ||
-                  (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
-            {
-               SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                  solval, SCIPvarGetName(var), SCIPvarGetObj(var));
-            }
-         }
-
-#ifdef SCIP_DEBUG
-         if( !(*feasible) && !printreason )
-         {
-            SCIPdebugPrintf("infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-               solval, SCIPvarGetName(var), SCIPvarGetObj(var));
-         }
-#endif
       }
    }
 
    /* check whether the solution fulfills all constraints */
-   for( h = 0; h < set->nconshdlrs && (*feasible || printreason); ++h )
+   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
    {
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
-            checkintegrality, checklprows, printreason, &result) );
+            checkintegrality, checklprows, printreason, completely, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
 #ifdef SCIP_DEBUG
@@ -1597,6 +1700,7 @@ SCIP_RETCODE SCIPsolCheck(
       }
 #endif
    }
+
 
    return SCIP_OKAY;
 }
@@ -1945,7 +2049,9 @@ SCIP_RETCODE SCIPsolPrint(
    {
       assert(prob->fixedvars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
-      if( printzeros || !SCIPsetIsZero(set, solval) )
+      if( printzeros
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -1964,7 +2070,9 @@ SCIP_RETCODE SCIPsolPrint(
    {
       assert(prob->vars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( printzeros || !SCIPsetIsZero(set, solval) )
+      if( printzeros
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -2182,7 +2290,17 @@ SCIP_Bool SCIPsolIsOriginal(
 {
    assert(sol != NULL);
 
-   return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_PARTIAL);
+}
+
+/** returns whether the given solution is defined on original variables and containes unknown solution values */
+SCIP_Bool SCIPsolIsPartial(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return (sol->solorigin == SCIP_SOLORIGIN_PARTIAL);
 }
 
 /** gets objective value of primal CIP solution which lives in the original problem space */

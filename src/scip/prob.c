@@ -35,6 +35,7 @@
 #include "scip/reopt.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/conflictstore.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
@@ -276,7 +277,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probexitsol = probexitsol;
    if( set->misc_usevartable )
    {
-      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, 
+      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem,
             (set->misc_usesmalltables ? SCIP_HASHSIZE_NAMES_SMALL : SCIP_HASHSIZE_NAMES),
             SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    }
@@ -320,6 +321,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
+   (*prob)->conscompression = FALSE;
 
    return SCIP_OKAY;
 }
@@ -495,6 +497,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -510,7 +513,7 @@ SCIP_RETCODE SCIPprobTransform(
    assert(blkmem != NULL);
    assert(target != NULL);
 
-   SCIPdebugMessage("transform problem: original has %d variables\n", source->nvars);
+   SCIPsetDebugMsg(set, "transform problem: original has %d variables\n", source->nvars);
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
@@ -575,6 +578,9 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* mark the transformed problem to be permuted iff the source problem is permuted */
    (*target)->permuted = source->permuted;
+
+   /* transform the conflict pool */
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -939,7 +945,7 @@ SCIP_RETCODE SCIPprobAddVar(
       SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
    }
 
-   SCIPdebugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
+   SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
 
    if( prob->transformed )
@@ -952,6 +958,11 @@ SCIP_RETCODE SCIPprobAddVar(
 
       /* update the number of variables with non-zero objective coefficient */
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
+
+      /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
+       * new variables beyond that stage has to be compatible. */
+      assert( SCIPsetGetStage(set) == SCIP_STAGE_TRANSFORMING || ! prob->objisintegral || SCIPsetIsZero(set, SCIPvarGetObj(var)) ||
+         ( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, SCIPvarGetObj(var)) ) );
    }
 
    return SCIP_OKAY;
@@ -991,7 +1002,7 @@ SCIP_RETCODE SCIPprobDelVar(
 
    assert(SCIPvarGetNegatedVar(var) == NULL);
 
-   SCIPdebugMessage("deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
+   SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
 
    /* mark variable to be deleted from the problem */
@@ -1055,7 +1066,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       /* don't delete the variable, if it was fixed or aggregated in the meantime */
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), (void*)var);
+         SCIPsetDebugMsg(set, "perform deletion of <%s> [%p]\n", SCIPvarGetName(var), (void*)var);
 
          /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -1217,7 +1228,6 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
       SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
    }
 
@@ -1247,7 +1257,7 @@ SCIP_RETCODE SCIPprobAddCons(
       return SCIP_INVALIDDATA;
    }
 #endif
-   SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
+   SCIPsetDebugMsg(set, "adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);
 
    /* mark the constraint as problem constraint, and remember the constraint's position */
@@ -1588,7 +1598,7 @@ SCIP_RETCODE SCIPprobScaleObj(
       SCIP_CALL( SCIPcalcIntegralScalar(objvals, nints, -SCIPsetEpsilon(set), +SCIPsetEpsilon(set), OBJSCALE_MAXDNOM, OBJSCALE_MAXSCALE,
          &intscalar, &success) );
 
-      SCIPdebugMessage("integral objective scalar: success=%u, intscalar=%g\n", success, intscalar);
+      SCIPsetDebugMsg(set, "integral objective scalar: success=%u, intscalar=%g\n", success, intscalar);
 
       if( success )
       {
@@ -1610,7 +1620,7 @@ SCIP_RETCODE SCIPprobScaleObj(
          }
          if( gcd != 0 )
             intscalar /= gcd;
-         SCIPdebugMessage("integral objective scalar: gcd=%" SCIP_LONGINT_FORMAT ", intscalar=%g\n", gcd, intscalar);
+         SCIPsetDebugMsg(set, "integral objective scalar: gcd=%" SCIP_LONGINT_FORMAT ", intscalar=%g\n", gcd, intscalar);
 
          /* only apply scaling if the final scalar is small enough */
          if( intscalar <= OBJSCALE_MAXFINALSCALE )
@@ -1635,13 +1645,13 @@ SCIP_RETCODE SCIPprobScaleObj(
                {
                   for( v = 0; v < nints; ++v )
                   {
-                     SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
+                     SCIPsetDebugMsg(set, " -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                      SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, objvals[v]) );
                   }
                   transprob->objoffset *= intscalar;
                   transprob->objscale /= intscalar;
                   transprob->objisintegral = TRUE;
-                  SCIPdebugMessage("integral objective scalar: objscale=%g\n", transprob->objscale);
+                  SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
                   SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
@@ -1661,6 +1671,7 @@ SCIP_RETCODE SCIPprobScaleObj(
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
@@ -1677,6 +1688,9 @@ void SCIPprobStoreRootSol(
 
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set, prob);
+
+      /* compute root LP best-estimate */
+      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nbinvars + prob->nintvars + prob->nimplvars);
    }
 }
 
@@ -1700,7 +1714,7 @@ void SCIPprobUpdateBestRootSol(
    if( SCIPprobGetNObjVars(prob, set) == 0 )
       return;
 
-   SCIPdebugMessage("update root reduced costs\n");
+   SCIPsetDebugMsg(set, "update root reduced costs\n");
 
    /* compute current root LP objective value */
    rootlpobjval = SCIPlpGetObjval(lp, set, prob);
@@ -2091,8 +2105,11 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
+#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+#undef SCIPisConsCompressedEnabled
+#undef SCIPprobEnableConsCompression
 
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
@@ -2233,6 +2250,15 @@ SCIP_VAR** SCIPprobGetVars(
    return prob->vars;
 }
 
+/** gets number of problem constraints */
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nconss;
+}
+
 /** gets the objective offset */
 SCIP_Real SCIPprobGetObjoffset(
    SCIP_PROB*            prob                /**< problem data */
@@ -2249,6 +2275,26 @@ SCIP_Real SCIPprobGetObjscale(
 {
    assert(prob != NULL);
    return prob->objscale;
+}
+
+/** is constraint compression enabled for this problem? */
+SCIP_Bool SCIPprobIsConsCompressionEnabled(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->conscompression;
+}
+
+/** enable problem compression, i.e., constraints can reduce memory size by removing fixed variables during creation */
+void SCIPprobEnableConsCompression(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->conscompression = TRUE;
 }
 
 #endif

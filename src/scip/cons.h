@@ -40,6 +40,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
+#include "scip/type_branch.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG
@@ -188,9 +189,10 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+   SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    );
 
 /** calls separator method of constraint handler to separate LP solution */
@@ -274,6 +276,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -789,7 +792,8 @@ SCIP_RETCODE SCIPconsEnfolp(
 extern
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    );
 
 /** calls separation method of single constraint for LP solution */
@@ -1087,6 +1091,12 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** marks the constraint to be a conflict */
+extern
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** marks the constraint to be propagated (update might be delayed) */
 extern
 SCIP_RETCODE SCIPconsMarkPropagate(
@@ -1146,31 +1156,6 @@ SCIP_RETCODE SCIPconsIncAge(
 extern
 SCIP_RETCODE SCIPconsResetAge(
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** adds an active constraint to the propagation queue(if not already marked for propagation) of corresponding
- *  constraint handler and marks the constraint to be propagated in the next propagation round
- *
- *  @note if constraint is added to the queue it will be captured
- */
-SCIP_RETCODE SCIPconsPushProp(
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** returns first constraint from propagation queue(if not empty) of given constraint handler */
-SCIP_CONS* SCIPconshdlrFrontProp(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
-/** removes constraint from propagation queue(if not empty) of given constraint handler and unmarks constraint to be
- *  propagated in the next propagation round
- *
- *  @note if constraint is removed from the queue it will be released
- */
-SCIP_RETCODE SCIPconshdlrPopProp(
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
