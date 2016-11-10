@@ -28,7 +28,6 @@
 
 #include "scip/sepa_convexproj.h"
 #include "scip/nlp.h"
-#include "scip/prop_nlobbt.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
 
@@ -818,13 +817,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
             SCIPcalcHashtableSize(sepadata->nlpinvars)) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
-      SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip)) );
+      SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE) );
 
       /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPaddConvexNlpRowsNlobbt(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+         SCIP_CALL( SCIPaddConvexNlpRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
                   SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
       }
 
@@ -833,8 +832,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
    }
    else
    {
-      SCIP_CALL( SCIPupdateConvexNlpNlobbt(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
-            sepadata->nlpivars, sepadata->nlpinvars) );
+      SCIP_CALL( SCIPupdateConvexNlp(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+            sepadata->nlpivars, sepadata->nlpinvars, SCIPgetCutoffbound(scip)) );
    }
 
    /* assert that the lp solution satisfies the cutoff bound; if this fails then we shouldn't have a cutoff bound in the

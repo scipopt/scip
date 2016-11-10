@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation.c
- * @brief  unit test for sepa_separation methods
+/**@file   convexproj.c
+ * @brief  unit test for sepa_convexproj.c methods
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -283,8 +283,8 @@ void setup_sepadata(void)
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
    /* I shouldn't care about the cutoff, just assert that the lp solution satisfies the cutoff bound */
-   SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, sepadata->nlpi, nlrows, 3,
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip)) );
+   SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, nlrows, 3,
+            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE) );
 
    /* set quadratic part of objective function */
    SCIP_CALL( setQuadraticObj(scip, sepadata) );
@@ -317,7 +317,7 @@ void test_setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &auxx, "x", -2.5, 3.1, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, auxx) );
    /* change SCIP's stage to be able to create nlrows and rows */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    x = SCIPvarGetTransVar(auxx);
    SCIP_CALL( SCIPreleaseVar(scip, &auxx) );
