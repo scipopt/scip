@@ -1558,8 +1558,6 @@ SCIP_RETCODE copyCuts(
    return SCIP_OKAY;
 }
 
-#define HASHTABLESIZE_FACTOR 5
-
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -1674,7 +1672,7 @@ SCIP_RETCODE copyProb(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -1682,7 +1680,7 @@ SCIP_RETCODE copyProb(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -1994,7 +1992,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    /* create the variable mapping hash map */
    if( uselocalvarmap )
    {
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2002,7 +2000,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2209,7 +2207,7 @@ SCIP_RETCODE copyVars(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2217,7 +2215,7 @@ SCIP_RETCODE copyVars(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2594,7 +2592,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2603,7 +2601,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    if( uselocalconsmap )
    {
       /* create local constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
    {
@@ -2718,7 +2716,7 @@ SCIP_RETCODE SCIPcopyConss(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2726,7 +2724,7 @@ SCIP_RETCODE SCIPcopyConss(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2918,7 +2916,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2926,7 +2924,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -3208,7 +3206,7 @@ SCIP_RETCODE SCIPcopyConflicts(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -3216,7 +3214,7 @@ SCIP_RETCODE SCIPcopyConflicts(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -3639,7 +3637,7 @@ SCIP_RETCODE doCopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -3647,7 +3645,7 @@ SCIP_RETCODE doCopy(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -23488,7 +23486,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * 2 * (nbinvars+nimplvars))) );
+   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -32108,6 +32106,456 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
+/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable
+ *  the number of non-linearly occurrences and stores it in the nlscore array
+ *
+ *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
+ **/
+SCIP_RETCODE SCIPcreateConvexNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLROW**          nlrows,             /**< nonlinear rows */
+   int                   nnlrows,            /**< total number of nonlinear rows */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
+                                              *   needed) */
+   SCIP_Real             cutoffbound,        /**< cutoff bound */
+   SCIP_Bool             setobj              /**< should the objective function be set? */
+   )
+{
+   SCIP_EXPRTREE** exprtrees;
+   int** exprvaridxs;
+   SCIP_QUADELEM** quadelems;
+   int* nquadelems;
+   SCIP_Real** linvals;
+   int** lininds;
+   int* nlininds;
+   SCIP_Real* lhss;
+   SCIP_Real* rhss;
+   const char** names;
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_Real* objvals;
+   int* objinds;
+   const char** varnames;
+   int nobjinds;
+   int nconss;
+   int i;
+
+   assert(nlpiprob != NULL);
+   assert(var2idx != NULL);
+   assert(nlrows != NULL);
+   assert(nnlrows > 0);
+   assert(nlpi != NULL);
+
+   SCIPdebugMsg(scip, "call SCIPcreateConvexNlpNlobbt() with cutoffbound %g\n", cutoffbound);
+
+   if( nlscore != NULL )
+   {
+      BMSclearMemoryArray(nlscore, SCIPgetNVars(scip));
+   }
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nconss = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprtrees, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nnlrows + 1) );
+
+   if( setobj )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &objinds, nvars) );
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, nvars) );
+
+   /* create a unique mapping between variables and {0,..,nvars-1} */
+   nobjinds = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      assert(vars[i] != NULL);
+      SCIP_CALL( SCIPhashmapInsert(var2idx, (void*)vars[i], (void*)(size_t)i) );
+
+      lbs[i] = SCIPvarGetLbLocal(vars[i]);
+      ubs[i] = SCIPvarGetUbLocal(vars[i]);
+      varnames[i] = SCIPvarGetName(vars[i]);
+
+      /* collect non-zero objective coefficients */
+      if( setobj && !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+      {
+         assert(objvals != NULL);
+         assert(objinds != NULL);
+
+         objvals[nobjinds] = SCIPvarGetObj(vars[i]);
+         objinds[nobjinds] = i;
+         ++nobjinds;
+      }
+  }
+
+   /* add variables */
+   SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
+   SCIPfreeBufferArray(scip, &varnames);
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
+
+   /* set the objective function */
+   if( setobj )
+   {
+      if( nobjinds > 0 )
+      {
+         SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, nobjinds, objinds, objvals, 0, NULL, NULL, NULL, 0.0) );
+      }
+
+      SCIPfreeBufferArray(scip, &objinds);
+      SCIPfreeBufferArray(scip, &objvals);
+   }
+
+   /* add row for cutoff bound even if cutoffbound == SCIPinfinity() */
+   lhss[nconss] = -SCIPinfinity(scip);
+   rhss[nconss] = cutoffbound;
+   names[nconss] = "objcutoff";
+   lininds[nconss] = NULL;
+   linvals[nconss] = NULL;
+   nlininds[nconss] = 0;
+   nquadelems[nconss] = 0;
+   quadelems[nconss] = NULL;
+   exprtrees[nconss] = NULL;
+   exprvaridxs[nconss] = NULL;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+      {
+         linvals[nconss][nlininds[nconss]] = SCIPvarGetObj(vars[i]);
+         lininds[nconss][nlininds[nconss]] = i;
+         ++nlininds[nconss];
+      }
+   }
+   ++nconss;
+
+   /* add convex nonlinear rows to NLPI problem */
+   for( i = 0; i < nnlrows; ++i )
+   {
+      SCIP_Bool userhs;
+      SCIP_Bool uselhs;
+      int k;
+
+      assert(nlrows[i] != NULL);
+
+      uselhs = FALSE;
+      userhs = FALSE;
+
+      /* check curvature together with constraint sides of a nonlinear row */
+      if( SCIPnlrowGetNQuadElems(nlrows[i]) == 0 && SCIPnlrowGetExprtree(nlrows[i]) == NULL )
+      {
+         uselhs = TRUE;
+         userhs = TRUE;
+      }
+      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
+         userhs = TRUE;
+      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
+         uselhs = TRUE;
+      else
+         continue;
+      assert(uselhs || userhs);
+
+      lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) : -SCIPinfinity(scip);
+      rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) :  SCIPinfinity(scip);
+      names[nconss] = SCIPnlrowGetName(nlrows[i]);
+      nlininds[nconss] = 0;
+      lininds[nconss] = NULL;
+      linvals[nconss] = NULL;
+      nquadelems[nconss] = 0;
+      quadelems[nconss] = NULL;
+      exprtrees[nconss] = NULL;
+      exprvaridxs[nconss] = NULL;
+
+      /* copy linear part */
+      if( SCIPnlrowGetNLinearVars(nlrows[i]) > 0 )
+      {
+         SCIP_VAR* var;
+
+         nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrows[i]);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) );
+
+         for( k = 0; k < nlininds[nconss]; ++k )
+         {
+            var = SCIPnlrowGetLinearVars(nlrows[i])[k];
+            assert(var != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var));
+
+            lininds[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+            assert(var == vars[lininds[nconss][k]]);
+            linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrows[i])[k];
+         }
+      }
+
+      /* copy quadratic part */
+      if( SCIPnlrowGetNQuadElems(nlrows[i]) > 0 )
+      {
+         SCIP_QUADELEM quadelem;
+         SCIP_VAR* var1;
+         SCIP_VAR* var2;
+
+         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrows[i]);
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) );
+
+         for( k = 0; k < nquadelems[nconss]; ++k )
+         {
+            quadelem = SCIPnlrowGetQuadElems(nlrows[i])[k];
+
+            var1 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx1];
+            assert(var1 != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var1));
+
+            var2 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx2];
+            assert(var2 != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var2));
+
+            quadelems[nconss][k].coef = quadelem.coef;
+            quadelems[nconss][k].idx1 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var1);
+            quadelems[nconss][k].idx2 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var2);
+
+            /* update nlscore */
+            if( nlscore != NULL )
+            {
+               ++nlscore[quadelems[nconss][k].idx1];
+               if( quadelems[nconss][k].idx1 != quadelems[nconss][k].idx2 )
+                  ++nlscore[quadelems[nconss][k].idx2];
+            }
+         }
+      }
+
+      /* copy expression tree */
+      if( SCIPnlrowGetExprtree(nlrows[i]) != NULL )
+      {
+         SCIP_VAR* var;
+
+         /* note that we don't need to copy the expression tree here since only the mapping between variables in the
+          * tree and the corresponding indices change; this mapping is stored in the exprvaridxs array
+          */
+         exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) );
+
+         for( k = 0; k < SCIPexprtreeGetNVars(exprtrees[nconss]); ++k )
+         {
+            var = SCIPexprtreeGetVars(exprtrees[nconss])[k];
+            assert(var != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var));
+
+            exprvaridxs[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+
+            /* update nlscore */
+            if( nlscore != NULL )
+               ++nlscore[exprvaridxs[nconss][k]];
+         }
+      }
+
+      ++nconss;
+   }
+   assert(nconss > 0);
+
+   /* pass all constraint information to nlpi */
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals, nquadelems,
+         quadelems, exprvaridxs, exprtrees, names) );
+
+   /* free memory */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      if( exprtrees[i] != NULL )
+      {
+         assert(exprvaridxs[i] != NULL);
+         SCIPfreeBufferArray(scip, &exprvaridxs[i]);
+      }
+
+      if( nquadelems[i] > 0 )
+      {
+         assert(quadelems[i] != NULL);
+         SCIPfreeBufferArray(scip, &quadelems[i]);
+      }
+
+      if( nlininds[i] > 0 )
+      {
+         assert(linvals[i] != NULL);
+         assert(lininds[i] != NULL);
+         SCIPfreeBufferArray(scip, &linvals[i]);
+         SCIPfreeBufferArray(scip, &lininds[i]);
+      }
+   }
+   /* free row for cutoff bound even if objective is 0 */
+   SCIPfreeBufferArray(scip, &linvals[i]);
+   SCIPfreeBufferArray(scip, &lininds[i]);
+
+   SCIPfreeBufferArray(scip, &rhss);
+   SCIPfreeBufferArray(scip, &lhss);
+   SCIPfreeBufferArray(scip, &names);
+   SCIPfreeBufferArray(scip, &nlininds);
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &nquadelems);
+   SCIPfreeBufferArray(scip, &quadelems);
+   SCIPfreeBufferArray(scip, &exprvaridxs);
+   SCIPfreeBufferArray(scip, &exprtrees);
+
+   return SCIP_OKAY;
+}
+
+/** updates bounds of each variable and the cutoff row in the nlpiproblem */
+SCIP_RETCODE SCIPupdateConvexNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
+   SCIP_HASHMAP*         var2nlpiidx,        /**< mapping between variables and nlpi indices */
+   SCIP_VAR**            nlpivars,           /**< array containing all variables of the nlpi */
+   int                   nlpinvars,          /**< total number of nlpi variables */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   )
+{
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int* inds;
+   int i;
+
+   SCIPdebugMsg(scip, "call SCIPupdateConvexNlpNlobbt()\n");
+
+   /* update variable bounds */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nlpinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nlpinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, nlpinvars) );
+
+   for( i = 0; i < nlpinvars; ++i )
+   {
+      assert(nlpivars[i] != NULL);
+      assert(SCIPhashmapExists(var2nlpiidx, (void*)nlpivars[i]));
+
+      lbs[i] = SCIPvarGetLbLocal(nlpivars[i]);
+      ubs[i] = SCIPvarGetUbLocal(nlpivars[i]);
+      inds[i] = (int)(size_t)SCIPhashmapGetImage(var2nlpiidx, (void*)nlpivars[i]);
+      assert(inds[i] >= 0 && inds[i] < nlpinvars);
+   }
+
+   SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, nlpinvars, inds, lbs, ubs) );
+
+   SCIPfreeBufferArray(scip, &inds);
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
+
+   /* update cutoff row */
+   lhs = -SCIPinfinity(scip);
+   rhs = cutoffbound;
+   i = 0;
+
+   SCIP_CALL( SCIPnlpiChgConsSides(nlpi, nlpiprob, 1, &i, &lhs, &rhs) );
+
+   return SCIP_OKAY;
+}
+
+/** adds linear rows to the convex NLP relaxation */
+SCIP_RETCODE SCIPaddConvexNlpRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_ROW**            rows,               /**< rows to add */
+   int                   nrows               /**< total number of rows to add */
+   )
+{
+   const char** names;
+   SCIP_Real* lhss;
+   SCIP_Real* rhss;
+   SCIP_Real** linvals;
+   int** lininds;
+   int* nlininds;
+   int i;
+
+   assert(nlpi != NULL);
+   assert(nlpiprob != NULL);
+   assert(var2idx != NULL);
+   assert(rows != NULL || nrows == 0);
+
+   SCIPdebugMsg(scip, "call SCIPaddConvexNlpRowsNlobbt() with %d rows\n", nrows);
+
+   if( nrows <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nrows) );
+
+   for( i = 0; i < nrows; ++i )
+   {
+      int k;
+
+      assert(rows[i] != NULL);
+      assert(SCIProwGetNNonz(rows[i]) <= SCIPgetNVars(scip));
+
+      names[i] = SCIProwGetName(rows[i]);
+      lhss[i] = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      rhss[i] = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      nlininds[i] = SCIProwGetNNonz(rows[i]);
+      linvals[i] = SCIProwGetVals(rows[i]);
+      lininds[i] = NULL;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) );
+
+      for( k = 0; k < SCIProwGetNNonz(rows[i]); ++k )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPcolGetVar(SCIProwGetCols(rows[i])[k]);
+         assert(var != NULL);
+         assert(SCIPhashmapExists(var2idx, (void*)var));
+
+         lininds[i][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+         assert(lininds[i][k] >= 0 && lininds[i][k] < SCIPgetNVars(scip));
+      }
+   }
+
+   /* pass all linear rows to the nlpi */
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals, NULL,
+         NULL, NULL, NULL, names) );
+
+   /* free memory */
+   for( i = nrows - 1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &lininds[i]);
+   }
+   SCIPfreeBufferArray(scip, &nlininds);
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &rhss);
+   SCIPfreeBufferArray(scip, &lhss);
+   SCIPfreeBufferArray(scip, &names);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /*
@@ -35857,7 +36305,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* copy the original problem to the sub-SCIP */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * norigvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
       SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
 
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
@@ -43565,6 +44013,19 @@ SCIP_Longint SCIPgetMemUsed(
    assert(scip != NULL);
 
    return SCIPmemGetUsed(scip->mem);
+}
+
+/** returns the total number of bytes in block and buffer memory
+ *
+ *  @return the total number of bytes in block and buffer memory.
+ */
+SCIP_Longint SCIPgetMemTotal(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPmemGetTotal(scip->mem);
 }
 
 /** returns the estimated number of bytes used by external software, e.g., the LP solver

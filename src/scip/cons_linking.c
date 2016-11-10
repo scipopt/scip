@@ -67,7 +67,7 @@
 #define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 
-#define HASHSIZE_BINVARSCONS     131101 /**< minimal size of hash table in linking constraint handler */
+#define HASHSIZE_BINVARSCONS        500 /**< minimal size of hash table in linking constraint handler */
 #define DEFAULT_LINEARIZE         FALSE /**< should the linking constraint be linearize after the binary variable are created */
 
 /*

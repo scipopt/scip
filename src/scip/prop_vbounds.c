@@ -813,7 +813,7 @@ SCIP_RETCODE initData(
     * within SCIP might change during the search
     */
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->vars, vars, nvars) );
-   SCIP_CALL( SCIPhashmapCreate(&propdata->varhashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&propdata->varhashmap, SCIPblkmem(scip), nvars) );
 
    for( v = 0; v < nvars; ++v )
    {
