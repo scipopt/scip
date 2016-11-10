@@ -43170,19 +43170,22 @@ void printConcsolverStatistics(
    SCIP_CONCSOLVER** concsolvers;
    int               nconcsolvers;
    int               i;
+   int               winner;
 
    if( scip->concurrent == NULL )
       return;
 
    nconcsolvers = SCIPgetNConcurrentSolvers(scip);
    concsolvers = SCIPgetConcurrentSolvers(scip);
+   winner = SCIPsyncstoreGetWinner(scip->syncstore);
 
    if( nconcsolvers > 0 )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Concurrent Solvers : SolvingTime     SyncTime       Nodes    LP Iters  SolsShared   SolsRecvd   TighterBnds  TighterIntBnds\n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Concurrent Solvers : SolvingTime    SyncTime       Nodes    LP Iters SolsShared   SolsRecvd TighterBnds TighterIntBnds\n");
       for( i = 0; i < nconcsolvers; ++i )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11i %11i %11"SCIP_LONGINT_FORMAT" %11"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %c%-16s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11i %11i %11"SCIP_LONGINT_FORMAT" %14"SCIP_LONGINT_FORMAT"\n",
+                               winner == i ? '*' : ' ',
                                SCIPconcsolverGetName(concsolvers[i]),
                                SCIPconcsolverGetSolvingTime(concsolvers[i]),
                                SCIPconcsolverGetSyncTime(concsolvers[i]),

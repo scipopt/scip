@@ -29,13 +29,13 @@
 
 /* lock */
 #define SCIPtpiInitLock(lock)                 SCIP_OKAY
-#define SCIPtpiDestroyLock(lock)              ( (void*) lock )
+#define SCIPtpiDestroyLock(lock)              ( (void) lock )
 #define SCIPtpiAcquireLock(lock)              SCIP_OKAY
 #define SCIPtpiReleaseLock(lock)              SCIP_OKAY
 
 /* condition */
 #define SCIPtpiInitCondition(condition)       SCIP_OKAY
-#define SCIPtpiDestroyCondition(condition)    ( (void*) condition )
+#define SCIPtpiDestroyCondition(condition)    ( (void) condition )
 #define SCIPtpiSignalCondition(condition)     SCIP_OKAY
 #define SCIPtpiBroadcastCondition(condition)  SCIP_OKAY
 #define SCIPtpiWaitCondition(condition, lock) SCIP_OKAY
@@ -44,11 +44,11 @@
 #define SCIPtpiGetNumThreads()                1
 #define SCIPtpiGetThreadNum()                 0
 
-#define SCIPtpiCreateJob(job, jobid, jobfunc, jobargs)  ( (void*) (job), (void*) (jobid), (void*) (jobfunc), (void*) (jobargs), SCIP_ERROR )
+#define SCIPtpiCreateJob(job, jobid, jobfunc, jobargs)  ( (void) (job), (void) (jobid), (void) (jobfunc), (void) (jobargs), SCIP_ERROR )
 #define SCIPtpiGetNewJobID()                            0
-#define SCIPtpiSumbitJob(job, status)                   ( (void*) (job), (void*) status, SCIP_ERROR )
-#define SCIPtpiCollectJobs(jobid)                       ( (void*) (jobid), SCIP_ERROR )
-#define SCIPtpiInit(nthreads, queuesize, blockwhenfull) ( (void*) (nthreads), (void*) (queuesize), (void*) (blockwhenfull), SCIP_ERROR )
+#define SCIPtpiSumbitJob(job, status)                   ( (void) (job), (void) status, SCIP_ERROR )
+#define SCIPtpiCollectJobs(jobid)                       ( (void) (jobid), SCIP_ERROR )
+#define SCIPtpiInit(nthreads, queuesize, blockwhenfull) ( (void) (nthreads), (void) (queuesize), (void) (blockwhenfull), SCIP_ERROR )
 #define SCIPtpiExit()                                   SCIP_ERROR
 
 #endif
