@@ -14559,7 +14559,6 @@ SCIP_RETCODE enforceConstraint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -15412,7 +15411,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -15421,7 +15420,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
 {
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
