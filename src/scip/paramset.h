@@ -439,7 +439,6 @@ SCIP_RETCODE SCIPparamsetCopyParams(
 extern
 SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to check */
    );
 
@@ -447,7 +446,6 @@ SCIP_Bool SCIPparamIsValidBool(
 extern
 SCIP_Bool SCIPparamIsValidInt(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value               /**< value to check */
    );
 
@@ -455,7 +453,6 @@ SCIP_Bool SCIPparamIsValidInt(
 extern
 SCIP_Bool SCIPparamIsValidLongint(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value               /**< value to check */
    );
 
@@ -463,7 +460,6 @@ SCIP_Bool SCIPparamIsValidLongint(
 extern
 SCIP_Bool SCIPparamIsValidReal(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value               /**< value to check */
    );
 
@@ -471,7 +467,6 @@ SCIP_Bool SCIPparamIsValidReal(
 extern
 SCIP_Bool SCIPparamIsValidChar(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value               /**< value to check */
    );
 
@@ -479,7 +474,6 @@ SCIP_Bool SCIPparamIsValidChar(
 extern
 SCIP_Bool SCIPparamIsValidString(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value               /**< value to check */
    );
 

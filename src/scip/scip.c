@@ -4477,7 +4477,7 @@ SCIP_Bool SCIPisBoolParamValid(
    assert(scip != NULL);
    assert(param != NULL);
 
-   return SCIPparamIsValidBool(param, scip->messagehdlr, value);
+   return SCIPparamIsValidBool(param, value);
 }
 
 /** changes the value of an existing int parameter
@@ -4535,7 +4535,7 @@ SCIP_Bool SCIPisIntParamValid(
    assert(scip != NULL);
    assert(param != NULL);
 
-   return SCIPparamIsValidInt(param, scip->messagehdlr, value);
+   return SCIPparamIsValidInt(param, value);
 }
 
 /** changes the value of an existing SCIP_Longint parameter
@@ -4593,7 +4593,7 @@ SCIP_Bool SCIPisLongintParamValid(
    assert(scip != NULL);
    assert(param != NULL);
 
-   return SCIPparamIsValidLongint(param, scip->messagehdlr, value);
+   return SCIPparamIsValidLongint(param, value);
 }
 
 /** changes the value of an existing SCIP_Real parameter
@@ -4651,7 +4651,7 @@ SCIP_Bool SCIPisRealParamValid(
    assert(scip != NULL);
    assert(param != NULL);
 
-   return SCIPparamIsValidReal(param, scip->messagehdlr, value);
+   return SCIPparamIsValidReal(param, value);
 }
 
 /** changes the value of an existing char parameter
@@ -4709,7 +4709,7 @@ SCIP_Bool SCIPisCharParamValid(
    assert(scip != NULL);
    assert(param != NULL);
 
-   return SCIPparamIsValidChar(param, scip->messagehdlr, value);
+   return SCIPparamIsValidChar(param, value);
 }
 
 /** changes the value of an existing string(char*) parameter
@@ -4767,7 +4767,7 @@ SCIP_Bool SCIPisStringParamValid(
    assert(scip != NULL);
    assert(param != NULL);
 
-   return SCIPparamIsValidString(param, scip->messagehdlr, value);
+   return SCIPparamIsValidString(param, value);
 }
 
 /** reads parameters from a file

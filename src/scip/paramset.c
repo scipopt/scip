@@ -4209,7 +4209,6 @@ void SCIPparamSetFixed(
 /** checks whether value of bool parameter is valid */
 SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to check */
    )
 {
@@ -4219,7 +4218,6 @@ SCIP_Bool SCIPparamIsValidBool(
 /** checks whether value of integer parameter is valid */
 SCIP_Bool SCIPparamIsValidInt(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value               /**< value to check */
    )
 {
@@ -4231,7 +4229,6 @@ SCIP_Bool SCIPparamIsValidInt(
 /** checks whether value of SCIP_Longint parameter is valid */
 SCIP_Bool SCIPparamIsValidLongint(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value               /**< value to check */
    )
 {
@@ -4243,7 +4240,6 @@ SCIP_Bool SCIPparamIsValidLongint(
 /** checks whether value of SCIP_Real parameter is valid */
 SCIP_Bool SCIPparamIsValidReal(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value               /**< value to check */
    )
 {
@@ -4255,7 +4251,6 @@ SCIP_Bool SCIPparamIsValidReal(
 /** checks whether value of char parameter is valid */
 SCIP_Bool SCIPparamIsValidChar(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value               /**< value to check */
    )
 {
@@ -4282,7 +4277,6 @@ SCIP_Bool SCIPparamIsValidChar(
 /** checks whether value of string parameter is valid */
 SCIP_Bool SCIPparamIsValidString(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value               /**< value to check */
    )
 {
