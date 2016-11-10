@@ -60,7 +60,7 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
 
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    cr_assert_eq(SCIPgetNVars(scip), 2);
    x = SCIPgetVars(scip)[0];

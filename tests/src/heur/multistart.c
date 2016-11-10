@@ -54,7 +54,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
 
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    x = SCIPvarGetTransVar(origx);
    y = SCIPvarGetTransVar(origy);
