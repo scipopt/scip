@@ -28,7 +28,6 @@
 #include <string.h>
 
 #include "scip/sepa_gauge.h"
-#include "scip/prop_nlobbt.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
@@ -197,8 +196,8 @@ SCIP_RETCODE computeInteriorPoint(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
-   SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob,
-            var2nlpiidx, NULL, SCIPgetCutoffbound(scip)) );
+   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
+            NULL, SCIPgetCutoffbound(scip), FALSE) );
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
    objvaridx = nvars;
@@ -238,8 +237,7 @@ SCIP_RETCODE computeInteriorPoint(
    }
 
    /* add linear rows */
-   SCIP_CALL( SCIPaddConvexNlpRowsNlobbt(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip),
-            SCIPgetNLPRows(scip)) );
+   SCIP_CALL( SCIPaddConvexNlpRows(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
    /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
     * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
