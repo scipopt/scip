@@ -23068,7 +23068,7 @@ SCIP_RETCODE relabelOrderConsistent(
    int classidx;
    int i;
 
-   SCIP_CALL( SCIPhashmapCreate(&classidx2newlabel, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nlabels)) );
+   SCIP_CALL( SCIPhashmapCreate(&classidx2newlabel, SCIPblkmem(scip), nlabels) );
 
    classidx = 0;
 
