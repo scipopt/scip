@@ -1601,7 +1601,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       /* store mapping from all active variables to their position afetr presolving because during solving new variables
        * might be added and therefore could destroy writing collected solutions
        */
-      SCIP_CALL( SCIPhashmapCreate(&(conshdlrdata->hashmap), SCIPblkmem(scip), 5 * conshdlrdata->nvars + 1) );
+      SCIP_CALL( SCIPhashmapCreate(&(conshdlrdata->hashmap), SCIPblkmem(scip), conshdlrdata->nvars + 1) );
 
       /* add variables to hashmap */
       for( v = conshdlrdata->nvars - 1; v >= 0; --v )

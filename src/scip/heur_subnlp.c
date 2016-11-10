@@ -129,7 +129,6 @@ SCIP_RETCODE createSubSCIP(
    int i;
    SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
-   SCIP_HASHMAPLIST* list;
 #ifdef SCIP_DEBUG
    static const SCIP_Bool copydisplays = TRUE;
    static const SCIP_Bool copyreader = TRUE;
@@ -149,7 +148,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX(nvars, 5)) );
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
    /* create sub-SCIP copy of CIP */
 
@@ -200,7 +199,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
    SCIPhashmapFree(&conssmap);
    if( !heurdata->subscipisvalid )
@@ -230,12 +229,14 @@ SCIP_RETCODE createSubSCIP(
    /* we need to get all subscip variables, also those which are copies of fixed variables from the main scip
     * therefore we iterate over the hashmap
     */
-   for( i = 0; i < SCIPhashmapGetNLists(varsmap); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries(varsmap); ++i )
    {
-      for( list = SCIPhashmapGetList(varsmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(varsmap, i);
+      if( entry != NULL )
       {
-         var    = (SCIP_VAR*)SCIPhashmapListGetOrigin(list);
-         subvar = (SCIP_VAR*)SCIPhashmapListGetImage(list);
+         var    = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
+         subvar = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
 
          assert(SCIPvarGetProbindex(subvar) >= 0);
          assert(SCIPvarGetProbindex(subvar) <= heurdata->nsubvars);

@@ -36,7 +36,7 @@
 #define PRESOL_NAME            "stuffing"
 #define PRESOL_DESC            "fix redundant singleton continuous variables"
 #define PRESOL_PRIORITY             -100     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 /** type of fixing direction */

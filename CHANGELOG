@@ -33,6 +33,7 @@ features:
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
 - add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
+- implemented and extended stuffing presolving in linear constraint handler
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -52,8 +53,10 @@ parameters:
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 
 performance improvements:
-- successful propagation with DURINGLPLOOP timing now triggers a new round of node solving, starting with BEFORELP
-  propagation
+- rewrote the propagate-and-cut-and-price loop so that successful propagations with DURINGLPLOOP timing, bound changes found by separation,
+  and new primal solutions now trigger a new round of node solving, starting with propagation; improved tuning of propagation and heuristic timings
+- tuned propagation methods of several constraint handlers
+- make more use of SCIPmarkConsPropagate() to mark constraints for propagation and improved the internal handling of marked constraints
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
 - improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
@@ -100,6 +103,7 @@ interface:
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 - SCIPinitConflictAnalysis() gets now 2 additional values: the type of the conflict and whether the current cutoff bound is used or not
 - bound reader uses angle bracket around variable names
+- add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
 
 fixed bugs:
 - avoid numerically troublesome aggregations
