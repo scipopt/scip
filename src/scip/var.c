@@ -1545,6 +1545,9 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
+   if( set->reopt_enable )
+      return SCIP_OKAY;
+
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
 
@@ -6735,7 +6738,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
     * SCIPvarFix() allows fixings that are outside of the domain within feastol
     */
-   assert(lp == NULL || SCIPsetIsFeasLE(set, var->glbdom.lb, newbound));
+   assert(lp == NULL || SCIPsetIsFeasLE(set, var->glbdom.lb, newbound) || (set->reopt_enable && set->stage == SCIP_STAGE_PRESOLVED));
 
    SCIPsetDebugMsg(set, "changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -6878,7 +6881,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
     * SCIPvarFix() allows fixings that are outside of the domain within feastol
     */
-   assert(lp == NULL || SCIPsetIsFeasGE(set, var->glbdom.ub, newbound));
+   assert(lp == NULL || SCIPsetIsFeasGE(set, var->glbdom.ub, newbound) || (set->reopt_enable && set->stage == SCIP_STAGE_PRESOLVED));
 
    SCIPsetDebugMsg(set, "changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -8723,31 +8726,6 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-
-   return SCIP_OKAY;
-}
-
-/** resets the local bounds of transformed variable to their global values */
-SCIP_RETCODE SCIPvarResetLocalBounds(
-   SCIP_VAR*             var,                /**< problem variable */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(var != NULL);
-   assert(set != NULL);
-   assert(var->scip == set->scip);
-   assert(SCIPvarIsTransformed(var));
-
-   /* copy the original bounds back to the local bounds if the */
-   SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->glbdom.lb) );
-   SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->glbdom.ub) );
-
-   /* free the global and local holelists and duplicate the original ones */
-   /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
-   holelistFree(&var->locdom.holelist, blkmem);
-   SCIP_CALL( holelistDuplicate(&var->locdom.holelist, blkmem, set, var->glbdom.holelist) );
 
    return SCIP_OKAY;
 }
@@ -12623,7 +12601,7 @@ void SCIPvarUpdateBestRootSol(
       /* check if an improving root solution, root reduced cost, and root LP objective value is at hand */
       if( cutoffbound > currcutoffbound )
       {
-         SCIPsetDebugMsg(set, "-> <%s> update potetial cutoff bound <%g> -> <%g>\n",
+         SCIPsetDebugMsg(set, "-> <%s> update potential cutoff bound <%g> -> <%g>\n",
             SCIPvarGetName(var), currcutoffbound, cutoffbound);
 
          var->bestrootsol = rootsol;

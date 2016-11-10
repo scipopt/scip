@@ -423,6 +423,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
+			scip/heur_locks.o \
 			scip/heur_mutation.o \
 			scip/heur_multistart.o \
 			scip/heur_nlpdiving.o \
@@ -522,8 +523,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 SCIPLIBOBJ	=	scip/branch.o \
 			scip/clock.o \
 			scip/conflict.o \
+			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
+			scip/cuts.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \

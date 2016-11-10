@@ -60,7 +60,7 @@ void setup(void)
    y = SCIPvarGetTransVar(origy);
 
    /* create mapping between variables and 0,..,SCIPgetNVars(scip)-1 */
-   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(2)) );
+   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), 2) );
    SCIP_CALL( SCIPhashmapInsert(varindex, (void*)x, (void*)(size_t)0) );
    SCIP_CALL( SCIPhashmapInsert(varindex, (void*)y, (void*)(size_t)1) );
 

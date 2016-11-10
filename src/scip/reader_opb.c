@@ -3189,7 +3189,6 @@ SCIP_RETCODE printPseudobooleanCons(
    return retcode;
 }
 
-#define HASHTABLESIZE_FACTOR 5
 
 static
 SCIP_RETCODE writeOpbConstraints(
@@ -3247,7 +3246,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    SCIP_CONS* lincons;
 
 	    /* create the linear constraint of indicator constraints hash map */
-	    SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nindconss)) );
+	    SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), nindconss) );
 	    assert(indconss != NULL);
 
 	    for( c = 0; c < nindconss; ++c )
@@ -3279,7 +3278,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    SCIP_CONS* lincons;
 
 	    /* create the linear constraint of indicator constraints hash map */
-	    SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * npbconss)) );
+	    SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), npbconss) );
 
 	    for( c = 0; c < npbconss; ++c )
 	    {
@@ -3315,7 +3314,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    if( !pbhashmapcreated )
 	    {
 	       /* create the linear constraint of indicator constraints hash map */
-	       SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nconss)) );
+	       SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), nconss) );
 	       pbhashmapcreated = TRUE;
 	    }
 
@@ -3330,7 +3329,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    if( !indhashmapcreated )
 	    {
 	       /* create the linear constraint of indicator constraints hash map */
-	       SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nconss)) );
+	       SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), nconss) );
 	       indhashmapcreated = TRUE;
 	    }
 

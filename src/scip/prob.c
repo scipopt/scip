@@ -35,6 +35,7 @@
 #include "scip/reopt.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/conflictstore.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
@@ -276,7 +277,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probexitsol = probexitsol;
    if( set->misc_usevartable )
    {
-      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, 
+      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem,
             (set->misc_usesmalltables ? SCIP_HASHSIZE_NAMES_SMALL : SCIP_HASHSIZE_NAMES),
             SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    }
@@ -496,6 +497,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -577,6 +579,9 @@ SCIP_RETCODE SCIPprobTransform(
    /* mark the transformed problem to be permuted iff the source problem is permuted */
    (*target)->permuted = source->permuted;
 
+   /* transform the conflict pool */
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
+
    return SCIP_OKAY;
 }
 
@@ -595,14 +600,7 @@ SCIP_RETCODE SCIPprobResetBounds(
 
    for( v = 0; v < prob->nvars; ++v )
    {
-      if( !SCIPprobIsTransformed(prob) )
-      {
-         SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPvarResetLocalBounds(prob->vars[v], blkmem, set, stat) );
-      }
+      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
    }
 
    return SCIP_OKAY;
@@ -1229,7 +1227,6 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
       SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
    }
 
@@ -1543,6 +1540,16 @@ void SCIPprobUpdateDualbound(
          SCIPABORT();
       }
    }
+}
+
+/** invalidates the dual bound */
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = SCIP_INVALID;
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -2107,6 +2114,7 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
+#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
 #undef SCIPisConsCompressedEnabled
@@ -2249,6 +2257,15 @@ SCIP_VAR** SCIPprobGetVars(
 {
    assert(prob != NULL);
    return prob->vars;
+}
+
+/** gets number of problem constraints */
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nconss;
 }
 
 /** gets the objective offset */

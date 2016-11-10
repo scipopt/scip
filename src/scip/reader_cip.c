@@ -932,7 +932,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if ( nfixedvars > 0 )
    {
       /* set up hash table for variables that have been written property (used for writing out fixed vars in the right order) */
-      SCIP_CALL( SCIPhashtableCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * (nvars + nfixedvars)), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&varhash, SCIPblkmem(scip), nvars + nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
 
    if ( nvars + nfixedvars > 0 )

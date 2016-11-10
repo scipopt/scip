@@ -67,7 +67,7 @@ void setup(void)
    x = SCIPgetVars(scip)[0];
    y = SCIPgetVars(scip)[1];
 
-   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPcalcHashtableSize(2)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), 2) );
 }
 
 static

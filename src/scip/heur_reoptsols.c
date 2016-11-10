@@ -31,10 +31,10 @@
 #define HEUR_DESC             "primal heuristic updating solutions found in a previous optimization round"
 #define HEUR_DISPCHAR         'J'
 #define HEUR_PRIORITY         40000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
-#define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
@@ -91,9 +91,10 @@ SCIP_RETCODE createNewSol(
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
+   SCIP_CALL( SCIPretransformSol(scip, newsol) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, TRUE, TRUE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &solvals);
 
@@ -358,9 +359,6 @@ SCIP_RETCODE SCIPincludeHeurReoptsols(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyReoptsols) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeReoptsols) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitReoptsols) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitReoptsols) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolReoptsols) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolReoptsols) );
 
    /* parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxsols", "maximal number solutions which should be checked. (-1: all)",

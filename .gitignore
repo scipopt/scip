@@ -48,9 +48,5 @@ interfaces/python/.cache/
 interfaces/python/build/
 interfaces/python/include/
 interfaces/python/tests/check
-<<<<<<< HEAD
-/Debug/
-=======
 interfaces/python/pyscipopt/*.c
 interfaces/gams/gams
->>>>>>> master
