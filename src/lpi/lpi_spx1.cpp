@@ -1646,7 +1646,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    )
 {
    assert(ncols == lpi->spx->nCols());
-   lpi->spx->setIntegralityInformation(intInfo);
+   lpi->spx->setIntegralityInformation(ncols, intInfo);
 
    return SCIP_OKAY;
 }
