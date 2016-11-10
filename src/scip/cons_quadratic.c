@@ -6912,12 +6912,19 @@ SCIP_RETCODE generateCut(
 
 /** computes eigen decomposition of A, where \f$ f(x) = x^T A x + b^T x \f$.
  *
- * The eigen decomposition is given by
- * A = P D P^T, where D is diagonal formed by the eigenvalues and P is orthonormal whose columns are the eigenvectors;
- * we also compute b^T * P, in case one needs the change of variables P^T x = y <=> x = P y
- * We store P^T in an array, specifically, in consdata->eigenvectors we store P^T row-wise, i.e.,
- * the first row of P^T is stored in eigenvector[0..n-1], the second row is stored in eigenvectors[n..2n-1], etc;
- * equivalently, the first eigenvector is eigenvector[0..n-1], the second one is eigenvectors[n..2n-1], etc.
+ * The eigen decomposition is given by A = P D P^T, where D is diagonal formed by the eigenvalues and P is orthonormal
+ * whose columns are the eigenvectors; we also compute b^T * P, in case one needs the change of variables P^T x = y <=>
+ * x = P y We store P^T in an array, specifically, in consdata->eigenvectors we store P^T row-wise, i.e., the first row
+ * of P^T is stored in eigenvector[0..n-1], the second row is stored in eigenvectors[n..2n-1], etc; equivalently, the
+ * first eigenvector is eigenvector[0..n-1], the second one is eigenvectors[n..2n-1], etc.
+ *
+ * @todo: - at the moment of writing, checkCurvature computes the eigenvalues (and vectors) for determining curvature
+ *          when it can't to it via other considerations. so one could try to merge both methods together.
+ *        - it seems that if A is of the form [I 0; 0 A'], one only needs to compute the decomposition for A' so one
+ *          could do better in terms of memory and speed. For instance, when the matrix is diagonal, the eigenvectors
+ *          are the identity matrix and the eigenvalues are readily available from the constraint, so one could adapt
+ *          the functions that uses the eigenvectors in this particular case. One could also think about storing the
+ *          eigenvectors in a sparse fashion, though eigenvectors are seldom sparse.
  */
 static
 SCIP_RETCODE computeED(
@@ -6962,7 +6969,14 @@ SCIP_RETCODE computeED(
     */
    n = consdata->nquadvars;
 
+   /* do not compute eigendecomposition if n is too large */
    nn = n * n;
+   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
+   {
+      SCIPdebugMsg(scip, "n is too large to compute eigendecomposition\n");
+      consdata->isedavailable = FALSE;
+      return SCIP_OKAY;
+   }
 
    /* we just need to pass the upper triangle of A since it is symmetric; build it here */
    SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->eigenvectors, nn) );
@@ -7937,10 +7951,8 @@ SCIP_RETCODE computeReferencePointProjection(
 
    return SCIP_OKAY;
 }
-/** compute reference point suggested by gauge function
- *
- *  @todo Should we modify a point in the interior? Currently we do not.
- */
+
+/** compute reference point suggested by gauge function */
 static
 SCIP_RETCODE computeReferencePointGauge(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8003,22 +8015,19 @@ SCIP_RETCODE computeReferencePointGauge(
    }
 #endif
 
-   /* scale gauge value so that point is close to the boundary, but not on the boundary */
+   /* scale gauge value so that final point is close to the boundary, but not on the boundary (weakens the cut) */
    gaugeval *= GAUGESCALE;
 
-   /* when a new solution is found, this method is called from addLinearizationCuts.
-    * in this case, since the solution is feasible, gaugeval <= 1
-    * is it a good idea to modify the point if it is interior?
-    */
+   /* if the point is not sufficiently violated, we don't modify it */
    if( SCIPisFeasLE(scip, gaugeval, 1.0) )
    {
       *success = FALSE;
-
       return SCIP_OKAY;
    }
 
-   /* set reference to (refsol - interior point)/gaugeval + interior point and project into bounds
-    * this is important for some cut generation methods such as generateCutLTI
+   /* set reference to (refsol - interior point)/gaugeval + interior point and project onto bounds this is important for
+    * some cut generation methods such as generateCutLTI
+    * @todo remove the projection onto the bounds; generateCutLTI shouldn't be called for convex constraints
     */
    for( j = 0; j < consdata->nquadvars; ++j )
    {
@@ -8120,6 +8129,7 @@ SCIP_RETCODE generateCutSol(
          }
       }
 
+      /* note that this is not the same as calling this method with mode 'l', 'l' assume convex/concave function */
       if( !success )
       {
          for( j = 0; j < consdata->nquadvars; ++j )
@@ -8161,10 +8171,22 @@ SCIP_RETCODE generateCutSol(
          SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
       }
    }
-   /* gradient linearization cut */
+   /* gradient linearization cut at refsol */
    if( mode == 'l' )
    {
       assert((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT));
+      for( j = 0; j < consdata->nquadvars; ++j )
+      {
+         var = consdata->quadvarterms[j].var;
+         lb  = SCIPvarGetLbLocal(var);
+         ub  = SCIPvarGetUbLocal(var);
+         /* do not like variables at infinity */
+         assert(!SCIPisInfinity(scip,  lb));
+         assert(!SCIPisInfinity(scip, -ub));
+
+         ref[j] = SCIPgetSolVal(scip, refsol, var);
+         ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
+      }
       SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
    }
 
@@ -8601,12 +8623,12 @@ SCIP_RETCODE addLinearizationCuts(
       if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
       {
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_RIGHT, &row, NULL,
-               conshdlrdata->checkcurvature, -SCIPinfinity(scip), 'd') );  /*lint !e613 */
+               conshdlrdata->checkcurvature, -SCIPinfinity(scip), 'l') );  /*lint !e613 */
       }
       else if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
       {
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_LEFT,  &row, NULL,
-               conshdlrdata->checkcurvature, -SCIPinfinity(scip), 'd') );  /*lint !e613 */
+               conshdlrdata->checkcurvature, -SCIPinfinity(scip), 'l') );  /*lint !e613 */
       }
       else
          continue;
