@@ -14064,7 +14064,6 @@ SCIP_RETCODE presolve(
    assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
    ncliquecomponents = SCIPcliquetableGetNCliqueComponents(scip->cliquetable);
 
-
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -14127,7 +14126,6 @@ SCIP_RETCODE presolve(
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
    SCIPclockStop(scip->stat->presolvingtimeoverall, scip->set);
-
 
    /* print presolving statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
@@ -23065,7 +23063,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 /** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
  *
  *  The algorithm performs the following steps:
- *  - recomputes connected clique components, if necessary (if there was has been a clique added since the last computation)
+ *  - recomputes connected clique components, if necessary
  *  - computes a clique partition for every connected clique component greedily.
  *  - relabels the resulting cliques such that the resulting partition obeys the variable order
  *
@@ -23119,7 +23117,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* early abort when no clique and implications are existing */
+   /* early abort if neither cliques nor implications are present */
    if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
    {
       for( i = nvars - 1; i >= 0; --i )
@@ -23167,12 +23165,12 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    for( i = 0; i < nvars; ++i )
    {
       if( SCIPvarIsActive(tmpvars[i]) )
-          componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+         componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
       else
          componentlabels[i] = -1;
    }
 
-   /* relabel component labels order consistent for a stable sort */
+   /* relabel component labels order consistent as prerequisite for a stable sort */
    SCIP_CALL( relabelOrderConsistent(scip, componentlabels, nvars, &ncomponents) );
    assert(ncomponents >= 1);
    assert(ncomponents <= nvars);
@@ -23259,7 +23257,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       SCIPsetFreeBufferArray(scip->set, &sortedtmpvars);
    }
 
-/* use the greedy algorithm as a whole to verify the result on small number of variables */
+   /* use the greedy algorithm as a whole to verify the result on small number of variables */
 #ifdef SCIP_DISABLED_CODE
    {
       int* debugcliquepartition;

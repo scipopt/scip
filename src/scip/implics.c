@@ -2232,28 +2232,34 @@ SCIP_RETCODE sortAndMergeClique(
    return SCIP_OKAY;
 }
 
-/* check if current connected component information gets outdated by after adding this fresh clique */
+/** checks if current connected components information will get outdated after adding this new clique */
 static
 void cliquetableCheckComponentUpdate(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CLIQUE*          clique              /**< freshly added clique */
+   SCIP_CLIQUE*          clique              /**< clique that should be added */
    )
 {
    int i;
    assert(cliquetable != NULL);
    assert(clique != NULL);
 
-   /* check if we can skip a clique components update because this clique does not connect two previously unconnected components */
+   /* check if last variable was a single component so far */
+   if( SCIPvarGetCliqueComponentIdx(clique->vars[clique->nvars - 1]) == -1 )
+   {
+      cliquetable->componentupdate = TRUE;
+      return;
+   }
+
+   /* check if this clique connects two previously disconnected components of the clique graph */
    for( i = 0; i < clique->nvars - 1 && !cliquetable->componentupdate; ++i )
    {
-      if( SCIPvarGetCliqueComponentIdx(clique->vars[i]) == -1 || SCIPvarGetCliqueComponentIdx(clique->vars[i]) != SCIPvarGetCliqueComponentIdx(clique->vars[i + 1]) )
+      if( SCIPvarGetCliqueComponentIdx(clique->vars[i]) == -1 ||
+            SCIPvarGetCliqueComponentIdx(clique->vars[i]) != SCIPvarGetCliqueComponentIdx(clique->vars[i + 1]) )
       {
          cliquetable->componentupdate = TRUE;
          break;
       }
    }
-   /* check if last variable was a single component so far */
-   cliquetable->componentupdate = cliquetable->componentupdate || SCIPvarGetCliqueComponentIdx(clique->vars[clique->nvars - 1]) == -1;
 }
 
 /** adds a clique to the clique table, using the given values for the given variables;
@@ -3008,7 +3014,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    return SCIP_OKAY;
 }
 
-/** helper function that returns the graph node index for a variable during clique component detection */
+/** helper function that returns the graph node index for a variable during connected component detection */
 static
 int getNodeNumberBinvar(
    SCIP_VAR*             binvar,             /**< binary (or implicit binary) variable */
@@ -3048,10 +3054,10 @@ int getNodeNumberBinvar(
    return nodeindex;
 }
 
-/** computes clique components for all binary variables */
+/** computes connected components of the clique graph */
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
-   SCIP_CLIQUETABLE*    cliquetable,        /**< SCIP data structure */
-   SCIP_SET*            set,                /**< problem settings */
+   SCIP_CLIQUETABLE*    cliquetable,        /**< clique table data structure */
+   SCIP_SET*            set,                /**< global SCIP settings */
    SCIP_VAR**           vars,               /**< array of problem variables, sorted by variable type */
    int                  nbinvars,           /**< number of binary variables */
    int                  nintvars,           /**< number of integer variables */
@@ -3068,6 +3074,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUE** cliques;
 
    assert(cliquetable != NULL);
+   assert(vars != NULL);
 
    nimplbinvars = 0;
    cliquetable->componentupdate = FALSE;
@@ -3112,7 +3119,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
    {
       if( SCIPvarIsBinary(vars[v]) )
-         sizes[v - nintvars] = SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE);
+         sizes[v - nintvars] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
       else
          sizes[v - nintvars] = 0;
    }

@@ -376,8 +376,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 /** computes clique components for all binary variables */
 extern
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
-   SCIP_CLIQUETABLE*    cliquetable,        /**< SCIP data structure */
-   SCIP_SET*            set,                /**< problem settings */
+   SCIP_CLIQUETABLE*    cliquetable,        /**< clique table data structure */
+   SCIP_SET*            set,                /**< global SCIP settings */
    SCIP_VAR**           vars,               /**< array of problem variables, sorted by variable type */
    int                  nbinvars,           /**< number of binary variables */
    int                  nintvars,           /**< number of integer variables */
