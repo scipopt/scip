@@ -138,7 +138,7 @@ SCIP_Bool SCIPsolveIsStopped(
       else
          --stat->nclockskipsleft;
    }
-   if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - stat->externmemestim )
+   if( SCIPgetMemTotal(set->scip) >= set->limit_memory*1048576.0 - stat->externmemestim )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING && SCIPgetNLimSolsFound(set->scip) > 0
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
