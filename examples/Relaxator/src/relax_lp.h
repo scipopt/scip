@@ -16,7 +16,7 @@
 /**@file   relax_lp.h
  * @ingroup RELAXATORS
  * @brief  lp relaxator
- * @author Tobias Achterberg
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
