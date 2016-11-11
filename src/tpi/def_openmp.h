@@ -31,10 +31,19 @@
 
 #define SPI_NONE  NULL
 
+#ifdef TPI_OMP
+
 #define SPI_PRAGMA_CLAUSE(directive, clause)    _Pragma( STRINGIFY( CONCATENATE( directive, clause ) ) )
 #define SPI_PRAGMA(directive)               _Pragma( STRINGIFY( directive ) )
 #define SPI_PRAGMA_PARENTH(directive, var)  _Pragma( STRINGIFY( CONCATPARENTH( directive, var ) ) )
 
+#else
+
+#define SPI_PRAGMA_CLAUSE(directive, clause)
+#define SPI_PRAGMA(directive)
+#define SPI_PRAGMA_PARENTH(directive, var)
+
+#endif
 
 
 #define SPI_FOR_CLAUSE(clause)      SPI_PRAGMA_CLAUSE( SPI_DIR_FOR, clause )
