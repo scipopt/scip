@@ -87,11 +87,6 @@
 /* scaling factor for gauge function */
 #define GAUGESCALE 0.99999
 
-/* behaviour of convex separation */
-#define CONVEXSEPARATION 'e'
-
-/* aggressive separation */
-#define AGGRESSIVESEPARATION FALSE
 /*
  * Data structures
  */
@@ -208,8 +203,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
    SCIP_Bool             projectedcuts;      /**< should convex quadratics generated strong cuts via projections? */
-   SCIP_Bool             aggressiveseparation;/**< apply all methods (gauge, gradient, projection) to separate convex constraints */
-   char                  convexseparation;   /**< behaviour of convex separation */
    char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
                                               * 'm'ost interior per constraint
                                               */
@@ -8525,39 +8518,10 @@ SCIP_RETCODE separatePoint(
          }
          else
          {
-            /* given that some other separator can take care of convex constraints (gauge, convexproj),
-             * we might want to decide when to separate the *LP solution* for convex quadratic constraints; for instance
-             * if some of the special separators runs only on the root node, we might separate 'a'fter the root node.
-             * NOTE: when sol and bestefficacy are NULL, then we are being called from CONSSEPALP
-             * TODO: have a proper check whether we are called from conssepalp
-             */
-            if( (conshdlrdata->convexseparation == 'n' || (conshdlrdata->convexseparation == 'a' && SCIPgetDepth(scip) == 0))
-               && sol == NULL && bestefficacy == NULL &&
-                  ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
-               continue;
-
-            /* aggressive separation means we apply all methods (projection, gauge, gradient) for separating convex quadratics */
-            if( conshdlrdata->aggressiveseparation &&
-                  ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
-            {
-               assert(row == NULL);
-               SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy, conshdlrdata->checkcurvature, actminefficacy, 'g') );
-               SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
-               assert(row == NULL);
-               SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy, conshdlrdata->checkcurvature, actminefficacy, 'p') );
-               SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
-               assert(row == NULL);
-               SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy, conshdlrdata->checkcurvature, actminefficacy, 'l') );
-               SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
-            }
-            else
-            {
-               SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy, conshdlrdata->checkcurvature, actminefficacy, 'd') );
-               /* @todo If generation failed not because of low efficacy, then probably because of numerical issues;
-                * if the constraint is convex and we are desperate to get a cut, then we may try again with a better chosen reference point
-                */
-               SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
-            }
+            SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
+                     conshdlrdata->checkcurvature, actminefficacy, 'd') );
+            /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
+            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
          }
       }
 
@@ -13234,14 +13198,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/projectedcuts",
          "should convex quadratics generated strong cuts via projections?",
          &conshdlrdata->projectedcuts, FALSE, FALSE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/aggressiveseparation",
-         "should convex constraints be separated aggressively? i.e. apply all methods for separation (gauge, projection, gradient)",
-         &conshdlrdata->aggressiveseparation, FALSE, AGGRESSIVESEPARATION, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/convexseparation",
-         "separate of convex constraint 'e'verywhere, 'a'fter root note, 'n'owhere",
-         &conshdlrdata->convexseparation, FALSE, CONVEXSEPARATION, "ean", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchscoring",
          "which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain",
