@@ -645,7 +645,7 @@ SCIP_RETCODE SCIPtpiExit(
 SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                      /**< pointer to the job that will be created */
    int                   jobid,                    /**< the id for the current job */
-   int                   (*jobfunc)(void* args),   /**< pointer to the job function */
+   SCIP_RETCODE          (*jobfunc)(void* args),   /**< pointer to the job function */
    void*                 jobargs                   /**< the job arguments */
    )
 {
