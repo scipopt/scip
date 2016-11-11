@@ -1647,7 +1647,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   branchruledata->nfirstlvlcutoffs++;
                )
 
-               *provedbound = MAX(*provedbound, downdualbound);
+               if( downdualboundvalid )
+               {
+                  *provedbound = MAX(*provedbound, downdualbound);
+               }
             }
             else if( downbranchingresult->cutoff )
             {
@@ -1660,7 +1663,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   branchruledata->nfirstlvlcutoffs++;
                )
 
-               *provedbound = MAX(*provedbound, updualbound);
+               if( updualboundvalid )
+               {
+                  *provedbound = MAX(*provedbound, updualbound);
+               }
             }
             else if( !status->limitreached && !status->maxnconsreached )
             {
@@ -1682,7 +1688,18 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   *bestupvalid = updualboundvalid;
                }
 
-               *provedbound = MAX(*provedbound, MIN(updualbound, downdualbound));
+               if( updualboundvalid && downdualboundvalid )
+               {
+                  *provedbound = MAX(*provedbound, MIN(updualbound, downdualbound));
+               }
+               else if( updualboundvalid )
+               {
+                  *provedbound = MAX(*provedbound, updualbound);
+               }
+               else if( downdualboundvalid )
+               {
+                  *provedbound = MAX(*provedbound, downdualbound);
+               }
             }
          }
 
