@@ -230,12 +230,12 @@ depend:		$(SCIPDIR)
 
 -include	$(UNITTESTSDEP)
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(SPILIBFILE)
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< \
 		$(LINKCXX_L)$(SCIPDIR)/lib \
 		$(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(OBJSCIPLIB) $(LINKCXX_l)$(LPILIB) $(LINKCXX_l)$(NLPILIB) \
-		$(LINKCXX_l)$(SPILIB) \
+		$(LINKCXX_l)$(TPILIB) \
 		$(addprefix $(LINKCXX_L),$(CR_LIBDIR)) \
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib) \
