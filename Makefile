@@ -259,13 +259,13 @@ TPILIBOBJ	=
 
 TPIOPTIONS	+=	none
 ifeq ($(TPI),none)
+TPILIBOBJ	=	tpi/tpi_none.o
 FLAGS		+=	-DTPI_NONE
 endif
 
 TPIOPTIONS	+=	omp
 ifeq ($(TPI),omp)
 TPILIBOBJ	=	tpi/tpi_openmp.o
-TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
 FLAGS		+=	-DTPI_OMP
 endif
 
@@ -273,10 +273,10 @@ TPIOPTIONS	+=	tny
 ifeq ($(TPI),tny)
 TPILIBOBJ	=	tpi/tpi_tnycthrd.o \
 			tinycthread/tinycthread.o
-TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
 FLAGS		+=	-DTPI_TNYC
 endif
 
+TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))

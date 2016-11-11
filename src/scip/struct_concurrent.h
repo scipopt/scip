@@ -40,7 +40,8 @@ struct SCIP_Concurrent
 {
    SCIP*                    mainscip;           /**< main scip for concurrent solver */
    SCIP_CONCSOLVER*         concsolver;         /**< the concurrent solver of the main scip */
-   int*                     varperm;            /**< variable permutation for communicating solutions and bounds */
+   int*                     varperm;            /**< permutation of variables to get the position of variable in the original SCIP's
+                                                 *   variable array by the index of an original variable in this concurrent's main SCIP */
    SCIP_Real                dettime;            /**< deterministic time since last synch */
    SCIP_CLOCK*              wallclock;          /**< wallclock time since last synch */
    SCIP_PROP*               propsynch;          /**< synch propagator */

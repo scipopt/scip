@@ -38,8 +38,6 @@ struct SCIP_ConcSolverData
 {
    SCIP*              solverscip;   /**< the concurrent solvers private scip datastructure */
    SCIP_VAR**         vars;         /**< array of variables in the order of the main SCIP's variable array */
-   int*               varperm;      /**< permutation of variables to get the position of variable in the main SCIP's
-                                     *   variable array by the index of the variable in the solver's private SCIP */
    int                nvars;        /**< number of variables in the above arrays */
 };
 
@@ -115,6 +113,7 @@ SCIP_RETCODE initConcsolver(
    SCIP_Bool           valid;
    SCIP_HASHMAP*       varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_CONCSOLVERDATA* data;
+   int* varperm;
 
    assert(scip != NULL);
    assert(concsolver != NULL);
@@ -131,17 +130,18 @@ SCIP_RETCODE initConcsolver(
    assert(valid);
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->varperm, data->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
    /* set up the arrays for the variable mapping */
    for( i = 0; i < data->nvars; i++ )
    {
       SCIP_VAR* var;
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-      data->varperm[SCIPvarGetIndex(var)] = i;
+      varperm[SCIPvarGetIndex(var)] = i;
       data->vars[i] = var;
    }
    /* create the concurrent data structure for the concurrent solver's SCIP */
-   SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, data->varperm) );
+   SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
+   SCIPfreeBufferArray(data->solverscip, &varperm);
    /* free the hashmap */
    SCIPhashmapFree(&varmapfw);
 
@@ -261,7 +261,6 @@ SCIP_DECL_CONCSOLVERDESTROYINST(concsolverScipDestroyInstance)
 
    /* free the array with the variable mapping */
    SCIPfreeBlockMemoryArray(data->solverscip, &data->vars, data->nvars);
-   SCIPfreeBlockMemoryArray(data->solverscip, &data->varperm, data->nvars);
 
    /* free subscip */
    SCIP_CALL( SCIPfree(&data->solverscip) );

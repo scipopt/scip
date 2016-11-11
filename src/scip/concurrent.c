@@ -50,6 +50,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    )
 {
    SCIP_SYNCSTORE*   syncstore;
+   int nvars;
 
    assert(scip != NULL);
    assert(scip->concurrent == NULL || scip->concurrent->mainscip != scip);
@@ -57,7 +58,10 @@ SCIP_RETCODE SCIPcreateConcurrent(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, &scip->concurrent) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &scip->concurrent) );
+
+   nvars = SCIPgetNOrigVars(scip);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
 
    scip->concurrent->concsolver = concsolver;
    scip->concurrent->mainscip = scip;
@@ -167,7 +171,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
    else
    {
       int i;
-      /* we are in the main SCIP to free the concurrent structure */
+      /* we are in the main SCIP so free the concurrent structure */
       if( scip->concurrent->wallclock != NULL )
          SCIPfreeClock(scip, &scip->concurrent->wallclock);
 
@@ -176,14 +180,16 @@ SCIP_RETCODE SCIPfreeConcurrent(
       {
          SCIP_CALL( SCIPconcsolverDestroyInstance(scip->set, &scip->concurrent->concsolvers[i]) );
       }
+
       SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->concsolvers, scip->concurrent->concsolverssize);
+      SCIPfreeBlockMemoryArray(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
 
       if( SCIPsyncstoreIsInitialized(scip->syncstore) )
       {
          SCIP_CALL( SCIPsyncstoreExit(scip->syncstore) );
       }
 
-      SCIPfreeMemory(scip, &scip->concurrent);
+      SCIPfreeBlockMemory(scip, &scip->concurrent);
    }
 
    return SCIP_OKAY;
