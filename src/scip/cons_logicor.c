@@ -3856,7 +3856,7 @@ SCIP_RETCODE enforceConstraint(
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Enforcing %d logic or constraints\n", nconss);
+   SCIPdebugMsg(scip, "Enforcing %d logic or constraints for %s solution\n", nconss, sol == NULL ? "LP" : "relaxation");
 
    *result = SCIP_FEASIBLE;
 

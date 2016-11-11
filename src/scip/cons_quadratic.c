@@ -10368,7 +10368,8 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcon));
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s> for %s solution\n", maxviol, SCIPconsGetName(maxviolcon),
+         sol == NULL ? "LP" : "relaxation");
 
    /* if we are above the 100'th enforcement round for this node, something is strange
     * (maybe the LP / relaxator does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)

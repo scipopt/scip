@@ -674,7 +674,7 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMsg(scip, "executing enforcement callback\n");
+   SCIPdebugMsg(scip, "executing enforcement callback for %s solution\n", sol == NULL ? "LP" : "relaxation");
 
    cont = TRUE;
    *result = SCIP_FEASIBLE;

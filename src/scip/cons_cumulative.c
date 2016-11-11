@@ -12465,7 +12465,8 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMsg(scip, "constraint enforcing %d useful cumulative constraints of %d constraints\n", nusefulconss, nconss);
+   SCIPdebugMsg(scip, "constraint enforcing %d useful cumulative constraints of %d constraints for %s solution\n", nusefulconss, nconss,
+         sol == NULL ? "LP" : "relaxation");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

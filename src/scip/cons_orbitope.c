@@ -1408,7 +1408,8 @@ SCIP_RETCODE enforceConstraint(
 
       /* get solution */
       copyValues(scip, consdata, sol);
-      SCIPdebugMsg(scip, "Relaxation enforcement for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Relaxation enforcement for orbitope constraint <%s> for %s solution\n", SCIPconsGetName(conss[c]),
+            sol == NULL ? "LP" : "relaxation");
 
       /* separate */
       SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );

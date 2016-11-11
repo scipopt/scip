@@ -6776,7 +6776,8 @@ SCIP_RETCODE enforceConstraint(
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for relaxation solution\n", nconss);
+   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for %s solution\n", nconss,
+         sol == NULL ? "LP" : "relaxation");
 
    *result = SCIP_FEASIBLE;
 

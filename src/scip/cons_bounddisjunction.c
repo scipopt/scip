@@ -1601,7 +1601,7 @@ SCIP_RETCODE enforceConstraint(
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Enforcing %d bound disjunction constraints\n", nconss);
+   SCIPdebugMsg(scip, "Enforcing %d bound disjunction constraints for %s solution\n", nconss, sol == NULL ? "LP" : "relaxation");
 
    *result = SCIP_FEASIBLE;
 

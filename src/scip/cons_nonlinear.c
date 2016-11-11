@@ -7044,7 +7044,8 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s> for %s solution\n", maxviol, SCIPconsGetName(maxviolcons),
+         sol == NULL ? "LP" : "relaxation");
 
    /* we propagate and separate constraints only if they are active and enforcing by branching only does not seem much effective */
    assert(SCIPconsIsActive(maxviolcons));

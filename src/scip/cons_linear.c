@@ -14578,7 +14578,7 @@ SCIP_RETCODE enforceConstraint(
 
    checkrelmaxabs = conshdlrdata->checkrelmaxabs;
 
-   SCIPdebugMsg(scip, "Enforcement method of linear constraints\n");
+   SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
 
    /* check for violated constraints
     * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP

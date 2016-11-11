@@ -6057,7 +6057,8 @@ SCIP_RETCODE enforceConstraint(
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
-   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s> for %s solution\n", maxviol, SCIPconsGetName(maxviolcons),
+         sol == NULL ? "LP" : "relaxation");
 
    /* run domain propagation */
    dummy = 0;
