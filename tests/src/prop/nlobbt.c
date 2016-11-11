@@ -20,7 +20,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/prop_nlobbt.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/nlpi.h"
@@ -61,13 +60,13 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
 
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    cr_assert_eq(SCIPgetNVars(scip), 2);
    x = SCIPgetVars(scip)[0];
    y = SCIPgetVars(scip)[1];
 
-   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPcalcHashtableSize(2)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), 2) );
 }
 
 static
@@ -167,7 +166,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
 
    /* create convex NLP relaxation */
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( SCIPcreateConvexNlpNlobbt(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5) );
+   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5, FALSE) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);

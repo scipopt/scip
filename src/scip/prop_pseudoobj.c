@@ -1519,7 +1519,7 @@ SCIP_RETCODE propdataInit(
    nobjvars = 0;
    nbinobjvars = 0;
 
-   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNObjVars(scip) * 5)) );
+   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPgetNObjVars(scip)) );
 
    /* count and collect variable problem indices of variables with non-zero objective coefficient */
    for( v = 0; v < nvars; ++v )
@@ -1587,7 +1587,7 @@ SCIP_RETCODE propdataInit(
 
          if( ncliques > 0 )
          {
-            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), SCIPcalcHashtableSize(ncliques),
+            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), ncliques,
                   cliqueGetHashkey, cliqueIsHashkeyEq, cliqueGetHashkeyVal, NULL) );
          }
          else
@@ -1781,7 +1781,7 @@ SCIP_RETCODE propdataInit(
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&propdata->addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(5*nvars),
+      SCIP_CALL( SCIPhashtableCreate(&propdata->addedvars, SCIPblkmem(scip), nvars,
             SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
    }
    else
