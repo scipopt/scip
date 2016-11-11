@@ -140,6 +140,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/targetprogress", &syncstore->targetprogress) );
    syncstore->nsyncdata = getNSyncdata(scip);
    SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &(syncstore->syncdata), syncstore->nsyncdata) );
+
    for( i = 0; i < syncstore->nsyncdata; ++i )
    {
       syncstore->syncdata[i].syncnum = -1;
@@ -147,10 +148,12 @@ SCIP_RETCODE SCIPsyncstoreInit(
       SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].solobj, syncstore->maxnsols) );
       SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].solsource, syncstore->maxnsols) );
       SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols, syncstore->maxnsols) );
+
       for( j = 0; j < syncstore->maxnsols; ++j )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols[j], nvars) );
       }
+
       SCIP_CALL( SCIPtpiInitLock(&(syncstore->syncdata[i].lock)) );
       SCIP_CALL( SCIPtpiInitCondition(&(syncstore->syncdata[i].allsynced)) );
    }
@@ -188,10 +191,11 @@ SCIP_RETCODE SCIPsyncstoreExit(
       SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].solsource, syncstore->maxnsols);
       SCIPboundstoreFree(syncstore->mainscip,  &syncstore->syncdata[i].boundstore);
 
-      for(j = 0; j < syncstore->maxnsols; ++j)
+      for( j = 0; j < syncstore->maxnsols; ++j )
       {
          SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols[j], SCIPgetNVars(syncstore->mainscip));
       }
+
       SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols, syncstore->maxnsols);
    }
 
@@ -313,7 +317,7 @@ SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
    int j = syncnum % syncstore->nsyncdata;
 
    /* check if requested syncnumber still exists if in debug mode */
-   assert( syncstore->syncdata[j].syncnum == syncnum );
+   assert(syncstore->syncdata[j].syncnum == syncnum);
 
    return &syncstore->syncdata[j];
 }
@@ -355,6 +359,7 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
 {
    /* check if waiting is required, make sure to hold the lock */
    SCIP_CALL( SCIPtpiAcquireLock(&syncdata->lock) );
+
    while( syncdata->syncedcount < syncstore->nsolvers )
    {
       /* yes, so wait on the condition variable
@@ -362,6 +367,7 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
        */
       SCIP_CALL( SCIPtpiWaitCondition(&syncdata->allsynced, &syncdata->lock) );
    }
+
    SCIP_CALL( SCIPtpiReleaseLock(&syncdata->lock) );
 
    return SCIP_OKAY;
@@ -391,11 +397,11 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
 
    i = syncnum % syncstore->nsyncdata;
    *syncdata = &syncstore->syncdata[i];
-   assert( *syncdata != NULL );
+   assert(*syncdata != NULL);
 
    SCIP_CALL( SCIPtpiAcquireLock(&(*syncdata)->lock) );
 
-   if((*syncdata)->syncnum != syncnum )
+   if( (*syncdata)->syncnum != syncnum )
    {
       SCIPboundstoreClear((*syncdata)->boundstore);
       (*syncdata)->nsols = 0;
@@ -427,15 +433,18 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    {
       if( (*syncdata)->status != SCIP_STATUS_UNKNOWN )
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
+
       syncstore->lastsync = *syncdata;
       SCIP_CALL( SCIPtpiBroadcastCondition(&(*syncdata)->allsynced) );
    }
+
    SCIP_CALL( SCIPtpiReleaseLock(&(*syncdata)->lock) );
 
    if( *syncdata == syncstore->lastsync )
    {
       SCIP_CALL( SCIPprintDisplayLine(syncstore->mainscip, NULL, SCIP_VERBLEVEL_HIGH, TRUE) );
    }
+
    *syncdata = NULL;
 
    return SCIP_OKAY;
@@ -616,32 +625,34 @@ void SCIPsyncdataGetSolutionBuffer(
 
    for( pos = 0; pos < syncdata->nsols; ++pos )
    {
-      if(syncdata->solobj[pos] < solobj || (syncdata->solobj[pos] == solobj && ownerid < syncdata->solsource[pos]  ) )
+      if( syncdata->solobj[pos] < solobj || (syncdata->solobj[pos] == solobj && ownerid < syncdata->solsource[pos]) )
          break;
    }
 
-   if(syncdata->nsols < syncstore->maxnsols)
+   if( syncdata->nsols < syncstore->maxnsols )
    {
       for( i = syncdata->nsols; i > pos; --i )
       {
-         syncdata->solobj[i] = syncdata->solobj[i-1];
-         syncdata->solsource[i] = syncdata->solsource[i-1];
-         SCIPswapPointers((void**) &syncdata->sols[i], (void**) &syncdata->sols[i-1]);
+         syncdata->solobj[i] = syncdata->solobj[i - 1];
+         syncdata->solsource[i] = syncdata->solsource[i - 1];
+         SCIPswapPointers((void**) &syncdata->sols[i], (void**) &syncdata->sols[i - 1]);
       }
+
       ++syncdata->nsols;
    }
    else
    {
       --pos;
+
       for( i = 0; i < pos; ++i )
       {
-         syncdata->solobj[i] = syncdata->solobj[i+1];
-         syncdata->solsource[i] = syncdata->solsource[i+1];
-         SCIPswapPointers((void**) &syncdata->sols[i], (void**) &syncdata->sols[i+1]);
+         syncdata->solobj[i] = syncdata->solobj[i + 1];
+         syncdata->solsource[i] = syncdata->solsource[i + 1];
+         SCIPswapPointers((void**) &syncdata->sols[i], (void**) &syncdata->sols[i + 1]);
       }
    }
 
-   if(pos >= 0)
+   if( pos >= 0 )
    {
       syncdata->solobj[pos] = solobj;
       syncdata->solsource[pos] = ownerid;

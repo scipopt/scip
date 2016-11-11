@@ -82,6 +82,7 @@ SCIP_RETCODE createJobQueue(
 
    _jobqueues->nthreads = nthreads;
    SCIP_ALLOC( BMSallocMemoryArray(&_jobqueues->currentjobs, nthreads) );
+
    for( i = 0; i < nthreads; ++i )
       _jobqueues->currentjobs[i] = NULL;
 
@@ -128,6 +129,7 @@ void executeJob(
    SCIP_CALL_ABORT( SCIPtpiAcquireLock(&_jobqueues->lock) );
    _jobqueues->ncurrentjobs--;
    _jobqueues->currentjobs[threadnum] = NULL;
+
    /* insert job into finished jobs */
    if( _jobqueues->finishedjobs.njobs == 0 )
    {
@@ -139,6 +141,7 @@ void executeJob(
       _jobqueues->finishedjobs.lastjob->nextjob = job;
       _jobqueues->finishedjobs.lastjob = job;
    }
+
    ++_jobqueues->finishedjobs.njobs;
 
    SCIP_CALL_ABORT( SCIPtpiBroadcastCondition(&_jobqueues->jobfinished) );
@@ -160,10 +163,12 @@ void jobQueueProcessJob(
 {
    SCIP_JOB* job;
    SCIP_CALL_ABORT( SCIPtpiAcquireLock(&_jobqueues->lock) );
+
    while( _jobqueues->ncurrentjobs == SCIPtpiGetNumThreads() )
    {
       SCIP_CALL_ABORT( SCIPtpiWaitCondition(&_jobqueues->jobfinished, &_jobqueues->lock) );
    }
+
    if( _jobqueues->jobqueue.njobs == 1 )
    {
       job = _jobqueues->jobqueue.firstjob;
@@ -181,10 +186,11 @@ void jobQueueProcessJob(
    {
       job = NULL;
    }
+
    ++_jobqueues->ncurrentjobs;
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_jobqueues->lock) );
 
-   if(job)
+   if( job )
    {
       executeJob(job);
    }
@@ -253,8 +259,10 @@ SCIP_RETCODE SCIPtpiSignalCondition(
    )
 {
    SCIP_CALL( SCIPtpiAcquireLock(&condition->_lock) );
+
    if( condition->_waitnum > condition->_signals )
       ++condition->_signals;
+
    SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
 
    return SCIP_OKAY;
@@ -285,11 +293,15 @@ SCIP_RETCODE SCIPtpiWaitCondition(
    waitnum = ++condition->_waitnum;
 
    ++condition->_waiters;
-   do {
+
+   do
+   {
       SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
       #pragma omp taskyield
       SCIP_CALL( SCIPtpiAcquireLock(&condition->_lock) );
-   } while( condition->_signals < waitnum );
+   }
+   while( condition->_signals < waitnum );
+
    --condition->_waiters;
 
    if( condition->_waiters == 0 )
@@ -297,6 +309,7 @@ SCIP_RETCODE SCIPtpiWaitCondition(
       condition->_signals = 0;
       condition->_waitnum = 0;
    }
+
    SCIP_CALL( SCIPtpiReleaseLock(&condition->_lock) );
 
    SCIP_CALL( SCIPtpiAcquireLock(lock) );
@@ -381,6 +394,7 @@ SCIP_Bool isJobRunning(
             return TRUE;
       }
    }
+
    return FALSE;
 }
 
@@ -395,13 +409,17 @@ SCIP_Bool isJobWaiting(
       SCIP_JOB* currjob;
       currjob = _jobqueues->jobqueue.firstjob;
 
-      do {
+      do
+      {
          if( currjob->jobid == jobid )
             return TRUE;
+
          if( currjob == _jobqueues->jobqueue.lastjob )
             break;
+
          currjob = currjob->nextjob;
-      } while( TRUE );
+      }
+      while( TRUE );
    }
 
    return FALSE;
@@ -430,7 +448,8 @@ SCIP_RETCODE SCIPtpiCollectJobs(
       SCIP_JOB* prevjob = NULL;
 
       /* finding the location of the processed job in the currentjobs queue */
-      do {
+      do
+      {
          if( currjob->jobid == jobid )
          {
             SCIP_JOB* nextjob;
@@ -444,6 +463,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
                _jobqueues->finishedjobs.firstjob = currjob->nextjob;
             else
                prevjob->nextjob = currjob->nextjob;
+
             if( currjob == _jobqueues->finishedjobs.lastjob )
                _jobqueues->finishedjobs.lastjob = prevjob;
 
@@ -459,10 +479,12 @@ SCIP_RETCODE SCIPtpiCollectJobs(
             prevjob = currjob;
             currjob = prevjob->nextjob;
          }
-      } while( prevjob != _jobqueues->finishedjobs.lastjob );
+      }
+      while( prevjob != _jobqueues->finishedjobs.lastjob );
 
    }
-   else {
+   else
+   {
       /* given jobid was not submitted */
       printf("err1");
       retcode = SCIP_ERROR;

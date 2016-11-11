@@ -89,7 +89,7 @@ struct SCIP_ThreadPool
 /** this function controls the execution of each of the threads */
 static
 int threadPoolThread(
-   void                  *args
+   void*                  args
    )
 {
    SCIP_JOB* newjob;
@@ -108,7 +108,10 @@ int threadPoolThread(
 
       /* the queue is empty but the shutdown command has not been given */
       while( _threadpool->jobqueue->njobs == 0 && !_threadpool->shutdown )
+      {
          SCIP_CALL( SCIPtpiWaitCondition(&(_threadpool->queuenotempty), &(_threadpool->poollock)) );
+      }
+
       /* if the shutdown command has been given, the exit the thread */
       if( _threadpool->shutdown )
       {
@@ -121,36 +124,42 @@ int threadPoolThread(
 
       /* getting the next job in the queue */
       newjob = _threadpool->jobqueue->firstjob;
-        _threadpool->jobqueue->njobs--;            /* decreasing the number of jobs in the queue */
+      _threadpool->jobqueue->njobs--;            /* decreasing the number of jobs in the queue */
+
       if( _threadpool->jobqueue->njobs == 0 )
       {
-            _threadpool->jobqueue->firstjob = NULL;
-            _threadpool->jobqueue->lastjob = NULL;
+         _threadpool->jobqueue->firstjob = NULL;
+         _threadpool->jobqueue->lastjob = NULL;
       }
       else
-            _threadpool->jobqueue->firstjob = newjob->nextjob;     /* updating the queue */
+         _threadpool->jobqueue->firstjob = newjob->nextjob;     /* updating the queue */
 
       /* if we want to wait when the queue is full, then we broadcast that the queue can now take new jobs */
       if( _threadpool->blockwhenfull &&
-                _threadpool->jobqueue->njobs == _threadpool->queuesize - 1 )
+          _threadpool->jobqueue->njobs == _threadpool->queuesize - 1 )
+      {
          SCIP_CALL( SCIPtpiBroadcastCondition(&(_threadpool->queuenotfull)) );
+      }
 
       /* indicating that the queue is empty */
       if( _threadpool->jobqueue->njobs == 0 )
+      {
          SCIP_CALL( SCIPtpiBroadcastCondition(&(_threadpool->queueempty)) );
+      }
 
       /* updating the current job list */
       if( _threadpool->currentjobs->njobs == 0 )
       {
-            _threadpool->currentjobs->firstjob = newjob;
-            _threadpool->currentjobs->lastjob = newjob;
+         _threadpool->currentjobs->firstjob = newjob;
+         _threadpool->currentjobs->lastjob = newjob;
       }
       else
       {
-            _threadpool->currentjobs->lastjob->nextjob = newjob;
-            _threadpool->currentjobs->lastjob = newjob;
+         _threadpool->currentjobs->lastjob->nextjob = newjob;
+         _threadpool->currentjobs->lastjob = newjob;
       }
-        _threadpool->currentjobs->njobs++;
+
+      _threadpool->currentjobs->njobs++;
 
       SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
 
@@ -163,6 +172,7 @@ int threadPoolThread(
       /* finding the location of the processed job in the currentjobs queue */
       currjob = _threadpool->currentjobs->firstjob;
       prevjob = NULL;
+
       while( currjob != newjob )
       {
          prevjob = currjob;
@@ -171,26 +181,28 @@ int threadPoolThread(
 
       /* removing the processed job from current jobs list */
       if( currjob == _threadpool->currentjobs->firstjob )
-            _threadpool->currentjobs->firstjob = currjob->nextjob;
+         _threadpool->currentjobs->firstjob = currjob->nextjob;
       else
          prevjob->nextjob = currjob->nextjob;
-      if( currjob == _threadpool->currentjobs->lastjob )
-            _threadpool->currentjobs->lastjob = prevjob;
 
-        _threadpool->currentjobs->njobs--;
+      if( currjob == _threadpool->currentjobs->lastjob )
+         _threadpool->currentjobs->lastjob = prevjob;
+
+      _threadpool->currentjobs->njobs--;
 
       /* updating the finished job list */
       if( _threadpool->finishedjobs->njobs == 0 )
       {
-            _threadpool->finishedjobs->firstjob = newjob;
-            _threadpool->finishedjobs->lastjob = newjob;
+         _threadpool->finishedjobs->firstjob = newjob;
+         _threadpool->finishedjobs->lastjob = newjob;
       }
       else
       {
-            _threadpool->finishedjobs->lastjob->nextjob = newjob;
-            _threadpool->finishedjobs->lastjob = newjob;
+         _threadpool->finishedjobs->lastjob->nextjob = newjob;
+         _threadpool->finishedjobs->lastjob = newjob;
       }
-        _threadpool->finishedjobs->njobs++;
+
+      _threadpool->finishedjobs->njobs++;
 
       /* signalling that a job has been finished */
       SCIP_CALL( SCIPtpiBroadcastCondition(&(_threadpool)->jobfinished) );
@@ -251,7 +263,7 @@ SCIP_RETCODE createThreadPool(
    for( i = 0; i < nthreads; i++ )
    {
       (*thrdpool)->threads[i].threadid = i;
-      SCIP_CALL( thrd_create(&((*thrdpool)->threads[i].thread), threadPoolThread, (void *)(*thrdpool)) );
+      SCIP_CALL( thrd_create(&((*thrdpool)->threads[i].thread), threadPoolThread, (void*)(*thrdpool)) );
    }
 
    /* halt while all threads are not active TODO: is synchronization required here ? */
@@ -321,7 +333,9 @@ SCIP_RETCODE threadPoolAddWork(
    /* @todo this needs to be checked. It is possible that a job can be submitted and then the queue is closed or the
     * thread pool is shutdown. Need to work out the best way to handle this. */
    while( _threadpool->jobqueue->njobs == _threadpool->queuesize && !(_threadpool->shutdown || !_threadpool->queueopen) )
+   {
       SCIP_CALL( SCIPtpiWaitCondition(&(_threadpool->queuenotfull), &(_threadpool->poollock)) );
+   }
 
    /* if the thread pool is shutdown or the queue is closed, then we need to leave the job submission */
    if( !_threadpool->queueopen )
@@ -429,10 +443,12 @@ SCIP_RETCODE freeThreadPool(
    SCIP_CALL( SCIPtpiBroadcastCondition(&((*thrdpool)->queuenotfull)) );
 
    retcode = SCIP_OKAY;
+
    /* calling a join to ensure that all worker finish before the thread pool is closed */
    for( i = 0; i < (*thrdpool)->nthreads; i++ )
    {
       int thrdretcode;
+
       if( thrd_join(threads[i].thread, &thrdretcode) != thrd_success )
          retcode = MIN(SCIP_ERROR, retcode);
       else
@@ -579,6 +595,7 @@ void removeJobFromQueue(
 
       /* at this point the next job must be the last job */
       assert(nextjob == jobqueue->lastjob);
+
       if( nextjob->jobid == jobid )
       {
          jobqueue->lastjob = currjob;
@@ -702,6 +719,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
    SCIP_JOB* prevjob;
 
    SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
+
    while( isJobRunning(_threadpool->currentjobs, jobid) ||
           isJobRunning(_threadpool->jobqueue, jobid) )
    {
@@ -712,6 +730,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
    retcode = SCIP_OKAY;
    currjob = _threadpool->finishedjobs->firstjob;
    prevjob = NULL;
+
    while( currjob )
    {
       if( currjob->jobid == jobid )
@@ -727,6 +746,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
             _threadpool->finishedjobs->firstjob = currjob->nextjob;
          else
             prevjob->nextjob = currjob->nextjob;
+
          if( currjob == _threadpool->finishedjobs->lastjob )
             _threadpool->finishedjobs->lastjob = prevjob;
 
