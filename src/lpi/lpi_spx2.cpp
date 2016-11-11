@@ -1574,6 +1574,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    return SCIP_OKAY;
 }
 
+/* todo unclear how to adapt to persistent scaling */
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
 SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1642,6 +1643,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    return SCIP_OKAY;
 }
 
+/* todo unclear how to adapt to persistent scaling */
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
  *  are divided by the scalar; for negative scalars, the column's bounds are switched
  */
@@ -1822,12 +1824,29 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
-      const Vector& lbvec = lpi->spx->lowerRealInternal();
-      const Vector& ubvec = lpi->spx->upperRealInternal();
-      for( i = firstcol; i <= lastcol; ++i )
+      if( lpi->spx->persistentScaling() )
       {
-         lb[i-firstcol] = lbvec[i];
-         ub[i-firstcol] = ubvec[i];
+         DVector lbvec;
+         DVector ubvec;
+         lpi->spx->getLowerReal(ubvec);
+         lpi->spx->getUpperReal(lbvec);
+
+         for( i = firstcol; i <= lastcol; ++i )
+         {
+            lb[i-firstcol] = lbvec[i];
+            ub[i-firstcol] = ubvec[i];
+         }
+      }
+      else
+      {
+         const Vector& lbvec = lpi->spx->lowerRealInternal();
+         const Vector& ubvec = lpi->spx->upperRealInternal();
+
+         for( i = firstcol; i <= lastcol; ++i )
+         {
+            lb[i-firstcol] = lbvec[i];
+            ub[i-firstcol] = ubvec[i];
+         }
       }
    }
    else
@@ -1839,12 +1858,29 @@ SCIP_RETCODE SCIPlpiGetCols(
       for( i = firstcol; i <= lastcol; ++i )
       {
          beg[i-firstcol] = *nnonz;
-         const SVector& cvec = lpi->spx->colVectorRealInternal(i);
-         for( j = 0; j < cvec.size(); ++j )
+
+         if( lpi->spx->persistentScaling() )
          {
-            ind[*nnonz] = cvec.index(j);
-            val[*nnonz] = cvec.value(j);
-            (*nnonz)++;
+            DSVector cvec;
+            lpi->spx->getColVectorReal(i, cvec);
+
+            for( j = 0; j < cvec.size(); ++j )
+            {
+               ind[*nnonz] = cvec.index(j);
+               val[*nnonz] = cvec.value(j);
+               (*nnonz)++;
+            }
+         }
+         else
+         {
+            const SVector& cvec = lpi->spx->colVectorRealInternal(i);
+
+            for( j = 0; j < cvec.size(); ++j )
+            {
+               ind[*nnonz] = cvec.index(j);
+               val[*nnonz] = cvec.value(j);
+               (*nnonz)++;
+            }
          }
       }
    }
@@ -1922,7 +1958,6 @@ SCIP_RETCODE SCIPlpiGetRows(
       {
          beg[i-firstrow] = *nnonz;
 
-
          if( lpi->spx->persistentScaling() )
          {
             DSVector rvec;
@@ -1938,6 +1973,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          else
          {
             const SVector& rvec = lpi->spx->rowVectorRealInternal(i);
+
             for( j = 0; j < rvec.size(); ++j )
             {
                ind[*nnonz] = rvec.index(j);
@@ -2121,6 +2157,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
    assert(0 <= row && row < lpi->spx->numRowsReal());
    assert(val != NULL);
 
+   // todo implement coefReal that handles unscaling if necessary
    *val = lpi->spx->colVectorRealInternal(col)[row];
 
    return SCIP_OKAY;
