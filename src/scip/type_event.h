@@ -31,6 +31,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,7 +125,7 @@ extern "C" {
 #define SCIP_EVENTTYPE_ROWEVENT       (SCIP_EVENTTYPE_ROWADDEDSEPA | SCIP_EVENTTYPE_ROWDELETEDSEPA | SCIP_EVENTTYPE_ROWADDEDLP | SCIP_EVENTTYPE_ROWDELETEDLP | SCIP_EVENTTYPE_ROWCHANGED)
 
 typedef uint64_t SCIP_EVENTTYPE;         /**< type of event (bit field) */
-
+#define SCIP_EVENTTYPE_FORMAT PRIx64
 
 typedef struct SCIP_Eventhdlr SCIP_EVENTHDLR;     /**< event handler for a specific events */
 typedef struct SCIP_EventhdlrData SCIP_EVENTHDLRDATA; /**< event handler data */

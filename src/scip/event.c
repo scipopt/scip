@@ -257,7 +257,7 @@ SCIP_RETCODE SCIPeventhdlrExec(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPsetDebugMsg(set, "execute event of handler <%s> with event %p of type 0x%llx\n", eventhdlr->name, (void*)event, event->eventtype);
+   SCIPsetDebugMsg(set, "execute event of handler <%s> with event %p of type 0x%"SCIP_EVENTTYPE_FORMAT"\n", eventhdlr->name, (void*)event, event->eventtype);
 
 #ifdef TIMEEVENTEXEC
    /* start timing */
@@ -1473,7 +1473,7 @@ SCIP_RETCODE SCIPeventProcess(
    assert((event->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
    assert((event->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
 
-   SCIPsetDebugMsg(set, "processing event of type 0x%llx\n", event->eventtype);
+   SCIPsetDebugMsg(set, "processing event of type 0x%"SCIP_EVENTTYPE_FORMAT"\n", event->eventtype);
 
    switch( event->eventtype )
    {
@@ -1967,7 +1967,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPsetDebugMsg(set, "processing event filter %p (len %d, mask 0x%x) with event type 0x%llx\n",
+   SCIPsetDebugMsg(set, "processing event filter %p (len %d, mask 0x%"SCIP_EVENTTYPE_FORMAT") with event type 0x%"SCIP_EVENTTYPE_FORMAT"\n",
       (void*)eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
 
    eventtype = event->eventtype;
@@ -2000,7 +2000,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    if( !processed )
    {
       eventfilter->eventmask &= ~event->eventtype;
-      SCIPsetDebugMsg(set, " -> event type 0x%llx not processed. new mask of event filter %p: 0x%llx\n",
+      SCIPsetDebugMsg(set, " -> event type 0x%"SCIP_EVENTTYPE_FORMAT" not processed. new mask of event filter %p: 0x%"SCIP_EVENTTYPE_FORMAT"\n",
          event->eventtype, (void*)eventfilter, eventfilter->eventmask);
    }
 
@@ -2096,7 +2096,7 @@ SCIP_RETCODE eventqueueAppend(
    assert(event != NULL);
    assert(*event != NULL);
 
-   SCIPsetDebugMsg(set, "appending event %p of type 0x%llx to event queue %p at position %d\n",
+   SCIPsetDebugMsg(set, "appending event %p of type 0x%"SCIP_EVENTTYPE_FORMAT" to event queue %p at position %d\n",
       (void*)*event, (*event)->eventtype, (void*)eventqueue, eventqueue->nevents);
 
    SCIP_CALL( eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1) );
@@ -2140,7 +2140,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    else
    {
       /* delay processing of event by appending it to the event queue */
-      SCIPsetDebugMsg(set, "adding event %p of type 0x%llx to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
+      SCIPsetDebugMsg(set, "adding event %p of type 0x%"SCIP_EVENTTYPE_FORMAT" to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
 
       switch( (*event)->eventtype )
       {
@@ -2389,7 +2389,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
       event = eventqueue->events[i];
       assert(event != NULL);
 
-      SCIPsetDebugMsg(set, "processing event %d of %d events in queue: eventtype=0x%llx\n", i, eventqueue->nevents, event->eventtype);
+      SCIPsetDebugMsg(set, "processing event %d of %d events in queue: eventtype=0x%"SCIP_EVENTTYPE_FORMAT"\n", i, eventqueue->nevents, event->eventtype);
 
       /* unmark the event queue index of a variable with changed objective value or bounds, and unmark the event queue
        * member flag of a variable with added implication
