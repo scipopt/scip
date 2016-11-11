@@ -44,10 +44,11 @@ enum SCIP_Submitstatus
 };
 typedef enum SCIP_Submitstatus SCIP_SUBMITSTATUS;
 
-/** The job status */
-/* There is more than one job per job id. So the job status will return either SCIP_JOB_DOESNOTEXIST or the lowest level
- * of execution. For example, if there is a job running and a job in the queue, then the return will be
- * SCIP_JOB_INQUEUE.
+/** The job status
+ *
+ *  There is more than one job per job id. So the job status will return either SCIP_JOB_DOESNOTEXIST or the lowest level
+ *  of execution. For example, if there is a job running and a job in the queue, then the return will be
+ *  SCIP_JOB_INQUEUE.
  */
 enum SCIP_Jobstatus
 {
@@ -58,15 +59,8 @@ enum SCIP_Jobstatus
 };
 typedef enum SCIP_Jobstatus SCIP_JOBSTATUS;
 
-/** TODO: The job type */
-enum SCIP_Jobtype
-{
-   SCIP_JOB_EXTSOLVER      = 0,
-   SCIP_JOB_FUNC           = 1
-};
-typedef enum SCIP_Jobtype SCIP_JOBTYPE;
-
 typedef struct SCIP_Job SCIP_JOB;            /**< a job to be submitted to a separate thread */
+
 #ifdef __cplusplus
 }
 #endif
