@@ -4267,7 +4267,7 @@ SCIP_RETCODE presolveDisaggregate(
    /* check how many quadratic terms with non-overlapping variables we have
     * in other words, the number of components in the sparsity graph of the quadratic term matrix */
    ncomponents = 0;
-   SCIP_CALL( SCIPhashmapCreate(&var2component, SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2component, SCIPblkmem(scip), consdata->nquadvars) );
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       /* if variable was marked already, skip it */
@@ -4643,7 +4643,7 @@ SCIP_RETCODE checkCurvature(
    consdata->isconvex  = TRUE;
    consdata->isconcave = TRUE;
 
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
    for( i = 0; i < n; ++i )
    {
       if( consdata->quadvarterms[i].nadjbilin > 0 )
@@ -12935,7 +12935,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          local, modifiable, dynamic, removable, FALSE) );
 
    /* add quadratic variables and remember their indices */
-   SCIP_CALL( SCIPhashmapCreate(&quadvaridxs, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nquadterms)) );
+   SCIP_CALL( SCIPhashmapCreate(&quadvaridxs, SCIPblkmem(scip), nquadterms) );
    nbilinterms = 0;
    for( i = 0; i < nquadterms; ++i )
    {
@@ -13603,6 +13603,44 @@ SCIP_Real SCIPgetRhsQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->rhs;
+}
+
+/** get index of a variable in linvars that may be decreased without making any other constraint infeasible, or -1 if none */
+int SCIPgetLinvarMayDecreaseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   consdataFindUnlockedLinearVar(scip, consdata);
+
+   return consdata->linvar_maydecrease;
+}
+
+/** get index of a variable in linvars that may be increased without making any other constraint infeasible, or -1 if none */
+int SCIPgetLinvarMayIncreaseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   consdataFindUnlockedLinearVar(scip, consdata);
+
+   return consdata->linvar_mayincrease;
 }
 
 /** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet. */

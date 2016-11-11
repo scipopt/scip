@@ -68,17 +68,23 @@ typedef struct SCIP_PQueue SCIP_PQUEUE;
  */
 typedef struct SCIP_HashTable SCIP_HASHTABLE;
 
-/** Hash table element list to store single elements of a hash table */
-typedef struct SCIP_HashTableList SCIP_HASHTABLELIST;
+/** Hash table data structure which allows multiple occurences of an element
+ *
+ *  - \ref MultiHash "List of all available methods"
+ */
+typedef struct SCIP_MultiHash SCIP_MULTIHASH;
+
+/** Hash table element list to store single elements of a multi hash table */
+typedef struct SCIP_MultiHashList SCIP_MULTIHASHLIST;
+
+/** Hash map entry */
+typedef struct SCIP_HashMapEntry SCIP_HASHMAPENTRY;
 
 /** Hash map data structure
  *
  *  - \ref HashMap "List of all available methods"
  */
 typedef struct SCIP_HashMap SCIP_HASHMAP;
-
-/** Hash map  element list to store single mappings of a hash map */
-typedef struct SCIP_HashMapList SCIP_HASHMAPLIST;
 
 /** dynamic array for storing SCIP_Real values */
 typedef struct SCIP_RealArray SCIP_REALARRAY;

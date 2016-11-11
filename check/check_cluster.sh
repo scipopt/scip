@@ -132,7 +132,6 @@ do
     # run different random seeds
     for ((s = 0; $s <= $SEEDS; s++))
     do
-
         # permute transformed problem
 	for ((p = 0; $p <= $PERMUTE; p++))
 	do

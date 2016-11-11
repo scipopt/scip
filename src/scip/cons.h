@@ -40,6 +40,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
+#include "scip/type_branch.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG
@@ -1088,6 +1089,12 @@ extern
 SCIP_RETCODE SCIPconsDisablePropagation(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** marks the constraint to be a conflict */
+extern
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** marks the constraint to be propagated (update might be delayed) */
