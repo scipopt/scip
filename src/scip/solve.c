@@ -2071,7 +2071,7 @@ SCIP_RETCODE cutpoolSeparate(
    SCIP_Bool             root,               /**< are we at the root node? */
    int                   actdepth,           /**< the depth of the focus node */
    SCIP_Bool*            enoughcuts,         /**< pointer to store if enough cuts were found in current separation round */
-   SCIP_Bool*            cutoff             /**< pointer to store if an cutoff was detected */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
    )
 {
    if( (set->sepa_poolfreq == 0 && actdepth == 0)
@@ -2775,9 +2775,8 @@ SCIP_RETCODE solveNodeLP(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if an unbounded ray was found in the LP */
    SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occured */
-   SCIP_Bool*            pricingaborted     /**< pointer to store TRUE, if the pricing was aborted and the lower bound
+   SCIP_Bool*            pricingaborted      /**< pointer to store TRUE, if the pricing was aborted and the lower bound
                                               *   must not be used */
-   
    )
 {
    SCIP_Longint nlpiterations;
