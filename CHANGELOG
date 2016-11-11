@@ -30,6 +30,10 @@ features:
 - can now analyze dual unbounded rays of primal infeasible LPs
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
+- add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
+- add sepa_convexproj, a separator which projects onto convex relaxation and build gradient cuts at the projection
+- add sepa_gauge, a separator which computes an interior point of a convex relaxation and performs a binary search in the segment joining
+  the interior point and the point to separate until it finds a point in the boundary of the feasible region where to build a gradient cut
 - add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
 - new presolving method presol_qpkktref to add the KKT conditions to QPs
 - implemented and extended stuffing presolving in linear constraint handler

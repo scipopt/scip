@@ -509,6 +509,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
 			scip/sepa_cmir.o \
+			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
 			scip/sepa_flowcover.o \
