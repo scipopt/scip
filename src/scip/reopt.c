@@ -5614,8 +5614,9 @@ SCIP_RETCODE SCIPreoptCheckRestart(
    /* check if the whole reoptimization process should start from scratch */
    if( node == NULL )
    {
-      if( reopt->run > 0 && set->reopt_objsimdelay > -1.0 )
-         sim = reopt->simtolastobj;
+      /* compute the similarity to the objective function of the first run after restarting */
+      if( reopt->run > 1 && set->reopt_objsimdelay > -1.0 )
+         sim = reoptSimilarity(reopt, set, reopt->run-1, MAX(0, reopt->lastrestart-1), transvars, ntransvars);
 
       /* check similarity */
       if( SCIPsetIsFeasLT(set, sim, set->reopt_objsimdelay) )
