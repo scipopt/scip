@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPboundstoreAdd(
       assert(boundstore->bndchg[pos].boundtype == boundtype);
       assert(boundstore->bndchg[pos].varidx == varidx);
 
-      /* if bound is better override old one */
+      /* if the bound is better overwrite the old one */
       if( (boundtype == SCIP_BOUNDTYPE_LOWER && newbound > boundstore->bndchg[pos].newbound) ||
           (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < boundstore->bndchg[pos].newbound) )
       {
@@ -122,6 +122,7 @@ SCIP_RETCODE SCIPboundstoreMerge(
    assert(source != NULL);
    assert(target != NULL);
 
+   /* just iterate over the boundchanges in the source and add them to the target */
    for( i = 0; i < source->nbndchg; ++i )
    {
       SCIP_CALL( SCIPboundstoreAdd(scip, target, source->bndchg[i].varidx, source->bndchg[i].newbound, source->bndchg[i].boundtype) );
@@ -137,6 +138,7 @@ void SCIPboundstoreClear(
 {
    assert(boundstore != NULL);
 
+   /* clearing the positions is enough */
    if( boundstore->nbndchg > 0 )
    {
       BMSclearMemoryArray(boundstore->bndpos, boundstore->nvars);

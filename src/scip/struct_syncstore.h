@@ -38,65 +38,75 @@ extern "C" {
 
 struct SCIP_SyncStore
 {
-   int                     references;         /**< reference count of spi */
+   int                     nuses;              /**< number of uses of the synchronization store */
    SCIP_PARALLELMODE       mode;               /**< the mode for the parallel solving */
-   SCIP_Bool               initialized;
-   SCIP_SYNCDATA*          syncdata;
-   SCIP_SYNCDATA*          lastsync;
+   SCIP_Bool               initialized;        /**< flag to indicate whether the syncstore has been initialized */
+   SCIP_SYNCDATA*          syncdata;           /**< array of size nsyncdata, containing the synchronization data
+                                                *   for each active synchroization */
+   SCIP_SYNCDATA*          lastsync;           /**< pointer to the last synchronization data that has been synchronized
+                                                *   by all threads */
 
-   SCIP*                   mainscip;
-   SCIP_Bool               stopped;
-   SCIP_LOCK               lock;
+   SCIP*                   mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
+   SCIP_Bool               stopped;            /**< flag to indicate if the solving is stopped */
+   SCIP_LOCK               lock;               /**< lock to protect the syncstore data structure from data races */
 
    /* SPI settings */
-   int                     nsyncdata;
-   int                     maxnsyncdelay;
-   SCIP_Real               minsyncdelay;
-   SCIP_Real               syncfreqinit;
-   SCIP_Real               syncfreqmax;
-   SCIP_Real               targetprogress;
-   SCIP_Real               syncfreqfactor;
-   int                     maxnsols;
-   int                     nsolvers;
+   int                     nsyncdata;          /**< the size of the synchronization data array */
+   SCIP_Real               minsyncdelay;       /**< the minimum delay before a synchronization data may be read */
+   int                     maxnsyncdelay;      /**< maximum number of synchronizations before the reading of the next
+                                                *   synchronization data is enforced regardless of the minimal synchroization
+                                                *   delay */
+   SCIP_Real               syncfreqinit;       /**< the initial synchronization frequency which is read from the settings
+                                                *   of the main SCIP when the syncstore is initialized */
+   SCIP_Real               syncfreqmax;        /**< the maximum synchronization frequency */
+   int                     maxnsols;           /**< maximum number of solutions that can be shared in one synchronization */
+   int                     nsolvers;           /**< number of solvers synchronizing with this syncstore */
 };
 
 
 struct SCIP_SyncData
 {
-   SCIP_Real*              solobj;
-   SCIP_Real**             sols;
-   int*                    solsource;
-   int                     nsols;
-   SCIP_Real               bestlowerbound;
-   SCIP_Real               bestupperbound;
-   SCIP_Longint            syncnum;
-   int                     winner;
-   SCIP_STATUS             status;
-   SCIP_LOCK               lock;
-   int                     syncedcount;
-   SCIP_CONDITION          allsynced;
-   SCIP_BOUNDSTORE*        boundstore;
-   SCIP_Real               syncfreq;
-   SCIP_Longint            memtotal;
+   SCIP_Real*              solobj;             /**< array with the objective value of all stored solutions */
+   SCIP_Real**             sols;               /**< array with the solution values of each variable for all stored solutions */
+   int*                    solsource;          /**< the solverid of the solution came from */
+   int                     nsols;              /**< number of solutions currently stored in the synchronization data */
+   SCIP_Real               bestlowerbound;     /**< largest lower bound on the objective value that was stored in this
+                                                *   synchroization data */
+   SCIP_Real               bestupperbound;     /**< smalles upper bound on the objective value that was stored in this
+                                                *   synchroization data */
+   SCIP_Longint            syncnum;            /**< the synchronization number of this synchronization data */
+   int                     winner;             /**< the solverid of the solver with the best status */
+   SCIP_STATUS             status;             /**< the best status that was stored in this synchronization data */
+   SCIP_LOCK               lock;               /**< a lock to protect this synchronization data */
+   int                     syncedcount;        /**< a counter of how many solvers have finished writing to this synchronization data */
+   SCIP_CONDITION          allsynced;          /**< a condition variable to signal when the last solver has finished writing to this
+                                                *   synchronization data */
+   SCIP_BOUNDSTORE*        boundstore;         /**< a boundstore for storing all the bound changes that were added to this
+                                                *   synchronization data */
+   SCIP_Real               syncfreq;           /**< the synchroization frequency that was set in this synchronization data */
+   SCIP_Longint            memtotal;           /**< the total amount of memory used by all solvers including the main SCIP */
 };
 
-
+/** struct for storing the position of avariables lower and upper bound in the boundstore */
 typedef struct {
-   int pos[2];
+   int                     pos[2];             /**< stores at pos[SCIP_BOUNDTYPE_LOWER] the position of the lowerbound and
+                                                *   at pos[SCIP_BOUNDTYPE_UPPER] the position of the upperbound */
 } BoundPos;
 
+/** struct for storing a single boundchange in the boundstore */
 typedef struct {
-   int                 varidx;      /**< the variables position in the variable array of the main scip */
-   SCIP_Real           newbound;    /**< the variables new bound */
-   SCIP_BOUNDTYPE      boundtype;   /**< the type of the variables new bound */
+   int                     varidx;             /**< the variables position in the variable array of the main scip */
+   SCIP_Real               newbound;           /**< the variables new bound */
+   SCIP_BOUNDTYPE          boundtype;          /**< the type of the variables new bound */
 } BoundChg;
 
 struct SCIP_BoundStore {
-   int                 nvars;
-   BoundPos*           bndpos;
-   BoundChg*           bndchg;
-   int                 nbndchg;
-   int                 bndchgsize;
+   int                     nvars;              /**< the number of variables to store bounds for */
+   BoundPos*               bndpos;             /**< array of size nvars to store the positions for all the bound changes
+                                                *   stored in this boundstore */
+   BoundChg*               bndchg;             /**< array of boundchanges */
+   int                     nbndchg;            /**< the number of boundchanges stored in this bound store */
+   int                     bndchgsize;         /**< the size of the bound change array */
 };
 
 #endif
