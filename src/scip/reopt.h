@@ -597,11 +597,20 @@ SCIP_RETCODE SCIPreoptInstallBounds(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** reactivate globally valid constraints that were deactivated and necessary to ensure correctness */
 extern
 SCIP_RETCODE SCIPreoptResetActiveConss(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   );
+
+
+/** returns whether a constraint is necessary to ensure correctness and cannot be deleted */
+extern
+SCIP_Bool SCIPreoptConsCanBeDeleted(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_CONS*            cons                /**< problem constraint */
    );
 
 #ifdef __cplusplus

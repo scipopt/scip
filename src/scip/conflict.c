@@ -6016,6 +6016,7 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_TREE*            tree,               /**< tree data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   nvars,              /**< number of variables in the proof constraint */
    SCIP_VAR**            vars,               /**< problem variables */
@@ -6082,7 +6083,7 @@ SCIP_RETCODE createAndAddDualray(
    SCIPconsMarkConflict(cons);
 
    /* add constraint based on dual ray to storage */
-   SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, prob) );
+   SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, prob, reopt) );
 
    /* add constraint to problem */
    SCIP_CALL( SCIPaddCons(set->scip, cons) );
@@ -6146,7 +6147,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var),
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
-      SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, blkmem, 1, &var, &val,
+      SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, 1, &var, &val,
             -SCIPsetInfinity(set), rhs, set->conf_seperate) );
    }
    else
@@ -6279,14 +6280,14 @@ SCIP_RETCODE performDualRayAnalysis(
              *
              * note: we have to use ndualrayvars instead of nmirvars because mirvars and mirvals are not sparse.
              */
-            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, blkmem, ndualrayvars, mirvars,
+            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, ndualrayvars, mirvars,
                   mirvals, -SCIPsetInfinity(set), mirrhs, set->conf_seperate) );
          }
 
          if( !success || (success && !set->conf_prefermir) )
          {
             /* create and add the original proof */
-            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, blkmem, ndualrayvars, mirvars,
+            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, ndualrayvars, mirvars,
                   farkascoefs, farkaslhs, SCIPsetInfinity(set), set->conf_seperate) );
          }
       }

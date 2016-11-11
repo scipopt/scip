@@ -8417,6 +8417,7 @@ SCIP_RETCODE SCIPreoptInstallBounds(
    return SCIP_OKAY;
 }
 
+/** reactivate globally valid constraints that were deactivated and necessary to ensure correctness */
 SCIP_RETCODE SCIPreoptResetActiveConss(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -8431,6 +8432,7 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
 
    nentries = SCIPhashmapGetNEntries(reopt->activeconss);
 
+   /* loop over all entries of the hashmap and reactivate deactivated constraints */
    for( i = 0; i < nentries; i++ )
    {
       SCIP_CONS* cons;
@@ -8443,6 +8445,9 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
       assert(cons != NULL);
       assert(!SCIPconsIsDeleted(cons));
 
+      /* to ensure that the constraint will be added to all the data structures we need to deactivate the
+       * constraint first.
+       */
       if( SCIPconsIsActive(cons) )
       {
          SCIP_CALL( SCIPconsDeactivate(cons, set, stat) );
@@ -8451,4 +8456,20 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether a constraint is necessary to ensure correctness and cannot be deleted */
+SCIP_Bool SCIPreoptConsCanBeDeleted(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_CONS*            cons                /**< problem constraint */
+   )
+{
+   assert(reopt != NULL);
+   assert(cons != NULL);
+
+   /* the hashmap is not initialized, we can delete all constraints */
+   if( reopt->activeconss == NULL )
+      return TRUE;
+
+   return !SCIPhashmapExists(reopt->activeconss, (void*)cons);
 }
