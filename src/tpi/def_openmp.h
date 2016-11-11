@@ -29,112 +29,112 @@
 #define CONCATENATE(x, y)     x y
 #define CONCATPARENTH(x, y)   x ( y )
 
-#define SPI_NONE  NULL
+#define TPI_NULL  NULL
 
 #ifdef TPI_OMP
 
-#define SPI_PRAGMA_CLAUSE(directive, clause)    _Pragma( STRINGIFY( CONCATENATE( directive, clause ) ) )
-#define SPI_PRAGMA(directive)               _Pragma( STRINGIFY( directive ) )
-#define SPI_PRAGMA_PARENTH(directive, var)  _Pragma( STRINGIFY( CONCATPARENTH( directive, var ) ) )
+#define TPI_PRAGMA_CLAUSE(directive, clause)    _Pragma( STRINGIFY( CONCATENATE( directive, clause ) ) )
+#define TPI_PRAGMA(directive)               _Pragma( STRINGIFY( directive ) )
+#define TPI_PRAGMA_PARENTH(directive, var)  _Pragma( STRINGIFY( CONCATPARENTH( directive, var ) ) )
 
 #else
 
-#define SPI_PRAGMA_CLAUSE(directive, clause)
-#define SPI_PRAGMA(directive)
-#define SPI_PRAGMA_PARENTH(directive, var)
+#define TPI_PRAGMA_CLAUSE(directive, clause)
+#define TPI_PRAGMA(directive)
+#define TPI_PRAGMA_PARENTH(directive, var)
 
 #endif
 
 
-#define SPI_FOR_CLAUSE(clause)      SPI_PRAGMA_CLAUSE( SPI_DIR_FOR, clause )
-#define SPI_FOR                     SPI_PRAGMA( SPI_DIR_FOR )
-#define SPI_PARA_CLAUSE(clause)     SPI_PRAGMA_CLAUSE( SPI_DIR_PARA, clause )
+#define TPI_FOR_CLAUSE(clause)      TPI_PRAGMA_CLAUSE( TPI_DIR_FOR, clause )
+#define TPI_FOR                     TPI_PRAGMA( TPI_DIR_FOR )
+#define TPI_PARA_CLAUSE(clause)     TPI_PRAGMA_CLAUSE( TPI_DIR_PARA, clause )
 
-#define SPI_PARA_CLAUSE_SHARED(priv, clause)       SPI_PRAGMA_CLAUSE( SPI_DIR_PARA,                           \
-                                                      SPI_CLAUSE_DEFAULT( shared )                            \
-                                                      SPI_CLAUSE_PRIVATE( (priv) ) clause )
+#define TPI_PARA_CLAUSE_SHARED(priv, clause)       TPI_PRAGMA_CLAUSE( TPI_DIR_PARA,                           \
+                                                      TPI_CLAUSE_DEFAULT( shared )                            \
+                                                      TPI_CLAUSE_PRIVATE( (priv) ) clause )
 
-#define SPI_PARA_SHARED                            SPI_PRAGMA_CLAUSE( SPI_DIR_PARA,                           \
-                                                      SPI_CLAUSE_DEFAULT( shared ) )
+#define TPI_PARA_SHARED                            TPI_PRAGMA_CLAUSE( TPI_DIR_PARA,                           \
+                                                      TPI_CLAUSE_DEFAULT( shared ) )
 
-#define SPI_PARA_SHARED_PRIVATE(priv)              SPI_PRAGMA_CLAUSE( SPI_DIR_PARA,                           \
-                                                      SPI_CLAUSE_DEFAULT( shared )                            \
-                                                      SPI_CLAUSE_PRIVATE( ( priv ) ) )
+#define TPI_PARA_SHARED_PRIVATE(priv)              TPI_PRAGMA_CLAUSE( TPI_DIR_PARA,                           \
+                                                      TPI_CLAUSE_DEFAULT( shared )                            \
+                                                      TPI_CLAUSE_PRIVATE( ( priv ) ) )
 
-#define SPI_PARA_CLAUSE_NONE(share, priv, clause)  SPI_PRAGMA_CLAUSE( SPI_DIR_PARA,                           \
-                                                      SPI_CLAUSE_DEFAULT( (none) )                            \
-                                                      SPI_CLAUSE_SHARED( (share) )                            \
-                                                      SPI_CLAUSE_PRIVATE( (priv) ) clause )
+#define TPI_PARA_CLAUSE_NONE(share, priv, clause)  TPI_PRAGMA_CLAUSE( TPI_DIR_PARA,                           \
+                                                      TPI_CLAUSE_DEFAULT( (none) )                            \
+                                                      TPI_CLAUSE_SHARED( (share) )                            \
+                                                      TPI_CLAUSE_PRIVATE( (priv) ) clause )
 
-#define SPI_PARA                    SPI_PRAGMA( SPI_DIR_PARA )
-#define SPI_CRITICAL(var)           SPI_PRAGMA_PARENTH( SPI_DIR_CRITICAL, var)
-#define SPI_MASTER                  SPI_PRAGMA( SPI_DIR_MASTER )
-#define SPI_WAIT                    SPI_PRAGMA( SPI_DIR_WAIT )
-#define SPI_ORDERED                 SPI_PRAGMA( SPI_DIR_ORDERED )
-#define SPI_SINGLE                  SPI_PRAGMA( SPI_DIR_SINGLE )
-#define SPI_CLAUSE_SINGLE(clause)   SPI_PRAGMA_CLAUSE( SPI_DIR_SINGLE, clause )
-#define SPI_TASK                    SPI_PRAGMA( SPI_DIR_TASK )
-#define SPI_TASK_SHARED             SPI_PRAGMA_CLAUSE( SPI_DIR_TASK,                                           \
-                                       SPI_CLAUSE_DEFAULT(shared) )
-#define SPI_CLAUSE_TASK(clause)     SPI_PRAGMA_CLAUSE( SPI_DIR_TASK, clause )
-#define SPI_TASKWAIT                SPI_PRAGMA( SPI_DIR_TASKWAIT )
+#define TPI_PARA                    TPI_PRAGMA( TPI_DIR_PARA )
+#define TPI_CRITICAL(var)           TPI_PRAGMA_PARENTH( TPI_DIR_CRITICAL, var)
+#define TPI_MASTER                  TPI_PRAGMA( TPI_DIR_MASTER )
+#define TPI_WAIT                    TPI_PRAGMA( TPI_DIR_WAIT )
+#define TPI_ORDERED                 TPI_PRAGMA( TPI_DIR_ORDERED )
+#define TPI_SINGLE                  TPI_PRAGMA( TPI_DIR_SINGLE )
+#define TPI_CLAUSE_SINGLE(clause)   TPI_PRAGMA_CLAUSE( TPI_DIR_SINGLE, clause )
+#define TPI_TASK                    TPI_PRAGMA( TPI_DIR_TASK )
+#define TPI_TASK_SHARED             TPI_PRAGMA_CLAUSE( TPI_DIR_TASK,                                           \
+                                       TPI_CLAUSE_DEFAULT(shared) )
+#define TPI_CLAUSE_TASK(clause)     TPI_PRAGMA_CLAUSE( TPI_DIR_TASK, clause )
+#define TPI_TASKWAIT                TPI_PRAGMA( TPI_DIR_TASKWAIT )
 
 
 /* OpenMP pragma directives */
-#define SPI_DIR_PARA             omp parallel
-#define SPI_DIR_FOR              omp for
-#define SPI_DIR_CRITICAL         omp critical
-#define SPI_DIR_MASTER           omp master
-#define SPI_DIR_WAIT             omp barrier
-#define SPI_DIR_ORDERED          omp ordered
-#define SPI_DIR_TASK             omp task
-#define SPI_DIR_SINGLE           omp single
-#define SPI_DIR_TASKWAIT         omp taskwait
+#define TPI_DIR_PARA             omp parallel
+#define TPI_DIR_FOR              omp for
+#define TPI_DIR_CRITICAL         omp critical
+#define TPI_DIR_MASTER           omp master
+#define TPI_DIR_WAIT             omp barrier
+#define TPI_DIR_ORDERED          omp ordered
+#define TPI_DIR_TASK             omp task
+#define TPI_DIR_SINGLE           omp single
+#define TPI_DIR_TASKWAIT         omp taskwait
 
 
 /* OpenMP clauses */
-#define SPI_CLAUSE_PRIVATE(var)                 CONCATENATE( private, var )
-#define SPI_CLAUSE_FSTPRIVATE(var)              CONCATENATE( firstprivate, var )
-#define SPI_CLAUSE_LSTPRIVATE(var)              CONCATENATE( lastprivate, var )
-#define SPI_CLAUSE_CPYPRIVATE(var)              CONCATENATE( copyprivate, var )
-#define SPI_CLAUSE_NOWAIT                       nowait
-#define SPI_CLAUSE_SHARED(var)                  CONCATENATE( shared, var )
-#define SPI_CLAUSE_DEFAULT(var)                 CONCATPARENTH( default, var )
+#define TPI_CLAUSE_PRIVATE(var)                 CONCATENATE( private, var )
+#define TPI_CLAUSE_FSTPRIVATE(var)              CONCATENATE( firstprivate, var )
+#define TPI_CLAUSE_LSTPRIVATE(var)              CONCATENATE( lastprivate, var )
+#define TPI_CLAUSE_CPYPRIVATE(var)              CONCATENATE( copyprivate, var )
+#define TPI_CLAUSE_NOWAIT                       nowait
+#define TPI_CLAUSE_SHARED(var)                  CONCATENATE( shared, var )
+#define TPI_CLAUSE_DEFAULT(var)                 CONCATPARENTH( default, var )
 /* The reduce clause requires op as either an operator or intrinsic procedure.
  * Operators: +, *, .and., .or., .eqv., .neqv.
  * intrinsic procedures: max, min, iand, ior, or ieor*/
-#define SPI_CLAUSE_REDUCE(op, var)              CONCATENATE( reduction, CONCATENATE( CONCATENATE( op, : ), var ) )
-#define SPI_CLAUSE_ORDERED                      ordered
-#define SPI_CLAUSE_IF(var)                      CONCATENATE( if, var )
-#define SPI_CLAUSE_NUMTHREADS(var)              CONCATENATE( num_threads, var )
-#define SPI_CLAUSE_SCHEDULE(type)               CONCATENATE( schedule, type )
-#define SPI_CLAUSE_SCHEDULE_CHUNK(type, chunk)  CONCATENATE( schedule, CONCATPARENTH( type, chunk ) )
-#define SPI_CLAUSE_COPYIN(var)                  CONCATENATE( copyin, var )
-#define SPI_CLAUSE_FINAL(var)                   CONCATENATE( final, var )
-#define SPI_CLAUSE_UNTIED                       untied
-#define SPI_CLAUSE_MERGEABLE                    mergeable
-#define SPI_CLAUSE_DEPEND(type, var)            CONCATENATE( depend, CONCATENATE( CONCATENATE( type, : ), var ) )
-#define SPI_CLAUSE_PRIORITY(var)                CONCATENATE( priority, var )
+#define TPI_CLAUSE_REDUCE(op, var)              CONCATENATE( reduction, CONCATENATE( CONCATENATE( op, : ), var ) )
+#define TPI_CLAUSE_ORDERED                      ordered
+#define TPI_CLAUSE_IF(var)                      CONCATENATE( if, var )
+#define TPI_CLAUSE_NUMTHREADS(var)              CONCATENATE( num_threads, var )
+#define TPI_CLAUSE_SCHEDULE(type)               CONCATENATE( schedule, type )
+#define TPI_CLAUSE_SCHEDULE_CHUNK(type, chunk)  CONCATENATE( schedule, CONCATPARENTH( type, chunk ) )
+#define TPI_CLAUSE_COPYIN(var)                  CONCATENATE( copyin, var )
+#define TPI_CLAUSE_FINAL(var)                   CONCATENATE( final, var )
+#define TPI_CLAUSE_UNTIED                       untied
+#define TPI_CLAUSE_MERGEABLE                    mergeable
+#define TPI_CLAUSE_DEPEND(type, var)            CONCATENATE( depend, CONCATENATE( CONCATENATE( type, : ), var ) )
+#define TPI_CLAUSE_PRIORITY(var)                CONCATENATE( priority, var )
 
 
 
-#define SPI_SHARED_DATA(name, members)       struct SPI_Shared_Data {                                         \
+#define TPI_SHARED_DATA(name, members)       struct TPI_Shared_Data {                                         \
                                                 members                                                       \
                                              } name;
 
-#define SPI_PRIVATE_DATA(name, members)      struct SPI_Private_Data {                                        \
+#define TPI_PRIVATE_DATA(name, members)      struct TPI_Private_Data {                                        \
                                                 members                                                       \
                                              } name;
 
-#define SPI_FSTPRIVATE_DATA(name, members)   struct SPI_FirstPrivate_Data {                                   \
+#define TPI_FSTPRIVATE_DATA(name, members)   struct TPI_FirstPrivate_Data {                                   \
                                                 members                                                       \
                                              } name;
 
-#define SPI_LSTPRIVATE_DATA(name, members)   struct SPI_LastPrivate_Data {                                    \
+#define TPI_LSTPRIVATE_DATA(name, members)   struct TPI_LastPrivate_Data {                                    \
                                                 members                                                       \
                                              } name;
 
-#define SPI_COPYIN_DATA(name, members)       struct SPI_CopyIn_Data {                                         \
+#define TPI_COPYIN_DATA(name, members)       struct TPI_CopyIn_Data {                                         \
                                                 members                                                       \
                                              } name;
 

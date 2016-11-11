@@ -504,9 +504,9 @@ SCIP_RETCODE SCIPsolveConcurrent(
    SCIPsyncstoreSetSolveIsStopped(syncstore, FALSE);
    jobid = SCIPtpiGetNewJobID();
 
-   SPI_PARA
+   TPI_PARA
    {
-      SPI_SINGLE
+      TPI_SINGLE
       {
          for( i = 0; i < nconcsolvers; ++i )
          {

@@ -15,7 +15,7 @@
 
 /**@file   syncstore.h
  * @ingroup PARAINTERFACE
- * @brief  the SCIP parallel interface functions
+ * @brief  the function declarations for the synchronization store
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher
  */

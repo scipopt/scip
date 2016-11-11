@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_parallel.h
+/**@file   struct_syncstore.h
  * @ingroup PARAINTERFACE
- * @brief  the struct definitions for the SCIP parallel interface
+ * @brief  the struct definitions for the synchronization store
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald
  */

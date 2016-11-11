@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_spi.h
+/**@file   type_syncstore.h
  * @ingroup PARAINTERFACE
- * @brief  the type definitions for the SCIP parallel interface
+ * @brief  the type definitions for the synchronization store
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald
  */
