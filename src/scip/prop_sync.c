@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   prop_synch.c
+/**@file   prop_sync.c
  * @brief  propagator for applying global bound changes that were communicated by other
  *         concurrent solvers
  * @author Robert Lion Gottwald
@@ -23,13 +23,13 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/prop_synch.h"
+#include "scip/prop_sync.h"
 #include "scip/concurrent.h"
 #include "tpi/tpi.h"
 
 /* fundamental propagator properties */
-#define PROP_NAME              "synch"
-#define PROP_DESC              "synchronization propagator"
+#define PROP_NAME              "sync"
+#define PROP_DESC              "propagator for synchronization of bound changes"
 #define PROP_PRIORITY                     (INT_MAX/4) /**< propagator priority */
 #define PROP_FREQ                                  -1 /**< propagator frequency */
 #define PROP_DELAY                              FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -65,7 +65,7 @@ struct SCIP_PropData
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_PROPFREE(propFreeSynch)
+SCIP_DECL_PROPFREE(propFreeSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
@@ -84,7 +84,7 @@ SCIP_DECL_PROPFREE(propFreeSynch)
 
 /** initialization method of propagator (called after problem was transformed) */
 static
-SCIP_DECL_PROPINIT(propInitSynch)
+SCIP_DECL_PROPINIT(propInitSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* data;
 
@@ -107,7 +107,7 @@ SCIP_DECL_PROPINIT(propInitSynch)
 
 /** deinitialization method of propagator (called before transformed problem is freed) */
 static
-SCIP_DECL_PROPEXIT(propExitSynch)
+SCIP_DECL_PROPEXIT(propExitSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* data;
 
@@ -126,7 +126,7 @@ SCIP_DECL_PROPEXIT(propExitSynch)
 
 /** execution method of propagator */
 static
-SCIP_DECL_PROPEXEC(propExecSynch)
+SCIP_DECL_PROPEXEC(propExecSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA*  data;
    int             i;
@@ -176,7 +176,7 @@ SCIP_DECL_PROPEXEC(propExecSynch)
       if( infeas )
       {
 #ifndef NDEBUG
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "synch propagator found cutoff in thread %i\n", SCIPtpiGetThreadNum());
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "sync propagator found cutoff in thread %i\n", SCIPtpiGetThreadNum());
 #endif
          data->ntightened += ntightened;
          data->ntightenedint += ntightenedint;
@@ -202,8 +202,8 @@ SCIP_DECL_PROPEXEC(propExecSynch)
  * propagator specific interface methods
  */
 
-/** creates the synch propagator and includes it in SCIP */
-SCIP_RETCODE SCIPincludePropSynch(
+/** creates the sync propagator and includes it in SCIP */
+SCIP_RETCODE SCIPincludePropSync(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -223,24 +223,24 @@ SCIP_RETCODE SCIPincludePropSynch(
     * compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecSynch, propdata) );
+         propExecSync, propdata) );
 
    assert(prop != NULL);
 
    /* set optional callbacks via setter functions */
-   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeSynch) );
-   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitSynch) );
-   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitSynch) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeSync) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitSync) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitSync) );
 
    return SCIP_OKAY;
 }
 
 
-/** adds a boundchange to the synch propagator */
+/** adds a boundchange to the sync propagator */
 EXTERN
-SCIP_RETCODE SCIPpropSynchAddBndchg(
+SCIP_RETCODE SCIPpropSyncAddBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop,               /**< synch propagator */
+   SCIP_PROP*            prop,               /**< sync propagator */
    SCIP_VAR*             var,                /**< variable for bound */
    SCIP_Real             val,                /**< value of bound */
    SCIP_BOUNDTYPE        bndtype             /**< type of bound */
@@ -277,9 +277,9 @@ SCIP_RETCODE SCIPpropSynchAddBndchg(
    return SCIP_OKAY;
 }
 
-/** gives the total number of tightened bounds found by the synch propagator */
-SCIP_Longint SCIPpropSynchGetNTightenedBnds(
-   SCIP_PROP*            prop                /**< synch propagator */
+/** gives the total number of tightened bounds found by the sync propagator */
+SCIP_Longint SCIPpropSyncGetNTightenedBnds(
+   SCIP_PROP*            prop                /**< sync propagator */
    )
 {
    SCIP_PROPDATA* data;
@@ -292,9 +292,9 @@ SCIP_Longint SCIPpropSynchGetNTightenedBnds(
    return data->ntightened;
 }
 
-/** gives the total number of tightened bounds for integer variables found by the synch propagator */
-SCIP_Longint SCIPpropSynchGetNTightenedIntBnds(
-   SCIP_PROP*            prop                /**< synch propagator */
+/** gives the total number of tightened bounds for integer variables found by the sync propagator */
+SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
+   SCIP_PROP*            prop                /**< sync propagator */
    )
 {
    SCIP_PROPDATA* data;

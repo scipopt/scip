@@ -22,7 +22,7 @@
 
 #include "scip/concsolver_scip.h"
 #include "scip/concsolver.h"
-#include "scip/event_synchpoint.h"
+#include "scip/event_sync.h"
 #include "scip/concurrent.h"
 #include "scip/syncstore.h"
 #include "scip/boundstore.h"
@@ -196,9 +196,11 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
          len = strlen(paramname);
 
          if( (len >= 7  && memcmp(paramname, "limits/", 7) == 0 ) ||
-            (len >= 9  && memcmp(paramname, "numerics/", 9) == 0) ||
-            (len >= 7  && memcmp(paramname, "memory/", 7) == 0) ||
-            (len >= 17 && memcmp(paramname, "concurrent/synch/", 17) == 0) )
+             (len >= 9  && memcmp(paramname, "numerics/", 9) == 0) ||
+             (len >= 7  && memcmp(paramname, "memory/", 7) == 0) ||
+             (len >= 16 && memcmp(paramname, "concurrent/sync/", 16) == 0) ||
+             (len >= 16 && memcmp(paramname, "heuristics/sync/", 16) == 0) ||
+             (len >= 17 && memcmp(paramname, "propagating/sync/", 17) == 0) )
          {
             fixedparams[nfixedparams++] = params[i];
             SCIP_CALL( SCIPfixParam(data->solverscip, paramname) );
@@ -225,7 +227,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
                       filename, SCIPconcsolverGetName(concsolver));
    }
    /* include eventhandler for synchronization */
-   SCIP_CALL( SCIPincludeEventHdlrSynchpoint(data->solverscip) );
+   SCIP_CALL( SCIPincludeEventHdlrSync(data->solverscip) );
    /* disable output for subscip */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "display/verblevel", 0) );
    /* use wall clock time in subscips */
@@ -418,7 +420,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("synching in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
+   SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
    /* consider at most maxcandsols many solutions, and since
     * the solution array is sorted, we will cosider the best
     * solutions
@@ -532,7 +534,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( SCIPvarGetType(var) <= SCIP_VARTYPE_INTEGER )
          ++(*ntighterintbnds);
 
-      /* bound is better so pass it to the synch propagator */
+      /* bound is better so pass it to the sync propagator */
       SCIP_CALL( SCIPaddConcurrentBndchg(data->solverscip, var, newbound, boundtype) );
    }
 

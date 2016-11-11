@@ -35,8 +35,8 @@
 #include "scip/struct_sepa.h"
 #include "scip/struct_presol.h"
 #include "scip/prob.h"
-#include "scip/prop_synch.h"
-#include "scip/heur_synch.h"
+#include "scip/prop_sync.h"
+#include "scip/heur_sync.h"
 #include "scip/event_globalbnd.h"
 #include "scip/scip.h"
 #include "scip/syncstore.h"
@@ -81,18 +81,18 @@ SCIP_RETCODE SCIPcreateConcurrent(
       SCIP_CALL( SCIPstartClock(scip, scip->concurrent->wallclock) );
    }
 
-   scip->concurrent->heursynch = SCIPfindHeur(scip, "synch");
-   if( scip->concurrent->heursynch == NULL )
+   scip->concurrent->heursync = SCIPfindHeur(scip, "sync");
+   if( scip->concurrent->heursync == NULL )
    {
-      SCIP_CALL( SCIPincludeHeurSynch(scip) );
-      scip->concurrent->heursynch = SCIPfindHeur(scip, "synch");
+      SCIP_CALL( SCIPincludeHeurSync(scip) );
+      scip->concurrent->heursync = SCIPfindHeur(scip, "sync");
    }
 
-   scip->concurrent->propsynch = SCIPfindProp(scip, "synch");
-   if( scip->concurrent->propsynch == NULL )
+   scip->concurrent->propsync = SCIPfindProp(scip, "sync");
+   if( scip->concurrent->propsync == NULL )
    {
-      SCIP_CALL( SCIPincludePropSynch(scip) );
-      scip->concurrent->propsynch = SCIPfindProp(scip, "synch");
+      SCIP_CALL( SCIPincludePropSync(scip) );
+      scip->concurrent->propsync = SCIPfindProp(scip, "sync");
    }
 
    scip->concurrent->eventglobalbnd = SCIPfindEventhdlr(scip, "globalbnd");
@@ -202,40 +202,40 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    SCIP_Real               val         /**< value by which the time counter for synchronization is incremented */
    )
 {
-   SCIP_Real           synchfreq;
+   SCIP_Real           syncfreq;
    SCIP*               mainscip;
    SCIP_CLOCK*         wallclock;
 
    if( scip->concurrent == NULL )
       return SCIP_OKAY;
 
-   synchfreq = SCIPconcsolverGetSyncFreq(scip->concurrent->concsolver);
+   syncfreq = SCIPconcsolverGetSyncFreq(scip->concurrent->concsolver);
    wallclock = scip->concurrent->wallclock;
    mainscip = scip->concurrent->mainscip;
 
    if( wallclock == NULL )
    {
       scip->concurrent->dettime += val;
-      if( scip->concurrent->dettime >= synchfreq && SCIPgetNTotalNodes(mainscip) > 1 )
+      if( scip->concurrent->dettime >= syncfreq && SCIPgetNTotalNodes(mainscip) > 1 )
       {
          SCIP_EVENT* event;
-         SCIPconcsolverSetTimeSinceLastSynch(scip->concurrent->concsolver, scip->concurrent->dettime);
+         SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, scip->concurrent->dettime);
          scip->concurrent->dettime = 0.0;
-         SCIP_CALL( SCIPeventCreateSynch(&event, SCIPblkmem(mainscip)) );
+         SCIP_CALL( SCIPeventCreateSync(&event, SCIPblkmem(mainscip)) );
          SCIP_CALL( SCIPeventqueueAdd(mainscip->eventqueue, SCIPblkmem(mainscip), mainscip->set,
                                       NULL, NULL, NULL, mainscip->eventfilter, &event) );
       }
    }
    else
    {
-      SCIP_Real timesincelastsynch;
-      timesincelastsynch = SCIPgetClockTime(mainscip, wallclock);
-      if( timesincelastsynch >= synchfreq && SCIPgetNTotalNodes(mainscip) > 1 )
+      SCIP_Real timesincelastsync;
+      timesincelastsync = SCIPgetClockTime(mainscip, wallclock);
+      if( timesincelastsync >= syncfreq && SCIPgetNTotalNodes(mainscip) > 1 )
       {
          SCIP_EVENT* event;
-         SCIPconcsolverSetTimeSinceLastSynch(scip->concurrent->concsolver, timesincelastsynch);
+         SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, timesincelastsync);
 
-         SCIP_CALL( SCIPeventCreateSynch(&event, SCIPblkmem(mainscip)) );
+         SCIP_CALL( SCIPeventCreateSync(&event, SCIPblkmem(mainscip)) );
          SCIP_CALL( SCIPeventqueueAdd(mainscip->eventqueue, SCIPblkmem(mainscip), mainscip->set,
                                       NULL, NULL, NULL, mainscip->eventfilter, &event) );
 
@@ -368,7 +368,7 @@ SCIP_Longint SCIPgetConcurrentNTightenedBnds(
 {
    assert(scip->concurrent != NULL);
 
-   return scip->concurrent->propsynch != NULL ? SCIPpropSynchGetNTightenedBnds(scip->concurrent->propsynch) : 0;
+   return scip->concurrent->propsync != NULL ? SCIPpropSyncGetNTightenedBnds(scip->concurrent->propsync) : 0;
 }
 
 /** gives the total number of tightened bounds for integer variables received from
@@ -379,11 +379,11 @@ SCIP_Longint SCIPgetConcurrentNTightenedIntBnds(
 {
    assert(scip->concurrent != NULL);
 
-   return scip->concurrent->propsynch != NULL ? SCIPpropSynchGetNTightenedIntBnds(scip->concurrent->propsynch) : 0;
+   return scip->concurrent->propsync != NULL ? SCIPpropSyncGetNTightenedIntBnds(scip->concurrent->propsync) : 0;
 }
 
 /** pass a solution to the given SCIP instance using that was received via synchronization by using
- * the synch heuristic */
+ * the sync heuristic */
 SCIP_RETCODE SCIPaddConcurrentSol(
    SCIP*                   scip,       /**< SCIP datastructure */
    SCIP_SOL*               sol         /**< solution */
@@ -392,12 +392,12 @@ SCIP_RETCODE SCIPaddConcurrentSol(
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
 
-   SCIP_CALL( SCIPheurSynchPassSol(scip, scip->concurrent->heursynch, sol) );
+   SCIP_CALL( SCIPheurSyncPassSol(scip, scip->concurrent->heursync, sol) );
 
    return SCIP_OKAY;
 }
 
-/** adds a global boundchange to the given SCIP, by passing it to the synch propagator */
+/** adds a global boundchange to the given SCIP, by passing it to the sync propagator */
 SCIP_RETCODE SCIPaddConcurrentBndchg(
    SCIP*                   scip,       /**< SCIP data structure */
    SCIP_VAR*               var,        /**< variable for bound */
@@ -407,9 +407,9 @@ SCIP_RETCODE SCIPaddConcurrentBndchg(
 {
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
-   assert(scip->concurrent->propsynch != NULL);
+   assert(scip->concurrent->propsync != NULL);
 
-   SCIP_CALL( SCIPpropSynchAddBndchg(scip->concurrent->mainscip, scip->concurrent->propsynch, var, val, bndtype) );
+   SCIP_CALL( SCIPpropSyncAddBndchg(scip->concurrent->mainscip, scip->concurrent->propsync, var, val, bndtype) );
 
    return SCIP_OKAY;
 }

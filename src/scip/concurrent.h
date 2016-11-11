@@ -82,14 +82,14 @@ SCIP_RETCODE SCIPsynchronize(
    );
 
 /** pass a solution to the given SCIP instance using that was received via synchronization by using
- * the synch heuristic */
+ * the sync heuristic */
 extern
 SCIP_RETCODE SCIPaddConcurrentSol(
    SCIP*                     scip,      /**< SCIP datastructure */
    SCIP_SOL*                 sol        /**< solution */
    );
 
-/** adds a global boundchange to the given SCIP, by passing it to the synch propagator */
+/** adds a global boundchange to the given SCIP, by passing it to the sync propagator */
 extern
 SCIP_RETCODE SCIPaddConcurrentBndchg(
    SCIP*                     scip,      /**< SCIP data structure */

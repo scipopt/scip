@@ -171,7 +171,7 @@ SCIP_Longint SCIPconcsolverGetMemTotal(
  *  started.
  */
 extern
-void SCIPconcsolverSetTimeSinceLastSynch(
+void SCIPconcsolverSetTimeSinceLastSync(
    SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
    SCIP_Real                           time                        /**< the time passed since the last synchronization */
    );

@@ -328,7 +328,7 @@ SCIP_RETCODE SCIPconcsolverSync(
    if( syncdata == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("concsolver %s starts synch %lli\n", concsolver->name, concsolver->nsyncs);
+   SCIPdebugMessage("concsolver %s starts sync %lli\n", concsolver->name, concsolver->nsyncs);
 
    SCIP_CALL( concsolvertype->concsolversyncwrite(concsolver, syncstore, syncdata, set->concurrent_nbestsols, set->concurrent_maxnsols, &nsols) );
    concsolver->nsolsshared += nsols;
@@ -456,7 +456,7 @@ SCIP_Longint SCIPconcsolverGetMemTotal(
 /** sets the time elapsed since the last synchronization. Must be set before the synchronization is
  *  started.
  */
-void SCIPconcsolverSetTimeSinceLastSynch(
+void SCIPconcsolverSetTimeSinceLastSync(
    SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
    SCIP_Real                           time                        /**< the time passed since the last synchronization */
    )

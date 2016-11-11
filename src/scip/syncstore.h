@@ -67,7 +67,7 @@ void SCIPsyncstoreInitSyncTiming(
    SCIP_Real                time                 /**< the time the solver spent before the first synchronization */
    );
 
-/** checks whether the solve-is-stopped flag in the synchstore has been set by any thread */
+/** checks whether the solve-is-stopped flag in the syncstore has been set by any thread */
 EXTERN
 SCIP_Bool SCIPsyncstoreSolveIsStopped(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */

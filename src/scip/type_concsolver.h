@@ -85,7 +85,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
 
 /** synchronization method of concurrent solver for writing data
  *
- *  Synchronizes with other solvers. The concurrent solver should pass new solutions
+ *  Syncronizes with other solvers. The concurrent solver should pass new solutions
  *  and bounds to the syncstore. For the solutions, no more than maxcandsols of the best solution
  *  should be considered for sharing. Additionally a maximum if maxsharedsols should be
  *  passed to the syncstore.
@@ -93,7 +93,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  *  input:
  *  - concsolver      : concurrent solver data structure
  *  - spi             : pointer to the SCIP parallel interface
- *  - synchdata       : concurrent solver data structure
+ *  - syncdata        : concurrent solver data structure
  *  - maxcandsols     : how many of the best solutions should be considered for sharing
  *  - maxsharedsols   : the maximum number of solutions that should be shared
  *
@@ -106,7 +106,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  *  input:
  *  - concsolver      : concurrent solver data structure
  *  - spi             : pointer to the SCIP parallel interface
- *  - synchdata       : concurrent solver data structure
+ *  - syncdata        : concurrent solver data structure
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */

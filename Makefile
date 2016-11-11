@@ -449,10 +449,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
 			scip/event_solvingphase.o \
-			scip/event_synchpoint.o \
-			scip/prop_synch.o \
+			scip/event_sync.o \
+			scip/prop_sync.o \
 			scip/event_globalbnd.o \
-			scip/heur_synch.o \
+			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_bound.o \
 			scip/heur_clique.o \

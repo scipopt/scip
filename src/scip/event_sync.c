@@ -13,21 +13,21 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_synchpoint.c
+/**@file   event_sync.c
  * @brief  eventhandler for synchronization
  * @author Robert Lion Gottwald
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/event_synchpoint.h"
+#include "scip/event_sync.h"
 #include "scip/event.h"
 #include "scip/scip.h"
 #include "scip/concurrent.h"
 #include "scip/syncstore.h"
 #include <string.h>
 
-#define EVENTHDLR_NAME         "synchpoint"
+#define EVENTHDLR_NAME         "sync"
 #define EVENTHDLR_DESC         "event handler for synchronization point"
 
 /*
@@ -46,7 +46,7 @@ struct SCIP_EventhdlrData
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_EVENTFREE(eventFreeSynchpoint)
+SCIP_DECL_EVENTFREE(eventFreeSync)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -68,7 +68,7 @@ SCIP_DECL_EVENTFREE(eventFreeSynchpoint)
 
 /** initialization method of event handler (called after problem was transformed) */
 static
-SCIP_DECL_EVENTINIT(eventInitSynchpoint)
+SCIP_DECL_EVENTINIT(eventInitSync)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SYNCSTORE*  syncstore;
@@ -86,7 +86,7 @@ SCIP_DECL_EVENTINIT(eventInitSynchpoint)
    if( eventhdlrdata->filterpos < 0 && SCIPsyncstoreIsInitialized(syncstore) )
    {
       /* notify SCIP that your event handler wants to react on synchronization events */
-      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SYNCH, eventhdlr, NULL, &eventhdlrdata->filterpos) );
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, &eventhdlrdata->filterpos) );
    }
 
    return SCIP_OKAY;
@@ -94,7 +94,7 @@ SCIP_DECL_EVENTINIT(eventInitSynchpoint)
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
-SCIP_DECL_EVENTEXIT(eventExitSynchpoint)
+SCIP_DECL_EVENTEXIT(eventExitSync)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -108,7 +108,7 @@ SCIP_DECL_EVENTEXIT(eventExitSynchpoint)
    /* notify SCIP that your event handler wants to drop the event type synchronization found */
    if( eventhdlrdata->filterpos >= 0 )
    {
-      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SYNCH, eventhdlr, NULL, eventhdlrdata->filterpos) );
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, eventhdlrdata->filterpos) );
       eventhdlrdata->filterpos = -1;
    }
 
@@ -117,7 +117,7 @@ SCIP_DECL_EVENTEXIT(eventExitSynchpoint)
 
 /** execution method of event handler */
 static
-SCIP_DECL_EVENTEXEC(eventExecSynchpoint)
+SCIP_DECL_EVENTEXEC(eventExecSync)
 {  /*lint --e{715}*/
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -131,7 +131,7 @@ SCIP_DECL_EVENTEXEC(eventExecSynchpoint)
 
 
 /** includes event handler for synchronization found */
-SCIP_RETCODE SCIPincludeEventHdlrSynchpoint(
+SCIP_RETCODE SCIPincludeEventHdlrSync(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
@@ -142,12 +142,12 @@ SCIP_RETCODE SCIPincludeEventHdlrSynchpoint(
    eventhdlrdata->filterpos = -1;
 
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSynchpoint, eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSync, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSynchpoint) );
-   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSynchpoint) );
-   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitSynchpoint) );
+   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSync) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSync) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitSync) );
 
    return SCIP_OKAY;
 }

@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   spi_pthreads.c
+/**@file   spi_tnycthrd.c
  * @ingroup PARAINTERFACE
- * @brief  the interface functions for pthreads
+ * @brief  the interface functions for the TPI using tinycthreads
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald
  */

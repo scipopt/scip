@@ -44,12 +44,7 @@
 #define SCIPtpiGetNumThreads()                1
 #define SCIPtpiGetThreadNum()                 0
 
-#define SCIPtpiCreateJob(job, jobid, jobfunc, jobargs)  ( (void) (job), (void) (jobid), (void) (jobfunc), (void) (jobargs), SCIP_ERROR )
 #define SCIPtpiGetNewJobID()                            0
-#define SCIPtpiSumbitJob(job, status)                   ( (void) (job), (void) status, SCIP_ERROR )
-#define SCIPtpiCollectJobs(jobid)                       ( (void) (jobid), SCIP_ERROR )
-#define SCIPtpiInit(nthreads, queuesize, blockwhenfull) ( (void) (nthreads), (void) (queuesize), (void) (blockwhenfull), SCIP_ERROR )
-#define SCIPtpiExit()                                   SCIP_ERROR
 
 #endif
 

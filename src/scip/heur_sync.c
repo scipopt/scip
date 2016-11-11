@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_synch.c
+/**@file   heur_sync.c
  * @brief  primal heuristic that adds solutions from synchronization
  * @author Robert Lion Gottwald
  *
@@ -25,12 +25,12 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/heur_synch.h"
+#include "scip/heur_sync.h"
 #include "scip/scip.h"
 
 
-#define HEUR_NAME             "synch"
-#define HEUR_DESC             "synch solution heuristic"
+#define HEUR_NAME             "sync"
+#define HEUR_DESC             "heuristic for synchronizing solution"
 #define HEUR_DISPCHAR         '$'
 #define HEUR_PRIORITY         -3000000     /* should process after all other heuristics */
 #define HEUR_FREQ             -1
@@ -60,7 +60,7 @@ struct SCIP_HeurData
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeSynch)
+SCIP_DECL_HEURFREE(heurFreeSync)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -68,7 +68,7 @@ SCIP_DECL_HEURFREE(heurFreeSynch)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
 
-   SCIPdebugMessage("free method of synch primal heuristic.\n");
+   SCIPdebugMessage("free method of sync primal heuristic.\n");
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -83,7 +83,7 @@ SCIP_DECL_HEURFREE(heurFreeSynch)
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitSynch)
+SCIP_DECL_HEUREXITSOL(heurExitSync)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int            i;
@@ -92,7 +92,7 @@ SCIP_DECL_HEUREXITSOL(heurExitSynch)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
 
-   SCIPdebugMessage("exit method of synch primal heuristic.\n");
+   SCIPdebugMessage("exit method of sync primal heuristic.\n");
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -110,7 +110,7 @@ SCIP_DECL_HEUREXITSOL(heurExitSynch)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecSynch)
+SCIP_DECL_HEUREXEC(heurExecSync)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Bool stored;
@@ -129,7 +129,7 @@ SCIP_DECL_HEUREXEC(heurExecSynch)
    assert(heurdata != NULL);
    assert(heurdata->nsols > 0);
 
-   SCIPdebugMessage("exec method of synch primal heuristic.\n");
+   SCIPdebugMessage("exec method of sync primal heuristic.\n");
    *result = SCIP_DIDNOTFIND;
    for( i = 0; i < heurdata->nsols; ++i )
    {
@@ -147,8 +147,8 @@ SCIP_DECL_HEUREXEC(heurExecSynch)
  * primal heuristic specific interface methods
  */
 
-/** creates the synch primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurSynch(
+/** creates the sync primal heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurSync(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -164,22 +164,22 @@ SCIP_RETCODE SCIPincludeHeurSynch(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSynch, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSync, heurdata) );
 
    assert(heur != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSynch) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitSynch) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSync) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitSync) );
 
    return SCIP_OKAY;
 }
 
 
-/** pass solution to synch heuristic */
-SCIP_RETCODE SCIPheurSynchPassSol(
+/** pass solution to sync heuristic */
+SCIP_RETCODE SCIPheurSyncPassSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< synch heuristic */
+   SCIP_HEUR*            heur,               /**< sync heuristic */
    SCIP_SOL*             sol                 /**< solution to be passed */
    )
 {

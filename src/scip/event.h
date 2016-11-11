@@ -179,7 +179,7 @@ void SCIPeventhdlrEnableOrDisableClocks(
 
 /** creates a synchronization event */
 extern
-SCIP_RETCODE SCIPeventCreateSynch(
+SCIP_RETCODE SCIPeventCreateSync(
    SCIP_EVENT**          event,             /**< pointer to store the event */
    BMS_BLKMEM*           blkmem             /**< block memory */
    );

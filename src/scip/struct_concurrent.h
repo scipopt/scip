@@ -42,10 +42,10 @@ struct SCIP_Concurrent
    SCIP_CONCSOLVER*         concsolver;         /**< the concurrent solver of the main scip */
    int*                     varperm;            /**< permutation of variables to get the position of variable in the original SCIP's
                                                  *   variable array by the index of an original variable in this concurrent's main SCIP */
-   SCIP_Real                dettime;            /**< deterministic time since last synch */
-   SCIP_CLOCK*              wallclock;          /**< wallclock time since last synch */
-   SCIP_PROP*               propsynch;          /**< synch propagator */
-   SCIP_HEUR*               heursynch;          /**< synch heuristic */
+   SCIP_Real                dettime;            /**< deterministic time since last sync */
+   SCIP_CLOCK*              wallclock;          /**< wallclock time since last sync */
+   SCIP_PROP*               propsync;          /**< sync propagator */
+   SCIP_HEUR*               heursync;          /**< sync heuristic */
    SCIP_EVENTHDLR*          eventglobalbnd;     /**< global bound eventhandler */
    int                      solidx;             /**< solution index after last synchronization */
    SCIP_CONCSOLVER**        concsolvers;        /**< the concurrent solvers used for solving */

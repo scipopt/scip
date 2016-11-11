@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   prop_synch.h
+/**@file   prop_sync.h
  * @ingroup PROPAGATORS
  * @brief  propagator for applying global bound changes that were communicated by other
  *         concurrent solvers
@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROP_SYNCH_H__
-#define __SCIP_PROP_SYNCH_H__
+#ifndef __SCIP_PROP_SYNC_H__
+#define __SCIP_PROP_SYNC_H__
 
 
 #include "scip/scip.h"
@@ -32,32 +32,32 @@
 extern "C" {
 #endif
 
-/** creates the synch propagator and includes it in SCIP */
+/** creates the sync propagator and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludePropSynch(
+SCIP_RETCODE SCIPincludePropSync(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** adds a boundchange to the synch propagator */
+/** adds a boundchange to the sync propagator */
 EXTERN
-SCIP_RETCODE SCIPpropSynchAddBndchg(
+SCIP_RETCODE SCIPpropSyncAddBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop,               /**< synch propagator */
+   SCIP_PROP*            prop,               /**< sync propagator */
    SCIP_VAR*             var,                /**< variable for bound */
    SCIP_Real             val,                /**< value of bound */
    SCIP_BOUNDTYPE        bndtype             /**< type of bound */
    );
 
-/** gives the total number of tightened bounds found by the synch propagator */
+/** gives the total number of tightened bounds found by the sync propagator */
 EXTERN
-SCIP_Longint SCIPpropSynchGetNTightenedBnds(
-   SCIP_PROP*            prop                /**< synch propagator */
+SCIP_Longint SCIPpropSyncGetNTightenedBnds(
+   SCIP_PROP*            prop                /**< sync propagator */
    );
 
-/** gives the total number of tightened bounds for integer variables found by the synch propagator */
+/** gives the total number of tightened bounds for integer variables found by the sync propagator */
 EXTERN
-SCIP_Longint SCIPpropSynchGetNTightenedIntBnds(
-   SCIP_PROP*            prop                /**< synch propagator */
+SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
+   SCIP_PROP*            prop                /**< sync propagator */
    );
 
 #ifdef __cplusplus
