@@ -6754,6 +6754,71 @@ SCIP_RETCODE performVarDeletions(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for relaxation solution\n", nconss);
+
+   *result = SCIP_FEASIBLE;
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+   
+#ifdef VARUSES
+#ifdef BRANCHLP
+   /* @todo also branch on relaxation solution */
+   if( (sol == NULL) && !cutoff && !separated && !reduceddom )
+   {
+      /* if solution is not integral, choose a variable set to branch on */
+      SCIP_CALL( branchLP(scip, conshdlr, result) );
+      if( *result != SCIP_FEASIBLE )
+         return SCIP_OKAY;
+   }
+#endif
+#endif
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
+   return SCIP_OKAY;
+}
 
 /*
  * upgrading of linear constraints
@@ -7718,55 +7783,7 @@ SCIP_RETCODE branchPseudo(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
-
-   SCIPdebugMsg(scip, "LP enforcing %d set partitioning / packing / covering constraints\n", nconss);
-
-   *result = SCIP_FEASIBLE;
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
-   }
-
-#ifdef VARUSES
-#ifdef BRANCHLP
-   if( !cutoff && !separated && !reduceddom )
-   {
-      /* if solution is not integral, choose a variable set to branch on */
-      SCIP_CALL( branchLP(scip, conshdlr, result) );
-      if( *result != SCIP_FEASIBLE )
-         return SCIP_OKAY;
-   }
-#endif
-#endif
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -7776,45 +7793,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
-
-   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for relaxation solution\n", nconss);
-
-   *result = SCIP_FEASIBLE;
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* @todo if solution is not integral, choose a variable set to branch on (only if VARUSES and BRANCHLP are defined) */
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
