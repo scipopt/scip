@@ -1895,8 +1895,6 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    nvars = SCIPgetNOrigVars(scip); /*TODO: correct getter for number of vars? */
 
-   SCIPinfoMessage(scip, NULL, "init: nvars <%i>\n", nvars);
-
    SCIPstatistic(
       {
          int i;
@@ -1946,8 +1944,6 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    nvars = SCIPgetNOrigVars(scip); /*TODO: correct getter for number of vars? */
-
-   SCIPinfoMessage(scip, NULL, "exit: nvars <%i>\n", nvars);
 
    for( i = nvars-1; i >= 0; i--)
    {
