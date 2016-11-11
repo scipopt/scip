@@ -19,7 +19,9 @@
  *
  */
 
-/* author bzfhende: TODO write a short description of what the heuristic does (modify heur_repair.h accordingly) */
+/* This heuristic takes a infeasible solution and tries to repair it.
+ *
+ * */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -105,11 +107,6 @@ struct SCIP_HeurData
 
 };
 
-
-/** TODO GENERAL TODOS:
- *  - concentrate on the binary and integer variables for the fixing.
- *  - fold the methods extendedProgram and variableFixings into one that does both (and calls subroutines where necessary)
- */
 
 /*
  * Local methods
@@ -533,10 +530,6 @@ SCIP_RETCODE varFixings(
       char consvarname[1024];
 
       heurdata->norvars++;
-      /*lb = SCIPvarGetLbGlobal(vars[i]);
-      ub = SCIPvarGetUbGlobal(vars[i]);
-      value = SCIPgetSolVal(scip, sol, vars[i]);
-      vartype = SCIPvarGetType(vars[i]);*/
 
       sla = 0.0;
       lborig = SCIPvarGetLbGlobal(vars[i]);
@@ -900,7 +893,10 @@ SCIP_RETCODE varFixings(
       assert(SCIPgetNSols(subscip) > 0);
       SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
 
-      *result = SCIP_FOUNDSOL;
+      if( success )
+      {
+         *result = SCIP_FOUNDSOL;
+      }
    }
    else
    {
@@ -922,13 +918,13 @@ TERMINATE:
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
    }
 
-   /* author bzfhende: TODO buffer arrays must be freed in reverse order of allocation */
-   SCIPfreeBufferArrayNull(scip, &subvars);
-   SCIPfreeBufferArrayNull(scip, &permutation);
    SCIPfreeBufferArrayNull(scip, &inftycounter);
-   SCIPfreeBufferArrayNull(scip, &potential);
-   SCIPfreeBufferArrayNull(scip, &slack);
    SCIPfreeBufferArrayNull(scip, &subcons);
+   SCIPfreeBufferArrayNull(scip, &slack);
+   SCIPfreeBufferArrayNull(scip, &potential);
+   SCIPfreeBufferArrayNull(scip, &permutation);
+   SCIPfreeBufferArrayNull(scip, &subvars);
+
    if( NULL != subsol )
    {
       SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
@@ -1261,7 +1257,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
    *result = SCIP_DIDNOTFIND;
 
-
+   /* this "if" should not be necessary, has to be tested */
    if(heurdata->usevarfix || heurdata->useslackvars)
    {
       retcode = varFixings(scip, heur, result, nnodes);
