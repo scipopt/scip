@@ -140,6 +140,7 @@ SCIP_RETCODE SCIPaddConcurrentSolver(
    )
 {
    int idx;
+
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
 
@@ -210,6 +211,8 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    SCIP_Real           syncfreq;
    SCIP*               mainscip;
    SCIP_CLOCK*         wallclock;
+
+   assert(scip != NULL);
 
    if( scip->concurrent == NULL )
       return SCIP_OKAY;
@@ -398,6 +401,7 @@ SCIP_RETCODE SCIPaddConcurrentSol(
 {
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
+   assert(sol != NULL);
 
    SCIP_CALL( SCIPheurSyncPassSol(scip, scip->concurrent->heursync, sol) );
 
@@ -413,6 +417,7 @@ SCIP_RETCODE SCIPaddConcurrentBndchg(
    )
 {
    assert(scip != NULL);
+   assert(var != NULL);
    assert(scip->concurrent != NULL);
    assert(scip->concurrent->propsync != NULL);
 
@@ -427,6 +432,9 @@ SCIP_RETCODE SCIPcopySolStats(
    SCIP_SOL*               target      /**< target for solution statistics */
    )
 {
+   assert(source != NULL);
+   assert(target != NULL);
+
    target->depth = source->depth;
    target->time = source->time;
    target->nodenum = source->nodenum;
@@ -444,8 +452,10 @@ int SCIPgetConcurrentVaridx(
 {
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
+   assert(scip->concurrent->varperm != NULL);
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
+   assert(SCIPvarGetIndex(var) < SCIPgetNOrigVars(scip));
 
    return scip->concurrent->varperm[SCIPvarGetIndex(var)];
 }
@@ -458,13 +468,14 @@ SCIP_Bool SCIPIsConcurrentSolNew(
 {
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
+   assert(sol != NULL);
 
    return SCIPsolGetIndex(sol) >= scip->concurrent->solidx;
 }
 
 /** gets the global lower bound changes since the last synchronization point */
 SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
-   SCIP*                     scip       /**< SCIP data structure */
+   SCIP*                     scip      /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -478,9 +489,15 @@ SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
 
 /** executes the concurrent solver with based on thread id */
 static
-SCIP_RETCODE execConcsolver(void* args)
+SCIP_RETCODE execConcsolver(
+   void*                     args      /**< SCIP data structure passed in as a void pointer */
+   )
 {
-   SCIP* scip = (SCIP*) args;
+   SCIP* scip;
+
+   assert(args != NULL);
+
+   scip = (SCIP*) args;
 
    SCIP_CALL( SCIPconcsolverExec(scip->concurrent->concsolvers[SCIPtpiGetThreadNum()]) );
    SCIP_CALL( SCIPconcsolverSync(scip->concurrent->concsolvers[SCIPtpiGetThreadNum()], scip->set) );
@@ -493,16 +510,18 @@ SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                scip                 /**< pointer to scip datastructure */
    )
 {
-   SCIP_SYNCSTORE* syncstore;
-   int idx;
-   int jobid;
-   int i;
-   SCIP_RETCODE retcode;
+   SCIP_SYNCSTORE*   syncstore;
+   int               idx;
+   int               jobid;
+   int               i;
+   SCIP_RETCODE      retcode;
    SCIP_CONCSOLVER** concsolvers;
    int               nconcsolvers;
 
-   syncstore = SCIPgetSyncstore(scip);
+   assert(scip != NULL);
+   assert(scip->concurrent != NULL);
 
+   syncstore = SCIPgetSyncstore(scip);
    concsolvers = scip->concurrent->concsolvers;
    nconcsolvers = scip->concurrent->nconcsolvers;
 
@@ -559,6 +578,9 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    SCIP_PRESOL** presols;
    int           npresols;
    int           i;
+
+   assert(source != NULL);
+   assert(target != NULL);
 
    heurs = SCIPgetHeurs(target);
    nheurs = SCIPgetNHeurs(target);
@@ -778,6 +800,7 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    tmptime += SCIPgetClockTime(source, source->stat->solvingtime);
    SCIP_CALL( SCIPsetClockTime(target, target->stat->solvingtime, tmptime) );*/
 
+   /* TODO */
    tmptime = SCIPgetClockTime(target, target->stat->solvingtimeoverall);
    tmptime += SCIPgetClockTime(source, source->stat->solvingtimeoverall);
    SCIP_CALL( SCIPsetClockTime(target, target->stat->solvingtimeoverall, tmptime) );

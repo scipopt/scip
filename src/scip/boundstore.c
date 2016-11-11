@@ -33,6 +33,9 @@ SCIP_RETCODE SCIPboundstoreCreate(
    int                      nvars            /**< number of variables for which bounds may be stored */
    )
 {
+   assert(scip != NULL);
+   assert(boundstore != NULL);
+
    SCIP_CALL( SCIPallocMemory(scip, boundstore) );
 
    (*boundstore)->bndchg = NULL;
@@ -50,6 +53,10 @@ void SCIPboundstoreFree(
    SCIP_BOUNDSTORE**        boundstore       /**< pointer to the bound store datastructure */
    )
 {
+   assert(scip != NULL);
+   assert(boundstore != NULL);
+   assert((*boundstore) != NULL);
+
    SCIPfreeBlockMemoryArray(scip, &(*boundstore)->bndpos, (*boundstore)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*boundstore)->bndchg, (*boundstore)->bndchgsize);
    SCIPfreeMemory(scip, boundstore);
@@ -68,6 +75,9 @@ SCIP_RETCODE SCIPboundstoreAdd(
    /* check if already stored a bound of same type for this variable */
    int pos = boundstore->bndpos[varidx].pos[boundtype];
 
+   assert(scip != NULL);
+   assert(boundstore != NULL);
+
    if( pos == 0 )
    {
       /* variable has no bound stored yet so store this bound */
@@ -82,7 +92,8 @@ SCIP_RETCODE SCIPboundstoreAdd(
    else
    {
       /* since pos == 0 is reserved if no bound is stored
-       * the index is pos-1 */
+       * the index is pos-1
+       */
       --pos;
       assert(boundstore->bndchg[pos].boundtype == boundtype);
       assert(boundstore->bndchg[pos].varidx == varidx);
@@ -107,6 +118,10 @@ SCIP_RETCODE SCIPboundstoreMerge(
 {
    int i;
 
+   assert(scip != NULL);
+   assert(source != NULL);
+   assert(target != NULL);
+
    for( i = 0; i < source->nbndchg; ++i )
    {
       SCIP_CALL( SCIPboundstoreAdd(scip, target, source->bndchg[i].varidx, source->bndchg[i].newbound, source->bndchg[i].boundtype) );
@@ -120,6 +135,8 @@ void SCIPboundstoreClear(
    SCIP_BOUNDSTORE*         boundstore       /**< the bound store datastructure */
    )
 {
+   assert(boundstore != NULL);
+
    if( boundstore->nbndchg > 0 )
    {
       BMSclearMemoryArray(boundstore->bndpos, boundstore->nvars);

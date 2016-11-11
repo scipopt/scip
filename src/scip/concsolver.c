@@ -174,10 +174,12 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    (*concsolver)->ntighterbnds = 0;
    (*concsolver)->ntighterintbnds = 0;
    SCIP_CALL( SCIPcreateWallClock(set->scip, &(*concsolver)->totalsynctime) );
+
    /* initialize synchronization fields */
    (*concsolver)->nsyncs = 0;
    (*concsolver)->syncdelay = 0.0;
    (*concsolver)->syncdata = NULL;
+
    /** register concurrent solver */
    (*concsolver)->idx = SCIPgetNConcurrentSolvers(set->scip);
    SCIP_CALL( concsolvertype->concsolvercreateinst(set->scip, concsolvertype, *concsolver) );
@@ -351,7 +353,8 @@ SCIP_RETCODE SCIPconcsolverSync(
    else if( nsynced == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
-       * it will adjust the synchronization frequency using the progress on the gap */
+       * it will adjust the synchronization frequency using the progress on the gap
+       */
       SCIP_Bool lbok;
       SCIP_Bool ubok;
       SCIP_Real progress;
@@ -474,6 +477,8 @@ SCIP_Real SCIPconcsolverGetSolvingTime(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->solvingtime;
 }
 
@@ -492,6 +497,8 @@ SCIP_Longint SCIPconcsolverGetNLPIterations(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->nlpiterations;
 }
 
@@ -500,6 +507,8 @@ SCIP_Longint SCIPconcsolverGetNNodes(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->nnodes;
 }
 
@@ -508,6 +517,8 @@ SCIP_Longint SCIPconcsolverGetNSolsRecvd(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->nsolsrecvd;
 }
 
@@ -516,6 +527,8 @@ SCIP_Longint SCIPconcsolverGetNSolsShared(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->nsolsshared;
 }
 
@@ -524,6 +537,8 @@ SCIP_Longint SCIPconcsolverGetNTighterBnds(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->ntighterbnds;
 }
 
@@ -532,6 +547,8 @@ SCIP_Longint SCIPconcsolverGetNTighterIntBnds(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->ntighterintbnds;
 }
 
@@ -540,5 +557,7 @@ int SCIPconcsolverGetIdx(
    SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
    )
 {
+   assert(concsolver != NULL);
+
    return concsolver->idx;
 }

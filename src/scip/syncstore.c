@@ -213,6 +213,8 @@ void SCIPsyncstoreInitSyncTiming(
    SCIP_Real                time                 /**< the time the solver spent before the first synchronization */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
    assert(syncstore->syncdata[0].syncnum == 0);
 
    syncstore->syncdata[0].syncfreq = MAX(syncstore->syncdata[0].syncfreq, time);
@@ -262,6 +264,9 @@ SCIP_Real SCIPsyncstoreGetLastUpperbound(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->lastsync == NULL ? SCIPinfinity(syncstore->mainscip) : syncstore->lastsync->bestupperbound;
 }
 
@@ -270,6 +275,9 @@ SCIP_Real SCIPsyncstoreGetLastLowerbound(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->lastsync == NULL ? -SCIPinfinity(syncstore->mainscip) : syncstore->lastsync->bestlowerbound;
 }
 
@@ -278,6 +286,9 @@ int SCIPsyncstoreGetLastNSols(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->lastsync == NULL ? 0 : syncstore->lastsync->nsols;
 }
 
@@ -286,6 +297,9 @@ int SCIPsyncstoreGetLastNBounds(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->lastsync == NULL ? 0 : SCIPboundstoreGetNChgs(syncstore->lastsync->boundstore);
 }
 
@@ -294,6 +308,9 @@ SCIP_Longint SCIPsyncstoreGetLastMemTotal(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->lastsync == NULL ? 0 : syncstore->lastsync->memtotal;
 }
 
@@ -302,6 +319,9 @@ SCIP_Real SCIPsyncstoreGetLastSyncfreq(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->lastsync == NULL ? 0.0 : syncstore->lastsync->syncfreq;
 }
 
@@ -314,6 +334,9 @@ SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
                                                   *   must be increasing between calls of the same thread */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    int j = syncnum % syncstore->nsyncdata;
 
    /* check if requested syncnumber still exists if in debug mode */
@@ -331,6 +354,11 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    SCIP_Real*               delay                /**< pointer holding the current synchronization delay */
    )
 {
+   assert(syncdata != NULL);
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(delay != NULL);
+
    SCIP_Real newdelay;
    SCIP_Longint nextsyncnum;
 
@@ -357,6 +385,10 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    /* check if waiting is required, make sure to hold the lock */
    SCIP_CALL( SCIPtpiAcquireLock(&syncdata->lock) );
 
@@ -386,6 +418,7 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
 {
    int i;
 
+   assert(syncdata != NULL);
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
@@ -424,6 +457,8 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    SCIP_SYNCDATA**          syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+   assert((*syncdata) != NULL);
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
@@ -455,6 +490,8 @@ SCIP_STATUS SCIPsyncdataGetStatus(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->status;
 }
 
@@ -463,6 +500,9 @@ int SCIPsyncstoreGetWinner(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    if( syncstore->lastsync == NULL || syncstore->lastsync->status == SCIP_STATUS_UNKNOWN )
       return -1;
 
@@ -474,6 +514,8 @@ int SCIPsyncdataGetNSynced(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->syncedcount;
 }
 
@@ -482,6 +524,9 @@ int SCIPsyncstoreGetNSolvers(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
    return syncstore->nsolvers;
 }
 
@@ -491,6 +536,8 @@ SCIP_Longint SCIPsyncdataGetMemTotal(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->memtotal;
 }
 
@@ -499,6 +546,8 @@ SCIP_Real SCIPsyncdataGetSyncFreq(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->syncfreq;
 }
 
@@ -507,6 +556,8 @@ SCIP_Real SCIPsyncdataGetUpperbound(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->bestupperbound;
 }
 
@@ -515,6 +566,8 @@ SCIP_Real SCIPsyncdataGetLowerbound(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->bestlowerbound;
 }
 
@@ -526,6 +579,11 @@ void SCIPsyncdataGetSolutions(
    int*                     nsols                /**< pointer to return number of solutions */
    )
 {
+   assert(syncdata != NULL);
+   assert(solvalues != NULL);
+   assert(solowner != NULL);
+   assert(nsols != NULL);
+
    *solvalues = syncdata->sols;
    *solowner = syncdata->solsource;
    *nsols = syncdata->nsols;
@@ -536,6 +594,8 @@ SCIP_BOUNDSTORE* SCIPsyncdataGetBoundChgs(
    SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
    )
 {
+   assert(syncdata != NULL);
+
    return syncdata->boundstore;
 }
 
@@ -546,6 +606,10 @@ void SCIPsyncdataSetSyncFreq(
    SCIP_Real                syncfreq             /**< the synchronization frequency */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(syncdata != NULL);
+
    syncdata->syncfreq = MIN(syncfreq, syncstore->syncfreqmax);
 }
 
@@ -556,9 +620,12 @@ void SCIPsyncdataSetStatus(
    int                      solverid             /**< identifier of te solver that has this status */
    )
 {
+   assert(syncdata != NULL);
+
    /* check if status is better than current one (closer to SCIP_STATUS_OPTIMAL),
     * break ties by the solverid, and remember the solver wit the best status
-    * so that the winner will be selected deterministically */
+    * so that the winner will be selected deterministically
+    */
    if( syncdata->status < SCIP_STATUS_OPTIMAL )
    {
 
@@ -584,6 +651,8 @@ void SCIPsyncdataAddMemTotal(
    SCIP_Longint             memtotal             /**< the number of bytes used */
    )
 {
+   assert(syncdata != NULL);
+
    syncdata->memtotal += memtotal;
 }
 
@@ -593,6 +662,8 @@ void SCIPsyncdataSetUpperbound(
    SCIP_Real                upperbound           /**< the upperbound */
    )
 {
+   assert(syncdata != NULL);
+
    syncdata->bestupperbound = MIN(syncdata->bestupperbound, upperbound);
 }
 
@@ -602,6 +673,8 @@ void SCIPsyncdataSetLowerbound(
    SCIP_Real                lowerbound           /**< the lowerbound */
    )
 {
+   assert(syncdata != NULL);
+
    syncdata->bestlowerbound = MAX(syncdata->bestlowerbound, lowerbound);
 }
 
@@ -622,6 +695,8 @@ void SCIPsyncdataGetSolutionBuffer(
 
    assert(syncstore != NULL);
    assert(syncstore->initialized);
+   assert(syncdata != NULL);
+   assert(buffer != NULL);
 
    for( pos = 0; pos < syncdata->nsols; ++pos )
    {
@@ -671,6 +746,11 @@ SCIP_RETCODE SCIPsyncdataAddBoundChanges(
    SCIP_BOUNDSTORE*         boundstore           /**< bound store containing the bounds to add */
    )
 {
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(syncdata != NULL);
+   assert(boundstore != NULL);
+
    SCIP_CALL( SCIPboundstoreMerge(syncstore->mainscip, syncdata->boundstore, boundstore) );
 
    return SCIP_OKAY;
@@ -681,6 +761,8 @@ SCIP_Bool SCIPsyncstoreIsInitialized(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+
    return syncstore->initialized;
 }
 
@@ -689,5 +771,7 @@ SCIP_PARALLELMODE SCIPsyncstoreGetMode(
    SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
    )
 {
+   assert(syncstore != NULL);
+
    return syncstore->mode;
 }
