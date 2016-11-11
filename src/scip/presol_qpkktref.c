@@ -1759,7 +1759,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    cons = conss[0];
    assert( cons != NULL );
 
-   SCIPdebugMessage("tries to add the KKT conditions for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "tries to add the KKT conditions for constraint <%s>\n", SCIPconsGetName(cons));
 
    /* get presolver data */
    presoldata = SCIPpresolGetData(presol);
@@ -1769,7 +1769,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
     * otherwise, the problem usually can be solved faster by standard methods. */
    if ( ! presoldata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
    {
-      SCIPdebugMessage("quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \
+      SCIPdebugMsg(scip, "quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \
            indefinite.\n", SCIPconsGetName(cons) );
       return SCIP_OKAY;
    }
@@ -1824,7 +1824,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
               ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
             )
          {
-            SCIPdebugMessage("failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are \
+            SCIPdebugMsg(scip, "failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are \
                  bounded.\n", SCIPconsGetName(cons) );
             return SCIP_OKAY;
          }
@@ -1841,7 +1841,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
          if ( ( bilvar1 != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bilvar1)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bilvar1)) ) )
             || ( bilvar2 != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bilvar2)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bilvar2)) ) ) )
          {
-            SCIPdebugMessage("failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are \
+            SCIPdebugMsg(scip, "failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are \
                  bounded.\n", SCIPconsGetName(cons) );
             return SCIP_OKAY;
          }
@@ -1855,7 +1855,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
          var = quadterms[j].var;
          if ( var != objvar && ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) ) )
          {
-            SCIPdebugMessage("failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are \
+            SCIPdebugMsg(scip, "failed adding the KKT conditions, since not all variables to quadratic constraint <%s> are \
                  bounded.\n", SCIPconsGetName(cons) );
             return SCIP_OKAY;
          }
@@ -1866,8 +1866,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    /* add KKT constraints */
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip),
-        SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &dualconss, 2 * SCIPgetNVars(scip) + 2 * SCIPgetNFixedVars(scip)) ); /*lint !e647*/
@@ -1949,9 +1948,9 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIPhashmapFree(&varhash);
 
    if ( SCIPgetNBinVars(scip) > 0 )
-      SCIPdebugMessage("added the KKT conditions to the mixed-binary quadratic program\n");
+      SCIPdebugMsg(scip, "added the KKT conditions to the mixed-binary quadratic program\n");
    else
-      SCIPdebugMessage("added the KKT conditions to the quadratic program\n");
+      SCIPdebugMsg(scip, "added the KKT conditions to the quadratic program\n");
 
    /*SCIP_CALL( SCIPwriteTransProblem(scip, "trafoQP.lp", NULL, FALSE ) );*/
 
