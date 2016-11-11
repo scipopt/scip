@@ -113,12 +113,37 @@ function writeConfig(solverID) {
 #cp "${libdir}/$libname" "${gamspath}/$libname"
 #ln -s "${libdir}/$libname" "${gamspath}/$libname"
 
-# hide libstdc++ and libgfortran - this was only necessary with GAMS < 24.3
-#if test -e "${gamspath}/libstdc++.so.6" ; then
-#  echo "Moving ${gamspath}/libstdc++.so.6 to ${gamspath}/libstdc++.so.6.hide"
-#  mv "${gamspath}/libstdc++.so.6" "${gamspath}/libstdc++.so.6.hide"
-#fi
-#if test -e "${gamspath}/libgfortran.so.3" ; then
-#  echo "Moving ${gamspath}/libgfortran.so.3 to ${gamspath}/libgfortran.so.3.hide"
-#  mv "${gamspath}/libgfortran.so.3" "${gamspath}/libgfortran.so.3.hide"
-#fi
+# hide libstdc++ and some other GCC libraries if system files are more recent than what GAMS ships
+if [ -e "${gamspath}/libstdc++.so.6" ] ; then
+  # get highest GLIBCXX dependency from libstdc++.so.6 in GAMS
+  gamsver=`strings ${gamspath}/libstdc++.so.6 | grep "^GLIBCXX_[0-9]" | sort -V | tail -1`
+  # check which libstdc++ is used by libgamsscip.so
+  userlibstdcxx=`ldd lib/libgamsscip.so | grep libstdc++ | awk '{print $3}'`
+  if [ -n "$userlibstdcxx" ] ; then
+    # get highest GLIBCXX dependency from libstdc++.so.6 that is used by SCIP
+    userver=`strings ${userlibstdcxx} | grep "^GLIBCXX_[0-9]" | sort -V | tail -1`
+  fi
+  if [ -n "${gamsver}" ] && [ -n "${userver}" ] ; then
+    # if things worked so far, compare the version numbers (by checking what sort -V lists last)
+    gamsver=${gamsver/GLIBCXX_/}
+    userver=${userver/GLIBCXX_/}
+    echo "libstdc++ versions GAMS: $gamsver   ${userlibstdcxx}: $userver"
+    if [ `printf "$gamsver\n$userver" | sort -V | tail -1` != "$gamsver" ] ; then
+      # hide GCC libraries in GAMS system directory
+      echo "GAMS libstdc++ is older than dependency of libgamsscip.so."
+      for f in libgcc_s.so.1 libstdc++.so.6 libgfortran.so.3 libquadmath.so.0 ; do
+        if [ -e "${gamspath}/$f" ] ; then
+          echo "Moving ${gamspath}/$f to ${gamspath}/${f}.hide"
+          mv "${gamspath}/$f" "${gamspath}/${f}.hide"
+        fi
+      done
+    else
+      echo "GAMS libstdc++ is at least as recent as dependency of libgamsscip.so, so no action needed."
+    fi
+
+  else
+    echo "Could not check GLIBCXX version of libstdc++.so.6 in GAMS directory and SCIP library dependency."
+    echo "If running GAMS/SCIPDEV fails due some missing GLIBCXX version, try removing libstdc++.so.6 from the GAMS system directory."
+  fi
+
+fi

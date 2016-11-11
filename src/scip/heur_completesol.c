@@ -519,7 +519,7 @@ SCIP_RETCODE tightenVariables(
          if( SCIPisEQ(scip, solval, SCIPvarGetLbLocal(vars[v])) || SCIPisEQ(scip, solval, SCIPvarGetUbLocal(vars[v])) )
          {
             /* open a new probing node */
-            if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip) - 1 )
+            if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH - 1 )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
@@ -571,7 +571,7 @@ SCIP_RETCODE tightenVariables(
             if( SCIPisLT(scip, ub, SCIPvarGetUbLocal(vars[v])) )
             {
                /* open a new probing node */
-               if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip)-10 )
+               if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
                {
                   SCIP_CALL( SCIPnewProbingNode(scip) );
                }
@@ -599,7 +599,7 @@ SCIP_RETCODE tightenVariables(
             if( SCIPisGT(scip, lb, SCIPvarGetLbLocal(vars[v])) )
             {
                /* open a new probing node */
-               if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip)-10 )
+               if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
                {
                   SCIP_CALL( SCIPnewProbingNode(scip) );
                }
@@ -711,7 +711,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    eventhdlr = NULL;
@@ -976,7 +976,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
          assert(SCIPvarIsActive(vars[v]));
 
          /* skip continuous variables if they should ignored */
-         if( SCIPvarIsIntegral(vars[v]) && heurdata->ignorecont )
+         if( !SCIPvarIsIntegral(vars[v]) && heurdata->ignorecont )
             continue;
 
          solval = SCIPgetSolVal(scip, sol, vars[v]);

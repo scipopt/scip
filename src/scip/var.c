@@ -2127,6 +2127,9 @@ SCIP_RETCODE SCIPvarCopy(
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
 
+   /* directly copy donotmultaggr flag */
+   (*var)->donotmultaggr = sourcevar->donotmultaggr;
+
    /* insert variable into mapping between source SCIP and the target SCIP */
    assert(!SCIPhashmapExists(varmap, sourcevar));
    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
@@ -2145,6 +2148,16 @@ SCIP_RETCODE SCIPvarCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
+
+      /* if copying was successful, add the created variable data to the variable as well as all callback methods */
+      if( result == SCIP_SUCCESS )
+      {
+         (*var)->varcopy = sourcevar->varcopy;
+         (*var)->vardelorig = sourcevar->vardelorig;
+         (*var)->vartrans = sourcevar->vartrans;
+         (*var)->vardeltrans = sourcevar->vardeltrans;
+         (*var)->vardata = targetdata;
+      }
    }
 
    /* we initialize histories of the variables by copying the source variable-information */
@@ -4928,6 +4941,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    )
 {
    SCIP_Bool easyaggr;
+   SCIP_Real maxscalar;
+   SCIP_Real absquot;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4952,6 +4967,13 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    *infeasible = FALSE;
    *aggregated = FALSE;
+
+   absquot = REALABS(scalarx / scalary);
+   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
+   maxscalar = MAX(maxscalar, 1.0);
+
+   if( absquot > maxscalar || absquot < 1 / maxscalar )
+      return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&
@@ -12574,7 +12596,7 @@ void SCIPvarUpdateBestRootSol(
       /* check if an improving root solution, root reduced cost, and root LP objective value is at hand */
       if( cutoffbound > currcutoffbound )
       {
-         SCIPsetDebugMsg(set, "-> <%s> update potetial cutoff bound <%g> -> <%g>\n",
+         SCIPsetDebugMsg(set, "-> <%s> update potential cutoff bound <%g> -> <%g>\n",
             SCIPvarGetName(var), currcutoffbound, cutoffbound);
 
          var->bestrootsol = rootsol;

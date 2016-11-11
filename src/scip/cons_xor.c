@@ -72,7 +72,7 @@
 #define DEFAULT_ADDFLOWEXTENDED   FALSE /**< should the extended flow formulation be added (nonsymmetric formulation otherwise)? */
 #define DEFAULT_SEPARATEPARITY    FALSE /**< should parity inequalities be separated? */
 #define DEFAULT_GAUSSPROPFREQ         5 /**< frequency for applying the Gauss propagator */
-#define HASHSIZE_XORCONS         131101 /**< minimal size of hash table in logicor constraint tables */
+#define HASHSIZE_XORCONS            500 /**< minimal size of hash table in logicor constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -759,7 +759,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -784,9 +783,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
     * SCIPvarCompareActiveAndNegated (see var.c)
     */
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** deletes all fixed variables and all pairs of equal variables */
@@ -2270,7 +2268,7 @@ SCIP_RETCODE checkSystemGF2(
    nvars = SCIPgetNVars(scip);
 
    /* set up hash map from variable to column index */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xoractive, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xorvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xoridx, nvars) );
@@ -2830,7 +2828,7 @@ SCIP_RETCODE analyzeConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add bound changes */
    SCIP_CALL( addConflictBounds(scip, cons, infervar, NULL, proprule) );
@@ -3583,8 +3581,9 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_XORCONS);
+
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyXorcons, hashKeyEqXorcons, hashKeyValXorcons, (void*) scip) );
 
@@ -5441,7 +5440,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/xor/gausspropfreq",
          "frequency for applying the Gauss propagator",
-         &conshdlrdata->gausspropfreq, TRUE, DEFAULT_GAUSSPROPFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->gausspropfreq, TRUE, DEFAULT_GAUSSPROPFREQ, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }

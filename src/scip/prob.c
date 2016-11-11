@@ -35,6 +35,7 @@
 #include "scip/reopt.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/conflictstore.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
@@ -177,7 +178,8 @@ SCIP_Bool varHasName(
  * problem creation
  */
 
-/** creates problem data structure by copying the source problem; 
+/** creates problem data structure by copying the source problem
+ *
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
  */
@@ -195,8 +197,8 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
-   SCIP_PROBDATA* targetdata;
-   SCIP_RESULT result;
+   SCIP_PROBDATA* targetdata = NULL;
+   SCIP_RESULT result = SCIP_DIDNOTRUN;
 
    assert(prob != NULL);
    assert(set != NULL);
@@ -205,9 +207,6 @@ SCIP_RETCODE SCIPprobCopy(
    assert(sourceprob != NULL);
    assert(varmap != NULL);
    assert(consmap != NULL);
-
-   result = SCIP_DIDNOTRUN;
-   targetdata = NULL;
 
    /* create problem and initialize callbacks with NULL */
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
@@ -225,19 +224,19 @@ SCIP_RETCODE SCIPprobCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
-   }
 
-   /* if copying was successful, add data and callbacks */
-   if( result == SCIP_SUCCESS )
-   {
-      assert( targetdata != NULL );
-      (*prob)->probdelorig = sourceprob->probdelorig;
-      (*prob)->probtrans = sourceprob->probtrans;
-      (*prob)->probdeltrans = sourceprob->probdeltrans;
-      (*prob)->probinitsol = sourceprob->probinitsol;
-      (*prob)->probexitsol = sourceprob->probexitsol;
-      (*prob)->probcopy = sourceprob->probcopy;
-      (*prob)->probdata = targetdata;
+      /* if copying was successful, add data and callbacks */
+      if( result == SCIP_SUCCESS )
+      {
+         assert( targetdata != NULL );
+         (*prob)->probdelorig = sourceprob->probdelorig;
+         (*prob)->probtrans = sourceprob->probtrans;
+         (*prob)->probdeltrans = sourceprob->probdeltrans;
+         (*prob)->probinitsol = sourceprob->probinitsol;
+         (*prob)->probexitsol = sourceprob->probexitsol;
+         (*prob)->probcopy = sourceprob->probcopy;
+         (*prob)->probdata = targetdata;
+      }
    }
 
    return SCIP_OKAY;
@@ -276,7 +275,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probexitsol = probexitsol;
    if( set->misc_usevartable )
    {
-      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, 
+      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem,
             (set->misc_usesmalltables ? SCIP_HASHSIZE_NAMES_SMALL : SCIP_HASHSIZE_NAMES),
             SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    }
@@ -496,6 +495,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -576,6 +576,9 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* mark the transformed problem to be permuted iff the source problem is permuted */
    (*target)->permuted = source->permuted;
+
+   /* transform the conflict pool */
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -1223,7 +1226,6 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
       SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
    }
 
@@ -2101,6 +2103,7 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
+#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
 #undef SCIPisConsCompressedEnabled
@@ -2243,6 +2246,15 @@ SCIP_VAR** SCIPprobGetVars(
 {
    assert(prob != NULL);
    return prob->vars;
+}
+
+/** gets number of problem constraints */
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nconss;
 }
 
 /** gets the objective offset */
