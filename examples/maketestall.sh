@@ -1,13 +1,30 @@
 #!/usr/bin/env bash
 #
-# run all tests of examples
+# Run all tests of examples, arguments are passed to the make test command.
+# Parameter "-q" turns on the quiet mode, i.e., does not output the logging of the programs.
 #
-# run with bash -e maketestall.sh to stop on errors
 #
 
 EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
 LPSOLVERS=(spx2)
 OPTS=(dbg)
+
+echo "Running all tests on examples."
+
+# parse command line
+MAKEARGS=""
+QUIET=0
+for i in $@
+do
+    if test "$i" = "-q"
+    then
+	echo "Quiet mode."
+	QUIET=1
+    else
+	MAKEARGS="$MAKEARGS $i"
+    fi
+done
+
 
 # determine architecture
 ARCH=`uname -m | \
@@ -28,14 +45,17 @@ OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
     -e 's/windows.*/windows/' \
     -e 's/mingw.*/mingw/'`
 
+# prepare log file
+echo "" > exampletestsummary.log
+
 for EXAMPLE in ${EXAMPLES[@]}
 do
     echo
     echo
     echo ===== $EXAMPLE =====
+    echo ===== $EXAMPLE ===== >> exampletestsummary.log
     echo
     cd $EXAMPLE
-    echo
     for OPT in ${OPTS[@]}
     do
 	for LPS in ${LPSOLVERS[@]}
@@ -46,25 +66,63 @@ do
 		SCIPLIB=../../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
 		if test -e $SCIPLIB
 		then
-		    echo make OPT=$OPT LPS=$LPS
-		    if (! make OPT=$OPT LPS=$LPS )
+		    echo make OPT=$OPT LPS=$LPS $MAKEARGS
+		    if (! make OPT=$OPT LPS=$LPS $MAKEARGS )
 		    then
+			echo "Making "$EXAMPLE" failed." >> ../exampletestsummary.log
 			exit $STATUS
+		    else
+			echo "Making "$EXAMPLE" successful." >> ../exampletestsummary.log
 		    fi
 		    echo
-		    echo make OPT=$OPT LPS=$LPS test
-		    if (! make OPT=$OPT LPS=$LPS test )
-	            then
-			exit $STATUS
+		    if test $QUIET = 1
+		    then
+			echo make OPT=$OPT LPS=$LPS $MAKEARGS test
+			if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test > /dev/null )
+			then
+			    echo "Testing "$EXAMPLE" failed."
+			    echo "Testing "$EXAMPLE" failed." >> ../exampletestsummary.log
+			    exit $STATUS
+			fi
+		    else
+			echo make OPT=$OPT LPS=$LPS $MAKEARGS test
+			if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test )
+			then
+			    echo "Testing "$EXAMPLE" failed."
+			    echo "Testing "$EXAMPLE" failed." >> ../exampletestsummary.log
+			    exit $STATUS
+			fi
+		    fi
+		    echo "Testing "$EXAMPLE" successful."
+		    echo "Testing "$EXAMPLE" successful." >> ../exampletestsummary.log
+
+		    # find most recently changed result file and display it
+		    if test -d check/results
+		    then
+			RESFILE=`find check/results/*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
+			if test -e $RESFILE
+			then
+			    cat $RESFILE >> ../exampletestsummary.log
+			fi
 		    fi
 		else
+		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS")" >> ../exampletestsummary.log
 		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS")"
 		fi
             else
+		echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS")" >> ../exampletestsummary.log
 		echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS")"
             fi
 	    echo
+	    echo >> ../exampletestsummary.log
 	done
     done
-    cd -
+    cd - > /dev/null
 done
+
+echo
+echo
+echo ===== Summary =====
+
+cat exampletestsummary.log
+rm -f exampletestsummary.log
