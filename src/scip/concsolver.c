@@ -43,6 +43,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    SCIP_MESSAGEHDLR*                   messagehdlr,                /**< message handler */
    BMS_BLKMEM*                         blkmem,                     /**< block memory for parameter settings */
    const char*                         name,                       /**< name of concurrent solver */
+   SCIP_Real                           prefpriodefault,            /**< the default preferred priority of this concurrent solver type */
    SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst)),  /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
@@ -60,6 +61,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
 
    assert(concsolvertype != NULL);
    assert(name != NULL);
+   assert(prefpriodefault >= 0.0 && prefpriodefault <= 1.0);
 
    assert(concsolvercreateinst != NULL);
    assert(concsolverdestroyinst != NULL);
@@ -84,10 +86,10 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    (*concsolvertype)->concsolversyncread = concsolversyncread;
    (*concsolvertype)->concsolvertypefreedata = concsolvertypefreedata;
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "concurrent/%s/ninstances", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "the number of instances of the <%s> concurrent solver that are used in a parallel solve", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                                 &(*concsolvertype)->nrequestedinstances, FALSE, 0, 0, 100,
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "concurrent/%s/prefprio", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "the preferred number concurrent solvers of type <%s> with respect to the number of threads", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                                 &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
                                  NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
@@ -139,14 +141,14 @@ char* SCIPconcsolverTypeGetName(
    return concsolvertype->name;
 }
 
-/** gets the number of instances that should be created from a concurrent solver type */
-int SCIPconcsolverTypeGetNRequestedInstances(
+/** gets the preferred priority from a concurrent solver type */
+SCIP_Real SCIPconcsolverTypeGetPrefPrio(
    SCIP_CONCSOLVERTYPE*                concsolvertype              /**< concurrent solver type */
    )
 {
    assert(concsolvertype != NULL);
 
-   return concsolvertype->nrequestedinstances;
+   return concsolvertype->prefprio;
 }
 
 /** creates an instance of the given concurrent solver type */

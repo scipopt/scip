@@ -393,9 +393,7 @@
 #define SCIP_DEFAULT_PARALLEL_MODE               1     /**< the mode for the parallel implementation. Either 0: opportunistic or
                                                         *   1: deterministic */
 #define SCIP_DEFAULT_PARALLEL_MINNTHREADS        1     /**< the minimum number of threads used in parallel code */
-#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS        32    /**< the maximum number of threads used in parallel code */
-#define SCIP_DEFAULT_PARALLEL_QUEUESIZE          64    /**< the number of threads used in parallel code */
-#define SCIP_DEFAULT_PARALLEL_QUEUEBLOCKWHENFULL FALSE /**< the number of threads used in parallel code */
+#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS        8     /**< the maximum number of threads used in parallel code */
 
 /* Concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_CHANGESEEDS     TRUE /**< should the concurrent solvers use different random seeds? */
@@ -2281,16 +2279,6 @@ SCIP_RETCODE SCIPsetCreate(
          "parallel/maxnthreads",
          "the maximum number of threads used during parallel solve",
          &(*set)->parallel_maxnthreads, FALSE, SCIP_DEFAULT_PARALLEL_MAXNTHREADS, 0, 64,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "parallel/queuesize",
-         "the number of threads used during parallel solve",
-         &(*set)->parallel_queuesize, FALSE, SCIP_DEFAULT_PARALLEL_QUEUESIZE, 1, 1024,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "parallel/blockqueuewhenfull",
-         "the number of threads used during parallel solve",
-         &(*set)->parallel_blockqueuewhenfull, FALSE, SCIP_DEFAULT_PARALLEL_QUEUEBLOCKWHENFULL,
          NULL, NULL) );
 
    /* concurrent solver parameters */

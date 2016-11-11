@@ -140,6 +140,7 @@ SCIP_RETCODE initConcsolver(
       data->vars[i] = var;
    }
    /* create the concurrent data structure for the concurrent solver's SCIP */
+   assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
    SCIPfreeBufferArray(data->solverscip, &varperm);
    /* free the hashmap */
@@ -550,55 +551,55 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    /* include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting */
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = FALSE;
-   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip", 1.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_DEFAULT;
-   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-default", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-default", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_CPSOLVER;
-    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-cpsolver", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-cpsolver", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_EASYCIP;
-    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-easycip", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-easycip", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_FEASIBILITY;
-    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-feasibility", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-feasibility", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_HARDLP;
-    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-hardlp", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-hardlp", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_OPTIMALITY;
-    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-optimality", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-optimality", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_COUNTER;
-    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-counter", concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-counter", 0.0,  concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 

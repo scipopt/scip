@@ -122,7 +122,6 @@ SCIP_RETCODE SCIPsyncstoreInit(
    int i;
    int j;
    int paramode;
-   SCIP_Bool blockwhenfull;
 
    assert(scip != NULL);
    syncstore = SCIPgetSyncstore(scip);
@@ -160,11 +159,9 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->stopped = FALSE;
 
    SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
-   SCIP_CALL( SCIPgetIntParam(scip, "parallel/queuesize", &syncstore->queuesize) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "parallel/blockqueuewhenfull", &blockwhenfull) );
    syncstore->mode = (SCIP_PARALLELMODE) paramode;
 
-   SCIP_CALL( SCIPtpiInit(syncstore->nsolvers, syncstore->queuesize, blockwhenfull) );
+   SCIP_CALL( SCIPtpiInit(syncstore->nsolvers, INT_MAX, FALSE) );
    SCIP_CALL( SCIPautoselectDisps(scip) );
 
    return SCIP_OKAY;

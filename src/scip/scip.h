@@ -3755,6 +3755,7 @@ EXTERN
 SCIP_RETCODE SCIPincludeConcsolverType(
    SCIP*                               scip,                       /**< SCIP data structure */
    const char*                         name,                       /**< name of concurrent_solver */
+   SCIP_Real                           prefpriodefault,            /**< the default preferred priority of this concurrent solver type */
    SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst)),  /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */

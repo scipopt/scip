@@ -49,8 +49,6 @@ struct SCIP_SyncStore
    SCIP_LOCK               lock;
 
    /* SPI settings */
-   int                     queuesize;          /**< the maximum size of the job queue.
-                                                  This is also the maximum number of task SCIP instances created. */
    int                     nsyncdata;
    int                     maxnsyncdelay;
    SCIP_Real               minsyncdelay;

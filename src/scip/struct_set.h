@@ -469,8 +469,6 @@ struct SCIP_Set
                                                       *   1: deterministic */
    int                   parallel_minnthreads;       /**< the minimum number of threads used for parallel code */
    int                   parallel_maxnthreads;       /**< the maximum number of threads used for parallel code */
-   int                   parallel_queuesize ;        /**< size of job queue */
-   SCIP_Bool             parallel_blockqueuewhenfull;/**< shall the job queue block when it is full? */
 
    /* concurrent solver settings */
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */

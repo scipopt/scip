@@ -61,11 +61,12 @@ SCIP_RETCODE SCIPcreateConcurrent(
    SCIP_CALL( SCIPallocBlockMemory(scip, &scip->concurrent) );
 
    nvars = SCIPgetNOrigVars(scip);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
+   scip->concurrent->varperm = NULL;
+   if( varperm != NULL )
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
 
    scip->concurrent->concsolver = concsolver;
    scip->concurrent->mainscip = scip;
-   scip->concurrent->varperm = varperm;
    scip->concurrent->solidx = 0;
    scip->stat->subscipdepth = 0;
 
@@ -182,7 +183,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
       }
 
       SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->concsolvers, scip->concurrent->concsolverssize);
-      SCIPfreeBlockMemoryArray(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
+      SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
 
       if( SCIPsyncstoreIsInitialized(scip->syncstore) )
       {

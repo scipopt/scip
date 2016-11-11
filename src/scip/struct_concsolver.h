@@ -36,7 +36,7 @@ extern "C" {
 struct SCIP_ConcSolverType
 {
    int                                 ninstances;                 /**< number of instances created from this concurrent solver class */
-   int                                 nrequestedinstances;        /**< number of instances that should be used in parallel solve */
+   SCIP_Real                           prefprio;                   /**< the weight of the concurrent */
    char*                               name;                       /**< name of concurrent solver */
    SCIP_CONCSOLVERTYPEDATA*            data;                       /**< user data of concurrent solver type */
    SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst));  /**< creates an instance of the concurrent solver */

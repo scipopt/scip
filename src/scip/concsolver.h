@@ -42,6 +42,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    SCIP_MESSAGEHDLR*                   messagehdlr,                /**< message handler */
    BMS_BLKMEM*                         blkmem,                     /**< block memory for parameter settings */
    const char*                         name,                       /**< name of concurrent solver */
+   SCIP_Real                           prefpriodefault,            /**< the default preferred priority of this concurrent solver type */
    SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst)),  /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
@@ -79,9 +80,9 @@ char* SCIPconcsolverTypeGetName(
    SCIP_CONCSOLVERTYPE*                concsolvertype              /**< concurrent solver type */
    );
 
-/** gets the number of instances that should be created from a concurrent solver type */
+/** gets the preferred priority from a concurrent solver type */
 extern
-int SCIPconcsolverTypeGetNRequestedInstances(
+SCIP_Real SCIPconcsolverTypeGetPrefPrio(
    SCIP_CONCSOLVERTYPE*                concsolvertype              /**< concurrent solver type */
    );
 

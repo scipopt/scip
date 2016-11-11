@@ -116,10 +116,11 @@ SCIP_DECL_HEUREXEC(heurExecSynch)
    SCIP_Bool stored;
    int i;
 
-   assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
-   assert( scip != NULL );
-   assert( result != NULL );
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+   assert(SCIPheurGetFreq(heur) == 1);
 
    SCIPheurSetFreq(heur, -1);
 
@@ -135,7 +136,6 @@ SCIP_DECL_HEUREXEC(heurExecSynch)
       SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sols[i], FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       if( stored )
          *result = SCIP_FOUNDSOL;
-
    }
 
    heurdata->nsols = 0;
@@ -242,7 +242,7 @@ SCIP_RETCODE SCIPheurSynchPassSol(
          SCIPfreeSol(scip, &sol);
       }
    }
-
+   assert(heurdata->nsols > 0);
    assert(heurdata->nsols <= heurdata->maxnsols);
    SCIPheurSetFreq(heur, 1);
    return SCIP_OKAY;
