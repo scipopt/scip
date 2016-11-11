@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
 #define SCIP_DEBUG
-#define SCIP_STATISTICS
+#define SCIP_STATISTIC
 */
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
@@ -96,6 +96,8 @@ typedef struct
  */
 struct SCIP_BranchruleData
 {
+   SCIP_Bool             isinitialized;      /**< indicates whether the fields in this struct are initialized */
+
    SCIP_Bool             useimplieddomred;   /**< indicates whether the second level domain reduction data should be
                                               *   gathered and used */
    SCIP_Bool             usedirectdomred;    /**< indicates whether the first level domain reduction data should be
@@ -125,7 +127,7 @@ struct SCIP_BranchruleData
    BRANCHINGRESULTDATA** lastbranchdownres;
    SCIP_Real*            lastbranchdowndb;   /**< dual bound of down branchings */
    SCIP_Real*            lastbranchupdb;     /**< dual bound of up branchigs */
-#ifdef SCIP_STATISTICS
+#ifdef SCIP_STATISTIC
    int                   nbinconst;          /**< counter for the nubmer of "normal" binary constraints added */
    int                   nfirstlvllps;       /**< counter for the number of lps that were solved on the first level */
    int                   nsecondlvllps;      /**< counter for the number of lps that were solved on the second level */
@@ -1861,6 +1863,7 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    assert(branchruledata != NULL);
 
    SCIPstatistic(
+      {
          int i;
 
          for( i = 1; i < 18; i++ )
@@ -1876,6 +1879,7 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
             branchruledata->nstoflvlcutoffs);
          SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints\n", branchruledata->nbinconst);
          SCIPfreeMemoryArray(scip, &branchruledata->nresults);
+      }
    )
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -1883,30 +1887,24 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    return SCIP_OKAY;
 }
 
-
-/** initialization method of branching rule (called after problem was transformed) */
 static
-SCIP_DECL_BRANCHINIT(branchInitLookahead)
-{  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
+SCIP_RETCODE initBranchruleData(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata
+   )
+{
    int nvars;
    int i;
 
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   nvars = SCIPgetNOrigVars(scip); /*TODO: correct getter for number of vars? */
-
-   SCIPstatistic(
-      {
-         int i;
-         for( i = 0; i < 18; i++)
-         {
-            branchruledata->nresults[i] = 0;
-         }
-      }
-   )
-
    /* Create an empty solution. Gets filled in case of implied binary bounds. */
    SCIP_CALL( SCIPcreateSol(scip, &branchruledata->prevbinsolution, NULL) );
+
+   /* The variables given by the SCIPgetVars() array are sorted with the binaries at first and the integer variables
+    * directly afterwards. With the SCIPvarGetProbindex() method we can access the index of a given variable in the
+    * SCIPgetVars() array and as such we can use it to access our arrays which should only contain binary and integer
+    * variables.
+    */
+   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->lastbranchid, nvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->lastbranchnlps, nvars) );
@@ -1930,40 +1928,49 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
       SCIP_CALL( SCIPallocMemory(scip, &branchruledata->lastbranchdownres[i]) );
    }
 
+   branchruledata->isinitialized = TRUE;
+
    return SCIP_OKAY;
 }
 
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
 static
-SCIP_DECL_BRANCHEXIT(branchExitLookahead)
+SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
-   int nvars;
-   int i;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
-   nvars = SCIPgetNOrigVars(scip); /*TODO: correct getter for number of vars? */
 
-   for( i = nvars-1; i >= 0; i--)
+   if( branchruledata->isinitialized )
    {
-      SCIPfreeMemory(scip, &branchruledata->lastbranchdownres[i]);
-      SCIPfreeMemory(scip, &branchruledata->lastbranchupres[i]);
-      SCIPfreeMemory(scip, &branchruledata->lastbranchscoredata[i]->upperbounddata);
-      SCIPfreeMemory(scip, &branchruledata->lastbranchscoredata[i]->lowerbounddata);
-      SCIPfreeMemory(scip, &branchruledata->lastbranchscoredata[i]);
+      int nvars;
+      int i;
+
+      nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+
+      for( i = nvars-1; i >= 0; i--)
+      {
+         SCIPfreeMemory(scip, &branchruledata->lastbranchdownres[i]);
+         SCIPfreeMemory(scip, &branchruledata->lastbranchupres[i]);
+         SCIPfreeMemory(scip, &branchruledata->lastbranchscoredata[i]->upperbounddata);
+         SCIPfreeMemory(scip, &branchruledata->lastbranchscoredata[i]->lowerbounddata);
+         SCIPfreeMemory(scip, &branchruledata->lastbranchscoredata[i]);
+      }
+
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchdownres);
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchupres);
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchscoredata);
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchupdb);
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchdowndb);
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchnlps);
+      SCIPfreeMemoryArray(scip, &branchruledata->lastbranchid);
+
+      /* Free the solution that was used for implied binary bounds. */
+      SCIP_CALL( SCIPfreeSol(scip, &branchruledata->prevbinsolution) );
+
+      branchruledata->isinitialized = FALSE;
    }
 
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchdownres);
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchupres);
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchscoredata);
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchupdb);
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchdowndb);
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchnlps);
-   SCIPfreeMemoryArray(scip, &branchruledata->lastbranchid);
-
-   /* Free the solution that was used for implied binary bounds. */
-   SCIP_CALL( SCIPfreeSol(scip, &branchruledata->prevbinsolution) );
 
    return SCIP_OKAY;
 }
@@ -2033,6 +2040,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+
+   if( !branchruledata->isinitialized )
+   {
+      initBranchruleData(scip, branchruledata);
+   }
 
    if( branchruledata->useimpliedbincons )
    {
@@ -2166,6 +2178,33 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_STATISTIC
+static
+SCIP_RETCODE initBranchruledataStatistics(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata
+   )
+{
+   int i;
+
+   branchruledata->nfirstlvlcutoffs = 0;
+   branchruledata->nfirstlvllps = 0;
+   branchruledata->nsecondlvlcutoffs = 0;
+   branchruledata->nsecondlvllps = 0;
+   branchruledata->nbinconst = 0;
+   branchruledata->nstoflvlcutoffs = 0;
+   /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nresults, 17 + 1) );
+
+   for( i = 0; i < 18; i++)
+   {
+      branchruledata->nresults[i] = 0;
+   }
+
+   return SCIP_OKAY;
+}
+#endif
+
 /*
  * branching rule specific interface methods
  */
@@ -2180,16 +2219,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
 
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   branchruledata->isinitialized = FALSE;
 
    SCIPstatistic(
-      branchruledata->nfirstlvlcutoffs = 0;
-      branchruledata->nfirstlvllps = 0;
-      branchruledata->nsecondlvlcutoffs = 0;
-      branchruledata->nsecondlvllps = 0;
-      branchruledata->nbinconst = 0;
-      branchruledata->nstoflvlcutoffs = 0;
-      /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->nresults, 17 + 1) );
+      SCIP_CALL( initBranchruledataStatistics(scip, branchruledata) );
    )
 
    /* include branching rule */
@@ -2201,8 +2234,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyLookahead) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeLookahead) );
-   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitLookahead) );
-   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitLookahead) );
+   SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitSolLookahead) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookahead) );
 
    /* add lookahead branching rule parameters */
