@@ -199,22 +199,28 @@ SCIP_Real getPotentialContributed(
    int               sgn                     /**< slacks signum */
    )
 {
+   SCIP_Real potential;
    if( 0 > sgn * coefficient )
    {
       if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
       {
-         return SCIPinfinity(scip);
+         potential = SCIPinfinity(scip);
       }
-      return coefficient * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
+      potential = coefficient * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
    }
    else
    {
       if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
       {
-         return -SCIPinfinity(scip);
+         potential = -SCIPinfinity(scip);
       }
-      return coefficient * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
+      potential = coefficient * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
    }
+   if( SCIPisZero(scip, potential) )
+   {
+      potential = 0.0;
+   }
+   return potential;
 }
 
 /**
