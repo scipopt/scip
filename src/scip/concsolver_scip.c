@@ -61,7 +61,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
    return SCIP_OKAY;
 #if 0
-   /* TODO somethings still poducing objective cutoffs so I use misc/allowdualreds for now */
+   /* TODO something is still poducing objective cutoffs so I use misc/allowdualreds for now */
    /* presolvers */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/stuffing/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
@@ -114,7 +114,7 @@ SCIP_RETCODE initConcsolver(
    int                 i;
    SCIP_VAR**          vars;
    SCIP_Bool           valid;
-   SCIP_HASHMAP*       varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP*       varmapfw;
    SCIP_CONCSOLVERDATA* data;
    int* varperm;
 
@@ -126,11 +126,13 @@ SCIP_RETCODE initConcsolver(
 
    data->nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
+
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
    SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE, &valid) );
    assert(valid);
+
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
    SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
@@ -148,6 +150,7 @@ SCIP_RETCODE initConcsolver(
    assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
    SCIPfreeBufferArray(data->solverscip, &varperm);
+
    /* free the hashmap */
    SCIPhashmapFree(&varmapfw);
 
@@ -171,12 +174,9 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    typedata = SCIPconcsolverTypeGetData(concsolvertype);
 
    SCIP_ALLOC( BMSallocMemory(&data) );
-
    SCIPconcsolverSetData(concsolver, data);
 
    initConcsolver(scip, concsolver);
-
-   SCIP_CALL( SCIPgetStringParam(scip, "concurrent/paramsetprefix", &prefix) );
 
    /* check if emphasis setting should be loaded */
    if( typedata->loademphasis )
@@ -222,6 +222,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    }
 
    /* load settings file if it exists */
+   SCIP_CALL( SCIPgetStringParam(scip, "concurrent/paramsetprefix", &prefix) );
    (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s%s.set", prefix, SCIPconcsolverGetName(concsolver));
 
    if( SCIPfileExists(filename) )
@@ -239,8 +240,10 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 
    /* include eventhandler for synchronization */
    SCIP_CALL( SCIPincludeEventHdlrSync(data->solverscip) );
+
    /* disable output for subscip */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "display/verblevel", 0) );
+
    /* use wall clock time in subscips */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", SCIP_CLOCKTYPE_WALL) );
 
@@ -254,8 +257,8 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
       SCIP_CALL( disableConflictingDualReductions(data->solverscip) );
    }
 
+   /* set different child selection rules if corresponding parameter is TRUE */
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/changechildsel", &changechildsel) );
-
    if( changechildsel )
    {
       SCIP_CALL( setChildSelRule(concsolver) );
@@ -347,11 +350,12 @@ SCIP_DECL_CONCSOLVERGETSOLVINGDATA(concsolverGetSolvingData)
 
    assert(nvars == data->nvars);
 
+   /* allocate buffer array used for translating the solution to the given SCIP */
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
 
+   /* add the solutions to the given SCIP */
    for( i = 0; i < nsols; ++i )
    {
-
       SCIP_SOL* sol;
       SCIP_Bool stored;
       SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], nvars, data->vars, solvals) );
@@ -369,9 +373,12 @@ SCIP_DECL_CONCSOLVERGETSOLVINGDATA(concsolverGetSolvingData)
       SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
    }
 
+   /* free the buffer array */
    SCIPfreeBufferArray(scip, &solvals);
 
+   /* copy solving statistics and status from the solver SCIP to the given SCIP */
    SCIP_CALL( SCIPcopyConcurrentSolvingStats(data->solverscip, scip) );
+
    return SCIP_OKAY;
 }
 
@@ -449,6 +456,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
       return SCIP_OKAY;
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
+
    /* consider at most maxcandsols many solutions, and since
     * the solution array is sorted, we will cosider the best
     * solutions
@@ -469,7 +477,8 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
          SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
 
          /* if syncstore has no place for this solution we can stop since the next solution will have
-          * a worse objective value and thus won't be accepted either */
+          * a worse objective value and thus won't be accepted either
+          */
          if( solvals == NULL )
             break;
 
@@ -505,10 +514,12 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
    int                    concsolverid;
    int                    nbndchgs;
 
-
    data = SCIPconcsolverGetData(concsolver);
+   assert(data != NULL);
+
    concsolverid = SCIPconcsolverGetIdx(concsolver);
 
+   /* get solutions from synchronization data */
    SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
    *nsolsrecvd = 0;
 
@@ -520,6 +531,9 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( concsolverids[i] == concsolverid )
          continue;
 
+      /* solution is from other solver so translate to this solvers variable space
+       * and add it to the SCIP
+       */
       ++(*nsolsrecvd);
       SCIP_CALL( SCIPcreateOrigSol(data->solverscip, &newsol, NULL) );
 
@@ -528,9 +542,9 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       SCIP_CALL( SCIPaddConcurrentSol(data->solverscip, newsol) );
    }
 
-
-   data = SCIPconcsolverGetData(concsolver);
-
+   /* get bound changes from the synchronization data and add it to this
+    * concurrent solvers SCIP
+    */
    *ntighterbnds = 0;
    *ntighterintbnds = 0;
    boundstore = SCIPsyncdataGetBoundChgs(syncdata);
@@ -553,19 +567,20 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
          return SCIP_OKAY;
 
       /* if bound is not better than also dont pass this bound to the propagator and
-       * don't waste memroy for storing this boundchange */
+       * don't waste memroy for storing this boundchange
+       */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(data->solverscip, SCIPvarGetLbGlobal(var), newbound) )
          return SCIP_OKAY;
 
       if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisLE(data->solverscip, SCIPvarGetUbGlobal(var), newbound) )
          return SCIP_OKAY;
 
+      /* bound is better so incremented counters for statistics and pass it to the sync propagator */
       ++(*ntighterbnds);
 
       if( SCIPvarGetType(var) <= SCIP_VARTYPE_INTEGER )
          ++(*ntighterintbnds);
 
-      /* bound is better so pass it to the sync propagator */
       SCIP_CALL( SCIPaddConcurrentBndchg(data->solverscip, var, newbound, boundtype) );
    }
 
@@ -581,7 +596,10 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    SCIP_CONCSOLVERTYPEDATA* data;
    assert(scip != NULL);
 
-   /* include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting */
+   /* include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.
+    * For the SCIP without an emphasis setting we set the default preferred priority to 1 and for the other types to 0
+    * so that the default concurent solve will use multiple SCIP's using settings as specified by the user in the main SCIP
+    */
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = FALSE;
    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip", 1.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
@@ -629,6 +647,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-optimality", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
+
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_COUNTER;
