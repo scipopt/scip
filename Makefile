@@ -519,6 +519,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
+			scip/presol_qpkktref.o \
 			scip/presol_redvub.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
@@ -556,6 +557,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
 			scip/sepa_cmir.o \
+			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
 			scip/sepa_flowcover.o \

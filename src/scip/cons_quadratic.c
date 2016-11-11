@@ -13605,6 +13605,44 @@ SCIP_Real SCIPgetRhsQuadratic(
    return SCIPconsGetData(cons)->rhs;
 }
 
+/** get index of a variable in linvars that may be decreased without making any other constraint infeasible, or -1 if none */
+int SCIPgetLinvarMayDecreaseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   consdataFindUnlockedLinearVar(scip, consdata);
+
+   return consdata->linvar_maydecrease;
+}
+
+/** get index of a variable in linvars that may be increased without making any other constraint infeasible, or -1 if none */
+int SCIPgetLinvarMayIncreaseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   consdataFindUnlockedLinearVar(scip, consdata);
+
+   return consdata->linvar_mayincrease;
+}
+
 /** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet. */
 SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */

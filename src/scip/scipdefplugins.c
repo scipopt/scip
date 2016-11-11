@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+   SCIP_CALL( SCIPincludePresolQPKKTref(scip) );
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
@@ -173,6 +174,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
    SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
    SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
