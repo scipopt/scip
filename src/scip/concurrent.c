@@ -62,6 +62,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
 
    nvars = SCIPgetNOrigVars(scip);
    scip->concurrent->varperm = NULL;
+
    if( varperm != NULL )
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
 
@@ -82,6 +83,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    }
 
    scip->concurrent->heursync = SCIPfindHeur(scip, "sync");
+
    if( scip->concurrent->heursync == NULL )
    {
       SCIP_CALL( SCIPincludeHeurSync(scip) );
@@ -89,6 +91,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    }
 
    scip->concurrent->propsync = SCIPfindProp(scip, "sync");
+
    if( scip->concurrent->propsync == NULL )
    {
       SCIP_CALL( SCIPincludePropSync(scip) );
@@ -96,6 +99,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    }
 
    scip->concurrent->eventglobalbnd = SCIPfindEventhdlr(scip, "globalbnd");
+
    if( scip->set->concurrent_commvarbnds && scip->concurrent->eventglobalbnd == NULL && concsolver != NULL )
    {
       SCIP_CALL( SCIPincludeEventHdlrGlobalbnd(scip) );
@@ -172,6 +176,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
    else
    {
       int i;
+
       /* we are in the main SCIP so free the concurrent structure */
       if( scip->concurrent->wallclock != NULL )
          SCIPfreeClock(scip, &scip->concurrent->wallclock);
@@ -216,6 +221,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    if( wallclock == NULL )
    {
       scip->concurrent->dettime += val;
+
       if( scip->concurrent->dettime >= syncfreq && SCIPgetNTotalNodes(mainscip) > 1 )
       {
          SCIP_EVENT* event;
@@ -230,6 +236,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    {
       SCIP_Real timesincelastsync;
       timesincelastsync = SCIPgetClockTime(mainscip, wallclock);
+
       if( timesincelastsync >= syncfreq && SCIPgetNTotalNodes(mainscip) > 1 )
       {
          SCIP_EVENT* event;
@@ -357,7 +364,7 @@ SCIP_Real SCIPgetConcurrentGap(
       SCIP_Real absdual = REALABS(dualbound);
       SCIP_Real absprimal = REALABS(primalbound);
 
-      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+      return REALABS((primalbound - dualbound) / MIN(absdual, absprimal));
    }
 }
 
@@ -462,6 +469,7 @@ SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
 {
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
+
    if( scip->concurrent->eventglobalbnd != NULL )
       return SCIPeventGlobalbndGetBoundChanges(scip->concurrent->eventglobalbnd);
 
@@ -470,7 +478,7 @@ SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
 
 /** executes the concurrent solver with based on thread id */
 static
-SCIP_RETCODE execConcsolver(void *args)
+SCIP_RETCODE execConcsolver(void* args)
 {
    SCIP* scip = (SCIP*) args;
 
@@ -513,7 +521,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
             SCIP_JOB*         job;
             SCIP_SUBMITSTATUS status;
 
-            SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, scip ) );
+            SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, scip) );
             SCIP_CALL_ABORT( SCIPtpiSumbitJob(job, &status) );
 
             assert(status == SCIP_SUBMIT_SUCCESS);
@@ -554,9 +562,11 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
 
    heurs = SCIPgetHeurs(target);
    nheurs = SCIPgetNHeurs(target);
+
    for( i = 0; i < nheurs; ++i )
    {
       heur = SCIPfindHeur(source, SCIPheurGetName(heurs[i]));
+
       if( heur != NULL )
       {
          heurs[i]->nbestsolsfound += heur->nbestsolsfound;
@@ -572,11 +582,14 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
          SCIP_CALL( SCIPsetClockTime(target, heurs[i]->heurclock, tmptime) );
       }
    }
+
    props = SCIPgetProps(target);
    nprops = SCIPgetNProps(target);
+
    for( i = 0; i < nprops; ++i )
    {
       prop = SCIPfindProp(source, SCIPpropGetName(props[i]));
+
       if( prop != NULL )
       {
          props[i]->ncalls += prop->ncalls;
@@ -608,9 +621,11 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
 
    presols = SCIPgetPresols(target);
    npresols = SCIPgetNPresols(target);
+
    for( i = 0; i < npresols; ++i )
    {
       presol = SCIPfindPresol(source, SCIPpresolGetName(presols[i]));
+
       if( presol != NULL )
       {
          presols[i]->ncalls += presol->ncalls;
@@ -640,9 +655,11 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
 
    sepas = SCIPgetSepas(target);
    nsepas = SCIPgetNSepas(target);
+
    for( i = 0; i < nsepas; ++i )
    {
       sepa = SCIPfindSepa(source, SCIPsepaGetName(sepas[i]));
+
       if( sepa != NULL )
       {
          sepas[i]->lastsepanode = sepa->lastsepanode;
@@ -669,11 +686,13 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->primal->nlimsolsfound = source->primal->nlimsolsfound;
    SCIPprobSetDualbound(target->transprob, SCIPprobExternObjval(target->transprob, target->origprob, target->set, SCIPgetDualbound(source)));
    root = SCIPgetRootNode(target);
+
    if( root != NULL )
    {
       /* in the copied SCIP the dualbound is in the transformed space of the target */
       SCIP_CALL( SCIPupdateNodeLowerbound(target, root, SCIPgetDualbound(source)) );
    }
+
    target->stat->nlpiterations = source->stat->nlpiterations;
    target->stat->nrootlpiterations = source->stat->nrootlpiterations;
    target->stat->nrootfirstlpiterations = source->stat->nrootfirstlpiterations;
@@ -828,6 +847,7 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    SCIP_CALL( SCIPsetClockTime(target, target->stat->reoptupdatetime, tmptime) );
 
    heur = source->stat->firstprimalheur;
+
    if( heur != NULL )
       target->stat->firstprimalheur = SCIPfindHeur(target, SCIPheurGetName(heur));
 

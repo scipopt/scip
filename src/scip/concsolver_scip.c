@@ -58,7 +58,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
    return SCIP_OKAY;
 #if 0
-/* TODO somethings still poducing objective cutoffs so I use misc/allowdualreds for now */
+   /* TODO somethings still poducing objective cutoffs so I use misc/allowdualreds for now */
    /* presolvers */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/stuffing/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
@@ -131,6 +131,7 @@ SCIP_RETCODE initConcsolver(
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
    SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
+
    /* set up the arrays for the variable mapping */
    for( i = 0; i < data->nvars; i++ )
    {
@@ -139,6 +140,7 @@ SCIP_RETCODE initConcsolver(
       varperm[SCIPvarGetIndex(var)] = i;
       data->vars[i] = var;
    }
+
    /* create the concurrent data structure for the concurrent solver's SCIP */
    assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
@@ -186,6 +188,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
       nparams = SCIPgetNParams(data->solverscip);
       SCIP_CALL( SCIPallocBufferArray(data->solverscip, &fixedparams, nparams) );
       nfixedparams = 0;
+
       /* fix certain parameters before loading emphasis to avoid setting them to default values */
       for( i = 0; i < nparams; ++i )
       {
@@ -206,14 +209,18 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
             SCIP_CALL( SCIPfixParam(data->solverscip, paramname) );
          }
       }
+
       SCIP_CALL( SCIPsetEmphasis(data->solverscip, typedata->emphasis, TRUE) );
+
       for( i = 0; i < nfixedparams; ++i )
          SCIP_CALL( SCIPunfixParam(data->solverscip, SCIPparamGetName(fixedparams[i])) );
+
       SCIPfreeBufferArray(data->solverscip, &fixedparams);
    }
 
    /* load settings file if it exists */
    (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s%s.set", prefix, SCIPconcsolverGetName(concsolver));
+
    if( SCIPfileExists(filename) )
    {
       /* load settings file and print info message */
@@ -226,12 +233,14 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "skipping non existent parameter file <%s> for concurrent solver <%s>\n",
                       filename, SCIPconcsolverGetName(concsolver));
    }
+
    /* include eventhandler for synchronization */
    SCIP_CALL( SCIPincludeEventHdlrSync(data->solverscip) );
    /* disable output for subscip */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "display/verblevel", 0) );
    /* use wall clock time in subscips */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", SCIP_CLOCKTYPE_WALL) );
+
    /* only catch ctrlc in one solver */
    if( SCIPconcsolverGetIdx(concsolver) != 0 )
       SCIP_CALL( SCIPsetBoolParam(data->solverscip, "misc/catchctrlc", FALSE) );
@@ -243,6 +252,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    }
 
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/changechildsel", &changechildsel) );
+
    if( changechildsel )
    {
       SCIP_CALL( setChildSelRule(concsolver) );
@@ -336,7 +346,8 @@ SCIP_DECL_CONCSOLVERGETSOLVINGDATA(concsolverGetSolvingData)
       SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], nvars, data->vars, solvals) );
 
       heur = SCIPsolGetHeur(sols[i]);
-      if(heur != NULL)
+
+      if( heur != NULL )
          heur = SCIPfindHeur(scip, SCIPheurGetName(heur));
 
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
@@ -427,6 +438,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
     */
    nsols = MIN(SCIPgetNSols(data->solverscip), maxcandsols);
    sols = SCIPgetSols(data->solverscip);
+
    for( i = 0; i < nsols; ++i )
    {
       if( SCIPIsConcurrentSolNew(data->solverscip, sols[i]) )
@@ -481,6 +493,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
    SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
    *nsolsrecvd = 0;
+
    for( i = 0; i < nsols; ++i )
    {
       SCIP_SOL* newsol;

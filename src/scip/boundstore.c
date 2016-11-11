@@ -67,6 +67,7 @@ SCIP_RETCODE SCIPboundstoreAdd(
 {
    /* check if already stored a bound of same type for this variable */
    int pos = boundstore->bndpos[varidx].pos[boundtype];
+
    if( pos == 0 )
    {
       /* variable has no bound stored yet so store this bound */
@@ -85,6 +86,7 @@ SCIP_RETCODE SCIPboundstoreAdd(
       --pos;
       assert(boundstore->bndchg[pos].boundtype == boundtype);
       assert(boundstore->bndchg[pos].varidx == varidx);
+
       /* if bound is better override old one */
       if( (boundtype == SCIP_BOUNDTYPE_LOWER && newbound > boundstore->bndchg[pos].newbound) ||
           (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < boundstore->bndchg[pos].newbound) )
@@ -92,6 +94,7 @@ SCIP_RETCODE SCIPboundstoreAdd(
          boundstore->bndchg[pos].newbound = newbound;
       }
    }
+
    return SCIP_OKAY;
 }
 
@@ -103,10 +106,12 @@ SCIP_RETCODE SCIPboundstoreMerge(
    )
 {
    int i;
+
    for( i = 0; i < source->nbndchg; ++i )
    {
       SCIP_CALL( SCIPboundstoreAdd(scip, target, source->bndchg[i].varidx, source->bndchg[i].newbound, source->bndchg[i].boundtype) );
    }
+
    return SCIP_OKAY;
 }
 

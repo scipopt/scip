@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    assert(concsolversyncread != NULL);
 
    SCIP_ALLOC( BMSallocMemory(concsolvertype) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*concsolvertype)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*concsolvertype)->name, name, strlen(name) + 1) );
 
    (*concsolvertype)->data = data;
    (*concsolvertype)->ninstances = 0;
@@ -89,8 +89,8 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "concurrent/%s/prefprio", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "the preferred number concurrent solvers of type <%s> with respect to the number of threads", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                                 &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
-                                 NULL, NULL) ); /*lint !e740*/
+                                  &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
+                                  NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    (void) SCIPsnprintf(instancename, SCIP_MAXSTRLEN, "%s-%i", concsolvertype->name, concsolvertype->ninstances);
 
    SCIP_ALLOC( BMSallocMemory(concsolver) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*concsolver)->name, instancename, strlen(instancename)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*concsolver)->name, instancename, strlen(instancename) + 1) );
 
    (*concsolver)->type = concsolvertype;
 
@@ -332,6 +332,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    SCIP_CALL( concsolvertype->concsolversyncwrite(concsolver, syncstore, syncdata, set->concurrent_nbestsols, set->concurrent_maxnsols, &nsols) );
    concsolver->nsolsshared += nsols;
+
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
@@ -371,6 +372,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       newlb = SCIPsyncdataGetLowerbound(syncdata);
       lbok = prevlb > SCIPsetInfinity(set);
       ubok = prevub < SCIPsetInfinity(set);
+
       if( lbok && ubok )
          progress = SCIPrelDiff(prevub - prevlb, newub - newlb);
       else if( lbok )
@@ -388,7 +390,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       if( progress < 0.5 * set->concurrent_targetprogress )
          freqfactor = set->concurrent_freqfactor;
       else if( progress > 2 * set->concurrent_targetprogress )
-         freqfactor = 0.5 + 0.5/set->concurrent_freqfactor;
+         freqfactor = 0.5 + 0.5 / set->concurrent_freqfactor;
       else
          freqfactor = 1.0;
 
@@ -416,6 +418,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       concsolver->syncdelay += concsolver->timesincelastsync;
 
       syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->nsyncs, &concsolver->syncdelay);
+
       while( syncdata != NULL )
       {
          SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
