@@ -41486,9 +41486,6 @@ SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Real primalbound;
-   SCIP_Real dualbound;
-
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
@@ -41502,24 +41499,7 @@ SCIP_Real SCIPgetGap(
          return 0.0;
    }
 
-   primalbound = getPrimalbound(scip);
-   dualbound = getDualbound(scip);
-
-   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
-      return 0.0;
-   else if( SCIPsetIsZero(scip->set, dualbound)
-      || SCIPsetIsZero(scip->set, primalbound)
-      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
-      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
-      || primalbound * dualbound < 0.0 )
-      return SCIPsetInfinity(scip->set);
-   else
-   {
-      SCIP_Real absdual = REALABS(dualbound);
-      SCIP_Real absprimal = REALABS(primalbound);
-
-      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
-   }
+   return SCIPcomputeGap(SCIPsetEpsilon(scip->set), SCIPsetInfinity(scip->set), getPrimalbound(scip), getDualbound(scip));
 }
 
 /** gets current gap |(upperbound - lowerbound)/min(|upperbound|,|lowerbound|)| in transformed problem if both bounds

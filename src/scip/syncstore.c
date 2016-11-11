@@ -140,8 +140,6 @@ SCIP_RETCODE SCIPsyncstoreInit(
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/minsyncdelay", &syncstore->minsyncdelay) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/freqinit", &syncstore->syncfreqinit) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/freqmax", &syncstore->syncfreqmax) );
-   SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/freqfactor", &syncstore->syncfreqfactor) );
-   SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/targetprogress", &syncstore->targetprogress) );
    syncstore->nsyncdata = getNSyncdata(scip);
    SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &(syncstore->syncdata), syncstore->nsyncdata) );
 

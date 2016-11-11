@@ -354,21 +354,7 @@ SCIP_Real SCIPgetConcurrentGap(
    primalbound = SCIPgetConcurrentPrimalbound(scip);
    dualbound = SCIPgetConcurrentDualbound(scip);
 
-   if( SCIPisEQ(scip, primalbound, dualbound) )
-      return 0.0;
-   else if( SCIPisZero(scip, dualbound)
-      || SCIPisZero(scip, primalbound)
-      || SCIPisInfinity(scip, REALABS(primalbound))
-      || SCIPisInfinity(scip, REALABS(dualbound))
-      || primalbound * dualbound < 0.0 )
-      return SCIPinfinity(scip);
-   else
-   {
-      SCIP_Real absdual = REALABS(dualbound);
-      SCIP_Real absprimal = REALABS(primalbound);
-
-      return REALABS((primalbound - dualbound) / MIN(absdual, absprimal));
-   }
+   return SCIPcomputeGap(SCIPepsilon(scip), SCIPinfinity(scip), primalbound, dualbound);
 }
 
 /** gives the total number of tightened bounds received from other concurrent solvers */
