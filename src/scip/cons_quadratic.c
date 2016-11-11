@@ -7774,13 +7774,35 @@ SCIP_RETCODE evaluateGauge(
    return SCIP_OKAY;
 }
 
-/** compute projection of refsol onto feasible region of cons; stores the projection in ref */
+/** compute projection of refsol onto feasible region of cons; stores the projection in ref
+ *
+ * This method solves
+ * \f[
+ *      \min \{ ||x - \bar x||^2 : x^T A x + 2 b^T x \le c \}
+ * \f]
+ * where \f$ \bar x \f$ is refsol.
+ * Note that \f$ \bar x \f$ is not feasible, so the optimal solution actually satisfies
+ * \f[
+ *      \min \{ ||x - \bar x||^2 : x^T A x + 2 b^T x = c \}
+ * \f]
+ * Using the eigendecomposition \f$ A = P D P^T \f$, the change of variables \f$ y = P^T x
+ * \f$ and the optimality conditions, this reduces to finding \f$ \rho \f$ such that
+ * \f[
+ *      y(\rho) = (I + \rho D)^{-1} (\bar y - \rho \bar b)
+ * \f]
+ * makes the constraint active. In the previous formula, \f$ \bar y = P^T \bar x\f$ and \f$ \bar b = P^T b \f$.  If \f$
+ * D \neq 0 \f$, the function
+ * \f[
+ *   \varphi(\rho) := y(\rho)^T D y(\rho) + 2 \bar b^T y(\rho) - c
+ * \f]
+ * is strictly convex. So this method actually computes the unique 0 of this function using Newton's method.
+ */
 static
 SCIP_RETCODE computeReferencePointProjection(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             refsol,             /**< reference point where to compute gauge, or NULL if LP solution should be used */
+   SCIP_SOL*             refsol,             /**< the given point to project, or NULL if LP solution should be used */
    SCIP_Real*            ref                 /**< array to store reference point */
    )
 {
