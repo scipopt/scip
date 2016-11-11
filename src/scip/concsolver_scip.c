@@ -28,12 +28,14 @@
 #include "scip/boundstore.h"
 #include <string.h>
 
+/** data for a concurrent solver type */
 struct SCIP_ConcSolverTypeData
 {
    SCIP_Bool          loademphasis; /**< should emphasis settings be loaded whe ncreatig an instance of this concurrent solver */
    SCIP_PARAMEMPHASIS emphasis;     /**< parameter emphasis that will be loaded if loademphasis is true */
 };
 
+/** data for a concurrent solver */
 struct SCIP_ConcSolverData
 {
    SCIP*              solverscip;   /**< the concurrent solvers private scip datastructure */
@@ -50,6 +52,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    )
 {
    SCIP_Bool commvarbnds;
+
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &commvarbnds) );
 
    if( !commvarbnds )
@@ -261,6 +264,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    return SCIP_OKAY;
 }
 
+/** destroys an instance of a concurrent SCIP solver */
 static
 SCIP_DECL_CONCSOLVERDESTROYINST(concsolverScipDestroyInstance)
 {
@@ -283,12 +287,16 @@ SCIP_DECL_CONCSOLVERDESTROYINST(concsolverScipDestroyInstance)
    return SCIP_OKAY;
 }
 
+/** frees the data of a concurrent solver type */
 static
 SCIP_DECL_CONCSOLVERTYPEFREEDATA(concsolverTypeScipFreeData)
 {
    BMSfreeMemory(data);
 }
 
+/** initializes the random and permutation seeds with the given one
+ *  and enables permutation of constraints and variables
+ */
 static
 SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
 {
@@ -309,6 +317,9 @@ SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
    return SCIP_OKAY;
 }
 
+/** installs the solving status of this concurrent solver and the solving statistics
+ *  into the given SCIP instance
+ */
 static
 SCIP_DECL_CONCSOLVERGETSOLVINGDATA(concsolverGetSolvingData)
 {
@@ -364,6 +375,9 @@ SCIP_DECL_CONCSOLVERGETSOLVINGDATA(concsolverGetSolvingData)
    return SCIP_OKAY;
 }
 
+/** start solving the problem until the solving reaches a limit, gets interrupted, or
+ *  just finished successfully
+ */
 static
 SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
 {
@@ -392,6 +406,7 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
    return SCIP_OKAY;
 }
 
+/** stops the concurrent solver as soon as possible */
 static
 SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
 {
@@ -406,6 +421,7 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
    return SCIP_OKAY;
 }
 
+/** writes new solutions and global boundchanges to the iven synchronization data */
 static
 SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 {
@@ -419,6 +435,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
 
    data = SCIPconcsolverGetData(concsolver);
+   assert(data != NULL);
    concsolverid = SCIPconcsolverGetIdx(concsolver);
    solverstatus = SCIPgetStatus(data->solverscip);
 
@@ -475,6 +492,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    return SCIP_OKAY;
 }
 
+/** reads the solutions and bounds from the given synchronization data */
 static
 SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 {
