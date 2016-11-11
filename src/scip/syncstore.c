@@ -334,10 +334,12 @@ SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
                                                   *   must be increasing between calls of the same thread */
    )
 {
+   int j;
+
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
-   int j = syncnum % syncstore->nsyncdata;
+   j = syncnum % syncstore->nsyncdata;
 
    /* check if requested syncnumber still exists if in debug mode */
    assert(syncstore->syncdata[j].syncnum == syncnum);
@@ -354,13 +356,13 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    SCIP_Real*               delay                /**< pointer holding the current synchronization delay */
    )
 {
+   SCIP_Real newdelay;
+   SCIP_Longint nextsyncnum;
+
    assert(syncdata != NULL);
    assert(syncstore != NULL);
    assert(syncstore->initialized);
    assert(delay != NULL);
-
-   SCIP_Real newdelay;
-   SCIP_Longint nextsyncnum;
 
    nextsyncnum = syncdata->syncnum + 1;
    newdelay = *delay - syncdata->syncfreq;

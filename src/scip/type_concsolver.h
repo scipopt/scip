@@ -73,7 +73,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  */
 #define SCIP_DECL_CONCSOLVERTYPEFREEDATA(x) void x (SCIP_CONCSOLVERTYPEDATA** data)
 
-/** initialize random seeds of concurrent solver
+/** initialize random seeds of a concurrent solver
  *
  *  input:
  *  - concsolver      : concurrent solver data structure
@@ -103,6 +103,9 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
 
 /** synchronization method of concurrent solver for reading data
  *
+ *  the concurrent solver should read the solutions and bounds stored in the
+ *  given synchronization data
+ *
  *  input:
  *  - concsolver      : concurrent solver data structure
  *  - spi             : pointer to the SCIP parallel interface
@@ -114,7 +117,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
 
 /** execution method of concurrent solver
  *
- *  Start solving of the problem given during initialization
+ *  start solving of the problem given during initialization
  *
  *  input:
  *  - concsolver       : concurrent solver data structure
@@ -132,8 +135,8 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  */
 #define SCIP_DECL_CONCSOLVERSTOP(x) SCIP_RETCODE x (SCIP_CONCSOLVER* concsolver)
 
-/** Extract the solving data from the concurrent solver and store it into the SCIP datastructure. Solving data means
- *  solutions and the statistics.
+/** extract the solving data from the concurrent solver and store it into the SCIP datastructure,
+ *  so that this SCIP instance has the optimal solution and reports the correct status and statistics.
  *
  *  input:
  *  - concsolver      : concurrent solver data structure
