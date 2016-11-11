@@ -16,9 +16,11 @@
 /**@file   heur_repair.h
  * @ingroup PRIMALHEURISTICS
  * @brief  repair primal heuristic
- * @author Tobias Achterberg
+ * @author Gregor Hendel
+ * @author Thomas Nagel
  *
- * template file for primal heuristic plugins
+ * repair is a large neighborhood search heuristic, which starts with an infeasible solution and tries to repair it.
+ * This can happen by variable fixing as long as the potential is higher than alpha*slack or slack variables with a strong penalty on the objective function.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

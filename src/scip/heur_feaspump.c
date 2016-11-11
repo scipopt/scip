@@ -63,9 +63,6 @@
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
-#define DEFAULT_STORELASTSOL FALSE      /**< should the last rounded solution be stored? */
-#define DEFAULT_LASTSOLFILENAME "-"     /**< filename for the last solution, number of loops will be appended */
-
 #define DEFAULT_RANDSEED          13    /**< initial random seed */
 
 /** primal heuristic data */
@@ -99,33 +96,8 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
-   SCIP_Bool             storelastsol;       /**< should the last rounded solution be stored? */
-   char*                 lastsolfilename;    /**< filename for the last solution, number of loops will be appended */
 };
 
-
-/* rounds solution values with fractionality >= 0.5 up and all others down */
-static
-SCIP_RETCODE roundSol(SCIP* scip, SCIP_SOL* sol)
-{
-   SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   int nlpcands;
-   int i;
-
-   /* get variable data */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
-
-   /* round all fractional solution values */
-   for( i = 0; i < nlpcands; ++i )
-   {
-      SCIP_Real roundedvalue;
-      roundedvalue = SCIPround(scip, lpcandssol[i]);
-      SCIP_CALL( SCIPsetSolVal(scip, sol, lpcands[i], roundedvalue) );
-   }
-
-   return SCIP_OKAY;
-}
 /* copies SCIP to probing SCIP and creates variable hashmap */
 static
 SCIP_RETCODE setupProbingSCIP(
@@ -687,7 +659,6 @@ SCIP_Longint adjustedMaxNLPIterations(
    else
       return maxnlpiterations;
 }
-
 
 /** execution method of primal heuristic */
 static
@@ -1258,54 +1229,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( success )
          *result = SCIP_FOUNDSOL;
    }
-   /* store the (infeasible) solution after the last iteration during root node execution */
-   else if( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && heurdata->storelastsol && SCIPgetDepth(scip) == 0 )
-   {
-      SCIP_SOL* roundedsol;
-      SCIP_Bool feasible = FALSE;
-
-      SCIP_CALL( SCIPcreateSol(scip, &roundedsol, heur) );
-      SCIP_CALL( SCIPlinkLPSol(scip, roundedsol) );
-
-      /* rounds all fractional solution values in tmpsol */
-      SCIP_CALL( roundSol(scip, roundedsol) );
-
-      /* check if the tmp sol is by accident feasible */
-      SCIP_CALL( SCIPcheckSol(scip, roundedsol, FALSE, FALSE, FALSE, FALSE, TRUE, &feasible) );
-
-      if( !feasible )
-      {
-         FILE* solfile;
-         char solfilename[SCIP_MAXSTRLEN];
-         SCIP_Bool defaultfilename;
-         if( strcmp(heurdata->lastsolfilename, DEFAULT_LASTSOLFILENAME) == 0 )
-            defaultfilename = TRUE;
-         else
-            defaultfilename = FALSE;
-
-         sprintf(solfilename, "%s_%s_%d.sol", defaultfilename ? basename(SCIPgetProbName(scip)) : heurdata->lastsolfilename, SCIPgetProbName(scip), nloops);
-
-         solfile = fopen(solfilename, "w");
-
-         /* test if file exists */
-         if( NULL != solfile )
-         {
-            SCIP_CALL(SCIPprintSol(scip, heurdata->roundedsol, solfile, FALSE));
-
-            fclose(solfile);
-         }
-         else
-         {
-            SCIPwarningMessage(scip, "Could not open file <%s> for storing infeasible feaspump solution\n", solfilename);
-         }
-      }
-      else
-      {
-         SCIPdebugMessage("Rounded solution is feasible");
-      }
-
-      SCIPfreeSol(scip, &roundedsol);
-   }
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
@@ -1460,7 +1383,6 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
 
    /* create Feaspump primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->lastsolfilename = NULL;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -1546,11 +1468,6 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/storelastsol",
-         "should the last rounded solution be stored?",
-         &heurdata->storelastsol, TRUE, DEFAULT_STORELASTSOL, NULL, NULL) );
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/lastsolfilename", "filename for the last solution, number of loops will be appended",
-         &heurdata->lastsolfilename, TRUE, DEFAULT_LASTSOLFILENAME, NULL, NULL) );
 
    return SCIP_OKAY;
 }

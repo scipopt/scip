@@ -104,59 +104,8 @@ echo set lp advanced threads $THREADS  >> $TMPFILE
 echo set timing clocktype 1            >> $TMPFILE
 echo set display freq $DISPFREQ        >> $TMPFILE
 # avoid switching to dfs - better abort with memory error
-
-# begin repair
-# DIR="repairsol_testset_0"
-# if [ -e "$DIR/" ]
-# then
-#      echo -e "\n\n\n Hello World \n\n\n"
-#     filename=`basename $INSTANCE`
-#     echo $filename
-#     datei="`ls ${DIR} -1 | grep ${filename} | head -1`"
-#     if test "$datei" = ""
-#     then
-#         echo "datei nicht da"
-#     else
-#         echo "datei da"
-#         echo -e "\n\n\n Datei :${datei} \n\n\n"
-#         echo -e $datei
-#        echo set heuristics repair filename "${DIR}/${datei}"  >> $TMPFILE
-#         echo set heuristic repair freq  0   >> $TMPFILE
-#     fi
-
-
-# first trial
-#     invsolfilename="`basename $SCIP_INSTANCEPATH/$INSTANCE`_.*[0-9]*.sol"
-#     echo -e " \n \n \n"
-#     echo $invsolfilename
-#
-#     for datei in "$dir/.*"
-#     do
-#       echo $datei
-#       echo -e "Hello World \n\n\n"
-#
-#       if test datei == $invsolfilename
-#       then
-# 	  echo set heuristics repair filename $file
-# 	  echo set heuristics/repair/freq  0
-#       fi
-#     done
-
-# second trial
-#     find $dir -type f -name $invsolfilename | while read file
-#     do
-#       echo set heuristics repair filename $file
-#       echo set heuristics/repair/freq  0
-#     done
-# fi
-# end repair
-
-
 echo set memory savefac 1.0            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
-
-
-
 
 if test "$VISUALIZE" = true
 then

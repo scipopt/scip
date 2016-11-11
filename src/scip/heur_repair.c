@@ -20,6 +20,7 @@
  */
 
 /* This heuristic takes a infeasible solution and tries to repair it.
+ * This can happen by variable fixing as long as the potential is higher than alpha*slack or slack variables with a strong penalty on the objective function.
  *
  * */
 
@@ -29,25 +30,25 @@
 #include <assert.h>
 #include <string.h>
 
-#include <stdio.h>
+/*#include <stdio.h>
 #include <stdlib.h>
 
-#include <libgen.h>
+#include <libgen.h>*/
 
 #include "scip/heur_repair.h"
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
-#include "cons_varbound.h"
+#include "scip/cons_varbound.h"
 
 #define HEUR_NAME             "repair"
-#define HEUR_DESC             "repair heuristic"
+#define HEUR_DESC             "tries to repair a primal infeasible solution"
 #define HEUR_DISPCHAR         '!'
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
-#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE      /**< does the heuristic use a secondary SCIP instance? */
 #define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
 
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes          */
@@ -55,13 +56,13 @@
 #define DEFAULT_MINNODES      50        /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 
-#define DEFAULT_FILENAME      "-" /**< file name of a solution to be used as infeasible starting point */
-#define DEFAULT_ROUNDIT       TRUE /**< if it is True : fractional variables which are not fractional in the given
-                                    *    solution are rounded, if it is FALSE : solving process of this heuristic is stopped */
-#define DEFAULT_USEOBJFACTOR  FALSE /**< should a scaled objective function for original variables be used in repair subproblem? */
-#define DEFAULT_USEVARFIX     TRUE  /**< should variable fixings be used in repair subproblem? */
-#define DEFAULT_USESLACKVARS  FALSE /**< should slack variables be used in repair subproblem? */
-#define DEFAULT_ALPHA         2.0
+#define DEFAULT_FILENAME      "-"       /**< file name of a solution to be used as infeasible starting point */
+#define DEFAULT_ROUNDIT       TRUE      /**< if it is True : fractional variables which are not fractional in the given
+                                          *  solution are rounded, if it is FALSE : solving process of this heuristic is stopped */
+#define DEFAULT_USEOBJFACTOR  FALSE     /**< should a scaled objective function for original variables be used in repair subproblem? */
+#define DEFAULT_USEVARFIX     TRUE      /**< should variable fixings be used in repair subproblem? */
+#define DEFAULT_USESLACKVARS  FALSE     /**< should slack variables be used in repair subproblem? */
+#define DEFAULT_ALPHA         2.0       /**< how many times the potential should be bigger than the slack? */
 
 /*
  * Data structures
@@ -73,31 +74,29 @@ struct SCIP_HeurData
 {
    char*                 filename;           /**< file name of a solution to be used as infeasible starting point */
    SCIP_Bool             roundit;            /**< if it is True : fractional variables which are not fractional in the given
-                                              *    solution are rounded, if it is FALSE : solvingprocess of this heuristic is stoped */
+                                              *    solution are rounded, if it is FALSE : solvingprocess of this heuristic is stoped
+                                              */
    SCIP_Bool             useobjfactor;       /**< should a scaled objective function for original variables be used in repair subproblem? */
    SCIP_Bool             usevarfix;          /**< should variable fixings be used in repair subproblem? */
    SCIP_Bool             useslackvars;       /**< should slack variables be used in repair subproblem? */
-
-
    int                   subnodes;           /**< number of nodes which were necessary to solve the subscip */
-   int                   subiters;           /**< contains total number of iterations used in primal and dual simplex and barrier algorithm to solve the subscip */
+   int                   subiters;           /**< contains total number of iterations used in primal and dual simplex and barrier algorithm to
+                                              *   solve the subscip
+                                              */
    SCIP_Real             subpresoltime;      /**< time for presolving the subscip */
    int                   runs;               /**< number of branch and bound runs performed to solve the subscip */
-
    int                   nviolatedvars;      /**< number of violated vars in the given solution */
    int                   norvars;            /**< number of all vars in the given problem */
    SCIP_Real             relviolatedvars;    /**< relative number of violated vars */
    int                   nviolatedcons;      /**< number of violated cons in the given solution */
    int                   norcons;            /**< number of all cons in the given problem */
    SCIP_Real             relviolatedcons;    /**< relative number of violated cons */
-
    int                   nvarfixed;          /**< number of all variables fixed in the sub problem */
    SCIP_Real             relvarfixed;        /**< relative number of fixed vars */
-
    SCIP_Real             orsolval;           /**< value of the solution find by repair, in the original Problem*/
    SCIP_Real             improovedoldsol;    /**< value of the given sol sfter beeing improoved by SCIP */
    SCIP_SOL*             infsol;             /**< infeasible solution to start with */
-   SCIP_Real             alpha;              /**< */
+   SCIP_Real             alpha;              /**< how many times the potential should be bigger than the slack? */
    int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
    int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
    int                   minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
@@ -113,12 +112,12 @@ struct SCIP_HeurData
  */
 
 /**
- * computes a factor to norm the original objectiv uper bound to 1.
+ * computes a factor, so that (factor) * (original objective upper bound) <= 1.
  */
 static
 SCIP_RETCODE getObjectiveFactor(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure */
    SCIP_Real*            factor,             /**< SCIP_Real to save the factor for the old objective function*/
    SCIP_Bool*            success             /**< SCIP_Bool: Is the factor real?*/
    )
@@ -134,12 +133,10 @@ SCIP_RETCODE getObjectiveFactor(
    *factor = 0.0;
    upperbound = 0.0;
 
-   /* IF there is a solution already found DO:*/
    lprelaxobj = SCIPgetLowerbound(scip);
 
    if( SCIPisInfinity(scip, -lprelaxobj) )
    {
-      *factor = 0.0;
       return SCIP_OKAY;
    }
 
@@ -151,8 +148,9 @@ SCIP_RETCODE getObjectiveFactor(
    }
    else
    {
-      SCIP_CALL(SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL));
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
+      /* tries to find an upper bound for the original objective function, by compute the worst, variable bound feasible, objective value */
       for (i = 0; i < nvars; ++i)
       {
          upperbound = SCIPvarGetObj(vars[i]);
@@ -181,7 +179,7 @@ SCIP_RETCODE getObjectiveFactor(
    *factor = upperbound - lprelaxobj;
    if( !SCIPisZero(scip, *factor) )
    {
-      *factor = 1 / *factor;
+      *factor = 1.0 / *factor;
    }
 
    /* sets an offset, which guarantee positive objective values */
@@ -191,41 +189,36 @@ SCIP_RETCODE getObjectiveFactor(
    return SCIP_OKAY;
 }
 
-/** */
+/** returns the contributed potential for an variable */
 static
 SCIP_Real getPotentialContributed(
-   SCIP*             scip,
-   SCIP_SOL*         sol,
-   SCIP_VAR*         var,
-   SCIP_Real         coeffiant,
-   int               sgn
+   SCIP*             scip,                   /**< SCIP data structure */
+   SCIP_SOL*         sol,                    /**< infeasible solution */
+   SCIP_VAR*         var,                    /**< variable, which potential should be returned */
+   SCIP_Real         coefficient,            /**< variables coefficient in related row */
+   int               sgn                     /**< slacks signum */
    )
 {
-   if( 0 > sgn * coeffiant )
+   if( 0 > sgn * coefficient )
    {
-      if(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)))
+      if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
       {
          return SCIPinfinity(scip);
       }
-      return coeffiant * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
+      return coefficient * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbGlobal(var));
    }
    else
    {
-      if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)))
+      if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
       {
          return -SCIPinfinity(scip);
       }
-      return coeffiant * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
+      return coefficient * (SCIPgetSolVal(scip, sol, var) - SCIPvarGetUbGlobal(var));
    }
 }
 
-
-
-
-
 /**
- * tries to fix a variable, if a it is possible, the potentials of rows is adapted.
- */
+ * tries to fix a variable, if a it is possible, the potentials of rows is reduced. */
 static
 SCIP_Bool tryFixVar(
    SCIP*                 scip,               /**< SCIP data structure */
