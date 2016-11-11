@@ -85,7 +85,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    *lowerbound = -SCIPinfinity(scip);
 
    /* check if it is not possible to run the relaxator */
-   if( !SCIPisNLPConstructed(scip) || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallColsInLP(scip) )
+   if( !SCIPisNLPConstructed(scip) || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallColsInLP(scip) || (SCIPgetNNlpis(scip) == 0) )
       return SCIP_OKAY;
 
    nlrows = SCIPgetNLPNlRows(scip);
