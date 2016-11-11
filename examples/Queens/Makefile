@@ -95,7 +95,7 @@ $(BINDIR):
 test: $(MAINFILE)
 		for i in 1 2 4 8 16 ; do \
 			echo ; echo "Testing the n-queens solver with n = $$i" ; \
-			$(MAINFILE) $$i || break 1 ; \
+			$(MAINFILE) $$i || exit $(STATUS) ; \
 			echo ; \
 		done
 
