@@ -44,9 +44,8 @@
 #define DEFAULT_NLPTIMELIMIT        0.0      /**< default time limit of NLP solver; 0.0 for no limit */
 #define DEFAULT_NLPITERLIM          250      /**< default NLP iteration limit */
 
-#define MIN_VIOLATION              1e-4      /* minimum violation of point to be separated */
+#define VIOLATIONFAC                100      /* points regarded violated if max violation > VIOLATIONFAC*SCIPfeastol */
 
-#define NLPFEASTOL                 1e-6      /**< NLP feasibility tolerance */
 #define NLPVERBOSITY                  0      /**< NLP solver verbosity */
 
 /*
@@ -424,7 +423,7 @@ SCIP_RETCODE separateCuts(
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASTOL) );
+   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute the projection onto the convex NLP relaxation */
@@ -846,7 +845,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 
    /* do not run if current solution's violation is small */
    SCIP_CALL( computeMaxViolation(scip, sepadata, lpsol, &maxviolation) );
-   if( maxviolation < MIN_VIOLATION )
+   if( maxviolation < VIOLATIONFAC * SCIPfeastol(scip) )
    {
       SCIPdebugMsg(scip, "solution doesn't violate constraints enough, do not separate\n");
       SCIP_CALL( SCIPfreeSol(scip, &lpsol) );
