@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+   SCIP_CALL( SCIPincludePresolQPKKTref(scip) );
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );

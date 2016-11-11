@@ -31,6 +31,7 @@ features:
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
 - add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
+- new presolving method presol_qpkktref to add the KKT conditions to QPs
 - implemented and extended stuffing presolving in linear constraint handler
 
 parameters:
@@ -49,6 +50,9 @@ parameters:
   "randomization/permuteconss", and "randomization/permutevars"
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
+- new parameter presolving/qpkktref/updatequadbounded to add the KKT conditions to QPs only if all variables are bounded
+- new parameter presolving/qpkktref/updatequadindef to add the KKT conditions to QPs only if the quadratic matrix is indefinite
+- new parameter presolving/qpkktref/addkktbinary to allow the presence of binary variables for the KKT update
 
 performance improvements:
 - rewrote the propagate-and-cut-and-price loop so that successful propagations with DURINGLPLOOP timing, bound changes found by separation,
@@ -98,6 +102,8 @@ interface:
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 - SCIPinitConflictAnalysis() gets now 2 additional values: the type of the conflict and whether the current cutoff bound is used or not
 - bound reader uses angle bracket around variable names
+- new functions SCIPgetLinvarMay{Decrease,Increase}Quadratic() to get index of a variable in linear term of quadratic constraint that may be decreased
+  without making any other constraint infeasible
 - in param.c/h: rename SCIPparamCheckBool() to SCIPparamIsValidBool(), SCIPparamCheckString() to SCIPparamIsValidString(),
   SCIPparamCheckChar() to SCIPparamIsValidChar(), SCIPparamCheckLongint() to SCIPparamIsValidLongint(); the new methods return
   a bool whether the given value is valid for the parameter instead of printing a warning message and returning an error code
