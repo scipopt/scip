@@ -37,9 +37,13 @@
 #include "scip/syncstore.h"
 #include "scip/boundstore.h"
 
+
+/** computes the size of the array of synchronization datas, such that
+ *  it cannot ever happen that a synchronization data is reused while still
+ *  not read by any thread */
 static
 int getNSyncdata(
-   SCIP*       scip
+   SCIP*                    scip                 /**< SCIP main datastructure */
    )
 {
    int maxnsyncdelay;
@@ -63,7 +67,7 @@ SCIP_RETCODE SCIPsyncstoreCreate(
    (*syncstore)->initialized = FALSE;
    (*syncstore)->syncdata = NULL;
    (*syncstore)->stopped = FALSE;
-   (*syncstore)->references = 1;
+   (*syncstore)->nuses = 1;
    SCIP_CALL( SCIPtpiInitLock(&(*syncstore)->lock) );
 
    return SCIP_OKAY;
@@ -80,8 +84,8 @@ SCIP_RETCODE SCIPsyncstoreRelease(
    assert(*syncstore != NULL);
 
    SCIP_CALL( SCIPtpiAcquireLock(&(*syncstore)->lock) );
-   (*syncstore)->references -= 1;
-   references = (*syncstore)->references;
+   (*syncstore)->nuses -= 1;
+   references = (*syncstore)->nuses;
    SCIP_CALL( SCIPtpiReleaseLock(&(*syncstore)->lock) );
 
    if( references == 0 )
@@ -105,7 +109,7 @@ SCIP_RETCODE SCIPsyncstoreCapture(
 {
    SCIP_CALL( SCIPtpiAcquireLock(&syncstore->lock) );
 
-   ++(syncstore->references);
+   ++(syncstore->nuses);
 
    SCIP_CALL( SCIPtpiReleaseLock(&syncstore->lock) );
 
