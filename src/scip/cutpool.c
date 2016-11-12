@@ -106,8 +106,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       || row1->nummaxval != row2->nummaxval
       || REALABS(row1->lhs - row2->lhs) > SCIP_DEFAULT_EPSILON
       || REALABS(row1->rhs - row2->rhs) > SCIP_DEFAULT_EPSILON
-      || REALABS(row1->sqrnorm - row2->sqrnorm) > SCIP_DEFAULT_SUMEPSILON
-      || REALABS(row1->sumnorm - row2->sumnorm) > SCIP_DEFAULT_SUMEPSILON
       || REALABS(row1->maxval - row2->maxval) > SCIP_DEFAULT_EPSILON
        )
       return FALSE;
