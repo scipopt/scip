@@ -78,6 +78,7 @@ SCIP_RETCODE createJobQueue(
    _jobqueues->finishedjobs.firstjob = NULL;
    _jobqueues->finishedjobs.lastjob = NULL;
    _jobqueues->finishedjobs.njobs = 0;
+   _jobqueues->ncurrentjobs = 0;
 
    _jobqueues->nthreads = nthreads;
    SCIP_ALLOC( BMSallocMemoryArray(&_jobqueues->currentjobs, nthreads) );
