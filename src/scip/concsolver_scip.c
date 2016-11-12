@@ -22,11 +22,139 @@
 
 #include "scip/concsolver_scip.h"
 #include "scip/concsolver.h"
-#include "scip/event_sync.h"
 #include "scip/concurrent.h"
 #include "scip/syncstore.h"
 #include "scip/boundstore.h"
 #include <string.h>
+
+
+/* event handler for synchronization */
+
+#define EVENTHDLR_NAME         "sync"
+#define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip sovlers"
+
+/*
+ * Data structures
+ */
+
+/** event handler data */
+struct SCIP_EventhdlrData
+{
+   int             filterpos;
+};
+
+/*
+ * Callback methods of event handler
+ */
+
+/** destructor of event handler to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_EVENTFREE(eventFreeSync)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
+
+   SCIPeventhdlrSetData(eventhdlr, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** initialization method of event handler (called after problem was transformed) */
+static
+SCIP_DECL_EVENTINIT(eventInitSync)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_SYNCSTORE*  syncstore;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   syncstore = SCIPgetSyncstore(scip);
+   assert(syncstore != NULL);
+
+   if( eventhdlrdata->filterpos < 0 && SCIPsyncstoreIsInitialized(syncstore) )
+   {
+      /* notify SCIP that your event handler wants to react on synchronization events */
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, &eventhdlrdata->filterpos) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of event handler (called before transformed problem is freed) */
+static
+SCIP_DECL_EVENTEXIT(eventExitSync)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   /* notify SCIP that your event handler wants to drop the event type synchronization found */
+   if( eventhdlrdata->filterpos >= 0 )
+   {
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, eventhdlrdata->filterpos) );
+      eventhdlrdata->filterpos = -1;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** execution method of event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecSync)
+{  /*lint --e{715}*/
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPsynchronize(scip) );
+
+   return SCIP_OKAY;
+}
+
+
+/** includes event handler for synchronization found */
+static
+SCIP_RETCODE includeEventHdlrSync(
+   SCIP*                 scip               /**< SCIP data structure */
+   )
+{
+   SCIP_EVENTHDLR*     eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
+   eventhdlrdata->filterpos = -1;
+
+   /* create event handler for events on watched variables */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSync, eventhdlrdata) );
+   assert(eventhdlr != NULL);
+
+   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSync) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSync) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitSync) );
+
+   return SCIP_OKAY;
+}
 
 /** data for a concurrent solver type */
 struct SCIP_ConcSolverTypeData
@@ -239,7 +367,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    }
 
    /* include eventhandler for synchronization */
-   SCIP_CALL( SCIPincludeEventHdlrSync(data->solverscip) );
+   SCIP_CALL( includeEventHdlrSync(data->solverscip) );
 
    /* disable output for subscip */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "display/verblevel", 0) );
