@@ -32,8 +32,7 @@ struct SCIP_Job
    struct                SCIP_Job* nextjob;        /**< pointer to the next job in the queue */
    SCIP_RETCODE          (*jobfunc)(void* args);   /**< pointer to the job function */
    void*                 args;                     /**< pointer to the function arguements */
-   SCIP_RETCODE          retcode;
-   SCIP_JOBTYPE          type;
+   SCIP_RETCODE          retcode;                  /**< return code of the job */
 };
 
 /** the thread pool job queue */
