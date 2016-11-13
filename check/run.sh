@@ -15,8 +15,8 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 # absolut tolerance for checking linear constraints and objective value
-LINTOL=1e-04
-# absolut tolerance for checking integrality constraints
+LINTOL=1e-04 
+# absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
 # check if tmp-path exists
@@ -62,9 +62,9 @@ then
             s/objective value:/=obj=/g;
             s/no solution available//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
-
+    
     # check if the link to the solution checker exists
-    if test -f "$CHECKERPATH/bin/solchecker"
+    if test -f "$CHECKERPATH/bin/solchecker" 
     then
       echo
       $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE
@@ -83,7 +83,7 @@ echo =ready=                        >> $OUTFILE
 mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
 
-# rm -f $TMPFILE
+rm -f $TMPFILE
 rm -f $SOLFILE
 #chmod g+r $ERRFILE
 #chmod g+r $SCIPPATH/results/$BASENAME.out
