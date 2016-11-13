@@ -20,9 +20,9 @@
  */
 
 /* This heuristic takes a infeasible solution and tries to repair it.
- * This can happen by variable fixing as long as the potential is higher than alpha*slack or slack variables with a strong penalty on the objective function.
- *
- * */
+   This can happen by variable fixing as long as the sum of all potential possible shiftings
+   is higher than alpha*slack or slack variables with a strong penalty on the objective function.
+ */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -219,7 +219,8 @@ SCIP_Real getPotentialContributed(
 }
 
 /** finds out if a variable can be fixed with respect to the potentials of all rows,
-    if it is possible, the potentials of rows are reduced and TRUE is returned. */
+    if it is possible, the potentials of rows are reduced and TRUE is returned.
+ */
 static
 SCIP_Bool tryFixVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -370,7 +371,7 @@ SCIP_RETCODE checkCands(
          else
          {
             *success = FALSE;
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,"All variables finished.\n");
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,"Repair: All variables are integral.\n");
             return SCIP_OKAY;
          }
       }
@@ -1135,8 +1136,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolRepair)
 
    return SCIP_OKAY;
 }
-#else
-#define heurInitsolRepair NULL
 #endif
 
 
