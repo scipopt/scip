@@ -3977,6 +3977,7 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    if( SCIPsetFindConshdlr(set, "components") != NULL )
 #endif
    {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
    }
 
