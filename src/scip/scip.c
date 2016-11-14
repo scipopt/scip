@@ -10244,9 +10244,9 @@ SCIP_RETCODE SCIPfreeProb(
    transsolorig = scip->set->misc_transsolsorig;
    scip->set->misc_transsolsorig = FALSE;
 
+   SCIP_CALL( SCIPfreeTransform(scip) );
    SCIP_CALL( SCIPfreeConcurrent(scip) );
 
-   SCIP_CALL( SCIPfreeTransform(scip) );
    assert(scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_PROBLEM);
    scip->set->misc_transsolsorig = transsolorig;
 
