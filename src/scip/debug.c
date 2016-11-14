@@ -23,7 +23,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
 #include <strings.h>
+#endif
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
