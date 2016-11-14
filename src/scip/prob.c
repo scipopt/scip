@@ -1610,6 +1610,13 @@ SCIP_RETCODE SCIPprobScaleObj(
          {
             SCIP_Longint absobj;
 
+            /* if absobj exceed maximum longint value, return */
+            if( REALABS(objvals[v]) * intscalar + 0.5 > SCIP_LONGINT_MAX )
+            {
+               SCIPsetFreeBufferArray(set, &objvals);
+               return SCIP_OKAY;
+            }
+
             absobj = (SCIP_Longint)(REALABS(objvals[v]) * intscalar + 0.5);
             if( gcd == 0 )
                gcd = absobj;

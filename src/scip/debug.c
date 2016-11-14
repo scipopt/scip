@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <strings.h>
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
