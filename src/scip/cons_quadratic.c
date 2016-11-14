@@ -139,6 +139,7 @@ struct SCIP_ConsData
    unsigned int          isimpladded:1;      /**< has there been an implication added for a binary variable in a bilinear term? */
 #endif
    unsigned int          isgaugeavailable:1; /**< is the gauge function computed? */
+   unsigned int          isedavailable:1;    /**< is the eigen decomposition of A available? */
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -164,6 +165,10 @@ struct SCIP_ConsData
    SCIP_Real             gaugeconst;         /**< constant of the gauge function */
    SCIP_Real*            interiorpoint;      /**< interior point of the region defined by the convex function */
    SCIP_Real             interiorpointval;   /**< function value at interior point */
+
+   SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
+   SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
+   SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
 };
 
 /** quadratic constraint update method */
@@ -197,6 +202,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
+   SCIP_Bool             projectedcuts;      /**< should convex quadratics generated strong cuts via projections? */
    char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
                                               * 'm'ost interior per constraint
                                               */
@@ -1219,6 +1225,7 @@ SCIP_RETCODE consdataCreateEmpty(
    (*consdata)->maxlinactivityinf = -1;
 
    (*consdata)->isgaugeavailable = FALSE;
+   (*consdata)->isedavailable = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1397,6 +1404,11 @@ SCIP_RETCODE consdataFree(
    /* free interior point information, may exists if constraint is deleted in solving stage */
    SCIPfreeMemoryArrayNull(scip, &(*consdata)->interiorpoint);
    SCIPfreeMemoryArrayNull(scip, &(*consdata)->gaugecoefs);
+
+   /* free eigen decomposition information */
+   SCIPfreeMemoryArrayNull(scip, &(*consdata)->eigenvalues);
+   SCIPfreeMemoryArrayNull(scip, &(*consdata)->eigenvectors);
+   SCIPfreeMemoryArrayNull(scip, &(*consdata)->bp);
 
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
@@ -6912,6 +6924,166 @@ SCIP_RETCODE generateCut(
    return SCIP_OKAY;
 }
 
+/** computes eigen decomposition of A, where \f$ f(x) = x^T A x + b^T x \f$.
+ *
+ * The eigen decomposition is given by A = P D P^T, where D is diagonal formed by the eigenvalues and P is orthonormal
+ * whose columns are the eigenvectors; we also compute b^T * P, in case one needs the change of variables P^T x = y <=>
+ * x = P y We store P^T in an array, specifically, in consdata->eigenvectors we store P^T row-wise, i.e., the first row
+ * of P^T is stored in eigenvector[0..n-1], the second row is stored in eigenvectors[n..2n-1], etc; equivalently, the
+ * first eigenvector is eigenvector[0..n-1], the second one is eigenvectors[n..2n-1], etc.
+ *
+ * @todo: - at the moment of writing, checkCurvature computes the eigenvalues (and vectors) for determining curvature
+ *          when it can't to it via other considerations. so one could try to merge both methods together.
+ *        - it seems that if A is of the form [I 0; 0 A'], one only needs to compute the decomposition for A' so one
+ *          could do better in terms of memory and speed. For instance, when the matrix is diagonal, the eigenvectors
+ *          are the identity matrix and the eigenvalues are readily available from the constraint, so one could adapt
+ *          the functions that uses the eigenvectors in this particular case. One could also think about storing the
+ *          eigenvectors in a sparse fashion, though eigenvectors are seldom sparse.
+ */
+static
+SCIP_RETCODE computeED(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int n;
+   int nn;
+   int row;
+   int col;
+   int i;
+   int j;
+   double*        matrix;
+   SCIP_HASHMAP*  var2index;
+
+   SCIPdebugMsg(scip, "computing ED for cons %s\n", SCIPconsGetName(cons));
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* function has to be convex with finite rhs or concave with finite lhs */
+   assert((consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
+         (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
+
+   /* can't compute eigenvectors without IPOPT */
+   if( !SCIPisIpoptAvailableIpopt() )
+   {
+      consdata->isedavailable = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* @todo: - it seems that if A is of the form [I 0; 0 A'], one only needs to compute the decomposition for A'
+    *          so one could do better in terms of memory and speed
+    *        - if n too big don't compute SVD
+    */
+   n = consdata->nquadvars;
+
+   /* do not compute eigendecomposition if n is too large */
+   nn = n * n;
+   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
+   {
+      SCIPdebugMsg(scip, "n is too large to compute eigendecomposition\n");
+      consdata->isedavailable = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* we just need to pass the upper triangle of A since it is symmetric; build it here */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->eigenvectors, nn) );
+   matrix = consdata->eigenvectors;
+   BMSclearMemoryArray(matrix, nn);
+
+   /* @todo if we are called in solving stage (or late from initsol), we can avoid the hashmap by using sepabilinvar2pos */
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
+
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvarterms[i].var, (void*)(size_t)i) );
+      matrix[i*n + i] = consdata->quadvarterms[i].sqrcoef;
+#ifdef DEBUG_PROJ
+      printf("inserting in position %d, value %g\n", i*n + i, consdata->quadvarterms[i].sqrcoef);
+#endif
+   }
+
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
+      assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
+      row = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var1);
+      col = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var2);
+      if( row < col )
+      {
+         matrix[row * n + col] = consdata->bilinterms[i].coef/2;
+#ifdef DEBUG_PROJ
+         printf("inserting in position %d, value %g\n", row*n + col, consdata->bilinterms[i].coef/2);
+#endif
+      }
+      else
+      {
+         matrix[col * n + row] = consdata->bilinterms[i].coef/2;
+#ifdef DEBUG_PROJ
+         printf("inserting in position %d, value %g\n", col*n + row, consdata->bilinterms[i].coef/2);
+#endif
+      }
+   }
+
+#ifdef DEBUG_PROJ
+   printf("matrix built:\n");
+   for( i = 0; i < n; i++ )
+   {
+      for( j = 0; j < n; j++ )
+         printf("%g ", matrix[i*n + j]);
+      printf("\n");
+   }
+#endif
+
+   /* compute eigenvalues and eigenvectors */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->eigenvalues, n) );
+
+   if( LapackDsyev(TRUE, n, matrix, consdata->eigenvalues) != SCIP_OKAY )
+   {
+      SCIPdebugMsg(scip, "couldn't compute ED for cons %s\n", SCIPconsGetName(cons));
+      consdata->isedavailable = FALSE;
+   }
+   else
+   {
+      consdata->isedavailable = TRUE;
+
+      /* compute b^T*P */
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &consdata->bp, n) );
+      for( i = 0; i < n; i++ )
+         for( j = 0; j < n; j++ )
+            consdata->bp[i] += consdata->quadvarterms[j].lincoef * matrix[i*n + j];
+
+#ifdef DEBUG_PROJ
+      printf("eigenvalues:\n");
+      for( j = 0; j < n; j++ )
+         printf("%g ", consdata->eigenvalues[j]);
+
+      printf("\neigenvectors (P^T):\n");
+      for( i = 0; i < n; i++ )
+      {
+         for( j = 0; j < n; j++ )
+            printf("%g ", matrix[i*n + j]);
+         printf("\n");
+      }
+
+      printf("b*P^T:\n");
+      for( j = 0; j < n; j++ )
+         printf("%g ", consdata->bp[j]);
+      printf("svd computed successfully\n");
+#endif
+   }
+
+
+   SCIPhashmapFree(&var2index);
+
+   return SCIP_OKAY;
+}
 
 /** computes an interior point for the quadratic part of the convex constraint
  *
@@ -7602,17 +7774,228 @@ SCIP_RETCODE evaluateGauge(
    return SCIP_OKAY;
 }
 
-/** compute reference point suggested by gauge function
+/** compute projection of refsol onto feasible region of cons; stores the projection in ref
  *
- *  @todo Should we modify a point in the interior? Currently we do not.
+ * This method solves
+ * \f[
+ *      \min \{ ||x - \bar x||^2 : x^T A x + 2 b^T x \le c \}
+ * \f]
+ * where \f$ \bar x \f$ is refsol.
+ * Note that \f$ \bar x \f$ is not feasible, so the optimal solution actually satisfies
+ * \f[
+ *      \min \{ ||x - \bar x||^2 : x^T A x + 2 b^T x = c \}
+ * \f]
+ * Using the eigendecomposition \f$ A = P D P^T \f$, the change of variables \f$ y = P^T x
+ * \f$ and the optimality conditions, this reduces to finding \f$ \rho \f$ such that
+ * \f[
+ *      y(\rho) = (I + \rho D)^{-1} (\bar y - \rho \bar b)
+ * \f]
+ * makes the constraint active. In the previous formula, \f$ \bar y = P^T \bar x\f$ and \f$ \bar b = P^T b \f$.  If \f$
+ * D \neq 0 \f$, the function
+ * \f[
+ *   \varphi(\rho) := y(\rho)^T D y(\rho) + 2 \bar b^T y(\rho) - c
+ * \f]
+ * is strictly convex. So this method actually computes the unique 0 of this function using Newton's method.
  */
+static
+SCIP_RETCODE computeReferencePointProjection(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             refsol,             /**< the given point to project, or NULL if LP solution should be used */
+   SCIP_Real*            ref                 /**< array to store reference point */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real* pt; /* stores P^T */
+   SCIP_Real* bp;
+   SCIP_Real* D;
+   SCIP_Real* y0;
+   SCIP_Real* yrho;
+   SCIP_Real* yrhoprime;
+   SCIP_Real c;
+   SCIP_Real c1;
+   SCIP_Real c2;
+   SCIP_Real rho;
+   SCIP_Real phirho;
+   SCIP_Real phirhoprime;
+   SCIP_Bool isconcave;
+   int iter;
+   int i;
+   int j;
+   int n;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->isedavailable);
+
+   SCIPdebugMessage("computing projection\n");
+
+   /* get the data we need */
+   pt = consdata->eigenvectors;
+   D  = consdata->eigenvalues;
+   n  = consdata->nquadvars;
+   bp = consdata->bp;
+   c  = consdata->rhs;
+   c1 = 0;
+   c2 = 0;
+   for( i = 0; i < consdata->nlinvars; i++ )
+   {
+      c1 += consdata->lincoefs[i] * SCIPgetSolVal(scip, refsol, consdata->linvars[i]);
+      c2 -= consdata->lincoefs[i] * consdata->lincoefs[i];
+   }
+   c2 /= 2.0;
+
+   /* determine if convex or concave */
+   isconcave = consdata->isconcave;
+   assert((isconcave && !SCIPisInfinity(scip, -consdata->lhs)) || !SCIPisInfinity(scip, consdata->rhs));
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &y0, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &yrho, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &yrhoprime, n) );
+
+   /* change data if function is concave */
+   if( isconcave )
+   {
+      c  = -consdata->lhs;
+      c1 = - c1;
+      for( i = 0; i < n; i++ )
+      {
+         D[i]  = -D[i];
+         bp[i] = -bp[i];
+      }
+   }
+
+   /* change coordinates: compute y(0) = x_0' * P */
+   for( i = 0; i < n; i++ )
+      for( j = 0; j < n; j++ )
+         y0[i] += SCIPgetSolVal(scip, refsol, consdata->quadvarterms[j].var) * pt[i*n + j];
+
+#ifdef DEBUG_PROJ
+   /* debug output */
+   printf("\nP^T:\n");
+   for( i = 0; i < n; i++ )
+   {
+      for( j = 0; j < n; j++ )
+         printf("%g ", pt[i*n + j]);
+      printf("\n");
+   }
+   printf("x_0: ");
+   for( i = 0; i < n; i++ )
+      printf("%g ", SCIPgetSolVal(scip, refsol, consdata->quadvarterms[i].var));
+   printf("\n");
+   printf("P^T x_0: ");
+   for( i = 0; i < n; i++ )
+      printf("%g ", y0[i]);
+   printf("\n");
+   printf("P^T b: ");
+   for( i = 0; i < n; i++ )
+      printf("%g ", bp[i]);
+   printf("\n");
+   printf("<d,linvars> = %g\n", c1);
+   printf("-norm(d)^2/2 = %g\n", c2);
+#endif
+
+   /* perform newton's method:  rho^+ = rho - phi(rho)/phi'(rho) */
+   rho = 0.0;
+   phirho = c;
+   phirhoprime = 1.0;
+   for( iter = 0; iter < 9; iter++ )
+   {
+      assert(phirhoprime != 0.0);
+      rho = rho - (phirho - c)/ phirhoprime;
+
+      /* compute phi(rho) and phi'(rho):
+       * note that formulas were deduced for constraints of the form x' A x + 2 b x, so we use b/2 in the formulas:
+       * c1        = <lin_coefs, sol_lin_vars>
+       * c2        = - norm(lin_coefs)^2/2
+       * y(rho)    = (I + rho * D)^-1 * (y(0) - rho * bp/2)
+       * y'(rho)   = -(I + rho * D)^-2 * (D y(0) + bp/2)
+       * phi(rho)  = <y(rho), D * y(rho) + pb> + c1 + c2*rho
+       * phi'(rho) = <y'(rho), 2 * D * y(rho) + pb> + c2
+       */
+      phirho = 0.0;
+      phirhoprime = 0.0;
+      for( i = 0; i < n; i++ )
+      {
+         assert(1.0 + rho * D[i] != 0.0);
+         yrho[i]      = (y0[i] - rho * bp[i]/2.0) / (1.0 + rho * D[i]);
+         yrhoprime[i] = -(D[i] * y0[i] + bp[i]/2.0) / ( (1.0 + rho * D[i])*(1.0 + rho * D[i]) );
+         phirho      += yrho[i] * (yrho[i] * D[i] + bp[i]);
+         phirhoprime += yrhoprime[i] * (2 * D[i] * yrho[i] + bp[i]);
+      }
+      phirho      += c2 * rho + c1;
+      phirhoprime += c2;
+#ifdef DEBUG_PROJ
+      printf("iteration %d: rho = %g, phirho = %g, phirho' = %g\n", iter, rho, phirho, phirhoprime);
+#endif
+   }
+
+   /* come back to the original coordinates: new ref point is P*yrho */
+   for( i = 0; i < n; i++ )
+   {
+      ref[i] = 0.0;
+
+      for( j = 0; j < n; j++ )
+         ref[i] += pt[j*n + i] * yrho[j];
+   }
+
+   /* change data back if function is concave */
+   if( isconcave )
+   {
+      for( i = 0; i < n; i++ )
+      {
+         D[i]  = -D[i];
+         bp[i] = -bp[i];
+      }
+   }
+
+#ifdef SCIP_DISABLED_CODE
+   /* project onto bounds; this is important for some cut generation methods such as generateCutLTI */
+   for( j = 0; j < consdata->nquadvars; ++j )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_VAR* var;
+
+      var = consdata->quadvarterms[j].var;
+      lb  = SCIPvarGetLbLocal(var);
+      ub  = SCIPvarGetUbLocal(var);
+      /* do not like variables at infinity */
+      assert(!SCIPisInfinity(scip,  lb));
+      assert(!SCIPisInfinity(scip, -ub));
+
+      ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
+   }
+#endif
+
+#ifdef DEBUG_PROJ
+   printf("modified reference point by a projection:\n");
+   for( j = 0; j < consdata->nquadvars; ++j )
+   {
+      printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), ref[j]);
+   }
+#endif
+
+   SCIPfreeBufferArray(scip, &y0);
+   SCIPfreeBufferArray(scip, &yrho);
+   SCIPfreeBufferArray(scip, &yrhoprime);
+
+   return SCIP_OKAY;
+}
+
+/** compute reference point suggested by gauge function */
 static
 SCIP_RETCODE computeReferencePointGauge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             refsol,             /**< reference point where to compute gauge, or NULL if LP solution should be used */
-   SCIP_Real**           ref,                /**< pointer to store reference point */
+   SCIP_Real*            ref,                /**< array to store reference point */
    SCIP_Bool*            success             /**< buffer to store whether we succeeded computing reference point */
    )
 {
@@ -7668,22 +8051,19 @@ SCIP_RETCODE computeReferencePointGauge(
    }
 #endif
 
-   /* scale gauge value so that point is close to the boundary, but not on the boundary */
+   /* scale gauge value so that final point is close to the boundary, but not on the boundary (weakens the cut) */
    gaugeval *= GAUGESCALE;
 
-   /* when a new solution is found, this method is called from addLinearizationCuts.
-    * in this case, since the solution is feasible, gaugeval <= 1
-    * is it a good idea to modify the point if it is interior?
-    */
+   /* if the point is not sufficiently violated, we don't modify it */
    if( SCIPisFeasLE(scip, gaugeval, 1.0) )
    {
       *success = FALSE;
-
       return SCIP_OKAY;
    }
 
-   /* set reference to (refsol - interior point)/gaugeval + interior point and project into bounds
-    * this is important for some cut generation methods such as generateCutLTI
+   /* set reference to (refsol - interior point)/gaugeval + interior point and project onto bounds this is important for
+    * some cut generation methods such as generateCutLTI
+    * @todo remove the projection onto the bounds; generateCutLTI shouldn't be called for convex constraints
     */
    for( j = 0; j < consdata->nquadvars; ++j )
    {
@@ -7695,8 +8075,8 @@ SCIP_RETCODE computeReferencePointGauge(
       assert(!SCIPisInfinity(scip, -ub));
 
       intpoint = consdata->interiorpoint[j];
-      (*ref)[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gaugeval + intpoint;
-      (*ref)[j] = MIN(ub, MAX(lb, (*ref)[j])); /* project value into bounds */
+      ref[j] = (SCIPgetSolVal(scip, refsol, var) - intpoint) / gaugeval + intpoint;
+      ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
    }
 
 #ifdef SCIP_DEBUG_GAUGE
@@ -7704,14 +8084,17 @@ SCIP_RETCODE computeReferencePointGauge(
    printf("modified reference point:\n");
    for( j = 0; j < consdata->nquadvars; ++j )
    {
-      printf("%s = % 20.15g\n", SCIPvarGetName(consdata->quadvarterms[j].var), (*ref)[j]);
+      printf("%s = % 20.15g\n", SCIPvarGetName(consdata->quadvarterms[j].var), ref[j]);
    }
 #endif
 
    return SCIP_OKAY;
 }
 
-/** generates a cut based on linearization (if convex) or McCormick (if nonconvex) in a solution */
+/** generates a cut based on linearization (if convex) or McCormick (if nonconvex) in a solution
+ * @note mode indicates whether we should modify the point we want to cutoff (sol) via gauge or projection,
+ * or if just normal linearization should be use, or the default way (whatever is specified via settings)
+ */
 static
 SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7723,7 +8106,8 @@ SCIP_RETCODE generateCutSol(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minefficacy         /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
+   SCIP_Real             minefficacy,        /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
+   char                  mode                /**< mode of execution 'g'auge, 'p'rojection, 'l'inearization gradient, 'd'efault */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -7752,27 +8136,81 @@ SCIP_RETCODE generateCutSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &ref, consdata->nquadvars) );
    success = FALSE;
 
-   if( conshdlrdata->gaugecuts && consdata->isgaugeavailable &&
-         ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
-          (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
+   if( mode == 'd')
    {
-      SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, &ref, &success) );
-   }
-
-   if( success )
-   {
-      SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
-
-      /* if cut fails, try again without modifying reference point via gauge */
-      if( *row == NULL || (efficacy != NULL && !SCIPisGT(scip, *efficacy, minefficacy)) || !SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
+      if( (consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
+            (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
       {
-         SCIPdebugMsg(scip, "gauge cut fail, try without modifying\n");
-         success = FALSE;
+         if( conshdlrdata->gaugecuts && consdata->isgaugeavailable )
+         {
+            SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, ref, &success) );
+         }
+         else if( conshdlrdata->projectedcuts && consdata->isedavailable )
+         {
+            SCIPdebugMessage("use the projection of refsol onto the region defined by the constraint as reference point\n");
+            SCIP_CALL( computeReferencePointProjection(scip, conshdlr, cons, refsol, ref) );
+            success = TRUE;
+         }
+      }
+
+      if( success )
+      {
+         SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
+
+         /* if cut fails, try again without modifying reference point */
+         if( *row == NULL || (efficacy != NULL && !SCIPisGT(scip, *efficacy, minefficacy)) || !SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
+         {
+            SCIPdebugMsg(scip, "%s cut fail, try without modifying\n", conshdlrdata->gaugecuts ? "gauge" : "projected");
+            success = FALSE;
+         }
+      }
+
+      /* note that this is not the same as calling this method with mode 'l', 'l' assume convex/concave function */
+      if( !success )
+      {
+         for( j = 0; j < consdata->nquadvars; ++j )
+         {
+            var = consdata->quadvarterms[j].var;
+            lb  = SCIPvarGetLbLocal(var);
+            ub  = SCIPvarGetUbLocal(var);
+            /* do not like variables at infinity */
+            assert(!SCIPisInfinity(scip,  lb));
+            assert(!SCIPisInfinity(scip, -ub));
+
+            ref[j] = SCIPgetSolVal(scip, refsol, var);
+            ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
+         }
+
+         SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
       }
    }
-
-   if( !success )
+   /* gauge cut */
+   if( mode == 'g' )
    {
+      assert((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT));
+      if( conshdlrdata->gaugecuts && consdata->isgaugeavailable )
+      {
+         SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, ref, &success) );
+      }
+      if( success )
+      {
+         SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
+      }
+   }
+   /* projection cut */
+   if( mode == 'p' )
+   {
+      assert((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT));
+      if( conshdlrdata->projectedcuts && consdata->isedavailable )
+      {
+         SCIP_CALL( computeReferencePointProjection(scip, conshdlr, cons, refsol, ref) );
+         SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
+      }
+   }
+   /* gradient linearization cut at refsol */
+   if( mode == 'l' )
+   {
+      assert((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) || (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT));
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          var = consdata->quadvarterms[j].var;
@@ -7785,7 +8223,6 @@ SCIP_RETCODE generateCutSol(
          ref[j] = SCIPgetSolVal(scip, refsol, var);
          ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
       }
-
       SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
    }
 
@@ -7843,7 +8280,7 @@ SCIP_RETCODE generateCutUnboundedLP(
       (!consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
    {
       /* if not convex, just call generateCut and hope it's getting something useful */
-      SCIP_CALL( generateCutSol(scip, conshdlr, cons, NULL, NULL, violside, row, NULL, FALSE, -SCIPinfinity(scip)) );
+      SCIP_CALL( generateCutSol(scip, conshdlr, cons, NULL, NULL, violside, row, NULL, FALSE, -SCIPinfinity(scip), 'd') );
 
       /* compute product of cut coefficients with ray, if required */
       if( *row != NULL && rowrayprod != NULL )
@@ -7942,6 +8379,69 @@ SCIP_RETCODE generateCutUnboundedLP(
    return SCIP_OKAY;
 }
 
+/** processes a cut for constraint cons, i.e., checks numerics and possibly adds cut to sepastore */
+static
+SCIP_RETCODE processCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< cut to process */
+   SCIP_CONSHDLR*        conshdlr,           /**< quadratic constraints handler */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   SCIP_Real             efficacy,           /**< efficacy of row in reference solution */
+   SCIP_Real             actminefficacy,     /**< actual minimal efficacy (whatever that is) */
+   SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
+   SCIP_Real*            bestefficacy,       /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
+   SCIP_RESULT*          result              /**< result of separation */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(row != NULL);
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+   assert(cons != NULL);
+
+   /* no cut to process */
+   if( *row == NULL )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( SCIPisGT(scip, efficacy, actminefficacy) && SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
+   {
+      SCIP_Bool infeasible;
+
+      /* cut cuts off solution */
+      SCIP_CALL( SCIPaddCut(scip, sol, *row, FALSE /* forcecut */, &infeasible) );
+      if( infeasible )
+      {
+         SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(cons));
+         *result = SCIP_CUTOFF;
+      }
+      else
+      {
+         SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy,
+               SCIPconsGetName(cons), consdata->lhsviol+consdata->rhsviol);
+         *result = SCIP_SEPARATED;
+      }
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
+      /* mark row as not removable from LP for current node, if in enforcement */
+      if( inenforcement && !conshdlrdata->enfocutsremovable )
+         SCIPmarkRowNotRemovableLocal(scip, *row);
+   }
+   if( bestefficacy != NULL && efficacy > *bestefficacy )
+      *bestefficacy = efficacy;
+
+   SCIP_CALL( SCIPreleaseRow (scip, row) );
+   return SCIP_OKAY;
+}
 /** tries to separate solution or LP solution by a linear cut
  * 
  *  assumes that constraint violations have been computed 
@@ -7982,6 +8482,7 @@ SCIP_RETCODE separatePoint(
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
 
+   row = NULL;
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -8055,48 +8556,16 @@ SCIP_RETCODE separatePoint(
                   return SCIP_INVALIDDATA;  /*lint !e527*/
                }
             }
+            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+            continue;
          }
          else
          {
-            /* @todo If convex, can we easily move the refpoint closer to the feasible region to get a stronger cut?
-             * E.g., use bisection on the line between LP solution and best primal (or LP interior)
-             */
-            SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy, conshdlrdata->checkcurvature, actminefficacy) );
-            /* @todo If generation failed not because of low efficacy, then probably because of numerical issues;
-             * if the constraint is convex and we are desperate to get a cut, then we may try again with a better chosen reference point
-             */
+            SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
+                     conshdlrdata->checkcurvature, actminefficacy, 'd') );
+            /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
+            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
          }
-
-         if( row == NULL ) /* failed to generate cut */
-            continue;
-
-         if( SCIPisGT(scip, efficacy, actminefficacy) && SCIPisCutApplicable(scip, row) )  /*lint !e644 */
-         {
-            SCIP_Bool infeasible;
-
-            /* cut cuts off solution */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
-            if( infeasible )
-            {
-               SCIPdebugMsg(scip, "cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
-               *result = SCIP_CUTOFF;
-            }
-            else
-            {
-               SCIPdebugMsg(scip, "add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy,
-                  SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
-               *result = SCIP_SEPARATED;
-            }
-            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-
-            /* mark row as not removable from LP for current node, if in enforcement */
-            if( inenforcement && !conshdlrdata->enfocutsremovable )
-               SCIPmarkRowNotRemovableLocal(scip, row);
-         }
-         if( bestefficacy != NULL && efficacy > *bestefficacy )
-            *bestefficacy = efficacy;
-
-         SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
 
       if( *result == SCIP_CUTOFF )
@@ -8161,12 +8630,12 @@ SCIP_RETCODE addLinearizationCuts(
       if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
       {
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_RIGHT, &row, NULL,
-               conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
+               conshdlrdata->checkcurvature, -SCIPinfinity(scip), 'l') );  /*lint !e613 */
       }
       else if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
       {
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_LEFT,  &row, NULL,
-               conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
+               conshdlrdata->checkcurvature, -SCIPinfinity(scip), 'l') );  /*lint !e613 */
       }
       else
          continue;
@@ -10716,7 +11185,17 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          {
             SCIP_CALL( computeGauge(scip, conshdlr, conss[c]) );
          }
+      }
 
+      /* compute eigendecomposition for convex quadratics */
+      if( conshdlrdata->projectedcuts && SCIPgetSubscipDepth(scip) == 0 && consdata->nquadvars > 0 )
+      {
+         SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
+         if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
+               (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+         {
+            SCIP_CALL( computeED(scip, conshdlr, conss[c]) );
+         }
       }
 
       /* mark constraint for propagation */
@@ -10794,6 +11273,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 
       SCIPfreeMemoryArrayNull(scip, &consdata->interiorpoint);
       SCIPfreeMemoryArrayNull(scip, &consdata->gaugecoefs);
+      SCIPfreeMemoryArrayNull(scip, &consdata->eigenvalues);
+      SCIPfreeMemoryArrayNull(scip, &consdata->eigenvectors);
+      SCIPfreeMemoryArrayNull(scip, &consdata->bp);
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_EXITSOLVE )
@@ -12766,8 +13248,12 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->gaugecuts, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/interiorcomputation",
-         "how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint",
+         "how the interior point for gauge cuts should be computed: 'a'ny point per constraint, 'm'ost interior per constraint",
          &conshdlrdata->interiorcomputation, TRUE, 'a', "am", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/projectedcuts",
+         "should convex quadratics generated strong cuts via projections?",
+         &conshdlrdata->projectedcuts, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchscoring",
          "which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain",
