@@ -424,7 +424,12 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
+#define BMSgetBlockMemoryTotal(mem)           BMSgetBlockMemoryTotal_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
+#define BMSgetBlockMemoryLazy(mem)            BMSgetBlockMemoryLazy_call(mem)
+#define BMSgetBlockMemoryUsedMax(mem)         BMSgetBlockMemoryUsedMax_call(mem)
+#define BMSgetBlockMemoryLazyMax(mem)         BMSgetBlockMemoryLazyMax_call(mem)
+#define BMSgetBlockMemoryTotalMax(mem)        BMSgetBlockMemoryTotalMax_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
 #define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
@@ -453,7 +458,12 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySize(mem,ptr,size)                 BMSfreeMemory(ptr)
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size)             BMSfreeMemoryNull(ptr)
 #define BMSgarbagecollectBlockMemory(mem)                    /**/
+#define BMSgetBlockMemoryTotal(mem)                          0LL
 #define BMSgetBlockMemoryUsed(mem)                           0LL
+#define BMSgetBlockMemoryLazy(mem)                           0LL
+#define BMSgetBlockMemoryUsedMax(mem)                        0LL
+#define BMSgetBlockMemoryLazyMax(mem)                        0LL
+#define BMSgetBlockMemoryTotalMax(mem)                       0LL
 #define BMSgetBlockPointerSize(mem,ptr)                      0
 #define BMSdisplayBlockMemory(mem)                           /**/
 #define BMSblockMemoryCheckEmpty(mem)                        0LL
@@ -588,9 +598,38 @@ void BMSgarbagecollectBlockMemory_call(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** returns the total number of bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryTotal_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
 /** returns the number of allocated bytes in the block memory */
 EXTERN
 long long BMSgetBlockMemoryUsed_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryLazy_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUsedMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryLazyMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the maximal number of allocated and used bytes in the block memory */
+long long BMSgetBlockMemoryTotalMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 

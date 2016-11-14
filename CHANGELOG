@@ -30,7 +30,13 @@ features:
 - can now analyze dual unbounded rays of primal infeasible LPs
 - a print callback can now be specified for user expressions
 - added interval-evaluation of sine and cosine
+- add prop_nlobbt, a nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
+- add sepa_convexproj, a separator which projects onto convex relaxation and build gradient cuts at the projection
+- add sepa_gauge, a separator which computes an interior point of a convex relaxation and performs a binary search in the segment joining
+  the interior point and the point to separate until it finds a point in the boundary of the feasible region where to build a gradient cut
 - add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
+- new presolving method presol_qpkktref to add the KKT conditions to QPs
+- implemented and extended stuffing presolving in linear constraint handler
 - allow to create constraints of constraint handlers that don't need constraints
 - nodes can now be postponed; currently, this can only be triggered by BEFORELP propagation callbacks
 - new components constraint handler which replaces the components presolver; it searches for independent subproblems
@@ -54,14 +60,21 @@ parameters:
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- new parameter "constraints/quadratic/projectedcuts" to enable convex quadratics to generate gradients cuts at the
+  projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
 - all parameters of the components presolver (starting with "presolving/components/") are now parameters of the components
   constraint handler (starting with "constraints/components/")
+- new parameter presolving/qpkktref/updatequadbounded to add the KKT conditions to QPs only if all variables are bounded
+- new parameter presolving/qpkktref/updatequadindef to add the KKT conditions to QPs only if the quadratic matrix is indefinite
+- new parameter presolving/qpkktref/addkktbinary to allow the presence of binary variables for the KKT update
 
 performance improvements:
-- successful propagation with DURINGLPLOOP timing now triggers a new round of node solving, starting with BEFORELP
-  propagation
+- rewrote the propagate-and-cut-and-price loop so that successful propagations with DURINGLPLOOP timing, bound changes found by separation,
+  and new primal solutions now trigger a new round of node solving, starting with propagation; improved tuning of propagation and heuristic timings
+- tuned propagation methods of several constraint handlers
+- make more use of SCIPmarkConsPropagate() to mark constraints for propagation and improved the internal handling of marked constraints
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
 - improved greedy solution in SCIPsolveKnapsackApproximatelyLT() for the flow cover separation
 - adjusted most Large Neighborhood Search heuristics such that they collect their variable fixings first in an array,
@@ -105,6 +118,20 @@ interface:
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 - SCIPinitConflictAnalysis() gets now 2 additional values: the type of the conflict and whether the current cutoff bound is used or not
 - bound reader uses angle bracket around variable names
+- new functions SCIPgetLinvarMay{Decrease,Increase}Quadratic() to get index of a variable in linear term of quadratic constraint that may be decreased
+  without making any other constraint infeasible
+- in param.c/h: rename SCIPparamCheckBool() to SCIPparamIsValidBool(), SCIPparamCheckString() to SCIPparamIsValidString(),
+  SCIPparamCheckChar() to SCIPparamIsValidChar(), SCIPparamCheckLongint() to SCIPparamIsValidLongint(); the new methods return
+  a bool whether the given value is valid for the parameter instead of printing a warning message and returning an error code
+  if the value is invalid
+- add SCIPparamIsValidInt() and SCIPparamIsValidReal() to param.c/h
+- in scip.c/h: rename SCIPcheckBoolParam() to SCIPisBoolParamValid(), SCIPcheckLongintParam() to SCIPisLongintParamValid(),
+  SCIPcheckCharParam() to SCIPisCharParamValid(), SCIPcheckStringParam() to SCIPisStringParamValid(); the new methods return
+  a bool whether the given value is valid for the parameter instead of printing a warning message and returning an error code
+  if the value is invalid
+- add missing functions SCIPisIntParamValid() and SCIPisRealParamValid() to scip.c/h
+- Setting a parameter to a non-valid value now produces an error message instead of a warning.
+- add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
 
 fixed bugs:
 - avoid numerically troublesome aggregations

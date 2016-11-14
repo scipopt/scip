@@ -894,7 +894,7 @@ SCIP_RETCODE checkIIS(
    SCIP_CALL( SCIPlpiCreate(&lp, SCIPgetMessagehdlr(scip), "checkLP", SCIP_OBJSEN_MINIMIZE) );
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* loop through indicator constraints */
    for (c = 0; c < nconss; ++c)
@@ -1325,9 +1325,9 @@ SCIP_RETCODE initAlternativeLP(
    assert( conshdlrdata->slackhash != NULL );
 
    /* create hash map of variables */
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->lbhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->lbhash, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubhash, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* create alternative LP */
    SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, SCIPgetMessagehdlr(scip), "altlp", SCIP_OBJSEN_MINIMIZE) );
@@ -3221,12 +3221,12 @@ SCIP_RETCODE createVarUbs(
             SCIPdebugMsg(scip, "Removing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
             assert( ! SCIPconsIsModifiable(conss[c]) );
 
-	    /* mark linear constraint to be upgrade-able */
-	    if ( SCIPconsIsActive(consdata->lincons) )
-	    {
+            /* mark linear constraint to be upgrade-able */
+            if ( SCIPconsIsActive(consdata->lincons) )
+            {
                SCIPconsAddUpgradeLocks(consdata->lincons, -1);
                assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-	    }
+            }
 
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          }
@@ -3809,12 +3809,12 @@ SCIP_RETCODE propIndicator(
          /* delete constraint */
          assert( ! SCIPconsIsModifiable(cons) );
 
-	 /* mark linear constraint to be update-able */
-	 if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
-	 {
+         /* mark linear constraint to be update-able */
+         if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
+         {
             SCIPconsAddUpgradeLocks(consdata->lincons, -1);
             assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-	 }
+         }
 
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -5137,7 +5137,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    if ( conshdlrdata->sepaalternativelp )
    {
       /* generate hash for storing all slack variables (size is just a guess) */
-      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->slackhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
+      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->slackhash, SCIPblkmem(scip), SCIPgetNVars(scip)) );
       assert( conshdlrdata->slackhash != NULL );
 
       /* first initialize slack hash */
@@ -5628,7 +5628,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    {
       if ( conshdlrdata->binvarhash == NULL )
       {
-         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNOrigVars(scip))) );
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
       }
 
       /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
@@ -6570,7 +6570,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
        * constraint pointer */
       if ( SCIPisTransformed(sourcescip) && ! SCIPconsIsTransformed(sourcelincons) )
       {
-	 SCIP_CONS* translincons;
+         SCIP_CONS* translincons;
 
          /* adjust the linear constraint in the original constraint (no need to release translincons) */
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );
@@ -7405,7 +7405,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
          {
             if ( conshdlrdata->binvarhash == NULL )
             {
-               SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNOrigVars(scip))) );
+               SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
             }
 
             /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */

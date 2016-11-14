@@ -124,7 +124,6 @@ SCIP_Bool parseBoolValue(
    case 'Y':
       return TRUE;
    default:
-      SCIPdialogMessage(scip, NULL, "\ninvalid parameter value <%s>\n\n", valuestr);
       *error = TRUE;
       break;
    }
@@ -1950,7 +1949,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
 /** dialog execution method for the set parameter command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 {  /*lint --e{715}*/
-   SCIP_RETCODE retcode;
    SCIP_PARAM* param;
    char prompt[SCIP_MAXSTRLEN];
    char* valuestr;
@@ -1984,16 +1982,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       boolval = parseBoolValue(scip, valuestr, &error);
 
-      if( !error )
+      if( error )
       {
-         retcode = SCIPchgBoolParam(scip, param, boolval);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
-         if( retcode != SCIP_PARAMETERWRONGVAL )
-         {
-            SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for bool parameter <%s>. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
+            valuestr, SCIPparamGetName(param));
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
+      }
+      else
+      {
+         assert(SCIPisBoolParamValid(scip, param, boolval));
 
-            SCIP_CALL( retcode );
-         }
+         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
+
       }
 
       break;
@@ -2012,17 +2014,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%d", &intval) != 1 )
+      if( sscanf(valuestr, "%d", &intval) != 1 || !SCIPisIntParamValid(scip, param, intval) )
       {
-         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
-         return SCIP_OKAY;
+         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for int parameter <%s>. Must be integral in range [%d,%d].\n\n",
+            valuestr, SCIPparamGetName(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
       }
-      retcode = SCIPchgIntParam(scip, param, intval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
+      else
       {
+         SCIP_CALL( SCIPchgIntParam(scip, param, intval) );
          SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
-
-         SCIP_CALL( retcode );
       }
 
       break;
@@ -2041,17 +2041,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 )
+      if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 || !SCIPisLongintParamValid(scip, param, longintval) )
       {
-         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
-         return SCIP_OKAY;
+         SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for longint parameter <%s>. Must be integral in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n\n",
+            valuestr, SCIPparamGetName(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       }
-      retcode = SCIPchgLongintParam(scip, param, longintval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
+      else
       {
+         SCIP_CALL( SCIPchgLongintParam(scip, param, longintval) );
          SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
-
-         SCIP_CALL( retcode );
       }
       break;
 
@@ -2069,17 +2067,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &realval) != 1 )
+      if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &realval) != 1 || !SCIPisRealParamValid(scip, param, realval) )
       {
-         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
-         return SCIP_OKAY;
+         SCIPdialogMessage(scip, NULL, "\nInvalid real parameter value <%s> for parameter <%s>. Must be in range [%.15g,%.15g].\n\n",
+            valuestr, SCIPparamGetName(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
       }
-      retcode = SCIPchgRealParam(scip, param, realval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
+      else
       {
+         SCIP_CALL( SCIPchgRealParam(scip, param, realval) );
          SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
-
-         SCIP_CALL( retcode );
       }
       break;
 
@@ -2096,17 +2092,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%c", &charval) != 1 )
+      if( sscanf(valuestr, "%c", &charval) != 1 || !SCIPisCharParamValid(scip, param, charval) )
       {
-         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
-         return SCIP_OKAY;
+         SCIPdialogMessage(scip, NULL, "\nInvalid char parameter value <%s>. Must be in set {%s}.\n\n",
+            valuestr, SCIPparamGetCharAllowedValues(param));
       }
-      retcode = SCIPchgCharParam(scip, param, charval);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
+      else
       {
+         SCIP_CALL( SCIPchgCharParam(scip, param, charval) );
          SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
-
-         SCIP_CALL( retcode );
       }
       break;
 
@@ -2123,12 +2117,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      retcode = SCIPchgStringParam(scip, param, valuestr);
-      if( retcode != SCIP_PARAMETERWRONGVAL )
+      if ( !SCIPisStringParamValid(scip, param, valuestr) )
       {
+         SCIPdialogMessage(scip, NULL, "\nInvalid character in string parameter.\n\n");
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgStringParam(scip, param, valuestr) );
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
-
-         SCIP_CALL( retcode );
       }
       break;
 
@@ -2229,6 +2225,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecFixParam)
       SCIPparamSetFixed(param, fix);
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, (fix ? "TRUE" : "FALSE"), TRUE) );
       SCIPdialogMessage(scip, NULL, "<%s> %s\n", SCIPparamGetName(param), (fix ? "fixed" : "unfixed"));
+   }
+   else
+   {
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
+      SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for fixing status. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
+         valuestr);
    }
 
    return SCIP_OKAY;
@@ -2812,7 +2814,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    generic = parseBoolValue(scip, valuestr, &error);
 
    if( error )
+   {
+      SCIPdialogMessage(scip, NULL, "\nInvalid value <%s>. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
+         valuestr);
+
       return SCIP_OKAY;
+   }
 
    /* adjust command and add to the history */
    SCIPescapeString(command, SCIP_MAXSTRLEN, filename);
@@ -2834,7 +2841,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    offset = parseBoolValue(scip, valuestr, &error);
 
    if( error )
+   {
+      SCIPdialogMessage(scip, NULL, "\nInvalid value <%s>. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
+         valuestr);
+
       return SCIP_OKAY;
+   }
 
    (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, offset ? "TRUE" : "FALSE");
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, command, FALSE) );
@@ -2855,7 +2867,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    lazyconss = parseBoolValue(scip, valuestr, &error);
 
    if( error )
+   {
+      SCIPdialogMessage(scip, NULL, "\nInvalid value <%s>. Must be <0>, <1>, <FALSE>, or <TRUE>.\n\n",
+         valuestr);
+
       return SCIP_OKAY;
+   }
 
    /* adjust command and add to the history */
    SCIPescapeString(command, SCIP_MAXSTRLEN, filename);

@@ -51,17 +51,17 @@ typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constrain
 typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins)
- * 
- *  If the copy process was one to one, the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
- *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a TRUE valid for all
- *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
+ *
+ *  If the copy process was one to one, the valid pointer can be set to TRUE. Otherwise, this pointer has to be set to
+ *  FALSE. If all problem defining objects (constraint handlers and variable pricers) return valid = TRUE for all
+ *  their copying calls, SCIP assumes that it is an overall one to one copy of the original instance. In this case any
  *  reductions made in the copied SCIP instance can be transfered to the original SCIP instance. If the valid pointer is
  *  set to TRUE and it was not a one to one copy, it might happen that optimal solutions are cut off.
- *  
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - valid           : was the copying process valid? 
+ *  - valid           : was the copying process valid?
  */
 #define SCIP_DECL_CONSHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_Bool* valid)
 
