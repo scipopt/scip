@@ -48,6 +48,29 @@ OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
 # prepare log file
 echo "" > applicationtestsummary.log
 
+# pretest
+for OPT in ${OPTS[@]}
+do
+    for LPS in ${LPSOLVERS[@]}
+    do
+	LPILIB=../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
+	if test ! -e $LPILIB
+	then
+	    echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
+	    echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"."
+	    exit 1
+	fi
+	SCIPLIB=../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
+	if test ! -e $SCIPLIB
+	then
+	    echo "Error: "$SCIPLIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
+	    echo "Error: "$SCIPLIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"."
+	    exit 1
+	fi
+    done
+done
+
+# run tests
 for APPLICATION in ${APPLICATIONS[@]}
 do
     echo
@@ -60,59 +83,45 @@ do
     do
 	for LPS in ${LPSOLVERS[@]}
 	do
-	    LPILIB=../../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
-	    if test -e $LPILIB
-            then
-		SCIPLIB=../../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
-		if test -e $SCIPLIB
+	    echo make OPT=$OPT LPS=$LPS $MAKEARGS
+	    if (! make OPT=$OPT LPS=$LPS $MAKEARGS )
+	    then
+		echo "Making "$APPLICATION" failed." >> ../applicationtestsummary.log
+		exit $STATUS
+	    else
+		echo "Making "$APPLICATION" successful." >> ../applicationtestsummary.log
+	    fi
+	    echo
+	    if test $QUIET = 1
+	    then
+		echo make OPT=$OPT LPS=$LPS $MAKEARGS test
+		if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test > /dev/null )
 		then
-		    echo make OPT=$OPT LPS=$LPS $MAKEARGS
-		    if (! make OPT=$OPT LPS=$LPS $MAKEARGS )
-		    then
-			echo "Making "$APPLICATION" failed." >> ../applicationtestsummary.log
-			exit $STATUS
-		    else
-			echo "Making "$APPLICATION" successful." >> ../applicationtestsummary.log
-		    fi
-		    echo
-		    if test $QUIET = 1
-		    then
-			echo make OPT=$OPT LPS=$LPS $MAKEARGS test
-			if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test > /dev/null )
-			then
-			    echo "Testing "$APPLICATION" failed."
-			    echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
-			    exit $STATUS
-			fi
-		    else
-			echo make OPT=$OPT LPS=$LPS $MAKEARGS test
-			if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test )
-			then
-			    echo "Testing "$APPLICATION" failed."
-			    echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
-			    exit $STATUS
-			fi
-		    fi
-		    echo "Testing "$APPLICATION" successful."
-		    echo "Testing "$APPLICATION" successful." >> ../applicationtestsummary.log
-
-		    # find most recently changed result file and display it
-		    if test -d check/results
-		    then
-			RESFILE=`find check/results/*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
-			if test -e $RESFILE
-			then
-			    cat $RESFILE >> ../applicationtestsummary.log
-			fi
-		    fi
-		else
-		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS")" >> ../applicationtestsummary.log
-		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS")"
+		    echo "Testing "$APPLICATION" failed."
+		    echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
+		    exit $STATUS
 		fi
-            else
-		echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS")" >> ../applicationtestsummary.log
-		echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS")"
-            fi
+	    else
+		echo make OPT=$OPT LPS=$LPS $MAKEARGS test
+		if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test )
+		then
+		    echo "Testing "$APPLICATION" failed."
+		    echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
+		    exit $STATUS
+		fi
+	    fi
+	    echo "Testing "$APPLICATION" successful."
+	    echo "Testing "$APPLICATION" successful." >> ../applicationtestsummary.log
+
+	    # find most recently changed result file and display it
+	    if test -d check/results
+	    then
+		RESFILE=`find check/results/*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
+		if test -e $RESFILE
+		then
+		    cat $RESFILE >> ../applicationtestsummary.log
+		fi
+	    fi
 	    echo
 	    echo >> ../applicationtestsummary.log
 	done
