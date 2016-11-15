@@ -1043,7 +1043,7 @@ SCIP_Bool isExecuteDeepBranchingLoop(
    SCIP_Bool             fullcutoff
    )
 {
-   SCIP_Bool result = !status->lperror && !fullcutoff && !status->maxnconsreached;;
+   SCIP_Bool result = !status->lperror && !fullcutoff;
    if( status->lperror )
    {
       /* an error occurred during one of the second level lps */
@@ -1054,14 +1054,6 @@ SCIP_Bool isExecuteDeepBranchingLoop(
       /* if both second level branches for a variable are cutoff, we stop the calculation, as the current first level
        * branch has to be cutoff */
       SCIPdebugMessage("A deeper lp is cutoff, as both lps are cutoff.\n");
-   }
-   if( !status->maxnconsreached )
-   {
-      /*
-       * if the maximum number of violated constraints to be added is reached we want to stop the current loop, add the
-       * constraints and restart everything.
-       */
-      SCIPdebugMessage("The max number of violated constraints to be added is reached.\n");
    }
    return result;
 }
@@ -1314,6 +1306,14 @@ SCIP_Bool isExecuteFirstLevelBranching(
    STATUS*               status
    )
 {
+   return !status->lperror && !status->firstlvlfullcutoff && !status->limitreached && !status->propagationdomred;
+}
+
+static
+SCIP_Bool isExecuteFirstLevelBranchingLoop(
+   STATUS*               status
+   )
+{
    return !status->lperror && !status->firstlvlfullcutoff && !status->limitreached && !status->maxnconsreached
       && !status->propagationdomred;
 }
@@ -1499,7 +1499,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       SCIPenableVarHistory(scip);
       SCIPdebugMessage("Start Probing Mode\n");
 
-      for( i = 0, c = *start; i < nlpcands && isExecuteFirstLevelBranching(status) && !SCIPisStopped(scip); i++, c++ )
+      for( i = 0, c = *start; i < nlpcands && isExecuteFirstLevelBranchingLoop(status) && !SCIPisStopped(scip); i++, c++ )
       {
          SCIP_VAR* branchvar;
          SCIP_Real branchval;
@@ -1670,7 +1670,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   *provedbound = MAX(*provedbound, updualbound);
                }
             }
-            else if( !status->limitreached && !status->maxnconsreached )
+            else if( !status->limitreached )
             {
                /* if neither of both branches was cutoff we can calculate the weight for the current variable */
                SCIP_Real currentScore;
@@ -1756,6 +1756,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       {
          freeBinaryBoundData(scip, &binarybounddata);
       }
+
       if( branchruledata->usedirectdomred || branchruledata->useimplieddomred )
       {
          if( branchruledata->useimplieddomred )
