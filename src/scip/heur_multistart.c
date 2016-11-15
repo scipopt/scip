@@ -31,7 +31,7 @@
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'm'
-#define HEUR_PRIORITY         0
+#define HEUR_PRIORITY         -2100000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -46,11 +46,13 @@
 #define DEFAULT_MINIMPRITER   10             /**< default number of iteration when checking the minimum improvement */
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
 #define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
-#define DEFAULT_GRADLIMIT     1e+6           /**< default limit for gradient computations for all improvePoint() calls */
-#define DEFAULT_MAXNCLUSTER   10             /**< default maximum number of considered clusters per heuristic call */
+#define DEFAULT_GRADLIMIT     5e+6           /**< default limit for gradient computations for all improvePoint() calls */
+#define DEFAULT_MAXNCLUSTER   3              /**< default maximum number of considered clusters per heuristic call */
 
 #define MINFEAS               -1e+4          /**< minimum feasibility for a point; used for filtering and improving
                                               *   feasibility */
+#define MINIMPRFAC            0.95           /**< improvement factor used to discard randomly generated points with a
+                                              *   too large objective value */
 #define GRADCOSTFAC_LINEAR    1.0            /**< gradient cost factor for the number of linear variables */
 #define GRADCOSTFAC_QUAD      2.0            /**< gradient cost factor for the number of quadratic terms */
 #define GRADCOSTFAC_NONLINEAR 3.0            /**< gradient cost factor for the number of nodes in nonlinear expression */
@@ -102,37 +104,44 @@ int getVarIndex(
 #define getVarIndex(varindex,var) ((int)(size_t)SCIPhashmapGetImage((varindex), (void*)(var)))
 #endif
 
-/** samples and stores random points */
+/** samples and stores random points; stores points which have a better objective value than the current incumbent
+ *  solution
+ */
 static
 SCIP_RETCODE sampleRandomPoints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            rndpoints,          /**< array to store all random points */
-   int                   nrndpoints,         /**< total number of random points to compute */
+   int                   nmaxrndpoints,      /**< maximum number of random points to compute */
    SCIP_Real             maxboundsize,       /**< maximum variable domain size for unbounded variables */
-   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             bestobj,            /**< objective value in the transformed space of the current incumbent */
+   int*                  nstored             /**< pointer to store the number of randomly generated points */
    )
 {
    SCIP_VAR** vars;
+   SCIP_SOL* sol;
    SCIP_Real val;
    SCIP_Real lb;
    SCIP_Real ub;
    int nvars;
+   int niter;
    int i;
-   int k;
 
    assert(scip != NULL);
    assert(rndpoints != NULL);
-   assert(nrndpoints > 0);
+   assert(nmaxrndpoints > 0);
    assert(maxboundsize > 0.0);
    assert(randnumgen != NULL);
+   assert(nstored != NULL);
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
+   *nstored = 0;
 
-   for( k = 0; k < nrndpoints; ++k )
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   for( niter = 0; niter < 3 * nmaxrndpoints && *nstored < nmaxrndpoints; ++niter )
    {
-      SCIP_CALL( SCIPcreateSol(scip, &rndpoints[k], NULL) );
-
       for( i = 0; i < nvars; ++i )
       {
          lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
@@ -155,11 +164,20 @@ SCIP_RETCODE sampleRandomPoints(
          assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
 
          /* set solution value */
-         SCIP_CALL( SCIPsetSolVal(scip, rndpoints[k], vars[i], val) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], val) );
       }
 
-      assert(rndpoints[k] != NULL);
+      /* add solution if it is good enough */
+      if( SCIPisLE(scip, SCIPgetSolTransObj(scip, sol), bestobj) )
+      {
+         SCIP_CALL( SCIPcreateSolCopy(scip, &rndpoints[*nstored], sol) );
+         ++(*nstored);
+      }
    }
+   assert(*nstored <= nmaxrndpoints);
+   SCIPdebugMsg(scip, "found %d randomly generated points\n", *nstored);
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    return SCIP_OKAY;
 }
@@ -756,7 +774,9 @@ SCIP_RETCODE applyHeur(
    SCIP_Real* nlrowgradcosts;
    int* clusteridx;
    SCIP_Real gradlimit;
+   SCIP_Real bestobj;
    int nusefulpoints;
+   int nrndpoints;
    int ncluster;
    int nnlrows;
    int npoints;
@@ -772,6 +792,7 @@ SCIP_RETCODE applyHeur(
 
    nlrows = SCIPgetNLPNlRows(scip);
    nnlrows = SCIPgetNNLPNlRows(scip);
+   bestobj = SCIPgetNSols(scip) > 0 ? MINIMPRFAC * SCIPgetSolTransObj(scip, SCIPgetBestSol(scip)) : SCIPinfinity(scip);
 
    if( heurdata->exprinterpreter == NULL )
    {
@@ -801,13 +822,18 @@ SCIP_RETCODE applyHeur(
    /*
     * 1. sampling points in the current domain; for unbounded variables we use a bounded box
     */
-   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->maxboundsize, heurdata->randnumgen) );
+   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->maxboundsize, heurdata->randnumgen,
+         bestobj, &nrndpoints) );
+   assert(nrndpoints >= 0);
+
+   if( nrndpoints == 0 )
+      goto TERMINATE;
 
    /*
     * 2. improve points via consensus vectors
     */
    gradlimit = heurdata->gradlimit == 0.0 ? SCIPinfinity(scip) : heurdata->gradlimit;
-   for( npoints = 0; npoints < heurdata->nrndpoints && gradlimit >= 0 && !SCIPisStopped(scip); ++npoints )
+   for( npoints = 0; npoints < nrndpoints && gradlimit >= 0 && !SCIPisStopped(scip); ++npoints )
    {
       SCIP_Real gradcosts;
 
@@ -816,9 +842,9 @@ SCIP_RETCODE applyHeur(
             &gradcosts) );
 
       gradlimit -= gradcosts;
-      SCIPdebugMsg(scip, "improve point %d / %d gradlimit = %g\n", npoints, heurdata->nrndpoints, gradlimit);
+      SCIPdebugMsg(scip, "improve point %d / %d gradlimit = %g\n", npoints, nrndpoints, gradlimit);
    }
-   assert(npoints > 0 && npoints <= heurdata->nrndpoints);
+   assert(npoints > 0 && npoints <= nrndpoints);
 
    /*
     * 3. filter and cluster points
@@ -878,7 +904,7 @@ SCIP_RETCODE applyHeur(
 
 TERMINATE:
    /* free memory */
-   for( i = heurdata->nrndpoints - 1; i >= 0 ; --i )
+   for( i = nrndpoints - 1; i >= 0 ; --i )
    {
       assert(points[i] != NULL);
       SCIP_CALL( SCIPfreeSol(scip, &points[i]) );

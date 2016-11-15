@@ -98,12 +98,14 @@ Test(heuristic, sampleRandomPoints, .init = setup, .fini = teardown,
    )
 {
    SCIP_SOL** rndpoints;
+   int nrndpoints;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rndpoints, 1) );
 
    /* compute a single random point */
    rndpoints[0] = NULL;
-   SCIP_CALL( sampleRandomPoints(scip, rndpoints, 1, 1.0, randumgen) );
+   SCIP_CALL( sampleRandomPoints(scip, rndpoints, 1, 1.0, randumgen, SCIPinfinity(scip), &nrndpoints) );
+   cr_assert( nrndpoints == 1 );
 
    cr_assert( rndpoints[0] != NULL );
    cr_assert( SCIPgetSolVal(scip, rndpoints[0], x) <= SCIPvarGetUbLocal(x) );
@@ -232,7 +234,7 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    lincoefs[1] = 1.0;
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, 0, NULL, 0, NULL, NULL, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts)) );
+   SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, exprint, sol, 1, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
    cr_expect(SCIPisFeasEQ(scip, minfeas, 0.0));
    cr_expect(gradcosts > 0.0);
 
