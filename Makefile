@@ -1254,7 +1254,7 @@ ifneq ($(SANITIZE),$(LAST_SANITIZE))
 		@-touch -c $(ALLSRC)
 endif
 ifneq ($(TPI),$(LAST_TPI))
-                @-touch -c $(ALLSRC)
+		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
