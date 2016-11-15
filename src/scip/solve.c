@@ -3985,6 +3985,7 @@ SCIP_RETCODE solveNode(
 
       *unbounded = FALSE;
       *infeasible = FALSE;
+      foundsol = FALSE;
 
       nloops++;
       lperror = FALSE;
@@ -4001,7 +4002,6 @@ SCIP_RETCODE solveNode(
          solvelpagain = FALSE;
          propagate = propagateagain;
          propagateagain = FALSE;
-         foundsol = FALSE;
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, cutoff) );
@@ -4023,10 +4023,10 @@ SCIP_RETCODE solveNode(
 
             return SCIP_OKAY;
          }
-         
+
       }
       fullseparation = FALSE;
-      
+
       /* reset relaxation solution to best solution found, this might be important for heuristics depending on the relaxation solution */
       if( bestrelaxval != -SCIPsetInfinity(set) )
       {
@@ -4049,9 +4049,6 @@ SCIP_RETCODE solveNode(
 
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
-      
-      /* reset foundsol */
-      foundsol = FALSE;
 
       /* call primal heuristics that should be applied after the LP relaxation of the node was solved;
        * if this is the first loop of the root node, call also AFTERNODE heuristics already here, since they might help
