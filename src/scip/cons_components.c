@@ -44,7 +44,7 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
-#define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection */
+#define DEFAULT_MAXDEPTH             10      /**< maximum depth of a node to run components detection */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
 #define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
@@ -87,7 +87,7 @@ typedef struct Component
 } COMPONENT;
 
 /** data related to one problem
- *  (correspoding to one node in the branch-and-branch tree and consisting of multiple components)
+ *  (corresponding to one node in the branch-and-bound tree and consisting of multiple components)
  */
 struct Problem
 {
@@ -181,12 +181,6 @@ int getMinsize(
    return minsize;
 }
 
-
-/** forward declaration: free subproblem structure */
-static
-SCIP_RETCODE freeProblem(PROBLEM**);
-
-
 /** initialize component structure */
 static
 SCIP_RETCODE initComponent(
@@ -257,12 +251,14 @@ SCIP_RETCODE freeComponent(
       SCIPfreeMemoryArray(scip, &(*component)->vars);
       SCIPfreeMemoryArray(scip, &(*component)->subvars);
    }
+   assert(((*component)->fixedvars != NULL) == ((*component)->fixedsubvars != NULL));
    if( (*component)->fixedvars != NULL )
    {
       SCIPfreeMemoryArray(scip, &(*component)->fixedsubvars);
       SCIPfreeMemoryArray(scip, &(*component)->fixedvars);
    }
 
+   /* free sub-SCIP belonging to this component and the working solution */
    if( (*component)->subscip != NULL )
    {
       if( (*component)->workingsol != NULL )
@@ -279,45 +275,47 @@ SCIP_RETCODE freeComponent(
 }
 
 
-/** create the working solution for a given component and compute the objective offset */
+/** create the working solution for a given component, store fixed variables and the corresponding objective offset */
 static
 SCIP_RETCODE componentSetupWorkingSol(
-   COMPONENT*            component,          /**< pointer to component structure */
+   COMPONENT*            component,          /**< component structure */
    SCIP_HASHMAP*         varmap              /**< variable hashmap */
    )
 {
-   PROBLEM* problem;
-   SCIP* scip;
    SCIP* subscip;
-   int nvars;
-   int v;
 
    assert(component != NULL);
 
    subscip = component->subscip;
    assert(subscip != NULL);
 
-   problem = component->problem;
-   assert(problem != NULL);
-
-   scip = problem->scip;
-   assert(scip != NULL);
-
-   nvars = component->nvars;
-
+   /* the solution should live in the primal, not the origprimal, of the sub-SCIP, so we need to transform it first */
    SCIP_CALL( SCIPtransformProb(subscip) );
-
    SCIP_CALL( SCIPcreateOrigSol(subscip, &(component->workingsol), NULL) );
 
    /* the number of variables was increased by copying the constraints */
-   if( SCIPgetNOrigVars(subscip) > nvars )
+   if( SCIPgetNOrigVars(subscip) > component->nvars )
    {
-      SCIP_VAR** sourcevars = SCIPgetVars(scip);
+      PROBLEM* problem;
+      SCIP* scip;
+      SCIP_VAR** sourcevars;
       SCIP_VAR* subvar;
-      int nsourcevars = SCIPgetNVars(scip);
-      int nnewvars = SCIPgetNOrigVars(subscip);
+      int nsourcevars;
+      int nnewvars;
       int index = 0;
-      int ninactive = 0;
+      int nvars;
+      int v;
+
+      problem = component->problem;
+      assert(problem != NULL);
+
+      scip = problem->scip;
+      assert(scip != NULL);
+
+      sourcevars = SCIPgetVars(scip);
+      nsourcevars = SCIPgetNVars(scip);
+      nnewvars = SCIPgetNOrigVars(subscip);
+      nvars = component->nvars;
 
       SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedvars, nnewvars - nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedsubvars, nnewvars - nvars) );
@@ -347,8 +345,6 @@ SCIP_RETCODE componentSetupWorkingSol(
             /* inactive variable */
             else
             {
-               ++ninactive;
-
                assert(SCIPisZero(subscip, SCIPvarGetObj(subvar)));
             }
          }
