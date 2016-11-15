@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_syncstore.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the type definitions for the synchronization store
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald

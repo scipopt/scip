@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def_openmp.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  wrappers for OpenMP defines
  * @author Stephen J. Maher
  */

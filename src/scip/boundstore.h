@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   boundstore.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the interface of the boundstore structure
  * @author Robert Lion Gottwald
  */

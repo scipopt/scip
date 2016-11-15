@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_tpi.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the type definitions for the task processing interface
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher

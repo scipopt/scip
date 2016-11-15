@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   concsolver_scip.c
+ * @ingroup PARALLEL
  * @brief  implementation of concurrent solver interface for SCIP
  * @author Robert Lion Gottwald
  */

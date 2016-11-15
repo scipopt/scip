@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   spi_tnycthrd.c
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the interface functions for the TPI using tinycthreads
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald

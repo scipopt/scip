@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   spi_pthreads.c
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the interface functions for pthreads
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald

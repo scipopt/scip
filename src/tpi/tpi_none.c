@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   spi_none.c
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the interface functions for dummy tpi
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   concurrent.h
+ * @ingroup PARALLEL
  * @brief  helper functions for concurrent scip solvers
  * @author Robert Lion Gottwald
  */

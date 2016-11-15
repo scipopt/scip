@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   syncstore.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the function declarations for the synchronization store
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher

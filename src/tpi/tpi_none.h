@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tpi_none.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the dummy implementation defines all functions as macros
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tpi_openmp.h
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the tpi_openmp redefines the lock functionality and some condition functionality as macros
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher

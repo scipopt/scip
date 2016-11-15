@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   boundstore.c
- * @ingroup PARAINTERFACE
+ * @ingroup PARALLEL
  * @brief  the implementation of the bound store datastructure
  * @author Robert Lion Gottwald
  */
