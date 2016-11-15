@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   spi_tnycthrd.c
- * @ingroup PARALLEL
+/**@file   tpi_tnycthrd.c
+ * @ingroup TASKINTERFACE
  * @brief  the interface functions for the TPI using tinycthreads
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald

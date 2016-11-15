@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   spi_pthreads.c
- * @ingroup PARALLEL
- * @brief  the interface functions for pthreads
+/**@file   tpi_openmp.c
+ * @ingroup TASKINTERFACE
+ * @brief  the interface functions for openmp
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald
  */

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tpi.h
- * @ingroup PARALLEL
+ * @ingroup TASKINTERFACE
  * @brief  the type definitions for the SCIP parallel interface
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def_openmp.h
- * @ingroup PARALLEL
+ * @ingroup TASKINTERFACE
  * @brief  wrappers for OpenMP defines
  * @author Stephen J. Maher
  */

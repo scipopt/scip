@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_tpi_openmp.h
- * @ingroup PARALLEL
+ * @ingroup TASKINTERFACE
  * @brief  the type definitions for the the locks and condition variables for the OpenMP implementation of the TPI
  * @author Robert Lion Gottwald
  * @author Stephen J. Maher
