@@ -55,9 +55,14 @@ struct ValidDomRedData
                                               *   BOUNDSTATUS_BOTH. */
    BOUNDSTATUS*          boundstatus;        /**< The current boundstatus for each active variable. Depending on this value
                                               *   the corresponding upperbound and lowerbound values are meaningful.*/
+   SCIP_Bool*            violatedbybaselp;   /**< Indicates for each variable, whether the bound change would be violated by
+                                              *   solution of the base lp. */
    int*                  boundedvars;        /**< Contains the var indices that have entries in the other arrays. This array
                                               *   may be used to only iterate over the relevant variables. */
    int                   nboundedvars;       /**< The length of the boundedvars array. */
+   int                   nviolatedbybaselp;  /**< The number of variables, that have a bound change in this struct, that
+                                              *   would be violated by the solution of the base lp. This is the number of
+                                              *   TRUEs in the 'violatedbybaselp' array. */
 };
 typedef struct ValidDomRedData VALIDDOMREDDATA;
 
@@ -124,6 +129,7 @@ SCIP_Bool addBound(
 EXTERN
 void addValidUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             baselpsolval,       /**< the lp solution of the base node */
    SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
    SCIP_Real             newupperbound,      /**< the new upper bound */
    VALIDDOMREDDATA*      validbounds         /**< the container to a add the bound to */
@@ -136,6 +142,7 @@ void addValidUpperBound(
 EXTERN
 void addValidLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             baselpsolval,       /**< the lp solution of the base node */
    SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
    SCIP_Real             newlowerbound,      /**< the new lower bound */
    VALIDDOMREDDATA*      validbounds         /**< the container to a add the bound to */

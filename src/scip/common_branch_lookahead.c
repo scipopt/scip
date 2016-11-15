@@ -38,12 +38,15 @@ SCIP_RETCODE allocValidBoundData(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->lowerbounds, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->boundstatus, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->boundedvars, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*validbounddata)->violatedbybaselp, ntotalvars) );
 
    for( i = 0; i < ntotalvars; i++ )
    {
       (*validbounddata)->boundstatus[i] = 0;
+      (*validbounddata)->violatedbybaselp[i] = FALSE;
    }
    (*validbounddata)->nboundedvars = 0;
+   (*validbounddata)->nviolatedbybaselp = 0;
 
    return SCIP_OKAY;
 }
@@ -56,6 +59,7 @@ void freeValidBoundData(
    VALIDDOMREDDATA**     validbounddata      /**< The struct that should be freed. */
 )
 {
+   SCIPfreeBufferArray(scip, &(*validbounddata)->violatedbybaselp);
    SCIPfreeBufferArray(scip, &(*validbounddata)->boundedvars);
    SCIPfreeBufferArray(scip, &(*validbounddata)->boundstatus);
    SCIPfreeBufferArray(scip, &(*validbounddata)->lowerbounds);
@@ -167,6 +171,7 @@ SCIP_Bool addBound(
  */
 void addValidUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             baselpsolval,       /**< the lp solution of the base node */
    SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
    SCIP_Real             newupperbound,      /**< the new upper bound */
    VALIDDOMREDDATA*      validbounds         /**< the container to a add the bound to */
@@ -192,10 +197,18 @@ void addValidUpperBound(
 
    if( newboundadded )
    {
+      int nboundedvars;
+
       /* in case of a new entry add the varindex to the container */
-      int nboundedvars = validbounds->nboundedvars;
+      nboundedvars = validbounds->nboundedvars;
       validbounds->boundedvars[nboundedvars] = varindex;
       validbounds->nboundedvars = nboundedvars + 1;
+
+      if( !validbounds->violatedbybaselp[varindex] && SCIPisFeasGT(scip, baselpsolval, newupperbound) )
+      {
+         validbounds->violatedbybaselp[varindex] = TRUE;
+         validbounds->nviolatedbybaselp++;
+      }
    }
 }
 
@@ -205,6 +218,7 @@ void addValidUpperBound(
  */
 void addValidLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             baselpsolval,       /**< the lp solution of the base node */
    SCIP_VAR*             branchvar,          /**< the var to assign the new bound to */
    SCIP_Real             newlowerbound,      /**< the new lower bound */
    VALIDDOMREDDATA*      validbounds         /**< the container to a add the bound to */
@@ -230,10 +244,19 @@ void addValidLowerBound(
 
    if( newboundadded )
    {
+      int nboundedvars;
+
       /* in case of a new entry add the varindex to the container */
-      int nboundedvars = validbounds->nboundedvars;
+      nboundedvars = validbounds->nboundedvars;
+
       validbounds->boundedvars[nboundedvars] = varindex;
       validbounds->nboundedvars = nboundedvars + 1;
+
+      if( !validbounds->violatedbybaselp[varindex] && SCIPisFeasLT(scip, baselpsolval, newlowerbound) )
+      {
+         validbounds->violatedbybaselp[varindex] = TRUE;
+         validbounds->nviolatedbybaselp++;
+      }
    }
 }
 

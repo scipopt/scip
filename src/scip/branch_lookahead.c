@@ -969,7 +969,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             {
                SCIP_Real localdowngain;
 
-               localdowngain = downresultdata->objval - localpobjval;
+               localdowngain = MAX(0, downresultdata->objval - localpobjval);
                SCIP_CALL( SCIPupdateVarPseudocost(scip, deepbranchvar, 0.0-deepbranchvarfrac, localdowngain, 1.0) );
 
                *dualbound = MAX(*dualbound, downresultdata->objval);
@@ -980,10 +980,6 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                   /* if the up branching was cutoff and both branching variables are binary we can deduce a binary
                    * constraint. add the constraint to the buffer and add them all later to the problem */
                   SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepbranchvar, baselpsol) );
-                  if( binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons )
-                  {
-                     status->maxnconsreached = TRUE;
-                  }
                }
 
                if( branchruledata->useimplieddomred )
@@ -996,7 +992,7 @@ SCIP_RETCODE executeDeepBranchingOnVar(
             {
                SCIP_Real localupgain;
 
-               localupgain = upresultdata->objval - localpobjval;
+               localupgain = MAX(0, upresultdata->objval - localpobjval);
                SCIP_CALL( SCIPupdateVarPseudocost(scip, deepbranchvar, 1.0-deepbranchvarfrac, localupgain, 1.0) );
 
                *dualbound = MAX(*dualbound, upresultdata->objval);
@@ -1014,10 +1010,6 @@ SCIP_RETCODE executeDeepBranchingOnVar(
                    * f(x) >= 1, the constraint f(x) + (1-y) <= 1.*/
                   SCIP_CALL( SCIPgetNegatedVar(scip, deepbranchvar, &deepvarforbound) );
                   SCIP_CALL( addBinaryBoundEntry(scip, binarybounddata, basevarforbound, deepvarforbound, baselpsol) );
-                  if( binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons )
-                  {
-                     status->maxnconsreached = TRUE;
-                  }
                }
 
                if( branchruledata->useimplieddomred )
@@ -1246,6 +1238,7 @@ SCIP_RETCODE handleImpliedBinaryBounds(
 static
 void transferBoundData(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,          /**< the lp solution of the base node */
    SUPPOSEDDOMREDDATA*   supposedbounds,     /**< Bound data from the second level branches. Source for the transfer. */
    VALIDDOMREDDATA*      validbounds         /**< Bound data from the first level branches. Target for the transfer. */
    )
@@ -1266,6 +1259,7 @@ void transferBoundData(
       int nupperboundupdates = supposedbounds->nupperboundupdates[boundedvarindex];
       int nlowerboundupdates = supposedbounds->nlowerboundupdates[boundedvarindex];
       SCIP_VAR* boundedvar = problemvars[boundedvarindex];
+      SCIP_Real baselpsolval = SCIPgetSolVal(scip, baselpsol, boundedvar);
 
       SCIPdebugMessage("Var: <%s>, nupperboundupdates: <%d>, nlowerboundupdates: <%d>\n", SCIPvarGetName(boundedvar),
          nupperboundupdates, nlowerboundupdates);
@@ -1277,7 +1271,7 @@ void transferBoundData(
 
          SCIPdebugMessage("Adding second level lower bound for variable <%s>. Lower bound: <%g>\n",
             SCIPvarGetName(boundedvar), lowerbound);
-         addValidLowerBound(scip, boundedvar, lowerbound, validbounds);
+         addValidLowerBound(scip, baselpsolval, boundedvar, lowerbound, validbounds);
          nofsecondlevelbounds++;
       }
 
@@ -1288,7 +1282,7 @@ void transferBoundData(
 
          SCIPdebugMessage("Adding second level upper bound for variable <%s>. Upper bound: <%g>\n",
             SCIPvarGetName(boundedvar), upperbound);
-         addValidUpperBound(scip, boundedvar, upperbound, validbounds);
+         addValidUpperBound(scip, baselpsolval, boundedvar, upperbound, validbounds);
          nofsecondlevelbounds++;
       }
 
@@ -1635,7 +1629,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
              * directly. That means we may transfer our gathered data for implied cutoffs to the concrete cutoffs. */
             if( branchruledata->useimplieddomred )
             {
-               transferBoundData(scip, supposedbounds, validbounds);
+               transferBoundData(scip, baselpsol, supposedbounds, validbounds);
             }
 
             if( upbranchingresult->cutoff )
@@ -1643,7 +1637,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                /* if the up branching (on the lower bound) was cutoff, we can add this as a new upper bound for the var */
                if( branchruledata->usedirectdomred )
                {
-                  addValidUpperBound(scip, branchvar, branchval, validbounds);
+                  addValidUpperBound(scip, branchval, branchvar, branchval, validbounds);
                }
                SCIPstatistic(
                   branchruledata->nfirstlvlcutoffs++;
@@ -1659,7 +1653,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                /* if the down branching (on the upper bound) was cutoff, we can add this as a new lower bound for the var */
                if( branchruledata->usedirectdomred )
                {
-                  addValidLowerBound(scip, branchvar, branchval, validbounds);
+                  addValidLowerBound(scip, branchval, branchvar, branchval, validbounds);
                }
                SCIPstatistic(
                   branchruledata->nfirstlvlcutoffs++;
@@ -1702,6 +1696,13 @@ SCIP_RETCODE selectVarLookaheadBranching(
                {
                   *provedbound = MAX(*provedbound, downdualbound);
                }
+            }
+
+            SCIPdebugMessage("Found <%i> violating binary constraints and <%i> violating bound changes.\n",
+               binarybounddata->nviolatedentries, validbounds->nviolatedbybaselp);
+            if( validbounds->nviolatedbybaselp + binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons )
+            {
+               status->maxnconsreached = TRUE;
             }
          }
 

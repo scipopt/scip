@@ -668,22 +668,22 @@ SCIP_RETCODE executeAbbreviatedLookaheadBranchingOnVars(
 
       if( uuresult->cutoff && ulresult->cutoff )
       {
-         addValidLowerBound(scip, firstvar, firstval, domainreductions);
+         addValidLowerBound(scip, baselpsol, firstvar, firstval, domainreductions);
       }
 
       if( llresult->cutoff && luresult->cutoff )
       {
-         addValidUpperBound(scip, firstvar, firstval, domainreductions);
+         addValidUpperBound(scip, baselpsol, firstvar, firstval, domainreductions);
       }
 
       if( uuresult->cutoff && luresult->cutoff )
       {
-         addValidLowerBound(scip, secondvar, secondval, domainreductions);
+         addValidLowerBound(scip, baselpsol, secondvar, secondval, domainreductions);
       }
 
       if( ulresult->cutoff && llresult->cutoff )
       {
-         addValidUpperBound(scip, secondvar, secondval, domainreductions);
+         addValidUpperBound(scip, baselpsol, secondvar, secondval, domainreductions);
       }
    }
 
