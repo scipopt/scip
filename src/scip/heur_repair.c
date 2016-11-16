@@ -60,6 +60,8 @@
 #define DEFAULT_USESLACKVARS  FALSE     /**< should slack variables be used in repair subproblem? */
 #define DEFAULT_ALPHA         2.0       /**< how many times the potential should be bigger than the slack? */
 
+#define MML                   2048      /* length of repair output string */
+
 /*
  * Data structures
  */
@@ -224,8 +226,8 @@ SCIP_Real getPotentialContributed(
    return potential;
 }
 
-/** finds out if a variable can be fixed with respect to the potentials of all rows,
- *  if it is possible, the potentials of rows are reduced and TRUE is returned.
+/** finds out if a variable can be fixed with respect to the potentials of all rows, if it is possible, the potentials
+ *  of rows are reduced and TRUE is returned.
  */
 static
 SCIP_Bool tryFixVar(
@@ -542,7 +544,7 @@ SCIP_RETCODE varFixings(
 
       nviolatedrows[i] = 0;
 
-      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
 
       /* if the value of x is lower than the lower bound, sets the slack to an correcting value */
       if( heurdata->useslackvars && SCIPisFeasLT(scip, value, lborig) )
@@ -581,7 +583,7 @@ SCIP_RETCODE varFixings(
          SCIPchgVarType(subscip,subvars[i],vartype, &success);
       }
 
-      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
 
       objval = SCIPvarGetObj(vars[i]);
       /* Adds the sub representing variable to the subscip. */
@@ -593,8 +595,8 @@ SCIP_RETCODE varFixings(
       if( !SCIPisFeasEQ(scip, sla, 0.0) )
       {
          SCIP_VAR* newvar;
-         SCIPsnprintf(slackvarname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIPvarGetName(vars[i]));
-         SCIPsnprintf(consvarname, SCIP_MAXSTRLEN, "boundcons_%s", SCIPvarGetName(vars[i]));
+         (void) SCIPsnprintf(slackvarname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIPvarGetName(vars[i]));
+         (void) SCIPsnprintf(consvarname, SCIP_MAXSTRLEN, "boundcons_%s", SCIPvarGetName(vars[i]));
 
          /* initialize and add an artificial slack variable */
          if(heurdata->useobjfactor)
@@ -736,7 +738,7 @@ SCIP_RETCODE varFixings(
          /*if necessary adds an new artificial slack variable*/
          if( !SCIPisFeasEQ(subscip, slack[i], 0.0) )
          {
-            SCIPsnprintf(varname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIProwGetName(rows[i]));
+            (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIProwGetName(rows[i]));
             SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(subscip, newvar) );
             SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
@@ -992,7 +994,6 @@ static
 SCIP_DECL_HEUREXIT(heurExitRepair)
 {  /*lint --e{715}*/
    #ifdef SCIP_STATISTIC
-      const int MML = 2048;
       SCIP_HEURDATA* heurdata;
       SCIP_Real time;
       SCIP_Real relvars;
@@ -1022,11 +1023,11 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
 
       if( SCIP_INVALID == heurdata->orsolval )
       {
-         SCIPsnprintf(solval, SCIP_MAXSTRLEN ,"--");
+         (void) SCIPsnprintf(solval, SCIP_MAXSTRLEN ,"--");
       }
       else
       {
-         SCIPsnprintf(solval, SCIP_MAXSTRLEN, "%15.9g",heurdata->orsolval);
+         (void) SCIPsnprintf(solval, SCIP_MAXSTRLEN, "%15.9g",heurdata->orsolval);
       }
 
       heurdata->relviolatedvars = MAX((SCIP_Real)heurdata->norvars, 1.0);
@@ -1040,11 +1041,11 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
       relcons = heurdata->relviolatedcons;
       relfixed = heurdata->relvarfixed;
 
-      SCIPsnprintf(message, MML, "<repair> \n\t total violateds: %d\n\n\t violated variables: %d\n\t total variables: %d\n\t relative violated variables: %.2f%%\n", violateds, ninvars, nvars, 100 * relvars);
-      SCIPsnprintf(message, MML, "%s  \n\n\t violated constraints: %d\n\t total constraints: %d\n\t relative violated constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
-      SCIPsnprintf(message, MML, "%s  \n\n\t fixed variables: %d\n\t relative fixed varibales: %.2f%%\n", message, heurdata->nvarfixed, 100* relfixed);
-      SCIPsnprintf(message, MML, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
-      SCIPsnprintf(message, MML, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
+      (void) SCIPsnprintf(message, MML, "<repair> \n\t total violateds: %d\n\n\t violated variables: %d\n\t total variables: %d\n\t relative violated variables: %.2f%%\n", violateds, ninvars, nvars, 100 * relvars);
+      (void) SCIPsnprintf(message, MML, "%s  \n\n\t violated constraints: %d\n\t total constraints: %d\n\t relative violated constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
+      (void) SCIPsnprintf(message, MML, "%s  \n\n\t fixed variables: %d\n\t relative fixed varibales: %.2f%%\n", message, heurdata->nvarfixed, 100* relfixed);
+      (void) SCIPsnprintf(message, MML, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
+      (void) SCIPsnprintf(message, MML, "%s  \n\n\t Value of repairs best solution: %s\n improoved orsolval: %6f \n</repair>\n\n", message,solval, heurdata->improovedoldsol);
       /* prints all statistic data for a user*/
       SCIPstatistic(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
@@ -1073,8 +1074,8 @@ SCIP_RETCODE writeDebugInformation(
 
    bfilename = basename(heurdata->filename);
 
-   SCIPsnprintf(solfilename, SCIP_MAXSTRLEN, "%s.sol", bfilename);
-   SCIPsnprintf(probfilename, SCIP_MAXSTRLEN, "%s.cip", bfilename);
+   (void) SCIPsnprintf(solfilename, SCIP_MAXSTRLEN, "%s.sol", bfilename);
+   (void) SCIPsnprintf(probfilename, SCIP_MAXSTRLEN, "%s.cip", bfilename);
 
    SCIPdebugMsg(scip,"All temp vars initialized");
 
