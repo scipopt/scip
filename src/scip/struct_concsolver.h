@@ -35,7 +35,7 @@ extern "C" {
 /** concurrent solver data structure */
 struct SCIP_ConcSolverType
 {
-   int                                 ninstances;                 /**< number of instances created from this concurrent solver class */
+   int                                 ninstances;                 /**< number of instances created from this concurrent solver type */
    SCIP_Real                           prefprio;                   /**< the weight of the concurrent */
    char*                               name;                       /**< name of concurrent solver */
    SCIP_CONCSOLVERTYPEDATA*            data;                       /**< user data of concurrent solver type */
@@ -43,10 +43,10 @@ struct SCIP_ConcSolverType
    SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)); /**< destroys an instance of the concurrent solver */
    SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds));   /**< initialize random seeds of concurrent solver */
    SCIP_DECL_CONCSOLVEREXEC            ((*concsolverexec));        /**< execution method of concurrent solver */
-   SCIP_DECL_CONCSOLVERGETSOLVINGDATA  ((*concsolvergetsolvdata)); /**< get solving data */
+   SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata));/**< copies the solving data */
    SCIP_DECL_CONCSOLVERSTOP            ((*concsolverstop));        /**< terminate solving in concurrent solver */
-   SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite));   /**< synchronization method of concurrent solver */
-   SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread));    /**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite));   /**< synchronization method of concurrent solver for sharing it's data */
+   SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread));    /**< synchronization method of concurrent solver for reading shared data */
    SCIP_DECL_CONCSOLVERTYPEFREEDATA    ((*concsolvertypefreedata));/**< frees user data of concurrent solver type */
 };
 

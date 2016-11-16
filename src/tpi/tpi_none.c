@@ -29,13 +29,13 @@ SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                      /**< pointer to the job that will be created */
    int                   jobid,                    /**< the id for the current job */
    int                   (*jobfunc)(void* args),   /**< pointer to the job function */
-   void*                 jobargs                   /**< the job arguments */
+   void*                 jobarg                    /**< the job's argument */
    )
 {
-   (void) job;
-   (void) jobid;
-   (void) jobfunc;
-   (void) jobargs;
+   SCIP_UNUSED( job );
+   SCIP_UNUSED( jobid );
+   SCIP_UNUSED( jobfunc );
+   SCIP_UNUSED( jobarg );
 
    return SCIP_ERROR;
 }
@@ -47,8 +47,8 @@ SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_SUBMITSTATUS*    status                    /**< pointer to store the job's submit status */
    )
 {
-   (void) job;
-   (void) status;
+   SCIP_UNUSED( job );
+   SCIP_UNUSED( status );
 
    return SCIP_ERROR;
 }
@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
    int                   jobid                     /**< the id of the jobs to collect */
    )
 {
-   (void) jobid;
+   SCIP_UNUSED( jobid );
 
    return SCIP_ERROR;
 }
@@ -71,9 +71,9 @@ SCIP_RETCODE SCIPtpiInit(
    SCIP_Bool   blockwhenfull                       /**< should the queue block when full */
    )
 {
-   (void) nthreads;
-   (void) queuesize;
-   (void) blockwhenfull;
+   SCIP_UNUSED( nthreads );
+   SCIP_UNUSED( queuesize );
+   SCIP_UNUSED( blockwhenfull );
 
    return SCIP_ERROR;
 }

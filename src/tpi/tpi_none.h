@@ -24,27 +24,29 @@
 
 #ifdef TPI_NONE
 
+#include "scip/def.h"
+
 #ifndef _TPI_NONE_H_
 #define _TPI_NONE_H_
 
 /* lock */
-#define SCIPtpiInitLock(lock)                 SCIP_OKAY
-#define SCIPtpiDestroyLock(lock)              ( (void) lock )
-#define SCIPtpiAcquireLock(lock)              SCIP_OKAY
-#define SCIPtpiReleaseLock(lock)              SCIP_OKAY
+#define SCIPtpiInitLock(lock)                 (SCIP_UNUSED(lock), SCIP_OKAY)
+#define SCIPtpiDestroyLock(lock)              SCIP_UNUSED(lock)
+#define SCIPtpiAcquireLock(lock)              (SCIP_UNUSED(lock), SCIP_OKAY)
+#define SCIPtpiReleaseLock(lock)              (SCIP_UNUSED(lock), SCIP_OKAY)
 
 /* condition */
-#define SCIPtpiInitCondition(condition)       SCIP_OKAY
-#define SCIPtpiDestroyCondition(condition)    ( (void) condition )
-#define SCIPtpiSignalCondition(condition)     SCIP_OKAY
-#define SCIPtpiBroadcastCondition(condition)  SCIP_OKAY
-#define SCIPtpiWaitCondition(condition, lock) SCIP_OKAY
+#define SCIPtpiInitCondition(condition)       (SCIP_UNUSED(condition), SCIP_OKAY)
+#define SCIPtpiDestroyCondition(condition)    SCIP_UNUSED(condition)
+#define SCIPtpiSignalCondition(condition)     (SCIP_UNUSED(condition), SCIP_OKAY)
+#define SCIPtpiBroadcastCondition(condition)  (SCIP_UNUSED(condition), SCIP_OKAY)
+#define SCIPtpiWaitCondition(condition, lock) (SCIP_UNUSED(condition), SCIP_UNUSED(lock), SCIP_OKAY)
 
 
 #define SCIPtpiGetNumThreads()                1
 #define SCIPtpiGetThreadNum()                 0
 
-#define SCIPtpiGetNewJobID()                            0
+#define SCIPtpiGetNewJobID()                  0
 
 #endif
 

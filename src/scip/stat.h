@@ -32,14 +32,9 @@
 #include "scip/type_stat.h"
 #include "scip/type_mem.h"
 #include "scip/pub_message.h"
-#include <stddef.h>
-
+#include "scip/concurrent.h"
 
 #include "scip/struct_stat.h"
-
-#if defined(TPI_TNYC) || defined(TPI_OMP)
-#include "scip/concurrent.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -196,8 +191,8 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    );
 
-#if !defined(TPI_TNYC) && !defined(TPI_OMP)
-/* no SPI included so just update the stats */
+#ifdef TPI_NONE
+/* no TPI included so just update the stats */
 
 #define SCIPstatUpdate(stat, set, field, val) do { \
   (stat)->field = (val); \
@@ -212,7 +207,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    } while(0)
 
 #else
-/* SPI not none, so increment deterministic time for relevant stats */
+/* TPI not none, so increment deterministic time for relevant stats */
 
 #define SCIPupdateDeterministicTimeCount(stat, set, val) do { \
         (stat)->detertimecnt += (val); \

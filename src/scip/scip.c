@@ -7744,7 +7744,7 @@ SCIP_RETCODE SCIPincludeConcsolverType(
    SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
    SCIP_DECL_CONCSOLVEREXEC            ((*concsolverexec)),        /**< execution method of concurrent solver */
-   SCIP_DECL_CONCSOLVERGETSOLVINGDATA  ((*concsolvergetsolvdata)), /**< get solving data */
+   SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata)),/**< method to copy solving data */
    SCIP_DECL_CONCSOLVERSTOP            ((*concsolverstop)),        /**< terminate solving in concurrent solver */
    SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite)),   /**< synchronization method of concurrent solver */
    SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread)),    /**< synchronization method of concurrent solver */
@@ -7764,7 +7764,7 @@ SCIP_RETCODE SCIPincludeConcsolverType(
    }
 
    SCIP_CALL( SCIPconcsolverTypeCreate(&concsolvertype, scip->set, scip->messagehdlr, scip->mem->setmem, name, prefpriodefault,
-                                       concsolvercreateinst, concsolverdestroyinst, concsolverinitseeds, concsolverexec, concsolvergetsolvdata,
+                                       concsolvercreateinst, concsolverdestroyinst, concsolverinitseeds, concsolverexec, concsolvercopysolvdata,
                                        concsolverstop, concsolversyncwrite, concsolversyncread, concsolvertypefreedata, data) );
 
    SCIP_CALL( SCIPsetIncludeConcsolverType(scip->set, concsolvertype) );

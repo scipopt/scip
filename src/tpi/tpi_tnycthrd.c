@@ -15,7 +15,7 @@
 
 /**@file   tpi_tnycthrd.c
  * @ingroup TASKINTERFACE
- * @brief  the interface functions for the TPI using tinycthreads
+ * @brief  a TPI implementation using tinycthreads
  * @author Stephen J. Maher
  * @author Robert Lion Gottwald
  */
@@ -31,27 +31,27 @@ static SCIP_THREADPOOL* _threadpool = NULL;
 /** A job added to the queue */
 struct SCIP_Job
 {
-   int                   jobid;                    /**< id to identify jobs from a common process */
-   struct                SCIP_Job* nextjob;        /**< pointer to the next job in the queue */
-   SCIP_RETCODE          (*jobfunc)(void* args);   /**< pointer to the job function */
-   void*                 args;                     /**< pointer to the function arguements */
-   SCIP_RETCODE          retcode;                  /**< return code of the job */
+   int                   jobid;              /**< id to identify jobs from a common process */
+   struct                SCIP_Job* nextjob;  /**< pointer to the next job in the queue */
+   SCIP_RETCODE          (*jobfunc)(void* args);/**< pointer to the job function */
+   void*                 args;               /**< pointer to the function arguements */
+   SCIP_RETCODE          retcode;            /**< return code of the job */
 };
 
 /** the thread pool job queue */
 struct SCIP_JobQueue
 {
-   SCIP_JOB*             firstjob;              /**< pointer to the first job in the queue */
-   SCIP_JOB*             lastjob;               /**< pointer to the last job in the queue */
-   int                   njobs;                 /**< number of jobs in the queue */
+   SCIP_JOB*             firstjob;           /**< pointer to the first job in the queue */
+   SCIP_JOB*             lastjob;            /**< pointer to the last job in the queue */
+   int                   njobs;              /**< number of jobs in the queue */
 };
 typedef struct SCIP_JobQueue SCIP_JOBQUEUE;
 
 /** A thread */
 struct SCIP_Thread
 {
-   int                   threadid;              /**< identifier of the thread */
-   thrd_t                thread;                /**< the thread of the struct */
+   int                   threadid;           /**< identifier of the thread */
+   thrd_t                thread;             /**< the thread of the struct */
 };
 typedef struct SCIP_Thread SCIP_THREAD;
 
@@ -78,7 +78,7 @@ struct SCIP_ThreadPool
    SCIP_Bool             queueopen;          /**< indicates whether the queue is open */
 
    /* mutex and locks for the thread pool */
-   SCIP_LOCK             poollock;          /**< mutex to allow read and write of the pool features */
+   SCIP_LOCK             poollock;           /**< mutex to allow read and write of the pool features */
    SCIP_CONDITION        queuenotempty;      /**< condition to broadcast the queue has jobs */
    SCIP_CONDITION        queuenotfull;       /**< condition to broadcast the queue is not full */
    SCIP_CONDITION        queueempty;         /**< condition to broadcast that the queue is empty */
@@ -88,12 +88,14 @@ struct SCIP_ThreadPool
 /** this function controls the execution of each of the threads */
 static
 int threadPoolThread(
-   void*                  args
+   void*                 args                /**< argument is required for the thread start function of tinycthreads/C11 threads */
    )
 {
    SCIP_JOB* newjob;
    SCIP_JOB* prevjob;
    SCIP_JOB* currjob;
+
+   SCIP_UNUSED( args );
 
    /* Increase the number of active threads */
    SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
@@ -210,12 +212,13 @@ int threadPoolThread(
    }
 }
 
+/** creates a threadpool */
 static
 SCIP_RETCODE createThreadPool(
-   SCIP_THREADPOOL**     thrdpool,
-   int                   nthreads,
-   int                   qsize,
-   SCIP_Bool             blockwhenfull
+   SCIP_THREADPOOL**     thrdpool,           /**< pointer to store threadpool */
+   int                   nthreads,           /**< number of threads in the threadpool */
+   int                   qsize,              /**< maximum size of the jobqueue */
+   SCIP_Bool             blockwhenfull       /**< should the jobqueue block if it is full */
    )
 {
    int i;
@@ -307,12 +310,11 @@ void jobQueueAddJob(
    threadpool->jobqueue->njobs++;
 }
 
-
-
+/** adds a job to the threadpool */
 static
 SCIP_RETCODE threadPoolAddWork(
-   SCIP_JOB*             newjob,
-   SCIP_SUBMITSTATUS*    status               /**< pointer to store the job's submit status */
+   SCIP_JOB*             newjob,             /**< job to add to threadpool */
+   SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
    )
 {
    assert(newjob != NULL);
@@ -365,30 +367,29 @@ SCIP_RETCODE threadPoolAddWork(
    return SCIP_OKAY;;
 }
 
-
-
+/** frees the jobqueue of the threadpool */
 static
 void freeJobQueue(
-   SCIP_THREADPOOL**     thrdpool
+   SCIP_THREADPOOL*      thrdpool
    )
 {
    SCIP_JOB* currjob;
 
-   assert(!(*thrdpool)->queueopen);
-   assert((*thrdpool)->shutdown);
+   assert(!thrdpool->queueopen);
+   assert(thrdpool->shutdown);
 
    /* iterating through all jobs until all have been freed. */
-   while( (*thrdpool)->jobqueue->firstjob != NULL )
+   while( thrdpool->jobqueue->firstjob != NULL )
    {
-      currjob = (*thrdpool)->jobqueue->firstjob->nextjob;
-      (*thrdpool)->jobqueue->firstjob = (*thrdpool)->jobqueue->firstjob->nextjob;
+      currjob = thrdpool->jobqueue->firstjob->nextjob;
+      thrdpool->jobqueue->firstjob = thrdpool->jobqueue->firstjob->nextjob;
       BMSfreeMemory(&currjob);
    }
 
-   assert((*thrdpool)->jobqueue->firstjob == NULL);
-   assert((*thrdpool)->jobqueue->lastjob == NULL);
+   assert(thrdpool->jobqueue->firstjob == NULL);
+   assert(thrdpool->jobqueue->lastjob == NULL);
 
-   BMSfreeMemory(&(*thrdpool)->jobqueue);
+   BMSfreeMemory(&thrdpool->jobqueue);
 }
 
 
@@ -463,9 +464,9 @@ SCIP_RETCODE freeThreadPool(
    assert((*thrdpool)->finishedjobs->njobs == 0);
    BMSfreeMemory(&(*thrdpool)->finishedjobs);
 
-   freeJobQueue(thrdpool);
+   freeJobQueue(*thrdpool);
 
-   /* initialising the conditions */
+   /* destroying the conditions */
    SCIPtpiDestroyCondition(&(*thrdpool)->jobfinished);
    SCIPtpiDestroyCondition(&(*thrdpool)->queueempty);
    SCIPtpiDestroyCondition(&(*thrdpool)->queuenotfull);
@@ -522,98 +523,17 @@ SCIP_Bool isJobRunning(
       return FALSE;
 }
 
-
-#if 0
-/* getting the job status. This determines whether the job is in the queue, running or does not exist */
-static
-SCIP_JOBSTATUS getJobStatus(
-   SCIP_JOBQUEUE*        jobqueue,
-   SCIP_JOBQUEUE*        currentjobs,
-   int                   jobid
-   )
-{
-   /* checking the job ids */
-   if( checkJobQueue(jobqueue, jobid) == SCIP_JOB_INQUEUE )
-      return SCIP_JOB_INQUEUE;
-
-   if( isJobRunning(currentjobs, jobid) )
-      return SCIP_JOB_ISRUNNING;
-
-   return SCIP_JOB_DOESNOTEXIST;
-}
-
-
-
-/* scans the job queue and removes all jobs with a given job id */
-/* The memory assigned to the job must be freed here. */
-static
-void removeJobFromQueue(
-   SCIP_JOBQUEUE*        jobqueue,
-   int                   jobid
-   )
-{
-   SCIP_JOB* currjob = jobqueue->firstjob;
-   SCIP_JOB* nextjob = currjob->nextjob;
-
-   /* checking the job ids */
-   if( currjob != NULL )
-   {
-      /* if the first job matches the jobid then we change the first job pointer. */
-      while( currjob->jobid == jobid && currjob != jobqueue->lastjob )
-      {
-         jobqueue->firstjob = nextjob;
-         BMSfreeMemory(&currjob);
-
-         currjob = nextjob;
-         nextjob = currjob->nextjob;
-      }
-
-      if( currjob == jobqueue->lastjob && currjob->jobid == jobid )
-      {
-         assert(nextjob == NULL);
-
-         jobqueue->firstjob = NULL;
-         jobqueue->lastjob = NULL;
-         BMSfreeMemory(&currjob);
-         return;
-      }
-
-      /* at this point currjob->jobid != jobid. We can then start searching with nextjob. */
-      while( nextjob != jobqueue->lastjob )
-      {
-         if( nextjob->jobid == jobid )
-         {
-            currjob->nextjob = nextjob->nextjob;
-            BMSfreeMemory(&nextjob);
-         }
-         else
-            currjob = currjob->nextjob;
-
-         nextjob = currjob->nextjob;
-      }
-
-      /* at this point the next job must be the last job */
-      assert(nextjob == jobqueue->lastjob);
-
-      if( nextjob->jobid == jobid )
-      {
-         jobqueue->lastjob = currjob;
-         BMSfreeMemory(&nextjob);
-      }
-   }
-}
-
-#endif
-
-/** Returns the number of threads */
+/** returns the number of threads */
 int SCIPtpiGetNumThreads(
+   void
    )
 {
    return _threadpool->nthreads;
 }
 
-/** Returns the thread number */
+/** returns the thread number */
 int SCIPtpiGetThreadNum(
+   void
    )
 {
    int i;
@@ -634,9 +554,9 @@ int SCIPtpiGetThreadNum(
 
 /** initializes tpi */
 SCIP_RETCODE SCIPtpiInit(
-   int         nthreads,
-   int         queuesize,
-   SCIP_Bool   blockwhenfull
+   int                   nthreads,
+   int                   queuesize,
+   SCIP_Bool             blockwhenfull
    )
 {
    assert(_threadpool == NULL);
@@ -659,17 +579,17 @@ SCIP_RETCODE SCIPtpiExit(
 
 /** creates a job for parallel processing*/
 SCIP_RETCODE SCIPtpiCreateJob(
-   SCIP_JOB**            job,                      /**< pointer to the job that will be created */
-   int                   jobid,                    /**< the id for the current job */
-   SCIP_RETCODE          (*jobfunc)(void* args),   /**< pointer to the job function */
-   void*                 jobargs                   /**< the job arguments */
+   SCIP_JOB**            job,                /**< pointer to the job that will be created */
+   int                   jobid,              /**< the id for the current job */
+   SCIP_RETCODE          (*jobfunc)(void* args),/**< pointer to the job function */
+   void*                 jobarg              /**< the job's argument */
    )
 {
    SCIP_ALLOC( BMSallocMemory(job) );
 
    (*job)->jobid = jobid;
    (*job)->jobfunc = jobfunc;
-   (*job)->args = jobargs;
+   (*job)->args = jobarg;
    (*job)->nextjob = NULL;
 
    return SCIP_OKAY;
@@ -677,6 +597,7 @@ SCIP_RETCODE SCIPtpiCreateJob(
 
 /** get a new job id for the new set of submitted jobs */
 int SCIPtpiGetNewJobID(
+   void
    )
 {
    int id;
@@ -690,10 +611,10 @@ int SCIPtpiGetNewJobID(
 }
 
 /** submit a job for parallel processing
- * the return is a globally defined status */
+ *  the return is a globally defined status */
 SCIP_RETCODE SCIPtpiSumbitJob(
-   SCIP_JOB*             job,                 /**< pointer to the job to be submitted */
-   SCIP_SUBMITSTATUS*    status               /**< pointer to store the job's submit status */
+   SCIP_JOB*             job,                /**< pointer to the job to be submitted */
+   SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
    )
 {
    assert(job != NULL);
@@ -707,10 +628,11 @@ SCIP_RETCODE SCIPtpiSumbitJob(
 }
 
 
-/** Blocks until all jobs of the given jobid have finished
- * and then returns the smallest SCIP_RETCODE of all the jobs */
+/** blocks until all jobs of the given jobid have finished
+ *  and then returns the smallest SCIP_RETCODE of all the jobs
+ */
 SCIP_RETCODE SCIPtpiCollectJobs(
-   int                   jobid
+   int                   jobid               /**< the jobid of the jobs to wait for */
    )
 {
    SCIP_RETCODE retcode;

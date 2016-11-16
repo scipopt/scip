@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
    SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
    SCIP_DECL_CONCSOLVEREXEC            ((*concsolverexec)),        /**< execution method of concurrent solver */
-   SCIP_DECL_CONCSOLVERGETSOLVINGDATA  ((*concsolvergetsolvdata)), /**< get solving data */
+   SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata)),/**< method to copy solving data */
    SCIP_DECL_CONCSOLVERSTOP            ((*concsolverstop)),        /**< terminate solving in concurrent solver */
    SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite)),   /**< synchronization method of concurrent solver */
    SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread)),    /**< synchronization method of concurrent solver */
@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    assert(concsolvercreateinst != NULL);
    assert(concsolverdestroyinst != NULL);
    assert(concsolverexec != NULL);
-   assert(concsolvergetsolvdata != NULL);
+   assert(concsolvercopysolvdata != NULL);
    assert(concsolverstop != NULL);
    assert(concsolversyncwrite != NULL);
    assert(concsolversyncread != NULL);
@@ -80,7 +80,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    (*concsolvertype)->concsolverdestroyinst = concsolverdestroyinst;
    (*concsolvertype)->concsolverinitseeds = concsolverinitseeds;
    (*concsolvertype)->concsolverexec = concsolverexec;
-   (*concsolvertype)->concsolvergetsolvdata = concsolvergetsolvdata;
+   (*concsolvertype)->concsolvercopysolvdata = concsolvercopysolvdata;
    (*concsolvertype)->concsolverstop = concsolverstop;
    (*concsolvertype)->concsolversyncwrite = concsolversyncwrite;
    (*concsolvertype)->concsolversyncread = concsolversyncread;
@@ -278,9 +278,9 @@ SCIP_RETCODE SCIPconcsolverGetSolvingData(
 {
    assert(concsolver != NULL);
    assert(concsolver->type != NULL);
-   assert(concsolver->type->concsolvergetsolvdata != NULL);
+   assert(concsolver->type->concsolvercopysolvdata != NULL);
 
-   return concsolver->type->concsolvergetsolvdata(concsolver, scip);
+   return concsolver->type->concsolvercopysolvdata(concsolver, scip);
 }
 
 /** interrupt solving in a concurrent solver */

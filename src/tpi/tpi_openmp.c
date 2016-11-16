@@ -28,31 +28,31 @@
 /** A job added to the queue */
 struct SCIP_Job
 {
-   int                   jobid;                    /**< id to identify jobs from a common process */
-   struct                SCIP_Job* nextjob;        /**< pointer to the next job in the queue */
-   SCIP_RETCODE          (*jobfunc)(void* args);   /**< pointer to the job function */
-   void*                 args;                     /**< pointer to the function arguements */
-   SCIP_RETCODE          retcode;                  /**< return code of the job */
+   int                   jobid;              /**< id to identify jobs from a common process */
+   struct                SCIP_Job* nextjob;  /**< pointer to the next job in the queue */
+   SCIP_RETCODE          (*jobfunc)(void* args);/**< pointer to the job function */
+   void*                 args;               /**< pointer to the function arguements */
+   SCIP_RETCODE          retcode;            /**< return code of the job */
 };
 
 /** the thread pool job queue */
 struct SCIP_JobQueue
 {
-   SCIP_JOB*             firstjob;              /**< pointer to the first job in the queue */
-   SCIP_JOB*             lastjob;               /**< pointer to the last job in the queue */
-   int                   njobs;                 /**< number of jobs in the queue */
+   SCIP_JOB*             firstjob;           /**< pointer to the first job in the queue */
+   SCIP_JOB*             lastjob;            /**< pointer to the last job in the queue */
+   int                   njobs;              /**< number of jobs in the queue */
 };
 typedef struct SCIP_JobQueue SCIP_JOBQUEUE;
 
 struct SCIP_JobQueues
 {
-   SCIP_JOBQUEUE  jobqueue;
-   SCIP_JOB**     currentjobs;
-   int            ncurrentjobs;
-   int            nthreads;
-   SCIP_JOBQUEUE  finishedjobs;
-   SCIP_LOCK      lock;
-   SCIP_CONDITION jobfinished;
+   SCIP_JOBQUEUE         jobqueue;           /**< queue of unprocessed jobs */
+   SCIP_JOB**            currentjobs;        /**< array with slot for each thread to store the currently running job */
+   int                   ncurrentjobs;       /**< number of currently running jobs */
+   int                   nthreads;           /**< number of threads */
+   SCIP_JOBQUEUE         finishedjobs;       /**< jobqueue containing the finished jobs */
+   SCIP_LOCK             lock;               /**< lock to protect this stucture from concurrent access */
+   SCIP_CONDITION        jobfinished;        /**< condition to signal if a job was finished */
 };
 typedef struct SCIP_JobQueues SCIP_JOBQUEUES;
 
@@ -68,8 +68,10 @@ SCIP_RETCODE createJobQueue(
    )
 {
    int i;
+
    assert(nthreads >= 0);
    assert(qsize >= 0);
+   SCIP_UNUSED( blockwhenfull );
 
    SCIP_ALLOC( BMSallocMemory(&_jobqueues) );  /** allocting memory for the job queue */
    _jobqueues->jobqueue.firstjob = NULL;
@@ -336,14 +338,14 @@ SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                      /**< pointer to the job that will be created */
    int                   jobid,                    /**< the id for the current job */
    int                   (*jobfunc)(void* args),   /**< pointer to the job function */
-   void*                 jobargs                   /**< the job arguments */
+   void*                 jobarg                    /**< the job's argument */
    )
 {
    SCIP_ALLOC( BMSallocMemory(job) );
 
    (*job)->jobid = jobid;
    (*job)->jobfunc = jobfunc;
-   (*job)->args = jobargs;
+   (*job)->args = jobarg;
    (*job)->nextjob = NULL;
 
    return SCIP_OKAY;

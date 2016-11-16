@@ -41,6 +41,7 @@
 #include "scip/event_globalbnd.h"
 #include "scip/scip.h"
 #include "scip/syncstore.h"
+#include "scip/set.h"
 #include "tpi/tpi.h"
 
 /** create concurrent data */
@@ -107,9 +108,6 @@ SCIP_RETCODE SCIPcreateConcurrent(
       scip->concurrent->eventglobalbnd = SCIPfindEventhdlr(scip, "globalbnd");
    }
 
-   scip->concurrent->nconcsolvers = 0;
-   scip->concurrent->concsolverssize = 0;
-   scip->concurrent->concsolvers = NULL;
    return SCIP_OKAY;
 }
 
@@ -119,8 +117,9 @@ int SCIPgetNConcurrentSolvers(
    )
 {
    assert(scip != NULL);
+   assert(scip->set != NULL);
 
-   return scip->concurrent == NULL ? 0 : scip->concurrent->nconcsolvers;
+   return scip->set->nconcsolvers;
 }
 
 /** gets the initialized concurrent solvers */
@@ -129,9 +128,9 @@ SCIP_CONCSOLVER** SCIPgetConcurrentSolvers(
    )
 {
    assert(scip != NULL);
-   assert(scip->concurrent != NULL);
+   assert(scip->set != NULL);
 
-   return scip->concurrent->concsolvers;
+   return scip->set->concsolvers;
 }
 
 /** adds an initialized concurrent solver */
@@ -140,17 +139,9 @@ SCIP_RETCODE SCIPaddConcurrentSolver(
    SCIP_CONCSOLVER*        concsolver  /**< concurrent solver of given SCIP instance */
    )
 {
-   int idx;
-
    assert(scip != NULL);
-   assert(scip->concurrent != NULL);
 
-   idx = scip->concurrent->nconcsolvers++;
-   assert(idx == SCIPconcsolverGetIdx(concsolver));
-
-   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &scip->concurrent->concsolvers, &scip->concurrent->concsolverssize, scip->concurrent->nconcsolvers) );
-
-   scip->concurrent->concsolvers[idx] = concsolver;
+   SCIP_CALL( SCIPsetIncludeConcsolver(scip->set, concsolver) );
 
    return SCIP_OKAY;
 }
@@ -177,19 +168,10 @@ SCIP_RETCODE SCIPfreeConcurrent(
    }
    else
    {
-      int i;
-
       /* we are in the main SCIP so free the concurrent structure */
       if( scip->concurrent->wallclock != NULL )
          SCIPfreeClock(scip, &scip->concurrent->wallclock);
 
-      /* destroy the concurrent solver instances */
-      for( i = 0; i < scip->concurrent->nconcsolvers; ++i )
-      {
-         SCIP_CALL( SCIPconcsolverDestroyInstance(scip->set, &scip->concurrent->concsolvers[i]) );
-      }
-
-      SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->concsolvers, scip->concurrent->concsolverssize);
       SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
 
       if( SCIPsyncstoreIsInitialized(scip->syncstore) )
@@ -486,8 +468,8 @@ SCIP_RETCODE execConcsolver(
 
    scip = (SCIP*) args;
 
-   SCIP_CALL( SCIPconcsolverExec(scip->concurrent->concsolvers[SCIPtpiGetThreadNum()]) );
-   SCIP_CALL( SCIPconcsolverSync(scip->concurrent->concsolvers[SCIPtpiGetThreadNum()], scip->set) );
+   SCIP_CALL( SCIPconcsolverExec(scip->set->concsolvers[SCIPtpiGetThreadNum()]) );
+   SCIP_CALL( SCIPconcsolverSync(scip->set->concsolvers[SCIPtpiGetThreadNum()], scip->set) );
 
    return SCIP_OKAY;
 }
@@ -509,8 +491,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
    assert(scip->concurrent != NULL);
 
    syncstore = SCIPgetSyncstore(scip);
-   concsolvers = scip->concurrent->concsolvers;
-   nconcsolvers = scip->concurrent->nconcsolvers;
+   concsolvers = scip->set->concsolvers;
+   nconcsolvers = scip->set->nconcsolvers;
 
    assert(SCIPsyncstoreIsInitialized(syncstore));
    assert(SCIPsyncstoreGetNSolvers(syncstore) == nconcsolvers);

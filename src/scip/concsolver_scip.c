@@ -453,7 +453,7 @@ SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
  *  into the given SCIP instance
  */
 static
-SCIP_DECL_CONCSOLVERGETSOLVINGDATA(concsolverGetSolvingData)
+SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
 {
    SCIP_CONCSOLVERDATA* data;
    SCIP_VAR** vars;

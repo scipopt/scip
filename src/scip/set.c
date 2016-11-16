@@ -1089,6 +1089,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->concsolvertypes = NULL;
    (*set)->nconcsolvertypes = 0;
    (*set)->concsolvertypessize = 0;
+   (*set)->concsolvers = NULL;
+   (*set)->nconcsolvers = 0;
+   (*set)->concsolverssize = 0;
    (*set)->concurrent_paramsetprefix = NULL;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
@@ -2575,11 +2578,19 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
    /* free concsolvers */
+   for( i = 0; i < (*set)->nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPconcsolverDestroyInstance(*set, &(*set)->concsolvers[i]) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->concsolvers);
+
+   /* free concsolvers types */
    for( i = 0; i < (*set)->nconcsolvertypes; ++i )
    {
       SCIPconcsolverTypeFree(&(*set)->concsolvertypes[i]);
    }
    BMSfreeMemoryArrayNull(&(*set)->concsolvertypes);
+
 
    /* free information on external codes */
    for( i = 0; i < (*set)->nextcodes; ++i )
@@ -3967,7 +3978,7 @@ void SCIPsetSortPropsName(
    }
 }
 
-/** inserts concurrent solver in concurrent solver type list */
+/** inserts concurrent solver type into the concurrent solver type list */
 SCIP_RETCODE SCIPsetIncludeConcsolverType(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
@@ -4007,6 +4018,30 @@ SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
    }
 
    return NULL;
+}
+
+/** inserts concurrent solver into the concurrent solver list */
+SCIP_RETCODE SCIPsetIncludeConcsolver(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   )
+{
+   assert(set != NULL);
+   assert(concsolver != NULL);
+
+   if( set->nconcsolvers >= set->concsolverssize )
+   {
+      set->concsolverssize = SCIPsetCalcMemGrowSize(set, set->nconcsolvers + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->concsolvers, set->concsolverssize) );
+   }
+   assert(set->nconcsolvers < set->concsolverssize);
+
+   set->concsolvers[set->nconcsolvers] = concsolver;
+   assert(set->nconcsolvers == SCIPconcsolverGetIdx(concsolver));
+
+   set->nconcsolvers++;
+
+   return SCIP_OKAY;
 }
 
 /** inserts primal heuristic in primal heuristic list */

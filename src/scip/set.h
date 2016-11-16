@@ -742,7 +742,7 @@ void SCIPsetSortPropsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** inserts concurrent solver in concurrent solver type list */
+/** inserts concurrent solver type into the concurrent solver type list */
 extern
 SCIP_RETCODE SCIPsetIncludeConcsolverType(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -754,6 +754,12 @@ extern
 SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name                /**< name of concurrent solver type */
+   );
+
+/** inserts concurrent solver into the concurrent solver list */
+SCIP_RETCODE SCIPsetIncludeConcsolver(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    );
 
 /** inserts primal heuristic in primal heuristic list */

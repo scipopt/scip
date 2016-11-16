@@ -48,9 +48,6 @@ struct SCIP_Concurrent
    SCIP_HEUR*               heursync;          /**< sync heuristic */
    SCIP_EVENTHDLR*          eventglobalbnd;     /**< global bound eventhandler */
    int                      solidx;             /**< solution index after last synchronization */
-   SCIP_CONCSOLVER**        concsolvers;        /**< the concurrent solvers used for solving */
-   int                      nconcsolvers;       /**< number of concurrent solvers used for solving */
-   int                      concsolverssize;    /**< size of concurrent solvers array */
 };
 
 #ifdef __cplusplus

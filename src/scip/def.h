@@ -320,6 +320,8 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+#define SCIP_UNUSED(x) ((void) (x))
+
 /*
  * Define to mark deprecated API functions
  */

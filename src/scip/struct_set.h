@@ -82,6 +82,7 @@ struct SCIP_Set
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
+   SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
@@ -120,6 +121,8 @@ struct SCIP_Set
    int                   nlpissize;          /**< size of NLPIs array */
    int                   nconcsolvertypes;   /**< number of concurrent solver types */
    int                   concsolvertypessize;/**< size of concurrent solver types array */
+   int                   nconcsolvers;       /**< number of concurrent solvers used for solving */
+   int                   concsolverssize;    /**< size of concurrent solvers array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */

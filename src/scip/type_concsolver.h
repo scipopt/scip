@@ -144,7 +144,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
-#define SCIP_DECL_CONCSOLVERGETSOLVINGDATA(x) SCIP_RETCODE x (SCIP_CONCSOLVER* concsolver, SCIP* scip)
+#define SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(x) SCIP_RETCODE x (SCIP_CONCSOLVER* concsolver, SCIP* scip)
 
 
 #ifdef __cplusplus
