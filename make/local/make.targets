@@ -72,14 +72,6 @@ testgamscluster:
 
 # for testing examples, see the scripts examples/maketestallexamples.sh and applications/maketestallapplications.sh
 
-SCIPEXAMPLES =	examples/Binpacking examples/CallableLibrary applications/Coloring \
-		examples/Eventhdlr examples/GMI examples/LOP examples/MIPSolver \
-		applications/Scheduler applications/STP examples/TSP examples/VRP
-
-.PHONY: docexamples
-docexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C $(EXAMPLE) $^ doc || exit 1;)
-
 .PHONY: coverage
 coverage:
 		$(SHELL) ./check/check_coverage.sh $(MAINFILE) $(notdir $(MAINFILE)).$(HOSTNAME) $(MEM) $(VERSION) $(LPS) $(OBJDIR);
