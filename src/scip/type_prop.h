@@ -35,6 +35,7 @@ extern "C" {
 #endif
 
 typedef struct SCIP_Prop SCIP_PROP;               /**< propagator */
+typedef struct SCIP_PropStat SCIP_PROPSTAT;       /**< propagator statistics */
 typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagator data */
 
 

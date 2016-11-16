@@ -58,6 +58,8 @@ struct SCIP_Prop
    SCIP_CLOCK*           sbproptime;         /**< time used for propagation of this propagator during strong branching */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this propagator */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this propagator */
+   SCIP_PROPSTAT*        subscipsstat;       /**< subscip statistics for this propagator */
+   SCIP_PROPSTAT*        lastmergedstat;     /**< last merged statistics */
    int                   priority;           /**< priority of the propagator for propagation */
    int                   freq;               /**< frequency for calling propagator */
    SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagator should be executed */
@@ -88,6 +90,32 @@ struct SCIP_Prop
    SCIP_Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_Bool             wasdelayed;         /**< was the propagator delayed at the last call? */
    SCIP_Bool             initialized;        /**< is propagator initialized? */
+};
+
+/** propagator statistics */
+struct SCIP_PropStat
+{
+   SCIP_PROP*            origprop;           /**< pointer to propagator data in original SCIP instance (target SCIP in merge call) */
+   SCIP_Longint          ncalls;             /**< number of times, this propagator was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
+   SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this propagator */
+   SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this propagator */
+   SCIP_Real             setuptime;          /**< time spend for setting up this propagator for the next stages */
+   SCIP_Real             proptime;           /**< time used for propagation of this propagator */
+   SCIP_Real             sbproptime;         /**< time used for propagation of this propagator during strong branching */
+   SCIP_Real             resproptime;        /**< time used for resolve propagation of this propagator */
+   SCIP_Real             presoltime;         /**< time used for presolving of this propagator */
+   int                   nfixedvars;         /**< total number of variables fixed by this propagator in presolving */
+   int                   naggrvars;          /**< total number of variables aggregated by this propagator in presolving */
+   int                   nchgvartypes;       /**< total number of variable type changes by this propagator in presolving */
+   int                   nchgbds;            /**< total number of variable bounds tightened by this propagator in presolving */
+   int                   naddholes;          /**< total number of domain holes added by this propagator in presolving */
+   int                   ndelconss;          /**< total number of deleted constraints by this propagator in presolving */
+   int                   naddconss;          /**< total number of added constraints by this propagator in presolving */
+   int                   nupgdconss;         /**< total number of upgraded constraints by this propagator in presolving */
+   int                   nchgcoefs;          /**< total number of changed coefficients by this propagator in presolving */
+   int                   nchgsides;          /**< total number of changed left or right hand sides by this propagator in presolving */
+   int                   npresolcalls;       /**< number of times the propagator was called in presolving and tried to find reductions */
 };
 
 #ifdef __cplusplus

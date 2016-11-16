@@ -17,6 +17,7 @@
  * @brief  methods and datastructures for propagators
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -175,6 +176,8 @@ SCIP_RETCODE SCIPpropCreate(
    SCIP_CALL( SCIPclockCreate(&(*prop)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   (*prop)->subscipsstat = NULL;
+   (*prop)->lastmergedstat = NULL;
    (*prop)->ncalls = 0;
    (*prop)->nrespropcalls = 0;
    (*prop)->ncutoffs = 0;
@@ -243,6 +246,8 @@ SCIP_RETCODE SCIPpropFree(
       SCIP_CALL( (*prop)->propfree(set->scip, *prop) );
    }
 
+   BMSfreeMemoryNull(&(*prop)->lastmergedstat);
+   BMSfreeMemoryNull(&(*prop)->subscipsstat);
    SCIPclockFree(&(*prop)->presoltime);
    SCIPclockFree(&(*prop)->resproptime);
    SCIPclockFree(&(*prop)->sbproptime);
@@ -277,6 +282,10 @@ SCIP_RETCODE SCIPpropInit(
       SCIPclockReset(prop->resproptime);
       SCIPclockReset(prop->presoltime);
       SCIPclockReset(prop->setuptime);
+      BMSfreeMemoryNull(&prop->lastmergedstat);
+      BMSfreeMemoryNull(&prop->subscipsstat);
+      prop->lastmergedstat = NULL;
+      prop->subscipsstat = NULL;
 
       prop->ncalls = 0;
       prop->nrespropcalls = 0;
@@ -1257,4 +1266,328 @@ void SCIPpropSetPresolTiming(
    assert(prop != NULL);
 
    prop->presoltiming = presoltiming;
+}
+
+/** create statistic data for merging statistics from source propagator into target propagator */
+SCIP_RETCODE SCIPpropInitMergeStatistics(
+   SCIP_PROP*            sourceprop,         /**< source primal propagator data structure */
+   SCIP_PROP*            targetprop          /**< target primal propagator data structure */
+   )
+{
+   assert(sourceprop != NULL);
+   assert(targetprop != NULL);
+
+   if( sourceprop->lastmergedstat == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemory(&sourceprop->lastmergedstat) );
+      sourceprop->lastmergedstat->ncalls = 0;
+      sourceprop->lastmergedstat->nrespropcalls = 0;
+      sourceprop->lastmergedstat->ncutoffs = 0;
+      sourceprop->lastmergedstat->ndomredsfound = 0;
+      sourceprop->lastmergedstat->setuptime = 0.0;
+      sourceprop->lastmergedstat->proptime = 0.0;
+      sourceprop->lastmergedstat->sbproptime = 0.0;
+      sourceprop->lastmergedstat->resproptime = 0.0;
+      sourceprop->lastmergedstat->presoltime = 0.0;
+      sourceprop->lastmergedstat->nfixedvars = 0;
+      sourceprop->lastmergedstat->naggrvars = 0;
+      sourceprop->lastmergedstat->nchgvartypes = 0;
+      sourceprop->lastmergedstat->nchgbds = 0;
+      sourceprop->lastmergedstat->naddholes = 0;
+      sourceprop->lastmergedstat->ndelconss = 0;
+      sourceprop->lastmergedstat->naddconss = 0;
+      sourceprop->lastmergedstat->nupgdconss = 0;
+      sourceprop->lastmergedstat->nchgcoefs = 0;
+      sourceprop->lastmergedstat->nchgsides = 0;
+      sourceprop->lastmergedstat->npresolcalls = 0;
+
+      if( targetprop->subscipsstat == NULL )
+      {
+         SCIP_ALLOC( BMSallocMemory(&targetprop->subscipsstat) );
+         targetprop->subscipsstat->origprop = NULL;
+         targetprop->subscipsstat->ncalls = 0;
+         targetprop->subscipsstat->nrespropcalls = 0;
+         targetprop->subscipsstat->ncutoffs = 0;
+         targetprop->subscipsstat->ndomredsfound = 0;
+         targetprop->subscipsstat->setuptime = 0.0;
+         targetprop->subscipsstat->proptime = 0.0;
+         targetprop->subscipsstat->sbproptime = 0.0;
+         targetprop->subscipsstat->resproptime = 0.0;
+         targetprop->subscipsstat->presoltime = 0.0;
+         targetprop->subscipsstat->nfixedvars = 0;
+         targetprop->subscipsstat->naggrvars = 0;
+         targetprop->subscipsstat->nchgvartypes = 0;
+         targetprop->subscipsstat->nchgbds = 0;
+         targetprop->subscipsstat->naddholes = 0;
+         targetprop->subscipsstat->ndelconss = 0;
+         targetprop->subscipsstat->naddconss = 0;
+         targetprop->subscipsstat->nupgdconss = 0;
+         targetprop->subscipsstat->nchgcoefs = 0;
+         targetprop->subscipsstat->nchgsides = 0;
+         targetprop->subscipsstat->npresolcalls = 0;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** merge primal propagator statistics from source propagator data structure to target propagator data structure */
+SCIP_RETCODE SCIPpropMergeStatistics(
+   SCIP_PROP*            sourceprop          /**< source primal propagator data structure */
+   )
+{
+   SCIP_PROP* targetprop;
+
+   assert(sourceprop != NULL);
+   assert(sourceprop->lastmergedstat != NULL);
+
+   targetprop = sourceprop->lastmergedstat->origprop;
+   assert(targetprop != NULL);
+   assert(targetprop->subscipsstat != NULL);
+
+   /* copy delta to last merged values */
+   targetprop->subscipsstat->ncalls        += (sourceprop->ncalls        - sourceprop->lastmergedstat->ncalls       );
+   targetprop->subscipsstat->nrespropcalls += (sourceprop->nrespropcalls - sourceprop->lastmergedstat->nrespropcalls);
+   targetprop->subscipsstat->ncutoffs      += (sourceprop->ncutoffs      - sourceprop->lastmergedstat->ncutoffs     );
+   targetprop->subscipsstat->ndomredsfound += (sourceprop->ndomredsfound - sourceprop->lastmergedstat->ndomredsfound);
+   targetprop->subscipsstat->nfixedvars    += (sourceprop->nfixedvars    - sourceprop->lastmergedstat->nfixedvars   );
+   targetprop->subscipsstat->naggrvars     += (sourceprop->naggrvars     - sourceprop->lastmergedstat->naggrvars    );
+   targetprop->subscipsstat->nchgvartypes  += (sourceprop->nchgvartypes  - sourceprop->lastmergedstat->nchgvartypes );
+   targetprop->subscipsstat->nchgbds       += (sourceprop->nchgbds       - sourceprop->lastmergedstat->nchgbds      );
+   targetprop->subscipsstat->naddholes     += (sourceprop->naddholes     - sourceprop->lastmergedstat->naddholes    );
+   targetprop->subscipsstat->ndelconss     += (sourceprop->ndelconss     - sourceprop->lastmergedstat->ndelconss    );
+   targetprop->subscipsstat->naddconss     += (sourceprop->naddconss     - sourceprop->lastmergedstat->naddconss    );
+   targetprop->subscipsstat->nupgdconss    += (sourceprop->nupgdconss    - sourceprop->lastmergedstat->nupgdconss   );
+   targetprop->subscipsstat->nchgcoefs     += (sourceprop->nchgcoefs     - sourceprop->lastmergedstat->nchgcoefs    );
+   targetprop->subscipsstat->nchgsides     += (sourceprop->nchgsides     - sourceprop->lastmergedstat->nchgsides    );
+   targetprop->subscipsstat->npresolcalls  += (sourceprop->npresolcalls  - sourceprop->lastmergedstat->npresolcalls );
+   targetprop->subscipsstat->setuptime     += (SCIPclockGetTime(sourceprop->setuptime)   - sourceprop->lastmergedstat->setuptime    );
+   targetprop->subscipsstat->proptime      += (SCIPclockGetTime(sourceprop->proptime)    - sourceprop->lastmergedstat->proptime     );
+   targetprop->subscipsstat->sbproptime    += (SCIPclockGetTime(sourceprop->sbproptime)  - sourceprop->lastmergedstat->sbproptime   );
+   targetprop->subscipsstat->resproptime   += (SCIPclockGetTime(sourceprop->resproptime) - sourceprop->lastmergedstat->resproptime  );
+   targetprop->subscipsstat->presoltime    += (SCIPclockGetTime(sourceprop->presoltime)  - sourceprop->lastmergedstat->presoltime   );
+
+   /* save the merged values */
+   sourceprop->lastmergedstat->ncalls = sourceprop->ncalls;
+   sourceprop->lastmergedstat->nrespropcalls = sourceprop->nrespropcalls;
+   sourceprop->lastmergedstat->ncutoffs = sourceprop->ncutoffs;
+   sourceprop->lastmergedstat->ndomredsfound = sourceprop->ndomredsfound;
+   sourceprop->lastmergedstat->nfixedvars = sourceprop->nfixedvars;
+   sourceprop->lastmergedstat->naggrvars = sourceprop->naggrvars;
+   sourceprop->lastmergedstat->nchgvartypes = sourceprop->nchgvartypes;
+   sourceprop->lastmergedstat->nchgbds = sourceprop->nchgbds;
+   sourceprop->lastmergedstat->naddholes = sourceprop->naddholes;
+   sourceprop->lastmergedstat->ndelconss = sourceprop->ndelconss;
+   sourceprop->lastmergedstat->naddconss = sourceprop->naddconss;
+   sourceprop->lastmergedstat->nupgdconss = sourceprop->nupgdconss;
+   sourceprop->lastmergedstat->nchgcoefs = sourceprop->nchgcoefs;
+   sourceprop->lastmergedstat->nchgsides = sourceprop->nchgsides;
+   sourceprop->lastmergedstat->npresolcalls = sourceprop->npresolcalls;
+   sourceprop->lastmergedstat->setuptime = SCIPclockGetTime(sourceprop->setuptime);
+   sourceprop->lastmergedstat->proptime = SCIPclockGetTime(sourceprop->proptime);
+   sourceprop->lastmergedstat->sbproptime = SCIPclockGetTime(sourceprop->sbproptime);
+   sourceprop->lastmergedstat->resproptime = SCIPclockGetTime(sourceprop->resproptime);
+   sourceprop->lastmergedstat->presoltime = SCIPclockGetTime(sourceprop->presoltime);
+
+   return SCIP_OKAY;
+}
+
+/** gets time in seconds used for setting up this propagator for new stages in sub-SCIPs */
+SCIP_Real SCIPpropGetSubscipSetupTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0.0 : prop->subscipsstat->setuptime);
+}
+
+/** gets time in seconds used in this propagator for propagation in sub-SCIPs */
+SCIP_Real SCIPpropGetSubscipTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0.0 : prop->subscipsstat->proptime);
+}
+
+/** gets time in seconds used in this propagator for propagation during strong branching in sub-SCIPs */
+SCIP_Real SCIPpropGetSubscipStrongBranchPropTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0.0 : prop->subscipsstat->sbproptime);
+}
+
+/** gets time in seconds used in this propagator for resolve propagation in sub-SCIPs */
+SCIP_Real SCIPpropGetSubscipRespropTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0.0 : prop->subscipsstat->resproptime);
+}
+
+/** gets time in seconds used in this propagator for presolving in sub-SCIPs */
+SCIP_Real SCIPpropGetSubscipPresolTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0.0 : prop->subscipsstat->presoltime);
+}
+
+/** gets the total number of times, the propagator was called in sub-SCIPs */
+SCIP_Longint SCIPpropGetSubscipNCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->ncalls);
+}
+
+/** gets the total number of times, the propagator was called for resolving a propagation in sub-SCIPs */
+SCIP_Longint SCIPpropGetSubscipNRespropCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nrespropcalls);
+}
+
+/** gets total number of times, this propagator detected a cutoff in sub-SCIPs */
+SCIP_Longint SCIPpropGetSubscipNCutoffs(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->ncutoffs);
+}
+
+/** gets total number of domain reductions found by this propagator in sub-SCIPs */
+SCIP_Longint SCIPpropGetSubscipNDomredsFound(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->ndomredsfound);
+}
+
+/** gets number of variables fixed during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNFixedVars(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nfixedvars);
+}
+
+/** gets number of variables aggregated during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNAggrVars(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->naggrvars);
+}
+
+/** gets number of variable types changed during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNChgVarTypes(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nchgvartypes);
+}
+
+/** gets number of bounds changed during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNChgBds(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nchgbds);
+}
+
+/** gets number of holes added to domains of variables during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNAddHoles(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->naddholes);
+}
+
+/** gets number of constraints deleted during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNDelConss(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->ndelconss);
+}
+
+/** gets number of constraints added during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNAddConss(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->naddconss);
+}
+
+/** gets number of constraints upgraded during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNUpgdConss(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nupgdconss);
+}
+
+/** gets number of coefficients changed during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNChgCoefs(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nchgcoefs);
+}
+
+/** gets number of constraint sides changed during presolving of propagator in sub-SCIPs */
+int SCIPpropGetSubscipNChgSides(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->nchgsides);
+}
+
+/** gets number of times the propagator was called in presolving and tried to find reductions in sub-SCIPs */
+int SCIPpropGetSubscipNPresolCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return (prop->subscipsstat == NULL ? 0 : prop->subscipsstat->npresolcalls);
 }
