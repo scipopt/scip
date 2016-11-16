@@ -4038,7 +4038,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #endif
 #if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
    case SCIP_LPPAR_PERSISTENTSCALING:
-      lpi->spx->setBoolPar((bool) ival);
+      lpi->spx->setBoolParam(SoPlex::PERSISTENTSCALING, (bool) ival);
       break;
 #endif
    default:
