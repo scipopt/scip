@@ -5,7 +5,7 @@
 #
 #
 
-APPLICATIONS=(Coloring Scheduler STP)
+APPLICATIONS=(Coloring MinIISC Scheduler STP)
 LPSOLVERS=(spx2)
 OPTS=(dbg)
 
