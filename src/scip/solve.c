@@ -1453,7 +1453,6 @@ SCIP_RETCODE separationRoundLP(
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if additional separation rounds should be performed */
    SCIP_Bool*            mustprice,          /**< pointer to store TRUE if additional pricing rounds should be performed */
    SCIP_Bool*            solverelaxagain     /**< pointer to store TRUE, if the external relaxators should be called again */
-   
    )
 {
    SCIP_RESULT result;
@@ -1494,11 +1493,11 @@ SCIP_RETCODE separationRoundLP(
       SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
-      
+
       /* check for changes to LP that could render relaxation solution infeasible */
       if( result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM )
          *solverelaxagain = TRUE;
-      
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -2229,6 +2228,7 @@ SCIP_RETCODE priceAndCutLoop(
                &mustsepa, lperror, pricingaborted) );
 
          mustprice = FALSE;
+
          /* if variables were added during pricing the relaxation also needs to be resolved */
          if( npricedcolvars != oldnpricedcolvars )
             *solverelaxagain = TRUE;
@@ -2283,7 +2283,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, reopt, lp,
                         branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, cutoff) );
-                  
+
                   *solverelaxagain = TRUE;
                }
 
@@ -2478,13 +2478,13 @@ SCIP_RETCODE priceAndCutLoop(
          else
          {
             int oldncutsapplied;
-            
+
             oldncutsapplied = SCIPsepastoreGetNCutsApplied(sepastore);
-            
+
             /* apply found cuts */
             SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
                   branchcand, eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
-            
+
             *solverelaxagain = *solverelaxagain || (SCIPsepastoreGetNCutsApplied(sepastore) != oldncutsapplied);
 
             if( !(*cutoff) )
@@ -3788,7 +3788,8 @@ SCIP_RETCODE propAndSolve(
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || !SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
 
-   /* reset solverelaxagain if no relaxations were solved up to this point (the LP-changes are already included in relaxators called after the LP) */
+   /* reset solverelaxagain if no relaxations were solved up to this point (the LP-changes are already included in
+    * relaxators called after the LP) */
    *solverelaxagain = *solverelaxagain && relaxcalled;
 
    /* solve external relaxations with negative priority */
