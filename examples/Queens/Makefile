@@ -80,7 +80,7 @@ doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipheader.html header.html);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/sciplayout.html layout.html);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/sciplayout.xml layout.xml);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
