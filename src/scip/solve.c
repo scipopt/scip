@@ -3069,7 +3069,7 @@ SCIP_RETCODE solveNodeRelax(
          /* update bestrelaxsol and bestrelaxval; this is only possible if the solution has been marked as valid (via
           * SCIPmarkRelaxSolValid())
           */
-         if( lowerbound > *bestrelaxval && SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxHasFullLpInfo(set->relaxs[r]) )
+         if( lowerbound > *bestrelaxval && SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxIncludesLp(set->relaxs[r]) )
          {
             int i;
 

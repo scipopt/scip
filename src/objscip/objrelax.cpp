@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPincludeObjRelax(
 
    /* include relaxator */
    SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_,
-         objrelax->scip_priority_, objrelax->scip_freq_, objrelax->scip_fulllpinfo_,
+         objrelax->scip_priority_, objrelax->scip_freq_, objrelax->scip_includeslp_,
          relaxCopyObj,
          relaxFreeObj, relaxInitObj, relaxExitObj,
          relaxInitsolObj, relaxExitsolObj, relaxExecObj,

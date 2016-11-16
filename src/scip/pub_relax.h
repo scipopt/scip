@@ -80,7 +80,7 @@ int SCIPrelaxGetFreq(
 
 /** returns whether the relaxation handler contains all LP rows */
 EXTERN
-SCIP_Bool SCIPrelaxHasFullLpInfo(
+SCIP_Bool SCIPrelaxIncludesLp(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 

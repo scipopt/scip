@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             fulllpinfo,         /**< Does the relaxator contain all cuts in the LP? */
+   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -131,7 +131,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (*relax)->ncalls = 0;
    (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
-   (*relax)->fulllpinfo = fulllpinfo;
+   (*relax)->includeslp = includeslp;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
@@ -517,13 +517,13 @@ void SCIPrelaxEnableOrDisableClocks(
 }
 
 /** returns whether the relaxation handler contains all LP rows */
-SCIP_Bool SCIPrelaxHasFullLpInfo(
+SCIP_Bool SCIPrelaxIncludesLp(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
 {
    assert(relax != NULL);
 
-   return relax->fulllpinfo;
+   return relax->includeslp;
 }
 
 /** gets time in seconds used in this relaxation handler */
