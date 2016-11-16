@@ -174,11 +174,6 @@ SCIP_RETCODE SCIPfreeConcurrent(
 
       SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
 
-      if( SCIPsyncstoreIsInitialized(scip->syncstore) )
-      {
-         SCIP_CALL( SCIPsyncstoreExit(scip->syncstore) );
-      }
-
       SCIPfreeBlockMemory(scip, &scip->concurrent);
    }
 

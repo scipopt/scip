@@ -41,6 +41,7 @@ struct SCIP_SyncStore
    int                     nuses;              /**< number of uses of the synchronization store */
    SCIP_PARALLELMODE       mode;               /**< the mode for the parallel solving */
    SCIP_Bool               initialized;        /**< flag to indicate whether the syncstore has been initialized */
+   int                     ninitvars;          /**< number of variables it has been initialized for */
    SCIP_SYNCDATA*          syncdata;           /**< array of size nsyncdata, containing the synchronization data
                                                 *   for each active synchroization */
    SCIP_SYNCDATA*          lastsync;           /**< pointer to the last synchronization data that has been synchronized

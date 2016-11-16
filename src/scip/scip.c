@@ -10245,6 +10245,9 @@ SCIP_RETCODE SCIPfreeProb(
    scip->set->misc_transsolsorig = FALSE;
 
    SCIP_CALL( SCIPfreeTransform(scip) );
+   /* for some reason the free transform can generate events caught in the globalbnd eventhander
+    * which requires the concurrent so it must be freed afterwards this happened o instance fiber
+    */
    SCIP_CALL( SCIPfreeConcurrent(scip) );
 
    assert(scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_PROBLEM);

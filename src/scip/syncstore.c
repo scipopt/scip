@@ -90,6 +90,11 @@ SCIP_RETCODE SCIPsyncstoreRelease(
 
    if( references == 0 )
    {
+      if( (*syncstore)->initialized )
+      {
+         SCIP_CALL( SCIPsyncstoreExit(*syncstore) );
+      }
+
       assert(!(*syncstore)->initialized);
       SCIPtpiDestroyLock(&(*syncstore)->lock);
       BMSfreeMemory(syncstore);
@@ -122,7 +127,6 @@ SCIP_RETCODE SCIPsyncstoreInit(
    )
 {
    SCIP_SYNCSTORE* syncstore;
-   int nvars;
    int i;
    int j;
    int paramode;
@@ -134,7 +138,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->lastsync = NULL;
    syncstore->nsolvers = SCIPgetNConcurrentSolvers(scip);
 
-   nvars = SCIPgetNVars(scip);
+   syncstore->ninitvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsols", &syncstore->maxnsols) );
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &syncstore->maxnsyncdelay) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/minsyncdelay", &syncstore->minsyncdelay) );
@@ -146,14 +150,14 @@ SCIP_RETCODE SCIPsyncstoreInit(
    for( i = 0; i < syncstore->nsyncdata; ++i )
    {
       syncstore->syncdata[i].syncnum = -1;
-      SCIP_CALL( SCIPboundstoreCreate(syncstore->mainscip, &syncstore->syncdata[i].boundstore, nvars) );
+      SCIP_CALL( SCIPboundstoreCreate(syncstore->mainscip, &syncstore->syncdata[i].boundstore, syncstore->ninitvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].solobj, syncstore->maxnsols) );
       SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].solsource, syncstore->maxnsols) );
       SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols, syncstore->maxnsols) );
 
       for( j = 0; j < syncstore->maxnsols; ++j )
       {
-         SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols[j], nvars) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols[j], syncstore->ninitvars) );
       }
 
       SCIP_CALL( SCIPtpiInitLock(&(syncstore->syncdata[i].lock)) );
@@ -195,7 +199,7 @@ SCIP_RETCODE SCIPsyncstoreExit(
 
       for( j = 0; j < syncstore->maxnsols; ++j )
       {
-         SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols[j], SCIPgetNVars(syncstore->mainscip));
+         SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols[j], syncstore->ninitvars);
       }
 
       SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata[i].sols, syncstore->maxnsols);
