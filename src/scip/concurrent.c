@@ -481,7 +481,6 @@ SCIP_RETCODE SCIPsolveConcurrent(
    int               nconcsolvers;
 
    assert(scip != NULL);
-   assert(scip->concurrent != NULL);
 
    syncstore = SCIPgetSyncstore(scip);
    concsolvers = scip->set->concsolvers;

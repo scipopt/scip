@@ -374,6 +374,10 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
       return NULL;
 
    nextsyncnum = syncdata->syncnum + 1;
+
+   if( nextsyncnum == writenum )
+      return NULL;
+
    newdelay = *delay - syncdata->syncfreq;
 
    /* if the delay would get too small we dont want to read the next syncdata.
@@ -385,6 +389,7 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
       return NULL;
 
    *delay = newdelay;
+   assert(syncstore->syncdata[nextsyncnum % syncstore->nsyncdata].syncnum == nextsyncnum);
 
    return &syncstore->syncdata[nextsyncnum % syncstore->nsyncdata];
 }
