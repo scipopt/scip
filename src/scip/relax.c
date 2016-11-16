@@ -526,6 +526,17 @@ SCIP_Bool SCIPrelaxIncludesLp(
    return relax->includeslp;
 }
 
+/** defines whether the relaxation handler contains all LP rows */
+void SCIPrelaxSetIncludesLp(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
+   )
+{
+   assert(relax != NULL);
+
+   relax->includeslp = includeslp;
+}
+
 /** gets time in seconds used in this relaxation handler */
 SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
