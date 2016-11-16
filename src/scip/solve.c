@@ -4421,7 +4421,10 @@ SCIP_RETCODE solveNode(
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || SCIPconflictGetNConflicts(conflict) == 0);
    
-   /* check whether the final enforcement round was called for the relaxation solution (unless the node is cut off anyways) */
+   /* check whether the final enforcement round was called for the relaxation solution (unless the node is cut off anyways)
+    * (the same check is used in enforceConstraints() to decide which solution to enforce and the values shouldn't change
+    * in between)
+    */
    if( !(*cutoff) && bestrelaxval != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, bestrelaxval, SCIPlpGetObjval(lp, set, transprob))) )
    {
