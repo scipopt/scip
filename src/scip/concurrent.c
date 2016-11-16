@@ -45,9 +45,9 @@
 
 /** create concurrent data */
 SCIP_RETCODE SCIPcreateConcurrent(
-   SCIP*                   scip,       /**< SCIP datastructure */
-   SCIP_CONCSOLVER*        concsolver, /**< concurrent solver of given SCIP instance */
-   int*                    varperm     /**< permutation of variables for communication */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver of given SCIP instance */
+   int*                  varperm             /**< permutation of variables for communication */
    )
 {
    SCIP_SYNCSTORE*   syncstore;
@@ -113,7 +113,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    return SCIP_OKAY;
 }
 
-/** Get number of initialized concurrent solvers */
+/** get number of initialized concurrent solvers */
 int SCIPgetNConcurrentSolvers(
    SCIP*                   scip        /**< SCIP datastructure */
    )
@@ -134,7 +134,7 @@ SCIP_CONCSOLVER** SCIPgetConcurrentSolvers(
    return scip->concurrent->concsolvers;
 }
 
-/** Adds an initialized concurrent solver */
+/** adds an initialized concurrent solver */
 SCIP_RETCODE SCIPaddConcurrentSolver(
    SCIP*                   scip,       /**< SCIP datastructure */
    SCIP_CONCSOLVER*        concsolver  /**< concurrent solver of given SCIP instance */
@@ -474,7 +474,7 @@ SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
    return NULL;
 }
 
-/** executes the concurrent solver with based on thread id */
+/** executes the concurrent solver corresponding to the current thread */
 static
 SCIP_RETCODE execConcsolver(
    void*                     args      /**< SCIP data structure passed in as a void pointer */
@@ -494,7 +494,7 @@ SCIP_RETCODE execConcsolver(
 
 /** start solving in parallel using the given set of concurrent solvers */
 SCIP_RETCODE SCIPsolveConcurrent(
-   SCIP*                scip                 /**< pointer to scip datastructure */
+   SCIP*                 scip                /**< pointer to scip datastructure */
    )
 {
    SCIP_SYNCSTORE*   syncstore;
@@ -546,8 +546,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
 
 /** copy solving statistics */
 SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
-   SCIP*                   source,     /**< SCIP data structure */
-   SCIP*                   target      /**< target SCIP data structure */
+   SCIP*                 source,             /**< SCIP data structure */
+   SCIP*                 target              /**< target SCIP data structure */
    )
 {
    SCIP_Real     tmptime;

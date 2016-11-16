@@ -39,12 +39,12 @@ extern "C" {
 /** create concurrent data */
 extern
 SCIP_RETCODE SCIPcreateConcurrent(
-   SCIP*                     scip,      /**< SCIP datastructure */
-   SCIP_CONCSOLVER*          concsolver,/**< concurrent solver of given SCIP instance */
-   int*                      varperm    /**< permutation of variables for communication */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver of given SCIP instance */
+   int*                  varperm             /**< permutation of variables for communication */
    );
 
-/** get number of concurrent solvers */
+/** get number of initialized concurrent solvers */
 extern
 int SCIPgetNConcurrentSolvers(
    SCIP*                     scip       /**< SCIP datastructure */
@@ -56,7 +56,7 @@ SCIP_CONCSOLVER** SCIPgetConcurrentSolvers(
    SCIP*                     scip      /**< SCIP datastructure */
    );
 
-/** Adds a concurrent solver */
+/** adds a concurrent solver */
 extern
 SCIP_RETCODE SCIPaddConcurrentSolver(
    SCIP*                     scip,      /**< SCIP datastructure */
