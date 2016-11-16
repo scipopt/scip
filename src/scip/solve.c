@@ -3780,7 +3780,8 @@ SCIP_RETCODE propAndSolve(
    assert(*cutoff || !SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
 
    /* reset solverelaxagain if no relaxations were solved up to this point (the LP-changes are already included in
-    * relaxators called after the LP) */
+    * relaxators called after the LP)
+    */
    *solverelaxagain = *solverelaxagain && relaxcalled;
 
    /* solve external relaxations with negative priority */
