@@ -29,7 +29,7 @@
 #define RELAX_DESC             "relaxator template"
 #define RELAX_PRIORITY         0
 #define RELAX_FREQ             1
-#define RELAX_FULLLPINFO       TRUE
+#define RELAX_FULLLPINFO       FALSE
 
 
 
