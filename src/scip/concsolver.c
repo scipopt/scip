@@ -328,7 +328,10 @@ SCIP_RETCODE SCIPconcsolverSync(
    SCIP_CALL( SCIPsyncstoreStartSync(syncstore, concsolver->nsyncs, &syncdata) );
 
    if( syncdata == NULL )
+   {
+      SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );
       return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("concsolver %s starts sync %lli\n", concsolver->name, concsolver->nsyncs);
 
