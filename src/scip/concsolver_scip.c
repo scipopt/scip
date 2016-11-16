@@ -276,6 +276,13 @@ SCIP_RETCODE initConcsolver(
    }
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
+   /*TODO this assert fails on check/instances/Orbitope/packorb_1-FullIns_3.cip
+    * there SCIPgetNVars(scip)(=data->nvars) is 87 but SCIPgetNOrigVars(data->solverscip) is 90
+    * how can there be more variables in the copy ?????!!!
+    *
+    * also fails on check/instances/Orbitope/partorb_1-FullIns_3.cip so this seems to be related
+    * to orbitope constraints.
+    */
    assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
    SCIPfreeBufferArray(data->solverscip, &varperm);

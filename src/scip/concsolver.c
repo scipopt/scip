@@ -391,7 +391,7 @@ SCIP_RETCODE SCIPconcsolverSync(
          progress = 1.0;
 
       /* should not be negative */
-      assert(progress >= 0.0);
+      assert(SCIPsetIsGE(set, progress, 0.0));
 
       if( progress < 0.5 * set->concurrent_targetprogress )
          freqfactor = set->concurrent_freqfactor;
