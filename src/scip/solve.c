@@ -2994,6 +2994,7 @@ SCIP_RETCODE solveNodeRelax(
    assert(solvelpagain != NULL);
    assert(propagateagain != NULL);
    assert(solverelaxagain != NULL);
+   assert(relaxcalled != NULL);
    assert(bestrelaxsol != NULL);
    assert(bestrelaxval != NULL);
    assert(!(*cutoff));
