@@ -3205,11 +3205,13 @@ SCIP_RETCODE enforceConstraints(
     */
    resolved = FALSE;
 
-   /* check if all constraint handler implement the enforelax callback, otherwise enforce the LP solution */
-   /* @todo move  this somewhere else since the included constraint handler should not change during solving */
+   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
    for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
-      if( set->conshdlrs_enfo[h]->consenforelax == NULL )
+   {
+      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
+            (set->conshdlrs_enfo[h]->nconss > 0)) )
          enforcerelaxsol = FALSE;
+   }
 
    for( h = 0; h < set->nconshdlrs && !resolved; ++h )
    {
