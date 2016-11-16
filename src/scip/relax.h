@@ -26,10 +26,13 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_primal.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_set.h"
+#include "scip/type_sol.h"
 #include "scip/type_stat.h"
+#include "scip/type_tree.h"
 #include "scip/type_relax.h"
 #include "scip/pub_relax.h"
 
@@ -183,13 +186,20 @@ void SCIPrelaxEnableOrDisableClocks(
 /** creates global relaxation data */
 extern
 SCIP_RETCODE SCIPrelaxationCreate(
-   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** frees global relaxation data */
 extern
 SCIP_RETCODE SCIPrelaxationFree(
-   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PRIMAL*          primal              /**< primal data */
    );
 
 /** sets the relaxsolzero flag in the relaxation data to the given value */
@@ -236,6 +246,25 @@ extern
 void SCIPrelaxationSolObjAdd(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_Real             val                 /**< value to add to the objective value */
+   );
+
+/** gets pointer to best relaxation solution */
+extern
+SCIP_SOL* SCIPrelaxationGetBestRelaxSol(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   );
+
+/** sets the objective value of the best relaxation solution */
+extern
+void SCIPrelaxationSetBestRelaxSolObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             obj                 /**< objective value of best relaxation solution */
+   );
+
+/** returns the objective value of the best relaxation solution */
+extern
+SCIP_Real SCIPrelaxationGetBestRelaxSolObj(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
 #ifdef __cplusplus
