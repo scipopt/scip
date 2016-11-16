@@ -370,6 +370,9 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    assert(syncstore->initialized);
    assert(delay != NULL);
 
+   if( syncdata->status != SCIP_STATUS_UNKNOWN )
+      return NULL;
+
    nextsyncnum = syncdata->syncnum + 1;
    newdelay = *delay - syncdata->syncfreq;
 

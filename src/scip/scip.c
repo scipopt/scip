@@ -15659,8 +15659,6 @@ SCIP_RETCODE SCIPsolveParallel(
       int                   ncandsolvertypes;
       SCIP_Real             prefpriosum;
 
-      SCIP_CALL( SCIPcreateConcurrent(scip, NULL, NULL) );
-
       /* check if concurrent solve is configured to presolve the problem
        * before setting up the concurrent solvers */
       if( scip->set->concurrent_presolvebefore )

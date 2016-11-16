@@ -55,7 +55,9 @@ SCIP_RETCODE SCIPcreateConcurrent(
    int nvars;
 
    assert(scip != NULL);
-   assert(scip->concurrent == NULL || scip->concurrent->mainscip != scip);
+   assert(concsolver != NULL);
+   assert(varperm != NULL);
+   assert(scip->concurrent == NULL);
 
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
@@ -65,8 +67,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    nvars = SCIPgetNOrigVars(scip);
    scip->concurrent->varperm = NULL;
 
-   if( varperm != NULL )
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
 
    scip->concurrent->concsolver = concsolver;
    scip->concurrent->mainscip = scip;
@@ -84,25 +85,20 @@ SCIP_RETCODE SCIPcreateConcurrent(
       SCIP_CALL( SCIPstartClock(scip, scip->concurrent->wallclock) );
    }
 
+   assert(SCIPfindHeur(scip, "sync") == NULL);
+
+   SCIP_CALL( SCIPincludeHeurSync(scip) );
    scip->concurrent->heursync = SCIPfindHeur(scip, "sync");
 
-   if( scip->concurrent->heursync == NULL )
-   {
-      SCIP_CALL( SCIPincludeHeurSync(scip) );
-      scip->concurrent->heursync = SCIPfindHeur(scip, "sync");
-   }
+   assert(SCIPfindProp(scip, "sync") == NULL);
 
+   SCIP_CALL( SCIPincludePropSync(scip) );
    scip->concurrent->propsync = SCIPfindProp(scip, "sync");
 
-   if( scip->concurrent->propsync == NULL )
-   {
-      SCIP_CALL( SCIPincludePropSync(scip) );
-      scip->concurrent->propsync = SCIPfindProp(scip, "sync");
-   }
+   scip->concurrent->eventglobalbnd = NULL;
+   assert(SCIPfindEventhdlr(scip, "globalbnd") == NULL);
 
-   scip->concurrent->eventglobalbnd = SCIPfindEventhdlr(scip, "globalbnd");
-
-   if( scip->set->concurrent_commvarbnds && scip->concurrent->eventglobalbnd == NULL && concsolver != NULL )
+   if( scip->set->concurrent_commvarbnds )
    {
       SCIP_CALL( SCIPincludeEventHdlrGlobalbnd(scip) );
       scip->concurrent->eventglobalbnd = SCIPfindEventhdlr(scip, "globalbnd");
@@ -156,6 +152,8 @@ SCIP_RETCODE SCIPfreeConcurrent(
    if( scip->concurrent == NULL )
       return SCIP_OKAY;
 
+   assert(scip->concurrent->varperm != NULL);
+
    /* check if we are the SCIP that is responsible for freeing this concurent struct
     * or just a subscip */
    if( scip->concurrent->mainscip != scip )
@@ -172,7 +170,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
       if( scip->concurrent->wallclock != NULL )
          SCIPfreeClock(scip, &scip->concurrent->wallclock);
 
-      SCIPfreeBlockMemoryArrayNull(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
 
       SCIPfreeBlockMemory(scip, &scip->concurrent);
    }
