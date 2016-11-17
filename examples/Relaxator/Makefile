@@ -14,8 +14,8 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for event handler plugin in C
-#@author  Stefan Heinz
+#@brief   Makefile for C example using different relaxators
+#@author  Benjamin Mueller
 
 
 #-----------------------------------------------------------------------------
@@ -23,10 +23,12 @@
 #-----------------------------------------------------------------------------
 SCIPDIR         =       ../..
 
+
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
 include $(SCIPDIR)/make/make.project
+
 
 #-----------------------------------------------------------------------------
 # Main Program
@@ -34,7 +36,7 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
-			relax_lp.o\
+			relax_lp.o \
 			relax_nlp.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
