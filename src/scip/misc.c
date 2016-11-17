@@ -2602,7 +2602,7 @@ SCIP_RETCODE hashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
-   assert(origin != NULL);
+   assert(hashval != 0);
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
@@ -2679,6 +2679,7 @@ SCIP_Bool hashmapLookup(
 
    /* get the hash value */
    hashval = hashvalue((size_t)origin);
+   assert(hashval != 0);
 
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
