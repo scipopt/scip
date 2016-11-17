@@ -9118,7 +9118,13 @@ SCIP_RETCODE SCIPaddClique(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
-/** calculates a partition of the given set of binary variables into cliques;
+/** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
+ *
+ *  The algorithm performs the following steps:
+ *  - recomputes connected clique components, if necessary
+ *  - computes a clique partition for every connected clique component greedily.
+ *  - relabels the resulting cliques such that the resulting partition obeys the variable order
+ *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
  *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
