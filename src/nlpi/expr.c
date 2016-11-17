@@ -15845,9 +15845,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             SCIP_EXPRGRAPHNODE* constnode;
 
-            if( node->value != node->value )  /*lint !e777*/
+            if( !SCIPisFinite(node->value) )  /*lint !e777*/
             {
-               SCIPdebugMessage("Expression graph simplify turned node into NaN.\n");
+               SCIPdebugMessage("Expression graph simplify turned node into NaN or inf.\n");
                *domainerror = TRUE;
                break;
             }
