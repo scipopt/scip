@@ -54,6 +54,7 @@
 #define DEFAULT_ADDBINCONSROW                FALSE
 #define DEFAULT_MAXNUMBERVIOLATEDCONS        10000
 #define DEFAULT_REEVALAGE                    5LL
+#define DEFAULT_STOPBRANCHING                TRUE
 
 /*
  * Data structures
@@ -118,6 +119,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             prevbestdownvalid;
    SCIP_Real             prevprovedbound;
    int                   restartindex;
+   SCIP_Bool             stopbranching;
 
    SCIP_Longint          reevalage;
    SCIP_Longint*         lastbranchid;
@@ -1478,10 +1480,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIP_CALL( allocBinaryBoundData(scip, &binarybounddata, (int)SCIPceil(scip, 0.1 * nlpcands)) );
       }
 
-      /* init all structs and variables */
-      initBranchingResultData(scip, downbranchingresult);
-      initBranchingResultData(scip, upbranchingresult);
-
       basenode = SCIPgetCurrentNode(scip);
       lpobjval = SCIPgetLPObjval(scip);
       *provedbound = lpobjval;
@@ -1502,6 +1500,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIP_Bool downdualboundvalid;
          SCIP_Real updualbound;
          SCIP_Bool updualboundvalid;
+
+         initBranchingResultData(scip, downbranchingresult);
+         initBranchingResultData(scip, upbranchingresult);
 
          c = c % nlpcands;
          assert(lpcands[c] != NULL);
@@ -1570,7 +1571,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
             }
 
-            if( isExecuteFirstLevelBranching(status) )
+            if( isExecuteFirstLevelBranching(status) && (!branchruledata->stopbranching || !downbranchingresult->cutoff) )
             {
                SCIPdebugMessage("First Level up branching on variable <%s>\n", SCIPvarGetName(branchvar));
                /* execute the up branching on first level for the variable "branchvar" */
@@ -2263,5 +2264,9 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/reevalage",
          "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
          &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/stopbranching",
+         "if the first level down branch is infeasible, should we stop evaluating the up branch?",
+         &branchruledata->stopbranching, TRUE, DEFAULT_STOPBRANCHING, NULL, NULL) );
    return SCIP_OKAY;
 }
