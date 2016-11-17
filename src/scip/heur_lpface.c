@@ -92,8 +92,8 @@ struct SCIP_HeurData
                                               *   to constraints in subproblem?                                     */
    SCIP_Bool             dualbasisequations; /**< should the dually nonbasic rows be turned into equations?        */
    SCIP_Bool             keepsubscip;        /**< should the heuristic continue solving the same sub-SCIP? */
-   char                  subscipobjective;   /**< objective function in the sub-SCIP: (z)ero, (r)oot-LP-difference, (i)nference, LP (f)ractionality, (o)riginal */
-
+   char                  subscipobjective;   /**< objective function in the sub-SCIP: (z)ero, (r)oot-LP-difference,
+                                              *   (i)nference, LP (f)ractionality, (o)riginal */
 
    SCIP_STATUS           submipstatus;       /**< return status of the sub-MIP */
    SCIP_Longint          submipnlpiters;     /**< number of LP iterations of the sub-MIP */
@@ -103,7 +103,6 @@ struct SCIP_HeurData
                                               *   changed before heuristic becomes active */
    SUBSCIPDATA*          subscipdata;        /**< sub-SCIP data structure */
 };
-
 
 /*
  * Local methods
@@ -147,7 +146,6 @@ static SCIP_RETCODE fixVariables(
       /* skip non-column variables */
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
-
 
       solval = SCIPgetSolVal(scip, NULL, var);
       col = SCIPvarGetCol(vars[i]);
@@ -229,7 +227,6 @@ SCIP_RETCODE createRows(
       vals = SCIProwGetVals(rows[i]);
       nnonz = SCIProwGetNNonz(rows[i]);
       cols = SCIProwGetCols(rows[i]);
-
 
       /* only subtract constant if left hand side is not infinite */
       lhs = SCIProwGetLhs(rows[i]);
@@ -323,7 +320,6 @@ SCIP_RETCODE setupSubproblem(
 
    return SCIP_OKAY;
 }
-
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
@@ -423,7 +419,6 @@ SCIP_Longint calcNodeLimit(
       nodelimit = MIN(nodelimit, heurdata->maxnodes);
    }
 
-
    return nodelimit;
 }
 
@@ -496,10 +491,8 @@ SCIP_RETCODE setSubscipParameters(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
 #endif
 
-
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -714,7 +707,6 @@ SCIP_DECL_HEURINIT(heurInitLpface)
    heurdata->submippresoltime = 0.0;
    heurdata->nvarsfixed = -1;
 
-
    return SCIP_OKAY;
 }
 
@@ -894,7 +886,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    *result = SCIP_DELAYED;
 
-
    /* we skip infeasible nodes */
    if( nodeinfeasible )
       return SCIP_OKAY;
@@ -906,7 +897,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    /* do not run heuristic on nodes that were not solved to optimality */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
-
 
    assert(SCIPgetCurrentNode(scip) != NULL);
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
@@ -975,7 +965,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    if( SCIPisStopped(scip) )
      return SCIP_OKAY;
-
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    assert(nvars > 0);
@@ -1128,7 +1117,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    }
 #endif
 
-
    /* we must not be infeasible at this stage */
    assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE);
 
@@ -1215,7 +1203,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          subvars = NULL;
       }
 
-
       subscipdataReset(heurdata->subscipdata);
    }
    else
@@ -1236,7 +1223,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    return SCIP_OKAY;
 }
-
 
 /*
  * primal heuristic specific interface methods
@@ -1304,7 +1290,6 @@ SCIP_RETCODE SCIPincludeHeurLpface(
          "should dually nonbasic rows be turned into equations?",
          &heurdata->dualbasisequations, TRUE, DEFAULT_DUALBASISEQUATIONS, NULL, NULL) );
 
-
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/keepsubscip",
          "should the heuristic continue solving the same sub-SCIP?",
          &heurdata->keepsubscip, TRUE, DEFAULT_KEEPSUBSCIP, NULL, NULL) );
@@ -1320,5 +1305,6 @@ SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minpathlen",
          "the minimum active search tree path length along which lower bound hasn't changed before heuristic becomes active",
          &heurdata->minpathlen, TRUE, DEFAULT_MINPATHLEN, 0, 65531, NULL, NULL) );
+
    return SCIP_OKAY;
 }
