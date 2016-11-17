@@ -109,7 +109,8 @@ struct SCIP_HeurData
  */
 
 /** fixes variables of the subproblem considering their reduced costs */
-static SCIP_RETCODE fixVariables(
+static
+SCIP_RETCODE fixVariables(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
@@ -164,6 +165,7 @@ static SCIP_RETCODE fixVariables(
             SCIPdebugMsg(scip, "Fixing variable <%s> (obj: %g), local bounds [%.1g, %.1g], redcost %9.5g, LP sol val %9.5g\n",
                   SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), redcost, solval);
             assert(!SCIPisInfinity(scip, solval));
+            assert(!SCIPisInfinity(scip, -solval));
             SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
             if( SCIPvarIsIntegral(var) )
@@ -292,7 +294,7 @@ SCIP_RETCODE setupSubproblem(
    /* set up the variables of the subproblem */
    SCIP_CALL( fixVariables(scip, subscip, subvars, heurdata, success) );
 
-   /* we copy the rows of the LP, if the enough variables could be fixed and we work on the MIP
+   /* we copy the rows of the LP, if enough variables could be fixed and we work on the MIP
       relaxation of the problem */
    if( *success && heurdata->uselprows )
    {
@@ -329,8 +331,8 @@ SCIP_RETCODE createNewSol(
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    SCIP_HEUR*            heur,               /**< lpface heuristic structure */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   int*                  solindex,           /**< index of the solution */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
+   int*                  solindex,           /**< pointer to store index of the solution */
+   SCIP_Bool*            success             /**< pointer to store whether new solution was found or not */
    )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
@@ -412,6 +414,7 @@ SCIP_Longint calcNodeLimit(
    nodelimit -= 100 * SCIPheurGetNCalls(heur);
 
    nodelimit += heurdata->nodesofs;
+
    /* determine the node limit for the current process */
    if( !heurdata->keepsubscip )
    {
@@ -471,7 +474,7 @@ SCIP_RETCODE setSubscipLimits(
    return SCIP_OKAY;
 }
 
-/* sets all one-time parameter settings like search strategy, but no limits */
+/** sets all one-time parameter settings like search strategy, but no limits */
 static
 SCIP_RETCODE setSubscipParameters(
    SCIP*                 scip,               /**< original SCIP data structure */
@@ -482,8 +485,6 @@ SCIP_RETCODE setSubscipParameters(
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable output to console */
 
 #ifdef SCIP_DEBUG
    /* for debugging lpface, enable MIP output */
@@ -530,6 +531,7 @@ SCIP_RETCODE setSubscipParameters(
 }
 
 #ifdef SCIP_DEBUG
+/** print debug message listing solving time, nodes, and status of sub-SCIP */
 static
 SCIP_RETCODE subscipGetInfo(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -581,8 +583,8 @@ SCIP_RETCODE changeSubvariableObjective(
          objcoeff = 0.0;
          break;
 
+         /* use current LP fractionality as objective */
       case 'f':
-      /* use current LP fractionality as objective */
          lpsolval = SCIPvarGetLPSol(var);
          upfrac = SCIPfloor(scip, lpsolval + 1.0) - lpsolval;
          downfrac = lpsolval - SCIPceil(scip, lpsolval - 1.0);
@@ -607,7 +609,7 @@ SCIP_RETCODE changeSubvariableObjective(
          objcoeff = SCIPvarGetObj(var);
          break;
       default:
-    objcoeff = 0.0;
+         objcoeff = 0.0;
          break;
    }
 
@@ -828,7 +830,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of primal heuristic (called after problem was transformed) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 SCIP_DECL_HEUREXIT(heurExitLpface)
 {  /*lint --e{715}*/
@@ -841,8 +843,6 @@ SCIP_DECL_HEUREXIT(heurExitLpface)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* initialize data */
-
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "LP Face heuristic stats: Status: %d Nodes: %d LP iters: %d Fixed: %d Presolving time: %.2f\n",
          heurdata->submipstatus, heurdata->usednodes, heurdata->submipnlpiters, heurdata->nvarsfixed, heurdata->submippresoltime);
@@ -854,27 +854,27 @@ SCIP_DECL_HEUREXIT(heurExitLpface)
 static
 SCIP_DECL_HEUREXEC(heurExecLpface)
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;                  /* primal heuristic data                               */
-   SCIP* subscip = NULL;                            /* the subproblem created by lpface                 */
-   SCIP_HASHMAP* varmapfw = NULL;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_EVENTHDLR* eventhdlr = NULL;                /* event handler for LP events                     */
+ SCIP_HEURDATA* heurdata; /* primal heuristic data */
+ SCIP* subscip = NULL; /* the subproblem created by lpface */
+ SCIP_HASHMAP* varmapfw = NULL; /* mapping of SCIP variables to sub-SCIP variables */
+ SCIP_EVENTHDLR* eventhdlr = NULL; /* event handler for LP events */
 
-   SCIP_VAR** vars;                          /* original problem's variables                        */
-   SCIP_VAR** subvars = NULL;                       /* subproblem's variables                              */
+ SCIP_VAR** vars; /* original problem's variables */
+ SCIP_VAR** subvars = NULL; /* subproblem's variables */
 
-   SCIP_Real focusnodelb;
-   SCIP_Real rootlb;
-   SCIP_Bool success;
-   SCIP_Bool keepthisscip;
+ SCIP_Real focusnodelb;
+ SCIP_Real rootlb;
+ SCIP_Bool success;
+ SCIP_Bool keepthisscip;
 
-   SCIP_Longint nodelimit;                 /* node limit for the subproblem                       */
+ SCIP_Longint nodelimit; /* node limit for the subproblem */
 
-   int nvars;                                /* number of original problem's variables              */
-   int nbinvars;
-   int nintvars;
-   int i;
+ int nvars; /* number of original problem's variables */
+ int nbinvars;
+ int nintvars;
+ int i;
 
-   SCIP_RETCODE retcode;
+ SCIP_RETCODE retcode;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -890,7 +890,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( nodeinfeasible )
       return SCIP_OKAY;
 
-   /* if heuristic should be delayed, wait until certain number of nodes is reached */
+   /* the node number to run the heuristic again was not yet reached */
    if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
       return SCIP_OKAY;
 
@@ -907,11 +907,11 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       return SCIP_OKAY;
 
    /* do not run if the current focus node already has a lower bound higher than the LP value at the node, maybe due to strong branching */
-   if( SCIPisLT(scip, SCIPgetLPObjval(scip), focusnodelb) )
+   if( SCIPisGT(scip, focusnodelb, SCIPgetLPObjval(scip)) )
       return SCIP_OKAY;
 
    /* only run at lower bound defining nodes */
-   if( SCIPisLT(scip, SCIPgetLowerbound(scip), focusnodelb) )
+   if( SCIPisGT(scip, focusnodelb, SCIPgetLowerbound(scip)) )
       return SCIP_OKAY;
 
    /* only run if lower bound has increased since last LP objective where the sub-MIP was solved to infeasibility */
@@ -934,11 +934,13 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       int nonimprovingpathlen = 0; /* the length of the current path (in edges) along which the lower bound stayed the same */
 
       parent = SCIPnodeGetParent(SCIPgetCurrentNode(scip));
+
       /* count the path length along which the dual bound has not changed */
       while( SCIPisEQ(scip, SCIPnodeGetLowerbound(parent), focusnodelb) && nonimprovingpathlen < heurdata->minpathlen )
       {
          ++nonimprovingpathlen;
-         /* we cannot hit the root node because the root lower bound was strictly smaller */
+
+         /* we cannot hit the root node because the root lower bound is strictly smaller */
          assert(SCIPnodeGetParent(parent) != NULL);
          parent = SCIPnodeGetParent(parent);
       }
@@ -946,7 +948,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       /* we return if the nonimproving path is too short measured by the heuristic frequency */
       if( nonimprovingpathlen < heurdata->minpathlen )
       {
-         /* we do not delay the heuristic if the path has length zero, otherwise it may be called at children so that the path length is sufficient */
+         /* we do not delay the heuristic if the path has length zero, otherwise it may be called at children so that
+          * the path length is sufficient
+          */
          if( nonimprovingpathlen == 0 )
             *result = SCIP_DIDNOTRUN;
 
@@ -1062,7 +1066,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
       success = FALSE;
 
+      /* disable output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
       /* create event handler for LP events */
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLpface, NULL) );
       if( eventhdlr == NULL )
@@ -1156,10 +1162,10 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    {
       SCIP_SOL** subsols;
       int nsubsols;
-      int solindex;                             /* index of the solution created by lpface          */
+      int solindex;
 
       /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted */
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one is accepted */
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       success = FALSE;
