@@ -45,13 +45,13 @@
 #define DEFAULT_NODESOFS      1500LL         /**< number of nodes added to the contingent of the total nodes            */
 #define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem         */
 #define DEFAULT_LPLIMFAC      2.0            /**< factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_USELPROWS     TRUE          /** should subproblem be created out of the rows in the LP rows,
-                                              * otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE           /** if uselprows == FALSE, should all active cuts from cutpool be copied
+#define DEFAULT_USELPROWS     TRUE           /**< should subproblem be created out of the rows in the LP rows,
+                                              *   otherwise, the copy constructors of the constraints handlers are used */
+#define DEFAULT_COPYCUTS      TRUE           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?                                     */
-#define DEFAULT_DUALBASISEQUATIONS FALSE    /**< should the dually nonbasic rows be turned into equations?        */
-#define DEFAULT_KEEPSUBSCIP   FALSE         /**< should the heuristic continue solving the same sub-SCIP? */
-#define DEFAULT_MINPATHLEN        5         /**< the minimum active search tree path length along which the lower bound hasn't
+#define DEFAULT_DUALBASISEQUATIONS FALSE     /**< should the dually nonbasic rows be turned into equations?        */
+#define DEFAULT_KEEPSUBSCIP   FALSE          /**< should the heuristic continue solving the same sub-SCIP? */
+#define DEFAULT_MINPATHLEN        5          /**< the minimum active search tree path length along which the lower bound hasn't
                                               *   changed before heuristic becomes active */
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lpface"
@@ -115,7 +115,7 @@ static SCIP_RETCODE fixVariables(
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
-   SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
+   SCIP_Bool*            success             /**< pointer to store whether enough integer variables were fixed */
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                */
@@ -287,8 +287,10 @@ SCIP_RETCODE setupSubproblem(
    int nvars = SCIPgetNVars(scip);
    SCIP_Real upperbound;
    SCIP_CONS* origobjcons;
-   int nobjvars = 0;
    int i;
+#ifndef NDEBUG
+   int nobjvars = 0;
+#endif
 
    /* set up the variables of the subproblem */
    SCIP_CALL( fixVariables(scip, subscip, subvars, heurdata, success) );
