@@ -4323,7 +4323,7 @@
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e.,
  * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
  *
- * \par RELAX_FULLLPINFO: whether the whole lp is included in the relaxation.
+ * \par RELAX_INCLUDESLP: whether the whole lp is included in the relaxation.
  * This flag should be set to TRUE if all active LP-rows are included in the relaxation and every feasible solution produced
  * by the relaxator will satisfy all these LP-constraints. Only if this is set to TRUE, the solutions of this relaxator can
  * be enforced using the \ref CONSENFORELAX callback, meaning that they will be used as primal solutions if feasible and can
@@ -4390,19 +4390,22 @@
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding
  * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() and SCIPflushLP() to
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
- * and SCIPgetLPColsData(), SCIPseparateSol() to call the cutting plane separators for a given primal solution, and
- * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
- * In addition, you may want to call SCIPtrySolFree() if you think that you have found a feasible primal solution.
+ * and SCIPgetLPColsData(), and SCIPseparateSol() to call the cutting plane separators for a given primal solution.
  *
- * The primal solution of the relaxation can be stored inside the data structures of SCIP with
- * <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code> and later accessed by
- * <code>SCIPgetRelaxSolVal()</code>.
+ * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. The primal solution of the relaxation can
+ * be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code>. If the
+ * RELAX_INCLUDESLP flag is set to true, this solution will be enforced and, if feasible, added to the solution storage if the
+ * lowerbound of this relaxator is the largest among all relaxators and the LP. You may also call SCIPtrySolFree() directly from the
+ * relaxation handler to make sure that a solution is added to the solution storage if it is feasible, even if the relaxator does not
+ * include the LP or another relaxator produced a stronger bound. After the relaxation round is finished, the best relaxation solution
+ * can be accessed via <code>SCIPgetRelaxSolVal()</code>.
  * Furthermore, there is a list of external branching candidates, that can be filled by relaxation handlers and constraint handlers,
- * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems.
- * Relaxation handlers should store appropriate candidates in this list using the method <code>SCIPaddExternBranchCand()</code>.
+ * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems. If the relaxation
+ * solution is enforced, the integrality constraint handler will add external branching candidates for the relaxation solution
+ * automatically, but the relaxation handler can also directly call <code>SCIPaddExternBranchCand()</code>.
  *
- * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound with a call to
- * SCIPupdateLocalLowerbound().
+ * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound through the corresponding pointer and
+ * possibly a solution through <code>SCIPsetRelaxSolVal()</code> calls.
  * However, it may also produce domain reductions, add additional constraints or generate cutting planes. It has the
  * following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
@@ -4420,7 +4423,10 @@
  * In the above criteria, "the same relaxation" means that the LP relaxation stayed unmodified. This means in particular
  * that no row has been added and no bounds have been modified. For example, changing the bounds of a variable will, as
  * long as it was a COLUMN variable, lead to a modification in the LP such that the relaxation handler is called again
- * after it returned with the result code SCIP_REDUCEDDOM.
+ * after it returned with the result code SCIP_REDUCEDDOM. If the relaxation solution should be enforced, the relaxation
+ * handler has to produce a new solution in this case which satisfies the updated LP. If a relaxation handler should only run
+ * once per node to compute a lower bound, it should store the node of the last relaxation call itself and return
+ * SCIP_DIDNOTRUN for subsequent calls in the same node.
  *
  *
  * @section RELAX_ADDITIONALCALLBACKS Additional Callback Methods of a Relaxation Handler
