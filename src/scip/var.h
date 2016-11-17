@@ -1645,6 +1645,13 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
    );
 
+/** sets the variable clique component index, or -1 if index should be reset */
+extern
+void SCIPvarSetCliqueComponentIdx(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   idx                 /**< clique component index of this variable */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
