@@ -43168,7 +43168,7 @@ void printConcsolverStatistics(
    int               i;
    int               winner;
 
-   if( scip->concurrent == NULL )
+   if( !SCIPsyncstoreIsInitialized(scip->syncstore) )
       return;
 
    nconcsolvers = SCIPgetNConcurrentSolvers(scip);
