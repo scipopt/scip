@@ -47,6 +47,17 @@ struct SCIP_MessagehdlrData
 
 extern "C"
 {
+/** error message print method of message handler */
+static
+SCIP_DECL_ERRORPRINTING(messagehdlrErrorObj)
+{
+   assert( data != 0 );
+
+   scip::ObjMessagehdlr* objmessagehdlr = static_cast<scip::ObjMessagehdlr*>(data);
+
+   objmessagehdlr->scip_error(0, file, msg);
+}
+
 /** warning message print method of message handler */
 static
 SCIP_DECL_MESSAGEWARNING(messagehdlrWarningObj)
@@ -168,3 +179,13 @@ scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    return messagehdlrdata->objmessagehdlr;
 }
 
+/** set static error output function to the corresponding function of message handler */
+EXTERN
+void SCIPsetStaticErrorPrintingMessagehdlr(
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   assert( messagehdlr != NULL );
+
+   SCIPmessageSetErrorPrinting(messagehdlrErrorObj, (void*) SCIPgetObjMessagehdlr(messagehdlr));
+}

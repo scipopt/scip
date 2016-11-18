@@ -504,11 +504,13 @@ SCIP_RETCODE switchWatchedvars(
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
    }
 
    /* catch events on new watched variables */
@@ -976,7 +978,8 @@ SCIP_RETCODE analyzeConflict(
    assert(consdata != NULL);
 
    /* initialize conflict analysis, and add all bounds of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       /* the opposite bound is in conflict with this literal */
@@ -2650,11 +2653,13 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
    {
       assert(consdata->filterpos1 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      consdata->watchedvar1 = -1;
    }
    if( consdata->watchedvar2 != -1 )
    {
       assert(consdata->filterpos2 != -1);
       SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      consdata->watchedvar2 = -1;
    }
 
    return SCIP_OKAY;
@@ -3004,8 +3009,10 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+
       *result = SCIP_CONSADDED;
    }
 

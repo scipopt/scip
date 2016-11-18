@@ -21,6 +21,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_PI and M_E on Windows */
+
 #include <assert.h>
 #include <string.h>
 #include <math.h>
@@ -39,15 +41,6 @@
 #define READER_NAME             "osilreader"
 #define READER_DESC             "file reader for OS instance language (OSiL) format"
 #define READER_EXTENSION        "osil"
-
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
-
-#ifndef M_E
-#define M_E            2.7182818284590452354
-#endif
-
 
 /*
  * Data structures

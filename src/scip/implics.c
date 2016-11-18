@@ -1628,32 +1628,32 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
       /* check whether both clique lists have a same clique */
       while( TRUE )  /*lint !e716*/
       {
-	 cliqueid = SCIPcliqueGetId(cliques2[i2]);
+         cliqueid = SCIPcliqueGetId(cliques2[i2]);
 
-	 /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
-	  * there will be no same item and we can stop */
-	 if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
-	    break;
+         /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
+            break;
 
-	 while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-	 {
-	    ++i1;
-	    assert(i1 < ncliques1);
-	 }
-	 cliqueid = SCIPcliqueGetId(cliques1[i1]);
+         while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+         {
+            ++i1;
+            assert(i1 < ncliques1);
+         }
+         cliqueid = SCIPcliqueGetId(cliques1[i1]);
 
-	 /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
-	  * there will be no same item and we can stop */
-	 if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
-	    break;
+         /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
+            break;
 
-	 while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-	 {
-	    ++i2;
-	    assert(i2 < ncliques2);
-	 }
-	 if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-	    return TRUE;
+         while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+         {
+            ++i2;
+            assert(i2 < ncliques2);
+         }
+         if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+            return TRUE;
       }
    }
    return FALSE;
@@ -1782,7 +1782,7 @@ SCIP_RETCODE SCIPcliquetableCreate(
    SCIP_ALLOC( BMSallocMemory(cliquetable) );
 
    /* create hash table to test for multiple cliques */
-   hashtablesize = SCIPcalcHashtableSize(HASHTABLE_CLIQUETABLE_SIZE);
+   hashtablesize = HASHTABLE_CLIQUETABLE_SIZE;
    hashtablesize = MAX(hashtablesize, (set->misc_usesmalltables ? SCIP_HASHSIZE_CLIQUES_SMALL : SCIP_HASHSIZE_CLIQUES));
    SCIP_CALL( SCIPhashtableCreate(&((*cliquetable)->hashtable), blkmem, hashtablesize,
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );
@@ -1796,6 +1796,8 @@ SCIP_RETCODE SCIPcliquetableCreate(
    (*cliquetable)->ndirtycliques = 0;
    (*cliquetable)->nentries = 0;
    (*cliquetable)->incleanup = FALSE;
+   (*cliquetable)->componentupdate = FALSE;
+   (*cliquetable)->ncliquecomponents = -1;
 
    return SCIP_OKAY;
 }
@@ -2230,6 +2232,35 @@ SCIP_RETCODE sortAndMergeClique(
    return SCIP_OKAY;
 }
 
+/** checks if current connected components information will get outdated after adding this new clique */
+static
+void cliquetableCheckComponentUpdate(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_CLIQUE*          clique              /**< clique that should be added */
+   )
+{
+   int i;
+   assert(cliquetable != NULL);
+   assert(clique != NULL);
+
+   /* check if last variable was a single component so far */
+   if( SCIPvarGetCliqueComponentIdx(clique->vars[clique->nvars - 1]) == -1 )
+   {
+      cliquetable->componentupdate = TRUE;
+      return;
+   }
+
+   /* check if this clique connects two previously disconnected components of the clique graph */
+   for( i = 0; i < clique->nvars - 1 && !cliquetable->componentupdate; ++i )
+   {
+      if( SCIPvarGetCliqueComponentIdx(clique->vars[i]) == -1 ||
+            SCIPvarGetCliqueComponentIdx(clique->vars[i]) != SCIPvarGetCliqueComponentIdx(clique->vars[i + 1]) )
+      {
+         cliquetable->componentupdate = TRUE;
+         break;
+      }
+   }
+}
 
 /** adds a clique to the clique table, using the given values for the given variables;
  *  performs implications if the clique contains the same variable twice
@@ -2468,6 +2499,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
          clique->index = cliquetable->ncliques;
          cliquetable->ncliques++;
          cliquetable->nentries += nvars;
+         cliquetableCheckComponentUpdate(cliquetable, clique);
 
          SCIP_CALL( SCIPhashtableInsert(cliquetable->hashtable, (void*)clique) );
 
@@ -2982,6 +3014,176 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    return SCIP_OKAY;
 }
 
+/** helper function that returns the graph node index for a variable during connected component detection */
+static
+int getNodeNumberBinvar(
+   SCIP_VAR*             binvar,             /**< binary (or implicit binary) variable */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of integer variables */
+   int                   nimplvars           /**< number of implicit integer variables */
+   )
+{
+   SCIP_VAR* activevar;
+   int nodeindex;
+
+   assert(binvar != NULL);
+   assert(SCIPvarIsBinary(binvar));
+
+   /* get active representative of variable */
+   if( !SCIPvarIsActive(binvar) )
+   {
+      activevar = SCIPvarGetProbvar(binvar);
+      if( !SCIPvarIsActive(activevar) )
+         return -1;
+   }
+   else
+      activevar = binvar;
+
+
+   assert(SCIPvarGetType(activevar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(activevar) == SCIP_VARTYPE_IMPLINT);
+
+   /* assign node index (problem index for binaries, subtract number of integer variables for integers) */
+   if( SCIPvarGetType(activevar) == SCIP_VARTYPE_BINARY )
+      nodeindex = SCIPvarGetProbindex(activevar);
+   else
+      nodeindex = SCIPvarGetProbindex(activevar) - nintvars;
+
+   assert(nodeindex >= 0);
+   assert(nodeindex < nbinvars + nimplvars);
+
+   return nodeindex;
+}
+
+/** computes connected components of the clique graph */
+SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
+   SCIP_CLIQUETABLE*    cliquetable,        /**< clique table data structure */
+   SCIP_SET*            set,                /**< global SCIP settings */
+   SCIP_VAR**           vars,               /**< array of problem variables, sorted by variable type */
+   int                  nbinvars,           /**< number of binary variables */
+   int                  nintvars,           /**< number of integer variables */
+   int                  nimplvars           /**< number of implicit integer variables */
+   )
+{
+   SCIP_DIGRAPH* digraph;
+   int nimplbinvars;
+   int* components;
+   int* sizes;
+   int v;
+   int c;
+   int nbinvarstotal;
+   SCIP_CLIQUE** cliques;
+
+   assert(cliquetable != NULL);
+   assert(vars != NULL);
+
+   nimplbinvars = 0;
+   cliquetable->componentupdate = FALSE;
+
+   /* detect implicit integer variables with bounds {0,1} because they might appear in cliques, as well */
+   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
+   {
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+
+      if( SCIPvarIsBinary(vars[v]) )
+         ++nimplbinvars;
+   }
+
+   /* count binary and implicit binary variables */
+   nbinvarstotal = nbinvars + nimplbinvars;
+
+   /* if there are no binary variables, continue */
+   if( nbinvarstotal == 0 )
+   {
+      cliquetable->ncliquecomponents = 0;
+      return SCIP_OKAY;
+   }
+
+   /* no cliques are present */
+   if( cliquetable->ncliques == 0 )
+   {
+      cliquetable->ncliquecomponents = nbinvarstotal;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &components, nbinvars + nimplvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &sizes, nbinvars + nimplvars) );
+
+   /* collect clique list sizes as an upper bound for the edges for each variable node in the digraph */
+   for( v = 0; v < nbinvars; ++v )
+   {
+      assert(SCIPvarIsActive(vars[v]));
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      sizes[v] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
+   }
+   /* collect sizes also for the implicit binary variables */
+   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
+   {
+      if( SCIPvarIsBinary(vars[v]) )
+         sizes[v - nintvars] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
+      else
+         sizes[v - nintvars] = 0;
+   }
+
+   SCIP_CALL( SCIPdigraphCreate(&digraph, nbinvars + nimplvars) );
+   SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
+
+   cliques = cliquetable->cliques;
+
+   /* loop over cliques and add them as paths to the digraph */
+   for( c = 0; c < cliquetable->ncliques; ++c )
+   {
+      SCIP_CLIQUE* clique;
+      SCIP_VAR** cliquevars;
+      int nclqvars;
+      int cv;
+
+      clique = cliques[c];
+      cliquevars = SCIPcliqueGetVars(clique);
+      nclqvars = SCIPcliqueGetNVars(clique);
+      assert(nclqvars > 0);
+
+      /* add a variable and its predecessor in this clique as an arc to the digraph */
+      for( cv = 1; cv < nclqvars; ++cv )
+      {
+         int startnode;
+         int endnode;
+
+         startnode = getNodeNumberBinvar(cliquevars[cv], nbinvars, nintvars, nimplvars);
+         endnode = getNodeNumberBinvar(cliquevars[cv - 1], nbinvars, nintvars, nimplvars);
+
+         /* add an arc to the digraph if both variables have an active representative */
+         if( startnode >= 0 && endnode >= 0 )
+         {
+            SCIP_CALL( SCIPdigraphAddArc(digraph, startnode, endnode, NULL) );
+         }
+      }
+   }
+
+   cliquetable->ncliquecomponents = -1;
+   SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &cliquetable->ncliquecomponents) );
+
+   /* subtract superfluous implicit integer variables added to the auxiliary graph */
+   cliquetable->ncliquecomponents -= (nimplvars - nimplbinvars);
+   assert(cliquetable->ncliquecomponents >= 0);
+   assert(cliquetable->ncliquecomponents <= nbinvarstotal);
+
+   /* save variable component in variable data structure */
+   for( v = 0; v < nbinvars; ++v )
+      SCIPvarSetCliqueComponentIdx(vars[v], components[v]);
+
+   /* save variable components for implicit binary variables */
+   for( v = nbinvars + nintvars; v < nbinvars + nintvars + nimplvars; ++v )
+   {
+      /* component of this variable is saved with an offset of -nintvars */
+      SCIPvarSetCliqueComponentIdx(vars[v], components[v - nintvars]);
+   }
+
+   SCIPdigraphFree(&digraph);
+   SCIPsetFreeBufferArray(set, &sizes);
+   SCIPsetFreeBufferArray(set, &components);
+
+   return SCIP_OKAY;
+}
 
 /*
  * simple functions implemented as defines
@@ -3014,6 +3216,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 #undef SCIPcliquetableGetNCliques
 #undef SCIPcliquetableGetCliques
 #undef SCIPcliquetableGetNEntries
+#undef SCIPcliquetableGetNCliqueComponents
+#undef SCIPcliquetableNeedsComponentUpdate
 
 /** gets number of variable bounds contained in given variable bounds data structure */
 int SCIPvboundsGetNVbds(
@@ -3245,4 +3449,20 @@ SCIP_Longint SCIPcliquetableGetNEntries(
    assert(cliquetable != NULL);
 
    return cliquetable->nentries;
+}
+
+/** returns the number of clique components, or -1 if update is necessary first */
+int SCIPcliquetableGetNCliqueComponents(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   return cliquetable->componentupdate ? -1 : cliquetable->ncliquecomponents;
+}
+
+/** returns TRUE iff the connected clique components need an update (because new cliques were added) */
+SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   return cliquetable->componentupdate;
 }

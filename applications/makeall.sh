@@ -4,7 +4,7 @@
 #
 
 APPLICATIONS=(Coloring MinIISC Scheduler STP)
-LPSOLVERS=(spx2 cpx none)
+LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 LIBTYPE=(static shared)
 

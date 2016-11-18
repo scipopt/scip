@@ -106,7 +106,7 @@
 /* presolving */
 #define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
-#define DEFAULT_PERFIMPLANALYSIS   TRUE /**< if TRUE then perform implication graph analysis (might add additional SOS1 constraints) */
+#define DEFAULT_PERFIMPLANALYSIS  FALSE /**< if TRUE then perform implication graph analysis (might add additional SOS1 constraints) */
 #define DEFAULT_DEPTHIMPLANALYSIS    -1 /**< number of recursive calls of implication graph analysis (-1: no limit) */
 
 /* propagation */
@@ -10271,7 +10271,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maximplcuts",
          "maximal number of implied bound cuts separated per branching node",
-         &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXIMPLCUTS, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maximplcuts, TRUE, DEFAULT_MAXIMPLCUTS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maximplcutsroot",
          "maximal number of implied bound cuts separated per iteration in the root node",

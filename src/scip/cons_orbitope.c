@@ -160,6 +160,7 @@ SCIP_RETCODE consdataCreate(
    )
 {
    int i;
+   int j;
 
    assert(consdata != NULL);
 
@@ -194,7 +195,13 @@ SCIP_RETCODE consdataCreate(
 
       for (i = 0; i < nspcons; ++i)
       {
-         SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nblocks, (*consdata)->vars[i], (*consdata)->vars[i]) );
+         /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_orbitope, sine one cannot
+          * easily eliminate single variables from an orbitope constraint. */
+         for (j = 0; j < nblocks; ++j)
+         {
+            SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
+         }
       }
    }
 
@@ -887,7 +894,7 @@ SCIP_RETCODE propagateCons(
             assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip) );
 
             /* perform conflict analysis */
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+            SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
             if ( ispart )
             {
@@ -969,7 +976,7 @@ SCIP_RETCODE propagateCons(
                   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
                   /* perform conflict analysis */
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   /* add current bound */
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );

@@ -58,10 +58,6 @@
 
 #define LINCONSUPGD_PRIORITY    +100000 /**< priority of the constraint handler for upgrading of linear constraints */
 
-#if 0
-#define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
-#endif
-
 #define MAX_USECLIQUES_SIZE        1000 /**< maximal number of items in knapsack where clique information is used */
 #define MAX_ZEROITEMS_SIZE        10000 /**< maximal number of items to store in the zero list in preprocessing */
 
@@ -84,7 +80,7 @@
 #define USESUPADDLIFT             FALSE /**< should lifted minimal cover inequalities using superadditive up-lifting be separated in addition */
 
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define HASHSIZE_KNAPSACKCONS    131101 /**< minimal size of hash table in linear constraint tables */
+#define HASHSIZE_KNAPSACKCONS       500 /**< minimal size of hash table in linear constraint tables */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
@@ -183,7 +179,6 @@ struct SCIP_ConsData
    SCIP_Longint          capacity;           /**< capacity of knapsack */
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
-   unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
    unsigned int          presolvedtiming:5;  /**< max level in which the knapsack constraint is already presolved */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
@@ -194,11 +189,12 @@ struct SCIP_ConsData
    unsigned int          existmultaggr:1;    /**< does this constraint contain multi-aggregations */
 };
 
+#define MAXNCLIQUEVARSCOMP 1000000
 
 /** event data for bound changes events */
 struct SCIP_EventData
 {
-   SCIP_CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
+   SCIP_CONS*            cons;               /**< knapsack constraint to process the bound change for */
    SCIP_Longint          weight;             /**< weight of variable */
    int                   filterpos;          /**< position of event in variable's event filter */
 };
@@ -286,14 +282,14 @@ static
 SCIP_RETCODE eventdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTDATA**      eventdata,          /**< pointer to store event data */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_CONS*            cons,               /**< constraint */
    SCIP_Longint          weight              /**< weight of variable */
    )
 {
    assert(eventdata != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
-   (*eventdata)->consdata = consdata;
+   (*eventdata)->cons = cons;
    (*eventdata)->weight = weight;
 
    return SCIP_OKAY;
@@ -436,7 +432,6 @@ SCIP_RETCODE calcCliquepartition(
       SCIP_CALL( SCIPcalcNegatedCliquePartition(scip, consdata->vars, consdata->nvars, consdata->negcliquepartition, &consdata->nnegcliques) );
       consdata->negcliquepartitioned = TRUE;
    }
-
    assert(!consdata->cliquepartitioned || consdata->ncliques <= consdata->nvars);
    assert(!consdata->negcliquepartitioned || consdata->nnegcliques <= consdata->nvars);
 
@@ -475,12 +470,14 @@ SCIP_RETCODE unlockRounding(
 static
 SCIP_RETCODE catchEvents(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
 
+   assert(cons != NULL);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
    assert(consdata->nvars == 0 || consdata->weights != NULL);
@@ -488,9 +485,9 @@ SCIP_RETCODE catchEvents(
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[i], consdata, consdata->weights[i]) );
+      SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[i], cons, consdata->weights[i]) );
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], 
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdata[i], &consdata->eventdata[i]->filterpos) );
    }
@@ -516,7 +513,7 @@ SCIP_RETCODE dropEvents(
    for( i = 0; i < consdata->nvars; i++)
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i],
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdata[i], consdata->eventdata[i]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdata[i]) );
@@ -568,7 +565,6 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   nvars,              /**< number of variables in knapsack */
    SCIP_VAR**            vars,               /**< variables of knapsack */
    SCIP_Longint*         weights,            /**< weights of knapsack items */
@@ -651,7 +647,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->onesweightsum = 0;
    (*consdata)->ncliques = 0;
    (*consdata)->nnegcliques = 0;
-   (*consdata)->propagated = FALSE;
    (*consdata)->presolvedtiming = 0;
    (*consdata)->sorted = FALSE;
    (*consdata)->cliquepartitioned = FALSE;
@@ -677,9 +672,6 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdata, (*consdata)->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, (*consdata)->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->negcliquepartition, (*consdata)->nvars) );
-
-      /* catch events for variables */
-      SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
    }
 
    /* calculate sum of weights and capture variables */
@@ -772,7 +764,6 @@ void consdataChgWeight(
       consdata->eventdata[item]->weight = newweight;
    }
 
-   consdata->propagated = FALSE;
    consdata->presolvedtiming = 0;
    consdata->sorted = FALSE;
 
@@ -1257,7 +1248,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* allocate temporary memory and check for memory exceeding */
-   /* @note we do allocate normal memory instead of buffer memory, because the buffer, will not be deleted directly and
+   /* @note we do allocate normal memory instead of buffer memory, because the buffer will not be deleted directly and
     *       might be a really huge block of memory which we will not use later on
     */
    retcode = SCIPallocMemoryArray(scip, &optvalues, nmyitems * intcap);
@@ -2042,7 +2033,7 @@ SCIP_RETCODE GUBsetCheck(
  *  note: in contrast to SCIPcalcCliquePartition(), variables with LP value 1 are put into trivial cliques (with one
  *  variable) and for the remaining variables, a partition with a small number of cliques is constructed
  */
-#define MAXNCLIQUEVARSCOMP 1000000
+
 static
 SCIP_RETCODE GUBsetCalcCliquePartition(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -6219,15 +6210,20 @@ SCIP_RETCODE addCoef(
 
          conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
          assert(conshdlrdata != NULL);
-         SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[consdata->nvars-1], consdata, weight) );
+         SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[consdata->nvars-1], cons, weight) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var,
-               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
                | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
                conshdlrdata->eventhdlr, consdata->eventdata[consdata->nvars-1],
                &consdata->eventdata[consdata->nvars-1]->filterpos) );
 
          if( !consdata->existmultaggr && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
             consdata->existmultaggr = TRUE;
+
+         /* mark constraint to be propagated and presolved */
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+         consdata->presolvedtiming = 0;
+         consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
       }
 
       /* update weight sums */
@@ -6240,9 +6236,6 @@ SCIP_RETCODE addCoef(
       consdata->negcliquepartitioned = FALSE;
       consdata->merged = FALSE;
    }
-   consdata->propagated = FALSE;
-   consdata->presolvedtiming = 0;
-   consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
 
    return SCIP_OKAY;
 }
@@ -6275,7 +6268,7 @@ SCIP_RETCODE delCoefPos(
    /* remove the rounding locks of variable */
    SCIP_CALL( unlockRounding(scip, cons, var) );
 
-   /* drop events */
+   /* drop events and mark constraint to be propagated and presolved */
    if( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -6283,10 +6276,14 @@ SCIP_RETCODE delCoefPos(
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
       SCIP_CALL( SCIPdropVarEvent(scip, var,
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             conshdlrdata->eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdata[pos]) );
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      consdata->presolvedtiming = 0;
+      consdata->sorted = (consdata->sorted && pos == consdata->nvars - 1);
    }
 
    /* update weight sums */
@@ -6304,10 +6301,6 @@ SCIP_RETCODE delCoefPos(
 
    /* release variable */
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-   consdata->propagated = FALSE;
-   consdata->presolvedtiming = 0;
-   consdata->sorted = (consdata->sorted && pos == consdata->nvars - 1);
 
    /* try to use old clique partitions */
    if( consdata->cliquepartitioned )
@@ -7111,10 +7104,6 @@ SCIP_RETCODE propagateCons(
    *cutoff = FALSE;
    *redundant = FALSE;
 
-   /* check, if constraint is already propagated */
-   if( consdata->propagated )
-      return SCIP_OKAY;
-
    SCIPdebugMsg(scip, "propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
@@ -7123,7 +7112,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
-   /* we need a merged constraint cause without it the negated clique information could be invalid */
+   /* we need a merged constraint since otherwise the negated clique information could be invalid */
    usenegatedclique = usenegatedclique && consdata->merged;
    nnegcliques = -1;
 
@@ -7257,7 +7246,7 @@ SCIP_RETCODE propagateCons(
                               assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
                               /* initialize the conflict analysis */
-                              SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                              SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                               /* add the two variables which are fixed to zero within a negated clique */
                               SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
@@ -7368,7 +7357,8 @@ SCIP_RETCODE propagateCons(
 
             weight = minweightsum;
 
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+            SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
             for( i = 0; i < nvars && weight <= consdata->capacity; i++ )
             {
                if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
@@ -7454,7 +7444,8 @@ SCIP_RETCODE propagateCons(
 
          weight = 0;
 
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
          for( i = 0; i < nvars && weight <= consdata->capacity; i++ )
          {
             if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
@@ -7507,8 +7498,6 @@ SCIP_RETCODE propagateCons(
       *redundant = TRUE;
    }
 
-   /* mark the constraint propagated */
-   consdata->propagated = TRUE;
    return SCIP_OKAY;
 }
 
@@ -8066,7 +8055,9 @@ void normalizeWeights(
       SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %" SCIP_LONGINT_FORMAT "\n", SCIPconsGetName(cons), gcd);
 
       for( i = 0; i < consdata->nvars; ++i )
+      {
          consdataChgWeight(consdata, i, consdata->weights[i]/gcd);
+      }
       consdata->capacity /= gcd;
       (*nchgcoefs) += consdata->nvars;
       (*nchgsides)++;
@@ -9011,7 +9002,7 @@ SCIP_RETCODE prepareCons(
    v = 0;
 
    /* check for weights bigger than the capacity */
-   while( weights[v] > capacity )
+   while( v < nvars && weights[v] > capacity )
    {
       SCIP_CALL( SCIPfixVar(scip, vars[v], 0.0, &infeasible, &fixed) );
       assert(!infeasible);
@@ -9308,7 +9299,9 @@ SCIP_RETCODE simplifyInequalities(
 
          /* replace old big coefficients with new capacity */
          for( v = 0; v < offsetv; ++v )
+         {
             consdataChgWeight(consdata, v, consdata->capacity);
+         }
 
          *nchgcoefs += offsetv;
          goto CONTINUE;
@@ -9343,7 +9336,9 @@ SCIP_RETCODE simplifyInequalities(
 
          /* replace old big coefficients with new capacity */
          for( v = 0; v < offsetv; ++v )
+         {
             consdataChgWeight(consdata, v, consdata->capacity);
+         }
 
          *nchgcoefs += offsetv;
       }
@@ -11359,11 +11354,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    SCIP* scip;
 #endif
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
-   int maxabsval;
 
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
@@ -11382,15 +11375,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && mididx >= 0 && maxidx >= 0);
 
-   if( consdata->weights[0] > INT_MAX )
-      maxabsval = 0;
-   else
-      maxabsval = (int) consdata->weights[0];
-
    /* hash value depends on vectors of variable indices */
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx + maxabsval; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
+                      consdata->weights[0]);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -11416,7 +11403,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_KNAPSACKCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyKnapsackcons, hashKeyEqKnapsackcons, hashKeyValKnapsackcons, (void*) scip) );
@@ -12082,7 +12069,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create target constraint data */
-   SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+   SCIP_CALL( consdataCreate(scip, &targetdata,
          sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) ); 
 
    /* create target constraint */
@@ -12091,6 +12078,9 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   /* catch events for variables */
+   SCIP_CALL( catchEvents(scip, *targetcons, targetdata, conshdlrdata->eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -12358,9 +12348,10 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
    assert(conshdlrdata != NULL);
 
    inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+   assert(!inpresolve || SCIPinProbing(scip));
 
    /* process useful constraints */
-   for( i = 0; i < nusefulconss && !cutoff; i++ )
+   for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       /* do not propagate constraints with multi-aggregated variables, which should only happen in probing mode,
        * otherwise the multi-aggregation should be resolved
@@ -12368,11 +12359,15 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
       if( inpresolve && SCIPconsGetData(conss[i])->existmultaggr )
          continue;
 #ifndef NDEBUG
-      else if( !inpresolve )
+      else
          assert(!(SCIPconsGetData(conss[i])->existmultaggr));
 #endif
 
       SCIP_CALL( propagateCons(scip, conss[i], &cutoff, &redundant, &nfixedvars, conshdlrdata->negatedclique) );
+
+      /* unmark the constraint to be propagated */
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
+
    }
 
    /* adjust result code */
@@ -12466,13 +12461,17 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       }
 
       /* propagate constraint */
-      SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars, (presoltiming & SCIP_PRESOLTIMING_MEDIUM)) );
-      if( cutoff )
-         break;
-      if( redundant )
+      if( presoltiming < SCIP_PRESOLTIMING_EXHAUSTIVE )
       {
-         (*ndelconss)++;
-         continue;
+         SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars, (presoltiming & SCIP_PRESOLTIMING_MEDIUM)) );
+
+         if( cutoff )
+            break;
+         if( redundant )
+         {
+            (*ndelconss)++;
+            continue;
+         }
       }
 
       /* remove again all fixed variables, if further fixings were found */
@@ -12925,53 +12924,46 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsKnapsack)
 static
 SCIP_DECL_EVENTEXEC(eventExecKnapsack)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
    assert(eventdata != NULL);
-   assert(eventdata->consdata != NULL);
+   assert(eventdata->cons != NULL);
+
+   consdata = SCIPconsGetData(eventdata->cons);
+   assert(consdata != NULL);
 
    switch( SCIPeventGetType(event) )
    {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
    case SCIP_EVENTTYPE_LBTIGHTENED:
-      eventdata->consdata->onesweightsum += eventdata->weight;
-      eventdata->consdata->propagated = FALSE;
-      eventdata->consdata->presolvedtiming = 0;
+      consdata->onesweightsum += eventdata->weight;
+      consdata->presolvedtiming = 0;
+      SCIP_CALL( SCIPmarkConsPropagate(scip, eventdata->cons) );
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
-      eventdata->consdata->onesweightsum -= eventdata->weight;
-
-      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-      assert(conshdlr != NULL);
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
-      if( conshdlrdata->negatedclique )
-      {
-         /* if a variable fixed to 1 is unfixed, it is possible, that it can be fixed to 1 again */
-         eventdata->consdata->propagated = FALSE;
-      }
-
+      consdata->onesweightsum -= eventdata->weight;
       break;
-   case SCIP_EVENTTYPE_UBRELAXED:
-      /* if a variable fixed to 0 is unfixed, it is possible, that it can be fixed to 0 again */
-      eventdata->consdata->propagated = FALSE;
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+      /* if a variable is fixed to 0, it is possible that the constraint gets redundant
+       * or that we can propagate based on negated clique information
+       */
+      consdata->presolvedtiming = 0;
+      SCIP_CALL( SCIPmarkConsPropagate(scip, eventdata->cons) );
       break;
    case SCIP_EVENTTYPE_VARFIXED:  /* the variable should be removed from the constraint in presolving */
-      if( !eventdata->consdata->existmultaggr )
+      if( !consdata->existmultaggr )
       {
 	 SCIP_VAR* var = SCIPeventGetVar(event);
 	 assert(var != NULL);
 
          if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
-            eventdata->consdata->existmultaggr = TRUE;
+            consdata->existmultaggr = TRUE;
       }
       /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */
-      eventdata->consdata->presolvedtiming = 0;
+      consdata->presolvedtiming = 0;
       break;
    case SCIP_EVENTTYPE_VARDELETED:
-      eventdata->consdata->varsdeleted = TRUE;
+      consdata->varsdeleted = TRUE;
       break;
    default:
       SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
@@ -13172,11 +13164,17 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
+   SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, weights, capacity) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* catch events for variables */
+   if( SCIPisTransformed(scip) )
+   {
+      SCIP_CALL( catchEvents(scip, *cons, consdata, conshdlrdata->eventhdlr) );
+   }
 
    return SCIP_OKAY;
 }

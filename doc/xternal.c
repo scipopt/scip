@@ -5986,9 +5986,11 @@
  *
  *  @subsection BUFMEMSTD Standard Buffer Memory
  *
- *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
- *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
- *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
+ *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally used within a
+ *  function and freed within the same function. For this purpose, SCIP has a list of memory buffers that are reused for
+ *  this purpose. In this way, a very efficient allocation/freeing is possible.
+ *
+ *  Note that the buffers are organized in a stack, i.e., freeing buffers in reverse order of allocation is faster.
  *
  *  The most important functions are
  *  - SCIPallocBuffer(), SCIPallocBufferArray() to allocate memory,
@@ -6053,6 +6055,9 @@
  *  - Avoid the usage of standard memory, since SCIP is unaware of the size used in such blocks.
  *  - Avoid reallocation with only slightly increased size, rather use a geometrically growing
  *    size allocation. SCIPcalcMemGrowSize() is one way to calculate new sizes.
+ *  - Be careful with buffer memory reallocation: For single buffers, the memory is reallocated (using malloc); since
+ *    the actual space might be larger than what was needed at allocation time, reallocation sometimes comes without
+ *    extra cost. Note that reallocating block memory in most cases implies moving memory arround.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

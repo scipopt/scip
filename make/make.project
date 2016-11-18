@@ -64,7 +64,7 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-VALGRIND	=	false
+DEBUGTOOL	=	auto
 CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
@@ -90,7 +90,15 @@ NOBLKBUFMEM	=	false
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
 
-# will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
+ifeq ($(DEBUGTOOL),auto)
+   ifeq ($(OPT),dbg)
+      override DEBUGTOOL   =   gdb
+   else
+      override DEBUGTOOL   =   none
+   endif
+endif
+
+#will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
 # third party compiling parameters

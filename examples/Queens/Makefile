@@ -79,6 +79,8 @@ doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipheader.html header.html);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/sciplayout.xml layout.xml);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
@@ -95,7 +97,7 @@ $(BINDIR):
 test: $(MAINFILE)
 		for i in 1 2 4 8 16 ; do \
 			echo ; echo "Testing the n-queens solver with n = $$i" ; \
-			$(MAINFILE) $$i || break 1 ; \
+			$(MAINFILE) $$i || exit $(STATUS) ; \
 			echo ; \
 		done
 

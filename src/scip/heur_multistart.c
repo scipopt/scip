@@ -32,7 +32,7 @@
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'm'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             0
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -727,7 +727,7 @@ SCIP_RETCODE applyHeur(
    SCIP_CALL( SCIPallocBufferArray(scip, &points, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &feasibilities, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &clusteridx, heurdata->nrndpoints) );
-   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* create an unique mapping of all variables to 0,..,SCIPgetNVars(scip)-1 */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
