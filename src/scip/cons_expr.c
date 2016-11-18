@@ -2452,7 +2452,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    }
 
    /* replace equivalent sub-expressions */
-   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPhashmapGetNEntries(expr2key)),
+   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), SCIPhashmapGetNEntries(expr2key),
          hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)expr2key) );
 
    for( i = 0; i < nconss; ++i )

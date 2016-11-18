@@ -150,7 +150,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrVar)
    assert(exprhdlrdata != NULL);
 
    /* free variable to variable expression map */
-   assert(SCIPhashmapGetNEntries((SCIP_HASHMAP*) (*exprhdlrdata)) == 0);
+   assert(SCIPhashmapGetNElements((SCIP_HASHMAP*) (*exprhdlrdata)) == 0);
    SCIPhashmapFree((SCIP_HASHMAP**) exprhdlrdata);
    *exprhdlrdata = NULL;
 
