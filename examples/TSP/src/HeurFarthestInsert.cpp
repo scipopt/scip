@@ -330,7 +330,7 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, successor[i]->var, 1.0) );
             }
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
             else

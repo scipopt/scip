@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,7 +54,7 @@
 #define DEFAULT_MAXFREQREC     FALSE         /**< executions of the rec heuristic at maximum frequency?                             */
 #define DEFAULT_MAXNSOLS       50            /**< maximum number of (good) solutions be regarded in the subproblem                  */
 #define DEFAULT_NUSEDSOLS      4             /**< number of solutions that will be taken into account                               */
-#define DEFAULT_RANDSEED       0             /**< random seed                                                                       */
+#define DEFAULT_RANDSEED       177           /**< random seed                                                                       */
 #define DEFAULT_NTMRUNS        75            /**< number of runs in TM heuristic                                                    */
 #define DEFAULT_NWAITINGSOLS   4             /**< max number of new solutions to be available before executing the heuristic again  */
 
@@ -82,6 +82,7 @@ struct SCIP_HeurData
    int                   nwaitingsols;       /**< number of new solutions before executing the heuristic again      */
    int                   nfailures;          /**< number of failures since last successful call                     */
    unsigned int          randseed;           /**< seed value for random number generator                            */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                                           */
    SCIP_Bool             maxfreq;            /**< should the heuristic be called at maximum frequency?              */
 };
 
@@ -123,17 +124,17 @@ SCIP_Real costMultiplier(
    {
       if( SCIPisLT(scip, avg, 1.6) )
       {
-         factor = SCIPgetRandomInt(1000, 1400, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 1000, 1400);
          mult =  (double) factor * (1.0 / avg);
       }
       else if( SCIPisLT(scip, avg, 2.6) )
       {
-         factor = SCIPgetRandomInt(200, 1000, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 200, 1000);
          mult =  (double) factor * (1.0 / avg);
       }
       else if( nusedsols == 3 && SCIPisLT(scip, avg, 3.6) )
       {
-         factor = SCIPgetRandomInt(40, 100, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 40, 100);
          mult =  (double) factor * (1.0 / avg);
       }
    }
@@ -141,23 +142,23 @@ SCIP_Real costMultiplier(
    {
       if( SCIPisLT(scip, avg, 1.6) )
       {
-         factor = SCIPgetRandomInt(1400, 1800, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 1400, 1800);
       }
       else if( SCIPisLT(scip, avg, 2.6) )
       {
-         factor = SCIPgetRandomInt(400, 1400, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 400, 1400);
       }
       else if( SCIPisLT(scip, avg, 3.6) )
       {
-         factor = SCIPgetRandomInt(150, 250, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 150, 250);
       }
       else if( SCIPisLT(scip, avg, 4.6) )
       {
-         factor = SCIPgetRandomInt(60, 90, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 60, 90);
       }
       else if( nusedsols >= 5 && SCIPisLT(scip, avg, 5.6) )
       {
-         factor = SCIPgetRandomInt(20, 40, &(heurdata->randseed));
+         factor = SCIPrandomGetInt(heurdata->randnumgen, 20, 40);
       }
       mult =  (double) factor * (1.0 / avg);
    }
@@ -236,7 +237,7 @@ SCIP_RETCODE selectdiffsols(
       }
       else
       {
-	 i = SCIPgetRandomInt(0, nsols - 1, &(heurdata->randseed));
+         i = SCIPrandomGetInt(heurdata->randnumgen, 0, nsols - 1);
       }
       *newsol = sols[perm[i]];
       solselected[perm[i]] = TRUE;
@@ -271,7 +272,7 @@ SCIP_RETCODE selectdiffsols(
    }
    maxnsols = MIN(nsols, maxnsols);
 
-   SCIPpermuteIntArray(perm, 0, maxnsols, &(heurdata->randseed));
+   SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, maxnsols);
    for( i = 0; i < maxnsols; i++ )
    {
       if( solselected[perm[i]] == FALSE )
@@ -383,7 +384,7 @@ SCIP_RETCODE selectsols(
       }
       else
       {
-	 i = SCIPgetRandomInt(0, nsols - 1, &(heurdata->randseed));
+         i = SCIPrandomGetInt(heurdata->randnumgen, 0, nsols - 1);
       }
       *newsol = sols[perm[i]];
       solselected[perm[i]] = TRUE;
@@ -406,27 +407,27 @@ SCIP_RETCODE selectsols(
 
    if( !randomize )
    {
-      end = (int) ((SCIPgetRandomReal(1.0, (double) nusedsols - 1, &(heurdata->randseed))) );
+      end = (int) (SCIPrandomGetReal(heurdata->randnumgen, 1.0, (SCIP_Real) nusedsols - 1));
 
-      shift = SCIPgetRandomInt(end, 2 * nusedsols - 1, &(heurdata->randseed));
+      shift = SCIPrandomGetInt(heurdata->randnumgen, end, 2 * nusedsols - 1);
 
       if( shift > nsols )
          shift = nsols;
-      SCIPpermuteIntArray(perm, 0, shift, &(heurdata->randseed));
+      SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, shift);
 
       for( i = 0; i < end; i++ )
       {
-	 if( solselected[perm[i]] == FALSE )
-	 {
+         if( solselected[perm[i]] == FALSE )
+         {
             selection[nselectedsols++] = perm[i];
             solselected[perm[i]] = TRUE;
-	 }
+         }
       }
    }
    maxnsols = MIN(nsols, maxnsols);
    if( nselectedsols < nusedsols )
    {
-      SCIPpermuteIntArray(perm, 0, maxnsols, &(heurdata->randseed));
+      SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, maxnsols);
       for( i = 0; i < maxnsols; i++ )
       {
          if( solselected[perm[i]] == FALSE )
@@ -591,7 +592,7 @@ SCIP_RETCODE buildsolgraph(
          newgraph->stp_type = graph->stp_type;
 
       if( pcmw )
-	SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nsolnodes) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nsolnodes) );
 
       newgraph->hoplimit = graph->hoplimit;
       j = 0;
@@ -697,6 +698,23 @@ SCIP_RETCODE buildsolgraph(
  */
 
 
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitRec)
+{
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
+   SCIPheurSetData(heur, heurdata);
+
+   return SCIP_OKAY;
+}
+
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyRec)
@@ -752,12 +770,15 @@ SCIP_DECL_HEURINIT(heurInitRec)
    heurdata->lastsolindex = -1;
    heurdata->bestsolindex = -1;
    heurdata->nfailures = 0;
+   heurdata->randseed = DEFAULT_RANDSEED;
 
 #ifdef WITH_UG
    heurdata->randseed += getUgRank();
-#else
-   heurdata->randseed = 0;
 #endif
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, heurdata->randseed)) );
 
    return SCIP_OKAY;
 }
@@ -904,7 +925,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    /* first run? */
    else if( heurdata->lastsolindex == -1 )
    {
-      newsol = (SCIPgetSols(scip))[SCIPgetRandomInt(0, heurdata->nusedsols - 1, &(heurdata->randseed))];
+      newsol = (SCIPgetSols(scip))[SCIPrandomGetInt(heurdata->randnumgen, 0, heurdata->nusedsols - 1)];
    }
    else
    {
@@ -924,7 +945,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    count = 0;
 
-   if( SCIPgetRandomInt(0, 10, &(heurdata->randseed)) == 1 )
+   if( SCIPrandomGetInt(heurdata->randnumgen, 0, 10) == 1 )
       modcost = FALSE;
    else
       modcost = TRUE;
@@ -934,31 +955,31 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    {
       if( count >= runs )
       {
-	 if( solfound )
-	 {
+         if( solfound )
+         {
             count = 0;
             solfound = FALSE;
-	 }
-	 else
-	 {
+         }
+         else
+         {
             break;
-	 }
+         }
       }
       if( perm[count] <= 1 )
       {
          heurdata->nusedsols = 2;
-	 if( SCIPgetRandomInt(0, 1, &(heurdata->randseed)) == 1 )
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 )
             randomize = TRUE;
          else
-	    randomize = FALSE;
+            randomize = FALSE;
       }
       else if( perm[count] <= 4 )
       {
-	 if( SCIPgetRandomInt(0, 1, &(heurdata->randseed)) == 1 )
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 )
             randomize = TRUE;
          else
-	    randomize = FALSE;
-         heurdata->nusedsols = DEFAULT_NUSEDSOLS - 1 ;
+            randomize = FALSE;
+         heurdata->nusedsols = DEFAULT_NUSEDSOLS - 1;
       }
       else if( perm[count] <= 6 || pcmw )
       {
@@ -1254,6 +1275,7 @@ SCIP_RETCODE SCIPincludeHeurRec(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRec) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRec) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRec) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRec) );
 
    /* add rec primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nwaitingsols",
@@ -1262,7 +1284,7 @@ SCIP_RETCODE SCIPincludeHeurRec(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/randseed",
          "random seed for heuristic",
-         NULL, FALSE, DEFAULT_RANDSEED, 0, INT_MAX, paramChgdRandomseed, (SCIP_PARAMDATA*)heurdata) );
+         NULL, FALSE, DEFAULT_RANDSEED, 1, INT_MAX, paramChgdRandomseed, (SCIP_PARAMDATA*)heurdata) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnsols",
          "max size of solution pool for heuristic",

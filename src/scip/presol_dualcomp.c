@@ -422,7 +422,7 @@ SCIP_RETCODE compensateVarLock(
 
 #ifdef SCIP_MORE_DEBUG
             SCIPmatrixPrintRow(scip, matrix, row);
-            SCIPdebugMessage("%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
+            SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
                SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
                SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
                SCIPmatrixGetColNNonzs(matrix, col),
@@ -437,7 +437,7 @@ SCIP_RETCODE compensateVarLock(
 
 #ifdef SCIP_MORE_DEBUG
             SCIPmatrixPrintRow(scip, matrix, row);
-            SCIPdebugMessage("%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
+            SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
                SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
                SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
                SCIPmatrixGetColNNonzs(matrix, col),
@@ -677,13 +677,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, -lb));
 
-               SCIPdebugMessage("Fix variable %s at lower bound %.15g\n", SCIPvarGetName(var), lb);
+               SCIPdebugMsg(scip, "Fix variable %s at lower bound %.15g\n", SCIPvarGetName(var), lb);
 
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -706,13 +706,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, ub));
 
-               SCIPdebugMessage("Fix variable %s at upper bound %.15g\n", SCIPvarGetName(var), ub);
+               SCIPdebugMsg(scip, "Fix variable %s at upper bound %.15g\n", SCIPvarGetName(var), ub);
 
                /* fix at upper bound */
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -731,7 +731,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          if( *result != SCIP_CUTOFF && *nfixedvars > oldnfixedvars )
             *result = SCIP_SUCCESS;
 
-         SCIPdebugMessage("### lbfixes: %d, ubfixes: %d, con: %d, dis: %d\n",
+         SCIPdebugMsg(scip, "### lbfixes: %d, ubfixes: %d, con: %d, dis: %d\n",
             numlowerboundfixings, numupperboundfixings,
             numcontinuousfixings, numdiscretefixings);
       }

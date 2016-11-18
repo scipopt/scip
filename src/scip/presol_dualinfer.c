@@ -39,7 +39,7 @@
 #define PRESOL_NAME             "dualinfer"
 #define PRESOL_DESC             "exploit dual informations for fixings and side changes"
 #define PRESOL_PRIORITY             -2000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS                0    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 #define MAX_LOOPS                       3    /**< maximal number of dual bound strengthening loops */
 
@@ -756,7 +756,7 @@ void updateDualBounds(
    if( val > 0 )
    {
       newubdual = (objval - mincolresact) / val;
-      assert(SCIPisGE(scip,newubdual,0));
+      assert(SCIPisGE(scip, newubdual, 0.0));
 
       if( newubdual < ubdual[part][row] )
       {
@@ -770,7 +770,7 @@ void updateDualBounds(
    else if( val < 0 )
    {
       newlbdual = (objval - mincolresact) / val;
-      assert(SCIPisGE(scip,ubdual[part][row],newlbdual));
+      assert(SCIPisGE(scip, ubdual[part][row], newlbdual));
 
       if( newlbdual > lbdual[part][row] )
       {
@@ -1206,7 +1206,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                   SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                   if( infeasible )
                   {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
+                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
                      *result = SCIP_CUTOFF;
                      break;
                   }
@@ -1285,7 +1285,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
          if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0)
          {
-            SCIPdebugMessage("### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
+            SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
                nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
          }
       }

@@ -323,11 +323,11 @@ static
 SCIP_RETCODE findEqualExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR *  expr,               /**< expression to replace */
-   SCIP_HASHTABLE*       key2expr,           /**< mapping of hashes to expressions */
+   SCIP_MULTIHASH*       key2expr,           /**< mapping of hashes to expressions */
    SCIP_CONSEXPR_EXPR**  newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
    )
 {  /*lint --e{438}*/
-   SCIP_HASHTABLELIST* hashtablelist;
+   SCIP_MULTIHASHLIST* multihashlist;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -335,17 +335,17 @@ SCIP_RETCODE findEqualExpr(
    assert(newexpr != NULL);
 
    *newexpr = NULL;
-   hashtablelist = NULL;
+   multihashlist = NULL;
 
    do
    {
       /* search for an equivalent expression */
-      *newexpr = (SCIP_CONSEXPR_EXPR*)(SCIPhashtableRetrieveNext(key2expr, &hashtablelist, (void*)expr));
+      *newexpr = (SCIP_CONSEXPR_EXPR*)(SCIPmultihashRetrieveNext(key2expr, &multihashlist, (void*)expr));
 
       if( *newexpr == NULL )
       {
          /* processed all expressions like expr from hash table, so insert expr */
-         SCIP_CALL( SCIPhashtableInsert(key2expr, (void*) expr) );
+         SCIP_CALL( SCIPmultihashInsert(key2expr, (void*) expr) );
          break;
       }
       else if( expr != *newexpr )
@@ -1172,7 +1172,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
 {
-   SCIP_HASHTABLE* key2expr;
+   SCIP_MULTIHASH* key2expr;
    SCIP_CONSEXPR_EXPR* newchild;
    SCIP_CONSEXPR_EXPR* child;
 
@@ -1181,7 +1181,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
 
-   key2expr = (SCIP_HASHTABLE*)data;
+   key2expr = (SCIP_MULTIHASH*)data;
    assert(key2expr != NULL);
 
    assert(expr->walkcurrentchild < expr->nchildren);
@@ -1199,7 +1199,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
       assert(child != newchild);
       assert(SCIPcompareConsExprExprs(child, newchild) == 0);
 
-      SCIPdebugMessage("replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
+      SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
 
       SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, expr->walkcurrentchild, newchild) );
 
@@ -1755,7 +1755,7 @@ SCIP_RETCODE forwardPropCons(
    if( !intersect && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLE(scip, consdata->lhs, consdata->expr->interval.inf))
       && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGE(scip, consdata->rhs, consdata->expr->interval.sup)) )
    {
-      SCIPdebugMessage("removing redundant constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
+      SCIPdebugMsg(scip, "removing redundant constraint %s activity=[%e,%e] sides=[%e,%e]\n", SCIPconsGetName(cons),
          consdata->expr->interval.inf, consdata->expr->interval.sup, consdata->lhs, consdata->rhs);
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       *redundant = TRUE;
@@ -1792,7 +1792,7 @@ SCIP_RETCODE forwardPropCons(
 #ifdef SCIP_DEBUG
    if( *infeasible )
    {
-      SCIPdebugMessage(" -> found empty bound for an expression during forward propagation of constraint %s\n",
+      SCIPdebugMsg(scip, " -> found empty bound for an expression during forward propagation of constraint %s\n",
          SCIPconsGetName(cons));
    }
 #endif
@@ -1874,7 +1874,7 @@ SCIP_RETCODE reversePropConss(
       expr->inqueue = FALSE;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("call reverse propagation for ");
+      SCIPdebugMsg(scip, "call reverse propagation for ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -1981,7 +1981,7 @@ SCIP_RETCODE propConss(
    /* main propagation loop */
    do
    {
-      SCIPdebugMessage("start propagation round %d\n", roundnr);
+      SCIPdebugMsg(scip, "start propagation round %d\n", roundnr);
 
       /* apply forward propagation; recompute expression intervals if it is called for the first time (this also marks
        * all expressions as non-tightened)
@@ -1993,7 +1993,7 @@ SCIP_RETCODE propConss(
 
          if( SCIPconsIsActive(conss[i]) && !consdata->ispropagated )
          {
-            SCIPdebugMessage("call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
+            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
             cutoff = FALSE;
@@ -2006,7 +2006,7 @@ SCIP_RETCODE propConss(
 
             if( cutoff )
             {
-               SCIPdebugMessage(" -> cutoff\n");
+               SCIPdebugMsg(scip, " -> cutoff\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
@@ -2031,7 +2031,7 @@ SCIP_RETCODE propConss(
 
       if( cutoff )
       {
-         SCIPdebugMessage(" -> cutoff\n");
+         SCIPdebugMsg(scip, " -> cutoff\n");
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
@@ -2216,7 +2216,7 @@ SCIP_RETCODE catchVarEvents(
 
    assert(consdata->vareventdata == NULL);
 
-   SCIPdebugMessage("catchVarEvents for %s\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
    eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
 
@@ -2271,7 +2271,7 @@ SCIP_RETCODE dropVarEvents(
 
    eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
 
-   SCIPdebugMessage("dropVarEvents for %s\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "dropVarEvents for %s\n", SCIPconsGetName(cons));
 
    for( i = consdata->nvarexprs - 1; i >= 0; --i )
    {
@@ -2322,7 +2322,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    eventtype = SCIPeventGetType(event);
    assert((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 || (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0);
 
-   SCIPdebugMessage("  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
    /* mark constraint to be propagated again */
    /* TODO: we only need to re-propagate if SCIP_EVENTTYPE_BOUNDTIGHTENED, but we need to reevaluate
@@ -2331,7 +2331,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
-      SCIPdebugMessage("  propagate %s again\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "  propagate %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
    }
 
@@ -2433,7 +2433,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    )
 {
    SCIP_HASHMAP* expr2key;
-   SCIP_HASHTABLE* key2expr;
+   SCIP_MULTIHASH* key2expr;
    SCIP_CONSDATA* consdata;
    int i;
 
@@ -2459,7 +2459,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    }
 
    /* replace equivalent sub-expressions */
-   SCIP_CALL( SCIPhashtableCreate(&key2expr, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPhashmapGetNEntries(expr2key)),
+   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), SCIPhashmapGetNEntries(expr2key),
          hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)expr2key) );
 
    for( i = 0; i < nconss; ++i )
@@ -2480,7 +2480,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
          assert(newroot != consdata->expr);
          assert(SCIPcompareConsExprExprs(consdata->expr, newroot) == 0);
 
-         SCIPdebugMessage("replacing common root expression of constraint <%s>: %p -> %p\n", SCIPconsGetName(conss[i]), (void*)consdata->expr, (void*)newroot);
+         SCIPdebugMsg(scip, "replacing common root expression of constraint <%s>: %p -> %p\n", SCIPconsGetName(conss[i]), (void*)consdata->expr, (void*)newroot);
 
          /* remove locks on old expression */
          SCIP_CALL( propagateLocks(scip, consdata->expr, -consdata->nlockspos, -consdata->nlocksneg) );
@@ -2501,7 +2501,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    }
 
    /* free memory */
-   SCIPhashtableFree(&key2expr);
+   SCIPmultihashFree(&key2expr);
    SCIPhashmapFree(&expr2key);
 
    return SCIP_OKAY;
@@ -3240,8 +3240,9 @@ SCIP_RETCODE createNlRow(
 
    if( consdata->expr == NULL )
    {
+      /* @todo pass correct curvature */
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
-            0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs) );
+            0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
    }
    else
    {
@@ -3255,8 +3256,9 @@ SCIP_RETCODE createNlRow(
          return SCIP_ERROR;
       }
 
+      /* @todo pass correct curvature */
       SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
-            0, NULL, NULL, 0, NULL, 0, NULL, exprtree, consdata->lhs, consdata->rhs) );
+            0, NULL, NULL, 0, NULL, 0, NULL, exprtree, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
    }
 
@@ -3472,7 +3474,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
      ++(conshdlrdata->auxvarid);
 
-      SCIPdebugMessage("add auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
+      SCIPdebugMsg(scip, "add auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
       /* add variable locks in both directions */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
@@ -3514,7 +3516,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
       assert(expr->exprhdlr != SCIPgetConsExprExprHdlrVar((SCIP_CONSHDLR*)data));
       assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue((SCIP_CONSHDLR*)data));
 
-      SCIPdebugMessage("remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
+      SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
       /* remove variable locks */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
@@ -3718,14 +3720,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       if( separesult == SCIP_CUTOFF )
       {
          assert(ncuts > 0);
-         SCIPdebugMessage("found a cutoff -> stop separation\n");
+         SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
          sepadata->result = SCIP_CUTOFF;
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
       }
       else if( separesult == SCIP_SEPARATED )
       {
          assert(ncuts > 0);
-         SCIPdebugMessage("found %d cuts separating the current solution\n", ncuts);
+         SCIPdebugMsg(scip, "found %d cuts separating the current solution\n", ncuts);
          sepadata->result = SCIP_SEPARATED;
       }
    }
@@ -3782,7 +3784,7 @@ SCIP_RETCODE initSepa(
 
          if( initsepadata.infeasible )
          {
-            SCIPdebugMessage("detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
@@ -4010,7 +4012,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
 
    *nupgdconss = 0;
 
-   SCIPdebugMessage("quadconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "quadconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* no interest in linear constraints */
@@ -4104,7 +4106,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
       SCIPconsIsStickingAtNode(cons)) );
 
-   SCIPdebugMessage("created expr constraint:\n");
+   SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -4129,7 +4131,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
    exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
    node = SCIPgetExprgraphNodeNonlinear(scip, cons);
 
-   SCIPdebugMessage("nonlinconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "nonlinconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* no interest in linear constraints */
@@ -4186,7 +4188,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
       SCIPconsIsStickingAtNode(cons)) );
 
-   SCIPdebugMessage("created expr constraint:\n");
+   SCIPdebugMsg(scip, "created expr constraint:\n");
    SCIPdebugPrintCons(scip, *upgdconss, NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -4566,7 +4568,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
    }
-   SCIPdebugMessage("maxviol=%e\n", maxviol);
+   SCIPdebugMsg(scip, "maxviol=%e\n", maxviol);
 
    *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
@@ -4594,7 +4596,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
-   SCIPdebugMessage("registered %d external branching candidates\n", nnotify);
+   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    /* all variables have been fixed -> cutoff node */
    /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
@@ -4647,7 +4649,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
-   SCIPdebugMessage("registered %d external branching candidates\n", nnotify);
+   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    *result = nnotify == 0 ? SCIP_SOLVELP : SCIP_INFEASIBLE;
 
@@ -5024,7 +5026,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    const char* endptr;
    SCIP_CONSEXPR_EXPR* consexprtree;
 
-   SCIPdebugMessage("cons_expr::consparse parsing %s\n",str);
+   SCIPdebugMsg(scip, "cons_expr::consparse parsing %s\n",str);
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -6192,9 +6194,10 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
    )
 {
-   SCIP_HASHMAPLIST* list;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_HASHMAPENTRY* entry;
    FILE* file;
-   int l;
+   int i;
 
    assert(dotdata != NULL);
    assert(*dotdata != NULL);
@@ -6202,12 +6205,21 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    file = (*dotdata)->file;
    assert(file != NULL);
 
-   /* tell dot that all expressions without children have the same rank */
+   /* iterate through all entries of the map */
    SCIPinfoMessage(scip, file, "{rank=same;");
-   for( l = 0; l < SCIPhashmapGetNLists((*dotdata)->visitedexprs); ++l )
-      for( list = SCIPhashmapGetList((*dotdata)->visitedexprs, l); list != NULL; list = SCIPhashmapListGetNext(list) )
-         if( SCIPgetConsExprExprNChildren((SCIP_CONSEXPR_EXPR*)SCIPhashmapListGetOrigin(list)) == 0 )
-            SCIPinfoMessage(scip, file, " n%p", SCIPhashmapListGetOrigin(list));
+   for( i = 0; i < SCIPhashmapGetNEntries((*dotdata)->visitedexprs); ++i )
+   {
+      entry = SCIPhashmapGetEntry((*dotdata)->visitedexprs, i);
+
+      if( entry != NULL )
+      {
+         expr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetOrigin(entry);
+         assert(expr != NULL);
+
+         if( SCIPgetConsExprExprNChildren(expr) == 0 )
+            SCIPinfoMessage(scip, file, " n%p", expr);
+      }
+   }
    SCIPinfoMessage(scip, file, "}\n");
 
    SCIPinfoMessage(scip, file, "}\n");
@@ -6498,7 +6510,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          }
 
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMsg(scip, "tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 #endif
       }
    }
@@ -7414,7 +7426,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    /* check that there is either a lhs or a rhs (if not, then probably we were overflowing SCIPinfinity for one side) */
    if( SCIPisInfinity(scip, -SCIProwGetLhs(*cut)) && SCIPisInfinity(scip, SCIProwGetRhs(*cut)) )
    {
-      SCIPdebugMessage("cut <%s> sides are both infinite: left %g right %g\n", SCIProwGetName(*cut), SCIProwGetLhs(*cut), SCIProwGetRhs(*cut));
+      SCIPdebugMsg(scip, "cut <%s> sides are both infinite: left %g right %g\n", SCIProwGetName(*cut), SCIProwGetLhs(*cut), SCIProwGetRhs(*cut));
       SCIP_CALL( SCIPreleaseRow(scip, cut) );
       return SCIP_OKAY;
    }
@@ -7427,12 +7439,12 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    mincoef = SCIPgetRowMinCoef(scip, *cut);
    maxcoef = SCIPgetRowMaxCoef(scip, *cut);
 
-   /* SCIPdebugMessage("cut <%s> violation %g mincoef %g maxcoef %g range %.2e side %g \n", SCIProwGetName(*cut), violation, mincoef, maxcoef, maxcoef/mincoef, side == SCIP_SIDETYPE_LEFT ? SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut)); */
+   /* SCIPdebugMsg(scip, "cut <%s> violation %g mincoef %g maxcoef %g range %.2e side %g \n", SCIProwGetName(*cut), violation, mincoef, maxcoef, maxcoef/mincoef, side == SCIP_SIDETYPE_LEFT ? SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut)); */
 
    /* if maximal coefficient is infinity, give up on the cut */
    if( SCIPisInfinity(scip, maxcoef) )
    {
-      SCIPdebugMessage("maximal coefficients of cut <%s> is too large: %g\n", SCIProwGetName(*cut), maxcoef);
+      SCIPdebugMsg(scip, "maximal coefficients of cut <%s> is too large: %g\n", SCIProwGetName(*cut), maxcoef);
       SCIP_CALL( SCIPreleaseRow(scip, cut) );
       return SCIP_OKAY;
    }
@@ -7446,7 +7458,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
       int j;
 
       /* if range of coefficients is bad, find very small coefficients and make them zero */
-      SCIPdebugMessage("cut coefficients for cut <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIProwGetName(*cut), mincoef, maxcoef);
+      SCIPdebugMsg(scip, "cut coefficients for cut <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIProwGetName(*cut), mincoef, maxcoef);
 
       /* TODO in the original code, we were not looking into cases where the minimal coefficient is due to a linear variable.
        * This would correspond to the auxiliary variable here, which we might not want to eliminate from the cut.
@@ -7472,7 +7484,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
             lb = SCIProwIsLocal(*cut) ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -lb) )
             {
-               SCIPdebugMessage("eliminate coefficient %g for <%s> = %g [>= %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), lb);
+               SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> = %g [>= %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), lb);
 
                constant += coef * lb;
                SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, -coef) );
@@ -7487,7 +7499,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
             ub = SCIProwIsLocal(*cut) ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
             if( !SCIPisInfinity(scip, ub) )
             {
-               SCIPdebugMessage("eliminate coefficient %g for <%s> = %g [<= %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), ub);
+               SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> = %g [<= %g]\n", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), ub);
 
                constant += coef * ub;
                SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, -coef) );
@@ -7496,7 +7508,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
          }
 
          /* if variable could not be eliminated, then give up */
-         SCIPdebugMessage("could not eliminate small coefficient %g of variable <%s>\n", coef, SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "could not eliminate small coefficient %g of variable <%s>\n", coef, SCIPvarGetName(var));
          SCIP_CALL( SCIPreleaseRow(scip, cut) );
          return SCIP_OKAY;
       }
@@ -7524,7 +7536,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    if( (side == SCIP_SIDETYPE_LEFT  && SCIPisInfinity(scip, -SCIProwGetLhs(*cut))) ||
        (side == SCIP_SIDETYPE_RIGHT && SCIPisInfinity(scip,  SCIProwGetRhs(*cut))) )
    {
-      SCIPdebugMessage("cut <%s> has very large side: %g\n", SCIProwGetName(*cut), side == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut));
+      SCIPdebugMsg(scip, "cut <%s> has very large side: %g\n", SCIProwGetName(*cut), side == SCIP_SIDETYPE_LEFT ? -SCIProwGetLhs(*cut) : SCIProwGetRhs(*cut));
       SCIP_CALL( SCIPreleaseRow(scip, cut) );
       return SCIP_OKAY;
    }

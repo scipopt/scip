@@ -186,7 +186,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalLog)
 
    if( SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) <= 0.0 )
    {
-      SCIPdebugMessage("invalid evaluation of logarithmic expression\n");
+      SCIPdebugMsg(scip, "invalid evaluation of logarithmic expression\n");
       *val = SCIP_INVALID;
    }
    else
@@ -354,7 +354,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
    *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("add cut with violation %e\n", violation);
+   SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
