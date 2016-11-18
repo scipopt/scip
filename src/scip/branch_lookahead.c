@@ -55,6 +55,7 @@
 #define DEFAULT_MAXNUMBERVIOLATEDCONS        10000
 #define DEFAULT_REEVALAGE                    5LL
 #define DEFAULT_STOPBRANCHING                TRUE
+#define DEFAULT_PURGECONSONCUTOFF            TRUE
 
 /*
  * Data structures
@@ -120,6 +121,7 @@ struct SCIP_BranchruleData
    SCIP_Real             prevprovedbound;
    int                   restartindex;
    SCIP_Bool             stopbranching;
+   SCIP_Bool             purgeconsoncutoff;
 
    SCIP_Longint          reevalage;
    SCIP_Longint*         lastbranchid;
@@ -187,9 +189,9 @@ typedef struct
  */
 typedef struct
 {
-   SCIP_VAR**            eithervars;         /**< An array containing one of the variables needed to create the implied
+   SCIP_VAR**            firstlvlvars;       /**< An array containing one of the variables needed to create the implied
                                               *   binary constraint. */
-   SCIP_VAR**            othervars;          /**< An array containing the other variable needed to create the implied binary
+   SCIP_VAR**            secondlvlvars;      /**< An array containing the other variable needed to create the implied binary
                                               *   constraint. */
    int                   nentries;           /**< The number of entries in both arrays. */
    int                   nviolatedentries;   /**< The number of entries that are violated by the base LP solution. */
@@ -385,8 +387,8 @@ SCIP_RETCODE allocBinaryBoundData(
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, binarybounddata) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->eithervars, nentries) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->othervars, nentries) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->firstlvlvars, nentries) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*binarybounddata)->secondlvlvars, nentries) );
    (*binarybounddata)->memsize = nentries;
    (*binarybounddata)->nentries = 0;
    (*binarybounddata)->nviolatedentries = 0;
@@ -415,8 +417,8 @@ static
 SCIP_RETCODE addBinaryBoundEntry(
    SCIP*                 scip,               /**< SCIP data structure */
    BINARYBOUNDDATA*      container,          /**< The container for the implied binary constraints. */
-   SCIP_VAR*             eithervar,          /**< One of both vars for the constraint. */
-   SCIP_VAR*             othervar,           /**< The other one of the vars for the constraint. */
+   SCIP_VAR*             firstlvlvar,        /**< One of both vars for the constraint. */
+   SCIP_VAR*             secondlvlvar,       /**< The other one of the vars for the constraint. */
    SCIP_SOL*             baselpsol           /**< the lp solution in the base node */
    )
 {
@@ -424,8 +426,8 @@ SCIP_RETCODE addBinaryBoundEntry(
 
    assert(scip != NULL);
    assert(container != NULL);
-   assert(eithervar != NULL);
-   assert(othervar != NULL);
+   assert(firstlvlvar != NULL);
+   assert(secondlvlvar != NULL);
 
    emptyindex = container->nentries;
 
@@ -433,16 +435,16 @@ SCIP_RETCODE addBinaryBoundEntry(
    {
       /* calculate new size, that can at least hold the old number of entries + 1 for the new entry */
       int newmemsize = SCIPcalcMemGrowSize(scip, emptyindex + 1);
-      SCIP_CALL( SCIPreallocBufferArray(scip, &container->eithervars, newmemsize) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, &container->othervars, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &container->firstlvlvars, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &container->secondlvlvars, newmemsize) );
       container->memsize = newmemsize;
    }
 
-   container->eithervars[emptyindex] = eithervar;
-   container->othervars[emptyindex] = othervar;
+   container->firstlvlvars[emptyindex] = firstlvlvar;
+   container->secondlvlvars[emptyindex] = secondlvlvar;
    container->nentries = emptyindex + 1;
 
-   if( isBinaryConstraintViolatedBySolution(scip, eithervar, othervar, baselpsol) )
+   if( isBinaryConstraintViolatedBySolution(scip, firstlvlvar, secondlvlvar, baselpsol) )
    {
       container->nviolatedentries++;
    }
@@ -472,8 +474,8 @@ void freeBinaryBoundData(
    BINARYBOUNDDATA**     binarybounddata     /**< The container to be freed. */
    )
 {
-   SCIPfreeBufferArray(scip, &(*binarybounddata)->othervars);
-   SCIPfreeBufferArray(scip, &(*binarybounddata)->eithervars);
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->secondlvlvars);
+   SCIPfreeBufferArray(scip, &(*binarybounddata)->firstlvlvars);
    SCIPfreeBuffer(scip, binarybounddata);
 }
 
@@ -1047,7 +1049,7 @@ SCIP_Bool isExecuteDeepBranchingLoop(
    {
       /* if both second level branches for a variable are cutoff, we stop the calculation, as the current first level
        * branch has to be cutoff */
-      SCIPdebugMessage("A deeper lp is cutoff, as both lps are cutoff.\n");
+      SCIPdebugMessage("A first level branching node is cutoff, as both second level lps are cutoff.\n");
    }
    return result;
 }
@@ -1195,20 +1197,20 @@ SCIP_RETCODE handleImpliedBinaryBounds(
    SCIPdebugMessage("Adding <%i> implied binary bounds.\n", nentries);
    for( i = 0; i < nentries; i++ )
    {
-      SCIP_VAR* eithervar;
-      SCIP_VAR* othervar;
+      SCIP_VAR* firstlvlvar;
+      SCIP_VAR* secondlvlvar;
       SCIP_VAR* constraintvars[2];
       SCIP_CONS* constraint;
       char constraintname[SCIP_MAXSTRLEN];
 
       /* BinaryBoundData is sequentially filled, so we can access the arrays with the for variable */
-      eithervar = binarybounddata->eithervars[i];
-      othervar = binarybounddata->othervars[i];
-      constraintvars[0] = eithervar;
-      constraintvars[1] = othervar;
+      firstlvlvar = binarybounddata->firstlvlvars[i];
+      secondlvlvar = binarybounddata->secondlvlvars[i];
+      constraintvars[0] = firstlvlvar;
+      constraintvars[1] = secondlvlvar;
 
       /* create the constraint with a meaningful name */
-      createBinaryBoundConstraintName(scip, eithervar, othervar, constraintname);
+      createBinaryBoundConstraintName(scip, firstlvlvar, secondlvlvar, constraintname);
       SCIP_CALL( createImpliedBinaryConstraint(scip, branchruledata, &constraint, constraintname, constraintvars) );
 
 #ifdef PRINTNODECONS
@@ -1394,6 +1396,23 @@ void updateOldBranchingResult(
 
 }
 
+static
+void purgeBinaryBoundData(
+   SCIP_VAR*             firstlvlvartopurge,
+   BINARYBOUNDDATA*      container
+   )
+{
+   /* delete the last entries in the container, that have the given first level variable */
+   /* TODO: maybe only decrement the number of entries? All access works with this counter */
+   while( container->nentries >= 0 && container->firstlvlvars[container->nentries - 1] == firstlvlvartopurge )
+   {
+      container->firstlvlvars[container->nentries - 1] = NULL;
+      container->secondlvlvars[container->nentries - 1] = NULL;
+      container->nentries--;
+   }
+}
+
+
 /**
  * Selects a variable from a set of candidates by applying strong branching with a depth of 2.
  * If the branching generated additional bounds, like domain reductions from cutoffs, those are added and a suitable result
@@ -1564,6 +1583,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, locallpobjval,
                         basevarforbound, &downdualbound, &downdualboundvalid, &downbranchingresult->cutoff, scoredata->upperbounddata,
                         &scoredata->ncutoffs, supposedbounds, binarybounddata) );
+
+                  if( branchruledata->useimpliedbincons && branchruledata->purgeconsoncutoff && downbranchingresult->cutoff )
+                  {
+                     purgeBinaryBoundData(basevarforbound, binarybounddata);
+                  }
                }
 
                /* reset the probing model */
@@ -1604,6 +1628,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   SCIP_CALL( executeDeepBranching(scip, branchruledata, status, baselpsol, basenode, lpobjval, locallpobjval,
                         basevarforbound, &updualbound, &updualboundvalid, &upbranchingresult->cutoff, scoredata->lowerbounddata,
                         &scoredata->ncutoffs, supposedbounds, binarybounddata) );
+
+                  if( branchruledata->useimpliedbincons && branchruledata->purgeconsoncutoff && upbranchingresult->cutoff )
+                  {
+                     purgeBinaryBoundData(basevarforbound, binarybounddata);
+                  }
                }
 
                /* reset the probing model */
@@ -2268,5 +2297,9 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/stopbranching",
          "if the first level down branch is infeasible, should we stop evaluating the up branch?",
          &branchruledata->stopbranching, TRUE, DEFAULT_STOPBRANCHING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/purgeconsoncutoff",
+         "if the first level down branch is infeasible, should we discard all constraints found for this variable?",
+         &branchruledata->purgeconsoncutoff, TRUE, DEFAULT_PURGECONSONCUTOFF, NULL, NULL) );
    return SCIP_OKAY;
 }
