@@ -3142,6 +3142,12 @@ SCIP_RETCODE makeClassicExpr(
    {
       SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), targetexpr, nchildren, children, SCIPgetConsExprExprSumCoefs(sourceexpr), SCIPgetConsExprExprSumConstant(sourceexpr)) );
    }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "pow") == 0 )
+   {
+      assert(nchildren == 1);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children,
+            SCIPgetConsExprExprPowExponent(sourceexpr)) );
+   }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
    {
       SCIP_EXPRDATA_MONOMIAL* monomial;
