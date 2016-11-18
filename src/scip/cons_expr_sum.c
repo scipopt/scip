@@ -1015,7 +1015,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("add cut with violation %e\n", violation);
+      SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
       SCIP_CALL( SCIPprintRow(scip, exprdata->row, NULL) );
 #endif
    }

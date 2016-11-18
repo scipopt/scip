@@ -38,8 +38,10 @@ ifeq ($(SANITIZE),true)
 # enable UndefinedBehaviorSanitizer
 SANITZERFLAGS = -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 
-# enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
-SANITZERFLAGS += -fsanitize=leak
+# do not enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
+# this does not seem to work well together with Criterion
+# also it may prevents usage of valgrind while also not replacing it
+#SANITZERFLAGS += -fsanitize=leak
 
 endif
 

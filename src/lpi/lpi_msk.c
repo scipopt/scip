@@ -877,6 +877,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+      int j;
+
+      MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+#endif
+
       SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
       MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
@@ -1053,6 +1063,16 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new cols are added - this is forbidden */
+      int ncols;
+      int j;
+
+      MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
+
       SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
       MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
@@ -1204,10 +1224,12 @@ SCIP_RETCODE SCIPlpiChgBounds(
    MSKboundkeye* bkx;
    double* blx;
    double* bux;
+   int i;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("Calling SCIPlpiChgBounds (%d)\n",lpi->lpid);
 
@@ -1217,6 +1239,22 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    if (ncols == 0)
       return SCIP_OKAY;
+
+   /* @todo This test could be integrated into generateMskBounds, but then this function needs to be able to return an
+    * error, which requires some rewriting. */
+   for (i = 0; i < ncols; ++i)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+   }
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
    SCIP_ALLOC( BMSallocMemoryArray(&blx, ncols) );
@@ -4589,11 +4627,11 @@ SCIP_RETCODE SCIPlpiWriteLP(
 {
    int olddataformat;
 
-   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n",lpi->lpid, fname);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n",lpi->lpid, fname);
 
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, &olddataformat) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, MSK_DATA_FORMAT_LP) );

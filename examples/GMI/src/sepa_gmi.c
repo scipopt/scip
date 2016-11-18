@@ -229,7 +229,7 @@ SCIP_Bool checkNumerics(
    /* Check maximum support */
    if( *cutnz > (ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs )
    {
-      SCIPdebugMessage("Cut too dense (%d > %d).\n", *cutnz, (int) ((ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs));
+      SCIPdebugMsg(scip, "Cut too dense (%d > %d).\n", *cutnz, (int) ((ncols)*(sepadata->maxsupprel) + sepadata->maxsuppabs));
       return FALSE;
    }
 
@@ -248,7 +248,7 @@ SCIP_Bool checkNumerics(
    /* Check dynamism */
    if( maxcoef > mincoef * sepadata->maxdynamism )
    {
-      SCIPdebugMessage("Cut too dynamic (%g > %g).\n", maxcoef, mincoef * sepadata->maxdynamism);
+      SCIPdebugMsg(scip, "Cut too dynamic (%g > %g).\n", maxcoef, mincoef * sepadata->maxdynamism);
       return FALSE;
    }
 
@@ -414,7 +414,7 @@ SCIP_Bool getGMIFromRow(
          break;
       case SCIP_BASESTAT_ZERO:
          /* Nonbasic free variable at zero: cut coefficient is zero, skip */
-         SCIPdebugMessage("Free nonbasic slack variable, this should not happen!\n");
+         SCIPdebugMsg(scip, "Free nonbasic slack variable, this should not happen!\n");
          continue;
       case SCIP_BASESTAT_BASIC:
       default:
@@ -511,10 +511,10 @@ SCIP_Bool getGMIFromRow(
    if ( success )
    {
       success = checkNumerics(scip, sepadata, ncols, cols, cutcoefs, cutind, cutnz, cutrhs, cutact);
-      SCIPdebugMessage("checkNumerics returned: %u.\n", success);
+      SCIPdebugMsg(scip, "checkNumerics returned: %u.\n", success);
       return success;
    }
-   SCIPdebugMessage("modifyAndPackCut was not successful.\n");
+   SCIPdebugMsg(scip, "modifyAndPackCut was not successful.\n");
 
    return FALSE;
 }
@@ -664,7 +664,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
       c = basisind[i];
       primsol = SCIP_INVALID;
 
-      SCIPdebugMessage("Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
+      SCIPdebugMsg(scip, "Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
       if( c >= 0 )
       {
          SCIP_VAR* var;
@@ -678,7 +678,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1 - sepadata->away) )
             {
-               SCIPdebugMessage("trying gomory cut for col <%s> [%g] row %i\n", SCIPvarGetName(var), primsol, i);
+               SCIPdebugMsg(scip, "trying gomory cut for col <%s> [%g] row %i\n", SCIPvarGetName(var), primsol, i);
                tryrow = TRUE;
             }
          }
@@ -698,7 +698,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1 - sepadata->away) )
             {
-               SCIPdebugMessage("trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebugMsg(scip, "trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                tryrow = TRUE;
             }
@@ -727,7 +727,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          /* create a GMI cut out of the simplex tableau row */
          success = getGMIFromRow(scip, sepadata, ncols, nrows, cols, rows, binvrow, binvarow, primsol, cutcoefs, cutind, &cutnz, &cutrhs, &cutact, workcoefs);
 
-         SCIPdebugMessage(" -> success = %u: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMsg(scip, " -> success = %u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, add the row as a cut */
          if( success )
@@ -755,7 +755,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
             if( SCIProwGetNNonz(cut) == 0 )
             {
                assert(SCIPisFeasNegative(scip, cutrhs));
-               SCIPdebugMessage(" -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+               SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
                *result = SCIP_CUTOFF;
                break;
             }
@@ -766,11 +766,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
             {
                SCIP_Bool infeasible;
 
-               SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
+               SCIPdebugMsg(scip, " -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
                   c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                   cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
 
-               SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+               SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                   cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                   SCIPgetCutEfficacy(scip, NULL, cut),
                   SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -808,7 +808,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &cutind);
 
-   SCIPdebugMessage("end searching gomory cuts: found %d cuts.\n", ncuts);
+   SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts.\n", ncuts);
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 

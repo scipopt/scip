@@ -115,7 +115,7 @@ SCIP_RETCODE performDualfix(
             if( roundbound < SCIPvarGetUbGlobal(var) )
                bound = roundbound;
          }
-         SCIPdebugMessage("fixing variable <%s> with objective 0 to %g\n", SCIPvarGetName(var), bound);
+         SCIPdebugMsg(scip, "fixing variable <%s> with objective 0 to %g\n", SCIPvarGetName(var), bound);
       }
       else
       {
@@ -140,7 +140,7 @@ SCIP_RETCODE performDualfix(
                   continue;
                }
             }
-            SCIPdebugMessage("fixing variable <%s> with objective %g and %d uplocks to lower bound %g\n",
+            SCIPdebugMsg(scip, "fixing variable <%s> with objective %g and %d uplocks to lower bound %g\n",
                SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksUp(var), bound);
          }
          else if( SCIPvarMayRoundUp(var) && !SCIPisPositive(scip, obj) )
@@ -163,7 +163,7 @@ SCIP_RETCODE performDualfix(
                   continue;
                }
             }
-            SCIPdebugMessage("fixing variable <%s> with objective %g and %d downlocks to upper bound %g\n",
+            SCIPdebugMsg(scip, "fixing variable <%s> with objective %g and %d downlocks to upper bound %g\n",
                SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksDown(var), bound);
          }
          else
@@ -172,7 +172,7 @@ SCIP_RETCODE performDualfix(
 
       if( SCIPisInfinity(scip, REALABS(bound)) && !SCIPisZero(scip, obj) )
       {
-         SCIPdebugMessage(" -> unbounded fixing\n");
+         SCIPdebugMsg(scip, " -> unbounded fixing\n");
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
             SCIPvarGetName(var), SCIPvarGetObj(var), bound < 0.0 ? "small" : "large");
@@ -181,12 +181,12 @@ SCIP_RETCODE performDualfix(
       }
 
       /* apply the fixing */
-      SCIPdebugMessage("apply fixing of variable %s to %g\n", SCIPvarGetName(var), bound);
+      SCIPdebugMsg(scip, "apply fixing of variable %s to %g\n", SCIPvarGetName(var), bound);
       SCIP_CALL( SCIPfixVar(scip, var, bound, &infeasible, &fixed) );
 
       if( infeasible )
       {
-         SCIPdebugMessage(" -> infeasible fixing\n");
+         SCIPdebugMsg(scip, " -> infeasible fixing\n");
          *cutoff = TRUE;
          return SCIP_OKAY;
       }

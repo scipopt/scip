@@ -94,21 +94,21 @@ Test(conshdlr, conscheck, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 2) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 3) );
-   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
    cr_expect_not(success, "an ifeasible solution has been accepted");
 
    /* create a feasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 1) );
-   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success, "a feasible solution has been declined");
 
    /* create an undefined solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 0) );
-   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
    cr_expect_not(success, "undefined solution has been accepted");
 
    /* release constraints */

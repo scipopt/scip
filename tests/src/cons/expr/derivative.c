@@ -33,6 +33,7 @@ static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
+static SCIP_RANDNUMGEN* rndgen;
 
 static
 void setup(void)
@@ -57,11 +58,15 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, z) );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&rndgen, SCIPblkmem(scip), 1) );
 }
 
 static
 void teardown(void)
 {
+   SCIPrandomFree(&rndgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -219,7 +224,6 @@ Test(derivative, quadratic)
 {
    SCIP_CONSEXPR_EXPR* expr;
    const char* input = "3.0*<x>[C]^2 -4.0*<y>[C] * <x>[C] + <z>[C] * <x>[C] -7.0*<z>[C]";
-   unsigned int seed = 0;
    int i;
 
    /* create expression */
@@ -229,9 +233,9 @@ Test(derivative, quadratic)
    {
       SCIP_Real xval, yval, zval;
 
-      xval = SCIPgetRandomReal(-10.0, 10.0, &seed);
-      yval = SCIPgetRandomReal(-10.0, 10.0, &seed);
-      zval = SCIPgetRandomReal(-10.0, 10.0, &seed);
+      xval = SCIPrandomGetReal(rndgen, -10.0, 10.0);
+      yval = SCIPrandomGetReal(rndgen, -10.0, 10.0);
+      zval = SCIPrandomGetReal(rndgen, -10.0, 10.0);
 
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, xval) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, yval) );
@@ -250,7 +254,6 @@ Test(derivative, complex1)
 {
    SCIP_CONSEXPR_EXPR* expr;
    const char* input = "<x>[C] * <y>[C] * exp(<x>[C]^2 + <z>[C]^2 - 5)";
-   unsigned int seed = 0;
    int i;
 
    /* create expression */
@@ -260,9 +263,9 @@ Test(derivative, complex1)
    {
       SCIP_Real xval, yval, zval;
 
-      xval = SCIPgetRandomReal(-2.0, 2.0, &seed);
-      yval = SCIPgetRandomReal(-2.0, 2.0, &seed);
-      zval = SCIPgetRandomReal(-2.0, 2.0, &seed);
+      xval = SCIPrandomGetReal(rndgen, -2.0, 2.0);
+      yval = SCIPrandomGetReal(rndgen, -2.0, 2.0);
+      zval = SCIPrandomGetReal(rndgen, -2.0, 2.0);
 
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, xval) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, yval) );
@@ -281,7 +284,6 @@ Test(derivative, complex2)
 {
    SCIP_CONSEXPR_EXPR* expr;
    const char* input = "-2*<x>[C] * (<x>[C]^2 - 9)^(-2)";
-   unsigned int seed = 0;
    int i;
 
    /* create expression */
@@ -291,7 +293,7 @@ Test(derivative, complex2)
    {
       SCIP_Real xval;
 
-      xval = SCIPgetRandomReal(-2.0, 2.0, &seed);
+      xval = SCIPrandomGetReal(rndgen, -2.0, 2.0);
 
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, xval) );
 

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   unittest-regression.c
+/**@file   regression.c
  * @brief  unit tests for incremental best-fit computation
  * @author Gregor Hendel
  */

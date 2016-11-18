@@ -33,6 +33,7 @@
  * @brief translates a SCIP_RETCODE into an error string
  *
  * @param[in] retcode SCIP_RETCODE you want to translate
+ * @param[in] buffersize size of buffer
  * @param[out] buffer_str buffer to character array to store translated message, this must be at least of size \ref SCIP_MSG_MAX
  * @return buffer_str or NULL, if retcode could not be translated
  */
@@ -136,7 +137,7 @@ public:
    const char * what(void)const throw() {return _msg;}
 
 
-   /** @brief get method for @ref _retcode
+   /** @brief get method for @p _retcode
     *
     * @return stored SCIP_RETCODE
     */

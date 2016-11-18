@@ -682,6 +682,7 @@ INPUT_ENCODING         = UTF-8
 # *.f90 *.f *.for *.vhd *.vhdl
 
 FILE_PATTERNS          = scip*.h \
+                         heuristics.* \
                          *_*.h \
                          lpi* \
                          exprinterpret* \

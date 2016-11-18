@@ -80,7 +80,7 @@ SCIP_RETCODE Exec(
       goto TERMINATE;
    }
 
-   SCIPdebugMessage("current node is %lld, ID %u:\n", SCIPnodeGetNumber(curnode), curid);
+   SCIPdebugMsg(scip, "current node is %lld, ID %u:\n", SCIPnodeGetNumber(curnode), curid);
 
    /* get the corresponding node of the reoptimization tree */
    reoptnode = SCIPgetReoptnode(scip, curid);
@@ -161,7 +161,7 @@ SCIP_RETCODE Exec(
       childid = childids[c];
       assert(childid >= 1);
 
-      SCIPdebugMessage("process child at ID %u\n", childid);
+      SCIPdebugMsg(scip, "process child at ID %u\n", childid);
 
       reoptnode = SCIPgetReoptnode(scip, childid);
       assert(reoptnode != NULL);
@@ -220,7 +220,7 @@ SCIP_RETCODE Exec(
 
   TERMINATE:
 
-   SCIPdebugMessage("**** finish reoptimizing %d child nodes of node %lld ****\n", ncreatednodes, SCIPnodeGetNumber(curnode));
+   SCIPdebugMsg(scip, "**** finish reoptimizing %d child nodes of node %lld ****\n", ncreatednodes, SCIPnodeGetNumber(curnode));
 
    return SCIP_OKAY;
 }

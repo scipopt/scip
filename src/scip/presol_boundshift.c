@@ -184,7 +184,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          SCIP_Bool redundant;
          SCIP_Bool aggregated;
 
-         SCIPdebugMessage("convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
+         SCIPdebugMsg(scip, "convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
 
          /* create new variable */
          (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
@@ -212,7 +212,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          assert(!infeasible);
          assert(redundant);
          assert(aggregated);
-         SCIPdebugMessage("var <%s> with bounds [%f,%f] has obj %f\n",
+         SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
             SCIPvarGetName(newvar),SCIPvarGetLbGlobal(newvar),SCIPvarGetUbGlobal(newvar),SCIPvarGetObj(newvar));
 
          /* release variable */
