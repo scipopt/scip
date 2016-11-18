@@ -85,7 +85,7 @@
 #define USESUPADDLIFT             FALSE /**< should lifted minimal cover inequalities using superadditive up-lifting be separated in addition */
 
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define HASHSIZE_KNAPSACKCONS    131101 /**< minimal size of hash table in linear constraint tables */
+#define HASHSIZE_KNAPSACKCONS       500 /**< minimal size of hash table in linear constraint tables */
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
@@ -202,6 +202,7 @@ struct SCIP_ConsData
    unsigned int          existmultaggr:1;    /**< does this constraint contain multi-aggregations */
 };
 
+#define MAXNCLIQUEVARSCOMP 1000000
 
 /** event data for bound changes events */
 struct SCIP_EventData
@@ -457,7 +458,6 @@ SCIP_RETCODE calcCliquepartition(
       consdata->negcliquepartitioned = TRUE;
       consdata->ncliqueslastnegpart = SCIPgetNCliques(scip);
    }
-
    assert(!consdata->cliquepartitioned || consdata->ncliques <= consdata->nvars);
    assert(!consdata->negcliquepartitioned || consdata->nnegcliques <= consdata->nvars);
 
@@ -2082,7 +2082,7 @@ SCIP_RETCODE GUBsetCheck(
  *  note: in contrast to SCIPcalcCliquePartition(), variables with LP value 1 are put into trivial cliques (with one
  *  variable) and for the remaining variables, a partition with a small number of cliques is constructed
  */
-#define MAXNCLIQUEVARSCOMP 1000000
+
 static
 SCIP_RETCODE GUBsetCalcCliquePartition(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -11412,11 +11412,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    SCIP* scip;
 #endif
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
-   int maxabsval;
 
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
@@ -11435,15 +11433,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValKnapsackcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && mididx >= 0 && maxidx >= 0);
 
-   if( consdata->weights[0] > INT_MAX )
-      maxabsval = 0;
-   else
-      maxabsval = (int) consdata->weights[0];
-
    /* hash value depends on vectors of variable indices */
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx + maxabsval; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
+                      consdata->weights[0]);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -11469,7 +11461,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_KNAPSACKCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyKnapsackcons, hashKeyEqKnapsackcons, hashKeyValKnapsackcons, (void*) scip) );

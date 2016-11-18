@@ -107,6 +107,8 @@
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES TRUE /**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
+#define DEFAULT_SINGLETONSTUFFING    TRUE /**< should singleton variable stuffing be performed? */
+#define DEFAULT_SINGLEVARSTUFFING    TRUE /**< should single variable stuffing be performed? */
 #define DEFAULT_DETECTCUTOFFBOUND    TRUE /**< should presolving try to detect constraints parallel to the objective
                                            *   function defining an upper bound and prevent these constraints from
                                            *   entering the LP */
@@ -129,10 +131,10 @@
                                            *   type
                                            */
 
+#define HASHSIZE_LINEARCONS           500 /**< minimal size of hash table in linear constraint tables */
 #define MAXVALRECOMP                1e+06 /**< maximal abolsute value we trust without recomputing the activity */
 #define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
 
-#define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
@@ -282,6 +284,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   SCIP_Bool             singletonstuffing;  /**< should singleton variable stuffing be performed? */
+   SCIP_Bool             singlevarstuffing;  /**< should single variable stuffing be performed? */
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
    SCIP_Bool             checkrelmaxabs;     /**< should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
@@ -12679,12 +12683,9 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real maxabsrealval;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
-   unsigned int addval;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12704,23 +12705,11 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   addval = (unsigned int) REALABS(consdata->vals[0]);
-   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
-   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
-
-   maxabsrealval = consdataGetMaxAbsval(consdata);
-   /* hash value depends on vectors of variable indices */
-   if( maxabsrealval < (SCIP_Real) INT_MAX )
-   {
-      if( maxabsrealval < 1.0 )
-         addval += (unsigned int) (MULTIPLIER * maxabsrealval);
-      else
-         addval += (unsigned int) maxabsrealval;
-   }
-
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx + addval; /*lint !e701*/
-
-   return hashval;
+   /* using only the variable indices as hash, since the values are compared by epsilon */
+   return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
+                       SCIPrealHashCode(consdata->vals[0]),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2]),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1]));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -12751,7 +12740,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(nchgsides != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_LINEARCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyLinearcons, hashKeyEqLinearcons, hashKeyValLinearcons, (void*) scip) );
@@ -13508,6 +13497,591 @@ SCIP_RETCODE preprocessConstraintPairs(
    SCIPfreeBufferArray(scip, &diffidx0minus1);
    SCIPfreeBufferArray(scip, &commonidx1);
    SCIPfreeBufferArray(scip, &commonidx0);
+
+   return SCIP_OKAY;
+}
+
+/** do stuffing presolving on a single constraint */
+static
+SCIP_RETCODE presolStuffing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Bool             singletonstuffing,  /**< should singleton variable stuffing be performed? */
+   SCIP_Bool             singlevarstuffing,  /**< should single variable stuffing be performed? */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
+   int*                  nfixedvars,         /**< pointer to count the total number of fixed variables */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   int*                  ndelconss           /**< pointer to count the total number of deleted constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real* ratios;
+   int* varpos;
+   SCIP_Bool* swapped;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_VAR* var;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real minactivity;
+   SCIP_Real maxactivity;
+   SCIP_Real maxcondactivity;
+   SCIP_Real mincondactivity;
+   SCIP_Real rhs;
+   SCIP_Real val;
+   SCIP_Real obj;
+   SCIP_Real factor;
+   SCIP_Bool minactisrelax;
+   SCIP_Bool maxactisrelax;
+   SCIP_Bool tryfixing;
+   int nsingletons;
+   int idx;
+   int v;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+
+   consdata = SCIPconsGetData(cons);
+
+   /* we only want to run for inequalities */
+   if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+      return SCIP_OKAY;
+
+   if( singlevarstuffing )
+   {
+      consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+   }
+   else
+   {
+      minactivity = SCIP_INVALID;
+      maxactivity = SCIP_INVALID;
+   }
+
+   /* we want to have a <= constraint, if the rhs is infinite, we implicitly multiply the constraint by -1,
+    * the new maxactivity is minus the old minactivity then
+    */
+   if( SCIPisInfinity(scip, consdata->rhs) )
+   {
+      SCIP_Real tmp;
+      rhs = -consdata->lhs;
+      factor = -1.0;
+      tmp = maxactivity;
+      maxactivity = -minactivity;
+      minactivity = -tmp;
+   }
+   else
+   {
+      assert(SCIPisInfinity(scip, -consdata->lhs));
+      rhs = consdata->rhs;
+      factor = 1.0;
+   }
+
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+   vals = consdata->vals;
+
+   /* check for continuous singletons */
+   if( singletonstuffing )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v];
+
+         if( (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
+            SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            break;
+      }
+   }
+   else
+      /* we don't want to go into the next block */
+      v = nvars;
+
+   /* a singleton was found -> perform singleton variable stuffing */
+   if( v < nvars )
+   {
+      assert(singletonstuffing);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varpos, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ratios, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &swapped, nvars) );
+
+      tryfixing = TRUE;
+      nsingletons = 0;
+      mincondactivity = 0.0;
+      maxcondactivity = 0.0;
+
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v];
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+         obj = SCIPvarGetObj(var);
+         val = factor * vals[v];
+
+         assert(!SCIPisZero(scip, val));
+
+         /* the variable is a singleton and continuous */
+         if( (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
+            SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPisNegative(scip, obj) && val > 0 )
+            {
+               /* case 1: obj < 0 and coef > 0 */
+               if( SCIPisInfinity(scip, -lb) )
+               {
+                  tryfixing = FALSE;
+                  break;
+               }
+
+               maxcondactivity += val * lb;
+               mincondactivity += val * lb;
+               swapped[nsingletons] = FALSE;
+               ratios[nsingletons] = obj / val;
+               varpos[nsingletons] = v;
+               nsingletons++;
+            }
+            else if( SCIPisPositive(scip, obj) && val < 0 )
+            {
+               /* case 2: obj > 0 and coef < 0 */
+               if( SCIPisInfinity(scip, ub) )
+               {
+                  tryfixing = FALSE;
+                  break;
+               }
+               /* multiply column by (-1) to become case 1.
+                * now bounds are swapped: ub := -lb, lb := -ub
+                */
+
+               maxcondactivity += val * ub;
+               mincondactivity += val * ub;
+               swapped[nsingletons] = TRUE;
+               ratios[nsingletons] = obj / val;
+               varpos[nsingletons] = v;
+               nsingletons++;
+            }
+            else if( val > 0 )
+            {
+               /* case 3: obj >= 0 and coef >= 0 is handled by duality fixing.
+                *  we only consider the lower bound for the constants
+                */
+               assert(!SCIPisNegative(scip, obj));
+
+               if( SCIPisInfinity(scip, -lb) )
+               {
+                  /* maybe unbounded */
+                  tryfixing = FALSE;
+                  break;
+               }
+
+               maxcondactivity += val * lb;
+               mincondactivity += val * lb;
+            }
+            else
+            {
+               /* case 4: obj <= 0 and coef <= 0 is also handled by duality fixing.
+                * we only consider the upper bound for the constants
+                */
+               assert(!SCIPisPositive(scip, obj));
+               assert(val < 0);
+
+               if( SCIPisInfinity(scip, ub) )
+               {
+                  /* maybe unbounded */
+                  tryfixing = FALSE;
+                  break;
+               }
+
+               maxcondactivity += val * ub;
+               mincondactivity += val * ub;
+            }
+         }
+         else
+         {
+            /* consider contribution of discrete variables, non-singleton
+             * continuous variables and variables with more than one lock
+             */
+            if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+            {
+               tryfixing = FALSE;
+               break;
+            }
+
+            if( val > 0 )
+            {
+               maxcondactivity += val * ub;
+               mincondactivity += val * lb;
+            }
+            else
+            {
+               maxcondactivity += val * lb;
+               mincondactivity += val * ub;
+            }
+         }
+      }
+      if( tryfixing && nsingletons > 0 && (SCIPisGT(scip, rhs, maxcondactivity) || SCIPisLE(scip, rhs, mincondactivity)) )
+      {
+         SCIP_Real delta;
+         SCIP_Bool tightened;
+#ifdef SCIP_DEBUG
+         int oldnfixedvars = *nfixedvars;
+         int oldnchgbds = *nchgbds;
+#endif
+
+         SCIPsortRealInt(ratios, varpos, nsingletons);
+
+         /* verify which singleton continuous variables can be fixed */
+         for( v = 0; v < nsingletons; ++v )
+         {
+            idx = varpos[v];
+            var = vars[idx];
+            val = factor * vals[idx];
+            lb = SCIPvarGetLbGlobal(var);
+            ub = SCIPvarGetUbGlobal(var);
+
+            assert(val > 0 || SCIPisPositive(scip, SCIPvarGetObj(var)));
+            assert((val < 0) == swapped[v]);
+            val = REALABS(val);
+
+            /* stop fixing if variable bounds are not finite */
+            if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+               break;
+
+            assert((SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1);
+            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
+            /* calculate the change in the row activities if this variable changes
+             * its value from its worst to its best bound
+             */
+            if( swapped[v] )
+               delta = -(lb - ub) * val;
+            else
+               delta =  (ub - lb) * val;
+
+            assert(!SCIPisNegative(scip, delta));
+
+            if( SCIPisLE(scip, delta, rhs - maxcondactivity) )
+            {
+               if( swapped[v] )
+               {
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
+                  SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
+
+               }
+               else
+               {
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
+                  SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
+               }
+
+               if( *cutoff )
+                  break;
+               if( tightened )
+               {
+                  (*nfixedvars)++;
+               }
+            }
+            /* the variable does not fit completely, but we can at least tighten its bound */
+            else if( SCIPisGT(scip, rhs, maxcondactivity) )
+            {
+               SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
+               if( swapped[v] )
+               {
+                  SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
+                  SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+               }
+               else
+               {
+                  SCIPdebugMsg(scip, "tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
+                  SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+               }
+
+               if( *cutoff )
+                  break;
+               if( tightened )
+               {
+                  (*nchgbds)++;
+               }
+            }
+            else if( SCIPisLE(scip, rhs, mincondactivity) )
+            {
+               if( swapped[v] )
+               {
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
+                  SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
+               }
+               else
+               {
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
+                  SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
+               }
+
+               if( *cutoff )
+                  break;
+               if( tightened )
+               {
+                  (*nfixedvars)++;
+               }
+            }
+
+            maxcondactivity += delta;
+            mincondactivity += delta;
+         }
+
+#ifdef SCIP_DEBUG
+         if( *nfixedvars - oldnfixedvars > 0 || *nchgbds - oldnchgbds > 0 )
+         {
+            SCIPdebugMsg(scip, "### stuffing fixed %d variables and changed %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+         }
+#endif
+      }
+
+      SCIPfreeBufferArray(scip, &swapped);
+      SCIPfreeBufferArray(scip, &ratios);
+      SCIPfreeBufferArray(scip, &varpos);
+   }
+
+   /* perform single-variable stuffing:
+    * for a linear inequality
+    *  a_1 x_1 + a_2 x_2 + ... + a_n x_n <= b
+    * with a_i > 0 and objective coefficients c_i < 0,
+    * setting all variables to their upper bound (giving us the maximal activity of the constraint) is worst w.r.t.
+    * feasibility of the constraint. On the other hand, this gives the best objective function contribution of the
+    * variables contained in the constraint. The maximal activity should be larger than the rhs, otherwise the constraint
+    * is redundant.
+    * Now we are searching for a variable x_k with maximal ratio c_k / a_k (note that all these ratios are negative), so
+    * that by reducing the value of this variable we reduce the activity of the constraint while having the smallest
+    * objective deterioration per activity unit. If x_k has no downlocks, is continuous, and can be reduced enough to
+    * render the constraint feasible, and ALL other variables have only the one uplock installed by the current constraint,
+    * we can reduce the upper bound of x_k such that the maxactivity equals the rhs and fix all other variables to their
+    * upper bound.
+    * Note that the others variables may have downlocks from other constraints, which we do not need to care
+    * about since we are setting them to the highest possible value. Also, they may be integer or binary, because the
+    * computed ratio is still a lower bound on the change in the objective caused by reducing those variable to reach
+    * constraint feasibility. On the other hand, uplocks on x_k from other constraint do no interfer with the method.
+    * With a slight adjustment, the procedure even works even for integral x_k. For this, we adjust the ratio by taking
+    * into account the integrality. If c_k * ceil((maxactivity - rhs)/val) / ((maxactivity - rhs)/val) is still a better
+    * ratio than that of all other constraints, the upper bound of x_k is decreased to ub_k - ceil(maxactivity - rhs).
+    * If there are variables with a_i < 0 and c_i > 0, they are negated to obtain the above form, variables with same
+    * sign of coefficients in constraint and objective prevent the use of this method.
+    */
+   if( singlevarstuffing && !SCIPisInfinity(scip, -minactivity) )
+   {
+      SCIP_Real bestratio = -SCIPinfinity(scip);
+      SCIP_Real secondbestratio = -SCIPinfinity(scip);
+      SCIP_Real ratio;
+      int bestindex = -1;
+      int bestuplocks = 0;
+      int bestdownlocks = 1;
+      int downlocks;
+      int uplocks;
+      int oldnfixedvars = *nfixedvars;
+      int oldnchgbds = *nchgbds;
+
+      /* loop over all variables to identify the best and second-best ratio */
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v];
+         obj = SCIPvarGetObj(var);
+         val = factor * vals[v];
+
+         assert(!SCIPisZero(scip, val));
+
+         ratio = obj / val;
+
+         /* if both objective and constraint push the variable to the same direction, we can do nothing here */
+         if( !SCIPisNegative(scip, ratio) )
+         {
+            bestindex = -1;
+            break;
+         }
+
+         if( val > 0 )
+         {
+            downlocks = SCIPvarGetNLocksDown(var);
+            uplocks = SCIPvarGetNLocksUp(var);
+         }
+         else
+         {
+            downlocks = SCIPvarGetNLocksUp(var);
+            uplocks = SCIPvarGetNLocksDown(var);
+         }
+
+         /* better ratio, update best candidate
+          * @todo use some tolerance
+          * @todo check size of domain and updated ratio for integer variables already?
+          */
+         if( ratio > bestratio || ((ratio == bestratio) && downlocks == 0 && (bestdownlocks > 0
+                  || (SCIPvarGetType(vars[bestindex]) != SCIP_VARTYPE_CONTINUOUS
+                     && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS))) )
+         {
+            /* best index becomes second-best*/
+            if( bestindex != -1 )
+            {
+               /* second-best index must not have more than 1 uplock */
+               if( bestuplocks > 1 )
+               {
+                  bestindex = -1;
+                  break;
+               }
+               else
+               {
+                  secondbestratio = bestratio;
+               }
+            }
+            bestdownlocks = downlocks;
+            bestuplocks = uplocks;
+            bestratio = ratio;
+            bestindex = v;
+
+            /* if this variable is the best in the end, we cannot do reductions since it has a downlocks,
+             * if it is not the best, it has too many uplocks -> not applicable
+             */
+            if( bestdownlocks > 0 && bestuplocks > 1 )
+            {
+               bestindex = -1;
+               break;
+            }
+         }
+         else
+         {
+            /* non-best index must not have more than 1 uplock */
+            if( uplocks > 1 )
+            {
+               bestindex = -1;
+               break;
+            }
+            /* update second-best ratio */
+            if( ratio > secondbestratio )
+            {
+               secondbestratio = ratio;
+            }
+         }
+      }
+
+      /* check if we can apply single variable stuffing */
+      if( bestindex != -1 && bestdownlocks == 0 )
+      {
+         SCIP_Bool tightened = FALSE;
+         SCIP_Real bounddelta;
+
+         var = vars[bestindex];
+         obj = SCIPvarGetObj(var);
+         val = factor * vals[bestindex];
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+         tryfixing = TRUE;
+
+         if( val < 0 )
+         {
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               bounddelta = SCIPceil(scip, (maxactivity - rhs)/-val);
+               assert(SCIPisPositive(scip, bounddelta));
+               assert(SCIPisNegative(scip, -bounddelta * obj / (maxactivity - rhs)));
+
+               tryfixing = SCIPisGE(scip, -bounddelta * obj / (maxactivity - rhs), secondbestratio);
+            }
+            else
+               bounddelta = (maxactivity - rhs)/-val;
+
+            tryfixing = tryfixing && SCIPisLE(scip, bounddelta, ub - lb);
+
+            if( tryfixing )
+            {
+               assert(SCIPvarGetNLocksUp(var) == 0);
+
+               if( SCIPisEQ(scip, lb + bounddelta, ub) )
+               {
+                  SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
+                  SCIP_CALL( SCIPfixVar(scip, var, lb + bounddelta, cutoff, &tightened) );
+               }
+               else
+               {
+                  SCIPinfoMessage(scip, NULL, "tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
+                  SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
+               }
+            }
+         }
+         else
+         {
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               bounddelta = SCIPceil(scip, (maxactivity - rhs)/val);
+               assert(SCIPisPositive(scip, bounddelta));
+               assert(SCIPisNegative(scip, bounddelta * obj / (maxactivity - rhs)));
+
+               tryfixing = SCIPisGE(scip, bounddelta * obj / (maxactivity - rhs), secondbestratio);
+            }
+            else
+               bounddelta = (maxactivity - rhs)/val;
+
+            tryfixing = tryfixing && SCIPisLE(scip, bounddelta, ub - lb);
+
+            if( tryfixing )
+            {
+               assert(SCIPvarGetNLocksDown(var) == 0);
+
+               if( SCIPisEQ(scip, ub - bounddelta, lb) )
+               {
+                  SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
+                  SCIP_CALL( SCIPfixVar(scip, var, ub - bounddelta, cutoff, &tightened) );
+               }
+               else
+               {
+                  SCIPinfoMessage(scip, NULL, "tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
+                  SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
+               }
+            }
+         }
+
+         if( *cutoff )
+            return SCIP_OKAY;
+         if( tightened )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+               ++(*nfixedvars);
+            else
+               ++(*nchgbds);
+
+            SCIPinfoMessage(scip, NULL, "cons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
+            for( v = 0; v < nvars; ++v )
+            {
+               SCIPinfoMessage(scip, NULL, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
+                  SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), SCIPvarGetNLocksUp(vars[v]),
+                  SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
+            }
+            SCIPinfoMessage(scip, NULL, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
+
+            for( v = 0; v < nvars; ++v )
+            {
+               if( v == bestindex )
+                  continue;
+
+               if( factor * vals[v] < 0 )
+               {
+                  assert(SCIPvarGetNLocksDown(vars[v]) == 1);
+                  SCIPinfoMessage(scip, NULL, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
+                  SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), cutoff, &tightened) );
+               }
+               else
+               {
+                  assert(SCIPvarGetNLocksUp(vars[v]) == 1);
+                  SCIPinfoMessage(scip, NULL, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
+                  SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), cutoff, &tightened) );
+               }
+
+               if( *cutoff )
+                  return SCIP_OKAY;
+               if( tightened )
+                  ++(*nfixedvars);
+            }
+            SCIPdebugMsg(scip, "### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -15289,6 +15863,36 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( firstupgradetry == INT_MAX && !consdata->upgradetried )
             firstupgradetry = c;
       }
+
+      /* singleton column stuffing */
+      if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) &&
+         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowDualReds(scip) )
+      {
+         SCIP_CALL( presolStuffing(scip, conshdlrdata, cons, conshdlrdata->singletonstuffing,
+               conshdlrdata->singlevarstuffing, &cutoff, nfixedvars, nchgbds, ndelconss) );
+
+         /* handle empty constraint */
+         if( consdata->nvars == 0 )
+         {
+            if( SCIPisFeasGT(scip, consdata->lhs, consdata->rhs) )
+            {
+               SCIPdebugMsg(scip, "empty linear constraint <%s> is infeasible: sides=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               cutoff = TRUE;
+            }
+            else
+            {
+               SCIPdebugMsg(scip, "empty linear constraint <%s> is redundant: sides=[%.15g,%.15g]\n",
+                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               assert(!SCIPconsIsActive(cons));
+
+               if( !consdata->upgraded )
+                  (*ndelconss)++;
+            }
+            break;
+         }
+      }
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them;
@@ -16251,6 +16855,14 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/singletonstuffing",
+         "should singleton variable stuffing be performed?",
+         &conshdlrdata->singletonstuffing, TRUE, DEFAULT_SINGLETONSTUFFING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/singlevarstuffing",
+         "should single variable stuffing be performed?",
+         &conshdlrdata->singlevarstuffing, TRUE, DEFAULT_SINGLEVARSTUFFING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );

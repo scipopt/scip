@@ -1558,8 +1558,6 @@ SCIP_RETCODE copyCuts(
    return SCIP_OKAY;
 }
 
-#define HASHTABLESIZE_FACTOR 5
-
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -1674,7 +1672,7 @@ SCIP_RETCODE copyProb(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -1682,7 +1680,7 @@ SCIP_RETCODE copyProb(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -1994,7 +1992,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    /* create the variable mapping hash map */
    if( uselocalvarmap )
    {
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2002,7 +2000,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2011,9 +2009,6 @@ SCIP_RETCODE SCIPgetVarCopy(
    switch( SCIPvarGetStatus(sourcevar) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat,
-            sourcescip, sourcevar, localvarmap, localconsmap, global) );
-      break;
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
@@ -2209,7 +2204,7 @@ SCIP_RETCODE copyVars(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2217,7 +2212,7 @@ SCIP_RETCODE copyVars(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2594,7 +2589,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2603,7 +2598,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    if( uselocalconsmap )
    {
       /* create local constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
    {
@@ -2718,7 +2713,7 @@ SCIP_RETCODE SCIPcopyConss(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2726,7 +2721,7 @@ SCIP_RETCODE SCIPcopyConss(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -2918,7 +2913,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -2926,7 +2921,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -3208,7 +3203,7 @@ SCIP_RETCODE SCIPcopyConflicts(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -3216,7 +3211,7 @@ SCIP_RETCODE SCIPcopyConflicts(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -3639,7 +3634,7 @@ SCIP_RETCODE doCopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localvarmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
    }
    else
       localvarmap = varmap;
@@ -3647,7 +3642,7 @@ SCIP_RETCODE doCopy(
    if( uselocalconsmap )
    {
       /* create the constraint mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPgetNConss(sourcescip)) );
    }
    else
       localconsmap = consmap;
@@ -4469,11 +4464,8 @@ SCIP_RETCODE SCIPsetBoolParam(
    return SCIP_OKAY;
 }
 
-/** checks the value of an existing SCIP_Bool parameter; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckBoolParam(
+/** checks whether the value of an existing SCIP_Bool parameter is valid */
+SCIP_Bool SCIPisBoolParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Bool             value               /**< value to check */
@@ -4482,9 +4474,7 @@ SCIP_RETCODE SCIPcheckBoolParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckBool(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidBool(param, value);
 }
 
 /** changes the value of an existing int parameter
@@ -4532,6 +4522,19 @@ SCIP_RETCODE SCIPsetIntParam(
    return SCIP_OKAY;
 }
 
+/** checks whether parameter value of an existing int paramter is valid */
+SCIP_Bool SCIPisIntParamValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   return SCIPparamIsValidInt(param, value);
+}
+
 /** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4577,11 +4580,8 @@ SCIP_RETCODE SCIPsetLongintParam(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckLongintParam(
+/** checks whether parameter value of an existing SCIP_Longint paramter is valid */
+SCIP_Bool SCIPisLongintParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Longint          value               /**< value to check */
@@ -4590,9 +4590,7 @@ SCIP_RETCODE SCIPcheckLongintParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckLongint(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidLongint(param, value);
 }
 
 /** changes the value of an existing SCIP_Real parameter
@@ -4640,6 +4638,19 @@ SCIP_RETCODE SCIPsetRealParam(
    return SCIP_OKAY;
 }
 
+/** checks whether parameter value of an existing SCIP_Real paramter is valid */
+SCIP_Bool SCIPisRealParamValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   return SCIPparamIsValidReal(param, value);
+}
+
 /** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4685,11 +4696,8 @@ SCIP_RETCODE SCIPsetCharParam(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckCharParam(
+/** checks whether parameter value for a given SCIP_Real parameter is valid */
+SCIP_Bool SCIPisCharParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char            value               /**< value to check */
@@ -4698,9 +4706,7 @@ SCIP_RETCODE SCIPcheckCharParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckChar(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidChar(param, value);
 }
 
 /** changes the value of an existing string(char*) parameter
@@ -4748,11 +4754,8 @@ SCIP_RETCODE SCIPsetStringParam(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
-SCIP_RETCODE SCIPcheckStringParam(
+/** checks whether parameter value for a given string parameter is valid */
+SCIP_Bool SCIPisStringParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char*           value               /**< value to check */
@@ -4761,9 +4764,7 @@ SCIP_RETCODE SCIPcheckStringParam(
    assert(scip != NULL);
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( SCIPparamCheckString(param, scip->messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return SCIPparamIsValidString(param, value);
 }
 
 /** reads parameters from a file
@@ -14185,6 +14186,7 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+   int ncliquecomponents;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14317,6 +14319,21 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
+   /* update clique components if necessary */
+   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
+   {
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int nimplvars;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
+   }
+   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
+   ncliquecomponents = SCIPcliquetableGetNCliqueComponents(scip->cliquetable);
+
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -14390,6 +14407,9 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
+
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+         "Clique table has %d connected components (bin+impl bin vars)\n", ncliquecomponents);
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -23028,12 +23048,306 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
+/** creates a variable order consistent labeling of the given labels
+ *
+ *  order consistent means that
+ *  a) the label at the first position in the array is 0
+ *  b) for every possible label \in {0, ..., nlabels - 1} there is an index j with label_j = i
+ *  c) that for two indices i <= j, it holds that
+ *     label_i > label_j if and only if there is a k < i such that label_k == label_j
+ *
+ *  every label equal to -1 is treated as a previously unseen, unique label and gets a new ordered label.
+ */
+static
+SCIP_RETCODE relabelOrderConsistent(
+   SCIP*const            scip,               /**< SCIP data structure */
+   int*                  labels,             /**< current labels that will be overwritten */
+   int const             nlabels,            /**< number of variables in the clique */
+   int*                  nclasses            /**< pointer to store the total number of distinct labels */
+   )
+{
+   SCIP_HASHMAP* classidx2newlabel;
+
+   int classidx;
+   int i;
+
+   SCIP_CALL( SCIPhashmapCreate(&classidx2newlabel, SCIPblkmem(scip), nlabels) );
+
+   classidx = 0;
+
+   /* loop over labels to create local class indices that obey the variable order */
+   for( i = 0; i < nlabels; ++i )
+   {
+      int currentlabel = labels[i];
+      int localclassidx;
+
+      /* labels equal to -1 are stored as singleton classes */
+      if( currentlabel == -1 )
+      {
+         ++classidx;
+         localclassidx = classidx;
+      }
+      else
+      {
+         assert(currentlabel >= 0);
+         /* look up the class index image in the hash map; if it is not stored yet, new class index is created and stored */
+         if( !SCIPhashmapExists(classidx2newlabel, (void*)(size_t)currentlabel) )
+         {
+            ++classidx;
+            localclassidx = classidx;
+            SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx);
+         }
+         else
+         {
+            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
+         }
+      }
+      assert(localclassidx - 1 >= 0);
+      assert(localclassidx - 1 <= i);
+
+      /* indices start with zero, but we have an offset of 1 because we cannot store 0 in a hashmap */
+      labels[i] = localclassidx - 1;
+   }
+
+   assert(classidx > 0);
+   assert(classidx <= nlabels);
+   *nclasses = classidx;
+
+   SCIPhashmapFree(&classidx2newlabel);
+
+   return SCIP_OKAY;
+}
+
+/** sort the variables w.r.t. the given labels; thereby ensure the current order of the variables with the same label. */
+static
+SCIP_RETCODE labelSortStable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array */
+   int*                  classlabels,        /**< array that contains a class label for every variable */
+   SCIP_VAR**            sortedvars,         /**< array to store variables after stable sorting */
+   int*                  sortedindices,      /**< array to store indices of sorted variables in the original vars array */
+   int*                  classesstartposs,   /**< starting position array for each label class (must have size nclasses + 1) */
+   int                   nvars,              /**< size of the vars arrays */
+   int                   nclasses            /**< number of label classes */
+   )
+{
+   SCIP_VAR*** varpointers;
+   int** indexpointers;
+   int* classcount;
+
+   int nextpos;
+   int c;
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(sortedindices != NULL);
+   assert(classesstartposs != NULL);
+
+   assert(nvars == 0 || vars != NULL);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   assert(classlabels != NULL);
+   assert(nclasses > 0);
+
+   /* we first count all class cardinalities and allocate temporary memory for a bucket sort */
+   SCIP_CALL( SCIPallocBufferArray(scip, &classcount, nclasses) );
+   BMSclearMemoryArray(classcount, nclasses);
+
+   /* first we count for each class the number of elements */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      assert(0 <= classlabels[v] && classlabels[v] < nclasses);
+      ++(classcount[classlabels[v]]);
+   }
+
+#ifndef NDEBUG
+   BMSclearMemoryArray(sortedvars, nvars);
+   BMSclearMemoryArray(sortedindices, nvars);
+#endif
+   SCIP_CALL( SCIPallocBufferArray(scip, &varpointers, nclasses) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indexpointers, nclasses) );
+
+   nextpos = 0;
+   /* now we initialize all start pointers for each class, so they will be ordered */
+   for( c = 0; c < nclasses; ++c )
+   {
+      /* to reach the goal that all variables of each class will be standing next to each other we will initialize the
+       * starting pointers for each class by adding the cardinality of each class to the last class starting pointer
+       * e.g. class1 has 4 elements and class2 has 3 elements then the starting pointer for class1 will be the pointer
+       *      to sortedvars[0], the starting pointer to class2 will be the pointer to sortedvars[4] and to class3 it will be
+       *      the pointer to sortedvars[7]
+       */
+      varpointers[c] = (SCIP_VAR**) (sortedvars + nextpos);
+      indexpointers[c] = (int*) (sortedindices + nextpos);
+      classesstartposs[c] = nextpos;
+      assert(classcount[c] > 0);
+      nextpos += classcount[c];
+      assert(nextpos > 0);
+   }
+   assert(nextpos == nvars);
+   classesstartposs[c] = nextpos;
+
+   /* now we copy all variables to the right order */
+   for( v = 0; v < nvars; ++v )
+   {
+      /* copy variable itself to the right position */
+      *(varpointers[classlabels[v]]) = vars[v];  /*lint !e613*/
+      ++(varpointers[classlabels[v]]);
+
+      /* copy index */
+      *(indexpointers[classlabels[v]]) = v;
+      ++(indexpointers[classlabels[v]]);
+   }
+
+/* in debug mode, we ensure the correctness of the mapping */
+#ifndef NDEBUG
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(sortedvars[v] != NULL);
+      assert(sortedindices[v] >= 0);
+
+      /* assert that the sorted indices map back to the correct variable in the original order */
+      assert(vars[sortedindices[v]] == sortedvars[v]);
+   }
+#endif
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &indexpointers);
+   SCIPfreeBufferArray(scip, &varpointers);
+   SCIPfreeBufferArray(scip, &classcount);
+
+   return SCIP_OKAY;
+}
+
+
 /* calculate clique partition for a maximal amount of comparisons on variables due to expensive algorithm
  * @todo: check for a good value, maybe it's better to check parts of variables
  */
 #define MAXNCLIQUEVARSCOMP 1000000
 
 /** calculates a partition of the given set of binary variables into cliques;
+ *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
+ *  were assigned to the same clique;
+ *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
+ *  the preceding variables was assigned to clique i-1;
+ *  for each clique at most 1 variables can be set to TRUE in a feasible solution;
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+static
+SCIP_RETCODE calcCliquePartitionGreedy(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   SCIP_Bool*const       values,             /**< clique value (TRUE or FALSE) for each variable in the clique */
+   int const             nvars,              /**< number of variables in the array */
+   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   )
+{
+   SCIP_VAR** cliquevars;
+   SCIP_Bool* cliquevalues;
+   int i;
+   int maxncliquevarscomp;
+   int ncliquevars;
+
+
+
+   /* allocate temporary memory for storing the variables of the current clique */
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
+
+   /* initialize the cliquepartition array with -1 */
+   for( i = nvars - 1; i >= 0; --i )
+      cliquepartition[i] = -1;
+
+   maxncliquevarscomp = (int) MIN(nvars * (SCIP_Longint)nvars, MAXNCLIQUEVARSCOMP);
+   /* calculate the clique partition */
+   *ncliques = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      if( cliquepartition[i] == -1 )
+      {
+         int j;
+
+         /* variable starts a new clique */
+         cliquepartition[i] = *ncliques;
+         cliquevars[0] = vars[i];
+         cliquevalues[0] = values[i];
+         ncliquevars = 1;
+
+         /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+         if( SCIPvarIsActive(vars[i]) && SCIPvarGetNCliques(vars[i], values[i]) > 0 )
+         {
+            /* greedily fill up the clique */
+            for( j = i+1; j < nvars; ++j )
+            {
+               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+               if( cliquepartition[j] == -1 && SCIPvarIsActive(vars[j]) )
+               {
+                  int k;
+
+                  /* check if every variable in the current clique can be extended by tmpvars[j] */
+                  for( k = ncliquevars - 1; k >= 0; --k )
+                  {
+                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], TRUE) )
+                        break;
+                  }
+
+                  if( k == -1 )
+                  {
+                     /* put the variable into the same clique */
+                     cliquepartition[j] = cliquepartition[i];
+                     cliquevars[ncliquevars] = vars[j];
+                     cliquevalues[ncliquevars] = values[j];
+                     ++ncliquevars;
+                  }
+               }
+            }
+         }
+
+         /* this clique is finished */
+         ++(*ncliques);
+      }
+      assert(cliquepartition[i] >= 0 && cliquepartition[i] < i+1);
+
+      /* break if we reached the maximal number of comparisons */
+      if( i * nvars > maxncliquevarscomp )
+         break;
+   }
+   /* if we had to many variables fill up the cliquepartition and put each variable in a separate clique */
+   for( ; i < nvars; ++i )
+   {
+      if( cliquepartition[i] == -1 )
+      {
+         cliquepartition[i] = *ncliques;
+         ++(*ncliques);
+      }
+   }
+
+   SCIPsetFreeBufferArray(scip->set, &cliquevalues);
+   SCIPsetFreeBufferArray(scip->set, &cliquevars);
+
+   return SCIP_OKAY;
+}
+
+/** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
+ *
+ *  The algorithm performs the following steps:
+ *  - recomputes connected clique components, if necessary
+ *  - computes a clique partition for every connected clique component greedily.
+ *  - relabels the resulting cliques such that the resulting partition obeys the variable order
+ *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
  *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
@@ -23059,12 +23373,17 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    )
 {
    SCIP_VAR** tmpvars;
-   SCIP_VAR** cliquevars;
-   SCIP_Bool* cliquevalues;
+
+   SCIP_VAR** sortedtmpvars;
    SCIP_Bool* tmpvalues;
-   int ncliquevars;
+   SCIP_Bool* sortedtmpvalues;
+   int* componentlabels;
+   int* sortedindices;
+   int* componentstartposs;
    int i;
-   int maxncliquevarscomp;
+   int c;
+
+   int ncomponents;
 
    assert(scip != NULL);
    assert(nvars == 0 || vars != NULL);
@@ -23079,7 +23398,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* early abort when no clique and implications are existing */
+   /* early abort if neither cliques nor implications are present */
    if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
    {
       for( i = nvars - 1; i >= 0; --i )
@@ -23090,14 +23409,12 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* allocate temporary memory for storing the variables of the current clique */
-   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
+
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &tmpvalues, nvars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
-   ncliquevars = 0;
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &componentlabels, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedindices, nvars) );
 
-   /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
    for( i = nvars - 1; i >= 0; --i )
    {
@@ -23108,76 +23425,144 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
-   maxncliquevarscomp = (int) MIN(nvars * (SCIP_Longint)nvars, MAXNCLIQUEVARSCOMP);
+   ncomponents = -1;
 
-   /* calculate the clique partition */
-   *ncliques = 0;
+   /* update clique components if necessary */
+   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
+   {
+      SCIP_VAR** allvars;
+      int nallbinvars;
+      int nallintvars;
+      int nallimplvars;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &allvars, NULL, &nallbinvars, &nallintvars, &nallimplvars, NULL) );
+
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, allvars, nallbinvars, nallintvars, nallimplvars) );
+   }
+
+   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
+
+   /* store the global clique component labels */
    for( i = 0; i < nvars; ++i )
    {
-      if( cliquepartition[i] == -1 )
-      {
-         int j;
-
-         /* variable starts a new clique */
-         cliquepartition[i] = *ncliques;
-         cliquevars[0] = tmpvars[i];
-         cliquevalues[0] = tmpvalues[i];
-         ncliquevars = 1;
-
-         /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-         if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) > 0 )
-         {
-            /* greedily fill up the clique */
-            for( j = i+1; j < nvars; ++j )
-            {
-               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-               if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
-               {
-                  int k;
-
-                  /* check if every variable in the current clique can be extended by tmpvars[j] */
-                  for( k = ncliquevars - 1; k >= 0; --k )
-                  {
-                     if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
-                        break;
-                  }
-
-                  if( k == -1 )
-                  {
-                     /* put the variable into the same clique */
-                     cliquepartition[j] = cliquepartition[i];
-                     cliquevars[ncliquevars] = tmpvars[j];
-                     cliquevalues[ncliquevars] = tmpvalues[j];
-                     ++ncliquevars;
-                  }
-               }
-            }
-         }
-
-         /* this clique is finished */
-         ++(*ncliques);
-      }
-      assert(cliquepartition[i] >= 0 && cliquepartition[i] < i+1);
-
-      /* break if we reached the maximal number of comparisons */
-      if( i * nvars > maxncliquevarscomp )
-         break;
+      if( SCIPvarIsActive(tmpvars[i]) )
+         componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+      else
+         componentlabels[i] = -1;
    }
-   /* if we had to much variables fill up the cliquepartition and put each variable in a separate clique */
-   for( ; i < nvars; ++i )
+
+   /* relabel component labels order consistent as prerequisite for a stable sort */
+   SCIP_CALL( relabelOrderConsistent(scip, componentlabels, nvars, &ncomponents) );
+   assert(ncomponents >= 1);
+   assert(ncomponents <= nvars);
+
+   /* allocate storage array for the starting positions of the components */
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &componentstartposs, ncomponents + 1) );
+
+   /* stable sort the variables w.r.t. the component labels so that we can restrict the quadratic algorithm to the components */
+   if( ncomponents > 1 )
    {
-      if( cliquepartition[i] == -1 )
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedtmpvars, nvars) );
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedtmpvalues, nvars) );
+      SCIP_CALL( labelSortStable(scip, tmpvars, componentlabels, sortedtmpvars, sortedindices, componentstartposs, nvars, ncomponents) );
+
+      /* reassign the tmpvalues with respect to the sorting */
+      for( i = 0; i < nvars; ++i )
       {
-         cliquepartition[i] = *ncliques;
-         ++(*ncliques);
+         assert(tmpvars[sortedindices[i]] == sortedtmpvars[i]);
+         sortedtmpvalues[i] = tmpvalues[sortedindices[i]];
       }
    }
+   else
+   {
+      /* if we have only one large connected component, skip the stable sorting and prepare the data differently */
+      sortedtmpvars = tmpvars;
+      sortedtmpvalues = tmpvalues;
+      componentstartposs[0] = 0;
+      componentstartposs[1] = nvars;
+
+      /* sorted indices are the identity */
+      for( i = 0; i < nvars; ++i )
+         sortedindices[i] = i;
+   }
+
+   *ncliques = 0;
+   /* calculate a greedy clique partition for each connected component */
+   for( c = 0; c < ncomponents; ++c )
+   {
+      int* localcliquepartition;
+      int nlocalcliques;
+      int ncomponentvars;
+      int l;
+
+      /* extract the number of variables in this connected component */
+      ncomponentvars = componentstartposs[c + 1] - componentstartposs[c];
+      nlocalcliques = 0;
+
+      /* allocate necessary memory to hold the intermediate component clique partition */
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &localcliquepartition, ncomponentvars) );
+
+      /* call greedy clique algorithm for all component variables */
+      SCIP_CALL( calcCliquePartitionGreedy(scip, &(sortedtmpvars[componentstartposs[c]]), &(sortedtmpvalues[componentstartposs[c]]),
+            ncomponentvars, localcliquepartition, &nlocalcliques) );
+
+      assert(nlocalcliques >= 1);
+      assert(nlocalcliques <= ncomponentvars);
+
+      /* store the obtained clique partition with an offset of ncliques for the original variables */
+      for( l = componentstartposs[c]; l < componentstartposs[c + 1]; ++l )
+      {
+         int origvaridx = sortedindices[l];
+         assert(cliquepartition[origvaridx] == -1);
+         assert(localcliquepartition[l - componentstartposs[c]] <= l - componentstartposs[c]);
+         cliquepartition[origvaridx] = localcliquepartition[l - componentstartposs[c]] + (*ncliques);
+      }
+      *ncliques += nlocalcliques;
+
+      /* free the local clique partition */
+      SCIPsetFreeBufferArray(scip->set, &localcliquepartition);
+   }
+
+   /* except in the two trivial cases, we have to ensure the order consistency of the partition indices */
+   if( ncomponents > 1 && ncomponents < nvars )
+   {
+      int partitionsize;
+      SCIP_CALL( relabelOrderConsistent(scip, cliquepartition, nvars, &partitionsize) );
+
+      assert(partitionsize == *ncliques);
+   }
+
+   if( ncomponents > 1 )
+   {
+      SCIPsetFreeBufferArray(scip->set, &sortedtmpvalues);
+      SCIPsetFreeBufferArray(scip->set, &sortedtmpvars);
+   }
+
+   /* use the greedy algorithm as a whole to verify the result on small number of variables */
+#ifdef SCIP_DISABLED_CODE
+   {
+      int* debugcliquepartition;
+      int ndebugcliques;
+
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &debugcliquepartition, nvars) );
+
+      /* call greedy clique algorithm for all component variables */
+      SCIP_CALL( calcCliquePartitionGreedy(scip, tmpvars, tmpvalues, nvars, debugcliquepartition, &ndebugcliques) );
+
+      /* loop and compare the traditional greedy clique with  */
+      for( i = 0; i < nvars; ++i )
+         assert(i * nvars > MAXNCLIQUEVARSCOMP || cliquepartition[i] == debugcliquepartition[i]);
+
+      SCIPsetFreeBufferArray(scip->set, &debugcliquepartition);
+   }
+#endif
 
    /* free temporary memory */
+   SCIPsetFreeBufferArray(scip->set, &componentstartposs);
+   SCIPsetFreeBufferArray(scip->set, &sortedindices);
+   SCIPsetFreeBufferArray(scip->set, &componentlabels);
    SCIPsetFreeBufferArray(scip->set, &tmpvars);
    SCIPsetFreeBufferArray(scip->set, &tmpvalues);
-   SCIPsetFreeBufferArray(scip->set, &cliquevalues);
-   SCIPsetFreeBufferArray(scip->set, &cliquevars);
 
    return SCIP_OKAY;
 }
@@ -23461,7 +23846,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * 2 * (nbinvars+nimplvars))) );
+   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -25945,7 +26330,6 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
    return SCIP_OKAY;
 }
-
 
 /*
  * constraint methods
@@ -32049,6 +32433,456 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
+/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable
+ *  the number of non-linearly occurrences and stores it in the nlscore array
+ *
+ *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
+ **/
+SCIP_RETCODE SCIPcreateConvexNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLROW**          nlrows,             /**< nonlinear rows */
+   int                   nnlrows,            /**< total number of nonlinear rows */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
+                                              *   needed) */
+   SCIP_Real             cutoffbound,        /**< cutoff bound */
+   SCIP_Bool             setobj              /**< should the objective function be set? */
+   )
+{
+   SCIP_EXPRTREE** exprtrees;
+   int** exprvaridxs;
+   SCIP_QUADELEM** quadelems;
+   int* nquadelems;
+   SCIP_Real** linvals;
+   int** lininds;
+   int* nlininds;
+   SCIP_Real* lhss;
+   SCIP_Real* rhss;
+   const char** names;
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_Real* objvals;
+   int* objinds;
+   const char** varnames;
+   int nobjinds;
+   int nconss;
+   int i;
+
+   assert(nlpiprob != NULL);
+   assert(var2idx != NULL);
+   assert(nlrows != NULL);
+   assert(nnlrows > 0);
+   assert(nlpi != NULL);
+
+   SCIPdebugMsg(scip, "call SCIPcreateConvexNlpNlobbt() with cutoffbound %g\n", cutoffbound);
+
+   if( nlscore != NULL )
+   {
+      BMSclearMemoryArray(nlscore, SCIPgetNVars(scip));
+   }
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nconss = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprtrees, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nnlrows + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nnlrows + 1) );
+
+   if( setobj )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &objinds, nvars) );
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, nvars) );
+
+   /* create a unique mapping between variables and {0,..,nvars-1} */
+   nobjinds = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      assert(vars[i] != NULL);
+      SCIP_CALL( SCIPhashmapInsert(var2idx, (void*)vars[i], (void*)(size_t)i) );
+
+      lbs[i] = SCIPvarGetLbLocal(vars[i]);
+      ubs[i] = SCIPvarGetUbLocal(vars[i]);
+      varnames[i] = SCIPvarGetName(vars[i]);
+
+      /* collect non-zero objective coefficients */
+      if( setobj && !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+      {
+         assert(objvals != NULL);
+         assert(objinds != NULL);
+
+         objvals[nobjinds] = SCIPvarGetObj(vars[i]);
+         objinds[nobjinds] = i;
+         ++nobjinds;
+      }
+  }
+
+   /* add variables */
+   SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
+   SCIPfreeBufferArray(scip, &varnames);
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
+
+   /* set the objective function */
+   if( setobj )
+   {
+      if( nobjinds > 0 )
+      {
+         SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, nobjinds, objinds, objvals, 0, NULL, NULL, NULL, 0.0) );
+      }
+
+      SCIPfreeBufferArray(scip, &objinds);
+      SCIPfreeBufferArray(scip, &objvals);
+   }
+
+   /* add row for cutoff bound even if cutoffbound == SCIPinfinity() */
+   lhss[nconss] = -SCIPinfinity(scip);
+   rhss[nconss] = cutoffbound;
+   names[nconss] = "objcutoff";
+   lininds[nconss] = NULL;
+   linvals[nconss] = NULL;
+   nlininds[nconss] = 0;
+   nquadelems[nconss] = 0;
+   quadelems[nconss] = NULL;
+   exprtrees[nconss] = NULL;
+   exprvaridxs[nconss] = NULL;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+      {
+         linvals[nconss][nlininds[nconss]] = SCIPvarGetObj(vars[i]);
+         lininds[nconss][nlininds[nconss]] = i;
+         ++nlininds[nconss];
+      }
+   }
+   ++nconss;
+
+   /* add convex nonlinear rows to NLPI problem */
+   for( i = 0; i < nnlrows; ++i )
+   {
+      SCIP_Bool userhs;
+      SCIP_Bool uselhs;
+      int k;
+
+      assert(nlrows[i] != NULL);
+
+      uselhs = FALSE;
+      userhs = FALSE;
+
+      /* check curvature together with constraint sides of a nonlinear row */
+      if( SCIPnlrowGetNQuadElems(nlrows[i]) == 0 && SCIPnlrowGetExprtree(nlrows[i]) == NULL )
+      {
+         uselhs = TRUE;
+         userhs = TRUE;
+      }
+      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
+         userhs = TRUE;
+      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
+         uselhs = TRUE;
+      else
+         continue;
+      assert(uselhs || userhs);
+
+      lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) : -SCIPinfinity(scip);
+      rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) :  SCIPinfinity(scip);
+      names[nconss] = SCIPnlrowGetName(nlrows[i]);
+      nlininds[nconss] = 0;
+      lininds[nconss] = NULL;
+      linvals[nconss] = NULL;
+      nquadelems[nconss] = 0;
+      quadelems[nconss] = NULL;
+      exprtrees[nconss] = NULL;
+      exprvaridxs[nconss] = NULL;
+
+      /* copy linear part */
+      if( SCIPnlrowGetNLinearVars(nlrows[i]) > 0 )
+      {
+         SCIP_VAR* var;
+
+         nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrows[i]);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) );
+
+         for( k = 0; k < nlininds[nconss]; ++k )
+         {
+            var = SCIPnlrowGetLinearVars(nlrows[i])[k];
+            assert(var != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var));
+
+            lininds[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+            assert(var == vars[lininds[nconss][k]]);
+            linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrows[i])[k];
+         }
+      }
+
+      /* copy quadratic part */
+      if( SCIPnlrowGetNQuadElems(nlrows[i]) > 0 )
+      {
+         SCIP_QUADELEM quadelem;
+         SCIP_VAR* var1;
+         SCIP_VAR* var2;
+
+         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrows[i]);
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) );
+
+         for( k = 0; k < nquadelems[nconss]; ++k )
+         {
+            quadelem = SCIPnlrowGetQuadElems(nlrows[i])[k];
+
+            var1 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx1];
+            assert(var1 != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var1));
+
+            var2 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx2];
+            assert(var2 != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var2));
+
+            quadelems[nconss][k].coef = quadelem.coef;
+            quadelems[nconss][k].idx1 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var1);
+            quadelems[nconss][k].idx2 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var2);
+
+            /* update nlscore */
+            if( nlscore != NULL )
+            {
+               ++nlscore[quadelems[nconss][k].idx1];
+               if( quadelems[nconss][k].idx1 != quadelems[nconss][k].idx2 )
+                  ++nlscore[quadelems[nconss][k].idx2];
+            }
+         }
+      }
+
+      /* copy expression tree */
+      if( SCIPnlrowGetExprtree(nlrows[i]) != NULL )
+      {
+         SCIP_VAR* var;
+
+         /* note that we don't need to copy the expression tree here since only the mapping between variables in the
+          * tree and the corresponding indices change; this mapping is stored in the exprvaridxs array
+          */
+         exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) );
+
+         for( k = 0; k < SCIPexprtreeGetNVars(exprtrees[nconss]); ++k )
+         {
+            var = SCIPexprtreeGetVars(exprtrees[nconss])[k];
+            assert(var != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var));
+
+            exprvaridxs[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+
+            /* update nlscore */
+            if( nlscore != NULL )
+               ++nlscore[exprvaridxs[nconss][k]];
+         }
+      }
+
+      ++nconss;
+   }
+   assert(nconss > 0);
+
+   /* pass all constraint information to nlpi */
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals, nquadelems,
+         quadelems, exprvaridxs, exprtrees, names) );
+
+   /* free memory */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      if( exprtrees[i] != NULL )
+      {
+         assert(exprvaridxs[i] != NULL);
+         SCIPfreeBufferArray(scip, &exprvaridxs[i]);
+      }
+
+      if( nquadelems[i] > 0 )
+      {
+         assert(quadelems[i] != NULL);
+         SCIPfreeBufferArray(scip, &quadelems[i]);
+      }
+
+      if( nlininds[i] > 0 )
+      {
+         assert(linvals[i] != NULL);
+         assert(lininds[i] != NULL);
+         SCIPfreeBufferArray(scip, &linvals[i]);
+         SCIPfreeBufferArray(scip, &lininds[i]);
+      }
+   }
+   /* free row for cutoff bound even if objective is 0 */
+   SCIPfreeBufferArray(scip, &linvals[i]);
+   SCIPfreeBufferArray(scip, &lininds[i]);
+
+   SCIPfreeBufferArray(scip, &rhss);
+   SCIPfreeBufferArray(scip, &lhss);
+   SCIPfreeBufferArray(scip, &names);
+   SCIPfreeBufferArray(scip, &nlininds);
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &nquadelems);
+   SCIPfreeBufferArray(scip, &quadelems);
+   SCIPfreeBufferArray(scip, &exprvaridxs);
+   SCIPfreeBufferArray(scip, &exprtrees);
+
+   return SCIP_OKAY;
+}
+
+/** updates bounds of each variable and the cutoff row in the nlpiproblem */
+SCIP_RETCODE SCIPupdateConvexNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
+   SCIP_HASHMAP*         var2nlpiidx,        /**< mapping between variables and nlpi indices */
+   SCIP_VAR**            nlpivars,           /**< array containing all variables of the nlpi */
+   int                   nlpinvars,          /**< total number of nlpi variables */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   )
+{
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int* inds;
+   int i;
+
+   SCIPdebugMsg(scip, "call SCIPupdateConvexNlpNlobbt()\n");
+
+   /* update variable bounds */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nlpinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nlpinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, nlpinvars) );
+
+   for( i = 0; i < nlpinvars; ++i )
+   {
+      assert(nlpivars[i] != NULL);
+      assert(SCIPhashmapExists(var2nlpiidx, (void*)nlpivars[i]));
+
+      lbs[i] = SCIPvarGetLbLocal(nlpivars[i]);
+      ubs[i] = SCIPvarGetUbLocal(nlpivars[i]);
+      inds[i] = (int)(size_t)SCIPhashmapGetImage(var2nlpiidx, (void*)nlpivars[i]);
+      assert(inds[i] >= 0 && inds[i] < nlpinvars);
+   }
+
+   SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, nlpinvars, inds, lbs, ubs) );
+
+   SCIPfreeBufferArray(scip, &inds);
+   SCIPfreeBufferArray(scip, &ubs);
+   SCIPfreeBufferArray(scip, &lbs);
+
+   /* update cutoff row */
+   lhs = -SCIPinfinity(scip);
+   rhs = cutoffbound;
+   i = 0;
+
+   SCIP_CALL( SCIPnlpiChgConsSides(nlpi, nlpiprob, 1, &i, &lhs, &rhs) );
+
+   return SCIP_OKAY;
+}
+
+/** adds linear rows to the convex NLP relaxation */
+SCIP_RETCODE SCIPaddConvexNlpRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_ROW**            rows,               /**< rows to add */
+   int                   nrows               /**< total number of rows to add */
+   )
+{
+   const char** names;
+   SCIP_Real* lhss;
+   SCIP_Real* rhss;
+   SCIP_Real** linvals;
+   int** lininds;
+   int* nlininds;
+   int i;
+
+   assert(nlpi != NULL);
+   assert(nlpiprob != NULL);
+   assert(var2idx != NULL);
+   assert(rows != NULL || nrows == 0);
+
+   SCIPdebugMsg(scip, "call SCIPaddConvexNlpRowsNlobbt() with %d rows\n", nrows);
+
+   if( nrows <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nrows) );
+
+   for( i = 0; i < nrows; ++i )
+   {
+      int k;
+
+      assert(rows[i] != NULL);
+      assert(SCIProwGetNNonz(rows[i]) <= SCIPgetNVars(scip));
+
+      names[i] = SCIProwGetName(rows[i]);
+      lhss[i] = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      rhss[i] = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      nlininds[i] = SCIProwGetNNonz(rows[i]);
+      linvals[i] = SCIProwGetVals(rows[i]);
+      lininds[i] = NULL;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) );
+
+      for( k = 0; k < SCIProwGetNNonz(rows[i]); ++k )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPcolGetVar(SCIProwGetCols(rows[i])[k]);
+         assert(var != NULL);
+         assert(SCIPhashmapExists(var2idx, (void*)var));
+
+         lininds[i][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+         assert(lininds[i][k] >= 0 && lininds[i][k] < SCIPgetNVars(scip));
+      }
+   }
+
+   /* pass all linear rows to the nlpi */
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals, NULL,
+         NULL, NULL, NULL, names) );
+
+   /* free memory */
+   for( i = nrows - 1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &lininds[i]);
+   }
+   SCIPfreeBufferArray(scip, &nlininds);
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &rhss);
+   SCIPfreeBufferArray(scip, &lhss);
+   SCIPfreeBufferArray(scip, &names);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /*
@@ -35796,7 +36630,7 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* copy the original problem to the sub-SCIP */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * norigvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
       SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
 
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
@@ -43498,6 +44332,19 @@ SCIP_Longint SCIPgetMemUsed(
    assert(scip != NULL);
 
    return SCIPmemGetUsed(scip->mem);
+}
+
+/** returns the total number of bytes in block and buffer memory
+ *
+ *  @return the total number of bytes in block and buffer memory.
+ */
+SCIP_Longint SCIPgetMemTotal(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPmemGetTotal(scip->mem);
 }
 
 /** returns the estimated number of bytes used by external software, e.g., the LP solver

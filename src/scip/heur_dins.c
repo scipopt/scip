@@ -715,7 +715,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    success = FALSE;
    eventhdlr = NULL;
