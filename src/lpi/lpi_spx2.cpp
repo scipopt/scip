@@ -1824,7 +1824,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
-      if( lpi->spx->persistentScaling() )
+      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
          DVector lbvec;
          DVector ubvec;
@@ -1859,7 +1859,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       {
          beg[i-firstcol] = *nnonz;
 
-         if( lpi->spx->persistentScaling() )
+         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
          {
             DSVector cvec;
             lpi->spx->getColVectorReal(i, cvec);
@@ -1923,7 +1923,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       assert(rhs != NULL);
 
-      if( lpi->spx->persistentScaling() )
+      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
          DVector lhsvec;
          DVector rhsvec;
@@ -1958,7 +1958,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       {
          beg[i-firstrow] = *nnonz;
 
-         if( lpi->spx->persistentScaling() )
+         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
          {
             DSVector rvec;
             lpi->spx->getRowVectorReal(i, rvec);
