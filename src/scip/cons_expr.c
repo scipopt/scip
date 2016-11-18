@@ -3793,7 +3793,7 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            infeasible,         /**< buffer to store whether the node is infeasible */
+   SCIP_Bool*            infeasible,         /**< buffer to update whether the node is infeasible */
    int*                  ndelconss           /**< buffer to add the total number of deleted constraints */
    )
 {
@@ -3806,8 +3806,6 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
    assert(conss != NULL || nconss == 0);
    assert(infeasible != NULL);
    assert(ndelconss != NULL);
-
-   *infeasible = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3834,7 +3832,7 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
          ++(*ndelconss);
       }
 
-      if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      if( !(*infeasible) && consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
       {
          /* backward propagation should have tighthened the bounds of the variable */
          assert(SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(consdata->expr)) - consdata->lhs >= -SCIPfeastol(scip));
@@ -4645,6 +4643,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    /* it might be possible that after simplification only a value expression remains in the root node
     * FIXME: we can't terminate presolve before calling this function, since constraints' expression
     * can't be value nor variable expression in several functions! */
+   infeasible = (*result == SCIP_CUTOFF);
    SCIP_CALL( removeFixedAndBoundConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
    assert(*ndelconss >= 0);
 
