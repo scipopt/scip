@@ -1730,8 +1730,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
             SCIPdebugMessage("Found <%i> violating binary constraints and <%i> violating bound changes.\n",
                binarybounddata->nviolatedentries, validbounds->nviolatedbybaselp);
-            if( validbounds->nviolatedbybaselp + binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons )
+            if( (branchruledata->maxnviolatedcons != -1) &&
+               (validbounds->nviolatedbybaselp + binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons) )
             {
+               SCIPinfoMessage(scip, NULL, "Was here\n");
                status->maxnconsreached = TRUE;
             }
          }
@@ -2288,7 +2290,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedcons",
          "how many constraints that are violated by the base lp solution should be gathered until they are added?",
-         &branchruledata->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, -1, 100000000, NULL, NULL) );
+         &branchruledata->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "branching/lookahead/reevalage",
          "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
