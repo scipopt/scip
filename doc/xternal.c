@@ -593,48 +593,49 @@
  *   the optimized mode. The third option <code>opt-gccold</code> will work with older GCC compilers before version
  *   4.2. We recommend using newer GCC versions.
  *
- * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should have been
+ * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should be
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN-OR Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
  *      - <code>grb</code>: Gurobi LP-solver (interface is in beta stage)
  *      - <code>msk</code>: Mosek LP-solver
  *      - <code>qso</code>: QSopt LP-solver
- *      - <code>spx</code>: SoPlex LP-solver (default)
+ *      - <code>spx</code>: old SoPlex LP-solver (for versions < 2)
+ *      - <code>spx2</code>: new SoPlex LP-solver (default) (from version 2)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
  *
  * - <code>LPSOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized version (or old GCC optimized) version of
- *   the LP-solver. (currently only available for SoPlex and CLP)
+ *   the LP-solver (currently only available for SoPlex and CLP).
  *
- * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.
- * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
- *   version of ZIMPL, if ZIMPL support is enabled. \n
+ * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.\n
  *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
+ *
+ * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
+ *   version of ZIMPL, if ZIMPL support is enabled.
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT >= 3.11)
+ * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
  *
- * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
+ * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
  *
- * - <code>GAMS=\<true|false\></code>   to enable or disable (default) reading functionality in GAMS reader (needs GAMS)
+ * - <code>GAMS=\<true|false\></code> Enable or disable (default) reading functionality in GAMS reader (needs GAMS).
+ *
+ * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal SCIP block and buffer memory off or on (default).
+ *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
+ *   and <code>NOBUFMEM=\<true|false\></code> to turn off the SCIP block and buffer memory, respectively, exist as well).
+ *
+ * You can use other compilers - depending on the system:
+ *
+ * - <code>COMP=<clang|gnu|intel></code> Use Clang, Gnu (default) or Intel compiler.
  *
  * There are additional parameters for Linux/Gnu compilers:
- *
- * - <code>NOBLKBUFMEM=\<true\></code> turns off the internal SCIP block and buffer memory.  This way the code can be checked by valgrind or
- *   similar tools. (The individual options <code>NOBLKMEM=\<true\></code> and <code>NOBUFMEM=\<true\></code> to turn off the SCIP block and
- *   buffer memory, respectively, exist as well).
  *
  * - <code>SHARED=\<true\></code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
  * - <code>OPT=prf</code> generates a profiling version of SCIP providing a detailed statistic of the time usage of
  *   every method of SCIP.
- *
- * You can use other compilers - depending on the system:
- *
- * - <code>COMP=intel</code> Uses of the Intel compiler which is only available with the main optimization flags
- *   <code>OPT=\<dbg|opt\></code>. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
  *
  * There is the possibility to watch the compilation more precisely:
  *
@@ -642,11 +643,12 @@
  *
  * The SCIP makefile supports several targets (used via <code>make ... "target"</code>):
  *
+ * - <code>all (or no target)</code> Build SCIP library and binary.
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
  * - <code>depend</code> Creates dependencies files. This is only needed if you add files to SCIP.
- * - <code>check</code> Runs the check script, see \ref TEST.
+ * - <code>check or test</code> Runs the check script, see \ref TEST.
  *
  * The SCIP makefiles are structured as follows.
  *
