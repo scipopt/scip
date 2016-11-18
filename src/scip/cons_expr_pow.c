@@ -148,7 +148,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
       baseval = SCIPgetConsExprExprValueValue(base);
 
       /* TODO check if those are all important asserts */
-      assert(baseval >= 0.0 || fmod(exponent, 2.0) == 1.0 || fmod(exponent, 2.0) == 0.0);
+      assert(baseval >= 0.0 || fmod(exponent, 1.0) == 0.0);
       assert(baseval != 0.0 || exponent != 0.0);
 
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, pow(baseval, exponent)) );
