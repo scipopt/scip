@@ -7115,6 +7115,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
 
+   /* some of the methods below will not work if there was a domain error (#1148, point 3) */
+   if( domainerror )
+      return SCIP_OKAY;
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
