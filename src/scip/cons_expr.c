@@ -1136,6 +1136,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
 
    expr2key = (SCIP_HASHMAP*) data;
    assert(expr2key != NULL);
+   assert(!SCIPhashmapExists(expr2key, (void*) expr));
 
    hashkey = 0;
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -2445,9 +2446,11 @@ SCIP_RETCODE replaceCommonSubexpressions(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( consdata->expr != NULL )
+      /* don't hash (root) expressions which are already in the hash map */
+      if( consdata->expr != NULL && !SCIPhashmapExists(expr2key, (void*)consdata->expr) )
       {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr,
+               (void*)expr2key) );
       }
    }
 
