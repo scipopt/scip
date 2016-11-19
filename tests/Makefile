@@ -247,6 +247,9 @@ $(SCIPLIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
 $(NLPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+$(TPILIBFILE):
+		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS) TPI=$(TPI))
+
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
 		@echo "-> compiling $@"

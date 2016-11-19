@@ -430,8 +430,8 @@ TPILDFLAGS	+=
 endif
 
 TPILIB		=	$(TPILIBNAME).$(BASE)
-TPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(TPILIB).$(LIBEXT)
-TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/lib$(TPILIBNAME).$(LIBEXT)
+TPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
+TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
