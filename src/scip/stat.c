@@ -95,7 +95,6 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->performpresol = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->nreoptruns = 0;
-   (*stat)->lastcopiedstat = NULL;
 
    SCIPstatReset(*stat, set, transprob, origprob);
 

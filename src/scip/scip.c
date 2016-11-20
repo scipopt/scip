@@ -2507,19 +2507,16 @@ SCIP_RETCODE SCIPmergeStatistics(
    )
 {
    SCIP_Longint nnodes;
-   int i;
+
+   /* check if target scip has been set to allow merging variable statistics ???? */
+   //if( !targetscip->set->history_allowmerge )
+   //return SCIP_OKAY;
 
    assert(sourcescip != targetscip);
 
    /* we do not want to copy statistics from a scip that has not really started solving */
    if( SCIPgetStage(sourcescip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
-
-   for( i = 0; i < sourcescip->set->nheurs; ++i )
-   {
-      SCIP_HEUR* origheur = SCIPfindHeur(targetscip, SCIPheurGetName(sourcescip->set->heurs[i]));
-      SCIP_CALL( SCIPheurMergeStatistics(sourcescip->set->heurs[i], origheur, sourcescip->mem->setmem) );
-   }
 
    nnodes = sourcescip->stat->ntotalnodes - sourcescip->stat->ntotalnodesmerged;
    sourcescip->stat->ntotalnodesmerged = sourcescip->stat->ntotalnodes;
