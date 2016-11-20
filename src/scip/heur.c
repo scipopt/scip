@@ -105,8 +105,8 @@ void SCIPdivesetReset(
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
 
-   BMSfreeMemoryNull(&diveset->subscipsstat);
-   BMSfreeMemoryNull(&diveset->lastmergedstat);
+   BMSfreeMemoryArrayNull(&diveset->subscipsstat);
+   BMSfreeMemoryArrayNull(&diveset->lastmergedstat);
    diveset->lastmergedstat = NULL;
    diveset->subscipsstat = NULL;
 }
@@ -601,8 +601,8 @@ void divesetFree(
    assert(*diveset != NULL);
    assert((*diveset)->name != NULL);
 
-   BMSfreeMemoryNull(&(*diveset)->subscipsstat);
-   BMSfreeMemoryNull(&(*diveset)->lastmergedstat);
+   BMSfreeMemoryArrayNull(&(*diveset)->subscipsstat);
+   BMSfreeMemoryArrayNull(&(*diveset)->lastmergedstat);
    BMSfreeMemoryArray(&(*diveset)->name);
    BMSfreeMemory(diveset);
 }
@@ -757,8 +757,8 @@ SCIP_RETCODE SCIPheurFree(
       SCIP_CALL( (*heur)->heurfree(set->scip, *heur) );
    }
 
-   BMSfreeMemoryNull(&(*heur)->subscipsstat);
-   BMSfreeMemoryNull(&(*heur)->lastmergedstat);
+   BMSfreeMemoryArrayNull(&(*heur)->subscipsstat);
+   BMSfreeMemoryArrayNull(&(*heur)->lastmergedstat);
    for( d = 0; d < (*heur)->ndivesets; ++d )
    {
       assert((*heur)->divesets[d] != NULL);
@@ -1708,7 +1708,7 @@ SCIP_Longint SCIPdivesetGetSubscipNLPIterations(
 {
    assert(diveset != NULL);
 
-   return (diveset->subscipsstat == NULL ? 0 : diveset->subscipsstat->nlpiterations);
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->nlpiterations);
 }
 
 /** get the total number of probing nodes used by this dive set in sub-SCIPs */
@@ -1718,7 +1718,7 @@ SCIP_Longint SCIPdivesetGetSubscipNProbingNodes(
 {
    assert(diveset != NULL);
 
-   return (diveset->subscipsstat == NULL ? 0 : diveset->subscipsstat->totalnnodes);
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->totalnnodes);
 }
 
 /** get the total number of backtracks performed by this dive set in sub-SCIPs */
@@ -1728,5 +1728,5 @@ SCIP_Longint SCIPdivesetGetSubscipNBacktracks(
 {
    assert(diveset != NULL);
 
-   return (diveset->subscipsstat == NULL ? 0 : diveset->subscipsstat->totalnbacktracks);
+   return (diveset->subscipsstat == NULL ? -1 : diveset->subscipsstat->totalnbacktracks);
 }
