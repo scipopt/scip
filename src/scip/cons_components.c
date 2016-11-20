@@ -1011,7 +1011,11 @@ SCIP_RETCODE solveComponent(
          nodelimit = 2 * SCIPgetNNodes(component->subscip);
          nodelimit = MAX(nodelimit, 10LL);
 
-         nodelimit = MIN(nodelimit, mainnodelimit - SCIPgetNNodes(scip));
+         if( mainnodelimit != -1 )
+         {
+            assert(mainnodelimit >= SCIPgetNNodes(scip));
+            nodelimit = MIN(nodelimit, mainnodelimit - SCIPgetNNodes(scip));
+         }
 
          /* set a gap limit of half the current gap (at most 10%) */
          if( SCIPgetGap(component->subscip) < 0.2 )
@@ -2112,6 +2116,9 @@ SCIP_DECL_CONSPROP(consPropComponents)
     * again and again
     */
    SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &nodelimit) );
+   if( nodelimit == -1 )
+      nodelimit = SCIP_LONGINT_MAX;
+
    do
    {
       if( problem != NULL )
