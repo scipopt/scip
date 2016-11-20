@@ -348,57 +348,6 @@ SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
 
-/** create statistic data for merging statistics from source heuristic into target heuristic */
-EXTERN
-SCIP_RETCODE SCIPheurCreateMergeStatistics(
-   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   SCIP_HEUR*            targetheur          /**< target primal heuristic data structure */
-   );
-
-/** merge primal heuristic statistics from source heuristic data structure to target heuristic data structure */
-EXTERN
-SCIP_RETCODE SCIPheurMergeStatistics(
-   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
-   );
-
-/** return whether primal heuristic has data for statistic merging */
-EXTERN
-SCIP_RETCODE SCIPheurHasMergeStatistics(
-   SCIP_HEUR*            heur                /**< primal heuristic data structure */
-   );
-
-/** gets the number of times, the heuristic was called in sub-SCIPs and tried to find a solution */
-EXTERN
-SCIP_Longint SCIPheurGetSubscipNCalls(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets the number of primal feasible solutions found by this heuristic in sub-SCIPs */
-EXTERN
-SCIP_Longint SCIPheurGetSubscipNSolsFound(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets the number of new best primal feasible solutions found by this heuristic in sub-SCIPs */
-EXTERN
-SCIP_Longint SCIPheurGetSubscipNBestSolsFound(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets time in seconds used in this heuristic for setting up for next stages in sub-SCIPs */
-EXTERN
-SCIP_Real SCIPheurGetSubscipSetupTime(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets time in seconds used in this heuristic in sub-SCIPs */
-EXTERN
-SCIP_Real SCIPheurGetSubscipTime(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   );
-
-
 #ifdef __cplusplus
 }
 #endif

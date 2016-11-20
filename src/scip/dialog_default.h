@@ -151,10 +151,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
 
-/** dialog execution method for the display subscipstatistics command */
-EXTERN
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubscipStatistics);
-
 /** dialog execution method for the display reoptstatistics command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics);

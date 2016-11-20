@@ -2517,15 +2517,8 @@ SCIP_RETCODE SCIPmergeStatistics(
 
    for( i = 0; i < sourcescip->set->nheurs; ++i )
    {
-      /* create merge and sub-SCIP statistic data, if not done yet */
-      if( !SCIPheurHasMergeStatistics(sourcescip->set->heurs[i]) )
-      {
-         SCIP_HEUR* targetheur = SCIPfindHeur(targetscip, SCIPheurGetName(sourcescip->set->heurs[i]));
-         SCIP_CALL( SCIPheurCreateMergeStatistics(sourcescip->set->heurs[i], targetheur) );
-      }
-
-      /* merge statistics */
-      SCIP_CALL( SCIPheurMergeStatistics(sourcescip->set->heurs[i], sourcescip->mem->setmem) );
+      SCIP_HEUR* origheur = SCIPfindHeur(targetscip, SCIPheurGetName(sourcescip->set->heurs[i]));
+      SCIP_CALL( SCIPheurMergeStatistics(sourcescip->set->heurs[i], origheur, sourcescip->mem->setmem) );
    }
 
    nnodes = sourcescip->stat->ntotalnodes - sourcescip->stat->ntotalnodesmerged;
@@ -42445,87 +42438,6 @@ void printHeuristicStatistics(
    }
 }
 
-static
-void printHeuristicSubscipStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file */
-   )
-{
-   int ndivesets = 0;
-   int i;
-
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(scip->tree != NULL);
-
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :   ExecTime  SetupTime      Calls      Found       Best\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-      SCIPclockGetTime(scip->stat->lpsoltime),
-      scip->stat->nlpsolsfound, scip->stat->nlpbestsolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-      SCIPclockGetTime(scip->stat->pseudosoltime),
-      scip->stat->npssolsfound, scip->stat->npsbestsolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-      SCIPclockGetTime(scip->stat->sbsoltime),
-      scip->stat->nsbsolsfound, scip->stat->nsbbestsolsfound);
-
-   /* sort heuristics w.r.t. their names */
-   SCIPsetSortHeursName(scip->set);
-
-   for( i = 0; i < scip->set->nheurs; ++i )
-   {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-         SCIPheurGetName(scip->set->heurs[i]),
-         SCIPheurGetSubscipTime(scip->set->heurs[i]),
-         SCIPheurGetSubscipSetupTime(scip->set->heurs[i]),
-         SCIPheurGetSubscipNCalls(scip->set->heurs[i]),
-         SCIPheurGetSubscipNSolsFound(scip->set->heurs[i]),
-         SCIPheurGetSubscipNBestSolsFound(scip->set->heurs[i]));
-
-      /* count heuristics that use diving; needed to determine output later */
-      ndivesets += SCIPheurGetNDivesets(scip->set->heurs[i]);
-   }
-
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  other solutions  :          -          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
-      scip->stat->nexternalsolsfound);
-
-   if ( ndivesets > 0 )
-   {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
-      for( i = 0; i < scip->set->nheurs; ++i )
-      {
-         int s;
-         for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
-         {
-            SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
-            if( SCIPdivesetGetNCalls(diveset) > 0 )
-            {
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f",
-                  SCIPdivesetGetNProbingNodes(diveset),
-                  SCIPdivesetGetNLPIterations(diveset),
-                  SCIPdivesetGetNBacktracks(diveset),
-                  SCIPdivesetGetMinDepth(diveset),
-                  SCIPdivesetGetMaxDepth(diveset),
-                  SCIPdivesetGetAvgDepth(diveset));
-               if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
-               {
-                  SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
-                     SCIPdivesetGetNSolutionCalls(diveset),
-                     SCIPdivesetGetMinSolutionDepth(diveset),
-                     SCIPdivesetGetMaxSolutionDepth(diveset),
-                     SCIPdivesetGetAvgSolutionDepth(diveset));
-               }
-               else
-                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
-            }
-            else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -\n");
-         }
-      }
-   }
-}
-
 /* print compression statistics if tree reoptimization is enabled */
 static
 void printCompressionStatistics(
@@ -43003,7 +42915,7 @@ void printTimingStatistics(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
- *        thus may not correspond to the original status.
+ *        thus may to correspond to the original status.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
@@ -43102,46 +43014,6 @@ SCIP_RETCODE SCIPprintStatistics(
       return SCIP_OKAY;
    }
    default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
-}
-
-/** outputs solving statistics for sub-SCIPs
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-SCIP_RETCODE SCIPprintSubscipStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPprintSubscipStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   switch( scip->set->stage )
-   {
-
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   {
-      printHeuristicSubscipStatistics(scip, file);
-
-      return SCIP_OKAY;
-   }
-   default:
-      return SCIP_OKAY;
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/

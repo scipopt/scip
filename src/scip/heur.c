@@ -702,7 +702,6 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->divesets = NULL;
    (*heur)->ndivesets = 0;
    (*heur)->lastmergedstat = NULL;
-   (*heur)->subscipsstat = NULL;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/priority", name);
@@ -745,7 +744,6 @@ SCIP_RETCODE SCIPheurFree(
       SCIP_CALL( (*heur)->heurfree(set->scip, *heur) );
    }
 
-   BMSfreeMemoryArrayNull(&(*heur)->subscipsstat);
    BMSfreeMemoryArrayNull(&(*heur)->lastmergedstat);
    for( d = 0; d < (*heur)->ndivesets; ++d )
    {
@@ -1058,11 +1056,11 @@ SCIP_RETCODE SCIPheurExec(
    return SCIP_OKAY;
 }
 
-
-/** create statistic data for merging statistics from source heuristic into target heuristic */
-SCIP_RETCODE SCIPheurCreateMergeStatistics(
+/** merge primal heuristic statistics from source heuristic data structure to target heuristic data structure */
+SCIP_RETCODE SCIPheurMergeStatistics(
    SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   SCIP_HEUR*            targetheur          /**< target primal heuristic data structure */
+   SCIP_HEUR*            targetheur,         /**< target primal heuristic data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
    )
 {
    assert(sourceheur != NULL);
@@ -1071,49 +1069,21 @@ SCIP_RETCODE SCIPheurCreateMergeStatistics(
    if( sourceheur->lastmergedstat == NULL )
    {
       SCIP_ALLOC( BMSallocMemory(&sourceheur->lastmergedstat) );
-      sourceheur->lastmergedstat->origheur = targetheur;
       sourceheur->lastmergedstat->ncalls = 0;
       sourceheur->lastmergedstat->nsolsfound = 0;
       sourceheur->lastmergedstat->nbestsolsfound = 0;
       sourceheur->lastmergedstat->setuptime = 0.0;
       sourceheur->lastmergedstat->heurclock = 0.0;
-
-      if( targetheur->subscipsstat == NULL )
-      {
-         SCIP_ALLOC( BMSallocMemory(&targetheur->subscipsstat) );
-         targetheur->subscipsstat->origheur = NULL;
-         targetheur->subscipsstat->ncalls = 0;
-         targetheur->subscipsstat->nsolsfound = 0;
-         targetheur->subscipsstat->nbestsolsfound = 0;
-         targetheur->subscipsstat->setuptime = 0.0;
-         targetheur->subscipsstat->heurclock = 0.0;
-      }
    }
 
-   return SCIP_OKAY;
-}
-
-/** merge primal heuristic statistics from source heuristic data structure to target heuristic data structure */
-SCIP_RETCODE SCIPheurMergeStatistics(
-   SCIP_HEUR*            sourceheur,         /**< source primal heuristic data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
-   )
-{
-   SCIP_HEUR* targetheur;
-
-   assert(sourceheur != NULL);
-   assert(sourceheur->lastmergedstat != NULL);
-
-   targetheur = sourceheur->lastmergedstat->origheur;
-   assert(targetheur != NULL);
-   assert(targetheur->subscipsstat != NULL);
-
    /* copy delta to last merged values */
-   targetheur->subscipsstat->ncalls += (sourceheur->ncalls - sourceheur->lastmergedstat->ncalls);
-   targetheur->subscipsstat->nsolsfound += (sourceheur->nsolsfound - sourceheur->lastmergedstat->nsolsfound);
-   targetheur->subscipsstat->nbestsolsfound += (sourceheur->nbestsolsfound - sourceheur->lastmergedstat->nbestsolsfound);
-   targetheur->subscipsstat->setuptime += SCIPclockGetTime(sourceheur->setuptime) - sourceheur->lastmergedstat->setuptime;
-   targetheur->subscipsstat->heurclock += SCIPclockGetTime(sourceheur->heurclock) - sourceheur->lastmergedstat->heurclock;
+   targetheur->ncalls += (sourceheur->ncalls - sourceheur->lastmergedstat->ncalls);
+   targetheur->nsolsfound += (sourceheur->nsolsfound - sourceheur->lastmergedstat->nsolsfound);
+   targetheur->nbestsolsfound += (sourceheur->nbestsolsfound - sourceheur->lastmergedstat->nbestsolsfound);
+   SCIPclockSetTime(targetheur->setuptime, SCIPclockGetTime(targetheur->setuptime)
+      + SCIPclockGetTime(sourceheur->setuptime) - sourceheur->lastmergedstat->setuptime);
+   SCIPclockSetTime(targetheur->heurclock, SCIPclockGetTime(targetheur->heurclock)
+      + SCIPclockGetTime(sourceheur->heurclock) - sourceheur->lastmergedstat->heurclock);
 
    /* save the merged values */
    sourceheur->lastmergedstat->ncalls = sourceheur->ncalls;
@@ -1121,19 +1091,9 @@ SCIP_RETCODE SCIPheurMergeStatistics(
    sourceheur->lastmergedstat->nbestsolsfound = sourceheur->nbestsolsfound;
    sourceheur->lastmergedstat->setuptime = SCIPclockGetTime(sourceheur->setuptime);
    sourceheur->lastmergedstat->heurclock = SCIPclockGetTime(sourceheur->heurclock);
-
    return SCIP_OKAY;
 }
 
-/** return whether primal heuristic has data for statistic merging */
-SCIP_RETCODE SCIPheurHasMergeStatistics(
-   SCIP_HEUR*            heur                /**< primal heuristic data structure */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->lastmergedstat != NULL);
-}
 
 /** gets user data of primal heuristic */
 SCIP_HEURDATA* SCIPheurGetData(
@@ -1440,54 +1400,4 @@ int SCIPheurGetNDivesets(
    assert(heur != NULL);
 
    return heur->ndivesets;
-}
-
-/** gets the number of times, the heuristic was called in sub-SCIPs and tried to find a solution */
-SCIP_Longint SCIPheurGetSubscipNCalls(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->subscipsstat == 0 ? 0 : heur->subscipsstat->ncalls);
-}
-
-/** gets the number of primal feasible solutions found by this heuristic in sub-SCIPs */
-SCIP_Longint SCIPheurGetSubscipNSolsFound(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->subscipsstat == 0 ? 0 : heur->subscipsstat->nsolsfound);
-}
-
-/** gets the number of new best primal feasible solutions found by this heuristic in sub-SCIPs */
-SCIP_Longint SCIPheurGetSubscipNBestSolsFound(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->subscipsstat == 0 ? 0 : heur->subscipsstat->nbestsolsfound);
-}
-
-/** gets time in seconds used in this heuristic for setting up for next stages in sub-SCIPs */
-SCIP_Real SCIPheurGetSubscipSetupTime(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->subscipsstat == 0 ? 0 : heur->subscipsstat->setuptime);
-}
-
-/** gets time in seconds used in this heuristic in sub-SCIPs */
-SCIP_Real SCIPheurGetSubscipTime(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   return (heur->subscipsstat == 0 ? 0 : heur->subscipsstat->heurclock);
 }

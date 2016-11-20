@@ -48,10 +48,9 @@ extern "C" {
 typedef unsigned int SCIP_DIVETYPE;
 
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
+typedef struct SCIP_HeurStat SCIP_HEURSTAT;       /**< primal heuristic statistics */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
-typedef struct SCIP_HeurStat SCIP_HEURSTAT;       /**< primal heuristic statistics */
-typedef struct SCIP_DivesetStat SCIP_DIVESETSTAT; /**< diving heuristic statistics */
 
 /** copy method for heuristic plugins (called when SCIP copies plugins)
  *
