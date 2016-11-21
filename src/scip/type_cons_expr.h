@@ -329,6 +329,22 @@ extern "C" {
    SCIP_HASHMAP* expr2key, \
    unsigned int* hashkey)
 
+/** expression branching score callback
+ *
+ * The method computes the violation at each expression by considering the values of the linearization variables.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be hashed
+ *  - sol  : solution (NULL for the LP solution)
+ *  - violation : pointer to store the current violation
+ */
+#define SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_SOL* sol, \
+   SCIP_Real* violation)
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {
