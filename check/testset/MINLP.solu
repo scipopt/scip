@@ -467,7 +467,7 @@
 =opt=      ex7_3_4                                          6.2746343370
 =best=     ex7_3_5                                          1.2068714300
 =bestdual= ex7_3_5                                          1.2057085900
-=bestdual= ex7_3_6                                                   inf
+=inf=      ex7_3_6
 =best=     ex8_1_1                                         -2.0218067830
 =best=     ex8_1_2                                         -1.0708610190
 =best=     ex8_1_3                                          3.0000000000
@@ -646,8 +646,8 @@
 =opt=      gastrans582_cool12_95                            0.0000000000
 =opt=      gastrans582_cool14                               0.0000000000
 =opt=      gastrans582_cool14_95                            0.0000000000
-=bestdual= gastrans582_freezing27                                    inf
-=bestdual= gastrans582_freezing27_95                                 inf
+=inf=      gastrans582_freezing27
+=inf=      gastrans582_freezing27_95
 =opt=      gastrans582_freezing30                           0.0000000000
 =opt=      gastrans582_freezing30_95                        0.0000000000
 =opt=      gastrans582_mild10                               0.0000000000
