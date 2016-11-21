@@ -132,6 +132,14 @@ misc:
 - dropped support for Ipopt < 3.11
 - updated CppAD to 20160000
 
+makefile:
+- All objective files are now placed in obj/static or obj/shared, depending on SHARED=false or SHARED=true, respectively.
+- All internal and external libraries are placed in lib/static and lib/shared, the include files are in lib/include.
+- External projects (including make.project) can use the makefile variable LINKCXXSCIPALL or LINKCCSCIPALL to link all SCIP libraries.
+- Running "make help" lists all makefile options.
+- All makefiles in examples/ and applications/ are updated.
+- The binaries now contain an rpath to the SCIP directory, such that shared libraries are found.
+
 
 SCIP version 3.2.2
 ==================

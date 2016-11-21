@@ -1998,7 +1998,7 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
          finite optimal solution might not exist and the KKT conditions would then be invalid",
          &presoldata->updatequadbounded, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" PRESOL_NAME "/updatequadindef",
+   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadindef",
          "if TRUE then apply quadratic constraint update even if the quadratic constraint matrix is known to be indefinite",
          &presoldata->updatequadindef, TRUE, FALSE, NULL, NULL) );
 

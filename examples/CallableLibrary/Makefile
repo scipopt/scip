@@ -108,27 +108,15 @@ depend:		$(SCIPDIR)
 
 $(BINDIR)/string.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/string.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/string.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/string.o $(LINKCXXSCIPALL)	$(LDFLAGS) $(LINKCXX_o)$@
 
 $(BINDIR)/gastrans.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/gastrans.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/gastrans.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/gastrans.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(BINDIR)/circle.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/circle.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/circle.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/circle.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
