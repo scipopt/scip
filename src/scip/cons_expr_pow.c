@@ -526,9 +526,9 @@ SCIP_RETCODE separatePointPow(
    *cut = NULL;
    refpoint = SCIPgetSolVal(scip, sol, childvar);
 
-   /* adjust refpoint if it is infinite */
+   /* we can not generate a cut at +/- infinity */
    if( SCIPisInfinity(scip, REALABS(refpoint)) )
-      refpoint = refpoint > 0.0 ? SCIPinfinity(scip) : -SCIPinfinity(scip);
+      return SCIP_OKAY;
 
    /* compute the violation; this determines whether we need to over- or underestimate */
    violation = pow(refpoint, exponent) - SCIPgetSolVal(scip, sol, auxvar);
