@@ -360,6 +360,7 @@ SCIP_RETCODE componentSetupWorkingSol(
    }
 
    /* set up debug solution */
+#ifdef SCIP_DEBUG_SOLUTION
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -392,7 +393,7 @@ SCIP_RETCODE componentSetupWorkingSol(
          }
       }
    }
-
+#endif
 
    return SCIP_OKAY;
 }
@@ -418,9 +419,11 @@ SCIP_RETCODE createSubscip(
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
+#ifdef SCIP_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
 
       SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
+#endif
 
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
@@ -440,7 +443,9 @@ SCIP_RETCODE createSubscip(
       /* reduce the effort spent for hash tables;
        * however, if the debug solution is enabled and valid in this subtree, we need hash tables
        */
+#ifdef SCIP_DEBUG_SOLUTION
       if( !isvalid )
+#endif
       {
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
@@ -1081,7 +1086,7 @@ SCIP_RETCODE solveComponent(
 
    SCIP_CALL( solveSubscip(scip, subscip, nodelimit, gaplimit) );
 
-   SCIP_CALL( SCIPmergeStatistics(subscip, scip) );
+   SCIPaddNNodes(scip, SCIPgetNNodes(subscip) - lastnnodes);
 
    SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
 

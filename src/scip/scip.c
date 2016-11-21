@@ -2495,38 +2495,6 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    return SCIP_OKAY;
 }
 
-/** merges the statistics from a source SCIP into a target SCIP. The two data structures should point to
- *  different SCIP instances.
- *
- *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
- *        \p targetscip denotes the original instance
- */
-SCIP_RETCODE SCIPmergeStatistics(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip          /**< target SCIP data structure */
-   )
-{
-   SCIP_Longint nnodes;
-
-   /* check if target scip has been set to allow merging variable statistics ???? */
-   //if( !targetscip->set->history_allowmerge )
-   //return SCIP_OKAY;
-
-   assert(sourcescip != targetscip);
-
-   /* we do not want to copy statistics from a scip that has not really started solving */
-   if( SCIPgetStage(sourcescip) < SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
-   nnodes = sourcescip->stat->ntotalnodes - sourcescip->stat->ntotalnodesmerged;
-   sourcescip->stat->ntotalnodesmerged = sourcescip->stat->ntotalnodes;
-
-   targetscip->stat->nnodes += nnodes;
-   targetscip->stat->ntotalnodes += nnodes;
-
-   return SCIP_OKAY;
-}
-
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
  *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
  *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of
@@ -39752,6 +39720,35 @@ int SCIPgetNReoptRuns(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNReoptRuns", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nreoptruns;
+}
+
+/** add given number to the number of processed nodes in current run and in all runs, including the focus node
+ *
+ *  @return the number of processed nodes in current run, including the focus node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPaddNNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint          nnodes              /**< number of processed nodes to add to the statistics */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPaddNNodes", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   scip->stat->nnodes += nnodes;
+   scip->stat->ntotalnodes += nnodes;
 }
 
 /** gets number of processed nodes in current run, including the focus node

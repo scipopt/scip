@@ -914,18 +914,6 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    int                   nvars               /**< number of variables in both variable arrays */
    );
 
-/** merges the statistics from a source SCIP into a target SCIP. The two data structures should point to
- *  different SCIP instances.
- *
- *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
- *        \p targetscip denotes the original instance
- */
-EXTERN
-SCIP_RETCODE SCIPmergeStatistics(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip          /**< target SCIP data structure */
-   );
-
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
  *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
  *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of
@@ -18533,6 +18521,30 @@ int SCIPgetNRuns(
 EXTERN
 int SCIPgetNReoptRuns(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** add given number to the number of processed nodes in current run and in all runs, including the focus node
+ *
+ *  @return the number of processed nodes in current run, including the focus node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+void SCIPaddNNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint          nnodes              /**< number of processed nodes to add to the statistics */
    );
 
 /** gets number of processed nodes in current run, including the focus node
