@@ -15176,8 +15176,6 @@ SCIP_RETCODE prepareReoptimization(
    /* we are at least in the second run */
    else
    {
-      int i;
-
       assert(scip->transprob != NULL);
 
       SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,

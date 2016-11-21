@@ -91,10 +91,9 @@ SCIP_RETCODE createNewSol(
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
-   SCIP_CALL( SCIPretransformSol(scip, newsol) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, TRUE, TRUE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &solvals);
 
@@ -244,28 +243,17 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
               && SCIPisFeasLT(scip, objsol, SCIPgetCutoffbound(scip)) )
             {
                SCIP_Bool stored;
-               SCIP_Bool feasible;
 
-               if( sepabestsol )
+               /* create a new solution */
+               SCIP_CALL( createNewSol(scip, heur, sol, &stored) );
+
+               if( stored )
                {
-                  SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, FALSE, TRUE) );
-               }
-               else
-                  feasible = TRUE;
-
-               if( feasible)
-               {
-                  /* create a new solution */
-                  SCIP_CALL( createNewSol(scip, heur, sol, &stored) );
-
-                  if( stored )
-                  {
-                     nsolsadded++;
+                  nsolsadded++;
 #ifdef SCIP_MORE_DEBUG
-                     nsolsaddedrun++;
+                  nsolsaddedrun++;
 #endif
-                     heurdata->nimprovingsols++;
-                  }
+                  heurdata->nimprovingsols++;
                }
             }
 

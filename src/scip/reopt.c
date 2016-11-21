@@ -1279,9 +1279,11 @@ SCIP_RETCODE checkMemGlbCons(
    int                   mem                 /**< memory which has to be allocated */
    )
 {
+   int c;
+
    assert(reopt != NULL);
    assert(blkmem != NULL);
-   assert(mem >= 0);
+   assert(mem > 0);
 
    if( mem > 0 )
    {
@@ -1290,11 +1292,20 @@ SCIP_RETCODE checkMemGlbCons(
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss, mem) );
          reopt->nglbconss = 0;
          reopt->allocmemglbconss = mem;
+
+         for( c = 0; c < reopt->allocmemglbconss; c++ )
+            reopt->glbconss[c] = NULL;
+
       }
       else if( reopt->allocmemglbconss < mem )
       {
          int newsize = SCIPsetCalcMemGrowSize(set, mem+1);
+
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss, reopt->allocmemglbconss, newsize) );
+
+         for( c = reopt->allocmemglbconss; c < newsize; c++ )
+            reopt->glbconss[c] = NULL;
+
          reopt->allocmemglbconss = newsize;
       }
    }
@@ -3176,23 +3187,46 @@ SCIP_RETCODE addGlobalCut(
    assert(vals != NULL);
    assert(nbinvars + nintvars == nvars);
 
-   nglbconss = reopt->nglbconss;
    nvarsadded = 0;
 
    /* check whether we have enough memory allocated */
-   SCIP_CALL( checkMemGlbCons(reopt, set, blkmem, nglbconss+1) );
+   SCIP_CALL( checkMemGlbCons(reopt, set, blkmem, 10) );
+   nglbconss = reopt->nglbconss;
+   reoptconsdata = NULL;
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->glbconss[nglbconss]) ); /*lint !e866*/
-   reoptconsdata = reopt->glbconss[nglbconss];
+   if( reopt->glbconss[nglbconss] == NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->glbconss[nglbconss]) ); /*lint !e866*/
+      reoptconsdata = reopt->glbconss[nglbconss];
 
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reoptconsdata->vars, (int)(nbinvars+2*nintvars)) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reoptconsdata->vals, (int)(nbinvars+2*nintvars)) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, (int)(nbinvars+2*nintvars)) );
-   reoptconsdata->nvars = 0;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reoptconsdata->vars, (int)(nbinvars+2*nintvars)) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reoptconsdata->vals, (int)(nbinvars+2*nintvars)) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, (int)(nbinvars+2*nintvars)) );
+      reoptconsdata->varssize = (int)(nbinvars+2*nintvars);
+      reoptconsdata->nvars = 0;
+   }
+   else{
+      assert(reopt->glbconss[nglbconss]->nvars == 0);
+      assert(reopt->glbconss[nglbconss]->varssize > 0);
+
+      reoptconsdata = reopt->glbconss[nglbconss];
+
+      if( reoptconsdata->varssize < nbinvars+2*nintvars )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vars, reoptconsdata->varssize,
+               (int)(nbinvars+2*nintvars)) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vals, reoptconsdata->varssize,
+               (int)(nbinvars+2*nintvars)) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, reoptconsdata->varssize,
+               (int)(nbinvars+2*nintvars)) );
+         reoptconsdata->varssize = (int)(nbinvars+2*nintvars);
+      }
+   }
+   assert(reoptconsdata != NULL);
+
    reoptconsdata->lhs = 1.0;
    reoptconsdata->rhs = SCIPsetInfinity(set);
    reoptconsdata->linear = FALSE;
-   reoptconsdata->varssize = (int)(nbinvars+2*nintvars);
    reoptconsdata->constype = REOPT_CONSTYPE_CUT;
 
    for( v = 0; v < nvars; v++ )
@@ -4897,8 +4931,8 @@ SCIP_RETCODE separateSolution(
    assert(SCIPsolIsOriginal(sol));
 
    /* allocate buffer memory */
-   SCIP_ALLOC( BMSallocMemoryArray(&origvars, nvars) );
-   SCIP_ALLOC( BMSallocMemoryArray(&vals, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &origvars, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, nvars) );
 
    nbinvars = 0;
    nintvars = 0;
@@ -4929,8 +4963,8 @@ SCIP_RETCODE separateSolution(
    SCIP_CALL( addGlobalCut(reopt, blkmem, set, origvars, vals, NULL, w, nbinvars, nintvars) );
 
    /* free buffer memory */
-   BMSfreeMemoryArray(&vals);
-   BMSfreeMemoryArray(&origvars);
+   SCIPsetFreeBufferArray(set, &vals);
+   SCIPsetFreeBufferArray(set, &origvars);
 
    return SCIP_OKAY;
 }
@@ -5238,30 +5272,24 @@ SCIP_RETCODE SCIPreoptFree(
 
    if( (*reopt)->glbconss != NULL && (*reopt)->allocmemglbconss > 0 )
    {
-      /* free all constraint */
-      while( (*reopt)->nglbconss > 0 )
-      {
-         int c;
-         c = (*reopt)->nglbconss-1;
+      int c;
 
+      /* free all constraint */
+      for( c = 0; c < (*reopt)->allocmemglbconss; c++ )
+      {
          if( (*reopt)->glbconss[c] != NULL )
          {
             if( (*reopt)->glbconss[c]->varssize > 0 )
             {
-               if( !(*reopt)->glbconss[c]->linear )
-                  BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->boundtypes, (*reopt)->glbconss[c]->varssize);
-#ifndef NDEBUG
-               else
-                  assert((*reopt)->glbconss[c]->boundtypes == NULL);
-#endif
+               BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->boundtypes, (*reopt)->glbconss[c]->varssize);
                BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->vals, (*reopt)->glbconss[c]->varssize);
                BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->vars, (*reopt)->glbconss[c]->varssize);
                (*reopt)->glbconss[c]->varssize = 0;
             }
             BMSfreeBlockMemory(blkmem, &(*reopt)->glbconss[c]); /*lint !e866*/
+            --(*reopt)->nglbconss;
          }
 
-         --(*reopt)->nglbconss;
       }
       assert((*reopt)->nglbconss == 0);
 
@@ -6637,7 +6665,7 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
          bestrun = r;
       }
    }
-   printf("run %d has best similarity=%g\n", bestrun, bestsim);
+   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "run %d has best similarity=%g\n", bestrun, bestsim);
 
    /* iterate through all variables and scale the histories */
    for( v = 0; v < nvars; v++ )
@@ -6677,7 +6705,6 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
          SCIPhistoryIncCutoffSum(transvar->history, (SCIP_BRANCHDIR)d, avgcutoff[d]);
 
          SCIPdebugMessage("-> <%s> %4s scores: inf=%g cutoff=%g\n", SCIPvarGetName(transvar), d == 0 ? "down" : "up", avginference[d], avgcutoff[d]);
-         printf("-> <%s> %4s scores: inf=%g cutoff=%g\n", SCIPvarGetName(transvar), d == 0 ? "down" : "up", avginference[d], avgcutoff[d]);
       }
    }
 
@@ -6707,7 +6734,6 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
       return SCIP_OKAY;
 
    SCIPdebugMessage("updating variable history\n");
-   printf("updating variable history\n");
 
    if( reopt->varhistory[reopt->run-1] == NULL )
    {
@@ -7791,7 +7817,6 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    )
 {
    char name[SCIP_MAXSTRLEN];
-   int naddedconss;
    int c;
 
    assert(scip != NULL);
@@ -7803,7 +7828,6 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    if( (reopt->glbconss == NULL || reopt->nglbconss == 0) && !set->reopt_sepabestsol )
       return SCIP_OKAY;
 
-   naddedconss = 0;
    for(c = reopt->nglbconss-1; c >= 0; c--)
    {
       SCIP_CONS* cons;
@@ -7835,7 +7859,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
          }
       }
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "glb_%s_%d", reopt->glbconss[c]->constype == REOPT_CONSTYPE_CUT ? "cut" : "inf", reopt->run);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "glb_%s_%d_%d", reopt->glbconss[c]->constype == REOPT_CONSTYPE_CUT ? "cut" : "inf", reopt->run, c);
 
       // @todo use active representatives!!!!
 
@@ -7884,11 +7908,21 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
 #endif
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
+
+      /* remember the constraint for re-activation */
+      assert(!SCIPhashmapExists(reopt->activeconss, (void*)cons));
+      SCIP_CALL( SCIPhashmapInsert(reopt->activeconss, (void*)cons, (void*)cons) );
+
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      ++naddedconss;
+
+      /* mark the constraint as empty */
+      reopt->glbconss[c]->nvars = 0;
    }
 
-   SCIPdebugMessage("added %d/%d gobal constraints\n", naddedconss, reopt->nglbconss);
+   SCIPdebugMessage("added %d gobal constraints\n", reopt->nglbconss);
+
+   /* reset number of global constraints */
+   reopt->nglbconss = 0;
 
    return SCIP_OKAY;
 }
@@ -8355,7 +8389,7 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
    nconss = transprob->nconss;
 
    /* create hashmap */
-      SCIP_CALL( SCIPhashmapCreate(&reopt->activeconss, blkmem, nconss) );
+   SCIP_CALL( SCIPhashmapCreate(&reopt->activeconss, blkmem, nconss) );
 
    for( i = 0; i < nconss; i++ )
    {

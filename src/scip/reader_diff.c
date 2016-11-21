@@ -934,7 +934,6 @@ SCIP_RETCODE readDiffFile(
    if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
    {
       SCIP_CALL( SCIPfreeReoptSolve(scip) );
-//      SCIP_CALL( SCIPfreeTransform(scip) );
    }
 
    /* parse the file */
