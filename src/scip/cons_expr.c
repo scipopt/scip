@@ -1268,6 +1268,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
  *    POW7: if exponent is 2, its child is not a sum (expand sums)
  *    POW8: if exponent is integer, its child is not a power
+ *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
  * - is a sum expression such that
  *    SS1: every child is simplified
  *    SS2: no child is a sum

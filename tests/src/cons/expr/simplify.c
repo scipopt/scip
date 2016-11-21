@@ -79,7 +79,8 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"log(exp(1.0))", "val"},
       {"exp(-3.0)", "val"},
       {"log(abs(-3.0))", "val"},
-      {"log(3.0)", "val"}
+      {"log(3.0)", "val"},
+      {"(25.0 * <x>^2)^0.5", "sum"}
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
    };

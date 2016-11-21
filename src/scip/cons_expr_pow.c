@@ -319,6 +319,42 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
          return SCIP_OKAY;
       }
    }
+   else
+   {
+      /* enforces POW9
+       *
+       * FIXME code of POW6 is very similar
+       */
+      if( SCIPgetConsExprExprNChildren(base) == 1
+         && SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrSum(conshdlr)
+         && SCIPgetConsExprExprSumConstant(base) == 0.0
+         && SCIPgetConsExprExprSumCoefs(base)[0] >= 0.0 )
+      {
+         SCIP_CONSEXPR_EXPR* simplifiedaux;
+         SCIP_CONSEXPR_EXPR* aux;
+         SCIP_Real newcoef;
+
+         SCIPdebugPrintf("[simplifyPow] seing a sum with one term, exponent %g\n", exponent);
+         /* assert SS7 holds */
+         assert(SCIPgetConsExprExprSumCoefs(base)[0] != 1.0);
+
+         /* create (pow n expr) and simplify it
+          * note: we call simplifyPow directly, since we know that `expr` is simplified */
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], exponent) );
+         SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+         /* create (sum (pow n expr)) and simplify it
+          * TODO: ideally we would call simplifySum directly, since we know its child is simplified! */
+         newcoef = pow(SCIPgetConsExprExprSumCoefs(base)[0], exponent);
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &aux, 1, &simplifiedaux, &newcoef, 0.0) );
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, aux, simplifiedexpr) ); /*FIXME*/
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
+
+         return SCIP_OKAY;
+      }
+   }
 
    SCIPdebugPrintf("[simplifyPow] power is simplified\n");
    *simplifiedexpr = expr;
