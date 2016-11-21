@@ -338,7 +338,25 @@ SCIP_RETCODE consdataCreate(
 
       if( (*consdata)->intvar != NULL )
       {
-	 SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->intvar, &((*consdata)->intvar)) );
+         SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->intvar, &((*consdata)->intvar)) );
+      }
+
+      if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      {
+         SCIP_CONSHDLRDATA* conshdlrdata;
+         SCIP_CONSHDLR* conshdlr;
+         int v;
+
+         conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+         assert(conshdlr != NULL);
+         conshdlrdata = SCIPconshdlrGetData(conshdlr);
+         assert(conshdlrdata != NULL);
+
+         for( v = (*consdata)->nvars - 1; v >= 0; --v )
+         {
+            SCIP_CALL( SCIPcatchVarEvent(scip, (*consdata)->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+                  (SCIP_EVENTDATA*)(*consdata), NULL) );
+         }
       }
    }
 
@@ -557,6 +575,21 @@ SCIP_RETCODE addCoef(
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockRounding(scip, cons, var) );
 
+   /* we only catch this event in presolving stage */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSHDLR* conshdlr;
+
+      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+      assert(conshdlr != NULL);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+            (SCIP_EVENTDATA*)cons, NULL) );
+   }
+
    /**@todo update LP rows */
    if( consdata->rows[0] != NULL )
    {
@@ -587,6 +620,13 @@ SCIP_RETCODE delCoefPos(
 
    /* remove the rounding locks of the deleted variable */
    SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
+
+   /* we only catch this event in presolving stage, so we need to only drop it there */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE )
+   {
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_VARFIXED, eventhdlr,
+            (SCIP_EVENTDATA*)cons, -1) );
+   }
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -4515,6 +4555,17 @@ SCIP_DECL_CONSDELETE(consDeleteXor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE )
+   {
+      int v;
+
+      for( v = (*consdata)->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)cons, -1) );
+      }
+   }
+
    SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
 
    return SCIP_OKAY;
@@ -4785,6 +4836,72 @@ SCIP_DECL_CONSPROP(consPropXor)
    return SCIP_OKAY;
 }
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+static
+SCIP_DECL_CONSINITPRE(consInitpreXor)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
+   int v;
+
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* catch all variable event for deleted variables, which is only used in presolving */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)conss[c], NULL) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreXor)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool cutoff;
+   int nchgcoefs = 0;
+   int c;
+   int v;
+
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* drop all variable event for deleted variables, which was only used in presolving */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
+               (SCIP_EVENTDATA*)conss[c], -1) );
+      }
+
+      if( !SCIPconsIsDeleted(conss[c]) )
+      {
+         /* we are not allowed to detect infeasibility in the exitpre stage */
+         SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &nchgcoefs, NULL, NULL, &cutoff) );
+         assert(!cutoff);
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** presolving method of constraint handler */
 static
@@ -5351,6 +5468,17 @@ SCIP_DECL_EVENTEXEC(eventExecXor)
    consdata = (SCIP_CONSDATA*)eventdata;
    assert(consdata != NULL);
 
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_VARFIXED )
+   {
+      SCIP_VAR* var = SCIPeventGetVar(event);
+
+      /* we only catch this event in presolving stage */
+      assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+      assert(var != NULL);
+
+      consdata->sorted = FALSE;
+   }
+
    consdata->propagated = FALSE;
 
    return SCIP_OKAY;
@@ -5393,6 +5521,8 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXor) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXor) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXor) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreXor) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consExitpreXor) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXor, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXor) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXor, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
