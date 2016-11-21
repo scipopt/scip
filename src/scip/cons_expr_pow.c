@@ -148,7 +148,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
       baseval = SCIPgetConsExprExprValueValue(base);
 
       /* TODO check if those are all important asserts */
-      assert(baseval >= 0.0 || fmod(exponent, 2.0) == 1.0 || fmod(exponent, 2.0) == 0.0);
+      assert(baseval >= 0.0 || fmod(exponent, 1.0) == 0.0);
       assert(baseval != 0.0 || exponent != 0.0);
 
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, pow(baseval, exponent)) );
@@ -315,6 +315,42 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], newexponent) );
          SCIP_CALL( simplifyPow(scip, aux, simplifiedexpr) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      /* enforces POW9
+       *
+       * FIXME code of POW6 is very similar
+       */
+      if( SCIPgetConsExprExprNChildren(base) == 1
+         && SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrSum(conshdlr)
+         && SCIPgetConsExprExprSumConstant(base) == 0.0
+         && SCIPgetConsExprExprSumCoefs(base)[0] >= 0.0 )
+      {
+         SCIP_CONSEXPR_EXPR* simplifiedaux;
+         SCIP_CONSEXPR_EXPR* aux;
+         SCIP_Real newcoef;
+
+         SCIPdebugPrintf("[simplifyPow] seing a sum with one term, exponent %g\n", exponent);
+         /* assert SS7 holds */
+         assert(SCIPgetConsExprExprSumCoefs(base)[0] != 1.0);
+
+         /* create (pow n expr) and simplify it
+          * note: we call simplifyPow directly, since we know that `expr` is simplified */
+         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], exponent) );
+         SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+         /* create (sum (pow n expr)) and simplify it
+          * TODO: ideally we would call simplifySum directly, since we know its child is simplified! */
+         newcoef = pow(SCIPgetConsExprExprSumCoefs(base)[0], exponent);
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &aux, 1, &simplifiedaux, &newcoef, 0.0) );
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, aux, simplifiedexpr) ); /*FIXME*/
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
 
          return SCIP_OKAY;
       }
@@ -525,6 +561,10 @@ SCIP_RETCODE separatePointPow(
 
    *cut = NULL;
    refpoint = SCIPgetSolVal(scip, sol, childvar);
+
+   /* we can not generate a cut at +/- infinity */
+   if( SCIPisInfinity(scip, REALABS(refpoint)) )
+      return SCIP_OKAY;
 
    /* compute the violation; this determines whether we need to over- or underestimate */
    violation = pow(refpoint, exponent) - SCIPgetSolVal(scip, sol, auxvar);
