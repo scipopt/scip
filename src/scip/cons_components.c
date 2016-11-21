@@ -1026,7 +1026,7 @@ SCIP_RETCODE solveComponent(
             if( problem->nlowerboundinf == 0 )
                newcutoffbound += component->lastdualbound;
 
-            if( SCIPisSumLT(subscip, newcutoffbound, SCIPgetPrimalbound(subscip)) )
+            if( SCIPisSumLT(subscip, newcutoffbound, SCIPgetCutoffbound(subscip)) )
             {
                SCIPdebugMessage("update cutoff bound to %16.9g\n", newcutoffbound);
 
@@ -1209,10 +1209,10 @@ SCIP_RETCODE solveComponent(
          if( problem->nfeascomps == problem->ncomponents )
          {
             SCIP_Bool feasible;
-
+#ifdef SCIP_MORE_DEBUG
             SCIP_CALL( SCIPcheckSol(scip, problem->bestsol, TRUE, FALSE, TRUE, TRUE, TRUE, &feasible) );
             assert(feasible);
-
+#endif
             SCIP_CALL( SCIPaddSol(scip, problem->bestsol, &feasible) );
 
             SCIPdebugMessage("component <%s>: primal bound decreased from %16.9g to %16.9g, new primal bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
@@ -2408,12 +2408,6 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolComponents)
 {  /*lint --e{715}*/
-   if( nconss > 0 )
-   {
-      assert(nconss == 1);
-
-      SCIP_CALL( SCIPdelCons(scip, conss[0]) );
-   }
 
    return SCIP_OKAY;
 }
