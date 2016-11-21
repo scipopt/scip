@@ -465,7 +465,7 @@ SCIP_RETCODE copyToSubscip(
    *success = TRUE;
 
    /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcopyProb(scip, subscip, varmap, consmap, FALSE, name) );
 
    /* copy variables */
    for( i = 0; i < nvars; ++i )
