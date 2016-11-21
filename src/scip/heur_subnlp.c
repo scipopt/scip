@@ -16,8 +16,9 @@
 /**@file    heur_subnlp.c
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
- * 
+ *
  * @todo set cutoff or similar in NLP
+ * @todo reconstruct sub-SCIP if problem has changed
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2053,16 +2054,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
-   if( heurdata->keepcopy )
-   {
-      /* create sub-SCIP for later use */
-      SCIP_CALL( createSubSCIP(scip, heurdata) );
-
-      /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
-      if( heurdata->subscip == NULL )
-         return SCIP_OKAY;
-   }
-
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
@@ -2124,6 +2115,17 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* try to setup NLP if not tried before */
+   if( !heurdata->triedsetupsubscip && heurdata->subscip == NULL )
+   {
+      /* create sub-SCIP for later use */
+      SCIP_CALL( createSubSCIP(scip, heurdata) );
+
+      /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
+      if( heurdata->subscip == NULL )
+         return SCIP_OKAY;
+   }
 
    /* if keepcopy and subscip == NULL, then InitsolNlp decided that we do not need an NLP solver,
     *   probably because we do not have nonlinear continuous or implicit integer variables
