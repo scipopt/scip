@@ -4252,7 +4252,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
-   //assert(postponed || lpfork == NULL || fork != NULL);
+   assert(postponed || lpfork == NULL || fork != NULL);
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 

@@ -44,10 +44,10 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
-#define DEFAULT_MAXDEPTH              0      /**< maximum depth of a node to run components detection */
+#define DEFAULT_MAXDEPTH             10      /**< maximum depth of a node to run components detection */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
-#define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
-#define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
+#define DEFAULT_MINSIZE               0      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
+#define DEFAULT_MINRELSIZE          0.0      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems during presolving */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
@@ -2422,7 +2422,7 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/minsize",
          "minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound",
-         &conshdlrdata->minsize, TRUE, DEFAULT_MINSIZE, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->minsize, TRUE, DEFAULT_MINSIZE, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/" CONSHDLR_NAME "/minrelsize",
          "minimum relative size (in terms of variables) to solve a component individually during branch-and-bound",
