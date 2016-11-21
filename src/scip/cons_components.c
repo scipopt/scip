@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "scip/cons_components.h"
+#include "scip/debug.h"
 
 #define CONSHDLR_NAME          "components"
 #define CONSHDLR_DESC          "independent components constraint handler"
@@ -75,7 +76,6 @@ typedef struct Component
    SCIP_Real             fixedvarsobjsum;    /**< objective contribution of all locally fixed variables */
    SCIP_Real             lastdualbound;      /**< dual bound after last optimization call for this component */
    SCIP_Real             lastprimalbound;    /**< primal bound after last optimization call for this component */
-   SCIP_Longint          lastnodelimit;      /**< node limit of last optimization call for this component */
    SCIP_STATUS           laststatus;         /**< solution status of last optimization call for the sub-SCIP of this component */
    SCIP_Bool             solved;             /**< was this component solved already? */
    int                   ncalls;             /**< number of optimization calls for this component */
@@ -209,7 +209,6 @@ SCIP_RETCODE initComponent(
    component->fixedvarsobjsum = 0.0;
    component->lastdualbound = -SCIPinfinity(scip);
    component->lastprimalbound = SCIPinfinity(scip);
-   component->lastnodelimit = 0LL;
    component->laststatus = SCIP_STATUS_UNKNOWN;
    component->solved = FALSE;
    component->ncalls = 0;
@@ -360,6 +359,41 @@ SCIP_RETCODE componentSetupWorkingSol(
          component->nfixedvars, component->fixedvarsobjsum);
    }
 
+   /* set up debug solution */
+   {
+      PROBLEM* problem;
+      SCIP* scip;
+      SCIP_Bool isvalid = FALSE;
+
+      problem = component->problem;
+      assert(problem != NULL);
+
+      scip = problem->scip;
+      assert(scip != NULL);
+
+      SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
+
+      if( isvalid )
+      {
+         SCIP_Real val;
+         int i;
+
+         SCIPdebugSolEnable(component->subscip);
+
+         for( i = 0; i < component->nvars; ++i )
+         {
+            SCIP_CALL( SCIPdebugGetSolVal(scip, component->vars[i], &val) );
+            SCIP_CALL( SCIPdebugAddSolVal(component->subscip, component->subvars[i], val) );
+         }
+         for( i = 0; i < component->nfixedvars; ++i )
+         {
+            SCIP_CALL( SCIPdebugGetSolVal(scip, component->fixedvars[i], &val) );
+            SCIP_CALL( SCIPdebugAddSolVal(component->subscip, component->fixedsubvars[i], val) );
+         }
+      }
+   }
+
+
    return SCIP_OKAY;
 }
 
@@ -384,6 +418,9 @@ SCIP_RETCODE createSubscip(
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
+      SCIP_Bool isvalid = FALSE;
+
+      SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
 
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
@@ -400,9 +437,14 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
 
-      /* reduce the effort spent for hash tables */
-      SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
+      /* reduce the effort spent for hash tables;
+       * however, if the debug solution is enabled and valid in this subtree, we need hash tables
+       */
+      if( !isvalid )
+      {
+         SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
+      }
 
       /* disable presolving */
       SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -626,6 +668,7 @@ SCIP_RETCODE solveSubscip(
    SCIP_CALL( SCIPsolve(subscip) );
 
 #ifdef SCIP_MORE_DEBUG
+   SCIP_CALL( SCIPprintBestSol(subscip, NULL, FALSE) );
    SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
@@ -899,6 +942,8 @@ SCIP_RETCODE solveComponent(
    SCIP* subscip;
    SCIP_SOL* bestsol;
    SCIP_Longint nodelimit;
+   SCIP_Longint lastnnodes;
+   SCIP_Longint lastnopennodes;
    SCIP_Real gaplimit;
    SCIP_STATUS status;
 
@@ -947,13 +992,12 @@ SCIP_RETCODE solveComponent(
       if( SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM || SCIPisLT(subscip, SCIPgetSolOrigObj(subscip, compsol), SCIPgetPrimalbound(subscip)) )
       {
          SCIP_Bool feasible;
-         SCIP_Real newcutoffbound = SCIPgetSolOrigObj(subscip, compsol);
 
          SCIPdebugMessage("install new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
             SCIPgetProbName(subscip), problem->name,
             SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM ? SCIPinfinity(subscip) : SCIPgetPrimalbound(subscip), SCIPgetSolOrigObj(subscip, compsol));
 
-         SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, TRUE, TRUE) );
+         SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, FALSE, FALSE) );
          if( feasible )
          {
             SCIPdebugMessage("... feasible\n");
@@ -961,128 +1005,128 @@ SCIP_RETCODE solveComponent(
             SCIP_CALL( SCIPaddSol(subscip, compsol, &feasible) );
          }
 
-         /* compute a valid cutoff bound */
-         for( v = 0; v < component->nfixedvars; ++v )
+         /* We cannot take the value of compsol as a cutoff bound if it was not feasible; some of the fixed connecting
+          * variables are different and might not allow for a better solution in this component, but still for far
+          * better solutions in other components. Therefore, the only cutoffbound we can apply is the cutoffbound
+          * of the problem reduced by the dual bounds of the other components
+          */
+         if( problem->nlowerboundinf == 0 || (problem->nlowerboundinf == 1 && SCIPisInfinity(scip, -component->lastdualbound)) )
          {
-            assert(SCIPisEQ(scip, SCIPvarGetObj(component->fixedsubvars[v]), SCIPvarGetObj(component->fixedvars[v])));
+            SCIP_Real newcutoffbound = SCIPgetSolTransObj(scip, bestsol);
 
-            /* the fixed variable has a non-zero objective and a different value in the solution than the fixing value;
-             * we need to adjust the cutoff bound (by default, all fixed variables have value equal to their bound,
-             * but for the cutoff bound, we need to pretend they have value as in the given solution)
-             */
-            if( !SCIPisZero(subscip, SCIPvarGetObj(component->fixedsubvars[v])) &&
-               !SCIPisEQ(subscip,SCIPgetSolVal(scip, bestsol, component->fixedvars[v]),
-                  SCIPgetSolVal(subscip, compsol, component->fixedsubvars[v])) )
+            assert(problem->nlowerboundinf > 0 || SCIPisGE(scip, newcutoffbound, problem->lowerbound));
+
+            newcutoffbound = newcutoffbound - problem->lowerbound + component->fixedvarsobjsum;
+
+            if( problem->nlowerboundinf == 0 )
+               newcutoffbound += component->lastdualbound;
+
+            if( SCIPisSumLT(subscip, newcutoffbound, SCIPgetPrimalbound(subscip)) )
             {
-               newcutoffbound += SCIPvarGetObj(component->fixedsubvars[v]) * (SCIPgetSolVal(scip, bestsol, component->fixedvars[v])
-                  - SCIPgetSolVal(subscip, compsol, component->fixedsubvars[v]));
-            }
-         }
+               SCIPdebugMessage("update cutoff bound to %16.9g\n", newcutoffbound);
 
-         if( SCIPisSumLT(subscip, newcutoffbound, SCIPgetPrimalbound(subscip)) )
-         {
-            SCIPdebugMessage("update cutoff bound to %16.9g\n", newcutoffbound);
-
-            if( SCIPgetSolOrigObj(subscip, compsol) < SCIPgetCutoffbound(subscip) )
-            {
                SCIP_CALL( SCIPupdateCutoffbound(subscip, newcutoffbound) );
             }
          }
       }
    }
 
+   assert(component->laststatus != SCIP_STATUS_OPTIMAL);
+
+   SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
+      SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
+
+   if( component->ncalls == 0 )
    {
-      assert(component->laststatus != SCIP_STATUS_OPTIMAL);
+      nodelimit = 1LL;
+      gaplimit = 0.0;
 
-      SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
-         SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
+      lastnnodes = 0;
+      lastnopennodes = 0;
 
-      if( component->ncalls == 0 )
+   }
+   else
+   {
+      SCIP_Longint mainnodelimit;
+
+      lastnnodes = SCIPgetNNodes(component->subscip);
+      lastnopennodes = SCIPgetNNodesLeft(component->subscip);
+
+      SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &mainnodelimit) );
+
+      nodelimit = 2 * lastnnodes;
+      nodelimit = MAX(nodelimit, 10LL);
+
+      if( mainnodelimit != -1 )
       {
-         nodelimit = 1LL;
+         assert(mainnodelimit >= lastnnodes);
+         nodelimit = MIN(nodelimit, mainnodelimit - lastnnodes);
+      }
+
+      /* set a gap limit of half the current gap (at most 10%) */
+      if( SCIPgetGap(component->subscip) < 0.2 )
+         gaplimit = 0.5 * SCIPgetGap(component->subscip);
+      else
+         gaplimit = 0.1;
+
+      if( lastcomponent )
+      {
+         int verblevel;
+
+         SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &verblevel) );
+
          gaplimit = 0.0;
       }
+   }
+
+   SCIP_CALL( solveSubscip(scip, subscip, nodelimit, gaplimit) );
+
+   SCIP_CALL( SCIPmergeStatistics(subscip, scip) );
+
+   SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
+
+   status = SCIPgetStatus(subscip);
+
+   component->laststatus = status;
+   ++component->ncalls;
+
+   SCIPdebugMsg(scip, "--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
+      status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
+      SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
+
+   *result = SCIP_SUCCESS;
+
+   switch( status )
+   {
+   case SCIP_STATUS_OPTIMAL:
+      component->solved = TRUE;
+      break;
+   case SCIP_STATUS_INFEASIBLE:
+      component->solved = TRUE;
+
+      /* the problem is really infeasible */
+      if( SCIPisInfinity(subscip, SCIPgetPrimalbound(subscip)) )
+      {
+         *result = SCIP_CUTOFF;
+      }
+      /* the cutoff bound was reached; no solution better than the cutoff bound exists */
       else
       {
-         SCIP_Longint mainnodelimit;
-
-         SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &mainnodelimit) );
-
-         nodelimit = 2 * SCIPgetNNodes(component->subscip);
-         nodelimit = MAX(nodelimit, 10LL);
-
-         if( mainnodelimit != -1 )
-         {
-            assert(mainnodelimit >= SCIPgetNNodes(scip));
-            nodelimit = MIN(nodelimit, mainnodelimit - SCIPgetNNodes(scip));
-         }
-
-         /* set a gap limit of half the current gap (at most 10%) */
-         if( SCIPgetGap(component->subscip) < 0.2 )
-            gaplimit = 0.5 * SCIPgetGap(component->subscip);
-         else
-            gaplimit = 0.1;
-
-         if( lastcomponent )
-         {
-            int verblevel;
-
-            SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &verblevel) );
-
-            gaplimit = 0.0;
-         }
+         *result = SCIP_SUCCESS;
+         component->laststatus = SCIP_STATUS_OPTIMAL;
+         assert(SCIPisLE(subscip, SCIPgetDualbound(subscip), SCIPgetPrimalbound(subscip)));
       }
-
-      SCIP_CALL( solveSubscip(scip, subscip, nodelimit, gaplimit) );
-
-      SCIP_CALL( SCIPmergeStatistics(subscip, scip) );
-
-      SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
-
-      status = SCIPgetStatus(subscip);
-
-      component->lastnodelimit = nodelimit;
-      component->laststatus = status;
-      ++component->ncalls;
-
-      SCIPdebugMsg(scip, "--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
-         status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
-         SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
-
-      *result = SCIP_SUCCESS;
-
-      switch( status )
-      {
-      case SCIP_STATUS_OPTIMAL:
-         component->solved = TRUE;
-         break;
-      case SCIP_STATUS_INFEASIBLE:
-         component->solved = TRUE;
-
-         /* the problem is really infeasible */
-         if( SCIPisInfinity(subscip, SCIPgetPrimalbound(subscip)) )
-         {
-            *result = SCIP_CUTOFF;
-         }
-         /* the cutoff bound was reached; no solution better than the cutoff bound exists */
-         else
-         {
-            *result = SCIP_SUCCESS;
-            component->laststatus = SCIP_STATUS_OPTIMAL;
-            assert(SCIPisLE(subscip, SCIPgetDualbound(subscip), SCIPgetPrimalbound(subscip)));
-         }
-         break;
-      case SCIP_STATUS_UNBOUNDED:
-      case SCIP_STATUS_INFORUNBD:
-         /* TODO: store unbounded ray in original SCIP data structure */
-         *result = SCIP_UNBOUNDED;
-         component->solved = TRUE;
-         break;
-      case SCIP_STATUS_USERINTERRUPT:
-         SCIP_CALL( SCIPinterruptSolve(scip) );
-      default:
-         break;
-      }
+      break;
+   case SCIP_STATUS_UNBOUNDED:
+   case SCIP_STATUS_INFORUNBD:
+      /* TODO: store unbounded ray in original SCIP data structure */
+      *result = SCIP_UNBOUNDED;
+      component->solved = TRUE;
+      break;
+   case SCIP_STATUS_USERINTERRUPT:
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   default:
+      break;
    }
 
    /* evaluate call */

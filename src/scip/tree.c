@@ -1464,7 +1464,7 @@ SCIP_RETCODE nodeDeactivate(
    assert(tree != NULL);
    assert(SCIPnodeGetType(node) != SCIP_NODETYPE_FOCUSNODE);
 
-   SCIPsetDebugMsg(set, "deactivate node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d  (reprop subtree mark: %u)\n",
+   SCIPsetDebugMsg(set, "deactivate node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* undo domain and constraint set changes */
@@ -4252,7 +4252,6 @@ SCIP_RETCODE SCIPnodeFocus(
 
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
-   assert(postponed || lpfork == NULL || fork != NULL);
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 
