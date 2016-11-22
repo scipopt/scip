@@ -4367,12 +4367,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4398,12 +4394,8 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
    SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
@@ -4501,12 +4493,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
+{
    /* create auxiliary variables */
    SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
 
