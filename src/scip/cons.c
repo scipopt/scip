@@ -2705,7 +2705,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
          conshdlr->ninitconss, conshdlr->ninitconsskept, initkeptconss);
 
       /* no constraints to initialize (or only kept constraints which do not need to be initialized this time) -> return */
-      if( conshdlr->ninitconss == 0 || (!initkeptconss && conshdlr->ninitconss == conshdlr->ninitconsskept) )
+      if( conshdlr->needscons && (conshdlr->ninitconss == 0 || (!initkeptconss && conshdlr->ninitconss == conshdlr->ninitconsskept)) )
          return SCIP_OKAY;
 
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,

@@ -13638,7 +13638,7 @@ SCIP_RETCODE presolStuffing(
 
                maxcondactivity += val * lb;
                mincondactivity += val * lb;
-               swapped[nsingletons] = FALSE;
+               swapped[v] = FALSE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13657,7 +13657,7 @@ SCIP_RETCODE presolStuffing(
 
                maxcondactivity += val * ub;
                mincondactivity += val * ub;
-               swapped[nsingletons] = TRUE;
+               swapped[v] = TRUE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13742,7 +13742,7 @@ SCIP_RETCODE presolStuffing(
             ub = SCIPvarGetUbGlobal(var);
 
             assert(val > 0 || SCIPisPositive(scip, SCIPvarGetObj(var)));
-            assert((val < 0) == swapped[v]);
+            assert((val < 0) == swapped[idx]);
             val = REALABS(val);
 
             /* stop fixing if variable bounds are not finite */
@@ -13755,7 +13755,7 @@ SCIP_RETCODE presolStuffing(
             /* calculate the change in the row activities if this variable changes
              * its value from its worst to its best bound
              */
-            if( swapped[v] )
+            if( swapped[idx] )
                delta = -(lb - ub) * val;
             else
                delta =  (ub - lb) * val;
@@ -13764,7 +13764,7 @@ SCIP_RETCODE presolStuffing(
 
             if( SCIPisLE(scip, delta, rhs - maxcondactivity) )
             {
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
@@ -13787,7 +13787,7 @@ SCIP_RETCODE presolStuffing(
             else if( SCIPisGT(scip, rhs, maxcondactivity) )
             {
                SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
@@ -13807,7 +13807,7 @@ SCIP_RETCODE presolStuffing(
             }
             else if( SCIPisLE(scip, rhs, mincondactivity) )
             {
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );

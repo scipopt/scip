@@ -189,6 +189,7 @@ struct SCIP_ConsData
    unsigned int          existmultaggr:1;    /**< does this constraint contain multi-aggregations */
 };
 
+#define MAXNCLIQUEVARSCOMP 1000000
 
 /** event data for bound changes events */
 struct SCIP_EventData
@@ -431,7 +432,6 @@ SCIP_RETCODE calcCliquepartition(
       SCIP_CALL( SCIPcalcNegatedCliquePartition(scip, consdata->vars, consdata->nvars, consdata->negcliquepartition, &consdata->nnegcliques) );
       consdata->negcliquepartitioned = TRUE;
    }
-
    assert(!consdata->cliquepartitioned || consdata->ncliques <= consdata->nvars);
    assert(!consdata->negcliquepartitioned || consdata->nnegcliques <= consdata->nvars);
 
@@ -2033,7 +2033,7 @@ SCIP_RETCODE GUBsetCheck(
  *  note: in contrast to SCIPcalcCliquePartition(), variables with LP value 1 are put into trivial cliques (with one
  *  variable) and for the remaining variables, a partition with a small number of cliques is constructed
  */
-#define MAXNCLIQUEVARSCOMP 1000000
+
 static
 SCIP_RETCODE GUBsetCalcCliquePartition(
    SCIP*const            scip,               /**< SCIP data structure */

@@ -3221,12 +3221,12 @@ SCIP_RETCODE createVarUbs(
             SCIPdebugMsg(scip, "Removing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
             assert( ! SCIPconsIsModifiable(conss[c]) );
 
-	    /* mark linear constraint to be upgrade-able */
-	    if ( SCIPconsIsActive(consdata->lincons) )
-	    {
+            /* mark linear constraint to be upgrade-able */
+            if ( SCIPconsIsActive(consdata->lincons) )
+            {
                SCIPconsAddUpgradeLocks(consdata->lincons, -1);
                assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-	    }
+            }
 
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
          }
@@ -3809,12 +3809,12 @@ SCIP_RETCODE propIndicator(
          /* delete constraint */
          assert( ! SCIPconsIsModifiable(cons) );
 
-	 /* mark linear constraint to be update-able */
-	 if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
-	 {
+         /* mark linear constraint to be update-able */
+         if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
+         {
             SCIPconsAddUpgradeLocks(consdata->lincons, -1);
             assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-	 }
+         }
 
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -6599,7 +6599,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
        * constraint pointer */
       if ( SCIPisTransformed(sourcescip) && ! SCIPconsIsTransformed(sourcelincons) )
       {
-	 SCIP_CONS* translincons;
+         SCIP_CONS* translincons;
 
          /* adjust the linear constraint in the original constraint (no need to release translincons) */
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourcelincons, &translincons) );

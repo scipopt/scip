@@ -23,6 +23,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -227,7 +231,7 @@ SCIP_RETCODE readSolfile(
          (*vals)[i] = (*vals)[i-1];
       }
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], name, strlen(name)+1) );
-      SCIPdebugMsg(scip, "found variable <%s>: value <%g>\n", (*names)[i], val);
+      SCIPdebugMsg(set->scip, "found variable <%s>: value <%g>\n", (*names)[i], val);
       (*vals)[i] = val;
       (*nvals)++;
    }
@@ -252,7 +256,7 @@ SCIP_RETCODE readSolfile(
          debugsolval += (*vals)[i] * SCIPvarGetObj(var);
       }
    }
-   SCIPdebugMsg(scip, "Debug Solution value is %g.\n", debugsolval);
+   SCIPdebugMsg(set->scip, "Debug Solution value is %g.\n", debugsolval);
 
 #ifdef SCIP_MORE_DEBUG
    SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
@@ -1656,6 +1660,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    )
 {
    SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Real testval;
    const char* varname;
    int i;
 

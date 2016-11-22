@@ -2849,6 +2849,16 @@ SCIP_RETCODE getLinearCoeffs(
       for( v = 0; v < nactivevars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&activevars[v], &activevals[v], &activeconstant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus(activevars[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            activevars[v] = SCIPvarGetNegatedVar(activevars[v]);
+            activevals[v] *= -1.0;
+            activeconstant += 1.0;
+         }
       }
    }
 
