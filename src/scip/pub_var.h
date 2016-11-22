@@ -852,7 +852,7 @@ int SCIPvarGetCliqueComponentIdx(
    );
 
 
-/** returns whether a cut containing this varialbe is valid after a restart */
+/** returns whether a cut containing this variable is valid after a restart */
 EXTERN
 SCIP_Bool SCIPvarIsCutValidAfterRestart(
    SCIP_VAR*             var                 /**< problem variable */

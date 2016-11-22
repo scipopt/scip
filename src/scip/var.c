@@ -16397,6 +16397,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
 #undef SCIPvarGetCliqueComponentIdx
+#undef SCIPvarIsCutValidAfterRestart
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -16798,7 +16799,7 @@ SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    return var->delglobalstructs;
 }
 
-/** returns whether a cut containing this varialbe is valid after a restart */
+/** returns whether a cut containing this variable is valid after a restart */
 SCIP_Bool SCIPvarIsCutValidAfterRestart(
    SCIP_VAR*             var                 /**< problem variable */
    )
