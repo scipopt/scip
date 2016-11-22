@@ -5522,10 +5522,12 @@ SCIP_RETCODE exprParse(
    if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg2, SCIPexprGetOpReal(arg1)) );
+      SCIPexprFreeDeep(blkmem, &arg1);
    }
    else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, SCIPexprGetOpReal(arg2)) );
+      SCIPexprFreeDeep(blkmem, &arg2);
    }
    else
    {

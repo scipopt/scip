@@ -5945,15 +5945,35 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          SCIP_INTERVAL nonlinactivity;
 
          SCIP_CALL( SCIPevalExprtreeLocalBounds(scip, consdata->exprtrees[i], INTERVALINFTY, &nonlinactivity) );
-         assert(SCIPintervalGetInf(nonlinactivity) > -INTERVALINFTY);
-         assert(SCIPintervalGetSup(nonlinactivity) <  INTERVALINFTY);
          SCIPintervalMulScalar(INTERVALINFTY, &nonlinactivity, nonlinactivity, consdata->nonlincoefs[i]);
 
          if( !SCIPisInfinity(scip, -lhs) )
-            lhs -= SCIPintervalGetSup(nonlinactivity);
+         {
+            if( SCIPintervalGetSup(nonlinactivity) >= INTERVALINFTY )
+               lhs = -SCIPinfinity(scip);
+            else if( SCIPintervalGetSup(nonlinactivity) <= -INTERVALINFTY )
+            {
+               /* lhs <= [...,-infinity] + ...  will never be feasible */
+               *infeasible = TRUE;
+               return SCIP_OKAY;
+            }
+            else
+               lhs -= SCIPintervalGetSup(nonlinactivity);
+         }
 
          if( !SCIPisInfinity(scip,  rhs) )
-            rhs -= SCIPintervalGetInf(nonlinactivity);
+         {
+            if( SCIPintervalGetInf(nonlinactivity) <= -INTERVALINFTY )
+               rhs = SCIPinfinity(scip);
+            else if( SCIPintervalGetInf(nonlinactivity) >= INTERVALINFTY )
+            {
+               /* [infinity,...] + ... <= rhs will never be feasible */
+               *infeasible = TRUE;
+               return SCIP_OKAY;
+            }
+            else
+               rhs -= SCIPintervalGetInf(nonlinactivity);
+         }
       }
 
       /* check if we have a bound change */
@@ -7094,6 +7114,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
+
+   /* some of the methods below will not work if there was a domain error (#1148, point 3) */
+   if( domainerror )
+      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {

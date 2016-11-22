@@ -1615,12 +1615,13 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
 #if (SOPLEX_VERSION >= 160)
-   sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
+   sprintf(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]", getGitHash());
+#else
+   strcpy(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
 #endif
 #ifdef WITH_LPSCHECK
-   sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
+   strcat(spxdesc, " - including CPLEX double check");
 #endif
    return spxdesc;
 }
