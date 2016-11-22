@@ -5477,8 +5477,9 @@ SCIP_DECL_EVENTEXEC(eventExecXor)
 
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_VARFIXED )
    {
+#ifndef NDEBUG
       SCIP_VAR* var = SCIPeventGetVar(event);
-
+#endif
       /* we only catch this event in presolving stage */
       assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
       assert(var != NULL);
