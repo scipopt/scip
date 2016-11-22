@@ -743,6 +743,7 @@ SCIP_RETCODE dfs(
    int curridx;
    int nimpls;
    int idx;
+   /* for cycle detection, we need to mark currently active nodes, otherwise we just mark them as visited */
    int visitedflag = (propdata->detectcycles ? ACTIVE : VISITED);
 
    assert(startnode >= 0);
@@ -1022,7 +1023,7 @@ SCIP_RETCODE dfs(
       /* store node in the sorted nodes array */
       dfsnodes[(*ndfsnodes)] = curridx;
       assert(visited[curridx] == visitedflag);
-      visited[curridx] = 1;
+      visited[curridx] = VISITED;
       (*ndfsnodes)++;
    }
 
