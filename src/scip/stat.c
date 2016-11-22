@@ -67,6 +67,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->relaxsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->sbsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -122,6 +123,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
+   SCIPclockFree(&(*stat)->relaxsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->sbsoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
@@ -196,6 +198,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
+   SCIPclockReset(stat->relaxsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->sbsoltime);
    SCIPclockReset(stat->nodeactivationtime);
@@ -231,9 +234,11 @@ void SCIPstatReset(
    stat->ntotalnodesmerged = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
+   stat->nrelaxsolsfound = 0;
    stat->npssolsfound = 0;
    stat->nsbsolsfound = 0;
    stat->nlpbestsolsfound = 0;
+   stat->nrelaxbestsolsfound = 0;
    stat->npsbestsolsfound = 0;
    stat->nsbbestsolsfound = 0;
    stat->nexternalsolsfound = 0;
@@ -253,6 +258,7 @@ void SCIPstatReset(
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
    stat->lpcount = 0;
+   stat->relaxcount = 0;
    stat->nlps = 0;
    stat->nrootlps = 0;
    stat->nprimallps = 0;
@@ -616,6 +622,7 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
    SCIPclockEnableOrDisable(stat->conflictlptime, enable);
    SCIPclockEnableOrDisable(stat->lpsoltime, enable);
+   SCIPclockEnableOrDisable(stat->relaxsoltime, enable);
    SCIPclockEnableOrDisable(stat->pseudosoltime, enable);
    SCIPclockEnableOrDisable(stat->sbsoltime, enable);
    SCIPclockEnableOrDisable(stat->nodeactivationtime, enable);

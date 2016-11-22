@@ -845,6 +845,12 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns the variable clique component index, or -1 if no index was computed */
+EXTERN
+int SCIPvarGetCliqueComponentIdx(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -940,6 +946,7 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetBdchgInfoUb(var, pos)   (&((var)->ubchginfos[pos]))
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
+#define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
 
 #endif
 

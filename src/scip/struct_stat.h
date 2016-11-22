@@ -83,9 +83,11 @@ struct SCIP_Stat
    SCIP_Longint          nrepropboundchgs;   /**< number of bound changes generated in repropagating nodes */
    SCIP_Longint          nrepropcutoffs;     /**< number of times, a repropagated node was cut off */
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
+   SCIP_Longint          nrelaxsolsfound;    /**< number of CIP-feasible relaxation solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          nsbsolsfound;       /**< number of CIP-feasible solutions found during strong branching so far */
-   SCIP_Longint          nlpbestsolsfound;   /**< number of new best CIP-feasible LP solutions found so far, */
+   SCIP_Longint          nlpbestsolsfound;   /**< number of new best CIP-feasible LP solutions found so far */
+   SCIP_Longint          nrelaxbestsolsfound;/**< number of new best CIP-feasible relaxation solutions found so far */
    SCIP_Longint          npsbestsolsfound;   /**< number of new best CIP-feasible pseudo solutions found so far */
    SCIP_Longint          nsbbestsolsfound;   /**< number of new best CIP-feasible solutions found during strong branching so far */
    SCIP_Longint          nexternalsolsfound; /**< number of externally given CIP-feasible solutions (or new solutions found when transforming old ones) */
@@ -139,6 +141,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
+   SCIP_CLOCK*           relaxsoltime;       /**< time needed for storing feasible relaxation solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    SCIP_CLOCK*           sbsoltime;          /**< time needed for searching and storing feasible strong branching solutions */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
@@ -155,6 +158,7 @@ struct SCIP_Stat
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    SCIP_LPSOLSTAT        lastsblpsolstats[2];/**< last LP solving statuses for variable strong branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
+   SCIP_Longint          relaxcount;         /**< internal counter, where all relax calls are counted */
    SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */
    SCIP_Longint          nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
    SCIP_Longint          nprimallps;         /**< number of primal LPs solved with at least 1 iteration */

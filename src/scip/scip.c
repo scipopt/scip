@@ -5661,6 +5661,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -5696,7 +5697,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds,
          delaysepa, delayprop, needscons, proptiming, presoltiming, conshdlrcopy,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
-         consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
+         consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck, consprop,
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
          conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
@@ -5756,7 +5757,7 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
          SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_ALWAYS,
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL, NULL, consenfolp, consenfops, conscheck, NULL,
+         NULL, NULL, NULL, NULL, NULL, consenfolp, NULL, consenfops, conscheck, NULL,
          NULL, NULL, conslock, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, NULL, NULL, NULL, NULL, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
@@ -5851,6 +5852,30 @@ SCIP_RETCODE SCIPsetConshdlrProp(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delayprop", name);
    SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delayprop) );
+
+   return SCIP_OKAY;
+}
+
+/** sets relaxation enforcement method of the constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetConshdlrEnforelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< enforcement method for relaxation solution of constraint handler (might be NULL) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrEnforelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetEnforelax(conshdlr, consenforelax);
 
    return SCIP_OKAY;
 }
@@ -6916,6 +6941,7 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             includeslp,         /**< does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -6938,7 +6964,7 @@ SCIP_RETCODE SCIPincludeRelax(
    }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq,
+         name, desc, priority, freq, includeslp,
          relaxcopy,
          relaxfree, relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
@@ -6960,6 +6986,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             includeslp,         /**< does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    )
@@ -6976,7 +7003,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq,
+         name, desc, priority, freq, includeslp,
          NULL, NULL, NULL, NULL, NULL, NULL, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
 
@@ -13359,9 +13386,9 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPeventqueueCreate(&scip->eventqueue) );
    SCIP_CALL( SCIPbranchcandCreate(&scip->branchcand) );
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
-   SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation) );
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
+   SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable, scip->set, scip->mem->probmem) );
 
@@ -14197,6 +14224,7 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+   int ncliquecomponents;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14331,6 +14359,21 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
+   /* update clique components if necessary */
+   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
+   {
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int nimplvars;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
+
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
+   }
+   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
+   ncliquecomponents = SCIPcliquetableGetNCliqueComponents(scip->cliquetable);
+
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -14404,6 +14447,9 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
+
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+         "Clique table has %d connected components (bin+impl bin vars)\n", ncliquecomponents);
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -14822,13 +14868,13 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
 
-   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
@@ -23042,12 +23088,306 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
+/** creates a variable order consistent labeling of the given labels
+ *
+ *  order consistent means that
+ *  a) the label at the first position in the array is 0
+ *  b) for every possible label \in {0, ..., nlabels - 1} there is an index j with label_j = i
+ *  c) that for two indices i <= j, it holds that
+ *     label_i > label_j if and only if there is a k < i such that label_k == label_j
+ *
+ *  every label equal to -1 is treated as a previously unseen, unique label and gets a new ordered label.
+ */
+static
+SCIP_RETCODE relabelOrderConsistent(
+   SCIP*const            scip,               /**< SCIP data structure */
+   int*                  labels,             /**< current labels that will be overwritten */
+   int const             nlabels,            /**< number of variables in the clique */
+   int*                  nclasses            /**< pointer to store the total number of distinct labels */
+   )
+{
+   SCIP_HASHMAP* classidx2newlabel;
+
+   int classidx;
+   int i;
+
+   SCIP_CALL( SCIPhashmapCreate(&classidx2newlabel, SCIPblkmem(scip), nlabels) );
+
+   classidx = 0;
+
+   /* loop over labels to create local class indices that obey the variable order */
+   for( i = 0; i < nlabels; ++i )
+   {
+      int currentlabel = labels[i];
+      int localclassidx;
+
+      /* labels equal to -1 are stored as singleton classes */
+      if( currentlabel == -1 )
+      {
+         ++classidx;
+         localclassidx = classidx;
+      }
+      else
+      {
+         assert(currentlabel >= 0);
+         /* look up the class index image in the hash map; if it is not stored yet, new class index is created and stored */
+         if( !SCIPhashmapExists(classidx2newlabel, (void*)(size_t)currentlabel) )
+         {
+            ++classidx;
+            localclassidx = classidx;
+            SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx);
+         }
+         else
+         {
+            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
+         }
+      }
+      assert(localclassidx - 1 >= 0);
+      assert(localclassidx - 1 <= i);
+
+      /* indices start with zero, but we have an offset of 1 because we cannot store 0 in a hashmap */
+      labels[i] = localclassidx - 1;
+   }
+
+   assert(classidx > 0);
+   assert(classidx <= nlabels);
+   *nclasses = classidx;
+
+   SCIPhashmapFree(&classidx2newlabel);
+
+   return SCIP_OKAY;
+}
+
+/** sort the variables w.r.t. the given labels; thereby ensure the current order of the variables with the same label. */
+static
+SCIP_RETCODE labelSortStable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array */
+   int*                  classlabels,        /**< array that contains a class label for every variable */
+   SCIP_VAR**            sortedvars,         /**< array to store variables after stable sorting */
+   int*                  sortedindices,      /**< array to store indices of sorted variables in the original vars array */
+   int*                  classesstartposs,   /**< starting position array for each label class (must have size nclasses + 1) */
+   int                   nvars,              /**< size of the vars arrays */
+   int                   nclasses            /**< number of label classes */
+   )
+{
+   SCIP_VAR*** varpointers;
+   int** indexpointers;
+   int* classcount;
+
+   int nextpos;
+   int c;
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(sortedindices != NULL);
+   assert(classesstartposs != NULL);
+
+   assert(nvars == 0 || vars != NULL);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   assert(classlabels != NULL);
+   assert(nclasses > 0);
+
+   /* we first count all class cardinalities and allocate temporary memory for a bucket sort */
+   SCIP_CALL( SCIPallocBufferArray(scip, &classcount, nclasses) );
+   BMSclearMemoryArray(classcount, nclasses);
+
+   /* first we count for each class the number of elements */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      assert(0 <= classlabels[v] && classlabels[v] < nclasses);
+      ++(classcount[classlabels[v]]);
+   }
+
+#ifndef NDEBUG
+   BMSclearMemoryArray(sortedvars, nvars);
+   BMSclearMemoryArray(sortedindices, nvars);
+#endif
+   SCIP_CALL( SCIPallocBufferArray(scip, &varpointers, nclasses) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indexpointers, nclasses) );
+
+   nextpos = 0;
+   /* now we initialize all start pointers for each class, so they will be ordered */
+   for( c = 0; c < nclasses; ++c )
+   {
+      /* to reach the goal that all variables of each class will be standing next to each other we will initialize the
+       * starting pointers for each class by adding the cardinality of each class to the last class starting pointer
+       * e.g. class1 has 4 elements and class2 has 3 elements then the starting pointer for class1 will be the pointer
+       *      to sortedvars[0], the starting pointer to class2 will be the pointer to sortedvars[4] and to class3 it will be
+       *      the pointer to sortedvars[7]
+       */
+      varpointers[c] = (SCIP_VAR**) (sortedvars + nextpos);
+      indexpointers[c] = (int*) (sortedindices + nextpos);
+      classesstartposs[c] = nextpos;
+      assert(classcount[c] > 0);
+      nextpos += classcount[c];
+      assert(nextpos > 0);
+   }
+   assert(nextpos == nvars);
+   classesstartposs[c] = nextpos;
+
+   /* now we copy all variables to the right order */
+   for( v = 0; v < nvars; ++v )
+   {
+      /* copy variable itself to the right position */
+      *(varpointers[classlabels[v]]) = vars[v];  /*lint !e613*/
+      ++(varpointers[classlabels[v]]);
+
+      /* copy index */
+      *(indexpointers[classlabels[v]]) = v;
+      ++(indexpointers[classlabels[v]]);
+   }
+
+/* in debug mode, we ensure the correctness of the mapping */
+#ifndef NDEBUG
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(sortedvars[v] != NULL);
+      assert(sortedindices[v] >= 0);
+
+      /* assert that the sorted indices map back to the correct variable in the original order */
+      assert(vars[sortedindices[v]] == sortedvars[v]);
+   }
+#endif
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &indexpointers);
+   SCIPfreeBufferArray(scip, &varpointers);
+   SCIPfreeBufferArray(scip, &classcount);
+
+   return SCIP_OKAY;
+}
+
+
 /* calculate clique partition for a maximal amount of comparisons on variables due to expensive algorithm
  * @todo: check for a good value, maybe it's better to check parts of variables
  */
 #define MAXNCLIQUEVARSCOMP 1000000
 
 /** calculates a partition of the given set of binary variables into cliques;
+ *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
+ *  were assigned to the same clique;
+ *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
+ *  the preceding variables was assigned to clique i-1;
+ *  for each clique at most 1 variables can be set to TRUE in a feasible solution;
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+static
+SCIP_RETCODE calcCliquePartitionGreedy(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   SCIP_Bool*const       values,             /**< clique value (TRUE or FALSE) for each variable in the clique */
+   int const             nvars,              /**< number of variables in the array */
+   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   )
+{
+   SCIP_VAR** cliquevars;
+   SCIP_Bool* cliquevalues;
+   int i;
+   int maxncliquevarscomp;
+   int ncliquevars;
+
+
+
+   /* allocate temporary memory for storing the variables of the current clique */
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
+
+   /* initialize the cliquepartition array with -1 */
+   for( i = nvars - 1; i >= 0; --i )
+      cliquepartition[i] = -1;
+
+   maxncliquevarscomp = (int) MIN(nvars * (SCIP_Longint)nvars, MAXNCLIQUEVARSCOMP);
+   /* calculate the clique partition */
+   *ncliques = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      if( cliquepartition[i] == -1 )
+      {
+         int j;
+
+         /* variable starts a new clique */
+         cliquepartition[i] = *ncliques;
+         cliquevars[0] = vars[i];
+         cliquevalues[0] = values[i];
+         ncliquevars = 1;
+
+         /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+         if( SCIPvarIsActive(vars[i]) && SCIPvarGetNCliques(vars[i], values[i]) > 0 )
+         {
+            /* greedily fill up the clique */
+            for( j = i+1; j < nvars; ++j )
+            {
+               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+               if( cliquepartition[j] == -1 && SCIPvarIsActive(vars[j]) )
+               {
+                  int k;
+
+                  /* check if every variable in the current clique can be extended by tmpvars[j] */
+                  for( k = ncliquevars - 1; k >= 0; --k )
+                  {
+                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], TRUE) )
+                        break;
+                  }
+
+                  if( k == -1 )
+                  {
+                     /* put the variable into the same clique */
+                     cliquepartition[j] = cliquepartition[i];
+                     cliquevars[ncliquevars] = vars[j];
+                     cliquevalues[ncliquevars] = values[j];
+                     ++ncliquevars;
+                  }
+               }
+            }
+         }
+
+         /* this clique is finished */
+         ++(*ncliques);
+      }
+      assert(cliquepartition[i] >= 0 && cliquepartition[i] < i+1);
+
+      /* break if we reached the maximal number of comparisons */
+      if( i * nvars > maxncliquevarscomp )
+         break;
+   }
+   /* if we had to many variables fill up the cliquepartition and put each variable in a separate clique */
+   for( ; i < nvars; ++i )
+   {
+      if( cliquepartition[i] == -1 )
+      {
+         cliquepartition[i] = *ncliques;
+         ++(*ncliques);
+      }
+   }
+
+   SCIPsetFreeBufferArray(scip->set, &cliquevalues);
+   SCIPsetFreeBufferArray(scip->set, &cliquevars);
+
+   return SCIP_OKAY;
+}
+
+/** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
+ *
+ *  The algorithm performs the following steps:
+ *  - recomputes connected clique components, if necessary
+ *  - computes a clique partition for every connected clique component greedily.
+ *  - relabels the resulting cliques such that the resulting partition obeys the variable order
+ *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
  *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
@@ -23073,12 +23413,17 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    )
 {
    SCIP_VAR** tmpvars;
-   SCIP_VAR** cliquevars;
-   SCIP_Bool* cliquevalues;
+
+   SCIP_VAR** sortedtmpvars;
    SCIP_Bool* tmpvalues;
-   int ncliquevars;
+   SCIP_Bool* sortedtmpvalues;
+   int* componentlabels;
+   int* sortedindices;
+   int* componentstartposs;
    int i;
-   int maxncliquevarscomp;
+   int c;
+
+   int ncomponents;
 
    assert(scip != NULL);
    assert(nvars == 0 || vars != NULL);
@@ -23093,7 +23438,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* early abort when no clique and implications are existing */
+   /* early abort if neither cliques nor implications are present */
    if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
    {
       for( i = nvars - 1; i >= 0; --i )
@@ -23104,14 +23449,12 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* allocate temporary memory for storing the variables of the current clique */
-   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
+
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &tmpvalues, nvars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
-   ncliquevars = 0;
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &componentlabels, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedindices, nvars) );
 
-   /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
    for( i = nvars - 1; i >= 0; --i )
    {
@@ -23122,76 +23465,144 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
-   maxncliquevarscomp = (int) MIN(nvars * (SCIP_Longint)nvars, MAXNCLIQUEVARSCOMP);
+   ncomponents = -1;
 
-   /* calculate the clique partition */
-   *ncliques = 0;
+   /* update clique components if necessary */
+   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
+   {
+      SCIP_VAR** allvars;
+      int nallbinvars;
+      int nallintvars;
+      int nallimplvars;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &allvars, NULL, &nallbinvars, &nallintvars, &nallimplvars, NULL) );
+
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, allvars, nallbinvars, nallintvars, nallimplvars) );
+   }
+
+   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
+
+   /* store the global clique component labels */
    for( i = 0; i < nvars; ++i )
    {
-      if( cliquepartition[i] == -1 )
-      {
-         int j;
-
-         /* variable starts a new clique */
-         cliquepartition[i] = *ncliques;
-         cliquevars[0] = tmpvars[i];
-         cliquevalues[0] = tmpvalues[i];
-         ncliquevars = 1;
-
-         /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-         if( SCIPvarIsActive(tmpvars[i]) && SCIPvarGetNCliques(tmpvars[i], tmpvalues[i]) > 0 )
-         {
-            /* greedily fill up the clique */
-            for( j = i+1; j < nvars; ++j )
-            {
-               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-               if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
-               {
-                  int k;
-
-                  /* check if every variable in the current clique can be extended by tmpvars[j] */
-                  for( k = ncliquevars - 1; k >= 0; --k )
-                  {
-                     if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
-                        break;
-                  }
-
-                  if( k == -1 )
-                  {
-                     /* put the variable into the same clique */
-                     cliquepartition[j] = cliquepartition[i];
-                     cliquevars[ncliquevars] = tmpvars[j];
-                     cliquevalues[ncliquevars] = tmpvalues[j];
-                     ++ncliquevars;
-                  }
-               }
-            }
-         }
-
-         /* this clique is finished */
-         ++(*ncliques);
-      }
-      assert(cliquepartition[i] >= 0 && cliquepartition[i] < i+1);
-
-      /* break if we reached the maximal number of comparisons */
-      if( i * nvars > maxncliquevarscomp )
-         break;
+      if( SCIPvarIsActive(tmpvars[i]) )
+         componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+      else
+         componentlabels[i] = -1;
    }
-   /* if we had to much variables fill up the cliquepartition and put each variable in a separate clique */
-   for( ; i < nvars; ++i )
+
+   /* relabel component labels order consistent as prerequisite for a stable sort */
+   SCIP_CALL( relabelOrderConsistent(scip, componentlabels, nvars, &ncomponents) );
+   assert(ncomponents >= 1);
+   assert(ncomponents <= nvars);
+
+   /* allocate storage array for the starting positions of the components */
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &componentstartposs, ncomponents + 1) );
+
+   /* stable sort the variables w.r.t. the component labels so that we can restrict the quadratic algorithm to the components */
+   if( ncomponents > 1 )
    {
-      if( cliquepartition[i] == -1 )
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedtmpvars, nvars) );
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &sortedtmpvalues, nvars) );
+      SCIP_CALL( labelSortStable(scip, tmpvars, componentlabels, sortedtmpvars, sortedindices, componentstartposs, nvars, ncomponents) );
+
+      /* reassign the tmpvalues with respect to the sorting */
+      for( i = 0; i < nvars; ++i )
       {
-         cliquepartition[i] = *ncliques;
-         ++(*ncliques);
+         assert(tmpvars[sortedindices[i]] == sortedtmpvars[i]);
+         sortedtmpvalues[i] = tmpvalues[sortedindices[i]];
       }
    }
+   else
+   {
+      /* if we have only one large connected component, skip the stable sorting and prepare the data differently */
+      sortedtmpvars = tmpvars;
+      sortedtmpvalues = tmpvalues;
+      componentstartposs[0] = 0;
+      componentstartposs[1] = nvars;
+
+      /* sorted indices are the identity */
+      for( i = 0; i < nvars; ++i )
+         sortedindices[i] = i;
+   }
+
+   *ncliques = 0;
+   /* calculate a greedy clique partition for each connected component */
+   for( c = 0; c < ncomponents; ++c )
+   {
+      int* localcliquepartition;
+      int nlocalcliques;
+      int ncomponentvars;
+      int l;
+
+      /* extract the number of variables in this connected component */
+      ncomponentvars = componentstartposs[c + 1] - componentstartposs[c];
+      nlocalcliques = 0;
+
+      /* allocate necessary memory to hold the intermediate component clique partition */
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &localcliquepartition, ncomponentvars) );
+
+      /* call greedy clique algorithm for all component variables */
+      SCIP_CALL( calcCliquePartitionGreedy(scip, &(sortedtmpvars[componentstartposs[c]]), &(sortedtmpvalues[componentstartposs[c]]),
+            ncomponentvars, localcliquepartition, &nlocalcliques) );
+
+      assert(nlocalcliques >= 1);
+      assert(nlocalcliques <= ncomponentvars);
+
+      /* store the obtained clique partition with an offset of ncliques for the original variables */
+      for( l = componentstartposs[c]; l < componentstartposs[c + 1]; ++l )
+      {
+         int origvaridx = sortedindices[l];
+         assert(cliquepartition[origvaridx] == -1);
+         assert(localcliquepartition[l - componentstartposs[c]] <= l - componentstartposs[c]);
+         cliquepartition[origvaridx] = localcliquepartition[l - componentstartposs[c]] + (*ncliques);
+      }
+      *ncliques += nlocalcliques;
+
+      /* free the local clique partition */
+      SCIPsetFreeBufferArray(scip->set, &localcliquepartition);
+   }
+
+   /* except in the two trivial cases, we have to ensure the order consistency of the partition indices */
+   if( ncomponents > 1 && ncomponents < nvars )
+   {
+      int partitionsize;
+      SCIP_CALL( relabelOrderConsistent(scip, cliquepartition, nvars, &partitionsize) );
+
+      assert(partitionsize == *ncliques);
+   }
+
+   if( ncomponents > 1 )
+   {
+      SCIPsetFreeBufferArray(scip->set, &sortedtmpvalues);
+      SCIPsetFreeBufferArray(scip->set, &sortedtmpvars);
+   }
+
+   /* use the greedy algorithm as a whole to verify the result on small number of variables */
+#ifdef SCIP_DISABLED_CODE
+   {
+      int* debugcliquepartition;
+      int ndebugcliques;
+
+      SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &debugcliquepartition, nvars) );
+
+      /* call greedy clique algorithm for all component variables */
+      SCIP_CALL( calcCliquePartitionGreedy(scip, tmpvars, tmpvalues, nvars, debugcliquepartition, &ndebugcliques) );
+
+      /* loop and compare the traditional greedy clique with  */
+      for( i = 0; i < nvars; ++i )
+         assert(i * nvars > MAXNCLIQUEVARSCOMP || cliquepartition[i] == debugcliquepartition[i]);
+
+      SCIPsetFreeBufferArray(scip->set, &debugcliquepartition);
+   }
+#endif
 
    /* free temporary memory */
+   SCIPsetFreeBufferArray(scip->set, &componentstartposs);
+   SCIPsetFreeBufferArray(scip->set, &sortedindices);
+   SCIPsetFreeBufferArray(scip->set, &componentlabels);
    SCIPsetFreeBufferArray(scip->set, &tmpvars);
    SCIPsetFreeBufferArray(scip->set, &tmpvalues);
-   SCIPsetFreeBufferArray(scip->set, &cliquevalues);
-   SCIPsetFreeBufferArray(scip->set, &cliquevars);
 
    return SCIP_OKAY;
 }
@@ -25960,7 +26371,6 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    return SCIP_OKAY;
 }
 
-
 /*
  * constraint methods
  */
@@ -27168,6 +27578,38 @@ SCIP_RETCODE SCIPenfolpCons(
    SCIP_CALL( checkStage(scip, "SCIPenfolpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsEnfolp(cons, scip->set, solinfeasible, result) );
+
+   return SCIP_OKAY;
+}
+
+/** enforces single constraint for a given relaxation solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *        added to SCIP beforehand.
+ */
+SCIP_RETCODE SCIPenforelaxCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SOL*             sol,                /**< solution to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
+   assert(sol != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPenforelaxCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsEnforelax(cons, scip->set, sol, solinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -42005,7 +42447,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
 
    /* Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoRelax  #EnfoPS    #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -42019,13 +42461,14 @@ void printConstraintStatistics(
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d%c%10d %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d%c%10d %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
             startnactiveconss,
             maxnactiveconss > startnactiveconss ? '+' : ' ',
             maxnactiveconss,
             SCIPconshdlrGetNSepaCalls(conshdlr),
             SCIPconshdlrGetNPropCalls(conshdlr),
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
+            SCIPconshdlrGetNEnfoRelaxCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
             SCIPconshdlrGetNCheckCalls(conshdlr),
             SCIPconshdlrGetNRespropCalls(conshdlr),
@@ -42051,7 +42494,7 @@ void printConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp    SB-Prop\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS     EnfoRelax   Check    ResProp    SB-Prop\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -42068,18 +42511,20 @@ void printConstraintTimingStatistics(
             + SCIPconshdlrGetStrongBranchPropTime(conshdlr)
             + SCIPconshdlrGetEnfoLPTime(conshdlr)
             + SCIPconshdlrGetEnfoPSTime(conshdlr)
+            + SCIPconshdlrGetEnfoRelaxTime(conshdlr)
             + SCIPconshdlrGetCheckTime(conshdlr)
             + SCIPconshdlrGetRespropTime(conshdlr)
 	    + SCIPconshdlrGetSetupTime(conshdlr);
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             totaltime,
 	    SCIPconshdlrGetSetupTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr),
             SCIPconshdlrGetPropTime(conshdlr),
             SCIPconshdlrGetEnfoLPTime(conshdlr),
             SCIPconshdlrGetEnfoPSTime(conshdlr),
+            SCIPconshdlrGetEnfoRelaxTime(conshdlr),
             SCIPconshdlrGetCheckTime(conshdlr),
             SCIPconshdlrGetRespropTime(conshdlr),
             SCIPconshdlrGetStrongBranchPropTime(conshdlr));
@@ -42377,6 +42822,9 @@ void printHeuristicStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
       scip->stat->nlpsolsfound, scip->stat->nlpbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  relax solutions  : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPclockGetTime(scip->stat->relaxsoltime),
+      scip->stat->nrelaxsolsfound, scip->stat->nrelaxbestsolsfound);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound, scip->stat->npsbestsolsfound);
