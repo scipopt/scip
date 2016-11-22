@@ -4497,11 +4497,15 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* add auxiliary variables to expressions */
-   if( !conshdlrdata->restart )
+   /* remove auxiliary variables from expressions after each restart
+    *
+    * TODO reuse as many linearization variables as possible
+    */
+   if( conshdlrdata->restart )
    {
-      SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
    }
+   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
 
    /* call LP initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );

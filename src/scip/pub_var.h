@@ -851,6 +851,13 @@ int SCIPvarGetCliqueComponentIdx(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+
+/** returns whether a cut containing this varialbe is valid after a restart */
+EXTERN
+SCIP_Bool SCIPvarIsCutValidAfterRestart(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -947,6 +954,7 @@ int SCIPvarGetCliqueComponentIdx(
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
+#define SCIPvarIsCutValidAfterRestart(var)((var)->invalidrestart)
 
 #endif
 
