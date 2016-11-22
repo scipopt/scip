@@ -894,6 +894,19 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns whether a cut containing this variable is invalid after a restart */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsCutInvalidAfterRestart(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** sets whether a cut containing this variable is invalid after a restart */
+SCIP_EXPORT
+void SCIPvarSetCutInvalidAfterRestart(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             invalid             /**< value */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -990,6 +1003,8 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
+#define SCIPvarIsCutInvalidAfterRestart(var)((var)->invalidrestart)
+#define SCIPvarSetCutInvalidAfterRestart(var, val)((var)->invalidrestart = (val))
 
 #endif
 

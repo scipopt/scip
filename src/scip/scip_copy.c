@@ -232,8 +232,19 @@ SCIP_RETCODE copyCuts(
 
          /* get all variables of the row */
          SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
-         for( i = 0; i < ncols; ++i )
+         for( i = 0; i < ncols && takecut; ++i )
+         {
             vars[i] = SCIPcolGetVar(cols[i]);
+            takecut = !SCIPvarIsCutInvalidAfterRestart(vars[i]);
+         }
+
+         /* discard cut if it contains a variable which is invalid after a restart */
+         if( !takecut )
+         {
+            /* free temporary memory */
+            SCIPfreeBufferArray(targetscip, &vars);
+            continue;
+         }
 
          /* get corresponding variables in targetscip if necessary */
          if( sourcescip != targetscip )
