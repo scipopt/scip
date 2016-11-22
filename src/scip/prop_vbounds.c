@@ -107,6 +107,7 @@
 #define DEFAULT_USEVBOUNDS         TRUE      /**< should variable bounds be propagated? */
 #define DEFAULT_DOTOPOSORT         TRUE      /**< should the bounds be topologically sorted in advance? */
 #define DEFAULT_SORTCLIQUES        FALSE     /**< should cliques be regarded for the topological sort? */
+#define DEFAULT_DETECTCYCLES       FALSE     /**< should cycles in the variable bound graph be identified? */
 
 /**@} */
 
@@ -170,6 +171,7 @@ struct SCIP_PropData
    SCIP_Bool             usevbounds;         /**< should variable bounds be propagated? */
    SCIP_Bool             dotoposort;         /**< should the bounds be topologically sorted in advance? */
    SCIP_Bool             sortcliques;        /**< should cliques be regarded for the topological sort? */
+   SCIP_Bool             detectcycles;       /**< should cycles in the variable bound graph be identified? */
 };
 
 /** inference information */
@@ -546,12 +548,12 @@ SCIP_RETCODE extractCycle(
          cliquevals = SCIPcliqueGetValues(tmpcliques[k]);
          ncliquevars = SCIPcliqueGetNVars(tmpcliques[k]);
 
-         printf("clique: ");
+         SCIPdebugMsg(scip, "clique: ");
          for( v = 0; v < ncliquevars; ++v )
          {
-            printf("%s%s ", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+            SCIPdebugMsg(scip, "%s%s ", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
          }
-         printf("(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
+         SCIPdebugMsg(scip, "(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
 
          for( v = 0; v < ncliquevars; ++v )
          {
@@ -581,7 +583,7 @@ SCIP_RETCODE extractCycle(
             constant = -constant + 1.0;
          }
 
-         printf("%s(%s) -- (*%g + %g)[clique(<%s%s>,<%s%s>,...)] --> %s(%s)\n",
+         SCIPdebugMsg(scip, "%s(%s) -- (*%g + %g)[clique(<%s%s>,<%s%s>,...)] --> %s(%s)\n",
             indexGetBoundString(dfsstack[j]), SCIPvarGetName(currvar),
             (currlower != nextlower ? -1.0 : 1.0),
             (currlower != nextlower ? 1.0 : 0.0),
@@ -642,7 +644,7 @@ SCIP_RETCODE extractCycle(
          coef = coef * newcoef;
          constant = constant * newcoef + newconstant;
 
-         printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+         SCIPdebugMsg(scip, "%s(%s) -- (*%g + %g) --> %s(%s)\n",
             indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
             newcoef, newconstant,
             indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
@@ -656,7 +658,7 @@ SCIP_RETCODE extractCycle(
          assert(k < propdata->nvbounds[dfsstack[j]]);
          assert(propdata->vboundboundedidx[dfsstack[j]][k] == dfsstack[j+1]);
 
-         printf("%s(%s) -- (*%g + %g) --> %s(%s)\n",
+         SCIPdebugMsg(scip, "%s(%s) -- (*%g + %g) --> %s(%s)\n",
             indexGetBoundString(dfsstack[j]), SCIPvarGetName(vars[getVarIndex(dfsstack[j])]),
             propdata->vboundcoefs[dfsstack[j]][k], propdata->vboundconstants[dfsstack[j]][k],
             indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]));
@@ -666,7 +668,7 @@ SCIP_RETCODE extractCycle(
       }
    }
 
-   printf("==> %s(%s) -- (*%g + %g) --> %s(%s)\n",
+   SCIPdebugMsg(scip, "==> %s(%s) -- (*%g + %g) --> %s(%s)\n",
       indexGetBoundString(startidx), SCIPvarGetName(vars[getVarIndex(startidx)]),
       coef, constant,
       indexGetBoundString(cycleidx), SCIPvarGetName(vars[getVarIndex(cycleidx)]));
@@ -677,12 +679,12 @@ SCIP_RETCODE extractCycle(
    {
       if( islower && SCIPisFeasPositive(scip, constant) )
       {
-         printf("-> infeasible aggregated variable bound relation 0 >= %g\n", constant);
+         SCIPdebugMsg(scip, "-> infeasible aggregated variable bound relation 0 >= %g\n", constant);
          *infeasible = TRUE;
       }
       else if( !islower && SCIPisFeasNegative(scip, constant) )
       {
-         printf("-> infeasible aggregated variable bound relation 0 <= %g\n", constant);
+         SCIPdebugMsg(scip, "-> infeasible aggregated variable bound relation 0 <= %g\n", constant);
          *infeasible = TRUE;
       }
    }
@@ -697,24 +699,26 @@ SCIP_RETCODE extractCycle(
 
       if( islower )
       {
-         printf("-> found new lower bound: <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[getVarIndex(cycleidx)]),
+         SCIPdebugMsg(scip, "-> found new lower bound: <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[getVarIndex(cycleidx)]),
             SCIPvarGetLbLocal(vars[getVarIndex(cycleidx)]), SCIPvarGetUbLocal(vars[getVarIndex(cycleidx)]), newbound);
          SCIP_CALL( SCIPtightenVarLb(scip, vars[getVarIndex(cycleidx)], newbound, FALSE, infeasible, &tightened) );
       }
       else
       {
-         printf("-> found new upper bound: <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[getVarIndex(cycleidx)]),
+         SCIPdebugMsg(scip, "-> found new upper bound: <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[getVarIndex(cycleidx)]),
             SCIPvarGetLbLocal(vars[getVarIndex(cycleidx)]), SCIPvarGetUbLocal(vars[getVarIndex(cycleidx)]), newbound);
          SCIP_CALL( SCIPtightenVarUb(scip, vars[getVarIndex(cycleidx)], newbound, FALSE, infeasible, &tightened) );
       }
 
       if( tightened )
-         printf("---> applied new bound\n");
+         SCIPdebugMsg(scip, "---> applied new bound\n");
    }
 
    return SCIP_OKAY;
 }
 
+#define VISITED 1
+#define ACTIVE  2
 /** performs depth-first-search in the implicitly given directed graph from the given start index */
 static
 SCIP_RETCODE dfs(
@@ -741,7 +745,7 @@ SCIP_RETCODE dfs(
    int curridx;
    int nimpls;
    int idx;
-   int visitedflag = 2;
+   int visitedflag = (propdata->detectcycles ? ACTIVE : VISITED);
 
    assert(startnode >= 0);
    assert(startnode < propdata->nbounds);
@@ -822,15 +826,15 @@ SCIP_RETCODE dfs(
                else
                   idx = varGetLbIndex(propdata, cliquevars[i]);
 
-               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag)
+               if( idx >= 0 && (visited[idx] == ACTIVE || visited[getOtherBoundIndex(idx)] == ACTIVE)
                   && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(cliquevars[i]), SCIPvarGetUbGlobal(cliquevars[i])) )
                {
-                  printf("found cycle\n");
+                  SCIPdebugMsg(scip, "found cycle\n");
 
                   dfsstack[stacksize] = idx;
                   stacknextedge[stacksize - 1] = -j - 2;
 
-                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == visitedflag, infeasible) );
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == ACTIVE, infeasible) );
 
                   if( *infeasible )
                      break;
@@ -907,15 +911,15 @@ SCIP_RETCODE dfs(
 
                idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
-               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag)
+               if( idx >= 0 && (visited[idx] == ACTIVE || visited[getOtherBoundIndex(idx)] == ACTIVE)
                   && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(implvars[i]), SCIPvarGetUbGlobal(implvars[i])) )
                {
-                  printf("found cycle\n");
+                  SCIPdebugMsg(scip, "found cycle\n");
 
                   dfsstack[stacksize] = idx;
                   stacknextedge[stacksize - 1] = i + 1;
 
-                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == visitedflag, infeasible) );
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == ACTIVE, infeasible) );
 
                   if( *infeasible )
                      break;
@@ -968,15 +972,15 @@ SCIP_RETCODE dfs(
             idx = vboundidx[i];
             assert(idx >= 0);
 
-            if( (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag)
+            if( (visited[idx] == ACTIVE || visited[getOtherBoundIndex(idx)] == ACTIVE)
                && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(vars[getVarIndex(idx)]), SCIPvarGetUbGlobal(vars[getVarIndex(idx)])) )
             {
-               printf("found cycle\n");
+               SCIPdebugMsg(scip, "found cycle\n");
 
                dfsstack[stacksize] = idx;
                stacknextedge[stacksize - 1] = nimpls + i + 1;
 
-               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == visitedflag, infeasible) );
+               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == ACTIVE, infeasible) );
 
                if( *infeasible )
                   break;
@@ -2237,19 +2241,22 @@ SCIP_RETCODE SCIPincludePropVbounds(
          &propdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/useimplics", "should implications be propagated?",
-         &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
+         &propdata->useimplics, TRUE, DEFAULT_USEIMPLICS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/usecliques", "should cliques be propagated?",
-         &propdata->usecliques, FALSE, DEFAULT_USECLIQUES, NULL, NULL) );
+         &propdata->usecliques, TRUE, DEFAULT_USECLIQUES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/usevbounds", "should vbounds be propagated?",
-         &propdata->usevbounds, FALSE, DEFAULT_USEVBOUNDS, NULL, NULL) );
+         &propdata->usevbounds, TRUE, DEFAULT_USEVBOUNDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/dotoposort", "should the bounds be topologically sorted in advance?",
          &propdata->dotoposort, FALSE, DEFAULT_DOTOPOSORT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/sortcliques", "should cliques be regarded for the topological sort?",
-         &propdata->sortcliques, FALSE, DEFAULT_SORTCLIQUES, NULL, NULL) );
+         &propdata->sortcliques, TRUE, DEFAULT_SORTCLIQUES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/detectcycles", "should cycles in the variable bound graph be identified?",
+         &propdata->detectcycles, FALSE, DEFAULT_DETECTCYCLES, NULL, NULL) );
 
    return SCIP_OKAY;
 }
