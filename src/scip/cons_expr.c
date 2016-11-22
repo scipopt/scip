@@ -2336,6 +2336,10 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       consdata->ispropagated = FALSE;
       consdata->issimplified = FALSE;
    }
+   if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != (unsigned int) 0 )
+   {
+      consdata->issimplified = FALSE;
+   }
 
    return SCIP_OKAY;
 }
