@@ -1682,6 +1682,37 @@ SCIP_DECL_CONSENFOLP(consEnfolpCountsols)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxCountsols)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   SCIPdebugMsg(scip, "method SCIP_DECL_CONSENFORELAX(consEnfolpCountsols)\n");
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( nconss == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if( conshdlrdata->active )
+   {
+      if( !solinfeasible )
+      {
+         SCIP_CALL( checkSolution(scip, sol, conshdlrdata, result) );
+      }
+      else
+         *result = SCIP_INFEASIBLE;
+   }
+   else
+      *result = SCIP_FEASIBLE;
+
+   assert( !conshdlrdata->active || *result == SCIP_INFEASIBLE || *result == SCIP_CUTOFF );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -2503,6 +2534,7 @@ SCIP_RETCODE includeConshdlrCountsols(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCountsols) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitCountsols) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolCountsols) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCountsols) );
 
    /* add countsols constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

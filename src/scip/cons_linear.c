@@ -14550,6 +14550,77 @@ SCIP_RETCODE fullDualPresolve(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff = FALSE;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+
+   SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
+
+   /* check for violated constraints
+    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
+    */
+   *result = SCIP_FEASIBLE;
+
+   /* check all useful linear constraints for feasibility */
+   for( c = 0; c < nusefulconss; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+
+   /* check all obsolete linear constraints for feasibility */
+   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+   
+   SCIPdebugMsg(scip, "-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -15340,64 +15411,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool checkrelmaxabs;
-   SCIP_Bool violated;
-   SCIP_Bool cutoff = FALSE;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
-
-   /*SCIPdebugMsg(scip, "Enfolp method of linear constraints\n");*/
-
-   /* check for violated constraints
-    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
-    */
-   *result = SCIP_FEASIBLE;
-
-   /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss; ++c )
-   {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-         if ( cutoff )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
-
-   /* check all obsolete linear constraints for feasibility */
-   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
-   {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-         if ( cutoff )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
+{
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -16777,6 +16803,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {

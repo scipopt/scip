@@ -11696,6 +11696,68 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff = FALSE;
+   int maxncuts;
+   int ncuts = 0;
+   int i;
+
+   *result = SCIP_FEASIBLE;
+
+   SCIPdebugMsg(scip, "knapsack enforcement of %d/%d constraints for %s solution\n", nusefulconss, nconss,
+         sol == NULL ? "LP" : "relaxation");
+
+   /* get maximal number of cuts per round */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   maxncuts = (SCIPgetDepth(scip) == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
+
+   /* search for violated useful knapsack constraints */
+   for( i = 0; i < nusefulconss && ncuts < maxncuts && ! cutoff; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
+      if( violated )
+      {
+         /* add knapsack constraint as LP row to the relaxation */
+         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         ncuts++;
+      }
+   }
+
+   /* as long as no violations were found, search for violated obsolete knapsack constraints */
+   for( i = nusefulconss; i < nconss && ncuts == 0 && ! cutoff; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
+      if( violated )
+      {
+         /* add knapsack constraint as LP row to the relaxation */
+         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         ncuts++;
+      }
+   }
+
+   /* adjust the result code */
+   if ( cutoff )
+      *result = SCIP_CUTOFF;
+   else if ( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+
+   return SCIP_OKAY;
+}
+
 /*
  * Linear constraint upgrading
  */
@@ -12236,56 +12298,20 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
    return SCIP_OKAY;
 }
 
-
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool violated;
-   SCIP_Bool cutoff = FALSE;
-   int maxncuts;
-   int ncuts = 0;
-   int i;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
-   *result = SCIP_FEASIBLE;
+   return SCIP_OKAY;
+}
 
-   SCIPdebugMsg(scip, "knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
-
-   /* get maximal number of cuts per round */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   maxncuts = (SCIPgetDepth(scip) == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
-
-   /* search for violated useful knapsack constraints */
-   for( i = 0; i < nusefulconss && ncuts < maxncuts && ! cutoff; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
-      if( violated )
-      {
-         /* add knapsack constraint as LP row to the LP */
-         SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
-         ncuts++;
-      }
-   } 
-
-   /* as long as no violations were found, search for violated obsolete knapsack constraints */
-   for( i = nusefulconss; i < nconss && ncuts == 0 && ! cutoff; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
-      if( violated )
-      {
-         /* add knapsack constraint as LP row to the LP */
-         SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
-         ncuts++;
-      }
-   }
-
-   /* adjust the result code */
-   if ( cutoff )
-      *result = SCIP_CUTOFF;
-   else if ( ncuts > 0 )
-      *result = SCIP_SEPARATED;
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -13033,6 +13059,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpKnapsack, consSepasolKnapsack, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxKnapsack) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
