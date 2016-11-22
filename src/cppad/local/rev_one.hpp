@@ -1,12 +1,12 @@
-/* $Id: rev_one.hpp 2683 2012-12-30 18:17:03Z bradbell $ */
-# ifndef CPPAD_REV_ONE_INCLUDED
-# define CPPAD_REV_ONE_INCLUDED
+// $Id$
+# ifndef CPPAD_REV_ONE_HPP
+# define CPPAD_REV_ONE_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,15 +22,10 @@ $spell
 $$
 
 
-$index derivative, first order driver$$
-$index first, order derivative driver$$
-$index driver, first order derivative$$
 
-$index easy, derivative$$
-$index driver, easy derivative$$
-$index derivative, easy$$
 
 $section First Order Derivative: Driver Routine$$
+$mindex derivative easy$$
 
 $head Syntax$$
 $icode%dw% = %f%.RevOne(%x%, %i%)%$$
@@ -43,9 +38,9 @@ The syntax above sets $icode dw$$ to the
 derivative of $latex F_i$$ with respect to $latex x$$; i.e.,
 $latex \[
 dw =
-F_i^{(1)} (x) 
-= \left[ 
-	\D{ F_i }{ x_0 } (x) , \cdots , \D{ F_i }{ x_{n-1} } (x) 
+F_i^{(1)} (x)
+= \left[
+	\D{ F_i }{ x_0 } (x) , \cdots , \D{ F_i }{ x_{n-1} } (x)
 \right]
 \] $$
 
@@ -63,7 +58,7 @@ $codei%
 	const %Vector% &%x%
 %$$
 (see $cref/Vector/RevOne/Vector/$$ below)
-and its size 
+and its size
 must be equal to $icode n$$, the dimension of the
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
 It specifies
@@ -87,9 +82,9 @@ $codei%
 (see $cref/Vector/RevOne/Vector/$$ below)
 and its size is $icode n$$, the dimension of the
 $cref/domain/seq_property/Domain/$$ space for $icode f$$.
-The value of $icode dw$$ is the derivative of $latex F_i$$ 
+The value of $icode dw$$ is the derivative of $latex F_i$$
 evaluated at $icode x$$; i.e.,
-for $latex j = 0 , \ldots , n - 1 $$ 
+for $latex j = 0 , \ldots , n - 1 $$
 $latex \[.
 	dw[ j ] = \D{ F_i }{ x_j } ( x )
 \] $$
@@ -103,7 +98,7 @@ if this is not the case.
 
 $head RevOne Uses Forward$$
 After each call to $cref Forward$$,
-the object $icode f$$ contains the corresponding 
+the object $icode f$$ contains the corresponding
 $cref/Taylor coefficients/glossary/Taylor Coefficient/$$.
 After a call to $code RevOne$$,
 the zero order Taylor coefficients correspond to
@@ -114,7 +109,7 @@ $head Example$$
 $children%
 	example/rev_one.cpp
 %$$
-The routine 
+The routine
 $cref/RevOne/rev_one.cpp/$$ is both an example and test.
 It returns $code true$$, if it succeeds and $code false$$ otherwise.
 
@@ -139,7 +134,7 @@ Vector ADFun<Base>::RevOne(const Vector  &x, size_t i)
 	CPPAD_ASSERT_KNOWN(
 		x.size() == n,
 		"RevOne: Length of x not equal domain dimension for f"
-	); 
+	);
 	CPPAD_ASSERT_KNOWN(
 		i < m,
 		"RevOne: the index i is not less than range dimension for f"

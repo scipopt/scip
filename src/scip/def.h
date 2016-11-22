@@ -46,6 +46,13 @@
 #endif
 
 /*
+ * define whether compiler allows variadic macros
+ */
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#define SCIP_HAVE_VARIADIC_MACROS 1
+#endif
+
+/*
  * Boolean values
  */
 
@@ -88,7 +95,7 @@ extern "C" {
 
 #define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -207,17 +214,25 @@ extern "C" {
 /* we use SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to size_t */
 #define SCIP_MAXMEMSIZE              (SIZE_MAX/2) /**< maximum size of allocated memory (array) */
 
-#define SCIP_HASHSIZE_PARAMS         4099 /**< size of hash table in parameter name tables */
-#define SCIP_HASHSIZE_NAMES          131101 /**< size of hash table in name tables */
-#define SCIP_HASHSIZE_CUTPOOLS       131101 /**< size of hash table in cut pools */
-#define SCIP_HASHSIZE_CLIQUES        131101 /**< size of hash table in clique tables */
-#define SCIP_HASHSIZE_NAMES_SMALL    8011   /**< size of hash table in name tables for small problems */
-#define SCIP_HASHSIZE_CUTPOOLS_SMALL 8011   /**< size of hash table in cut pools for small problems */
-#define SCIP_HASHSIZE_CLIQUES_SMALL  8011   /**< size of hash table in clique tables for small problems */
-#define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
+#define SCIP_HASHSIZE_PARAMS        2048 /**< size of hash table in parameter name tables */
+#define SCIP_HASHSIZE_NAMES          500 /**< size of hash table in name tables */
+#define SCIP_HASHSIZE_CUTPOOLS       500 /**< size of hash table in cut pools */
+#define SCIP_HASHSIZE_CLIQUES        500 /**< size of hash table in clique tables */
+#define SCIP_HASHSIZE_NAMES_SMALL    100 /**< size of hash table in name tables for small problems */
+#define SCIP_HASHSIZE_CUTPOOLS_SMALL 100 /**< size of hash table in cut pools for small problems */
+#define SCIP_HASHSIZE_CLIQUES_SMALL  100 /**< size of hash table in clique tables for small problems */
+#define SCIP_HASHSIZE_VBC            500 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
+
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+
+/*
+ * Tree settings
+ */
+
+#define SCIP_MAXTREEDEPTH             65535  /**< maximal allowed depth of the branch-and-bound tree */
 
 /*
  * Global debugging settings
@@ -310,9 +325,9 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
-#elif defined(__GNUC__) && defined(__linux__)
+#elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED

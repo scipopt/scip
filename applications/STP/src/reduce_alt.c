@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2272,7 +2272,7 @@ SCIP_RETCODE sd_reduction(
       g->mark[i] = (g->grad[i] > 0);
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         randarr[e] = SCIPgetRandomReal(0.0, (g->cost[e]), seed);/* @todo: org (double)(rand() % 512); */
+         randarr[e] = (double)(rand() % 512);/* @todo: org (double)(rand() % 512); */
          cost[e] = g->cost[e] * 1.0 + randarr[e];
       }
    }

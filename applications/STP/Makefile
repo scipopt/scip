@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,7 +14,7 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for SCIP project
+#@brief   Makefile for solving the Steiner tree problem using SCIP
 #@author  Gerald Gamrath
 #@author  Thorsten Koch
 #@author  Michael Winkler
@@ -143,7 +143,7 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 
 OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
@@ -183,11 +183,7 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

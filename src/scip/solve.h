@@ -41,6 +41,7 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_cutpool.h"
 #include "scip/type_conflict.h"
+#include "scip/type_conflictstore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,7 +57,7 @@ SCIP_Bool SCIPsolveIsStopped(
    SCIP_Bool             checknodelimits     /**< should the node limits be involved in the check? */
    );
 
-/** applies domain propagation on current node and flushes the conflict storage afterwards */
+/** applies domain propagation on current node and flushes the conflict store afterwards */
 extern
 SCIP_RETCODE SCIPpropagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -208,6 +209,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */

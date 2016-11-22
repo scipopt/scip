@@ -115,7 +115,7 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+			$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: depend
 depend:		$(SCIPDIR)
@@ -127,11 +127,7 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

@@ -1,23 +1,2 @@
-Adding new tests
-----------------
-
-When adding a new unittest, this should be called unittest-<name>
-For example, when creating unittest-xyz, you should create a folder called
-unittest-xyz and put the unittest-xyz.c/cpp (which should contain the main)
-and all the extra files (without restriction on the name) inside
-
-Modifying the Makefile
-----------------------
-
-Suppose you created your new unittest, unittest-xyz, and assume
-the folder src/unittest-xyz contains the following files
-unittest-xyz.c misc.c misc.h more_misc.c
-
-Then you should add unittest-xyz to the list on UNITTESTS
-and add unittest-xyz/misc unittest-xyz/more_misc to the list
-on EXTRASRC.
-
-Running tests
-----------------
-Just excecute make test with the options you want, for instance,
-make LPS=cpx OPT=opt test
+Please, write your tests using the new testing framework.
+See the tests/ folder!

@@ -50,3 +50,5 @@ interfaces/python/include/
 interfaces/python/tests/check
 interfaces/python/pyscipopt/*.c
 interfaces/gams/gams
+examples/*/doc/html
+applications/*/doc/html

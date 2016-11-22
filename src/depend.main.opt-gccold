@@ -18,7 +18,8 @@ $(BINOBJDIR)/main.o: src/main.c src/scip/scip.h src/scip/def.h src/scip/type_ret
  src/scip/pub_implics.h src/scip/type_implics.h src/scip/struct_implics.h \
  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
  src/lpi/type_lpi.h src/scip/struct_lp.h src/scip/pub_nlp.h \
- src/scip/pub_misc.h src/scip/struct_misc.h src/scip/pub_nodesel.h \
+ src/scip/pub_misc.h src/scip/pub_misc_select.h src/scip/type_misc.h \
+ src/scip/pub_misc_sort.h src/scip/struct_misc.h src/scip/pub_nodesel.h \
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
@@ -27,9 +28,10 @@ $(BINOBJDIR)/main.o: src/main.c src/scip/scip.h src/scip/def.h src/scip/type_ret
  src/scip/history.h src/lpi/lpi.h src/nlpi/pub_expr.h \
  src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
  src/nlpi/struct_expr.h src/scip/presolve.h src/scip/scip.h \
- src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
- src/scip/type_primal.h src/scip/type_pricestore.h \
- src/scip/type_sepastore.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h \
+ src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
+ src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/type_conflictstore.h src/scip/set.h \
+ src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
  src/scip/scipshell.h

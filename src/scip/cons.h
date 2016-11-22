@@ -40,6 +40,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
+#include "scip/type_branch.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG
@@ -275,6 +276,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -1089,6 +1091,12 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** marks the constraint to be a conflict */
+extern
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** marks the constraint to be propagated (update might be delayed) */
 extern
 SCIP_RETCODE SCIPconsMarkPropagate(
@@ -1148,31 +1156,6 @@ SCIP_RETCODE SCIPconsIncAge(
 extern
 SCIP_RETCODE SCIPconsResetAge(
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** adds an active constraint to the propagation queue(if not already marked for propagation) of corresponding
- *  constraint handler and marks the constraint to be propagated in the next propagation round
- *
- *  @note if constraint is added to the queue it will be captured
- */
-SCIP_RETCODE SCIPconsPushProp(
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** returns first constraint from propagation queue(if not empty) of given constraint handler */
-SCIP_CONS* SCIPconshdlrFrontProp(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
-/** removes constraint from propagation queue(if not empty) of given constraint handler and unmarks constraint to be
- *  propagated in the next propagation round
- *
- *  @note if constraint is removed from the queue it will be released
- */
-SCIP_RETCODE SCIPconshdlrPopProp(
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

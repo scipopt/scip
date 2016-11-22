@@ -114,7 +114,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -237,14 +237,14 @@ SCIP_DECL_HEUREXEC(heurExecZeroobj)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping zeroobj: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
+      SCIPdebugMsg(scip, "skipping zeroobj: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
    /* do not run zeroobj, if the problem does not have an objective function anyway */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      SCIPdebugMessage("skipping zeroobj: pure feasibility problem anyway\n");
+      SCIPdebugMsg(scip, "skipping zeroobj: pure feasibility problem anyway\n");
       return SCIP_OKAY;
    }
 
@@ -341,15 +341,15 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* different methods to create sub-problem: either copy LP relaxation or the CIP with all constraints */
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, TRUE, &valid) );
-   SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj",  TRUE, FALSE, TRUE, &valid) );
+   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
    eventhdlr = NULL;
@@ -527,7 +527,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
-   SCIPdebugMessage("solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
+   SCIPdebugMsg(scip, "solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */

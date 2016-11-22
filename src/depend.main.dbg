@@ -17,10 +17,11 @@ $(BINOBJDIR)/main.o: src/main.c src/scip/scip.h src/scip/def.h src/scip/type_ret
  src/scip/pub_history.h src/scip/pub_implics.h src/scip/type_implics.h \
  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
  src/lpi/type_lpi.h src/scip/pub_nlp.h src/scip/pub_misc.h \
+ src/scip/pub_misc_select.h src/scip/type_misc.h src/scip/pub_misc_sort.h \
  src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
  src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
  src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
  src/scip/pub_tree.h src/scip/type_reopt.h src/scip/pub_var.h \
  src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/scip.h \
- src/scip/scipshell.h
+ src/scip/heuristics.h src/scip/scipshell.h

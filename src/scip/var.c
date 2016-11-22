@@ -82,7 +82,7 @@ SCIP_RETCODE holelistCreate(
    assert(blkmem != NULL);
    assert(SCIPsetIsLT(set, left, right));
 
-   SCIPdebugMessage("create hole list element (%.15g,%.15g) in blkmem %p\n", left, right, (void*)blkmem);
+   SCIPsetDebugMsg(set, "create hole list element (%.15g,%.15g) in blkmem %p\n", left, right, (void*)blkmem);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, holelist) );
    (*holelist)->hole.left = left;
@@ -165,7 +165,7 @@ SCIP_RETCODE domAddHole(
    /* check if new hole already exists in the hole list or is a sub hole of an existing one */
    if( *insertpos != NULL && (*insertpos)->hole.left == left && (*insertpos)->hole.right >= right )  /*lint !e777 */
    {
-      SCIPdebugMessage("new hole (%.15g,%.15g) is redundant through known hole (%.15g,%.15g)\n",
+      SCIPsetDebugMsg(set, "new hole (%.15g,%.15g) is redundant through known hole (%.15g,%.15g)\n",
          left, right, (*insertpos)->hole.left, (*insertpos)->hole.right);
       *added = FALSE;
       return SCIP_OKAY;
@@ -223,7 +223,7 @@ void domMerge(
    }
 #endif
 
-   SCIPdebugMessage("merge hole list\n");
+   SCIPsetDebugMsg(set, "merge hole list\n");
 
    holelistptr = &dom->holelist;
    lastrightptr = &dom->lb;  /* lower bound is the right bound of the hole (-infinity,lb) */
@@ -231,8 +231,7 @@ void domMerge(
 
    while( *holelistptr != NULL )
    {
-      SCIPdebugMessage("check hole (%.15g,%.15g) last right interval was <%.15g>\n", 
-         (*holelistptr)->hole.left, (*holelistptr)->hole.right, *lastrightptr);
+      SCIPsetDebugMsg(set, "check hole (%.15g,%.15g) last right interval was <%.15g>\n", (*holelistptr)->hole.left, (*holelistptr)->hole.right, *lastrightptr);
 
       /* check that the hole is not empty */
       assert(SCIPsetIsLT(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right));
@@ -240,7 +239,7 @@ void domMerge(
       if( SCIPsetIsGE(set, (*holelistptr)->hole.left, dom->ub) )
       {
          /* the remaining holes start behind the upper bound: remove them */
-         SCIPdebugMessage("remove remaining hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
+         SCIPsetDebugMsg(set, "remove remaining hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
          holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
 
@@ -250,7 +249,7 @@ void domMerge(
       else if( SCIPsetIsGT(set, (*holelistptr)->hole.right, dom->ub) )
       {
          /* the hole overlaps the upper bound: decrease upper bound, remove this hole and all remaining holes */
-         SCIPdebugMessage("upper bound <%.15g> lays in current hole; store new upper bound and remove this and all remaining holes\n", dom->ub);
+         SCIPsetDebugMsg(set, "upper bound <%.15g> lays in current hole; store new upper bound and remove this and all remaining holes\n", dom->ub);
 
          assert(SCIPsetIsLT(set, (*holelistptr)->hole.left, dom->ub));
 
@@ -277,7 +276,7 @@ void domMerge(
          {
             /* the reason for the overlap results from the lower bound hole (-infinity,lb); therefore, we can increase
              * the lower bound */
-            SCIPdebugMessage("lower bound <%.15g> lays in current hole; store new lower bound and remove hole\n", dom->lb);
+            SCIPsetDebugMsg(set, "lower bound <%.15g> lays in current hole; store new lower bound and remove hole\n", dom->lb);
             *lastrightptr = MAX(*lastrightptr, (*holelistptr)->hole.right);
 
             /* adjust lower bound */
@@ -288,7 +287,7 @@ void domMerge(
          }
          else
          {
-            SCIPdebugMessage("current hole overlaps with the previous one (...,%.15g); merge to (...,%.15g)\n", 
+            SCIPsetDebugMsg(set, "current hole overlaps with the previous one (...,%.15g); merge to (...,%.15g)\n",
                *lastrightptr, MAX(*lastrightptr, (*holelistptr)->hole.right) );
             *lastrightptr = MAX(*lastrightptr, (*holelistptr)->hole.right);
          }
@@ -424,9 +423,8 @@ SCIP_RETCODE varAddLbchginfo(
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
-   SCIPdebugMessage("adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
-      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
-      infercons != NULL ? "cons" : "prop", 
+   SCIPsetDebugMsg(set, "adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
+      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo,
       oldbound, newbound);
 
@@ -500,9 +498,8 @@ SCIP_RETCODE varAddUbchginfo(
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
-   SCIPdebugMessage("adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
-      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
-      infercons != NULL ? "cons" : "prop", 
+   SCIPsetDebugMsg(set, "adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
+      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo,
       oldbound, newbound);
 
@@ -594,7 +591,7 @@ SCIP_RETCODE SCIPboundchgApply(
             switch( boundchg->boundchgtype )
             {
             case SCIP_BOUNDCHGTYPE_BRANCHING:
-               SCIPdebugMessage(" -> branching: new lower bound of <%s>[%g,%g]: %g\n",
+               SCIPsetDebugMsg(set, " -> branching: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
@@ -605,7 +602,7 @@ SCIP_RETCODE SCIPboundchgApply(
 
             case SCIP_BOUNDCHGTYPE_CONSINFER:
                assert(boundchg->data.inferencedata.reason.cons != NULL);
-               SCIPdebugMessage(" -> constraint <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+               SCIPsetDebugMsg(set, " -> constraint <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
@@ -615,7 +612,7 @@ SCIP_RETCODE SCIPboundchgApply(
                break;
 
             case SCIP_BOUNDCHGTYPE_PROPINFER:
-               SCIPdebugMessage(" -> propagator <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+               SCIPsetDebugMsg(set, " -> propagator <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
                   boundchg->data.inferencedata.reason.prop != NULL
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
@@ -635,7 +632,7 @@ SCIP_RETCODE SCIPboundchgApply(
          }
          else
          {
-            SCIPdebugMessage(" -> cutoff: new lower bound of <%s>[%g,%g]: %g\n",
+            SCIPsetDebugMsg(set, " -> cutoff: new lower bound of <%s>[%g,%g]: %g\n",
                SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
@@ -644,7 +641,7 @@ SCIP_RETCODE SCIPboundchgApply(
       else
       {
          /* mark bound change to be inactive */
-         SCIPdebugMessage(" -> inactive %s: new lower bound of <%s>[%g,%g]: %g\n",
+         SCIPsetDebugMsg(set, " -> inactive %s: new lower bound of <%s>[%g,%g]: %g\n",
             (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
             SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
          boundchg->redundant = TRUE;
@@ -661,7 +658,7 @@ SCIP_RETCODE SCIPboundchgApply(
             switch( boundchg->boundchgtype )
             {
             case SCIP_BOUNDCHGTYPE_BRANCHING:
-               SCIPdebugMessage(" -> branching: new upper bound of <%s>[%g,%g]: %g\n",
+               SCIPsetDebugMsg(set, " -> branching: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
@@ -672,7 +669,7 @@ SCIP_RETCODE SCIPboundchgApply(
 
             case SCIP_BOUNDCHGTYPE_CONSINFER:
                assert(boundchg->data.inferencedata.reason.cons != NULL);
-               SCIPdebugMessage(" -> constraint <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+               SCIPsetDebugMsg(set, " -> constraint <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
@@ -682,7 +679,7 @@ SCIP_RETCODE SCIPboundchgApply(
                break;
 
             case SCIP_BOUNDCHGTYPE_PROPINFER:
-               SCIPdebugMessage(" -> propagator <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+               SCIPsetDebugMsg(set, " -> propagator <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
                   boundchg->data.inferencedata.reason.prop != NULL
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
@@ -702,7 +699,7 @@ SCIP_RETCODE SCIPboundchgApply(
          }
          else
          {
-            SCIPdebugMessage(" -> cutoff: new upper bound of <%s>[%g,%g]: %g\n",
+            SCIPsetDebugMsg(set, " -> cutoff: new upper bound of <%s>[%g,%g]: %g\n",
                SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
@@ -711,7 +708,7 @@ SCIP_RETCODE SCIPboundchgApply(
       else
       {
          /* mark bound change to be inactive */
-         SCIPdebugMessage(" -> inactive %s: new upper bound of <%s>[%g,%g]: %g\n",
+         SCIPsetDebugMsg(set, " -> inactive %s: new upper bound of <%s>[%g,%g]: %g\n",
             (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
             SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
          boundchg->redundant = TRUE;
@@ -779,9 +776,9 @@ SCIP_RETCODE SCIPboundchgUndo(
       assert( SCIPsetIsFeasEQ(set, var->lbchginfos[var->nlbchginfos].newbound, var->locdom.lb) ); /*lint !e777*/
       assert( SCIPsetIsFeasLE(set, boundchg->newbound, var->locdom.lb) ); /* current lb might be larger to intermediate global bound change */
 
-      SCIPdebugMessage("removed lower bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
+      SCIPsetDebugMsg(set, "removed lower bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
-         var->lbchginfos[var->nlbchginfos].bdchgidx.depth, var->lbchginfos[var->nlbchginfos].bdchgidx.pos, 
+         var->lbchginfos[var->nlbchginfos].bdchgidx.depth, var->lbchginfos[var->nlbchginfos].bdchgidx.pos,
          var->lbchginfos[var->nlbchginfos].oldbound, var->lbchginfos[var->nlbchginfos].newbound);
 
       /* reinstall the previous local bound */
@@ -800,9 +797,9 @@ SCIP_RETCODE SCIPboundchgUndo(
       assert( SCIPsetIsFeasEQ(set, var->ubchginfos[var->nubchginfos].newbound, var->locdom.ub) ); /*lint !e777*/
       assert( SCIPsetIsFeasGE(set, boundchg->newbound, var->locdom.ub) ); /* current ub might be smaller to intermediate global bound change */
 
-      SCIPdebugMessage("removed upper bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
+      SCIPsetDebugMsg(set, "removed upper bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
-         var->ubchginfos[var->nubchginfos].bdchgidx.depth, var->ubchginfos[var->nubchginfos].bdchgidx.pos, 
+         var->ubchginfos[var->nubchginfos].bdchgidx.depth, var->ubchginfos[var->nubchginfos].bdchgidx.pos,
          var->ubchginfos[var->nubchginfos].oldbound, var->ubchginfos[var->nubchginfos].newbound);
 
       /* reinstall the previous local bound */
@@ -871,7 +868,7 @@ SCIP_RETCODE boundchgApplyGlobal(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
+   SCIPsetDebugMsg(set, "applying global bound change: <%s>[%g,%g] %s %g\n",
       SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", newbound);
 
@@ -1094,7 +1091,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
    assert(domchg != NULL);
    assert(blkmem != NULL);
 
-   SCIPdebugMessage("making domain change data %p pointing to %p static\n", (void*)domchg, (void*)*domchg);
+   SCIPsetDebugMsg(set, "making domain change data %p pointing to %p static\n", (void*)domchg, (void*)*domchg);
 
    if( *domchg != NULL )
    {
@@ -1239,7 +1236,7 @@ SCIP_RETCODE SCIPdomchgApply(
 
    *cutoff = FALSE;
 
-   SCIPdebugMessage("applying domain changes at %p in depth %d\n", (void*)domchg, depth);
+   SCIPsetDebugMsg(set, "applying domain changes at %p in depth %d\n", (void*)domchg, depth);
 
    if( domchg == NULL )
       return SCIP_OKAY;
@@ -1252,7 +1249,7 @@ SCIP_RETCODE SCIPdomchgApply(
       if( *cutoff )
          break;
    }
-   SCIPdebugMessage(" -> %u bound changes (cutoff %u)\n", domchg->domchgbound.nboundchgs, *cutoff);
+   SCIPsetDebugMsg(set, " -> %u bound changes (cutoff %u)\n", domchg->domchgbound.nboundchgs, *cutoff);
 
    /* mark all bound changes after a cutoff redundant */
    for( ; i < (int)domchg->domchgbound.nboundchgs; ++i )
@@ -1263,7 +1260,7 @@ SCIP_RETCODE SCIPdomchgApply(
    {
       for( i = 0; i < domchg->domchgboth.nholechgs; ++i )
          *(domchg->domchgboth.holechgs[i].ptr) = domchg->domchgboth.holechgs[i].newlist;
-      SCIPdebugMessage(" -> %d hole changes\n", domchg->domchgboth.nholechgs);
+      SCIPsetDebugMsg(set, " -> %d hole changes\n", domchg->domchgboth.nholechgs);
    }
 
    return SCIP_OKAY;
@@ -1282,7 +1279,7 @@ SCIP_RETCODE SCIPdomchgUndo(
 {
    int i;
 
-   SCIPdebugMessage("undoing domain changes at %p\n", (void*)domchg);
+   SCIPsetDebugMsg(set, "undoing domain changes at %p\n", (void*)domchg);
    if( domchg == NULL )
       return SCIP_OKAY;
 
@@ -1291,7 +1288,7 @@ SCIP_RETCODE SCIPdomchgUndo(
    {
       for( i = domchg->domchgboth.nholechgs-1; i >= 0; --i )
          *(domchg->domchgboth.holechgs[i].ptr) = domchg->domchgboth.holechgs[i].oldlist;
-      SCIPdebugMessage(" -> %d hole changes\n", domchg->domchgboth.nholechgs);
+      SCIPsetDebugMsg(set, " -> %d hole changes\n", domchg->domchgboth.nholechgs);
    }
 
    /* undo bound changes */
@@ -1299,7 +1296,7 @@ SCIP_RETCODE SCIPdomchgUndo(
    {
       SCIP_CALL( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp, branchcand, eventqueue) );
    }
-   SCIPdebugMessage(" -> %u bound changes\n", domchg->domchgbound.nboundchgs);
+   SCIPsetDebugMsg(set, " -> %u bound changes\n", domchg->domchgbound.nboundchgs);
 
    return SCIP_OKAY;
 }
@@ -1326,7 +1323,7 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    if( domchg == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("applying domain changes at %p to the global problem\n", (void*)domchg);
+   SCIPsetDebugMsg(set, "applying domain changes at %p to the global problem\n", (void*)domchg);
 
    /* apply bound changes */
    for( i = 0; i < (int)domchg->domchgbound.nboundchgs; ++i )
@@ -1336,7 +1333,7 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
       if( *cutoff )
          break;
    }
-   SCIPdebugMessage(" -> %u global bound changes\n", domchg->domchgbound.nboundchgs);
+   SCIPsetDebugMsg(set, " -> %u global bound changes\n", domchg->domchgbound.nboundchgs);
 
    /**@todo globally apply holelist changes - how can this be done without confusing pointer updates? */
 
@@ -1371,9 +1368,8 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
-   SCIPdebugMessage("adding %s bound change <%s: %g> of variable <%s> to domain change at %p pointing to %p\n",
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
-      boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference", 
+   SCIPsetDebugMsg(set, "adding %s bound change <%s: %g> of variable <%s> to domain change at %p pointing to %p\n",
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
       newbound, var->name, (void*)domchg, (void*)*domchg);
 
    /* if domain change data doesn't exist, create it;
@@ -1552,7 +1548,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
 
-   SCIPdebugMessage("removing %s implications and vbounds of %s<%s>[%g,%g]\n",
+   SCIPsetDebugMsg(set, "removing %s implications and vbounds of %s<%s>[%g,%g]\n",
       onlyredundant ? "redundant" : "all", irrelevantvar ? "irrelevant " : "", SCIPvarGetName(var), lb, ub);
 
    /* remove implications of (fixed) binary variable */
@@ -1592,8 +1588,8 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
             {
                if( implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
                {
-                  SCIPdebugMessage("deleting variable bound: <%s> == %u  ==>  <%s> <= %g\n", 
-                     SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
+                  SCIPsetDebugMsg(set, "deleting variable bound: <%s> == %u  ==>  <%s> <= %g\n",
+                     SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar),
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, varfixing) );
                   implvar->closestvblpcount = -1;
@@ -1604,8 +1600,8 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
             {
                if( implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
                {
-                  SCIPdebugMessage("deleting variable bound: <%s> == %u  ==>  <%s> >= %g\n", 
-                     SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
+                  SCIPsetDebugMsg(set, "deleting variable bound: <%s> == %u  ==>  <%s> >= %g\n",
+                     SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar),
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, !varfixing) );
                   implvar->closestvblpcount = -1;
@@ -1683,13 +1679,13 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
          /* remove the corresponding implication */
          if( implvar->implics != NULL ) /* variable may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> >= %g\n",
+            SCIPsetDebugMsg(set, "deleting implication: <%s> == %d  ==>  <%s> >= %g\n",
                SCIPvarGetName(implvar), (coef > 0.0), SCIPvarGetName(var), MAX(coef, 0.0) + constants[i]);
             SCIP_CALL( SCIPimplicsDel(&implvar->implics, blkmem, set, (coef > 0.0), var, SCIP_BOUNDTYPE_LOWER) );
          }
          if( coef > 0.0 && implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
+            SCIPsetDebugMsg(set, "deleting variable upper bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, FALSE) );
             implvar->closestvblpcount = -1;
@@ -1697,7 +1693,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
          }
          else if( coef < 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
+            SCIPsetDebugMsg(set, "deleting variable lower bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, TRUE) );
             implvar->closestvblpcount = -1;
@@ -1777,13 +1773,13 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
          /* remove the corresponding implication */
          if( implvar->implics != NULL ) /* variable may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> <= %g\n",
+            SCIPsetDebugMsg(set, "deleting implication: <%s> == %d  ==>  <%s> <= %g\n",
                SCIPvarGetName(implvar), (coef < 0.0), SCIPvarGetName(var), MIN(coef, 0.0) + constants[i]);
             SCIP_CALL( SCIPimplicsDel(&implvar->implics, blkmem, set, (coef < 0.0), var, SCIP_BOUNDTYPE_UPPER) );
          }
          if( coef < 0.0 && implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting variable upper bound from <%s> involving variable %s\n",
+            SCIPsetDebugMsg(set, "deleting variable upper bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, TRUE) );
             implvar->closestvblpcount = -1;
@@ -1791,7 +1787,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
          }
          else if( coef > 0.0 && implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
          {
-            SCIPdebugMessage("deleting variable lower bound from <%s> involving variable %s\n",
+            SCIPsetDebugMsg(set, "deleting variable lower bound from <%s> involving variable %s\n",
                SCIPvarGetName(implvar), SCIPvarGetName(var));
             SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, FALSE) );
             implvar->closestvblpcount = -1;
@@ -1976,6 +1972,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+   (*var)->clqcomponentidx = -1;
 
    stat->nvaridx++;
 
@@ -2131,6 +2128,9 @@ SCIP_RETCODE SCIPvarCopy(
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
 
+   /* directly copy donotmultaggr flag */
+   (*var)->donotmultaggr = sourcevar->donotmultaggr;
+
    /* insert variable into mapping between source SCIP and the target SCIP */
    assert(!SCIPhashmapExists(varmap, sourcevar));
    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
@@ -2149,6 +2149,16 @@ SCIP_RETCODE SCIPvarCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
+
+      /* if copying was successful, add the created variable data to the variable as well as all callback methods */
+      if( result == SCIP_SUCCESS )
+      {
+         (*var)->varcopy = sourcevar->varcopy;
+         (*var)->vardelorig = sourcevar->vardelorig;
+         (*var)->vartrans = sourcevar->vartrans;
+         (*var)->vardeltrans = sourcevar->vardeltrans;
+         (*var)->vardata = targetdata;
+      }
    }
 
    /* we initialize histories of the variables by copying the source variable-information */
@@ -2169,7 +2179,7 @@ SCIP_RETCODE SCIPvarCopy(
       (*var)->vardata = targetdata;
    }
 
-   SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*var), SCIPvarGetName(sourcevar));
+   SCIPsetDebugMsg(set, "created copy <%s> of variable <%s>\n", SCIPvarGetName(*var), SCIPvarGetName(sourcevar));
 
    return SCIP_OKAY;
 }
@@ -2216,18 +2226,18 @@ SCIP_RETCODE parseBounds(
 {
    char token[SCIP_MAXSTRLEN];
 
-   SCIPdebugMessage("parsing bounds: '%s'\n", str);
+   SCIPsetDebugMsg(set, "parsing bounds: '%s'\n", str);
 
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
    if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
    {
-      SCIPdebugMessage("unkown bound type <%s>\n", type);
+      SCIPsetDebugMsg(set, "unkown bound type <%s>\n", type);
       *endptr = NULL;
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("parsed bound type <%s>\n", type);
+   SCIPsetDebugMsg(set, "parsed bound type <%s>\n", type);
 
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
@@ -2237,7 +2247,7 @@ SCIP_RETCODE parseBounds(
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
 
-   SCIPdebugMessage("parsed bounds: [%g,%g]\n", *lb, *ub);
+   SCIPsetDebugMsg(set, "parsed bounds: [%g,%g]\n", *lb, *ub);
 
    /* skip end of bounds */
    while ( **endptr != '\0' && (**endptr == ']' || **endptr == ',') )
@@ -2284,7 +2294,7 @@ SCIP_RETCODE varParse(
    /* copy variable type */
    SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, endptr);
    assert(str != *endptr);
-   SCIPdebugMessage("parsed variable type <%s>\n", token);
+   SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
    /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
@@ -2308,7 +2318,7 @@ SCIP_RETCODE varParse(
    /* get variable name */
    SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, endptr);
    assert(endptr != NULL);
-   SCIPdebugMessage("parsed variable name <%s>\n", name);
+   SCIPsetDebugMsg(set, "parsed variable name <%s>\n", name);
 
    /* move string pointer behind variable name */
    str = *endptr;
@@ -2326,7 +2336,7 @@ SCIP_RETCODE varParse(
       return SCIP_READERROR;
    }
 
-   SCIPdebugMessage("parsed objective coefficient <%g>\n", *obj);
+   SCIPsetDebugMsg(set, "parsed objective coefficient <%g>\n", *obj);
 
    /* parse global/original bounds */
    SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
@@ -2547,7 +2557,7 @@ SCIP_RETCODE varAddParent(
    /* the direct original counterpart must be stored as first parent */
    assert(var->nparentvars == 0 || SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL);
 
-   SCIPdebugMessage("adding parent <%s>[%p] to variable <%s>[%p] in slot %d\n", 
+   SCIPsetDebugMsg(set, "adding parent <%s>[%p] to variable <%s>[%p] in slot %d\n",
       parentvar->name, (void*)parentvar, var->name, (void*)var, var->nparentvars);
 
    SCIP_CALL( varEnsureParentvarsSize(var, blkmem, set, var->nparentvars+1) );
@@ -2573,7 +2583,7 @@ SCIP_RETCODE varFreeParents(
    SCIP_VAR* parentvar;
    int i;
 
-   SCIPdebugMessage("free parents of <%s>\n", (*var)->name);
+   SCIPsetDebugMsg(set, "free parents of <%s>\n", (*var)->name);
 
    /* release the parent variables and remove the link from the parent variable to the child */
    for( i = 0; i < (*var)->nparentvars; ++i )
@@ -2649,7 +2659,7 @@ SCIP_RETCODE varFree(
    assert((*var)->nuses == 0);
    assert((*var)->probindex == -1);
 
-   SCIPdebugMessage("free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
+   SCIPsetDebugMsg(set, "free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
 
    switch( SCIPvarGetStatus(*var) )
    {
@@ -2762,7 +2772,7 @@ SCIP_RETCODE SCIPvarRelease(
    assert(blkmem != NULL);
    assert((*var)->scip == set->scip);
 
-   SCIPdebugMessage("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
+   SCIPsetDebugMsg(set, "release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
    if( (*var)->nuses == 0 )
    {
@@ -3049,7 +3059,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    if( addnlocksdown == 0 && addnlocksup == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("add rounding locks %d/%d to variable <%s> (locks=%d/%d)\n",
+   SCIPsetDebugMsg(set, "add rounding locks %d/%d to variable <%s> (locks=%d/%d)\n",
       addnlocksdown, addnlocksup, var->name, var->nlocksdown, var->nlocksup);
 
    lockvar = var;
@@ -3348,7 +3358,7 @@ SCIP_RETCODE SCIPvarTransform(
          (*transvar)->vardata = origvar->vardata;
    }
 
-   SCIPdebugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, (void*)origvar, (*transvar)->name, (void*)*transvar);
+   SCIPsetDebugMsg(set, "transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, (void*)origvar, (*transvar)->name, (void*)*transvar);
 
    return SCIP_OKAY;
 }
@@ -3398,7 +3408,7 @@ SCIP_RETCODE SCIPvarColumn(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(var->scip == set->scip);
 
-   SCIPdebugMessage("creating column for variable <%s>\n", var->name);
+   SCIPsetDebugMsg(set, "creating column for variable <%s>\n", var->name);
 
    /* switch variable status */
    var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
@@ -3435,7 +3445,7 @@ SCIP_RETCODE SCIPvarLoose(
    assert(var->data.col->lppos == -1);
    assert(var->data.col->lpipos == -1);
 
-   SCIPdebugMessage("deleting column for variable <%s>\n", var->name);
+   SCIPsetDebugMsg(set, "deleting column for variable <%s>\n", var->name);
 
    /* free column of variable */
    SCIP_CALL( SCIPcolFree(&var->data.col, blkmem, set, eventqueue, lp) );
@@ -3584,7 +3594,7 @@ SCIP_RETCODE SCIPvarFix(
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
-   SCIPdebugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
+   SCIPsetDebugMsg(set, "fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
 
    *infeasible = FALSE;
    *fixed = FALSE;
@@ -3592,15 +3602,14 @@ SCIP_RETCODE SCIPvarFix(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
    {
       *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->locdom.lb);
-      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%u\n",
-         var->locdom.lb, fixedval, *infeasible);
+      SCIPsetDebugMsg(set, " -> variable already fixed to %g (fixedval=%g): infeasible=%u\n", var->locdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
    else if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
    {
-      SCIPdebugMessage(" -> fixing infeasible: locdom=[%g,%g], fixedval=%g\n", var->locdom.lb, var->locdom.ub, fixedval);
+      SCIPsetDebugMsg(set, " -> fixing infeasible: locdom=[%g,%g], fixedval=%g\n", var->locdom.lb, var->locdom.ub, fixedval);
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
@@ -4117,12 +4126,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set))); /*lint !e777*/
    assert(SCIPsetIsInfinity(set, -(*constant)) == ((*constant) == -SCIPsetInfinity(set))); /*lint !e777*/
 
-   SCIPsetFreeBufferArray(set, &tmpvars2);
-   SCIPsetFreeBufferArray(set, &tmpscalars2);
-   SCIPsetFreeBufferArray(set, &tmpvars);
    SCIPsetFreeBufferArray(set, &tmpscalars);
-   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &tmpvars);
    SCIPsetFreeBufferArray(set, &activescalars);
+   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &tmpscalars2);
+   SCIPsetFreeBufferArray(set, &tmpvars2);
 
    return SCIP_OKAY;
 }
@@ -4241,9 +4250,8 @@ SCIP_RETCODE varUpdateAggregationBounds(
    *infeasible = FALSE;
    *fixed = FALSE;
 
-   SCIPdebugMessage("updating bounds of variables in aggregation <%s> == %g*<%s> %+g\n",
-      var->name, scalar, aggvar->name, constant);
-   SCIPdebugMessage("  old bounds: <%s> [%g,%g]   <%s> [%g,%g]\n",
+   SCIPsetDebugMsg(set, "updating bounds of variables in aggregation <%s> == %g*<%s> %+g\n", var->name, scalar, aggvar->name, constant);
+   SCIPsetDebugMsg(set, "  old bounds: <%s> [%g,%g]   <%s> [%g,%g]\n",
       var->name, var->glbdom.lb, var->glbdom.ub, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub);
 
    /* loop as long additional changes may be found */
@@ -4388,7 +4396,7 @@ SCIP_RETCODE varUpdateAggregationBounds(
    }
    while( aggvarbdschanged );
 
-   SCIPdebugMessage("  new bounds: <%s> [%g,%g]   <%s> [%g,%g]\n",
+   SCIPsetDebugMsg(set, "  new bounds: <%s> [%g,%g]   <%s> [%g,%g]\n",
       var->name, var->glbdom.lb, var->glbdom.ub, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub);
 
    return SCIP_OKAY;
@@ -4467,7 +4475,7 @@ SCIP_RETCODE SCIPvarAggregate(
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
    assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
 
-   SCIPdebugMessage("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
+   SCIPsetDebugMsg(set, "aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
       scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
 
    /* if variable and aggregation variable are equal, the variable can be fixed: x == a*x + c  =>  x == c/(1-a) */
@@ -4934,6 +4942,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    )
 {
    SCIP_Bool easyaggr;
+   SCIP_Real maxscalar;
+   SCIP_Real absquot;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4958,6 +4968,13 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    *infeasible = FALSE;
    *aggregated = FALSE;
+
+   absquot = REALABS(scalarx / scalary);
+   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
+   maxscalar = MAX(maxscalar, 1.0);
+
+   if( absquot > maxscalar || absquot < 1 / maxscalar )
+      return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&
@@ -5106,7 +5123,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
-   SCIPdebugMessage("trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+   SCIPsetDebugMsg(set, "trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -5170,12 +5187,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          {
             if( SCIPsetIsZero(set, tmpconstant) ) /* x = x */
             {
-               SCIPdebugMessage("Possible multi-aggregation was completely resolved and detected to be redundant.\n");
+               SCIPsetDebugMsg(set, "Possible multi-aggregation was completely resolved and detected to be redundant.\n");
                goto TERMINATE;
             }
             else /* 0 = c and c != 0 */
             {
-               SCIPdebugMessage("Multi-aggregation was completely resolved and led to infeasibility.\n");
+               SCIPsetDebugMsg(set, "Multi-aggregation was completely resolved and led to infeasibility.\n");
                *infeasible = TRUE;
                goto TERMINATE;
             }
@@ -5185,7 +5202,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
             assert(tmpscalars[0] != 0.0);
             assert(tmpvars[0] != NULL);
 
-            SCIPdebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(tmpvars[0]), -constant/tmpscalars[0]);
+            SCIPsetDebugMsg(set, "Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(tmpvars[0]), -constant/tmpscalars[0]);
             SCIP_CALL( SCIPvarFix(tmpvars[0], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
                   branchcand, eventqueue, cliquetable, -constant/tmpscalars[0], infeasible, aggregated) );
             goto TERMINATE;
@@ -5194,7 +5211,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          {
 	    /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
 
-            SCIPdebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
+            SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
                   SCIPvarGetName(tmpvars[0]), SCIPvarGetName(tmpvars[1]), tmpscalars[0], tmpscalars[1], -tmpconstant);
 
             SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
@@ -5221,7 +5238,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* check, if we are in one of the simple cases */
       if( ntmpvars == 0 )
       {
-         SCIPdebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(var), tmpconstant);
+         SCIPsetDebugMsg(set, "Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(var), tmpconstant);
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
                eventqueue, cliquetable, tmpconstant, infeasible, aggregated) );
          goto TERMINATE;
@@ -5230,7 +5247,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
       if( ntmpvars == 1 )
       {
-            SCIPdebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
+            SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
                   SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
 
             SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
@@ -5248,7 +5265,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* if the variable is not allowed to be multi-aggregated */
       if( SCIPvarDoNotMultaggr(var) )
       {
-         SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
+         SCIPsetDebugMsg(set, "variable is not allowed to be multi-aggregated.\n");
          goto TERMINATE;
       }
 
@@ -5505,7 +5522,7 @@ SCIP_RETCODE SCIPvarNegate(
 
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED);
 
-      SCIPdebugMessage("creating negated variable of <%s>\n", var->name);
+      SCIPsetDebugMsg(set, "creating negated variable of <%s>\n", var->name);
 
       /* negation is only possible for bounded variables */
       if( SCIPsetIsInfinity(set, -var->glbdom.lb) || SCIPsetIsInfinity(set, var->glbdom.ub) )
@@ -5777,7 +5794,7 @@ SCIP_RETCODE SCIPvarChgObj(
    assert(set != NULL);
    assert(var->scip == set->scip);
 
-   SCIPdebugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
+   SCIPsetDebugMsg(set, "changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
 
    if( !SCIPsetIsEQ(set, var->obj, newobj) )
    {
@@ -5853,7 +5870,7 @@ SCIP_RETCODE SCIPvarAddObj(
    assert(var->scip == set->scip);
    assert(set->stage < SCIP_STAGE_INITSOLVE);
 
-   SCIPdebugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
+   SCIPsetDebugMsg(set, "adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
    if( !SCIPsetIsZero(set, addobj) )
    {
@@ -5959,7 +5976,7 @@ SCIP_RETCODE SCIPvarChgObjDive(
    assert(var->scip == set->scip);
    assert(lp != NULL);
 
-   SCIPdebugMessage("changing objective of <%s> to %g in current dive\n", var->name, newobj);
+   SCIPsetDebugMsg(set, "changing objective of <%s> to %g in current dive\n", var->name, newobj);
 
    if( SCIPsetIsZero(set, newobj) )
       newobj = 0.0;
@@ -6021,7 +6038,7 @@ void SCIPvarAdjustLb(
    assert(var->scip == set->scip);
    assert(lb != NULL);
 
-   SCIPdebugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
+   SCIPsetDebugMsg(set, "adjust lower bound %g of <%s>\n", *lb, var->name);
 
    *lb = adjustedLb(set, SCIPvarGetType(var), *lb);
 }
@@ -6038,7 +6055,7 @@ void SCIPvarAdjustUb(
    assert(var->scip == set->scip);
    assert(ub != NULL);
 
-   SCIPdebugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
+   SCIPsetDebugMsg(set, "adjust upper bound %g of <%s>\n", *ub, var->name);
 
    *ub = adjustedUb(set, SCIPvarGetType(var), *ub);
 }
@@ -6086,7 +6103,7 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    /* original domains are only stored for ORIGINAL variables, not for NEGATED */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
-      SCIPdebugMessage("changing original lower bound of <%s> from %g to %g\n",
+      SCIPsetDebugMsg(set, "changing original lower bound of <%s> from %g to %g\n",
          var->name, var->data.original.origdom.lb, newbound);
 
       if( SCIPsetIsEQ(set, var->data.original.origdom.lb, newbound) )
@@ -6145,7 +6162,7 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    /* original domains are only stored for ORIGINAL variables, not for NEGATED */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
-      SCIPdebugMessage("changing original upper bound of <%s> from %g to %g\n",
+      SCIPsetDebugMsg(set, "changing original upper bound of <%s> from %g to %g\n",
          var->name, var->data.original.origdom.ub, newbound);
 
       if( SCIPsetIsEQ(set, var->data.original.origdom.ub, newbound) )
@@ -6206,7 +6223,7 @@ SCIP_RETCODE varEventGlbChanged(
    {
       SCIP_EVENT* event;
 
-      SCIPdebugMessage("issue GLBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue GLBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
@@ -6244,7 +6261,7 @@ SCIP_RETCODE varEventGubChanged(
    {
       SCIP_EVENT* event;
 
-      SCIPdebugMessage("issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
@@ -6276,7 +6293,7 @@ SCIP_RETCODE varEventGholeAdded(
    {
       SCIP_EVENT* event;
 
-      SCIPdebugMessage("issue GHOLEADDED event for variable <%s>: (%.15g,%.15g)\n", var->name, left, right);
+      SCIPsetDebugMsg(set, "issue GHOLEADDED event for variable <%s>: (%.15g,%.15g)\n", var->name, left, right);
 
       SCIP_CALL( SCIPeventCreateGholeAdded(&event, blkmem, var, left, right) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
@@ -6367,7 +6384,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
-   SCIPdebugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
+   SCIPsetDebugMsg(set, "process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
       return SCIP_OKAY;
@@ -6400,7 +6417,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
       if( var->lbchginfos[i].oldbound < var->glbdom.lb )
       {
-         SCIPdebugMessage(" -> adjust lower bound change <%s>: %g -> %g due to new global lower bound %g\n",
+         SCIPsetDebugMsg(set, " -> adjust lower bound change <%s>: %g -> %g due to new global lower bound %g\n",
             SCIPvarGetName(var), var->lbchginfos[i].oldbound, var->lbchginfos[i].newbound, var->glbdom.lb);
          var->lbchginfos[i].oldbound = var->glbdom.lb;
          if( SCIPsetIsLE(set, var->lbchginfos[i].newbound, var->glbdom.lb) )
@@ -6542,7 +6559,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
-   SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
+   SCIPsetDebugMsg(set, "process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
       return SCIP_OKAY;
@@ -6574,7 +6591,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
       assert(var->ubchginfos[i].var == var);
       if( var->ubchginfos[i].oldbound > var->glbdom.ub )
       {
-         SCIPdebugMessage(" -> adjust upper bound change <%s>: %g -> %g due to new global upper bound %g\n",
+         SCIPsetDebugMsg(set, " -> adjust upper bound change <%s>: %g -> %g due to new global upper bound %g\n",
             SCIPvarGetName(var), var->ubchginfos[i].oldbound, var->ubchginfos[i].newbound, var->glbdom.ub);
          var->ubchginfos[i].oldbound = var->glbdom.ub;
          if( SCIPsetIsGE(set, var->ubchginfos[i].newbound, var->glbdom.ub) )
@@ -6719,7 +6736,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
     */
    assert(lp == NULL || SCIPsetIsFeasLE(set, var->glbdom.lb, newbound));
 
-   SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
+   SCIPsetDebugMsg(set, "changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
    if( SCIPsetIsEQ(set, var->glbdom.lb, newbound) )
       return SCIP_OKAY;
@@ -6862,7 +6879,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
     */
    assert(lp == NULL || SCIPsetIsFeasGE(set, var->glbdom.ub, newbound));
 
-   SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
+   SCIPsetDebugMsg(set, "changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, var->glbdom.ub, newbound) )
       return SCIP_OKAY;
@@ -7064,7 +7081,7 @@ SCIP_RETCODE varEventLbChanged(
    {
       SCIP_EVENT* event;
 
-      SCIPdebugMessage("issue LBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue LBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
@@ -7102,7 +7119,7 @@ SCIP_RETCODE varEventUbChanged(
    {
       SCIP_EVENT* event;
 
-      SCIPdebugMessage("issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
@@ -7162,7 +7179,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
+   SCIPsetDebugMsg(set, "process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
       return SCIP_OKAY;
@@ -7324,7 +7341,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
+   SCIPsetDebugMsg(set, "process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
       return SCIP_OKAY;
@@ -7485,7 +7502,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
+   SCIPsetDebugMsg(set, "changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, var->locdom.lb, newbound) )
       return SCIP_OKAY;
@@ -7611,7 +7628,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
-   SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
+   SCIPsetDebugMsg(set, "changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, var->locdom.ub, newbound) )
       return SCIP_OKAY;
@@ -7744,7 +7761,7 @@ SCIP_RETCODE SCIPvarChgLbDive(
    /* adjust bound for integral variables */
    SCIPvarAdjustLb(var, set, &newbound);
 
-   SCIPdebugMessage("changing lower bound of <%s> to %g in current dive\n", var->name, newbound);
+   SCIPsetDebugMsg(set, "changing lower bound of <%s> to %g in current dive\n", var->name, newbound);
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -7834,7 +7851,7 @@ SCIP_RETCODE SCIPvarChgUbDive(
    /* adjust bound for integral variables */
    SCIPvarAdjustUb(var, set, &newbound);
 
-   SCIPdebugMessage("changing upper bound of <%s> to %g in current dive\n", var->name, newbound);
+   SCIPsetDebugMsg(set, "changing upper bound of <%s> to %g in current dive\n", var->name, newbound);
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -8190,7 +8207,7 @@ SCIP_RETCODE SCIPvarAddHoleOriginal(
    assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
-   SCIPdebugMessage("adding original hole (%g,%g) to <%s>\n", left, right, var->name);
+   SCIPsetDebugMsg(set, "adding original hole (%g,%g) to <%s>\n", left, right, var->name);
 
    if( SCIPsetIsEQ(set, left, right) )
       return SCIP_OKAY;
@@ -8339,7 +8356,7 @@ SCIP_RETCODE varProcessAddHoleGlobal(
          return SCIP_INVALIDDATA;
       }
 
-      SCIPdebugMessage("add global hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
+      SCIPsetDebugMsg(set, "add global hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
 
       /* perform hole added for parent variable */
       assert(blkmem != NULL);
@@ -8372,7 +8389,7 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
    assert(blkmem != NULL);
    assert(added != NULL);
 
-   SCIPdebugMessage("adding global hole (%g,%g) to <%s>\n", left, right, var->name);
+   SCIPsetDebugMsg(set, "adding global hole (%g,%g) to <%s>\n", left, right, var->name);
 
    /* the interval should not be empty */
    assert(SCIPsetIsLT(set, left, right));
@@ -8587,7 +8604,7 @@ SCIP_RETCODE varProcessAddHoleLocal(
          return SCIP_INVALIDDATA;
       }
 
-      SCIPdebugMessage("add local hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
+      SCIPsetDebugMsg(set, "add local hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
 
       /* perform hole added for parent variable */
       assert(blkmem != NULL);
@@ -8615,7 +8632,7 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_Real childnewleft;
    SCIP_Real childnewright;
 
-   SCIPdebugMessage("adding local hole (%g,%g) to <%s>\n", left, right, var->name);
+   SCIPsetDebugMsg(set, "adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
    assert(var != NULL);
    assert(set != NULL);
@@ -8827,13 +8844,13 @@ SCIP_RETCODE varAddVbound(
          }
       }
 #endif
-      SCIPdebugMessage("redundant variable bound: <%s> %s %g<%s> %+g\n", 
+      SCIPsetDebugMsg(set, "redundant variable bound: <%s> %s %g<%s> %+g\n",
          SCIPvarGetName(var), vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef, SCIPvarGetName(vbvar), vbconstant);
 
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("adding variable bound: <%s> %s %g<%s> %+g\n", 
+   SCIPsetDebugMsg(set, "adding variable bound: <%s> %s %g<%s> %+g\n",
       SCIPvarGetName(var), vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef, SCIPvarGetName(vbvar), vbconstant);
 
    /* check variable bound on debugging solution */
@@ -9098,7 +9115,7 @@ SCIP_RETCODE varAddImplic(
       else
       {
          /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
-         SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n",
+         SCIPsetDebugMsg(set, "adding implication: <%s> == %u  ==>  <%s> %s %g\n",
             SCIPvarGetName(var), varfixing,
             SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
          SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
@@ -9110,7 +9127,7 @@ SCIP_RETCODE varAddImplic(
    /* on conflict, fix the variable to the opposite value */
    if( conflict )
    {
-      SCIPdebugMessage(" -> implication yields a conflict: fix <%s> == %d\n", SCIPvarGetName(var), !varfixing);
+      SCIPsetDebugMsg(set, " -> implication yields a conflict: fix <%s> == %d\n", SCIPvarGetName(var), !varfixing);
 
       /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
        * with the local bound, in this case we need to store the bound change as pending bound change
@@ -9507,8 +9524,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    assert(SCIPvarGetType(vlbvar) != SCIP_VARTYPE_CONTINUOUS);
    assert(infeasible != NULL);
 
-   SCIPdebugMessage("adding variable lower bound <%s> >= %g<%s> + %g\n", 
-      SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
+   SCIPsetDebugMsg(set, "adding variable lower bound <%s> >= %g<%s> + %g\n", SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
    *infeasible = FALSE;
    if( nbdchgs != NULL )
@@ -9527,8 +9543,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    case SCIP_VARSTATUS_FIXED:
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, set, &vlbcoef, &vlbconstant) );
-      SCIPdebugMessage(" -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", 
-         SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
+      SCIPsetDebugMsg(set, " -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
       /* if the vlb coefficient is zero, just update the lower bound of the variable */
       if( SCIPsetIsZero(set, vlbcoef) )
@@ -9881,8 +9896,7 @@ SCIP_RETCODE SCIPvarAddVub(
    assert(SCIPvarGetType(vubvar) != SCIP_VARTYPE_CONTINUOUS);
    assert(infeasible != NULL);
 
-   SCIPdebugMessage("adding variable upper bound <%s> <= %g<%s> + %g\n", 
-      SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
+   SCIPsetDebugMsg(set, "adding variable upper bound <%s> <= %g<%s> + %g\n", SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
    *infeasible = FALSE;
    if( nbdchgs != NULL )
@@ -9901,7 +9915,7 @@ SCIP_RETCODE SCIPvarAddVub(
    case SCIP_VARSTATUS_FIXED:
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, set, &vubcoef, &vubconstant) );
-      SCIPdebugMessage(" -> transformed to variable upper bound <%s> <= %g<%s> + %g\n", 
+      SCIPsetDebugMsg(set, " -> transformed to variable upper bound <%s> <= %g<%s> + %g\n",
          SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
       /* if the vub coefficient is zero, just update the upper bound of the variable */
@@ -10777,7 +10791,7 @@ SCIP_RETCODE varProcessChgBranchFactor(
    eps = SCIPsetEpsilon(set);
    branchfactor = MAX(branchfactor, eps);
 
-   SCIPdebugMessage("process changing branch factor of <%s> from %f to %f\n", var->name, var->branchfactor, branchfactor);
+   SCIPsetDebugMsg(set, "process changing branch factor of <%s> from %f to %f\n", var->name, var->branchfactor, branchfactor);
 
    if( SCIPsetIsEQ(set, branchfactor, var->branchfactor) )
       return SCIP_OKAY;
@@ -11577,13 +11591,17 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_Bool active = FALSE;
 #ifndef NDEBUG
    SCIP_Real constant = 0.0;
-   SCIP_Bool orignegated = *negated;
+   SCIP_Bool orignegated;
 #endif
 
    assert(var != NULL);
    assert(*var != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
+
+#ifndef NDEBUG
+   orignegated = *negated;
+#endif
 
    while( !active && *var != NULL )
    {
@@ -12579,7 +12597,7 @@ void SCIPvarUpdateBestRootSol(
       /* check if an improving root solution, root reduced cost, and root LP objective value is at hand */
       if( cutoffbound > currcutoffbound )
       {
-         SCIPdebugMessage("-> <%s> update potetial cutoff bound <%g> -> <%g>\n",
+         SCIPsetDebugMsg(set, "-> <%s> update potential cutoff bound <%g> -> <%g>\n",
             SCIPvarGetName(var), currcutoffbound, cutoffbound);
 
          var->bestrootsol = rootsol;
@@ -12589,10 +12607,10 @@ void SCIPvarUpdateBestRootSol(
    }
    else
    {
-      SCIPdebugMessage("-> <%s> initialize best root reduced cost information\n", SCIPvarGetName(var));
-      SCIPdebugMessage("   -> rootsol <%g>\n", rootsol);
-      SCIPdebugMessage("   -> rootredcost <%g>\n", rootredcost);
-      SCIPdebugMessage("   -> rootlpobjval <%g>\n", rootlpobjval);
+      SCIPsetDebugMsg(set, "-> <%s> initialize best root reduced cost information\n", SCIPvarGetName(var));
+      SCIPsetDebugMsg(set, "   -> rootsol <%g>\n", rootsol);
+      SCIPsetDebugMsg(set, "   -> rootredcost <%g>\n", rootredcost);
+      SCIPsetDebugMsg(set, "   -> rootlpobjval <%g>\n", rootlpobjval);
 
       var->bestrootsol = rootsol;
       var->bestrootredcost = rootredcost;
@@ -12740,7 +12758,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    implredcost = getImplVarRedcost(var, set, varfixing, stat, lp);
 
 #ifdef SCIP_MORE_DEBUG
-   SCIPdebugMessage("variable <%s> itself has reduced cost of %g\n", SCIPvarGetName(var), implredcost);
+   SCIPsetDebugMsg(set, "variable <%s> itself has reduced cost of %g\n", SCIPvarGetName(var), implredcost);
 #endif
 
    /* the following algorithm is expensive */
@@ -12855,7 +12873,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    }
 
 #ifdef SCIP_MORE_DEBUG
-   SCIPdebugMessage("variable <%s> incl. cliques (%d) has implied reduced cost of %g\n", SCIPvarGetName(var), ncliques,
+   SCIPsetDebugMsg(set, "variable <%s> incl. cliques (%d) has implied reduced cost of %g\n", SCIPvarGetName(var), ncliques,
       implredcost);
 #endif
 
@@ -12957,7 +12975,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    }
 
 #ifdef SCIP_MORE_DEBUG
-   SCIPdebugMessage("variable <%s> incl. cliques (%d) and implications (%d) has implied reduced cost of %g\n",
+   SCIPsetDebugMsg(set, "variable <%s> incl. cliques (%d) and implications (%d) has implied reduced cost of %g\n",
       SCIPvarGetName(var), ncliques, nvars, implredcost);
 #endif
 
@@ -13540,7 +13558,7 @@ SCIP_RETCODE SCIPvarAddToRow(
    assert(row != NULL);
    assert(!SCIPsetIsInfinity(set, REALABS(val)));
 
-   SCIPdebugMessage("adding coefficient %g<%s> to row <%s>\n", val, var->name, row->name);
+   SCIPsetDebugMsg(set, "adding coefficient %g<%s> to row <%s>\n", val, var->name, row->name);
 
    if ( SCIPsetIsZero(set, val) )
       return SCIP_OKAY;
@@ -13622,6 +13640,7 @@ SCIP_RETCODE SCIPvarAddToRow(
 #ifdef SCIP_HISTORYTOFILE
 SCIP_Longint counter = 0l;
 const char* historypath="."; /* allows for user-defined path; use '.' for calling directory of SCIP */
+#include "scip/scip.h"
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
@@ -13676,13 +13695,24 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    {
       FILE* f;
       char filename[256];
+      SCIP_NODE* currentnode;
+      SCIP_NODE* parentnode;
+      currentnode = SCIPgetFocusNode(set->scip);
+      parentnode = SCIPnodeGetParent(currentnode);
 
       sprintf(filename, "%s/%s.pse", historypath, SCIPgetProbName(set->scip));
       f = fopen(filename, "a");
       if( NULL != f )
       {
-         fprintf(f, "%lld %s \t %lld \t %d %15.9f %.3f\n", ++counter,
-            SCIPvarGetName(var), stat->nnodes, SCIPgetDepth(set->scip), objdelta, solvaldelta);
+         fprintf(f, "%lld %s \t %lld \t %lld \t %lld \t %d \t %15.9f \t %.3f\n",
+            ++counter,
+            SCIPvarGetName(var),
+            SCIPnodeGetNumber(currentnode),
+            parentnode != NULL ? SCIPnodeGetNumber(parentnode) : -1,
+            SCIPgetNLPIterations(set->scip),
+            SCIPgetDepth(set->scip),
+            objdelta,
+            solvaldelta);
          fclose(f);
       }
    }
@@ -14338,7 +14368,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
          assert(history != NULL);
 
          SCIPhistoryIncVSIDS(history, dir, weight);
-         SCIPdebugMessage("variable (<%s> %s %g) + <%g> = <%g>\n", SCIPvarGetName(var), dir == SCIP_BRANCHDIR_UPWARDS ? ">=" : "<=",
+         SCIPsetDebugMsg(set, "variable (<%s> %s %g) + <%g> = <%g>\n", SCIPvarGetName(var), dir == SCIP_BRANCHDIR_UPWARDS ? ">=" : "<=",
             value, weight, SCIPhistoryGetVSIDS(history, dir));
       }
 
@@ -15774,6 +15804,8 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
 
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarLbAtIndex()
  */
 SCIP_Real SCIPvarGetLbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -15896,6 +15928,8 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarUbAtIndex()
  */
 SCIP_Real SCIPvarGetUbAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16018,6 +16052,8 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
+ *
+ *  @deprecated Please use SCIPgetVarBdAtIndex()
  */
 SCIP_Real SCIPvarGetBdAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
@@ -16035,7 +16071,10 @@ SCIP_Real SCIPvarGetBdAtIndex(
    }
 }
 
-/** returns whether the binary variable was fixed at the time given by the bound change index */
+/** returns whether the binary variable was fixed at the time given by the bound change index
+ *
+ *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
+ */
 SCIP_Bool SCIPvarWasFixedAtIndex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
@@ -16357,6 +16396,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
+#undef SCIPvarGetCliqueComponentIdx
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -16376,6 +16416,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPbdchginfoIsRedundant
 #undef SCIPbdchginfoHasInferenceReason
 #undef SCIPbdchginfoIsTighter
+
 
 /** returns the new value of the bound in the bound change data */
 SCIP_Real SCIPboundchgGetNewbound(
@@ -17574,6 +17615,26 @@ SCIP_Real SCIPvarGetVSIDS(
       return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
 
+/** returns the variable clique component index, or -1 if no index was computed */
+int SCIPvarGetCliqueComponentIdx(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   return var->clqcomponentidx;
+}
+
+/** sets the variable clique component index, or -1 if index should be reset */
+void SCIPvarSetCliqueComponentIdx(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   idx                 /**< clique component index of this variable */
+   )
+{
+   assert(var != NULL);
+   var->clqcomponentidx = idx;
+}
+
+
 /** includes event handler with given data in variable's event filter */
 SCIP_RETCODE SCIPvarCatchEvent(
    SCIP_VAR*             var,                /**< problem variable */
@@ -17593,7 +17654,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPdebugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
+   SCIPsetDebugMsg(set, "catch event of type 0x%x of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
@@ -17618,7 +17679,7 @@ SCIP_RETCODE SCIPvarDropEvent(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPdebugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, (void*)eventhdlr, (void*)eventdata);
+   SCIPsetDebugMsg(set, "drop event of variable <%s> with handler %p and data %p\n", var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 

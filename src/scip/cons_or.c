@@ -658,9 +658,9 @@ SCIP_RETCODE applyFixings(
       }
    }
 
-   SCIPdebugMessage("after fixings: ");
+   SCIPdebugMsg(scip, "after fixings: ");
    SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
    return SCIP_OKAY;
 }
@@ -915,7 +915,8 @@ SCIP_RETCODE analyzeConflictZero(
    assert(SCIPvarGetLbLocal(consdata->vars[truepos]) > 0.5);
 
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[truepos]) );
 
@@ -946,7 +947,8 @@ SCIP_RETCODE analyzeConflictOne(
    assert(SCIPvarGetLbLocal(consdata->resvar) > 0.5);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -1018,7 +1020,7 @@ SCIP_RETCODE propagateCons(
       {}
       if( i < nvars )
       {
-         SCIPdebugMessage("constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
+         SCIPdebugMsg(scip, "constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
          SCIP_CALL( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
          if( infeasible )
@@ -1050,7 +1052,7 @@ SCIP_RETCODE propagateCons(
    {
       for( i = 0; i < nvars && !(*cutoff); ++i )
       {
-         SCIPdebugMessage("constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
+         SCIPdebugMsg(scip, "constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
          if( infeasible )
@@ -1136,7 +1138,7 @@ SCIP_RETCODE propagateCons(
    {
       assert(watchedvar2 == -1);
 
-      SCIPdebugMessage("constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
+      SCIPdebugMsg(scip, "constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
       SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
       if( infeasible )
@@ -1166,7 +1168,7 @@ SCIP_RETCODE propagateCons(
    {
       assert(watchedvar1 != -1);
 
-      SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
+      SCIPdebugMsg(scip, "constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
       if( infeasible )
@@ -1231,11 +1233,11 @@ SCIP_RETCODE resolvePropagation(
    {
    case PROPRULE_1:
       /* the resultant was infered to TRUE, because one operand variable was TRUE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         if( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
+         if( SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) > 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
@@ -1247,19 +1249,19 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_2:
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
-      assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) < 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_3:
       /* the resultant was infered to FALSE, because all operand variables were FALSE */
-      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+         assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
          SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
@@ -1267,14 +1269,14 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_4:
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
-      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
-      assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPgetVarLbAtIndex(scip, consdata->resvar, bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+            assert(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) < 0.5);
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
@@ -1310,7 +1312,7 @@ SCIP_RETCODE upgradeCons(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
+   SCIPdebugMsg(scip, "upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
       SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
@@ -1564,20 +1566,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
 static
 SCIP_DECL_CONSCHECK(consCheckOr)
 {  /*lint --e{715}*/
-   SCIP_Bool violated;
    int i;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
-      if( violated )
-      {
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
-   }
    *result = SCIP_FEASIBLE;
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   {
+      SCIP_Bool violated = FALSE;
+
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
+
+      if( violated )
+         *result = SCIP_INFEASIBLE;
+   }
 
    return SCIP_OKAY;
 }
@@ -1672,7 +1674,7 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
          /* if only one variable is left, the resultant has to be equal to this single variable */
          if( consdata->nvars == 1 )
          {
-            SCIPdebugMessage("or constraint <%s> has only one variable not fixed to 0.0\n", SCIPconsGetName(cons));
+            SCIPdebugMsg(scip, "or constraint <%s> has only one variable not fixed to 0.0\n", SCIPconsGetName(cons));
 
             assert(consdata->vars != NULL);
             assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
@@ -1847,7 +1849,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    int varssize;
    int nvars;
 
-   SCIPdebugMessage("parse <%s> as or constraint\n", str);
+   SCIPdebugMsg(scip, "parse <%s> as or constraint\n", str);
 
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
@@ -1860,7 +1862,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
    if( resvar == NULL )
    {
-      SCIPdebugMessage("resultant variable %s does not exist \n", token);
+      SCIPdebugMsg(scip, "resultant variable %s does not exist \n", token);
       *success = FALSE;
    }
    else

@@ -141,6 +141,12 @@ using namespace soplex;
       {                                                                 \
          (x);                                                           \
       }                                                                 \
+      catch( const SPxMemoryException& E )                              \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw a memory exception: %s\n", s.c_str()); \
+         return SCIP_ERROR;                                             \
+      }                                                                 \
       catch( const SPxException& E )                                    \
       {                                                                 \
          std::string s = E.what();                                      \
@@ -156,6 +162,12 @@ using namespace soplex;
       try                                                               \
       {                                                                 \
          (x);                                                           \
+      }                                                                 \
+      catch( const SPxMemoryException& E )                              \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw a memory exception: %s\n", s.c_str()); \
+         return SCIP_ERROR;                                             \
       }                                                                 \
       catch( const SPxException& )                                      \
       {                                                                 \
@@ -1603,12 +1615,13 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
 #if (SOPLEX_VERSION >= 160)
-   sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
+   sprintf(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]", getGitHash());
+#else
+   strcpy(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
 #endif
 #ifdef WITH_LPSCHECK
-   sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
+   strcat(spxdesc, " - including CPLEX double check");
 #endif
    return spxdesc;
 }
@@ -1796,6 +1809,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new rows are added - this is likely to be a mistake */
+      int nrows = lpi->spx->nRows();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
+
    SPxSCIP* spx = lpi->spx;
    try
    {
@@ -1913,6 +1936,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols = lpi->spx->nCols();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    try
    {
@@ -2051,6 +2084,18 @@ SCIP_RETCODE SCIPlpiChgBounds(
       for( i = 0; i < ncols; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+
+         if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+         if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+
          lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
          assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]) + Param::epsilon());
       }

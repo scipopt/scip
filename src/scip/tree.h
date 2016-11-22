@@ -40,13 +40,13 @@
 #include "scip/type_branch.h"
 #include "scip/type_prop.h"
 #include "scip/type_implics.h"
+#include "scip/type_history.h"
+#include "scip/type_conflictstore.h"
 #include "scip/pub_tree.h"
 
 #ifndef NDEBUG
 #include "scip/struct_tree.h"
 #endif
-
-#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
 
 #ifdef __cplusplus
 extern "C" {
@@ -113,6 +113,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -469,6 +470,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
@@ -489,6 +491,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
@@ -875,12 +878,6 @@ int SCIPtreeGetCurrentDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets the maximal allowed tree depth */
-extern
-int SCIPtreeGetDepthLimit(
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   );
-
 /** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
@@ -923,7 +920,6 @@ void SCIPtreeMarkProbingObjChanged(
 #define SCIPtreeGetNNodes(tree)         \
    (SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree))
 #define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
-#define SCIPtreeGetDepthLimit(tree)     (MAXDEPTH)
 #define SCIPtreeProbing(tree)           ((tree)->probingroot != NULL)
 #define SCIPtreeGetProbingRoot(tree)    (tree)->probingroot
 #define SCIPtreeGetProbingDepth(tree)   (SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth((tree)->probingroot))

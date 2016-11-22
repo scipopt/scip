@@ -51,17 +51,17 @@ typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constrain
 typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins)
- * 
- *  If the copy process was one to one, the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
- *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a TRUE valid for all
- *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
+ *
+ *  If the copy process was one to one, the valid pointer can be set to TRUE. Otherwise, this pointer has to be set to
+ *  FALSE. If all problem defining objects (constraint handlers and variable pricers) return valid = TRUE for all
+ *  their copying calls, SCIP assumes that it is an overall one to one copy of the original instance. In this case any
  *  reductions made in the copied SCIP instance can be transfered to the original SCIP instance. If the valid pointer is
  *  set to TRUE and it was not a one to one copy, it might happen that optimal solutions are cut off.
- *  
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - valid           : was the copying process valid? 
+ *  - valid           : was the copying process valid?
  */
 #define SCIP_DECL_CONSHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_Bool* valid)
 
@@ -385,6 +385,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - checkintegrality: Has integrality to be checked?
  *  - checklprows     : Do constraints represented by rows in the current LP have to be checked?
  *  - printreason     : Should the reason for the violation be printed?
+ *  - completely      : Should all violations be checked?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
@@ -392,7 +393,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
-      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_RESULT* result)
+      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_Bool completely, SCIP_RESULT* result)
 
 /** domain propagation method of constraint handler
  *
@@ -465,9 +466,6 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nchgcoefs       : pointer to count total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to count total number of changed left/right hand sides of all presolvers
  *
- *  @todo: implement a final round of presolving after SCIPisPresolveFinished(),
- *         therefore, duplicate counters to a "relevant for finishing presolve" version
- *
  *  output:
  *  - result          : pointer to store the result of the presolving call
  *
@@ -506,7 +504,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
- *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of
+ *  With a call to SCIPgetVarLbAtIndex(scip, z, bdchgidx, TRUE), the handler can find out, that the lower bound of
  *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
  *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  *  the reason for the deduction of the lower bound of z.

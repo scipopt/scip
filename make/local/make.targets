@@ -11,7 +11,7 @@ testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configu
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testnodes
 testnodes:
@@ -20,7 +20,7 @@ testnodes:
                 $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:
@@ -29,7 +29,7 @@ testclustercpx:
                 $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercbc
 testclustercbc:
@@ -70,22 +70,7 @@ testgamscluster:
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) $(SETCUTOFF);
 
-SCIPEXAMPLES	=	examples/Binpacking examples/CallableLibrary applications/Coloring \
-                  examples/Eventhdlr examples/GMI examples/LOP examples/MIPSolver \
-                  applications/Scheduler applications/STP examples/TSP examples/VRP
-
-.PHONY: testexamples
-testexamples:
-		@-echo "" > exampletestsummary.log
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), echo $(EXAMPLE);  $(MAKE) -C $(EXAMPLE) $^ test && { echo "tested $(EXAMPLE) example -- success" >> exampletestsummary.log; } \
-			|| { echo "tested example $(EXAMPLE) -- FAIL" >> exampletestsummary.log; };)
-		@-echo "Summary: "
-		@-cat exampletestsummary.log
-		@-rm -f exampletestsummary.log
-
-.PHONY: docexamples
-docexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C $(EXAMPLE) $^ doc || exit 1;)
+# for testing examples, see the scripts examples/maketestallexamples.sh and applications/maketestallapplications.sh
 
 .PHONY: coverage
 coverage:

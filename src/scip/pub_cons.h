@@ -575,6 +575,12 @@ SCIP_Bool SCIPconsIsObsolete(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint is marked as a conflict */
+EXTERN
+SCIP_Bool SCIPconsIsConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** gets age of constraint */
 EXTERN
 SCIP_Real SCIPconsGetAge(
@@ -744,12 +750,13 @@ int SCIPconsGetNUpgradeLocks(
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
+#define SCIPconsIsConflict(cons)        ((cons)->conflict)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
-#define SCIPconsIsMarkedPropagate(cons) (cons)->markpropagate
+#define SCIPconsIsMarkedPropagate(cons) ((cons)->updatemarkpropagate || ((cons)->markpropagate && !(cons)->updateunmarkpropagate))
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local
