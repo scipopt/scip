@@ -150,8 +150,6 @@ struct SCIP_ConshdlrData
    /* separation parameters */
    SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
    SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-
-   unsigned int             restart;         /**< whether we are running after a restart */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -4272,9 +4270,6 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
-
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
@@ -4327,7 +4322,11 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 
    if( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Bool success;
+      int i;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
       /* simplify constraints */
       SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
@@ -4336,6 +4335,20 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       if( success )
       {
          SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+
+         /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+          * been changed after simplification; now we completely recollect all variable expression and variable events
+          */
+         for( i = 0; i < nconss; ++i )
+         {
+            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+            SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         }
+         for( i = 0; i < nconss; ++i )
+         {
+            SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+            SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+         }
       }
 
       /* tell SCIP that we have something nonlinear */
@@ -4356,9 +4369,6 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4393,10 +4403,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 
    /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
    SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
-
-   conshdlrdata->restart = restart;
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4497,14 +4503,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* remove auxiliary variables from expressions after each restart
-    *
-    * TODO reuse as many linearization variables as possible
-    */
-   if( conshdlrdata->restart )
-   {
-      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
-   }
+   /* create auxiliary variables */
    SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
 
    /* call LP initialization callbacks of the expression handlers */
@@ -4768,10 +4767,6 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
    /* simplify constraints */
@@ -4781,20 +4776,20 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    if( success )
    {
       SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
-   }
 
-   /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
-    * been changed after simplification; now we completely recollect all variable expression and variable events
-    */
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-      SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
-   }
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+      /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+       * been changed after simplification; now we completely recollect all variable expression and variable events
+       */
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      }
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+      }
    }
 
    /* propagate constraints */
