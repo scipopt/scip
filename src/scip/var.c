@@ -17565,7 +17565,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPdebugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
+   SCIPdebugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
@@ -17590,7 +17590,8 @@ SCIP_RETCODE SCIPvarDropEvent(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPdebugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, (void*)eventhdlr, (void*)eventdata);
+   SCIPdebugMessage("drop event of of type 0x%x of variable <%s> with handler %p, and data %p\n", eventtype, var->name,
+         (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
