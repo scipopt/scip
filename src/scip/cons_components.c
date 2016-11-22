@@ -45,10 +45,10 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
-#define DEFAULT_MAXDEPTH             10      /**< maximum depth of a node to run components detection */
+#define DEFAULT_MAXDEPTH              0      /**< maximum depth of a node to run components detection  (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
-#define DEFAULT_MINSIZE               0      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
-#define DEFAULT_MINRELSIZE          0.0      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
+#define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
+#define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems during presolving */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
@@ -118,7 +118,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             pluginscopied;      /**< was the copying of the plugins successful? */
    SCIP_Bool             writeproblems;      /**< should the single components be written as an .cip-file? */
    int                   maxintvars;         /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
-   int                   maxdepth;           /**< maximum depth of a node to run components detection */
+   int                   maxdepth;           /**< maximum depth of a node to run components detection  (-1: disable component detection during solving) */
    int                   minsize;            /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
    SCIP_Real             minrelsize;         /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
    int                   subscipdepth;       /**< depth offset of the current (sub-)problem compared to the original problem */
@@ -2456,7 +2456,7 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxdepth",
-         "maximum depth of a node to run components detection",
+         "maximum depth of a node to run components detection (-1: disable component detection during solving)",
          &conshdlrdata->maxdepth, FALSE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxintvars",
