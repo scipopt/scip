@@ -626,7 +626,8 @@ SCIP_RETCODE delCoefPos(
    SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    /* we only catch this event in presolving stage, so we need to only drop it there */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE
+         || SCIPgetStage(scip) == SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_VARFIXED, eventhdlr,
             (SCIP_EVENTDATA*)consdata, -1) );
@@ -4109,16 +4110,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             {
                SCIP_CALL( addCoef(scip, cons0, consdata1->vars[v]) );
             }
+
             SCIP_CALL( applyFixings(scip, cons0, conshdlrdata->eventhdlr, nchgcoefs, naggrvars, naddconss, cutoff) );
             assert(SCIPconsGetData(cons0) == consdata0);
             assert(consdata0->nvars >= 2); /* at least the two "other" variables should remain in the constraint */
-
-            if( *cutoff )
-               return SCIP_OKAY;
-
-            consdataSort(consdata0);
-	    assert(consdata0->sorted);
          }
+
+         if( *cutoff )
+            return SCIP_OKAY;
+
+         consdataSort(consdata0);
+         assert(consdata0->sorted);
       }
       else if( singlevar0 == NULL )
       {
@@ -4875,10 +4877,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreXor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Bool cutoff;
-   int naggrvars = 0;
-   int naddconss = 0;
-   int nchgcoefs = 0;
    int c;
    int v;
 
@@ -4894,11 +4892,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreXor)
 
       if( !SCIPconsIsDeleted(conss[c]) )
       {
-         /* we are not allowed to detect infeasibility in the exitpre stage */
-         cutoff = FALSE;
-         SCIP_CALL( applyFixings(scip, conss[c], conshdlrdata->eventhdlr, &nchgcoefs, &naggrvars, &naddconss, &cutoff) );
-         assert(!cutoff);
-
          for( v = 0; v < consdata->nvars; ++v )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[v], SCIP_EVENTTYPE_VARFIXED, conshdlrdata->eventhdlr,
