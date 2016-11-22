@@ -17679,7 +17679,12 @@ SCIP_RETCODE SCIPvarDropEvent(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
 
+<<<<<<< HEAD
    SCIPsetDebugMsg(set, "drop event of variable <%s> with handler %p and data %p\n", var->name, (void*)eventhdlr, (void*)eventdata);
+=======
+   SCIPdebugMessage("drop event of of type 0x%x of variable <%s> with handler %p, and data %p\n", eventtype, var->name,
+         (void*)eventhdlr, (void*)eventdata);
+>>>>>>> v32-bugfix
 
    SCIP_CALL( SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
