@@ -71,7 +71,7 @@
 /*
  * Data structures
  */
-#define HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS 131101 /**< minimal size of hash table in and constraint tables */
+#define HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS 500 /**< minimal size of hash table in and constraint tables */
 
 
 /* - create special linear(knapsack, setppc, logicor, (eqknapsack)) and and-constraints with check flags FALSE, to
@@ -367,7 +367,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndConsDatas)
    maxidx = SCIPvarGetIndex(cdata->vars[cdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   return (cdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   return SCIPhashTwo(SCIPcombineTwoInt(cdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx)); /*lint !e701*/
 }
 
 /** initializes the hashmap and -table used in this constraint handler data for artificial variables and specific
@@ -391,12 +392,12 @@ SCIP_RETCODE inithashmapandtable(
    assert((*conshdlrdata)->hashmap == NULL);
 
    /* create a hash table for and-constraint data objects */
-   (*conshdlrdata)->hashtablesize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
+   (*conshdlrdata)->hashtablesize = HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS;
    SCIP_CALL( SCIPhashtableCreate(&((*conshdlrdata)->hashtable), SCIPblkmem(scip), (*conshdlrdata)->hashtablesize,
          hashGetKeyAndConsDatas, hashKeyEqAndConsDatas, hashKeyValAndConsDatas, (void*) scip) );
 
    /* create a hash table for and-resultant to and-constraint data objects */
-   (*conshdlrdata)->hashmapsize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
+   (*conshdlrdata)->hashmapsize = HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS;
    SCIP_CALL( SCIPhashmapCreate(&((*conshdlrdata)->hashmap), SCIPblkmem(scip), (*conshdlrdata)->hashmapsize) );
 
    (*conshdlrdata)->inithashmapandtable = TRUE;
@@ -7967,6 +7968,31 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxPseudoboolean)
+{  /*lint --e{715}*/
+   SCIP_Bool violated;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   violated = FALSE;
+
+   /* check all and-constraints */
+   SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+
+   if( violated )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
@@ -8748,6 +8774,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxPseudoboolean) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -8784,9 +8811,9 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -8975,6 +9002,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
          }
 
          /* insert new mapping */
+         assert(!SCIPhashmapExists(conshdlrdata->hashmap, (void*)res));
          SCIP_CALL( SCIPhashmapInsert(conshdlrdata->hashmap, (void*)res, (void*)newdata) );
       }
       else
@@ -9055,7 +9083,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
                                               *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */

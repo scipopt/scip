@@ -78,6 +78,19 @@ int SCIPrelaxGetFreq(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
+/** returns whether the relaxation handler contains all LP rows */
+EXTERN
+SCIP_Bool SCIPrelaxIncludesLp(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** defines whether the relaxation handler contains all LP rows */
+EXTERN
+void SCIPrelaxSetIncludesLp(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
+   );
+
 /** gets time in seconds used in this relaxator for setting up for next stages */
 EXTERN
 SCIP_Real SCIPrelaxGetSetupTime(

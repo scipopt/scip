@@ -796,7 +796,7 @@ SCIP_RETCODE SCIPapplyProximity(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &subvars, nvars) );
 
       /* copy complete SCIP instance */

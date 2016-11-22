@@ -62,7 +62,7 @@
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 
-#define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
+#define HASHSIZE_SETPPCCONS         500 /**< minimal size of hash table in setppc constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -2421,6 +2421,7 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             lpfeas,             /**< is the given solution feasible for the current LP ? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
    SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
@@ -2446,13 +2447,13 @@ SCIP_RETCODE separateCons(
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
    /* skip constraints already in the LP */
-   if( sol == NULL && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+   if( lpfeas && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
-   if( sol == NULL )
+   if( lpfeas )
    {
       int nfixedvars = 0;
 
@@ -2471,12 +2472,12 @@ SCIP_RETCODE separateCons(
       assert(!addcut);
 
       /* variable's fixings didn't give us any information -> we have to check the constraint */
-      if( sol == NULL && consdata->row != NULL )
+      if( lpfeas && consdata->row != NULL )
       {
          SCIP_Real feasibility;
 
          assert(!SCIProwIsInLP(consdata->row));
-         feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
          addcut = SCIPisFeasNegative(scip, feasibility);
       }
       else
@@ -2617,7 +2618,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
 {
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -2640,9 +2640,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** add extra clique-constraints resulting from a given cliquepartition to SCIP */
@@ -4911,7 +4910,7 @@ SCIP_RETCODE preprocessCliques(
    susefulvars = 2 * nvars; /* two times because of negated vars, maybe due to deleted variables we need to increase this */
 
    /* a hashmap from varindex to postion in varconsidxs array, because above is still too small */
-   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), nvars) );
 
    /* get temporary memory for the aggregation storage, to memorize aggregations which will be performed later, otherwise we would destroy our local data structures */
    saggregations = nvars;
@@ -5544,7 +5543,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       return SCIP_OKAY;
 
    /* a hashmap from var to index when found in a set-partitioning constraint */
-   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nposvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), nposvars) );
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &chgtype, nconss) );
@@ -6247,7 +6246,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(conss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_SETPPCCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeySetppccons, hashKeyEqSetppccons, hashKeyValSetppccons, (void*) scip) );
@@ -6755,6 +6754,72 @@ SCIP_RETCODE performVarDeletions(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for %s solution\n", nconss,
+         sol == NULL ? "LP" : "relaxation");
+
+   *result = SCIP_FEASIBLE;
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+   
+#ifdef VARUSES
+#ifdef BRANCHLP
+   /* @todo also branch on relaxation solution */
+   if( (sol == NULL) && !cutoff && !separated && !reduceddom )
+   {
+      /* if solution is not integral, choose a variable set to branch on */
+      SCIP_CALL( branchLP(scip, conshdlr, result) );
+      if( *result != SCIP_FEASIBLE )
+         return SCIP_OKAY;
+   }
+#endif
+#endif
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
+   return SCIP_OKAY;
+}
 
 /*
  * upgrading of linear constraints
@@ -7345,7 +7410,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7388,7 +7453,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, FALSE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7719,55 +7784,17 @@ SCIP_RETCODE branchPseudo(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   SCIPdebugMsg(scip, "LP enforcing %d set partitioning / packing / covering constraints\n", nconss);
 
-   *result = SCIP_FEASIBLE;
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
-   }
-
-#ifdef VARUSES
-#ifdef BRANCHLP
-   if( !cutoff && !separated && !reduceddom )
-   {
-      /* if solution is not integral, choose a variable set to branch on */
-      SCIP_CALL( branchLP(scip, conshdlr, result) );
-      if( *result != SCIP_FEASIBLE )
-         return SCIP_OKAY;
-   }
-#endif
-#endif
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -8897,6 +8924,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSetppc) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
 

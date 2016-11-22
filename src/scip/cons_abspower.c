@@ -146,8 +146,8 @@ struct SCIP_ConshdlrData
    int                   newsoleventfilterpos;/**< filter position of new solution event handler, if catched */
    SCIP_Bool             comparedpairwise;   /**< did we compare absolute power constraints pairwise in this run? */
    SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
-   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
-   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
+   SCIP_NODE*            lastenfonode;       /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenforounds;        /**< counter on number of enforcement rounds for the current node */
    unsigned int          nsecantcuts;        /**< number of secant cuts created so far */
    unsigned int          ncuts;              /**< number of linearization cuts created so far */
 };
@@ -586,8 +586,8 @@ SCIP_RETCODE presolveFindDuplicates(
    SCIP_Bool*            infeas              /**< pointer to store whether infeasibility was detected */
    )
 {
-   SCIP_HASHTABLE*     hashtable;
-   SCIP_HASHTABLELIST* hashtablelist;
+   SCIP_MULTIHASH*     multihash;
+   SCIP_MULTIHASHLIST* multihashlist;
    SCIP_CONSHDLRDATA*  conshdlrdata;
    int c;
 
@@ -613,7 +613,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the x variable */
 
-   SCIP_CALL( SCIPhashtableCreate(&hashtable, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ, presolveFindDuplicatesKeyVal, (void*)scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -627,7 +627,7 @@ SCIP_RETCODE presolveFindDuplicates(
       assert(!SCIPconsIsLocal(cons0));       /* shouldn't have local constraints in presolve */
       assert(SCIPconsIsActive(cons0));       /* shouldn't get inactive constraints here */
 
-      hashtablelist = NULL;
+      multihashlist = NULL;
 
       do
       {
@@ -635,11 +635,11 @@ SCIP_RETCODE presolveFindDuplicates(
          SCIP_CONSDATA* consdata1;
 
          /* get constraint from current hash table with same x variable as cons0 and same exponent */
-         cons1 = (SCIP_CONS*)(SCIPhashtableRetrieveNext(hashtable, &hashtablelist, (void*)cons0));
+         cons1 = (SCIP_CONS*)(SCIPmultihashRetrieveNext(multihash, &multihashlist, (void*)cons0));
          if( cons1 == NULL )
          {
             /* processed all constraints like cons0 from hash table, so insert cons0 and go to conss[c+1] */
-            SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
 
@@ -723,7 +723,7 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIPdebugMsg(scip, "substitute <%s> in <%s> to make linear constraint\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
                SCIP_CALL( presolveFindDuplicatesUpgradeCons(scip, cons1, cons0, infeas, nupgdconss, ndelconss, naggrvars) );
 
-               SCIP_CALL( SCIPhashtableRemove(hashtable, cons1) );
+               SCIP_CALL( SCIPmultihashRemove(multihash, cons1) );
                *success = TRUE;
 
                if( *infeas )
@@ -807,7 +807,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
                SCIP_CALL( SCIPdelCons(scip, cons1) );
-               SCIP_CALL( SCIPhashtableRemove(hashtable, cons1) );
+               SCIP_CALL( SCIPmultihashRemove(multihash, cons1) );
                *success = TRUE;
 
                break;
@@ -913,16 +913,16 @@ SCIP_RETCODE presolveFindDuplicates(
 
             SCIP_CALL( SCIPdelCons(scip, cons0) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
-            SCIP_CALL( SCIPhashtableRemove(hashtable, cons1) );
+            SCIP_CALL( SCIPmultihashRemove(multihash, cons1) );
             *success = TRUE;
 
             break;
          }
 
-         if( hashtablelist == NULL )
+         if( multihashlist == NULL )
          {
             /* processed all constraints like cons0 from hash table, but cons0 could not be removed, so insert cons0 into hashmap and go to conss[c+1] */
-            SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
       }
@@ -930,7 +930,7 @@ SCIP_RETCODE presolveFindDuplicates(
    }
 
    /* free hash table */
-   SCIPhashtableFree(&hashtable);
+   SCIPmultihashFree(&multihash);
 
    if( *infeas )
       return SCIP_OKAY;
@@ -938,7 +938,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the z variable */
 
-   SCIP_CALL( SCIPhashtableCreate(&hashtable, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ2, presolveFindDuplicatesKeyVal2, (void*) scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -966,18 +966,18 @@ SCIP_RETCODE presolveFindDuplicates(
       if( !SCIPisEQ(scip, consdata0->lhs, consdata0->rhs) )
          continue;
 
-      hashtablelist = NULL;
+      multihashlist = NULL;
 
       do
       {
          SCIP_CONSDATA* consdata1;
 
          /* get constraint from current hash table with same z variable as cons0 and same exponent */
-         cons1 = (SCIP_CONS*)(SCIPhashtableRetrieveNext(hashtable, &hashtablelist, (void*)cons0));
+         cons1 = (SCIP_CONS*)(SCIPmultihashRetrieveNext(multihash, &multihashlist, (void*)cons0));
          if( cons1 == NULL )
          {
             /* processed all constraints like cons0 from hash table, so insert cons0 and go to conss[c+1] */
-            SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
 
@@ -1065,10 +1065,10 @@ SCIP_RETCODE presolveFindDuplicates(
             break;
          }
 
-         if( hashtablelist == NULL )
+         if( multihashlist == NULL )
          {
             /* processed all constraints like cons0 from hash table, but cons0 could not be removed, so insert cons0 into hashmap and go to conss[c+1] */
-            SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
+            SCIP_CALL( SCIPmultihashInsert(multihash, (void*) cons0) );
             break;
          }
       }
@@ -1076,7 +1076,7 @@ SCIP_RETCODE presolveFindDuplicates(
    }
 
    /* free hash table */
-   SCIPhashtableFree(&hashtable);
+   SCIPmultihashFree(&multihash);
 
    return SCIP_OKAY;
 }
@@ -2133,6 +2133,7 @@ static
 SCIP_Real proposeBranchingPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint which variable to get branching point for */
+   SCIP_SOL*             sol,                /**< solution to branch on (NULL for LP or pseudosol) */
    int                   preferzero,         /**< how much we prefer branching on -xoffset (0, 1, or 2) if sign is not fixed */
    SCIP_Bool             branchminconverror  /**< whether to minimize convexification error if sign is fixed */
    )
@@ -2140,6 +2141,7 @@ SCIP_Real proposeBranchingPoint(
    SCIP_CONSDATA* consdata;
    SCIP_VAR*      x;
    SCIP_Real      xref;
+   SCIP_Real      zref;
    SCIP_Real      xlb;
    SCIP_Real      xub;
 
@@ -2171,14 +2173,15 @@ SCIP_Real proposeBranchingPoint(
       xlb += consdata->xoffset;
       xub += consdata->xoffset;
 
-      xref = SCIPgetVarSol(scip, x) + consdata->xoffset;
+      xref = SCIPgetSolVal(scip, sol, x) + consdata->xoffset;
+      zref = SCIPgetSolVal(scip, sol, consdata->z);
       if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* signpow(x,n,offset) + c*z <= 0 is violated
           *  if we are close to or right of -offset, then branching on -offset gives a convex function on the right branch, this is good
           *  otherwise if branching on -offset yields a violated secant cut in left branch, then current solution would be cutoff there, this is also still good
           */
-         if( !SCIPisFeasNegative(scip, xref) || SCIPisFeasPositive(scip, -consdata->power(-xlb, consdata->exponent)*xref/xlb + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
+         if( !SCIPisFeasNegative(scip, xref) || SCIPisFeasPositive(scip, -consdata->power(-xlb, consdata->exponent)*xref/xlb + consdata->zcoef * zref) )
             return -consdata->xoffset;
          return SCIP_INVALID;
       }
@@ -2188,7 +2191,7 @@ SCIP_Real proposeBranchingPoint(
        *  if we are close to or left of zero, then branching on 0.0 gives a concave function on the left branch, this is good
        *  otherwise if branching on 0.0 yields a violated secant cut in right branch, then current solution would be cutoff there, this is also still good
        */
-      if( !SCIPisFeasPositive(scip, xref) || SCIPisFeasNegative(scip, -consdata->power(xub, consdata->exponent)*xref/xub + consdata->zcoef * SCIPgetVarSol(scip, consdata->z)) )
+      if( !SCIPisFeasPositive(scip, xref) || SCIPisFeasNegative(scip, -consdata->power(xub, consdata->exponent)*xref/xub + consdata->zcoef * zref) )
          return -consdata->xoffset;
       return SCIP_INVALID;
    }
@@ -2243,6 +2246,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
    int                   nconss,             /**< number of constraints to check */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
@@ -2280,14 +2284,14 @@ SCIP_RETCODE registerBranchingCandidates(
             continue;
 
          /* if the value of x lies in a concave range (i.e., where a secant approximation is used), then register x as branching variable */
-         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
-            ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x)) || SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset <= -consdata->root * (SCIPvarGetLbLocal(consdata->x) + consdata->xoffset))) ||
+            ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x)) || SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset >= -consdata->root * (SCIPvarGetUbLocal(consdata->x) + consdata->xoffset))) )
          {
             /* domain propagation should have removed constraints with fixed x, at least for violated constraints */
             assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
 
             SCIPdebugMsg(scip, "register var <%s> in cons <%s> with violation %g %g\n", SCIPvarGetName(consdata->x), SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);  /*lint !e613*/
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, MAX(consdata->lhsviol, consdata->rhsviol), proposeBranchingPoint(scip, conss[c], sol, conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );  /*lint !e613*/
             ++*nnotify;
          }
       }
@@ -2305,12 +2309,13 @@ SCIP_RETCODE registerBranchingCandidates(
    return SCIP_OKAY;
 }
 
-/** registers a variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
+/** registers a variable from a violated constraint as branching candidate that has a large absolute value in the relaxation */
 static
-SCIP_RETCODE registerLargeLPValueVariableForBranching(
+SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
    )
 {
@@ -2334,7 +2339,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
-      val = SCIPgetSolVal(scip, NULL, consdata->x) + consdata->xoffset;
+      val = SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset;
       if( REALABS(val) > brvarval )
       {
          brvarval = ABS(val);
@@ -3873,13 +3878,13 @@ SCIP_RETCODE separatePoint(
          {
             convex = !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x))
                && (!SCIPisNegative(scip, SCIPvarGetLbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, NULL, consdata->x)+consdata->xoffset >= -consdata->root*(SCIPvarGetLbLocal(consdata->x)+consdata->xoffset));
+                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset >= -consdata->root*(SCIPvarGetLbLocal(consdata->x)+consdata->xoffset));
          }
          else
          {
             convex = !SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x))
                && (!SCIPisPositive(scip, SCIPvarGetUbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, NULL, consdata->x)+consdata->xoffset <= -consdata->root*(SCIPvarGetUbLocal(consdata->x)+consdata->xoffset));
+                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset <= -consdata->root*(SCIPvarGetUbLocal(consdata->x)+consdata->xoffset));
          }
 
          feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
@@ -5159,6 +5164,201 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS*         maxviolcons;
+   SCIP_CONSDATA*     consdata;
+   SCIP_Bool          success;
+   SCIP_Bool          cutoff;
+   SCIP_Bool          solviolbounds;
+   SCIP_Real          minefficacy;
+   SCIP_Real          sepaefficacy;
+   SCIP_Real          leastpossibleefficacy;
+   SCIP_Real          maxviol;
+   int                nnotify;
+   int                c;
+
+   assert(scip     != NULL);
+   assert(conshdlr != NULL);
+   assert(conss    != NULL || nconss == 0);
+   assert(result   != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &solviolbounds, &maxviolcons) );
+
+   if( maxviolcons == NULL )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   *result = SCIP_INFEASIBLE;
+
+   if( solviolbounds )
+   {
+      /* if LP solution violates variable bounds, then this should be because a row was added that
+       * introduced this variable newly to the LP, in which case it gets value 0.0; the row should
+       * have been added to resolve an infeasibility, so solinfeasible should be TRUE
+       * see also issue #627
+       */
+      assert(solinfeasible);
+      return SCIP_OKAY;
+   }
+
+   /* if we are above the 100'th enforcement round for this node, something is strange
+    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
+    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
+    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
+    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
+    * we only increment nenforounds until 101 to avoid an overflow
+    */
+   if( conshdlrdata->lastenfonode == SCIPgetCurrentNode(scip) )
+   {
+      if( conshdlrdata->nenforounds > 100 )
+      {
+         if( SCIPisStopped(scip) )
+         {
+            SCIP_NODE* child;
+
+            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }
+      else
+         ++conshdlrdata->nenforounds;
+   }
+   else
+   {
+      conshdlrdata->lastenfonode = SCIPgetCurrentNode(scip);
+      conshdlrdata->nenforounds = 0;
+   }
+
+   /* run domain propagation for violated constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      int       nchgbds;
+      int       naddconss;
+
+      assert(conss[c] != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      nchgbds = 0;
+      naddconss = 0;
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &naddconss) );  /*lint !e613*/
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( nchgbds )
+         *result = SCIP_REDUCEDDOM;
+      if( naddconss )
+         *result = SCIP_CONSADDED;
+   }
+   if( *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(maxviolcons);
+   assert(consdata != NULL);
+   maxviol = consdata->lhsviol + consdata->rhsviol;
+   assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
+
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
+    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
+    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
+    * but in any case we need an efficacy that is at least feastol
+    */
+   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, FALSE, &success,
+         &cutoff, &sepaefficacy) );
+   if( cutoff )
+   {
+      SCIPdebugMsg(scip, "separation detected cutoff.\n");
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+   if( success )
+   {
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      *result = SCIP_SEPARATED;
+      return SCIP_OKAY;
+   }
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy,
+      maxviol);
+
+   /* we are not feasible, the whole node is not infeasible, and we cannot find a reasonable cut
+    * -> collect variables for branching
+    */
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
+
+   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
+   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   {
+      /* fallback 1: we also have no branching candidates, so try to find a weak cut */
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE, FALSE,
+            &success, &cutoff, &sepaefficacy) );
+      if( cutoff )
+      {
+         SCIPdebugMsg(scip, "separation detected cutoff.\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( success )
+      {
+         *result = SCIP_SEPARATED;
+         return SCIP_OKAY;
+      }
+   }
+
+   if( nnotify == 0 && !solinfeasible )
+   {
+      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
+         if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
+      SCIP_VAR* brvar = NULL;
+      SCIP_CALL( registerLargeRelaxValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
+      if( brvar == NULL )
+      {
+         SCIPwarningMessage(scip, "Could not find any branching variable candidate. Cutting off node. Max viol = %g.\n",
+            SCIPconsGetData(maxviolcons)->lhsviol+SCIPconsGetData(maxviolcons)->rhsviol);
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching. Max. viol. cons. <%s>: %g+%g\n",
+            SCIPvarGetName(brvar), SCIPgetSolVal(scip, sol, brvar), SCIPconsGetName(maxviolcons),
+            SCIPconsGetData(maxviolcons)->lhsviol, SCIPconsGetData(maxviolcons)->rhsviol);
+         nnotify = 1;
+      }
+   }
+
+   assert(*result == SCIP_INFEASIBLE && (solinfeasible || nnotify > 0));
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -5379,8 +5579,8 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
 
    /* reset flags and counters */
    conshdlrdata->sepanlp = FALSE;
-   conshdlrdata->lastenfolpnode = NULL;
-   conshdlrdata->nenfolprounds = 0;
+   conshdlrdata->lastenfonode = NULL;
+   conshdlrdata->nenforounds = 0;
 
    return SCIP_OKAY;
 }
@@ -5858,182 +6058,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONS*         maxviolcons;
-   SCIP_CONSDATA*     consdata;
-   SCIP_Bool          success;
-   SCIP_Bool          cutoff;
-   SCIP_Bool          solviolbounds;
-   SCIP_Real          minefficacy;
-   SCIP_Real          sepaefficacy;
-   SCIP_Real          leastpossibleefficacy;
-   SCIP_Real          maxviol;
-   int                nnotify;
-   int                c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
 
-   assert(scip     != NULL);
-   assert(conshdlr != NULL);
-   assert(conss    != NULL || nconss == 0);
-   assert(result   != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcons) );
-
-   if( maxviolcons == NULL )
-   {
-      *result = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   *result = SCIP_INFEASIBLE;
-
-   if( solviolbounds )
-   {
-      /* if LP solution violates variable bounds, then this should be because a row was added that
-       * introduced this variable newly to the LP, in which case it gets value 0.0; the row should
-       * have been added to resolve an infeasibility, so solinfeasible should be TRUE
-       * see also issue #627
-       */
-      assert(solinfeasible);
-      return SCIP_OKAY;
-   }
-
-   /* if we are above the 100'th enforcement round for this node, something is strange
-    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
-    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
-    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
-    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
-    * we only increment nenfolprounds until 101 to avoid an overflow
-    */
-   if( conshdlrdata->lastenfolpnode == SCIPgetCurrentNode(scip) )
-   {
-      if( conshdlrdata->nenfolprounds > 100 )
-      {
-         if( SCIPisStopped(scip) )
-         {
-            SCIP_NODE* child;
-
-            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
-            *result = SCIP_BRANCHED;
-
-            return SCIP_OKAY;
-         }
-      }
-      else
-         ++conshdlrdata->nenfolprounds;
-   }
-   else
-   {
-      conshdlrdata->lastenfolpnode = SCIPgetCurrentNode(scip);
-      conshdlrdata->nenfolprounds = 0;
-   }
-
-   /* run domain propagation for violated constraints */
-   for( c = 0; c < nconss; ++c )
-   {
-      int       nchgbds;
-      int       naddconss;
-
-      assert(conss[c] != NULL);  /*lint !e613*/
-
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
-      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
-         continue;
-
-      nchgbds = 0;
-      naddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &naddconss) );  /*lint !e613*/
-      if( cutoff )
-      {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-      if( nchgbds )
-         *result = SCIP_REDUCEDDOM;
-      if( naddconss )
-         *result = SCIP_CONSADDED;
-   }
-   if( *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED )
-      return SCIP_OKAY;
-
-   consdata = SCIPconsGetData(maxviolcons);
-   assert(consdata != NULL);
-   maxviol = consdata->lhsviol + consdata->rhsviol;
-   assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
-
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
-    */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
-   if( cutoff )
-   {
-      SCIPdebugMsg(scip, "separation detected cutoff.\n");
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-   if( success )
-   {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
-      *result = SCIP_SEPARATED;
-      return SCIP_OKAY;
-   }
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
-
-   /* we are not feasible, the whole node is not infeasible, and we cannot find a reasonable cut
-    * -> collect variables for branching
-    */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
-
-   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
-   {
-      /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, leastpossibleefficacy, TRUE, FALSE, &success, &cutoff, &sepaefficacy) );
-      if( cutoff )
-      {
-         SCIPdebugMsg(scip, "separation detected cutoff.\n");
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-      if( success )
-      {
-         *result = SCIP_SEPARATED;
-         return SCIP_OKAY;
-      }
-   }
-
-   if( nnotify == 0 && !solinfeasible )
-   {
-      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
-         if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
-      SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
-      if( brvar == NULL )
-      {
-         SCIPwarningMessage(scip, "Could not find any branching variable candidate. Cutting off node. Max viol = %g.\n", SCIPconsGetData(maxviolcons)->lhsviol+SCIPconsGetData(maxviolcons)->rhsviol);
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-      else
-      {
-         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching. Max. viol. cons. <%s>: %g+%g\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar), SCIPconsGetName(maxviolcons), SCIPconsGetData(maxviolcons)->lhsviol, SCIPconsGetData(maxviolcons)->rhsviol);
-         nnotify = 1;
-      }
-   }
-
-   assert(*result == SCIP_INFEASIBLE && (solinfeasible || nnotify > 0));
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxAbspower)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -6115,7 +6152,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
       /* domain propagation should have removed cons when x is fixed */
       assert(!SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)));
 
-      SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, consdata->lhsviol + consdata->rhsviol, proposeBranchingPoint(scip, conss[c], conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
+      SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->x, consdata->lhsviol + consdata->rhsviol, proposeBranchingPoint(scip, conss[c], NULL, conshdlrdata->preferzerobranch, conshdlrdata->branchminconverror)) );
       ++nnotify;
    }
 
@@ -6982,6 +7019,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAbspower, consSepasolAbspower, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAbspower) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxAbspower) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdAbspower, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );

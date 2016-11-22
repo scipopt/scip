@@ -5531,10 +5531,12 @@ SCIP_RETCODE exprParse(
    if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg2, SCIPexprGetOpReal(arg1)) );
+      SCIPexprFreeDeep(blkmem, &arg1);
    }
    else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, SCIPexprGetOpReal(arg2)) );
+      SCIPexprFreeDeep(blkmem, &arg2);
    }
    else
    {
@@ -14901,7 +14903,7 @@ SCIP_RETCODE SCIPexprgraphCreate(
 
    /* create var's arrays and hashmap */
    ensureBlockMemoryArraySize3((*exprgraph)->blkmem, &(*exprgraph)->varnodes, &(*exprgraph)->vars, &(*exprgraph)->varbounds, &(*exprgraph)->varssize, varssizeinit);
-   SCIP_CALL( SCIPhashmapCreate(&(*exprgraph)->varidxs, (*exprgraph)->blkmem, SCIPcalcHashtableSize(5 * (*exprgraph)->varssize)) );
+   SCIP_CALL( SCIPhashmapCreate(&(*exprgraph)->varidxs, (*exprgraph)->blkmem, (*exprgraph)->varssize) );
 
    /* empty array of constants is sorted */
    (*exprgraph)->constssorted = TRUE;
@@ -15864,9 +15866,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             SCIP_EXPRGRAPHNODE* constnode;
 
-            if( node->value != node->value )  /*lint !e777*/
+            if( !SCIPisFinite(node->value) )  /*lint !e777*/
             {
-               SCIPdebugMessage("Expression graph simplify turned node into NaN.\n");
+               SCIPdebugMessage("Expression graph simplify turned node into NaN or inf.\n");
                *domainerror = TRUE;
                break;
             }

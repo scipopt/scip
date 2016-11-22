@@ -1218,7 +1218,7 @@ SCIP_RETCODE searchEcAggrWithCliques(
 
    *foundclique = TRUE;
    aggrsize = MIN(sepadata->maxaggrsize, nmaxcliquenodes);
-   SCIP_CALL( SCIPhashmapCreate(&cliquemap, SCIPblkmem(scip), SCIPcalcHashtableSize(aggrsize)) );
+   SCIP_CALL( SCIPhashmapCreate(&cliquemap, SCIPblkmem(scip), aggrsize) );
 
    for( i = 0; i < aggrsize; ++i )
    {

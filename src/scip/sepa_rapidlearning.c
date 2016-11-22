@@ -264,7 +264,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    success = FALSE;
 
    /* copy the subproblem */
@@ -403,7 +403,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), nvars) );
 
    /* store reversing mapping of variables */
    SCIP_CALL( SCIPtransformProb(subscip) );
@@ -557,10 +557,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       assert(SCIPgetNConflictConssApplied(subscip) < (SCIP_Longint) INT_MAX);
       hashtablesize = (int) SCIPgetNConflictConssApplied(subscip);
       assert(hashtablesize < INT_MAX/5);
-      hashtablesize *= 5;
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize(hashtablesize)) );
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), hashtablesize) );
 
       /* loop over all constraint handlers that might contain conflict constraints */
       for( i = 0; i < nconshdlrs; ++i)

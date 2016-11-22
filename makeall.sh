@@ -9,7 +9,7 @@ LPSS=(cpx spx spx2 xprs msk clp grb qso)
 OPTS=(opt dbg prf)
 
 # check if zimpl is available
-if test -e lib/zimplinc/zimpl
+if test -e lib/include/zimplinc/zimpl
 then
     ZIMPL=true
 else

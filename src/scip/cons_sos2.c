@@ -59,6 +59,9 @@
  *   SOS2 constraint: \f$ \min \{l_x, l_y\} \leq x + y \leq \max \{u_x, u_y\}\f$, where \f$l_x, u_x,
  *   l_y, u_y\f$ are the lower and upper bounds of x and y, respectively.
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would affect lhs/rhs of rows)
+ * @todo Try to compute better ChildEstimates in enforceSOS2 when called for relaxation solution,
+ *   currently this uses SCIPcalcChildEstimate, which uses SCIPvarGetSol and can only get either the
+ *   LP or the pseudo solution, as well as pseudo costs, which are not computed for the relaxation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -988,6 +991,7 @@ SCIP_RETCODE enforceSOS2(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
+   SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
    SCIP_RESULT*          result              /**< result */
    )
 {
@@ -1068,7 +1072,7 @@ SCIP_RETCODE enforceSOS2(
       {
          SCIP_Real val;
 
-         val = REALABS(SCIPgetSolVal(scip, NULL, vars[j]));
+         val = REALABS(SCIPgetSolVal(scip, sol, vars[j]));
          weight1 += val * (SCIP_Real) j;
          weight2 += val;
 
@@ -1085,7 +1089,7 @@ SCIP_RETCODE enforceSOS2(
 
       /* if two adjacent variables are nonzero */
       assert( 0 < lastNonzero && lastNonzero < nvars );
-      if ( cnt == 2 && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[lastNonzero-1])) )
+      if ( cnt == 2 && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[lastNonzero-1])) )
          continue;
 
       assert( !SCIPisFeasZero(scip, weight2) );
@@ -1095,7 +1099,7 @@ SCIP_RETCODE enforceSOS2(
       assert( 0 <= ind && ind < nvars-1 );
 
       /* correct index if necessary - see above for an explanation */
-      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[ind])) && ind < lastNonzero-1 )
+      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[ind])) && ind < lastNonzero-1 )
          ++ind;
 
       /* check if the constraint has more nonzeros */
@@ -1720,7 +1724,23 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS2)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIP_CALL( enforceSOS2(scip, conshdlr, nconss, conss, result) );
+   SCIP_CALL( enforceSOS2(scip, conshdlr, nconss, conss, NULL, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSOS2)
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
+
+   SCIP_CALL( enforceSOS2(scip, conshdlr, nconss, conss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -1736,7 +1756,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS2)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIP_CALL( enforceSOS2(scip, conshdlr, nconss, conss, result) );
+   SCIP_CALL( enforceSOS2(scip, conshdlr, nconss, conss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -2251,6 +2271,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSOS2) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS2, consSepasolSOS2, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS2) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSOS2) );
 
    return SCIP_OKAY;
 }

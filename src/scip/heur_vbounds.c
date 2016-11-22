@@ -689,7 +689,7 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
       SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
