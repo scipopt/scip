@@ -948,7 +948,6 @@ SCIP_RETCODE solveComponent(
    SCIP_SOL* bestsol;
    SCIP_Longint nodelimit;
    SCIP_Longint lastnnodes;
-   SCIP_Longint lastnopennodes;
    SCIP_Real gaplimit;
    SCIP_STATUS status;
 
@@ -1047,15 +1046,12 @@ SCIP_RETCODE solveComponent(
       gaplimit = 0.0;
 
       lastnnodes = 0;
-      lastnopennodes = 0;
-
    }
    else
    {
       SCIP_Longint mainnodelimit;
 
       lastnnodes = SCIPgetNNodes(component->subscip);
-      lastnopennodes = SCIPgetNNodesLeft(component->subscip);
 
       SCIP_CALL( SCIPgetLongintParam(scip, "limits/nodes", &mainnodelimit) );
 
