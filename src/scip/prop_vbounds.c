@@ -594,16 +594,14 @@ SCIP_RETCODE extractCycle(
       }
       else if( stacknextedge[j] <= ntmpimpls )
       {
-         SCIP_VAR** implvars;
-         SCIP_BOUNDTYPE* impltypes;
-         SCIP_Real* implbounds;
+#ifndef NDEBUG
+         SCIP_VAR** implvars = SCIPvarGetImplVars(currvar, currlower);
+#endif
+         SCIP_BOUNDTYPE* impltypes = SCIPvarGetImplTypes(currvar, currlower);
+         SCIP_Real* implbounds = SCIPvarGetImplBounds(currvar, currlower);
          SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
          SCIP_Real newconstant;
          SCIP_Real newcoef;
-
-         implvars = SCIPvarGetImplVars(currvar, currlower);
-         impltypes = SCIPvarGetImplTypes(currvar, currlower);
-         implbounds = SCIPvarGetImplBounds(currvar, currlower);
 
          k = stacknextedge[j] - 1;
 
