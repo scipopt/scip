@@ -54,8 +54,8 @@ struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    int                   skipsize;           /**< size of skipdown and skipup array */
-   SCIP_Bool*            skipdown;
-   SCIP_Bool*            skipup;
+   SCIP_Bool*            skipdown;           /**< should down branch be skiped? */
+   SCIP_Bool*            skipup;             /**< should up branch be skiped? */
 };
 
 
