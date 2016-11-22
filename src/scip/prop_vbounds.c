@@ -495,8 +495,6 @@ SCIP_RETCODE extractCycle(
    assert(scip != NULL);
    assert(propdata != NULL);
 
-   assert(samebound);
-
    vars = propdata->vars;
 
    if( samebound )
@@ -548,12 +546,12 @@ SCIP_RETCODE extractCycle(
          cliquevals = SCIPcliqueGetValues(tmpcliques[k]);
          ncliquevars = SCIPcliqueGetNVars(tmpcliques[k]);
 
-         // printf("clique: ");
-         // for( v = 0; v < ncliquevars; ++v )
-         // {
-         //    printf("%s%s ", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
-         // }
-         // printf("(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
+         printf("clique: ");
+         for( v = 0; v < ncliquevars; ++v )
+         {
+            printf("%s%s ", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+         }
+         printf("(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
 
          for( v = 0; v < ncliquevars; ++v )
          {
@@ -600,12 +598,10 @@ SCIP_RETCODE extractCycle(
          SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
          SCIP_Real newconstant;
          SCIP_Real newcoef;
-         int* implids;
 
          implvars = SCIPvarGetImplVars(currvar, currlower);
          impltypes = SCIPvarGetImplTypes(currvar, currlower);
          implbounds = SCIPvarGetImplBounds(currvar, currlower);
-         implids = SCIPvarGetImplIds(currvar, currlower);
 
          k = stacknextedge[j] - 1;
 
@@ -779,6 +775,10 @@ SCIP_RETCODE dfs(
       startvar = vars[getVarIndex(curridx)];
       lower = isIndexLowerbound(curridx);
 
+      /* if the variable was fixed in the meantime, it is a loose end in the variable bound graph */
+      if( SCIPisFeasGE(scip, SCIPvarGetLbGlobal(startvar), SCIPvarGetUbGlobal(startvar)) )
+         goto REMOVE;
+
       nimpls = 0;
 
       if( propdata->sortcliques && propdata->usecliques && stacknextedge[stacksize - 1] == 0 )
@@ -822,7 +822,8 @@ SCIP_RETCODE dfs(
                else
                   idx = varGetLbIndex(propdata, cliquevars[i]);
 
-               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag) )
+               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag)
+                  && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(cliquevars[i]), SCIPvarGetUbGlobal(cliquevars[i])) )
                {
                   printf("found cycle\n");
 
@@ -906,7 +907,8 @@ SCIP_RETCODE dfs(
 
                idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
-               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag) )
+               if( idx >= 0 && (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag)
+                  && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(implvars[i]), SCIPvarGetUbGlobal(implvars[i])) )
                {
                   printf("found cycle\n");
 
@@ -966,7 +968,8 @@ SCIP_RETCODE dfs(
             idx = vboundidx[i];
             assert(idx >= 0);
 
-            if( visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag )
+            if( (visited[idx] == visitedflag || visited[getOtherBoundIndex(idx)] == visitedflag)
+               && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(vars[getVarIndex(idx)]), SCIPvarGetUbGlobal(vars[getVarIndex(idx)])) )
             {
                printf("found cycle\n");
 
@@ -1008,7 +1011,7 @@ SCIP_RETCODE dfs(
          }
 
       }
-
+   REMOVE:
       /* the current node was completely handled, remove it from stack */
       stacksize--;
 
