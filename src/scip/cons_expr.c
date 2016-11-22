@@ -115,6 +115,7 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
+   unsigned int          issimplified:1;     /**< did we simplify the expression tree already? */
 
    SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 
@@ -2326,15 +2327,16 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    SCIPdebugMsg(scip, "  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
-   /* mark constraint to be propagated again */
+   /* mark constraint to be propagated and simplified again */
    /* TODO: we only need to re-propagate if SCIP_EVENTTYPE_BOUNDTIGHTENED, but we need to reevaluate
     * the intervals (forward-propagation) when SCIP_EVENTTYPE_BOUNDRELAXED
     * at some point we should start using the intevaltag for this
     */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
-      SCIPdebugMsg(scip, "  propagate %s again\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "  propagate and simplify %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
+      consdata->issimplified = FALSE;
    }
 
    return SCIP_OKAY;
@@ -2519,15 +2521,19 @@ static
 SCIP_RETCODE simplifyConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss              /**< total number of constraints */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            success             /**< pointer to store whether an expression has been simplified */
    )
 {
-   int i;
    SCIP_CONSDATA* consdata;
+   int i;
 
    assert(scip != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* simplify each constraint's expression */
    for( i = 0; i < nconss; ++i )
@@ -2537,11 +2543,15 @@ SCIP_RETCODE simplifyConstraints(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( consdata->expr != NULL )
+      if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
 
+         /* TODO check whether something has changed because of SCIPsimplifyConsExprExpr */
+         *success = TRUE;
+
          SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consdata->expr, &simplified) );
+         consdata->issimplified = TRUE;
 
          /* If root expression changed, then we need to take care updating the locks as well (the consdata is the one holding consdata->expr "as a child").
           * If root expression did not change, some subexpression may still have changed, but the locks were taking care of in the corresponding SCIPreplaceConsExprExprChild() call.
@@ -4317,6 +4327,17 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 
    if( nconss > 0 )
    {
+      SCIP_Bool success;
+
+      /* simplify constraints */
+      SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
+
+      /* replace common subexpressions */
+      if( success )
+      {
+         SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+      }
+
       /* tell SCIP that we have something nonlinear */
       SCIPenableNLP(scip);
    }
@@ -4737,6 +4758,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
+   SCIP_Bool success;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4749,10 +4771,13 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    *result = SCIP_DIDNOTFIND;
 
    /* simplify constraints */
-   SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
+   SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
 
    /* replace common subexpressions */
-   SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+   if( success )
+   {
+      SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+   }
 
    /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
     * been changed after simplification; now we completely recollect all variable expression and variable events
