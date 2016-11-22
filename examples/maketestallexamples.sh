@@ -53,14 +53,14 @@ for OPT in ${OPTS[@]}
 do
     for LPS in ${LPSOLVERS[@]}
     do
-	LPILIB=../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
+	LPILIB=../lib/static/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
 	if test ! -e $LPILIB
 	then
 	    echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
 	    echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"."
 	    exit 1
 	fi
-	SCIPLIB=../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
+	SCIPLIB=../lib/static/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
 	if test ! -e $SCIPLIB
 	then
 	    echo "Error: "$SCIPLIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
