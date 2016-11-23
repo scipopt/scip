@@ -10,6 +10,8 @@ features:
 - added adaptive solving behavior of SCIP based on solving phases and heuristic transitions, if enabled via "solvingphases/enabled"
 - new presolving step for variables contained in a single quadratic constraint with proper square coefficients
 - can now solve relaxations within probing
+- will now enforce relaxation solution instead of lp or pseudosolution if lowerbound is better and the whole lp is included in the relaxation
+- in case of multiple relaxators the best solution is saved instead of the last one
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
 - new target "dll" to build Windows dlls with MSVC
@@ -89,6 +91,9 @@ interface:
   Alternatively, local instead of global bounds can be used for compression.
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
+- new optional callback CONSENFORELAX for enforcement of relaxation solutions
+- new parameter fulllpinfo for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear rows and can be
+  enforced
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
 - next to the number of found solution, also the number of new best solutions is now printed for each heuristic

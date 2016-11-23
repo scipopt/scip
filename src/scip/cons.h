@@ -99,6 +99,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -219,6 +220,22 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
    SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls enforcing method of constraint handler for a relaxation solution for all constraints added after last
+ *  conshdlrResetEnfo() call
+ */
+extern
+SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             relaxsol,           /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -784,6 +801,15 @@ extern
 SCIP_RETCODE SCIPconsEnfolp(
    SCIP_CONS*            cons,               /**< constraint to enforce */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** enforces single constraint for a given relaxation solution */
+SCIP_RETCODE SCIPconsEnforelax(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< solution to be enforced */
    SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
