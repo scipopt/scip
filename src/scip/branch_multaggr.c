@@ -68,7 +68,7 @@ struct SCIP_BranchruleData
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
-   int                   skipsize;           /**< sizze of skipdown and skipup array */
+   int                   skipsize;           /**< size of skipdown and skipup array */
    SCIP_Bool*            skipdown;           /**< should be branching on down child be skipped? */
    SCIP_Bool*            skipup;             /**< should be branching on up child be skipped? */
 #ifdef SCIP_STATISTIC
@@ -706,10 +706,11 @@ SCIP_DECL_BRANCHEXIT(branchExitMultAggr)
    )
    if( branchruledata->skipdown != NULL )
    {
-      SCIPfreeMemoryArray(scip, &branchruledata->skipup);
-      SCIPfreeMemoryArray(scip, &branchruledata->skipdown);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize);
+      SCIPfreeblockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize);
       branchruledata->skipdown = NULL;
       branchruledata->skipup = NULL;
+      branchruledata->skipsize = 0;
    }
    return SCIP_OKAY;
 }
@@ -1050,6 +1051,7 @@ SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    /* create multaggr branching rule data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipsize = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
    SCIPstatistic(branchruledata->ratioggain = NULL);

@@ -53,8 +53,9 @@ struct SCIP_BranchruleData
                                               *   branching (only with propagation)? */
    SCIP_Bool             forcestrongbranch;  /**< should strong branching be applied even if there is just a single candidate? */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
-   SCIP_Bool*            skipdown;
-   SCIP_Bool*            skipup;
+   int                   skipsize;           /**< size of skipdown and skipup array */
+   SCIP_Bool*            skipdown;           /**< should be branching on down child be skipped? */
+   SCIP_Bool*            skipup;             /**< should be branching on up child be skipped? */
 };
 
 
@@ -86,8 +87,8 @@ SCIP_DECL_BRANCHFREE(branchFreeFullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipdown, branchruledata->skipsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipup, branchruledata->skipsize);
 
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -124,11 +125,11 @@ SCIP_DECL_BRANCHEXIT(branchExitFullstrong)
 
    if( branchruledata->skipdown != NULL )
    {
-      SCIPfreeMemoryArray(scip, &branchruledata->skipup);
-      SCIPfreeMemoryArray(scip, &branchruledata->skipdown);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize);
       branchruledata->skipdown = NULL;
       branchruledata->skipup = NULL;
-
+      branchruledata->skipsize = 0;
    }
 
    return SCIP_OKAY;
@@ -565,15 +566,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    if( branchruledata->skipdown == NULL )
    {
-      int nvars;
-      nvars = SCIPgetNVars(scip);
-
       assert(branchruledata->skipup == NULL);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
-      BMSclearMemoryArray(branchruledata->skipdown, nvars);
-      BMSclearMemoryArray(branchruledata->skipup, nvars);
+      branchruledata->skipsize = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize) );
+      BMSclearMemoryArray(branchruledata->skipdown, branchruledata->skipsize);
+      BMSclearMemoryArray(branchruledata->skipup, branchruledata->skipsize);
    }
 
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
@@ -647,6 +646,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    /* create fullstrong branching rule data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipsize = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
 
