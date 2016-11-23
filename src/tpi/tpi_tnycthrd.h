@@ -40,6 +40,11 @@
 #define SCIPtpiBroadcastCondition(condition)  ( cnd_broadcast(condition) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
 #define SCIPtpiWaitCondition(condition, lock) ( cnd_wait((condition), (lock)) == thrd_success ? SCIP_OKAY: SCIP_ERROR )
 
+
+extern _Thread_local int _threadnumber;
+
+#define SCIPtpiGetThreadNum()                 _threadnumber
+
 #endif
 
 #endif

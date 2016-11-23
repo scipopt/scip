@@ -27,7 +27,7 @@
 
 typedef struct SCIP_ThreadPool SCIP_THREADPOOL;
 static SCIP_THREADPOOL* _threadpool = NULL;
-_Thread_local static int threadnumber;
+_Thread_local int _threadnumber;
 
 /** A job added to the queue */
 struct SCIP_Job
@@ -87,7 +87,7 @@ int threadPoolThread(
    SCIP_JOB* prevjob;
    SCIP_JOB* currjob;
 
-   threadnumber = (int)(size_t) threadnum;
+   _threadnumber = (int)(size_t) threadnum;
 
    /* Increase the number of active threads */
    SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
@@ -264,6 +264,7 @@ SCIP_RETCODE createThreadPool(
       SCIP_CALL( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)(size_t)i) );
    }
 
+   _threadnumber = nthreads;
    /* halt while all threads are not active TODO: is synchronization required here ? */
    /*TODO: this caused a deadlock, is it important to wait for all threads to start?
     * while( (*thrdpool)->currworkingthreads != nthreads )
@@ -524,14 +525,6 @@ int SCIPtpiGetNumThreads(
    )
 {
    return _threadpool->nthreads;
-}
-
-/** returns the thread number */
-int SCIPtpiGetThreadNum(
-   void
-   )
-{
-   return threadnumber;
 }
 
 /** initializes tpi */
