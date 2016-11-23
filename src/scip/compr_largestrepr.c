@@ -610,7 +610,7 @@ SCIP_RETCODE applyCompression(
       return SCIP_OKAY;
 
    /* set references to the root node */
-   for(r = 0; r < comprdata->nrepresentatives; r++)
+   for( r = 0; r < comprdata->nrepresentatives; r++ )
       SCIPreoptnodeSetParentID(comprdata->representatives[r], 0);
 
    success = FALSE;

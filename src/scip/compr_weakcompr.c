@@ -196,7 +196,7 @@ SCIP_RETCODE constructCompression(
    SCIP_CALL( SCIPallocBufferArray(scip, &nconss, size) );
 
    /* get data of nodes */
-   for(k = size-1; k < 1; k++)
+   for( k = size-1; k < 1; k++ )
    {
       SCIP_REOPTNODE* reoptnode;
       int mem_vars;
@@ -245,7 +245,7 @@ SCIP_RETCODE constructCompression(
       assert(mem_conss == nconss[k]);
 
 #ifdef SCIP_DEBUG
-      for(c = 0; c < mem_conss; c++)
+      for( c = 0; c < mem_conss; c++ )
          assert(conss_nvars[k][c] <= SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
 #endif
 
@@ -286,12 +286,12 @@ SCIP_RETCODE constructCompression(
 
       /* create a representative at position 1 with fixed branching path */
       assert(SCIPreoptnodeGetNVars(comprdata->representatives[pos_repr_fix]) == 0);
-      for(r = pos_repr_fix; r < comprdata->nrepresentatives; r++)
+      for( r = pos_repr_fix; r < comprdata->nrepresentatives; r++ )
       {
          /* copy the branching path to all representatives */
          assert(comprdata->representatives[r] != NULL);
 
-         for(v = 0; v < nvars[0]; v++)
+         for( v = 0; v < nvars[0]; v++ )
          {
             SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[r], vars[0][v],
                   vals[0][v], SCIPisFeasEQ(scip, vals[0][v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER) );
@@ -310,7 +310,7 @@ SCIP_RETCODE constructCompression(
    assert(0 <= pos_repr_fix && pos_repr_fix < comprdata->nrepresentatives);
 
    /* create nconss[0] nodes for the added constraints */
-   for(k = 0; k < nconss[0]; k++)
+   for( k = 0; k < nconss[0]; k++ )
    {
       SCIP_Bool linear;
       int v;
@@ -322,14 +322,14 @@ SCIP_RETCODE constructCompression(
       /* create a node with fixed bounds corresponding to constraint at position k */
 
       /* fix the branching path */
-      for(v = 0; v < conss_nvars[0][k]; v++)
+      for( v = 0; v < conss_nvars[0][k]; v++ )
       {
          SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[pos_repr_fix], conss_var[0][k][v],
                conss_val[0][k][v], SCIPisFeasEQ(scip, conss_val[0][k][v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER) );
       }
 
       /* add this constraint to all further representatives */
-      for(r = pos_repr_fix+1; r < comprdata->nrepresentatives; r++)
+      for( r = pos_repr_fix+1; r < comprdata->nrepresentatives; r++ )
       {
          SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k],
                conss_boundtypes[0][k], 1.0, SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_DUALREDS, linear) );
@@ -345,7 +345,7 @@ SCIP_RETCODE constructCompression(
    SCIPdebugMsg(scip, "-> found representation of size %d.\n", comprdata->nrepresentatives);
 
    /* free memory */
-   for(k = size-1; k >= 0; k--)
+   for( k = size-1; k >= 0; k-- )
    {
       SCIPfreeBufferArray(scip, &conss_nvars[k]);
       SCIPfreeBufferArray(scip, &conss_val[k]);
@@ -391,7 +391,7 @@ SCIP_RETCODE applyCompression(
       return SCIP_OKAY;
 
    /* set references to the root node */
-   for(r = 0; r < comprdata->nrepresentatives; r++)
+   for( r = 0; r < comprdata->nrepresentatives; r++ )
       SCIPreoptnodeSetParentID(comprdata->representatives[r], 0);
 
    success = FALSE;
