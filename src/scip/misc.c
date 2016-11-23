@@ -6622,19 +6622,23 @@ SCIP_RETCODE ensureSuccessorsSize(
    assert(idx >= 0);
    assert(idx < digraph->nnodes);
    assert(newsize > 0);
+   assert(digraph->successorssize[idx] == 0 || digraph->successors[idx] != NULL);
+   assert(digraph->successorssize[idx] == 0 || digraph->arcdata[idx] != NULL);
 
    /* check whether array is big enough, and realloc, if needed */
    if( newsize > digraph->successorssize[idx] )
    {
-      if( digraph->successorssize[idx] == 0 )
+      if( digraph->successors[idx] == NULL )
       {
+         assert(digraph->arcdata[idx] == NULL);
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
-         digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
+         assert(digraph->arcdata[idx] != NULL);
+         digraph->successorssize[idx] = MAX(newsize, 2 * digraph->successorssize[idx]);
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }

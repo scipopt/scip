@@ -132,6 +132,7 @@ fixed bugs:
 - avoid numerically troublesome aggregations
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
+- fixed memory bug in SCIP_DIGRAPH
 
 misc:
 - dropped support for Ipopt < 3.11
