@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_SPI_H__
-#define __STRUCT_SPI_H__
+#ifndef __STRUCT_SYNCSTORE_H__
+#define __STRUCT_SYNCSTORE_H__
 
 #include "scip/type_syncstore.h"
 #include "tpi/type_tpi.h"
@@ -109,5 +109,9 @@ struct SCIP_BoundStore {
    int                     nbndchg;            /**< the number of boundchanges stored in this bound store */
    int                     bndchgsize;         /**< the size of the bound change array */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

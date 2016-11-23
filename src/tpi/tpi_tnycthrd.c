@@ -27,6 +27,7 @@
 
 typedef struct SCIP_ThreadPool SCIP_THREADPOOL;
 static SCIP_THREADPOOL* _threadpool = NULL;
+_Thread_local static int threadnumber;
 
 /** A job added to the queue */
 struct SCIP_Job
@@ -47,15 +48,6 @@ struct SCIP_JobQueue
 };
 typedef struct SCIP_JobQueue SCIP_JOBQUEUE;
 
-/** A thread */
-struct SCIP_Thread
-{
-   int                   threadid;           /**< identifier of the thread */
-   thrd_t                thread;             /**< the thread of the struct */
-};
-typedef struct SCIP_Thread SCIP_THREAD;
-
-
 /** The thread pool */
 struct SCIP_ThreadPool
 {
@@ -64,7 +56,7 @@ struct SCIP_ThreadPool
    int                   queuesize;          /**< the total number of items to enter the queue */
 
    /* Current pool state */
-   SCIP_THREAD*          threads;            /**< the threads included in the pool */
+   thrd_t*               threads;            /**< the threads included in the pool */
    SCIP_JOBQUEUE*        jobqueue;           /**< the job queue */
    SCIP_JOBQUEUE*        currentjobs;        /**< the jobs currently being processed on a thread.
                                                   Only a single job is allowed per thread. */
@@ -88,14 +80,14 @@ struct SCIP_ThreadPool
 /** this function controls the execution of each of the threads */
 static
 int threadPoolThread(
-   void*                 args                /**< argument is required for the thread start function of tinycthreads/C11 threads */
+   void*                 threadnum           /**< thread number is passed in as argument stored inside a void pointer */
    )
 {
    SCIP_JOB* newjob;
    SCIP_JOB* prevjob;
    SCIP_JOB* currjob;
 
-   SCIP_UNUSED( args );
+   threadnumber = (int)(size_t) threadnum;
 
    /* Increase the number of active threads */
    SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
@@ -239,12 +231,14 @@ SCIP_RETCODE createThreadPool(
    (*thrdpool)->jobqueue->lastjob = NULL;
    (*thrdpool)->jobqueue->njobs = 0;
 
-   SCIP_ALLOC( BMSallocMemory(&(*thrdpool)->currentjobs) );  /** allocating memory for the job queue */
+   /* allocating memory for the job queue */
+   SCIP_ALLOC( BMSallocMemory(&(*thrdpool)->currentjobs) );
    (*thrdpool)->currentjobs->firstjob = NULL;
    (*thrdpool)->currentjobs->lastjob = NULL;
    (*thrdpool)->currentjobs->njobs = 0;
 
-   SCIP_ALLOC( BMSallocMemory(&(*thrdpool)->finishedjobs) );  /** allocating memory for the job queue */
+   /* allocating memory for the job queue */
+   SCIP_ALLOC( BMSallocMemory(&(*thrdpool)->finishedjobs) );
    (*thrdpool)->finishedjobs->firstjob = NULL;
    (*thrdpool)->finishedjobs->lastjob = NULL;
    (*thrdpool)->finishedjobs->njobs = 0;
@@ -260,12 +254,14 @@ SCIP_RETCODE createThreadPool(
 
    /* creating the threads */
    (*thrdpool)->currworkingthreads = 0;
-   SCIP_ALLOC( BMSallocMemoryArray(&((*thrdpool)->threads), nthreads) );   /* allocating memory for the threads */
 
+   /* allocating memory for the threads */
+   SCIP_ALLOC( BMSallocMemoryArray(&((*thrdpool)->threads), nthreads) );
+
+   /* create the threads */
    for( i = 0; i < nthreads; i++ )
    {
-      (*thrdpool)->threads[i].threadid = i;
-      SCIP_CALL( thrd_create(&((*thrdpool)->threads[i].thread), threadPoolThread, (void*)(*thrdpool)) );
+      SCIP_CALL( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)(size_t)i) );
    }
 
    /* halt while all threads are not active TODO: is synchronization required here ? */
@@ -405,11 +401,10 @@ SCIP_RETCODE freeThreadPool(
    int          i;
    SCIP_RETCODE retcode;
 
-   SCIP_THREAD* threads;
+   /*TODO remove argument? */
+   SCIP_UNUSED( finishjobs );
 
    SCIP_CALL( SCIPtpiAcquireLock(&((*thrdpool)->poollock)) );
-
-   threads = (*thrdpool)->threads;
 
    /* if the shutdown is already in progress, then we don't need to completed this function */
    if( !(*thrdpool)->queueopen || (*thrdpool)->shutdown )
@@ -449,7 +444,7 @@ SCIP_RETCODE freeThreadPool(
    {
       int thrdretcode;
 
-      if( thrd_join(threads[i].thread, &thrdretcode) != thrd_success )
+      if( thrd_join((*thrdpool)->threads[i], &thrdretcode) != thrd_success )
          retcode = MIN(SCIP_ERROR, retcode);
       else
          retcode = MIN(thrdretcode, retcode);
@@ -536,20 +531,7 @@ int SCIPtpiGetThreadNum(
    void
    )
 {
-   int i;
-   thrd_t current;
-
-   current = thrd_current();
-
-   for( i = 0; i < _threadpool->nthreads; ++i )
-   {
-      if( thrd_equal(current, _threadpool->threads[i].thread) )
-         return _threadpool->threads[i].threadid;
-   }
-
-   /* TODO probably the master thread is not in the thread list of the pool? */
-   SCIPABORT();
-   return -1;
+   return threadnumber;
 }
 
 /** initializes tpi */
