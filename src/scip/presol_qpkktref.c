@@ -1708,7 +1708,7 @@ SCIP_DECL_PRESOLFREE(presolFreeQPKKTref)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -1977,7 +1977,7 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
    SCIP_PRESOL* presol= NULL;
 
    /* alloc presolve data object */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
