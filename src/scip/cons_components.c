@@ -19,9 +19,9 @@
  *
  * This constraint handler looks for independent components.
  */
-//#define DETAILED_OUTPUT
-//#define SCIP_DEBUG
-//#define SCIP_MORE_DEBUG
+/*#define DETAILED_OUTPUT*/
+/*#define SCIP_DEBUG*/
+/*#define SCIP_MORE_DEBUG*/
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -35,15 +35,15 @@
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -9999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYPROP         TRUE /**< should propagation method be delayed, if other propagators found reductions? */
 
-#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
-#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
 #define DEFAULT_MAXDEPTH              0      /**< maximum depth of a node to run components detection  (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
@@ -51,14 +51,13 @@
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems during presolving */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
-#define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
-                                              *   to allow running again during presolving (1.0: do not run again) */
 #define DEFAULT_FEASTOLFACTOR       1.0      /**< default value for parameter to increase the feasibility tolerance in all sub-SCIPs */
 
 /*
  * Data structures
  */
 
+/** data related to one problem (see below) */
 typedef struct Problem PROBLEM;
 
 /** data related to one component */
@@ -106,22 +105,25 @@ struct Problem
 };
 
 
-/** cosntraint handler data */
+/** constraint handler data */
 struct SCIP_ConshdlrData
 {
    SCIP_Longint          nodelimit;          /**< maximum number of nodes to be solved in subproblems */
    SCIP_Real             intfactor;          /**< the weight of an integer variable compared to binary variables */
-   SCIP_Real             reldecrease;        /**< percentage by which the number of variables has to be decreased after the last component solving
-                                              *  to allow running again (1.0: do not run again) */
    SCIP_Real             feastolfactor;      /**< parameter to increase the feasibility tolerance in all sub-SCIPs */
    SCIP_Bool             didsearch;          /**< did the presolver already search for components? */
    SCIP_Bool             pluginscopied;      /**< was the copying of the plugins successful? */
    SCIP_Bool             writeproblems;      /**< should the single components be written as an .cip-file? */
-   int                   maxintvars;         /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
-   int                   maxdepth;           /**< maximum depth of a node to run components detection  (-1: disable component detection during solving) */
-   int                   minsize;            /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
-   SCIP_Real             minrelsize;         /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
-   int                   subscipdepth;       /**< depth offset of the current (sub-)problem compared to the original problem */
+   int                   maxintvars;         /**< maximum number of integer (or binary) variables to solve a subproblem
+                                              *   directly (-1: no solving) */
+   int                   maxdepth;           /**< maximum depth of a node to run components detection (-1: disable
+                                              *   component detection during solving) */
+   int                   minsize;            /**< minimum absolute size (in terms of variables) to solve a component
+                                              *   individually during branch-and-bound */
+   SCIP_Real             minrelsize;         /**< minimum relative size (in terms of variables) to solve a component
+                                              *   individually during branch-and-bound */
+   int                   subscipdepth;       /**< depth offset of the current (sub-)problem compared to the original
+                                              *   problem */
 };
 
 
@@ -141,8 +143,6 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
    comp1 = (COMPONENT*)elem1;
    comp2 = (COMPONENT*)elem2;
 
-   scip = comp1->problem->scip;
-
    if( comp1->ncalls == 0 )
       if( comp2->ncalls == 0 )
          return comp1->number - comp2->number;
@@ -156,6 +156,13 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
     */
    gap1 = SQR(comp1->lastprimalbound - comp1->lastdualbound) / comp1->ncalls;
    gap2 = SQR(comp2->lastprimalbound - comp2->lastdualbound) / comp2->ncalls;
+
+   assert(comp1->problem != NULL);
+   assert(comp1->problem == comp2->problem);
+   assert(comp1->problem->scip == comp2->problem->scip);
+
+   scip = comp1->problem->scip;
+   assert(scip != NULL);
 
    if( SCIPisFeasGT(scip, gap1, gap2) )
       return -1;
@@ -173,6 +180,8 @@ int getMinsize(
    )
 {
    int minsize;
+
+   assert(conshdlrdata != NULL);
 
    minsize = conshdlrdata->minrelsize * SCIPgetNVars(scip);
    minsize = MAX(minsize, conshdlrdata->minsize);
@@ -249,6 +258,7 @@ SCIP_RETCODE freeComponent(
       SCIPfreeMemoryArray(scip, &(*component)->vars);
       SCIPfreeMemoryArray(scip, &(*component)->subvars);
    }
+
    assert(((*component)->fixedvars != NULL) == ((*component)->fixedsubvars != NULL));
    if( (*component)->fixedvars != NULL )
    {
@@ -286,6 +296,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
    subscip = component->subscip;
    assert(subscip != NULL);
+   assert(SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM);
 
    /* the solution should live in the primal, not the origprimal, of the sub-SCIP, so we need to transform it first */
    SCIP_CALL( SCIPtransformProb(subscip) );
@@ -329,11 +340,12 @@ SCIP_RETCODE componentSetupWorkingSol(
             assert(SCIPisZero(subscip, SCIPvarGetObj(subvar)) ||
                SCIPisEQ(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)));
 
-            /* locally fixed variable */
+            /* variable is gloablly fixed in sub-SCIP, so it was locally fixed in the main-SCIP */
             if( SCIPisEQ(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)) )
             {
-               component->fixedvarsobjsum += SCIPvarGetLbGlobal(subvar) * SCIPvarGetObj(subvar);
+               assert(SCIPisEQ(scip, SCIPvarGetLbLocal(sourcevars[v]), SCIPvarGetUbLocal(sourcevars[v])));
 
+               component->fixedvarsobjsum += SCIPvarGetLbGlobal(subvar) * SCIPvarGetObj(subvar);
                component->fixedvars[index] = sourcevars[v];
                component->fixedsubvars[index] = subvar;
                ++index;
@@ -408,6 +420,9 @@ SCIP_RETCODE createSubscip(
 {
    SCIP_Bool success;
 
+   assert(conshdlrdata != NULL);
+
+   /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(subscip) );
 
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
@@ -421,8 +436,6 @@ SCIP_RETCODE createSubscip(
       SCIP_CONSHDLRDATA* newconshdlrdata;
 #ifdef SCIP_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
-
-      SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
 #endif
 
       /* copy parameter settings */
@@ -440,10 +453,11 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
 
-      /* reduce the effort spent for hash tables;
-       * however, if the debug solution is enabled and valid in this subtree, we need hash tables
+      /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
+       * hash tables are needed for installing the debug solution
        */
 #ifdef SCIP_DEBUG_SOLUTION
+      SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
       if( !isvalid )
 #endif
       {
@@ -521,7 +535,7 @@ SCIP_RETCODE copyToSubscip(
 
       /* abort if variable was not successfully copied */
       if( !(*success) )
-         goto TERMINATE;
+         return SCIP_OKAY;
    }
    assert(nvars == SCIPgetNOrigVars(subscip));
 
@@ -538,16 +552,10 @@ SCIP_RETCODE copyToSubscip(
 
       /* abort if constraint was not successfully copied */
       if( !(*success) )
-         goto TERMINATE;
+         return SCIP_OKAY;
 
       SCIP_CALL( SCIPaddCons(subscip, newcons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
-   }
-
- TERMINATE:
-   if( !(*success) )
-   {
-      SCIP_CALL( SCIPfreeTransform(subscip) );
    }
 
    return SCIP_OKAY;
@@ -556,7 +564,7 @@ SCIP_RETCODE copyToSubscip(
 /** create the sub-SCIP for a given component */
 static
 SCIP_RETCODE componentCreateSubscip(
-   COMPONENT*            component,          /**< pointer to component structure */
+   COMPONENT*            component,          /**< component structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_HASHMAP*         varmap,             /**< variable hashmap used to improve performance */
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
@@ -573,14 +581,14 @@ SCIP_RETCODE componentCreateSubscip(
    assert(component != NULL);
    assert(consmap != NULL);
    assert(conss != NULL);
+   assert(success != NULL);
+   assert(component->nvars > 0);
 
    problem = component->problem;
    assert(problem != NULL);
 
    scip = problem->scip;
    assert(scip != NULL);
-
-   assert(component->nvars > 0);
 
    (*success) = TRUE;
 
@@ -801,7 +809,7 @@ SCIP_RETCODE solveAndEvalSubscip(
 
          /* the solution value of at least one variable is feasible with a relative tolerance of feasibility epsilon,
           * but infeasible with an absolute tolerance of epsilon; try to set the variables to the bounds and check
-          * solution again (changing the values might now introduce infeasibilities of constraints)
+          * solution again in the original space (changing the values might now introduce infeasibilities of constraints)
           */
          if( !feasible )
          {
@@ -815,12 +823,10 @@ SCIP_RETCODE solveAndEvalSubscip(
 
             SCIP_CALL( SCIPcreateOrigSol(subscip, &sol, NULL) );
 
-            /* get values of variables in the optimal solution */
+            /* set solution values of variables */
             for( i = 0; i < nvars; ++i )
             {
-               subvar = subvars[i];
-
-               SCIP_CALL( SCIPsetSolVal(subscip, sol, subvar, fixvals[i]) );
+               SCIP_CALL( SCIPsetSolVal(subscip, sol, subvars[i], fixvals[i]) );
             }
 
             /* check the solution; integrality and bounds should be fulfilled and do not have to be checked */
@@ -937,8 +943,8 @@ SCIP_RETCODE solveAndEvalSubscip(
 /** (continues) solving a connected component */
 static
 SCIP_RETCODE solveComponent(
-   COMPONENT*            component,
-   SCIP_Bool             lastcomponent,
+   COMPONENT*            component,          /**< component structure */
+   SCIP_Bool             lastcomponent,      /**< is this the last component to be solved? */
    SCIP_RESULT*          result              /**< pointer to store the result of the solving process */
    )
 {
@@ -993,13 +999,15 @@ SCIP_RETCODE solveComponent(
       }
 #endif
 
-      if( SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM || SCIPisLT(subscip, SCIPgetSolOrigObj(subscip, compsol), SCIPgetPrimalbound(subscip)) )
+      if( SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM
+         || SCIPisLT(subscip, SCIPgetSolOrigObj(subscip, compsol), SCIPgetPrimalbound(subscip)) )
       {
          SCIP_Bool feasible;
 
          SCIPdebugMessage("install new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
             SCIPgetProbName(subscip), problem->name,
-            SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM ? SCIPinfinity(subscip) : SCIPgetPrimalbound(subscip), SCIPgetSolOrigObj(subscip, compsol));
+            SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM ? SCIPinfinity(subscip) : SCIPgetPrimalbound(subscip),
+            SCIPgetSolOrigObj(subscip, compsol));
 
          SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, FALSE, FALSE) );
          if( feasible )
@@ -1014,7 +1022,8 @@ SCIP_RETCODE solveComponent(
           * better solutions in other components. Therefore, the only cutoffbound we can apply is the cutoffbound
           * of the problem reduced by the dual bounds of the other components
           */
-         if( problem->nlowerboundinf == 0 || (problem->nlowerboundinf == 1 && SCIPisInfinity(scip, -component->lastdualbound)) )
+         if( problem->nlowerboundinf == 0 || (problem->nlowerboundinf == 1
+               && SCIPisInfinity(scip, -component->lastdualbound)) )
          {
             SCIP_Real newcutoffbound = SCIPgetSolTransObj(scip, bestsol);
 
@@ -1071,13 +1080,7 @@ SCIP_RETCODE solveComponent(
          gaplimit = 0.1;
 
       if( lastcomponent )
-      {
-         int verblevel;
-
-         SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &verblevel) );
-
          gaplimit = 0.0;
-      }
    }
 
    SCIP_CALL( solveSubscip(scip, subscip, nodelimit, gaplimit) );
@@ -1376,7 +1379,7 @@ static
 SCIP_RETCODE sortComponents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   SCIP_DIGRAPH*         digraph,
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    SCIP_CONS**           conss,              /**< constraints */
    SCIP_VAR**            vars,               /**< variables */
    int*                  varcomponent,       /**< component numbers for the variables */
@@ -1510,6 +1513,7 @@ SCIP_RETCODE createAndSplitProblem(
 
    /* init subproblem data structure */
    SCIP_CALL( initProblem(scip, problem, fixedvarsobjsum, ncomponents) );
+   assert((*problem)->components != NULL);
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
    SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * compstartsconss[ncomponents]) );
@@ -2326,7 +2330,6 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          if( !success )
          {
             SCIPhashmapFree(&varmap);
-            SCIP_CALL( SCIPfreeTransform(subscip) );
             continue;
          }
 
@@ -2474,10 +2477,6 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          "constraints/" CONSHDLR_NAME "/intfactor",
          "the weight of an integer variable compared to binary variables",
          &conshdlrdata->intfactor, FALSE, DEFAULT_INTFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/" CONSHDLR_NAME "/reldecrease",
-         "percentage by which the number of variables has to be decreased after the last component solving to allow running again during presolving (1.0: do not run again)",
-         &conshdlrdata->reldecrease, FALSE, DEFAULT_RELDECREASE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/" CONSHDLR_NAME "/feastolfactor",
          "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
