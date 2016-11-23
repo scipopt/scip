@@ -408,10 +408,10 @@ SCIP_RETCODE constructCompression(
 
          /* free memory */
          SCIPfreeMemoryArray(scip, &common_vars);
-         SCIPfreeBufferArray(scip, &idx_common_vars);
-         SCIPfreeBufferArray(scip, &idx_non_zero);
 
          SCIPfreeBufferArray(scip, &covered_ids);
+         SCIPfreeBufferArray(scip, &idx_non_zero);
+         SCIPfreeBufferArray(scip, &idx_common_vars);
       }
 
      TERMINATE:
@@ -611,7 +611,7 @@ SCIP_DECL_COMPRFREE(comprFreeLargestrepr)
    comprdata = SCIPcomprGetData(compr);
    assert(comprdata != NULL);
 
-   SCIPfreeMemory(scip, &comprdata);
+   SCIPfreeBlockMemory(scip, &comprdata);
    SCIPcomprSetData(compr, NULL);
 
    return SCIP_OKAY;
@@ -707,7 +707,7 @@ SCIP_RETCODE SCIPincludeComprLargestrepr(
    SCIP_COMPR* compr;
 
    /* create largestrepr tree compression data */
-   SCIP_CALL( SCIPallocMemory(scip, &comprdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &comprdata) );
    assert(comprdata != NULL);
    comprdata->initialized = FALSE;
 

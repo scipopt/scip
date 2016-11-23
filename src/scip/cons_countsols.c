@@ -618,7 +618,11 @@ SCIP_RETCODE collectSolution(
    int nvars;
    int v;
 
-   /* ensure size of solution array */
+   /* ensure size of solution array
+    *
+    * we use normal memory instead of block memory because this plugin is rarely used and the size of 'solutions'
+    * can be arbitrary large and the change that the other blocks can be used is quite small
+    */
    if( conshdlrdata->nsolutions == conshdlrdata->ssolutions )
    {
       if( conshdlrdata->ssolutions == 0 )
