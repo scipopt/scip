@@ -855,7 +855,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGauge)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -1038,7 +1038,7 @@ SCIP_RETCODE SCIPincludeSepaGauge(
    SCIP_SEPA* sepa;
 
    /* create gauge separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* this sets all data in sepadata to 0 */
    BMSclearMemory(sepadata);
