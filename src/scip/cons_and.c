@@ -19,7 +19,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This constraint handler deals with AND-constraint. These are constraint of the form:
+ * This constraint handler deals with AND-constraints. These are constraint of the form:
  *
  * \f[
  *    r = x_1 \wedge x_2 \wedge \dots  \wedge x_n
@@ -151,7 +151,7 @@ typedef enum Proprule PROPRULE;
 static
 SCIP_RETCODE lockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< AND-constraint */
+   SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
@@ -165,7 +165,7 @@ SCIP_RETCODE lockRounding(
 static
 SCIP_RETCODE unlockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< AND-constraint */
+   SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
@@ -4964,7 +4964,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -5141,7 +5141,7 @@ SCIP_VAR* SCIPgetResultantAnd(
    return consdata->resvar;
 }
 
-/** return if the variables of the AND-constraint are sorted due to their indices */
+/** return if the variables of the AND-constraint are sorted with respect to their indices */
 SCIP_Bool SCIPisAndConsSorted(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5165,7 +5165,7 @@ SCIP_Bool SCIPisAndConsSorted(
    return consdata->sorted;
 }
 
-/** sort the variables of the AND-constraint due to their indices */
+/** sort the variables of the AND-constraint with respect to their indices */
 SCIP_RETCODE SCIPsortAndCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

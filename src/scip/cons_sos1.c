@@ -10622,7 +10622,7 @@ int SCIPgetNSOS1Vars(
 
 /** returns whether variable is part of the SOS1 conflict graph */
 SCIP_Bool SCIPvarIsSOS1(
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */
    )
 {

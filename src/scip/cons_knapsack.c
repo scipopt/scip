@@ -951,8 +951,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
-   SCIP_Bool*            success             /**< pointer to store if an error occured during solving(normally a memory
-                                              *   problem) */
+   SCIP_Bool*            success             /**< pointer to store if an error occured during solving
+                                              *   (normally a memory problem) */
    )
 {
    SCIP_RETCODE retcode;
@@ -5481,7 +5481,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
-   SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -5694,7 +5694,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_SEPA*            sepa,               /**< originating separator of the knapsack problem, or NULL */
    int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
    SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
-   SCIP_Real*            knapvals,           /**< coefficient of the variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficients of the variables in the continuous knapsack constraint */
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
@@ -13147,7 +13147,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    int                   nvars,              /**< number of items in the knapsack */
    SCIP_VAR**            vars,               /**< array with item variables */
    SCIP_Longint*         weights,            /**< array with item weights */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Longint          capacity,           /**< capacity of knapsack (right hand side of inequality) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -13164,7 +13164,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

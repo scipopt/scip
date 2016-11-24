@@ -175,7 +175,7 @@ unsigned int SCIPnodeGetReoptID(
 EXTERN
 void SCIPnodeSetReopttype(
    SCIP_NODE*            node,               /**< node */
-   SCIP_REOPTTYPE        type                /**< reoptimization type */
+   SCIP_REOPTTYPE        reopttype           /**< reoptimization type */
    );
 
 /** sets a unique id to identify the node during reoptimization */
