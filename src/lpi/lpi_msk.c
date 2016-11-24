@@ -3317,17 +3317,15 @@ SCIP_RETCODE convertstat_mosek2scip(
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< ??? */
-   MSKstakeye*           sk,                 /**< ??? */
-   int                   n,                  /**< size */
+   MSKaccmodee           acc,                /**< whether constraints or variables are accessed */
+   MSKstakeye*           sk,                 /**< Mosek basis status */
+   int                   m,                  /**< size */
    int*                  stat                /**< status array */
    )
 {
    int i;
 
-   /* slacks are stored as -1 in Mosek, i.e., bounds are reversed compared to SCIP  */
-
-   for( i = 0; i < n; i++ )
+   for( i = 0; i < m; i++ )
    {
       double sl;
       double su;
@@ -3349,14 +3347,13 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          break;
       case MSK_SK_UNK:
       case MSK_SK_INF:
-      case MSK_SK_UPR: /* Reversed */
-         stat[i] = (int)SCIP_BASESTAT_LOWER;
-         break;
-      case MSK_SK_LOW: /* Reversed */
+      case MSK_SK_UPR:
          stat[i] = (int)SCIP_BASESTAT_UPPER;
          break;
-      case MSK_SK_END:
+      case MSK_SK_LOW:
+         stat[i] = (int)SCIP_BASESTAT_LOWER;
          break;
+      case MSK_SK_END:
       default:
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
