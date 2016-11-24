@@ -2748,8 +2748,11 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   MSKprostae prosta;
    MSKsolstae solsta;
+   MSKrescodee restat;
+#if MSK_VERSION_MAJOR < 7
+   MSKprostae prosta;
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2757,9 +2760,15 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
-   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
+#if MSK_VERSION_MAJOR >= 7
+   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+#else
+   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+#endif
 
-   return (solsta == MSK_SOL_STA_OPTIMAL);
+   if ( restat != MSK_RES_OK )
+      return FALSE;
+   return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
 /** gets information about primal and dual feasibility of the current LP solution */
