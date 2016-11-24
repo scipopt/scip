@@ -56,7 +56,7 @@
 #define EVENTHDLR_NAME         "knapsack"
 #define EVENTHDLR_DESC         "bound change event handler for knapsack constraints"
 #define EVENTTYPE_KNAPSACK SCIP_EVENTTYPE_LBCHANGED \
-                         | SCIP_EVENTTYPE_UBCHANGED \
+                         | SCIP_EVENTTYPE_UBTIGHTENED \
                          | SCIP_EVENTTYPE_VARFIXED \
                          | SCIP_EVENTTYPE_VARDELETED \
                          | SCIP_EVENTTYPE_IMPLADDED /**< variable events that should be caught by the event handler */
@@ -191,7 +191,6 @@ struct SCIP_ConsData
    SCIP_Longint          capacity;           /**< capacity of knapsack */
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
-   SCIP_Longint          zerosweightsum;     /**< sum of weights of variables fixed to zero */
    unsigned int          presolvedtiming:5;  /**< max level in which the knapsack constraint is already presolved */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
@@ -597,12 +596,9 @@ void updateWeightSums(
 
    if( SCIPvarGetLbLocal(var) > 0.5 )
       consdata->onesweightsum += weightdelta;
-   else if( SCIPvarGetUbLocal(var) < 0.5 )
-      consdata->zerosweightsum += weightdelta;
 
    assert(consdata->weightsum >= 0);
    assert(consdata->onesweightsum >= 0);
-   assert(consdata->zerosweightsum >= 0);
 }
 
 /** creates knapsack constraint data */
@@ -690,7 +686,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->row = NULL;
    (*consdata)->weightsum = 0;
    (*consdata)->onesweightsum = 0;
-   (*consdata)->zerosweightsum = 0;
    (*consdata)->ncliques = 0;
    (*consdata)->nnegcliques = 0;
    (*consdata)->presolvedtiming = 0;
@@ -7295,7 +7290,6 @@ SCIP_RETCODE applyFixings(
       }
    }
    assert(consdata->onesweightsum == 0);
-   assert(consdata->zerosweightsum == 0);
 
    SCIPdebugMsg(scip, "after applyFixings, before merging:\n");
    SCIPdebugPrintCons(scip, cons, NULL);
@@ -7676,7 +7670,6 @@ SCIP_RETCODE propagateCons(
          SCIPfreeBufferArray(scip, &myvars);
       }
 
-
       assert(consdata->negcliquepartitioned || minweightsum == 0);
    }
    while( FALSE );
@@ -7744,13 +7737,26 @@ SCIP_RETCODE propagateCons(
       }
    }
 
-   assert(consdata->onesweightsum + consdata->zerosweightsum <= consdata->weightsum);
-
-   /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
-   if( !SCIPconsIsModifiable(cons) && consdata->weightsum - consdata->zerosweightsum <= consdata->capacity )
+   /* check if the knapsack is now redundant */
+   if( !SCIPconsIsModifiable(cons) )
    {
-      SCIPdebugMsg(scip, " -> knapsack constraint <%s> is redundant: weightsum=%" SCIP_LONGINT_FORMAT ", zerosweightsum=%" SCIP_LONGINT_FORMAT ", capacity=%" SCIP_LONGINT_FORMAT "\n",
-         SCIPconsGetName(cons), consdata->weightsum, consdata->zerosweightsum, consdata->capacity);
+      SCIP_Longint unfixedweightsum = consdata->onesweightsum;
+
+      /* sum up the weights of all unfixed variables, plus the weight sum of all variables fixed to one already */
+      for( i = 0; i < nvars; ++i )
+      {
+         if( SCIPvarGetLbLocal(consdata->vars[i]) + 0.5 < SCIPvarGetUbLocal(consdata->vars[i]) )
+         {
+            unfixedweightsum += consdata->weights[i];
+
+            /* the weight sum is larger than the capacity, so the constraint is not redundant */
+            if( unfixedweightsum > consdata->capacity )
+               return SCIP_OKAY;
+         }
+      }
+      /* we summed up all (unfixed and fixed to one) weights and did not exceed the capacity, so the constraint is redundant */
+      SCIPdebugMsg(scip, " -> knapsack constraint <%s> is redundant: weightsum=%" SCIP_LONGINT_FORMAT ", unfixedweightsum=%" SCIP_LONGINT_FORMAT ", capacity=%" SCIP_LONGINT_FORMAT "\n",
+         SCIPconsGetName(cons), consdata->weightsum, unfixedweightsum, consdata->capacity);
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       *redundant = TRUE;
    }
@@ -8292,7 +8298,6 @@ void normalizeWeights(
    assert(consdata != NULL);
    assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
    assert(consdata->onesweightsum == 0); /* all fixed variables should have been removed */
-   assert(consdata->zerosweightsum == 0);
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars >= 1);
 
@@ -10346,7 +10351,6 @@ SCIP_RETCODE tightenWeights(
    assert(consdata != NULL);
    assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
    assert(consdata->onesweightsum == 0); /* all fixed variables should have been removed */
-   assert(consdata->zerosweightsum == 0);
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
 
@@ -13000,13 +13004,9 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
    case SCIP_EVENTTYPE_LBRELAXED:
       consdata->onesweightsum -= eventdata->weight;
       break;
-   case SCIP_EVENTTYPE_UBRELAXED:
-      consdata->zerosweightsum -= eventdata->weight;
-      break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       consdata->presolvedtiming = 0;
       SCIP_CALL( SCIPmarkConsPropagate(scip, eventdata->cons) );
-      consdata->zerosweightsum += eventdata->weight;
       break;
    case SCIP_EVENTTYPE_VARFIXED:  /* the variable should be removed from the constraint in presolving */
       if( !consdata->existmultaggr )
