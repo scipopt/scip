@@ -12598,7 +12598,7 @@ SCIP_RETCODE SCIPclearConflictStore(
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
    assert(SCIPeventGetSol(event) != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcleanConflictStoreBoundexceeding", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcleanConflictStore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictstoreCleanNewIncumbent(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
          scip->transprob, scip->primal->cutoffbound) );
@@ -37864,7 +37864,7 @@ SCIP_Bool SCIPisDualSolAvailable(
 
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintDualSolAvailable", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisDualSolAvailable", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
    {

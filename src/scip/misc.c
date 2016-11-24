@@ -1341,9 +1341,11 @@ static int primetable[] = {
 };
 static const int primetablesize = sizeof(primetable)/sizeof(int);
 
-/**< simple and fast 2-universal hash function using multiply and shift */
+/** simple and fast 2-universal hash function using multiply and shift */
 static
-uint32_t hashvalue(uint64_t input)
+uint32_t hashvalue(
+   uint64_t              input               /**< key value */
+   )
 {
    return ( (uint32_t) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
 }

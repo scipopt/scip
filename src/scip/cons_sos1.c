@@ -2047,7 +2047,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
    int                   givennode,          /**< node of the conflict graph */
    int                   nonznode,           /**< node of the conflict graph that is implied to be nonzero if given node is nonzero */
    SCIP_Real*            impllbs,            /**< current lower variable bounds if given node is nonzero (update possible) */
-   SCIP_Real*            implubs,             /**< current upper variable bounds if given node is nonzero (update possible) */
+   SCIP_Real*            implubs,            /**< current upper variable bounds if given node is nonzero (update possible) */
    SCIP_Bool*            implnodes,          /**< indicates which variables are currently implied to be nonzero if given node is nonzero (update possible) */
    int*                  naddconss,          /**< pointer to store number of added SOS1 constraints */
    int*                  probingdepth,       /**< pointer to store current probing depth */
