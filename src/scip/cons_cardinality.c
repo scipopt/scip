@@ -2246,7 +2246,7 @@ SCIP_DECL_CONSFREE(consFreeCardinality)
       SCIPhashmapFree(&conshdlrdata->varhash);
    }
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -3072,7 +3072,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->branchcard = TRUE;
    conshdlrdata->eventhdlr = NULL;
    conshdlrdata->varhash = NULL;
