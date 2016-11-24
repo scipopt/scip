@@ -112,6 +112,8 @@ SCIP_RETCODE performTest(
    cr_assert( nrows == ntmprows );
    cr_assert( ncols == ntmpcols );
 
+   cr_assert( ! SCIPlpiWasSolved(lpi) );
+
    /* solve problem */
    if ( solveprimal )
    {
