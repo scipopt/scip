@@ -332,10 +332,14 @@ endif
 #-------------------------------------------------------
 # define flags for Mosek
 ifeq ($(LPS),msk)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT) \
-			$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT) \
+			$(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+ifneq ($(LINKRPATH),)
+MOSEKDIR	= 	$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)))
+LPSLDFLAGS	+=      $(LINKRPATH)$(MOSEKDIR)
+endif
 endif
 
 #-------------------------------------------------------
