@@ -3796,8 +3796,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[inds[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+      assert( *ninds <= nrows );
    }
    else
    {
@@ -3816,6 +3818,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
