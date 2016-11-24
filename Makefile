@@ -688,7 +688,7 @@ ALLSRC		+=	$(MAINSRC)
 DLLFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).dll
 
 LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(GAMS)
-LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
+LASTSETTINGS	=	$(LIBDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
 # Rules
