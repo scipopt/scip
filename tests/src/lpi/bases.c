@@ -258,7 +258,6 @@ Test(complex, test1)
    int rstats[3];
    int basinds[3];
 
-
    /* solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
