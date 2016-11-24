@@ -18,14 +18,14 @@
  * @brief  constraint handler for cardinality constraints
  * @author Tobias Fischer
  *
- * This constraint handler handles a special type of logic constraints, namely cardinality constraints.
- * A cardinality constraint has the form
+ * This constraint handler handles cardinality constraints of the form
  * \f[
  *   |\mbox{supp}(x)| \leq b
  * \f]
- * with integer right-hand side \f$b\f$. The expression \f$|\mbox{supp}(x)|\f$ denotes the number of nonzero entries of
- * the vector \f$x\f$.
+ * with integer right-hand side \f$b\f$. Here, \f$|\mbox{supp}(x)|\f$ denotes the number of nonzero entries of the
+ * vector \f$x\f$.
  *
+ * Cardinality constraints generalize special ordered set of type one (SOS1) constraints in which \f$b = 1\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
