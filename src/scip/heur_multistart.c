@@ -648,7 +648,7 @@ SCIP_RETCODE solveNLP(
       SCIP_CALL( SCIPsetSolVal(scip, refpoint, vars[i], val / npoints) );
    }
 
-   /** round point for sub-NLP heuristic */
+   /* round point for sub-NLP heuristic */
    SCIP_CALL( SCIProundSol(scip, refpoint, success) );
    SCIPdebugMessage("rounding of refpoint successfully? %d\n", *success);
 

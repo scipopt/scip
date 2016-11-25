@@ -405,6 +405,20 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    SCIP_Real*            violation           /**< pointer to store violation of constraint */
    );
 
+/** get index of a linear variable of a nonlinear constraint that may be decreased without making any other constraint infeasible, or -1 if none */
+EXTERN
+int SCIPgetLinvarMayDecreaseNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** get index of a linear variable of a nonlinear constraint that may be increased without making any other constraint infeasible, or -1 if none */
+EXTERN
+int SCIPgetLinvarMayIncreaseNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** gets expression graph of nonlinear constraint handler */
 EXTERN
 SCIP_EXPRGRAPH* SCIPgetExprgraphNonlinear(

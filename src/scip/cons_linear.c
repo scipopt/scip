@@ -13638,7 +13638,7 @@ SCIP_RETCODE presolStuffing(
 
                maxcondactivity += val * lb;
                mincondactivity += val * lb;
-               swapped[nsingletons] = FALSE;
+               swapped[v] = FALSE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13657,7 +13657,7 @@ SCIP_RETCODE presolStuffing(
 
                maxcondactivity += val * ub;
                mincondactivity += val * ub;
-               swapped[nsingletons] = TRUE;
+               swapped[v] = TRUE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13742,7 +13742,7 @@ SCIP_RETCODE presolStuffing(
             ub = SCIPvarGetUbGlobal(var);
 
             assert(val > 0 || SCIPisPositive(scip, SCIPvarGetObj(var)));
-            assert((val < 0) == swapped[v]);
+            assert((val < 0) == swapped[idx]);
             val = REALABS(val);
 
             /* stop fixing if variable bounds are not finite */
@@ -13755,7 +13755,7 @@ SCIP_RETCODE presolStuffing(
             /* calculate the change in the row activities if this variable changes
              * its value from its worst to its best bound
              */
-            if( swapped[v] )
+            if( swapped[idx] )
                delta = -(lb - ub) * val;
             else
                delta =  (ub - lb) * val;
@@ -13764,7 +13764,7 @@ SCIP_RETCODE presolStuffing(
 
             if( SCIPisLE(scip, delta, rhs - maxcondactivity) )
             {
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
@@ -13787,7 +13787,7 @@ SCIP_RETCODE presolStuffing(
             else if( SCIPisGT(scip, rhs, maxcondactivity) )
             {
                SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
@@ -13807,7 +13807,7 @@ SCIP_RETCODE presolStuffing(
             }
             else if( SCIPisLE(scip, rhs, mincondactivity) )
             {
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
@@ -14550,6 +14550,77 @@ SCIP_RETCODE fullDualPresolve(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff = FALSE;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+
+   SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
+
+   /* check for violated constraints
+    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
+    */
+   *result = SCIP_FEASIBLE;
+
+   /* check all useful linear constraints for feasibility */
+   for( c = 0; c < nusefulconss; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+
+   /* check all obsolete linear constraints for feasibility */
+   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+   
+   SCIPdebugMsg(scip, "-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -15340,64 +15411,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool checkrelmaxabs;
-   SCIP_Bool violated;
-   SCIP_Bool cutoff = FALSE;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
-
-   /*SCIPdebugMsg(scip, "Enfolp method of linear constraints\n");*/
-
-   /* check for violated constraints
-    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
-    */
-   *result = SCIP_FEASIBLE;
-
-   /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss; ++c )
-   {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-         if ( cutoff )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
-
-   /* check all obsolete linear constraints for feasibility */
-   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
-   {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-         if ( cutoff )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
+{
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -16777,6 +16803,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
@@ -16983,8 +17010,8 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

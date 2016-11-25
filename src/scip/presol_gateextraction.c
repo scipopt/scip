@@ -349,7 +349,7 @@ SCIP_RETCODE createPresoldata(
 
    if( !presoldata->usefulsetppcexist )
    {
-      /* find set-packing constraints with exactly two varibales */
+      /* find set-packing constraints with exactly two variables */
       for( c = 0; c < nsetppcs; ++c )
       {
 	 assert(SCIPconsIsActive(setppcs[c]));
