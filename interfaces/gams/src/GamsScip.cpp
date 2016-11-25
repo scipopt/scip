@@ -45,7 +45,7 @@ SCIP_DECL_MESSAGEWARNING(GamsScipPrintLogStat)
    assert(file != NULL);
 
    if( file != stderr )
-      fprintf(file, msg);
+      fputs(msg, file);
    else
    {
       void* gev = (void*)SCIPmessagehdlrGetData(messagehdlr);
@@ -60,7 +60,7 @@ SCIP_DECL_MESSAGEINFO(GamsScipPrintLog)
    assert(file != NULL);
 
    if( file != stdout )
-      fprintf(file, msg);
+      fputs(msg, file);
    else
    {
       void* gev = (void*)SCIPmessagehdlrGetData(messagehdlr);
