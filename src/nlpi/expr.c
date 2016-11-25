@@ -14391,6 +14391,13 @@ void SCIPexprgraphDisableNode(
    if( !node->enabled )
       return;
 
+   /* workaround: don't disable nodes if there could be more users than the one who is disabling the node
+    * otherwise, if there are several nonlinear constraints using the same expression graph node as root node,
+    * we might get enabled constraints with disabled node
+    */
+   if( node->nuses > 1 )
+      return;
+
    /* if all parents of node are disabled, then also node can be disabled */
    node->enabled = FALSE;
    for( i = 0; i < node->nparents; ++i )
