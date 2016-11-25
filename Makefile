@@ -58,6 +58,8 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		GMP=$(GMP)\\n\
 		IPOPT=$(IPOPT)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
+		WORHP=$(WORHP)\\n\
+		WORHPOPT=$(WORHPOPT)\\n\
 		LPS=$(LPS)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
@@ -293,10 +295,15 @@ NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
 endif
 
 ifeq ($(IPOPT),true)
-NLPILIBSHORTNAME = $(NLPILIBSHORTNAME).ipopt
 NLPILIBCXXOBJ	+= 	nlpi/nlpi_ipopt.o
 else
 NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
+endif
+
+ifeq ($(WORHP),true)
+NLPILIBCXXOBJ	+= 	nlpi/nlpi_worhp.o
+else
+NLPILIBCOBJ	+= 	nlpi/nlpi_worhp_dummy.o
 endif
 
 NLPILIBSHORTNAME= 	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
@@ -371,6 +378,14 @@ SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\", \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/libipopt*\", ... should exist.\n"
 endif
 
+# WORHP only provides shared libraries
+ifeq ($(WORHP),true)
+SOFTLINKS	+=	$(LIBDIR)/include/worhpinc
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libworhp.$(SHAREDLIBEXT).1
+LPIINSTMSG	+=	"\n  -> \"worhpinc\" is a directory containing the path to the WORHP \"include\" directory."
+LPIINSTMSG	+=	"\n  -> \"libworhp.*\" is the path to the WORHP library, e.g., \"<WORHP-path>/lib/libworhp.$(SHAREDLIBEXT).1\".\n"
+endif
+
 ifeq ($(GAMS),true)
 GAMSDIR		=	$(LIBDIR)/gams.$(OSTYPE).$(ARCH).$(COMP)
 FLAGS		+=	-DWITH_GAMS=\"$(abspath $(GAMSDIR))\"
@@ -380,8 +395,7 @@ LPIINSTMSG	+=	"\n  -> \"$(GAMSDIR)\" is the path to the GAMS system directory"
 endif
 
 ifeq ($(SHARED),true)
-SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(ZLIB_LDFLAGS) $(GMP_LDFLAGS) $(READLINE_LDFLAGS) $(ZIMPLLIB) \
-			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(ZLIB_LDFLAGS) $(GMP_LDFLAGS) $(READLINE_LDFLAGS) $(ZIMPLLIB)
 endif
 
 
@@ -1183,6 +1197,12 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
+ifneq ($(IPOPT),$(LAST_IPOPT))
+		@-touch $(NLPILIBSRC)
+endif
+ifneq ($(WORHP),$(LAST_WORHP))
+		@-touch $(NLPILIBSRC)
+endif
 ifneq ($(GAMS),$(LAST_GAMS))
 		@-touch $(GAMSSRC)
 endif
@@ -1229,6 +1249,8 @@ endif
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
+		@echo "LAST_WORHP=$(WORHP)" >> $(LASTSETTINGS)
 		@echo "LAST_GAMS=$(GAMS)" >> $(LASTSETTINGS)
 		@echo "LAST_PARASCIP=$(PARASCIP)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
@@ -1332,6 +1354,11 @@ endif
 ifneq ($(IPOPT),true)
 ifneq ($(IPOPT),false)
 		$(error invalid IPOPT flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+endif
+endif
+ifneq ($(WORHP),true)
+ifneq ($(WORHP),false)
+		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)

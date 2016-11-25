@@ -191,6 +191,7 @@
 #include "scip/scipshell.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_worhp.h"
 
 #ifdef __cplusplus
 extern "C" {

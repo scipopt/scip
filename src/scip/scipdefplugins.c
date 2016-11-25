@@ -198,6 +198,14 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
    }
 
+   /* include NLPI's, if available */
+   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
+   }
+
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;

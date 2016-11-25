@@ -108,10 +108,12 @@ ZLIB		=	true
 GMP		=	true
 ZIMPL		=	auto
 IPOPT		=	false
+WORHP		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+WORHPOPT	=	opt
 LPSCHECK        =	false
 GAMS		=	false
 SPX_LEGACY  	=	false
@@ -458,7 +460,7 @@ LINKER		=	CPP
 # we require here Ipopt >= 3.10.0
 # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # - shared libraries are installed into the lib directory, so add this to the rpath
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
 IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
 LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
@@ -469,6 +471,19 @@ LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE)
 endif
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
+endif
+
+# define flags for WORHP
+ifeq ($(WORHP),true)
+FLAGS		+=	-DWITH_WORHP -I$(LIBDIR)/include/worhpinc
+LDFLAGS  += $(LINKCC_l)worhp
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)
+else
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)
+endif
+endif
 endif
 
 ifeq ($(EXPRINT),cppad)
