@@ -87,6 +87,8 @@ struct TCLIQUE_Graph
    int                   cliqueidssize;      /**< size of cliqueids array */
    int                   nnodes;             /**< number of nodes in graph */
    int                   tablewidth;         /**< number of unsigned ints per row in the table */
+
+   int                   maxnnodes;           /**< allocated memory for some arrays */
 };
 
 
@@ -105,17 +107,17 @@ SCIP_RETCODE tcliquegraphCreate(
 
    assert(tcliquegraph != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, tcliquegraph) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, tcliquegraph) );
 
    /* there are at most 2*nbinvars nodes in the graph */
    maxnnodes = 2*SCIPgetNBinVars(scip);
    assert(maxnnodes > 0);
 
    /* allocate memory for tclique graph arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*tcliquegraph)->vars, maxnnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*tcliquegraph)->weights, maxnnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*tcliquegraph)->adjnodesidxs, maxnnodes+1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*tcliquegraph)->cliqueidsidxs, maxnnodes+1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*tcliquegraph)->vars, maxnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*tcliquegraph)->weights, maxnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*tcliquegraph)->adjnodesidxs, maxnnodes+1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*tcliquegraph)->cliqueidsidxs, maxnnodes+1) );
    (*tcliquegraph)->adjnodesidxs[0] = 0;  /* the last slot defines the end of the last node */
    (*tcliquegraph)->cliqueidsidxs[0] = 0; /* the last slot defines the end of the last node */
    (*tcliquegraph)->adjnodes = NULL;
@@ -125,6 +127,7 @@ SCIP_RETCODE tcliquegraphCreate(
    (*tcliquegraph)->cliqueidssize = 0;
    (*tcliquegraph)->nnodes = 0;
    (*tcliquegraph)->tablewidth = 0;
+   (*tcliquegraph)->maxnnodes = maxnnodes;  /* remember allocated memory */
 
    return SCIP_OKAY;
 }
@@ -148,14 +151,14 @@ SCIP_RETCODE tcliquegraphFree(
    }
 
    /* free memory */
-   SCIPfreeMemoryArray(scip, &(*tcliquegraph)->vars);
-   SCIPfreeMemoryArray(scip, &(*tcliquegraph)->weights);
-   SCIPfreeMemoryArray(scip, &(*tcliquegraph)->adjnodesidxs);
-   SCIPfreeMemoryArray(scip, &(*tcliquegraph)->cliqueidsidxs);
+   SCIPfreeBlockMemoryArray(scip, &(*tcliquegraph)->vars, (*tcliquegraph)->maxnnodes);
+   SCIPfreeBlockMemoryArray(scip, &(*tcliquegraph)->weights, (*tcliquegraph)->maxnnodes);
+   SCIPfreeBlockMemoryArray(scip, &(*tcliquegraph)->adjnodesidxs, (*tcliquegraph)->maxnnodes + 1);
+   SCIPfreeBlockMemoryArray(scip, &(*tcliquegraph)->cliqueidsidxs, (*tcliquegraph)->maxnnodes + 1);
    SCIPfreeMemoryArrayNull(scip, &(*tcliquegraph)->adjnodes);
    SCIPfreeMemoryArrayNull(scip, &(*tcliquegraph)->cliqueids);
    SCIPfreeMemoryArrayNull(scip, &(*tcliquegraph)->cliquetable);
-   SCIPfreeMemory(scip, tcliquegraph);
+   SCIPfreeBlockMemory(scip, tcliquegraph);
 
    return SCIP_OKAY;
 }
