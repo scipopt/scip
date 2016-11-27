@@ -15,12 +15,12 @@
 
 /**@file   cons_and.h
  * @ingroup CONSHDLRS
- * @brief  Constraint handler for "and" constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
+ * @brief  Constraint handler for AND-constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This constraint handler deals with "and" constraint. These are constraint of the form:
+ * This constraint handler deals with AND-constraints. These are constraint of the form:
  *
  * \f[
  *    r = x_1 \wedge x_2 \wedge \dots  \wedge x_n
@@ -124,41 +124,41 @@ SCIP_VAR* SCIPgetResultantAnd(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** return if the variables of the and-constraint are sorted due to their indices */
+/** return if the variables of the AND-constraint are sorted with respect to their indices */
 EXTERN
 SCIP_Bool SCIPisAndConsSorted(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< and-constraint */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** sort the variables of the and-constraint due to their indices */
+/** sort the variables of the AND-constraint with respect to their indices */
 EXTERN
 SCIP_RETCODE SCIPsortAndCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< and-constraint */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** when 'upgrading' the given and-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
- *  the check flag of this and-constraint is set to FALSE?
+/** when 'upgrading' the given AND-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
+ *  the check flag of this AND-constraint is set to FALSE?
  */
 EXTERN
 SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be checked,
-                                              *   even if the check flag of the and-constraint is set to FALSE
+   SCIP_Bool             flag                /**< should an arising constraint from the given AND-constraint be checked,
+                                              *   even if the check flag of the AND-constraint is set to FALSE
                                               */
    );
 
-/** when 'upgrading' the given and-constraint, should the removable flag for the upgraded constraint be set to FALSE,
- *  even if the removable flag of this and-constraint is set to TRUE?
+/** when 'upgrading' the given AND-constraint, should the removable flag for the upgraded constraint be set to FALSE,
+ *  even if the removable flag of this AND-constraint is set to TRUE?
  */
 EXTERN
 SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Bool             flag                /**< should an arising constraint from the given and-constraint be not
-                                              *   removable, even if the removable flag of the and-constraint is set to
+   SCIP_Bool             flag                /**< should an arising constraint from the given AND-constraint be not
+                                              *   removable, even if the removable flag of the AND-constraint is set to
                                               *   TRUE
                                               */
    );

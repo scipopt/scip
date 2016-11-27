@@ -1663,6 +1663,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    SCIP_Real testval;
    const char* varname;
    int i;
+   SCIP_Real testval;
 
    assert(scip != NULL);
    assert(var != NULL);

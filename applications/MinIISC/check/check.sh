@@ -28,13 +28,14 @@ CONTINUE=${11}
 LOCK=${12}
 VERSION=${13}
 LPS=${14}
-VALGRIND=${15}
+DEBUGTOOL=${15}
 CLIENTTMPDIR=${16}
 REOPT=${17}
 OPTCOMMAND=${18}
 SETCUTOFF=${19}
 MAXJOBS=${20}
 VISUALIZE=${21}
+PERMUTE=${22}
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
@@ -54,7 +55,7 @@ then
     echo "LOCK          = $LOCK"
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
-    echo "VALGRIND      = $VALGRIND"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
@@ -68,7 +69,7 @@ fi
 # of passed settings, etc
 TIMEFORMAT="sec"
 MEMFORMAT="kB"
-. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
 INIT="true"
 COUNT=0
@@ -94,7 +95,7 @@ do
         PERMUTE=0
         QUEUE=`hostname`
         # infer the names of all involved files from the arguments
-        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
+        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE 0 $SETNAME $TSTNAME $CONTINUE $QUEUE $p 0
 
         if test "$INSTANCE" = "DONE"
         then
@@ -130,7 +131,7 @@ do
 
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./$CONFFILE $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+        . ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
             $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
 
         # additional environment variables needed by run.sh
@@ -139,7 +140,7 @@ do
 
         if test "$SOLVER" = "scip"
         then
-            export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+            export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
         else
             export EXECNAME=$BINNAME
         fi
