@@ -196,9 +196,9 @@ SCIP_Real getPotentialContributed(
 {
    SCIP_Real potential;
 
-   asert(NULL != scip);
-   asert(NULL != sol);
-   asert(NULL != var);
+   assert(NULL != scip);
+   assert(NULL != sol);
+   assert(NULL != var);
 
    if( 0 > sgn * coefficient )
    {
@@ -290,7 +290,7 @@ SCIP_Bool tryFixVar(
 
       sgn = 1;
 
-      if( SCIPisFeasZero(slack[rowindex]) )
+      if( SCIPisFeasZero(scip, slack[rowindex]) )
       {
          continue;
       }
@@ -708,7 +708,7 @@ SCIP_RETCODE applyRepair(
          }
       #ifndef NDEBUG
          else
-            assert(!SCIPisInfinity(scip, -lhs));
+            assert(!SCIPisInfinity(scip, lhs));
       #endif
 
          pos = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
