@@ -3757,7 +3757,7 @@ SCIP_RETCODE focusnodeToLeaf(
    assert(tree->focusnode->active);
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
-   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to leaf at depth %d\n",
+   SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to leaf at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    SCIP_CALL( nodeToLeaf(&tree->focusnode, blkmem, set, stat, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound));

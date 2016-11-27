@@ -45,7 +45,7 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
-#define DEFAULT_MAXDEPTH              0      /**< maximum depth of a node to run components detection  (-1: disable component detection during solving) */
+#define DEFAULT_MAXDEPTH              0      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
 #define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
@@ -82,6 +82,7 @@ typedef struct Component
    int                   lastbestsolindex;   /**< index of last best solution transferred to this component from the main problem */
    int                   nvars;              /**< number of variables belonging to this component */
    int                   nfixedvars;         /**< number of fixed variables copied during constraint copying */
+   int                   fixedvarssize;      /**< size of fixedvars and fixedsubvars arrays */
    int                   number;             /**< component number */
 } COMPONENT;
 
@@ -225,6 +226,7 @@ SCIP_RETCODE initComponent(
    component->lastbestsolindex = -1;
    component->nvars = 0;
    component->nfixedvars = 0;
+   component->fixedvarssize = 0;
    component->number = problem->ncomponents;
 
    ++problem->ncomponents;
@@ -255,15 +257,15 @@ SCIP_RETCODE freeComponent(
    assert(((*component)->vars != NULL) == ((*component)->subvars != NULL));
    if( (*component)->vars != NULL )
    {
-      SCIPfreeMemoryArray(scip, &(*component)->vars);
-      SCIPfreeMemoryArray(scip, &(*component)->subvars);
+      SCIPfreeBlockMemoryArray(scip, &(*component)->vars, (*component)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*component)->subvars, (*component)->nvars);
    }
 
    assert(((*component)->fixedvars != NULL) == ((*component)->fixedsubvars != NULL));
    if( (*component)->fixedvars != NULL )
    {
-      SCIPfreeMemoryArray(scip, &(*component)->fixedsubvars);
-      SCIPfreeMemoryArray(scip, &(*component)->fixedvars);
+      SCIPfreeBlockMemoryArray(scip, &(*component)->fixedsubvars, (*component)->fixedvarssize);
+      SCIPfreeBlockMemoryArray(scip, &(*component)->fixedvars, (*component)->fixedvarssize);
    }
 
    /* free sub-SCIP belonging to this component and the working solution */
@@ -326,8 +328,9 @@ SCIP_RETCODE componentSetupWorkingSol(
       nnewvars = SCIPgetNOrigVars(subscip);
       nvars = component->nvars;
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedvars, nnewvars - nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedsubvars, nnewvars - nvars) );
+      component->fixedvarssize = nnewvars - nvars;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &component->fixedvars, component->fixedvarssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &component->fixedsubvars, component->fixedvarssize) );
 
       for( v = 0; v < nsourcevars; ++v )
       {
@@ -367,6 +370,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 #endif
       }
       component->nfixedvars = index;
+      assert(component->nfixedvars <= component->fixedvarssize);
       SCIPdebugMsg(scip, "%d locally fixed variables have been copied, objective contribution: %g\n",
          component->nfixedvars, component->fixedvarsobjsum);
    }
@@ -1004,7 +1008,7 @@ SCIP_RETCODE solveComponent(
       {
          SCIP_Bool feasible;
 
-         SCIPdebugMessage("install new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
+         SCIPdebugMessage("checking new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
             SCIPgetProbName(subscip), problem->name,
             SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM ? SCIPinfinity(subscip) : SCIPgetPrimalbound(subscip),
             SCIPgetSolOrigObj(subscip, compsol));
@@ -1012,7 +1016,7 @@ SCIP_RETCODE solveComponent(
          SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, FALSE, FALSE) );
          if( feasible )
          {
-            SCIPdebugMessage("... feasible\n");
+            SCIPdebugMessage("... feasible, adding solution.\n");
 
             SCIP_CALL( SCIPaddSol(subscip, compsol, &feasible) );
          }
@@ -1267,7 +1271,7 @@ SCIP_RETCODE initProblem(
    SCIP_CALL( SCIPallocBlockMemory(scip, problem) );
    assert(*problem != NULL);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*problem)->components, ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*problem)->components, ncomponents) );
    SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, (int)(1.1*ncomponents), 1.2, componentSort) );
 
    (*problem)->scip = scip;
@@ -1330,7 +1334,7 @@ SCIP_RETCODE freeProblem(
    }
    if( (*problem)->components != NULL )
    {
-      SCIPfreeMemoryArray(scip, &(*problem)->components);
+      SCIPfreeBlockMemoryArray(scip, &(*problem)->components, (*problem)->componentssize);
    }
 
    /* free priority queue */
@@ -1529,8 +1533,8 @@ SCIP_RETCODE createAndSplitProblem(
       /* get component variables and store them in component structure */
       compvars = &(sortedvars[compstartsvars[comp]]);
       component->nvars = compstartsvars[comp + 1 ] - compstartsvars[comp];
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &component->vars, compvars, component->nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &component->subvars, component->nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &component->vars, compvars, component->nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &component->subvars, component->nvars) );
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * component->nvars) );
 
       /* get component constraints */
@@ -1681,7 +1685,7 @@ SCIP_RETCODE fillDigraph(
    requiredsize = 0;
    nvars = SCIPgetNVars(scip);
 
-   /* use big buffer for storing active variables per constraint */
+   /* allocate buffer for storing active variables per constraint; size = nvars ensures that it will be big enough */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
 
    for( c = 0; c < nconss; ++c )
@@ -1797,9 +1801,12 @@ static
 SCIP_RETCODE findComponents(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< the components constraint handler data */
-   SCIP_Real*            fixedvarsobjsum,    /**< objective contribution of all locally fixed variables, or NULL if fixed variables should not be disregarded */
-   SCIP_VAR**            sortedvars,         /**< array to store variables sorted by components, should have enough size for all variables */
-   SCIP_CONS**           sortedconss,        /**< array to store (checked) constraints sorted by components, should have enough size for all constraints */
+   SCIP_Real*            fixedvarsobjsum,    /**< objective contribution of all locally fixed variables, or NULL if
+                                              *   fixed variables should not be disregarded */
+   SCIP_VAR**            sortedvars,         /**< array to store variables sorted by components, should have enough size
+                                              *   for all variables */
+   SCIP_CONS**           sortedconss,        /**< array to store (checked) constraints sorted by components, should have
+                                              *   enough size for all constraints */
    int*                  compstartsvars,     /**< start points of components in sortedvars array */
    int*                  compstartsconss,    /**< start points of components in sortedconss array */
    int*                  nsortedvars,        /**< pointer to store the number of variables belonging to any component */
@@ -2035,7 +2042,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
 
    *result = SCIP_DIDNOTRUN;
 
-   /** @warning Don't run in probing or in repropagation since this can lead to wrong conclusion */
+   /* don't run in probing or in repropagation */
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
@@ -2394,6 +2401,7 @@ SCIP_DECL_CONSLOCK(consLockComponents)
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_CONSINITSOL(consInitsolComponents)
@@ -2402,15 +2410,7 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 
    return SCIP_OKAY;
 }
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-static
-SCIP_DECL_CONSEXITSOL(consExitsolComponents)
-{  /*lint --e{715}*/
-
-   return SCIP_OKAY;
-}
-
+#endif
 
 #define consEnfolpComponents NULL
 #define consEnfopsComponents NULL
@@ -2448,8 +2448,9 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING));
 
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, conshdlrFreeComponents) );
+#ifndef NDEBUG
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolComponents) );
-   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolComponents) );
+#endif
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyComponents, NULL) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteComponents) );
 
