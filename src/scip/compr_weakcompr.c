@@ -329,7 +329,7 @@ SCIP_RETCODE constructCompression(
       }
 
       /* add this constraint to all further representatives */
-      for( r = pos_repr_fix+1; r < comprdata->nrepresentatives; r++ )
+      for( r = pos_repr_fix + 1; r < comprdata->nrepresentatives; r++ )
       {
          SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k],
                conss_boundtypes[0][k], 1.0, SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_DUALREDS, linear) );

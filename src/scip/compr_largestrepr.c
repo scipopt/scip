@@ -217,7 +217,7 @@ SCIP_RETCODE constructCompression(
       SCIP_CALL( SCIPallocBufferArray(scip, &repvals, 2+comprdata->niters) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nrepvars, 2+comprdata->niters) );
 
-      SCIPdebugMsg(scip, "+---+ start round %d +---+\n", start_id+1);
+      SCIPdebugMsg(scip, "+---+ start round %d +---+\n", start_id + 1);
 
       /* try to find common representatives */
       while( nreps-1 <= comprdata->niters && (nreps == -1 || (current_id % nleaveids) != start_id) )
@@ -250,9 +250,9 @@ SCIP_RETCODE constructCompression(
          covered[current_id] = TRUE;
 
          /* find the next not covered id */
-         next_id = (current_id+1) % nleaveids ;
+         next_id = (current_id + 1) % nleaveids ;
          while( covered[next_id] && next_id != current_id )
-            next_id = (next_id+1) % nleaveids;
+            next_id = (next_id + 1) % nleaveids;
 
          if( next_id == current_id )
             goto TERMINATE;
@@ -498,7 +498,7 @@ SCIP_RETCODE constructCompression(
          /* add a constraint (corresponding to the branching path of k) to all representatives
           * in the subtree induced by the sibling of k
           */
-         for( r = k+1; r < comprdata->nrepresentatives; r++ )
+         for( r = k + 1; r < comprdata->nrepresentatives; r++ )
          {
             SCIP_VAR** pathvars;
             SCIP_Real* pathvals;
