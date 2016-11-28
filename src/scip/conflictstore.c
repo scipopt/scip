@@ -291,7 +291,7 @@ SCIP_RETCODE delPosConflict(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    int                   pos,                /**< position to remove */
    SCIP_Bool             delete              /**< should the conflict be deleted? */
-)
+   )
 {
    SCIP_CONS* conflict;
    int lastpos;
@@ -347,7 +347,7 @@ SCIP_RETCODE delPosDualray(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    int                   pos,                /**< position to remove */
    SCIP_Bool             delete              /**< should the dual ray be deleted? */
-)
+   )
 {
    SCIP_CONS* dualray;
    int lastpos;
@@ -610,17 +610,6 @@ SCIP_RETCODE SCIPconflictstoreFree(
    assert(conflictstore != NULL);
    assert(*conflictstore != NULL);
 
-   /* remove original constraints if present */
-   if( (*conflictstore)->origconfs != NULL )
-   {
-      int i;
-      for( i = 0; i < (*conflictstore)->norigconfs; i++ )
-      {
-         SCIP_CONS* conflict = (*conflictstore)->origconfs[i];
-         SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
-      }
-   }
-
    /* clear the storage */
    SCIP_CALL( SCIPconflictstoreClean(*conflictstore, blkmem, set, stat, reopt) );
 
@@ -645,10 +634,20 @@ SCIP_RETCODE SCIPconflictstoreClean(
    int i;
 
    assert(conflictstore != NULL);
-   assert(conflictstore->norigconfs == 0);
 
-   SCIPsetDebugMsg(set, "cleaning conflict store: %d conflicts, %d dual rays\n",
-         conflictstore->nconflicts, conflictstore->ndualrayconfs);
+   SCIPsetDebugMsg(set, "cleaning conflict store: %d origconfs, %d conflicts, %d dual rays\n",
+         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs);
+
+   /* remove original constraints if present */
+   if( conflictstore->origconfs != NULL )
+   {
+      for( i = 0; i < conflictstore->norigconfs; i++ )
+      {
+         SCIP_CONS* conflict = conflictstore->origconfs[i];
+         SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+      }
+      conflictstore->norigconfs = 0;
+   }
 
    if( conflictstore->conflicts != NULL )
    {

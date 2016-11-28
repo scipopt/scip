@@ -3050,6 +3050,8 @@ SCIP_DECL_CONSINITPRE(consInitpreOptcumulative)
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolOptcumulative NULL
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+#define consEnforelaxOptcomulative NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -4010,7 +4012,7 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
          consFreeOptcumulative, consInitOptcumulative, consExitOptcumulative,
          consInitpreOptcumulative, consExitpreOptcumulative, consInitsolOptcumulative, consExitsolOptcumulative,
          consDeleteOptcumulative, consTransOptcumulative, consInitlpOptcumulative,
-         consSepalpOptcumulative, consSepasolOptcumulative, consEnfolpOptcumulative, consEnfopsOptcumulative, consCheckOptcumulative,
+         consSepalpOptcumulative, consSepasolOptcumulative, consEnfolpOptcumulative, consEnforelaxOptcomulative, consEnfopsOptcumulative, consCheckOptcumulative,
          consPropOptcumulative, consPresolOptcumulative, consRespropOptcumulative, consLockOptcumulative,
          consActiveOptcumulative, consDeactiveOptcumulative,
          consEnableOptcumulative, consDisableOptcumulative,

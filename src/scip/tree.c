@@ -7099,7 +7099,7 @@ SCIP_Real SCIPnodeGetEstimate(
 
 /** gets the reoptimization type of this node */
 SCIP_REOPTTYPE SCIPnodeGetReopttype(
-   SCIP_NODE*            node                /**< node **/
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
