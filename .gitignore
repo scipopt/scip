@@ -39,6 +39,7 @@ lint/size-options.lnt
 
 localhooks/
 src/scip/githash.c
+src/scip/buildflags.c
 settings/
 unittests/check/results
 unittests/check/locks
