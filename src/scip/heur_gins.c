@@ -810,7 +810,7 @@ SCIP_RETCODE determineMaxDistance(
     */
    zeropos = -1;
 
-   /* todo: use selection method instead */
+   /* TODO: use selection method instead */
    SCIPsortedvecFindInt(distancescopy, 0, nrelevantdistances, &zeropos);
    assert(zeropos >= 0);
 
