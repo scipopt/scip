@@ -84,7 +84,7 @@ struct SCIP_HeurData
    SCIP_Real             subpresoltime;      /**< time for presolving the subscip */
    int                   runs;               /**< number of branch and bound runs performed to solve the subscip */
    int                   nviolatedvars;      /**< number of violated vars in the given solution */
-   int                   norvars;            /**< number of all vars in the given problem */
+   int                   norigvars;            /**< number of all vars in the given problem */
    SCIP_Real             relviolatedvars;    /**< relative number of violated vars */
    int                   nviolatedcons;      /**< number of violated cons in the given solution */
    int                   norcons;            /**< number of all cons in the given problem */
@@ -197,7 +197,6 @@ SCIP_Real getPotentialContributed(
    SCIP_Real potential;
 
    assert(NULL != scip);
-   assert(NULL != sol);
    assert(NULL != var);
 
    if( 0 > sgn * coefficient )
@@ -231,7 +230,7 @@ SCIP_Real getPotentialContributed(
 }
 
 /** finds out if a variable can be fixed with respect to the potentials of all rows, if it is possible, the potentials
- *  of rows are reduced and TRUE is returned.
+ *  of rows are adapted and TRUE is returned.
  */
 static
 SCIP_Bool tryFixVar(
@@ -254,7 +253,6 @@ SCIP_Bool tryFixVar(
    int rowindex;
 
    assert(NULL != scip);
-   assert(NULL != sol);
    assert(NULL != potential);
    assert(NULL != slack);
    assert(NULL != var);
@@ -294,7 +292,7 @@ SCIP_Bool tryFixVar(
       {
          continue;
       }
-      else if( SCIPisFeasGT(scip, 0 , slack[rowindex]) )
+      else if( SCIPisFeasGT(scip, 0.0 , slack[rowindex]) )
       {
          sgn = -1;
       }
@@ -473,7 +471,7 @@ SCIP_RETCODE applyRepair(
    SCIP_SOL* subsol = NULL;
    SCIP_HEURDATA* heurdata = NULL;
    SCIP_Real* potential = NULL;
-   SCIP_Real* slack = NULL;
+   SCIP_Real* slacks = NULL;
    SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
@@ -533,7 +531,7 @@ SCIP_RETCODE applyRepair(
       SCIP_Real ub;
       SCIP_Real lborig;
       SCIP_Real uborig;
-      SCIP_Real sla;
+      SCIP_Real varslack;
       SCIP_Real objval;
       SCIP_Real value;
       SCIP_VARTYPE vartype;
@@ -541,9 +539,9 @@ SCIP_RETCODE applyRepair(
       char slackvarname[SCIP_MAXSTRLEN];
       char consvarname[SCIP_MAXSTRLEN];
 
-      heurdata->norvars++;
+      heurdata->norigvars++;
 
-      sla = 0.0;
+      varslack = 0.0;
       lborig = SCIPvarGetLbGlobal(vars[i]);
       uborig = SCIPvarGetUbGlobal(vars[i]);
       value = SCIPgetSolVal(scip, sol, vars[i]);
@@ -555,7 +553,7 @@ SCIP_RETCODE applyRepair(
       if( heurdata->useslackvars && SCIPisFeasLT(scip, value, lborig) )
       {
          lb = value;
-         sla = lborig - value;
+         varslack = lborig - value;
          SCIPchgVarLbGlobal(subscip, subvars[i], lb);
       }
       else
@@ -567,7 +565,7 @@ SCIP_RETCODE applyRepair(
       if( heurdata->useslackvars && SCIPisFeasGT(scip, value, uborig) )
       {
          ub = value;
-         sla = uborig - value;
+         varslack = uborig - value;
          SCIPchgVarUbGlobal(subscip, subvars[i], ub);
       }
       else
@@ -582,7 +580,7 @@ SCIP_RETCODE applyRepair(
          objval = 0.0;
       }
       /* if a binary variable is out of bound, generalize it to an integer variable */
-      if( !SCIPisFeasZero(scip, sla) && SCIP_VARTYPE_BINARY == vartype )
+      if( !SCIPisFeasZero(scip, varslack) && SCIP_VARTYPE_BINARY == vartype )
       {
          vartype = SCIP_VARTYPE_INTEGER;
          SCIP_CALL( SCIPchgVarType(subscip, subvars[i], vartype, &success) );
@@ -597,7 +595,7 @@ SCIP_RETCODE applyRepair(
       SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
 
       /* if necessary adds a constraint to represent the original bounds of x.*/
-      if( !SCIPisFeasEQ(scip, sla, 0.0) )
+      if( !SCIPisFeasEQ(scip, varslack, 0.0) )
       {
          SCIP_VAR* newvar;
          (void) SCIPsnprintf(slackvarname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIPvarGetName(vars[i]));
@@ -618,7 +616,7 @@ SCIP_RETCODE applyRepair(
          SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
 
          /* adds a linear constraint to represent the old bounds */
-         SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, sla, lb, ub) );
+         SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, varslack, lb, ub) );
          SCIP_CALL( SCIPaddCons(subscip, cons) );
          SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
          SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -643,7 +641,7 @@ SCIP_RETCODE applyRepair(
    nrows = SCIPgetNLPRows(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &potential, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &slack, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &slacks, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subcons, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inftycounter, nrows) );
 
@@ -680,17 +678,17 @@ SCIP_RETCODE applyRepair(
       /* sets the slack if its necessary */
       if( SCIPisFeasLT(scip, rowsolact, lhs) )
       {
-         slack[i] = lhs - rowsolact;
+         slacks[i] = lhs - rowsolact;
          heurdata->nviolatedcons++;
       }
       else if( SCIPisFeasGT(scip, rowsolact, rhs) )
       {
-         slack[i] = rhs - rowsolact;
+         slacks[i] = rhs - rowsolact;
          heurdata->nviolatedcons++;
       }
       else
       {
-         slack[i] = 0.0;
+         slacks[i] = 0.0;
       }
 
       /* translate all variables from the original scip to the subscip with subscip variables. */
@@ -701,7 +699,7 @@ SCIP_RETCODE applyRepair(
          int sgn = 1;
 
          /* negative slack represents a right hand side violation */
-         if( SCIPisFeasGT(scip, 0.0, slack[i]) )
+         if( SCIPisFeasGT(scip, 0.0, slacks[i]) )
          {
             assert(!SCIPisInfinity(scip, rhs));
             sgn = -1;
@@ -726,7 +724,7 @@ SCIP_RETCODE applyRepair(
             inftycounter[i]++;
          }
 
-         if( !SCIPisZero(scip, slack[i]) )
+         if( !SCIPisZero(scip, slacks[i]) )
          {
             nviolatedrows[pos]++;
          }
@@ -743,13 +741,13 @@ SCIP_RETCODE applyRepair(
          char varname[SCIP_MAXSTRLEN];
 
          /*if necessary adds a new artificial slack variable*/
-         if( !SCIPisFeasEQ(subscip, slack[i], 0.0) )
+         if( !SCIPisFeasEQ(subscip, slacks[i], 0.0) )
          {
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIProwGetName(rows[i]));
             SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(subscip, newvar) );
             SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(subscip, subcons[i], newvar, slack[i]) );
+            SCIP_CALL( SCIPaddCoefLinear(subscip, subcons[i], newvar, slacks[i]) );
             SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
          }
       }
@@ -775,7 +773,7 @@ SCIP_RETCODE applyRepair(
       for( i = 0; i < nvars; ++i )
       {
          SCIPdebugMsg(scip,"Try to fix %s",SCIPvarGetName(vars[permutation[i]]));
-         if( tryFixVar(scip, sol, potential, slack, vars[permutation[i]], inftycounter, heurdata) )
+         if( tryFixVar(scip, sol, potential, slacks, vars[permutation[i]], inftycounter, heurdata) )
          {
             SCIP_Bool infeasible = FALSE;
             SCIP_Bool fixed = TRUE;
@@ -882,7 +880,7 @@ SCIP_RETCODE applyRepair(
          SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
       }
       SCIPfreeBufferArray(scip, &subvars);
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    success = FALSE;
@@ -915,7 +913,10 @@ SCIP_RETCODE applyRepair(
    }
    /* terminates the solving process  */
 TERMINATE:
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+if( NULL != sol )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   }
    SCIPfreeBufferArrayNull(scip, &nviolatedrows);
    for( i = 0; i < nvars; ++i )
    {
@@ -924,7 +925,7 @@ TERMINATE:
 
    SCIPfreeBufferArrayNull(scip, &inftycounter);
    SCIPfreeBufferArrayNull(scip, &subcons);
-   SCIPfreeBufferArrayNull(scip, &slack);
+   SCIPfreeBufferArrayNull(scip, &slacks);
    SCIPfreeBufferArrayNull(scip, &potential);
    SCIPfreeBufferArrayNull(scip, &permutation);
    SCIPfreeBufferArrayNull(scip, &subvars);
@@ -978,7 +979,7 @@ SCIP_DECL_HEURINIT(heurInitRepair)
    heurdata->runs = 0;
 
    heurdata->nviolatedvars = 0;
-   heurdata->norvars = 0;
+   heurdata->norigvars = 0;
    heurdata->relviolatedvars = 0;
    heurdata->nviolatedcons = 0;
    heurdata->norcons = 0;
@@ -1022,7 +1023,7 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
       violateds = heurdata->nviolatedvars+heurdata->nviolatedcons;
       ninvars = heurdata->nviolatedvars;
       ninvcons = heurdata->nviolatedcons;
-      nvars = heurdata->norvars;
+      nvars = heurdata->norigvars;
       ncons = heurdata->norcons;
       iterations = heurdata->subiters;
       nodes = heurdata->subnodes;
@@ -1038,12 +1039,12 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
          (void) SCIPsnprintf(solval, SCIP_MAXSTRLEN, "%15.9g", heurdata->orsolval);
       }
 
-      heurdata->relviolatedvars = MAX((SCIP_Real)heurdata->norvars, 1.0);
+      heurdata->relviolatedvars = MAX((SCIP_Real)heurdata->norigvars, 1.0);
       heurdata->relviolatedvars = heurdata->nviolatedvars/heurdata->relviolatedvars;
       heurdata->relviolatedcons = MAX((SCIP_Real)heurdata->norcons, 1.0);
       heurdata->relviolatedcons = heurdata->nviolatedcons/heurdata->relviolatedcons;
 
-      heurdata->relvarfixed = MAX((SCIP_Real)heurdata->norvars, 1.0);
+      heurdata->relvarfixed = MAX((SCIP_Real)heurdata->norigvars, 1.0);
       heurdata->relvarfixed = heurdata->nvarfixed/heurdata->relvarfixed;
       relvars = heurdata->relviolatedvars;
       relcons = heurdata->relviolatedcons;
@@ -1214,6 +1215,8 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       return SCIP_OKAY;
    }
    *result = SCIP_DIDNOTFIND;
+
+   SCIP_CALL( SCIPtrySolFree(scip, &(heurdata->infsol), FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 
    /* this "if" should not be necessary, has to be tested */
    if( heurdata->usevarfix || heurdata->useslackvars )
