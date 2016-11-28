@@ -60,9 +60,6 @@ struct SCIP_HeurData
  * Local methods
  */
 
-#define heurInitsolReoptsols NULL
-#define heurExitsolReoptsols NULL
-#define heurExitReoptsols NULL
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
