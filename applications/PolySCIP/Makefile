@@ -37,15 +37,17 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME        =       polyscip
-MAINOBJ         =       LiftedWeightSpaceSolver.o \
-			main.o \
-			ProbDataObjectives.o \
+MAINOBJ         =       cmd_line_args.o \
+			double_description_method.o \
+			polyscip.o \
+			prob_data_objectives.o \
 			ReaderMOP.o \
-			Skeleton.o \
-			WeightedSolver.o \
-			WeightSpaceVertex.o
+			weight_space_facet.o \
+			weight_space_polyhedron.o \
+			weight_space_vertex.o \
+			main.o
 
-MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
+MAINSRC		=	$(addprefix $(SRCDIR)/,PolySCIPConfig.h polyscip_types.h $(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
