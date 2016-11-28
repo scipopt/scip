@@ -1241,7 +1241,7 @@ $(LINKSMARKERFILE):
 		@$(MAKE) links
 
 .PHONY: links
-links:		| $(LIBDIR)/static $(LIBDIR)/shared $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
+links:		| $(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
 		@rm -f $(LINKSMARKERFILE)
 		@echo "this is only a marker" > $(LINKSMARKERFILE)
 
