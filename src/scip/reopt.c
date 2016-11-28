@@ -347,7 +347,7 @@ int soltreeNInducedSols(
    nsols = 0;
    sibling = solnode->child;
 
-   /* travers through the list */
+   /* traverse through the list */
    while( sibling != NULL )
    {
       nsols += soltreeNInducedSols(sibling);
@@ -382,7 +382,7 @@ SCIP_Real reoptSimilarity(
    norm_obj2 = 0.0;
 
    /* calc similarity */
-   for(v = 0; v < nvars; v++)
+   for( v = 0; v < nvars; v++ )
    {
       SCIP_VAR* origvar;
       SCIP_VAR* transvar;
@@ -451,13 +451,13 @@ SCIP_RETCODE reoptnodeDelete(
    assert(blkmem != NULL );
 
    /* delete data for constraints */
-   if((*reoptnode)->consssize > 0 )
+   if( (*reoptnode)->consssize > 0 )
    {
       int c;
 
       assert((*reoptnode)->conss != NULL);
 
-      for(c = 0; c < (*reoptnode)->nconss; c++)
+      for( c = 0; c < (*reoptnode)->nconss; c++ )
       {
          assert((*reoptnode)->conss[c]->vals != NULL);
          assert((*reoptnode)->conss[c]->vars != NULL);
@@ -584,7 +584,7 @@ SCIP_RETCODE reoptnodeReset(
       assert(reoptnode->conss != NULL);
       assert(reoptnode->consssize > 0);
 
-      for(c = 0; c < reoptnode->nconss; c++)
+      for( c = 0; c < reoptnode->nconss; c++ )
       {
          if( !reoptnode->conss[c]->linear )
          {
@@ -687,7 +687,7 @@ SCIP_RETCODE createSolTree(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &soltree->sols, DEFAULT_MEM_RUN) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &soltree->nsols, DEFAULT_MEM_RUN) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &soltree->solssize, DEFAULT_MEM_RUN) );
-   for(s = 0; s < DEFAULT_MEM_RUN; s++)
+   for( s = 0; s < DEFAULT_MEM_RUN; s++ )
    {
       soltree->nsols[s] = 0;
       soltree->solssize[s] = 0;
@@ -727,7 +727,7 @@ SCIP_RETCODE soltreefreeNode(
 
    child = (*solnode)->child;
 
-   /* travers through the list and free recursive all subtree */
+   /* traverse through the list and free recursive all subtree */
    while( child != NULL )
    {
       SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, &child) );
@@ -1055,7 +1055,7 @@ void soltreeResetMarks(
 
       child = node->child;
 
-      /* travers through the list of siblings */
+      /* traverse through the list of siblings */
       while( child != NULL )
       {
          soltreeResetMarks(child);
@@ -1085,7 +1085,7 @@ SCIP_RETCODE createReoptnode(
 
    SCIPsetDebugMsg(set, "create a reoptnode at ID %u\n", id);
 
-   if(reopttree->reoptnodes[id] == NULL )
+   if( reopttree->reoptnodes[id] == NULL )
    {
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopttree->reoptnodes[id]) ); /*lint !e866*/
 
@@ -1553,7 +1553,7 @@ SCIP_RETCODE transformIntoOrig(
    assert(reopt->reopttree->reoptnodes[id] != NULL );
 
    /* transform branching variables and bound changes applied before the first dual reduction */
-   for(varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
+   for( varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++ )
    {
       SCIP_Real constant;
       SCIP_Real scalar;
@@ -1561,7 +1561,7 @@ SCIP_RETCODE transformIntoOrig(
       scalar = 1;
       constant = 0;
 
-      if(!SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->vars[varnr]))
+      if( !SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->vars[varnr]) )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&reopt->reopttree->reoptnodes[id]->vars[varnr], &scalar, &constant)) ;
          reopt->reopttree->reoptnodes[id]->varbounds[varnr] = (reopt->reopttree->reoptnodes[id]->varbounds[varnr] - constant) / scalar;
@@ -1570,7 +1570,7 @@ SCIP_RETCODE transformIntoOrig(
    }
 
    /* transform bound changes affected by dual reduction */
-   for(varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++)
+   for( varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++ )
    {
       SCIP_Real constant;
       SCIP_Real scalar;
@@ -1578,7 +1578,7 @@ SCIP_RETCODE transformIntoOrig(
       scalar = 1;
       constant = 0;
 
-      if(!SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]))
+      if( !SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]) )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&reopt->reopttree->reoptnodes[id]->afterdualvars[varnr], &scalar, &constant)) ;
          reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr] = (reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr] - constant) / scalar;
@@ -1721,7 +1721,7 @@ SCIP_RETCODE moveChildrenUp(
       assert(reopt->reopttree->reoptnodes[childid]->varssize >= reopt->reopttree->reoptnodes[childid]->nvars + reopt->reopttree->reoptnodes[nodeid]->nvars);
 
       /* save branching information */
-      for(varnr = 0; varnr < reopt->reopttree->reoptnodes[nodeid]->nvars; varnr++)
+      for( varnr = 0; varnr < reopt->reopttree->reoptnodes[nodeid]->nvars; varnr++ )
       {
          nvars = reopt->reopttree->reoptnodes[childid]->nvars;
          reopt->reopttree->reoptnodes[childid]->vars[nvars] = reopt->reopttree->reoptnodes[nodeid]->vars[varnr];
@@ -1982,7 +1982,7 @@ SCIP_RETCODE reoptCheckLocalRestart(
          reopt->nlocrestarts = 0;
 
       /* since the stored objective functions are already normalize the dot-product is equivalent to the similarity */
-      for(v = 0; v < ntransvars; v++)
+      for( v = 0; v < ntransvars; v++ )
       {
          lb = SCIPvarGetLbLocal(transvars[v]);
          ub = SCIPvarGetUbLocal(transvars[v]);
@@ -2309,7 +2309,7 @@ SCIP_RETCODE saveLocalConssData(
    assert(id < reopttree->reoptnodessize);
 
    /* save the added pseudo-constraint */
-   if(SCIPnodeGetNAddedConss(node) > 0)
+   if( SCIPnodeGetNAddedConss(node) > 0 )
    {
       addedconsssize = SCIPnodeGetNAddedConss(node);
 
@@ -2325,7 +2325,7 @@ SCIP_RETCODE saveLocalConssData(
       SCIP_CALL( reoptnodeCheckMemory(reopttree->reoptnodes[id], set, blkmem, 0, 0, naddedconss) );
 
       /* since the first nconss are already stored in the data structure, we skip them */
-      for(c = nconss; c < naddedconss; c++)
+      for( c = nconss; c < naddedconss; c++ )
       {
          SCIP_CONSHDLR* conshdlr;
          SCIP_Bool islinear;
@@ -2429,7 +2429,7 @@ SCIP_RETCODE collectDualInformation(
       reopt->dualreds->linear = FALSE;
 
       /* transform the variables into the original space */
-      for(v = 0; v < nbndchgs; v++)
+      for( v = 0; v < nbndchgs; v++ )
       {
          SCIP_Real constant = 0.0;
          SCIP_Real scalar = 1.0;
@@ -2571,7 +2571,7 @@ SCIP_RETCODE addNode(
 
          parentid = SCIPnodeGetReoptID(parent);
 
-         /* travers along the branching path until reaching a node that is part of the reoptimization tree or the root node */
+         /* traverse along the branching path until reaching a node that is part of the reoptimization tree or the root node */
          while( SCIPnodeGetDepth(parent) > 0 && reopt->reopttree->reoptnodes[parentid] == NULL )
          {
             /* the parent node is not part of the reoptimization, reset the reoptid and reopttype of the parent node */
@@ -3457,14 +3457,14 @@ SCIP_RETCODE reoptMoveIDs(
    SCIPdebugMessage("move %d IDs: %u -> %u\n", nchilds_id1, id1, id2);
 
    /* move the ids */
-   for(c = 0; c < nchilds_id1; c++)
+   for( c = 0; c < nchilds_id1; c++ )
    {
 
 #ifdef SCIP_DEBUG
       {
          /* check that no id is added twice */
          int k;
-         for(k = 0; k < nchilds_id2; k++)
+         for( k = 0; k < nchilds_id2; k++ )
             assert(reopttree->reoptnodes[id2]->childids[k] != reopttree->reoptnodes[id1]->childids[c]);
       }
 #endif
@@ -3526,7 +3526,7 @@ SCIP_RETCODE changeAncestorBranchings(
       return SCIP_OKAY;
 
    /* change the bounds along the branching path */
-   for(v = 0; v < reoptnode->nvars; v++)
+   for( v = 0; v < reoptnode->nvars; v++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -3550,14 +3550,14 @@ SCIP_RETCODE changeAncestorBranchings(
 
       assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
 
-      if(boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb) && SCIPsetIsFeasLE(set, newbound, oldub))
+      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb) && SCIPsetIsFeasLE(set, newbound, oldub) )
       {
          SCIPvarAdjustLb(var, set, &newbound);
 
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
                tree, reopt, lp, branchcand, eventqueue, cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
-      else if(boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub) && SCIPsetIsFeasGE(set, newbound, oldlb))
+      else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub) && SCIPsetIsFeasGE(set, newbound, oldlb) )
       {
          SCIPvarAdjustUb(var, set, &newbound);
 
@@ -3575,7 +3575,7 @@ SCIP_RETCODE changeAncestorBranchings(
       SCIP_CALL( reoptnodeCheckMemory(reopttree->reoptnodes[id], set, blkmem, reoptnode->nvars + reoptnode->nafterdualvars, 0, 0) );
 
       /* change the bounds */
-      for(v = 0; v < reoptnode->nafterdualvars; v++)
+      for( v = 0; v < reoptnode->nafterdualvars; v++ )
       {
          SCIP_VAR* var;
          SCIP_Real val;
@@ -3600,7 +3600,7 @@ SCIP_RETCODE changeAncestorBranchings(
          oldub = SCIPvarGetUbLocal(var);
          newbound = val;
 
-         if(boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb) && SCIPsetIsFeasLE(set, newbound, oldub))
+         if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb) && SCIPsetIsFeasLE(set, newbound, oldub) )
          {
             SCIPvarAdjustLb(var, set, &newbound);
             SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
@@ -3608,7 +3608,7 @@ SCIP_RETCODE changeAncestorBranchings(
 
             bndchgd = TRUE;
          }
-         else if(boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub) && SCIPsetIsFeasGE(set, newbound, oldlb))
+         else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub) && SCIPsetIsFeasGE(set, newbound, oldlb) )
          {
             SCIPvarAdjustUb(var, set, &newbound);
             SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
@@ -3743,13 +3743,13 @@ SCIP_RETCODE addSplitcons(
       boundtype = (SCIP_BOUNDTYPE) (1 - (int)boundtype);
       assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
 
-      if(boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb) && SCIPsetIsFeasLE(set, newbound, oldub))
+      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb) && SCIPsetIsFeasLE(set, newbound, oldub) )
       {
          SCIPvarAdjustLb(var, set, &newbound);
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
                tree, reopt, lp, branchcand, eventqueue, cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
-      else if(boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub) && SCIPsetIsFeasGE(set, newbound, oldlb))
+      else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub) && SCIPsetIsFeasGE(set, newbound, oldlb) )
       {
          SCIPvarAdjustUb(var, set, &newbound);
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
@@ -3814,7 +3814,7 @@ SCIP_RETCODE addSplitcons(
       /* case 1: all variables are binary. we use a logic-or constraint. */
       if( reoptconsdata->nvars == nbinvars )
       {
-         for(v = 0; v < reoptconsdata->nvars; v++)
+         for( v = 0; v < reoptconsdata->nvars; v++ )
          {
             consvars[v] = reoptconsdata->vars[v];
             consval = reoptconsdata->vals[v];
@@ -3954,7 +3954,7 @@ SCIP_RETCODE fixBounds(
    /* ensure that the arrays to store the bound changes are large enough */
    SCIP_CALL( reoptnodeCheckMemory(reoptnode, set, blkmem, reoptnode->nvars + reoptnode->dualredscur->nvars, 0, 0) );
 
-   for(v = 0; v < reoptnode->dualredscur->nvars; v++)
+   for( v = 0; v < reoptnode->dualredscur->nvars; v++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -3970,7 +3970,7 @@ SCIP_RETCODE fixBounds(
 
       bndchgd = FALSE;
 
-      if(boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)))
+      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)) )
       {
          SCIPvarAdjustLb(var, set, &val);
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
@@ -3978,7 +3978,7 @@ SCIP_RETCODE fixBounds(
 
          bndchgd = TRUE;
       }
-      else if(boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) && SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)))
+      else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) && SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)) )
       {
          SCIPvarAdjustUb(var, set, &val);
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
@@ -3986,7 +3986,7 @@ SCIP_RETCODE fixBounds(
 
          bndchgd = TRUE;
       }
-      else if(boundtype != SCIP_BOUNDTYPE_LOWER && boundtype != SCIP_BOUNDTYPE_UPPER)
+      else if( boundtype != SCIP_BOUNDTYPE_LOWER && boundtype != SCIP_BOUNDTYPE_UPPER )
       {
          SCIPerrorMessage("** Unknown boundtype: %d **\n", boundtype);
          return SCIP_INVALIDDATA;
@@ -4088,7 +4088,7 @@ SCIP_RETCODE fixInterdiction(
    nbndchgs = MIN(negbndchg, nvars);
 
    /* change the first negbndchg-1 bounds as stored in dualredscur and negate the negbndchg-th bound */
-   for(v = 0; v < nbndchgs; v++)
+   for( v = 0; v < nbndchgs; v++ )
    {
       var = vars[v];
       val = vals[v];
@@ -4104,19 +4104,19 @@ SCIP_RETCODE fixInterdiction(
          boundtype = (SCIP_BOUNDTYPE)(SCIP_BOUNDTYPE_UPPER - boundtype); /*lint !e656*/
       }
 
-      if(boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)))
+      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)) )
       {
          SCIPvarAdjustLb(var, set, &val);
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
                tree, reopt, lp, branchcand, eventqueue, cliquetable, var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
-      else if(boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) && SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)))
+      else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) && SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)) )
       {
          SCIPvarAdjustUb(var, set, &val);
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob,
                tree, reopt, lp, branchcand, eventqueue, cliquetable, var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
       }
-      else if(boundtype != SCIP_BOUNDTYPE_LOWER && boundtype != SCIP_BOUNDTYPE_UPPER)
+      else if( boundtype != SCIP_BOUNDTYPE_LOWER && boundtype != SCIP_BOUNDTYPE_UPPER )
       {
          SCIPerrorMessage("** Unknown boundtype: %d **\n", boundtype);
          return SCIP_INVALIDDATA;
@@ -4410,7 +4410,7 @@ SCIP_RETCODE dryBranch(
          /* allocate buffer memory to store the redundant variables */
          SCIP_CALL( SCIPsetAllocBufferArray(set, &redundantvars, child->nvars) );
 
-         for(v = 0; v < child->nvars && !cutoff; v++)
+         for( v = 0; v < child->nvars && !cutoff; v++ )
          {
             SCIP_VAR* transvar;
             SCIP_Real transval;
@@ -4449,7 +4449,7 @@ SCIP_RETCODE dryBranch(
 
          if( !cutoff && nredundantvars > 0 )
          {
-            for(v = 0; v < nredundantvars; v++)
+            for( v = 0; v < nredundantvars; v++ )
             {
                /* replace the redundant variable by the last stored variable */
                child->vars[redundantvars[v]] = child->vars[child->nvars-1];
@@ -4543,7 +4543,7 @@ SCIP_RETCODE dryBranch(
          SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[id], set, blkmem, 0, reoptnode->nchilds+ncc, 0) );
 
          /* add all IDs of child nodes to the current node */
-         for(cc = 0; cc < ncc; cc++)
+         for( cc = 0; cc < ncc; cc++ )
          {
             reoptnode->childids[reoptnode->nchilds] = reopt->reopttree->reoptnodes[redchilds[nredchilds-1]]->childids[cc];
             ++reoptnode->nchilds;
@@ -4581,7 +4581,7 @@ int reopttreeGetNNodes(
    assert(reopttree != NULL);
    assert(id < reopttree->reoptnodessize);
 
-   for(i = 0; i < reopttree->reoptnodes[id]->nchilds; i++)
+   for( i = 0; i < reopttree->reoptnodes[id]->nchilds; i++ )
       nnodes += reopttreeGetNNodes(reopttree, reopttree->reoptnodes[id]->childids[i]);
 
    return nnodes + 1;
@@ -4602,7 +4602,7 @@ int reoptGetNLeaves(
    assert(reopt->reopttree->reoptnodes[id] != NULL);
 
    /* iterate over all child nods and check whether they are leaves or not */
-   for(i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++)
+   for( i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++ )
    {
       unsigned int childid;
 
@@ -4637,7 +4637,7 @@ SCIP_RETCODE reoptGetLeaves(
    assert(id < reopt->reopttree->reoptnodessize);
    assert(reopt->reopttree->reoptnodes[id] != NULL);
 
-   for(i = 0, l = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++)
+   for( i = 0, l = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++ )
    {
       unsigned int childid;
 
@@ -5173,7 +5173,7 @@ SCIP_RETCODE SCIPreoptCreate(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->objs, (*reopt)->runsize) );
 
-   for(i = 0; i < (*reopt)->runsize; i++)
+   for( i = 0; i < (*reopt)->runsize; i++ )
    {
       (*reopt)->objs[i] = NULL;
       (*reopt)->prevbestsols[i] = NULL;
@@ -5819,7 +5819,7 @@ void SCIPreoptResetSolMarks(
 
    child = reopt->soltree->root->child;
 
-   /* travers through the list */
+   /* traverse through the list */
    while( child != NULL )
    {
       soltreeResetMarks(child);
@@ -5958,7 +5958,7 @@ void SCIPreoptnodeGetSplitCons(
    assert(reoptnode->dualredscur->constype == REOPT_CONSTYPE_DUALREDS);
 
    /* copy the variable information */
-   for(v = 0; v < *nvars; v++)
+   for( v = 0; v < *nvars; v++ )
    {
       vars[v] = reoptnode->dualredscur->vars[v];
       vals[v] = reoptnode->dualredscur->vals[v];
@@ -5993,7 +5993,7 @@ void SCIPreoptnodeGetConss(
    if( mem < *nconss )
       return;
 
-   for(c = 0; c < *nconss; c++)
+   for( c = 0; c < *nconss; c++ )
    {
       assert(vars[c] != NULL);
       assert(bounds[c] != NULL);
@@ -6038,7 +6038,7 @@ int SCIPreoptGetNLeaves(
    if( node != NULL && SCIPnodeGetDepth(node) > 0 && id == 0 )
       return nleaves;
 
-   for(i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++)
+   for( i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++ )
    {
       unsigned int childid;
 
@@ -6654,7 +6654,7 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
    bestsim = reopt->simtolastobj;
 
    /* find the run with the most simlar objectve */
-   for(r = reopt->run-3; r >= 0 && reopt->objhaschanged && set->reopt_usepscost; r-- )
+   for( r = reopt->run-3; r >= 0 && reopt->objhaschanged && set->reopt_usepscost; r-- )
    {
       SCIP_Real sim;
       sim = reoptSimilarity(reopt, set, r, reopt->run-1, vars, nvars);
@@ -7106,7 +7106,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    assert(reopttree->reoptnodes[id]->varboundtypes != NULL);
 
    /* copy bounds */
-   for(v = 0; v < nbndchgs; v++)
+   for( v = 0; v < nbndchgs; v++ )
    {
       reopttree->reoptnodes[id]->vars[v] = reopttree->reoptnodes[0]->dualredscur->vars[v];
       reopttree->reoptnodes[id]->varbounds[v] = reopttree->reoptnodes[0]->dualredscur->vals[v];
@@ -7318,14 +7318,14 @@ void SCIPreoptnodeGetPath(
    if( varssize == 0 || varssize < *nbndchgs + *nbndchgsafterdual )
       return;
 
-   for(v = 0; v < *nbndchgs; v++)
+   for( v = 0; v < *nbndchgs; v++ )
    {
       vars[v] = reoptnode->vars[v];
       vals[v] = reoptnode->varbounds[v];
       boundtypes[v] = reoptnode->varboundtypes[v];
    }
 
-   for(; v < *nbndchgs + *nbndchgsafterdual; v++)
+   for( ; v < *nbndchgs + *nbndchgsafterdual; v++ )
    {
       vars[v] = reoptnode->afterdualvars[v-(*nbndchgs)];
       vals[v] = reoptnode->afterdualvarbounds[v-(*nbndchgs)];
@@ -7828,7 +7828,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    if( (reopt->glbconss == NULL || reopt->nglbconss == 0) && !set->reopt_sepabestsol )
       return SCIP_OKAY;
 
-   for(c = reopt->nglbconss-1; c >= 0; c--)
+   for( c = reopt->nglbconss-1; c >= 0; c-- )
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
@@ -7844,7 +7844,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       nintvars = 0;
 
       /* check if we can use a logic-or or if we have to use a bounddisjuction constraint */
-      for(v = 0; v < reopt->glbconss[c]->nvars; v++)
+      for( v = 0; v < reopt->glbconss[c]->nvars; v++ )
       {
          if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_BINARY )
             ++nbinvars;
@@ -7871,7 +7871,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
          /* allocate buffer */
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, reopt->glbconss[c]->nvars) );
 
-         for(v = 0; v < reopt->glbconss[c]->nvars; v++)
+         for( v = 0; v < reopt->glbconss[c]->nvars; v++ )
          {
             consvars[v] = reopt->glbconss[c]->vars[v];
             assert(SCIPvarIsOriginal(consvars[v]));
