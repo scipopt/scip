@@ -633,7 +633,6 @@ SCIP_RETCODE createCoveringProblem(
          if( conshdlr != NULL )
             mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
-         mapsize = SCIPcalcHashtableSize(2*mapsize);
          assert(mapsize > 0);
 
          /* create hash map */
@@ -2104,7 +2103,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    int                   coversize,          /**< size of the cover */
    int*                  cover,              /**< problem indices of the variables in the cover */
-   SCIP_Real*            fixedvals,         /**< fixing values for the variables in the cover */
+   SCIP_Real*            fixedvals,          /**< fixing values for the variables in the cover */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Longint          nodelimit,          /**< node limit */
@@ -2168,7 +2167,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );

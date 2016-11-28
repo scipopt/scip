@@ -239,7 +239,10 @@ SCIP_RETCODE runBenders(
    SCIP_CALL( SCIPsetIntParam(masterscip, "display/verblevel", 0) );
 #endif
 
-   SCIP_CALL( SCIPsetRealParam(masterscip, "limits/memory", memlimit) );
+   if ( ! SCIPisInfinity(masterscip, memlimit) )
+   {
+      SCIP_CALL( SCIPsetRealParam(masterscip, "limits/memory", memlimit) );
+   }
 
    if ( dispfreq >= 0 )
       SCIP_CALL( SCIPsetIntParam(masterscip, "display/freq", dispfreq) );

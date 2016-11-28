@@ -99,6 +99,13 @@ void SCIPconshdlrSetProp(
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    );
 
+/** sets the relaxation enforcement method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetEnforelax(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< constraint copying method */
+   );
+
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
  *
@@ -186,6 +193,12 @@ SCIP_Real SCIPconshdlrGetEnfoPSTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for relaxation enforcement in this constraint handler */
+EXTERN
+SCIP_Real SCIPconshdlrGetEnfoRelaxTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets time in seconds used for propagation in this constraint handler */
 EXTERN
 SCIP_Real SCIPconshdlrGetPropTime(
@@ -225,6 +238,12 @@ SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 EXTERN
 SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's relaxation enforcing method */
+EXTERN
+SCIP_Longint SCIPconshdlrGetNEnfoRelaxCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -575,6 +594,12 @@ SCIP_Bool SCIPconsIsObsolete(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint is marked as a conflict */
+EXTERN
+SCIP_Bool SCIPconsIsConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** gets age of constraint */
 EXTERN
 SCIP_Real SCIPconsGetAge(
@@ -744,6 +769,7 @@ int SCIPconsGetNUpgradeLocks(
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
+#define SCIPconsIsConflict(cons)        ((cons)->conflict)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate

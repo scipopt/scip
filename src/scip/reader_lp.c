@@ -2515,6 +2515,16 @@ SCIP_RETCODE getActiveVariables(
       for( v = 0; v < *nvars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus((*vars)[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            (*vars)[v] = SCIPvarGetNegatedVar((*vars)[v]);
+            (*scalars)[v] *= -1.0;
+            *constant += 1.0;
+         }
       }
    }
    return SCIP_OKAY;
@@ -3571,7 +3581,7 @@ SCIP_RETCODE SCIPwriteLp(
    if( conshdlrInd != NULL )
    {
       /* create hashtable storing linear constraints that should not be output */
-      SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), SCIPcalcHashtableSize(1000)) );
+      SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), 500) );
 
       /* loop through indicator constraints (works only in transformed problem) */
       if( transformed )
@@ -3905,7 +3915,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggvars, saggvars) );
 
    /* create hashtable for storing aggregated variables */
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 10 * saggvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), saggvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
    for( c = 0; c < nConsSOS1; ++c )
