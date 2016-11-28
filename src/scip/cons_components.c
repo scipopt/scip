@@ -154,6 +154,7 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
 
    /* the main sorting criterion is the absolute gap; however, we devide it by the number of solving calls for this
     * component to diversify the search if one component does not improve
+    * @todo investigate other sorting criteria
     */
    gap1 = SQR(comp1->lastprimalbound - comp1->lastdualbound) / comp1->ncalls;
    gap2 = SQR(comp2->lastprimalbound - comp2->lastdualbound) / comp2->ncalls;
@@ -1270,7 +1271,11 @@ SCIP_RETCODE initProblem(
    assert(*problem != NULL);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*problem)->components, ncomponents) );
-   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, (int)(1.1*ncomponents), 1.2, componentSort) );
+
+   /* create a priority queue for the components: we need exactly ncomponents slots in the queue so it should never be
+    * resized
+    */
+   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, ncomponents, 1.2, componentSort) );
 
    (*problem)->scip = scip;
    (*problem)->lowerbound = fixedvarsobjsum;
@@ -1538,7 +1543,6 @@ SCIP_RETCODE createAndSplitProblem(
       /* get component constraints */
       compconss = &(sortedconss[compstartsconss[comp]]);
       ncompconss = compstartsconss[comp + 1] - compstartsconss[comp];
-
 
 #ifdef DETAILED_OUTPUT
       /* print details about the component including its size */
