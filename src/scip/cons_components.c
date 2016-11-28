@@ -361,13 +361,11 @@ SCIP_RETCODE componentSetupWorkingSol(
                assert(SCIPisZero(subscip, SCIPvarGetObj(subvar)));
             }
          }
-#ifndef NDEBUG
          else
          {
             assert(subvar == NULL || SCIPisLT(scip, SCIPvarGetLbGlobal(sourcevars[v]), SCIPvarGetUbGlobal(sourcevars[v])));
             assert(subvar == NULL || SCIPisLT(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)));
          }
-#endif
       }
       component->nfixedvars = index;
       assert(component->nfixedvars <= component->fixedvarssize);
@@ -598,13 +596,13 @@ SCIP_RETCODE componentCreateSubscip(
 
    SCIP_CALL( createSubscip(scip, conshdlrdata, &component->subscip) );
 
-   /* get minimum size of components to solve individually and set the parameter in the sub-SCIP */
-   minsize = getMinsize(scip, conshdlrdata);
-
-   SCIP_CALL( SCIPsetIntParam(component->subscip, "constraints/" CONSHDLR_NAME "/minsize", minsize) );
-
    if( component->subscip != NULL )
    {
+      /* get minimum size of components to solve individually and set the parameter in the sub-SCIP */
+      minsize = getMinsize(scip, conshdlrdata);
+
+      SCIP_CALL( SCIPsetIntParam(component->subscip, "constraints/" CONSHDLR_NAME "/minsize", minsize) );
+
       /* get name of the original problem and add "comp_nr" */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, component->number);
 
@@ -639,13 +637,13 @@ SCIP_RETCODE solveSubscip(
    assert(scip != NULL);
    assert(subscip != NULL);
 
-   /* update time limit */
+   /* set time limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    timelimit += SCIPgetSolvingTime(subscip);
 
-   /* update soft time limit */
+   /* set soft time limit, if specified in main SCIP */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
    if( softtimelimit > -0.5 )
    {
@@ -1523,7 +1521,7 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * compstartsconss[ncomponents]) );
 
    /* loop over all components */
-   for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); comp++ )
+   for( comp = 0; comp < ncomponents; comp++ )
    {
       SCIP_CALL( initComponent(*problem) );
 
