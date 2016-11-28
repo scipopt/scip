@@ -332,8 +332,6 @@ GAMSSRC		:=	$(shell cat $(GAMSDEP))
 PARASCIPDEP	:=	$(SRCDIR)/depend.parascip
 PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
 
-DIRECTORIES	+=	$(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include
-
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
@@ -1243,7 +1241,7 @@ $(LINKSMARKERFILE):
 		@$(MAKE) links
 
 .PHONY: links
-links:		| $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
+links:		| $(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
 		@rm -f $(LINKSMARKERFILE)
 		@echo "this is only a marker" > $(LINKSMARKERFILE)
 
