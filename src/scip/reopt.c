@@ -7035,7 +7035,6 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          randseed,           /**< seed value for random generator */
    int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
    int*                  naddedconss         /**< pointer to store the number added constraints */
    )
@@ -7402,7 +7401,6 @@ SCIP_RETCODE SCIPreoptApply(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          randseed,           /**< seed value for random generator */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree to reactivate */
    unsigned int          id,                 /**< id of the node to reactivate */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
@@ -8353,7 +8351,7 @@ SCIP_RETCODE SCIPreoptAddCons(
    return SCIP_OKAY;
 }
 
-/** save global lower and bounds
+/** save global lower and upper bounds
  *
  *  @note this method can only called once, i.e., after fishing presolving of the first problem
  */

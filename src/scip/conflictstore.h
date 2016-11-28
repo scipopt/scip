@@ -94,10 +94,10 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree (or NULL original constraint) */
-   SCIP_PROB*            transprob,          /**< transformed problem (or NULL original constraint) */
+   SCIP_TREE*            tree,               /**< branch and bound tree (or NULL for an original constraint) */
+   SCIP_PROB*            transprob,          /**< transformed problem (or NULL for an original constraint) */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL original constraint) */
+   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL for an original constraint) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */

@@ -13175,7 +13175,7 @@ SCIP_RETCODE checkSolOrig(
 
             if( printreason )
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
                   SCIPvarGetName(var), lb, ub, solval);
             }
 
@@ -14737,7 +14737,11 @@ SCIP_RETCODE freeSolve(
    return SCIP_OKAY;
 }
 
-/** frees solution process data structures */
+/** frees solution process data structures when reoptimization is used
+ *
+ *  in contrast to a freeSolve() this method will preserve the transformed problem such that another presolving round
+ *  after changing the problem (modifying the objective function) is not necessary.
+ */
 static
 SCIP_RETCODE freeReoptSolve(
    SCIP*                 scip                /**< SCIP data structure */
@@ -15213,7 +15217,9 @@ SCIP_RETCODE prepareReoptimization(
       SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
    }
 
-   /* */
+   /* after presolving the problem the first time we remember all global bounds and active constraints. bounds and
+    * constraints will be restored within SCIPreoptInstallBounds() and SCIPreoptResetActiveConss().
+    */
    if( scip->stat->nreoptruns == 1 )
    {
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
@@ -15983,7 +15989,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR*             var,                /**< variable pointer */
-   SCIP_Real             bound,              /**< value of the variable */
+   SCIP_Real             bound,              /**< variable bound to add */
    SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    )
 {
@@ -16203,9 +16209,8 @@ SCIP_RETCODE SCIPapplyReopt(
    SCIP_CALL( checkStage(scip, "SCIPapplyReopt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptApply(scip->reopt, scip, scip->set, scip->stat, scip->transprob, scip->origprob, scip->tree,
-         scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, scip->mem->probmem,
-         (unsigned int)scip->set->random_randomseedshift, reoptnode, id, estimate, childnodes, ncreatedchilds,
-         naddedconss, childnodessize, success) );
+         scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, scip->mem->probmem, reoptnode, id, estimate,
+         childnodes, ncreatedchilds, naddedconss, childnodessize, success) );
 
    return SCIP_OKAY;
 }
@@ -16277,6 +16282,26 @@ SCIP_RETCODE SCIPfreeSolve(
    }  /*lint !e788*/
 }
 
+/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
+ *  preserved
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
+ *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_RETCODE SCIPfreeReoptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -16626,8 +16651,8 @@ SCIP_RETCODE SCIPsplitReoptRoot(
 
    SCIP_CALL( checkStage(scip, "SCIPsplitReoptRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPreoptSplitRoot(scip->reopt, scip->tree, scip->set, scip->stat, scip->mem->probmem,
-         (unsigned int)scip->set->random_permutationseed, ncreatedchilds, naddedconss) );
+   SCIP_CALL( SCIPreoptSplitRoot(scip->reopt, scip->tree, scip->set, scip->stat, scip->mem->probmem, ncreatedchilds,
+         naddedconss) );
 
    return SCIP_OKAY;
 }
@@ -20966,7 +20991,6 @@ SCIP_RETCODE SCIPchgVarObj(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPaddVarObj(
@@ -29360,12 +29384,6 @@ SCIP_Real SCIPgetColRedcost(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColRedcost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   /* if the instance is a pure LP the current node should be the root node */
-   if( scip->set->stage == SCIP_STAGE_SOLVED )
-   {
-      SCIP_CALL_ABORT( SCIPtreeGetCurrentNode(scip->tree) == SCIPtreeGetRootNode(scip->tree) );
-   }
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
