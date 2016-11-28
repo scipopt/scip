@@ -13,8 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
-
 /**@file   heur_gins.c
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
  * @author Gregor Hendel
@@ -23,8 +21,8 @@
  * an incumbent solution by fixing a suitable percentage of integer variables to the incumbent and
  * solving the resulting, smaller and presumably easier sub-MIP.
  *
- * Its search neighborhoods are based on distances in a bipartite graph \f$G\f$ with the variables and constraints as nodes and
- * an edge between a variable and a constraint, if the variable is part of the constraint.
+ * Its search neighborhoods are based on distances in a bipartite graph \f$G\f$ with the variables and constraints as nodes
+ * and an edge between a variable and a constraint, if the variable is part of the constraint.
  * Given an integer \f$k\f$, the \f$k\f$-neighborhood of a variable \f$v\f$ in \f$G\f$ is the set of variables, whose nodes
  * are connected to \f$v\f$ by a path not longer than \f$2 \cdot k\f$. Intuitively, a judiciously chosen neighborhood size
  * allows to consider a local portion of the overall problem.
@@ -76,9 +74,11 @@
                                              *   select the distance that best approximates the minimum fixing rate from below */
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #define DEFAULT_RANDSEED       71
-#define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be ignored by connectivity graph? */
+#define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
+                                             *   ignored by connectivity graph? */
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-#define ROLLINGHORIZON_MAXUSEDFACTOR 0.75   /**< percentage of variables used from a connected component to finish rolling horizon */
+#define DEFAULT_ROLLHORIZONLIMFAC 0.75      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
+                                             *   horizon approach */
 /*
  * Data structures
  */
@@ -102,15 +102,19 @@ typedef struct VariableGraph VARIABLEGRAPH;
 struct RollingHorizon
 {
    VARIABLEGRAPH*        variablegraph;      /**< variable graph data structure for breadth-first-search neighborhoods */
-   int*                  distances;          /**< distances of the heuristic rolling horizon from the original source variable indexed by probindex */
-   SCIP_Bool*            used;               /**< array that represents for every variable whether it has been used in a neighborhood indexed by probindex */
+   int*                  distances;          /**< distances of the heuristic rolling horizon from the original source
+                                              *   variable indexed by probindex */
+   SCIP_Bool*            used;               /**< array that represents for every variable whether it has been used
+                                              *   in a neighborhood indexed by probindex */
    int                   lastmaxdistance;    /**< the last distance k for a neighborhood, will be decreased
-                                               *  during the rolling horizon if the selected neighborhood is too large */
+                                              *   during the rolling horizon if the selected neighborhood is too large */
    int                   lastdistance;       /**< last distance from originally selected variable in iteration zero */
    int                   distancessize;      /**< size of the distances and used arrays */
    int                   niterations;        /**< counter for the number of rolling horizon iterations */
-   int                   nused;              /**< counts the number variables that have been part of any neighborhood during the rolling horizon approach */
-   int                   nnonreachable;      /**< counter for the number of nonreachable variables (distance -1) from the initially selected variable */
+   int                   nused;              /**< counts the number variables that have been part of any neighborhood
+                                              *   during the rolling horizon approach */
+   int                   nnonreachable;      /**< counter for the number of nonreachable variables (distance -1) from
+                                              *   the initially selected variable */
 };
 typedef struct RollingHorizon ROLLINGHORIZON;
 
@@ -125,6 +129,8 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Gins should at least improve the incumbent */
    SCIP_Longint          usednodes;          /**< nodes already used by Gins in earlier calls */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
+   SCIP_Real             rollhorizonlimfac;  /**< limiting percentage for variables already used in sub-SCIPs to terminate
+                                              *   rolling horizon approach */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                              */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
@@ -136,14 +142,20 @@ struct SCIP_HeurData
    int                   sumneighborhoodvars;/**< neighborhood variables sum over all seen neighborhoods */
    int                   sumdiscneighborhoodvars; /**< neighborhood discrete variables sum over all seen neighboorhoods */
    int                   nneighborhoods;     /**< number of calculated neighborhoods */
-   int                   nsubmips;           /**< counter for the number of sub-MIP's that can be higher than the number of calls of this heuristic */
-   SCIP_Bool             relaxdenseconss;    /**< should dense constraints (at least as dense as 1 - minfixingrate) be ignored by connectivity graph? */
-   SCIP_Bool             userollinghorizon;  /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-   char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
+   int                   nsubmips;           /**< counter for the number of sub-MIP's that can be higher than the number of
+                                              *   calls of this heuristic */
+   SCIP_Bool             relaxdenseconss;    /**< should dense constraints (at least as dense as 1 - minfixingrate) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Bool             userollinghorizon;  /**< should the heuristic solve a sequence of sub-MIP's around the first
+                                              *   selected variable */
+   char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or
+                                              *   (p)seudo solution */
    int                   maxseendistance;    /**< maximum of all distances between two variables */
+#ifdef SCIP_STATISTIC
    int                   consvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the densities of the constraints */
    int                   consdiscvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the discrete variable densities of the constraints */
    int                   conscontvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the continuous variable densities of the constraints */
+#endif
    int                   nrelaxedconstraints; /**< number of constraints that were relaxed */
    int                   nfailures;           /**< counter for the number of unsuccessful runs of this heuristic */
    SCIP_Longint          nextnodenumber;      /**< the next node number at which the heuristic should be called again */
@@ -162,6 +174,7 @@ typedef struct SolveLimits SOLVELIMITS;
  * Local methods
  */
 
+#ifdef SCIP_STATISTIC
 /** resets a histogram */
 static
 void resetHistogram(
@@ -188,6 +201,7 @@ void addHistogramEntry(
    ++histogram[index];
 }
 
+#endif
 
 /* fills variable graph data structure
  *
@@ -204,8 +218,6 @@ SCIP_RETCODE fillVariableGraph(
    int nconss;
    int nvars;
    int c;
-   int ndiscvars;
-   int ncontvars;
    SCIP_VAR** varbuffer;
 
    assert(scip != NULL);
@@ -217,12 +229,12 @@ SCIP_RETCODE fillVariableGraph(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, nvars) );
 
-   ncontvars = SCIPgetNContVars(scip);
-   ndiscvars = SCIPgetNVars(scip) - ncontvars;
-
+#ifdef SCIP_STATISTIC
    resetHistogram(heurdata->consvarshist);
    resetHistogram(heurdata->consdiscvarshist);
    resetHistogram(heurdata->conscontvarshist);
+#endif
+
    heurdata->nrelaxedconstraints = 0;
 
    for( c = 0; c < nconss; ++c )
@@ -251,7 +263,6 @@ SCIP_RETCODE fillVariableGraph(
          continue;
       }
 
-
       /* collect constraint variables in buffer */
       SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
 
@@ -259,6 +270,7 @@ SCIP_RETCODE fillVariableGraph(
          continue;
 
       nconsdiscvars = nconscontvars = 0;
+
       /* loop over constraint variables and add this constraint to them if they are active */
       for( v = 0; v < nconsvars; ++v )
       {
@@ -300,9 +312,11 @@ SCIP_RETCODE fillVariableGraph(
       }
 
       /* update the histograms */
+#ifdef SCIP_STATISTIC
       addHistogramEntry(heurdata->consvarshist, nconsvars, SCIPgetNVars(scip));
-      addHistogramEntry(heurdata->consdiscvarshist, nconsdiscvars, ndiscvars);
+      addHistogramEntry(heurdata->consdiscvarshist, nconsdiscvars, SCIPgetNVars(scip) - SCIPgetNContVars(scip));
       addHistogramEntry(heurdata->conscontvarshist, nconscontvars, nconsvars);
+#endif
    }
 
    /* free the buffer */
@@ -325,7 +339,6 @@ SCIP_RETCODE variableGraphCreate(
    assert(scip != NULL);
    assert(vargraph != NULL);
 
-
    nvars = SCIPgetNVars(scip);
    nconss = SCIPgetNConss(scip);
 
@@ -334,7 +347,8 @@ SCIP_RETCODE variableGraphCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, vargraph) );
 
-   SCIP_CALL( SCIPhashtableCreate(&(*vargraph)->visitedconss, SCIPblkmem(scip), 2 * nconss, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&(*vargraph)->visitedconss, SCIPblkmem(scip), 2 * nconss, SCIPhashGetKeyStandard,
+         SCIPhashKeyEqPtr, SCIPhashKeyValPtr, NULL) );
 
    /* allocate and clear memory */
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconss, nvars) );
@@ -343,7 +357,6 @@ SCIP_RETCODE variableGraphCreate(
 
    /* fill the variable graph with variable-constraint mapping for breadth-first search*/
    SCIP_CALL( fillVariableGraph(scip, *vargraph, heurdata) );
-
 
    return SCIP_OKAY;
 }
@@ -377,8 +390,8 @@ void variableGraphFree(
    SCIPfreeBlockMemory(scip, vargraph);
 }
 
-/* breadth-first search on the variable constraint graph; uses a special kind of queue data structure that holds two queue levels
- * at the same time: the variables at the current distance and the ones at the next distance
+/* breadth-first search on the variable constraint graph; uses a special kind of queue data structure that holds
+ * two queue levels at the same time: the variables at the current distance and the ones at the next distance
  */
 static
 SCIP_RETCODE variablegraphBreadthFirst(
@@ -422,7 +435,6 @@ SCIP_RETCODE variablegraphBreadthFirst(
 
    /* start variable has a distance of 0 */
    distances[SCIPvarGetProbindex(startvar)] = 0;
-
 
    queue[0] = SCIPvarGetProbindex(startvar);
    currlvlidx = 0;
@@ -502,7 +514,9 @@ SCIP_RETCODE variablegraphBreadthFirst(
       /* check if we need to swap current and next level index and reverse the increment */
       if( currlvlidx == nvars || currlvlidx == 0 || queue[currlvlidx] == -1 || currlvlidx == nextlvlidx )
       {
-         /* increment knows whether we are currently looping upwards (all variables with odd distance) or downwards the queue */
+         /* increment knows whether we are currently looping upwards (all variables with odd distance) or downwards the
+          * queue
+          */
          if( increment == +1 )
          {
             currlvlidx = nvars - 1;
@@ -575,12 +589,18 @@ SCIP_RETCODE rollingHorizonFree(
 /** is there potential to run another iteration of the rolling horizon approach? */
 static
 SCIP_Bool rollingHorizonRunAgain(
-   SCIP*                scip,               /**< SCIP data structure */
-   ROLLINGHORIZON*      rollinghorizon      /**< rolling horizon data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ROLLINGHORIZON*       rollinghorizon,     /**< rolling horizon data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   /* run again if a certain percentage of the reachable variables (in the same connected component) was not used in a previous neighborhood */
-   return rollinghorizon->nused < ROLLINGHORIZON_MAXUSEDFACTOR * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) - rollinghorizon->nnonreachable);
+   int maxnused = (int)(heurdata->rollhorizonlimfac * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)
+         - rollinghorizon->nnonreachable));
+
+   /* run again if a certain percentage of the reachable variables (in the same connected component)
+    * was not used in a previous neighborhood
+    */
+   return (rollinghorizon->nused < maxnused);
 }
 
 /** store the distances from the selected variable permanently for the rolling horizon approach */
@@ -604,7 +624,9 @@ void rollingHorizonStoreDistances(
    }
 }
 
-/** get the potential of a subset of variables (distance to a reference point such as the pseudo-solution or root LP solution) */
+/** get the potential of a subset of variables (distance to a reference point such as the pseudo-solution or root
+ * LP solution)
+ */
 static
 SCIP_Real getPotential(
    SCIP*                scip,                /**< SCIP data structure */
@@ -619,7 +641,6 @@ SCIP_Real getPotential(
    assert(scip != NULL);
    assert(vars != NULL);
    assert(sol != NULL);
-
 
    if( nvars == 0 )
       return 0.0;
@@ -647,6 +668,7 @@ SCIP_Real getPotential(
          case 'p':
             referencepoint = SCIPvarGetObj(var) > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
             break;
+
          /* use root LP solution difference */
          case 'r':
             referencepoint = SCIPvarGetRootSol(var);
@@ -657,11 +679,11 @@ SCIP_Real getPotential(
             referencepoint = SCIPgetSolVal(scip, sol, var);
             break;
       }
-      /* calculate the delta to the variables best bound */
 
       if( SCIPisInfinity(scip, REALABS(referencepoint)) )
          continue;
 
+      /* calculate the delta to the variables best bound */
       objdelta = (SCIPgetSolVal(scip, sol, var) - referencepoint) * SCIPvarGetObj(var);
       potential += objdelta;
    }
@@ -710,6 +732,7 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
 
    nvarstofix = heurdata->fixcontvars ? nvars : nbinvars + nintvars;
    *nfixings = 0;
+
    /* change bounds of variables of the subproblem */
    for( i = 0; i < nvarstofix; i++ )
    {
@@ -725,8 +748,7 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
          ub = SCIPvarGetUbGlobal(vars[i]);
          assert(SCIPisLE(scip, lb, ub));
 
-         /* due to dual reductions, it may happen that the solution value is not in
-            the variable's domain anymore */
+         /* due to dual reductions, it may happen that the solution value is not in the variable's domain anymore */
          if( SCIPisLT(scip, solval, lb) )
             solval = lb;
          else if( SCIPisGT(scip, solval, ub) )
@@ -756,7 +778,9 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
    return SCIP_OKAY;
 }
 
-/** determine the maximum allowed distance to stay within the restriction to fix at least minfixingrate many non neighborhood variables */
+/** determine the maximum allowed distance to stay within the restriction to fix at least minfixingrate many non
+ *  neighborhood variables
+ */
 static
 SCIP_RETCODE determineMaxDistance(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -782,7 +806,8 @@ SCIP_RETCODE determineMaxDistance(
    SCIPsortInt(distancescopy, nrelevantdistances);
 
    /* distances can be infinite in the case of multiple connected components; therefore, search for the index of the
-    * zero entry, which is the unique representative of the chosen variable in the sorted distances */
+    * zero entry, which is the unique representative of the chosen variable in the sorted distances
+    */
    zeropos = -1;
 
    /* todo: use selection method instead */
@@ -820,8 +845,7 @@ SCIP_Real heurdataAvgDiscreteNeighborhoodSize(
    return heurdata->sumdiscneighborhoodvars / (MAX(1.0, (SCIP_Real)heurdata->nneighborhoods));
 }
 
-
-/** todo select a good starting variable at the first iteration of a rolling horizon approach */
+/** select a good starting variable at the first iteration of a rolling horizon approach */
 static
 SCIP_RETCODE selectInitialVariable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -855,6 +879,7 @@ SCIP_RETCODE selectInitialVariable(
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
    /* copy SCIP variables */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nbinvars + nintvars) );
    nsearched = 0;
@@ -863,7 +888,9 @@ SCIP_RETCODE selectInitialVariable(
    /* determine upper bound on neighborhood size */
    nintegralvarsbound = (int)((1.0 - heurdata->minfixingrate) * (nbinvars + nintvars));
 
-   /* maximum distance from selected variable for breadth-first search (if set to -1, we compute an exhaustive breadth-first search and sort the variables by their distance) */
+   /* maximum distance from selected variable for breadth-first search (if set to -1, we compute an exhaustive breadth-first
+    * search and sort the variables by their distance)
+    */
    maxdistance = (heurdata->maxdistance == - 1 ? INT_MAX : heurdata->maxdistance);
 
    nintegralvarsleft  = nbinvars + nintvars;
@@ -912,7 +939,7 @@ SCIP_RETCODE selectInitialVariable(
       /* if there was no variable chosen, there are no active variables left */
       if( choosevar == NULL || SCIPvarGetProbindex(choosevar) < 0 )
       {
-         SCIPdebugMessage("No active variable left to perform breadth-first search\n");
+         SCIPdebugMsg(scip, "No active variable left to perform breadth-first search\n");
          break;
       }
 
@@ -957,7 +984,8 @@ SCIP_RETCODE selectInitialVariable(
       /* check if neighborhood contains too many integer variables in order to satisfy the minimum fixing rate */
       if( ndiscvarsneighborhood >= nintegralvarsbound || ndiscvarsneighborhood <= 1 )
       {
-         SCIPdebugMessage("Too many or too few discrete variables in neighboorhood: %d (%d)\n", ndiscvarsneighborhood, nbinvars + nintvars);
+         SCIPdebugMsg(scip, "Too many or too few discrete variables in neighboorhood: %d (%d)\n",
+            ndiscvarsneighborhood, nbinvars + nintvars);
       }
       else
       {
@@ -999,11 +1027,10 @@ SCIP_RETCODE selectInitialVariable(
    /* maybe no variable has a positive delta */
    if( !SCIPisPositive(scip, maxpotential) || *selvar == NULL )
    {
-      SCIPdebugMessage("Stopping with maxpotential %15.9f and selected variable %s\n",
+      SCIPdebugMsg(scip, "Stopping with maxpotential %15.9f and selected variable %s\n",
             maxpotential, *selvar != NULL ? SCIPvarGetName(*selvar) : "none");
       *selvar = NULL;
    }
-
 
    return SCIP_OKAY;
 }
@@ -1044,7 +1071,8 @@ SCIP_RETCODE selectNextVariable(
       *selvar = NULL;
       for( i = 0; i < nbinvars + nintvars && minunuseddistance > rollinghorizon->lastdistance; ++i )
       {
-         if( rollinghorizon->distances[i] >= rollinghorizon->lastdistance && rollinghorizon->distances[i] < minunuseddistance && ! rollinghorizon->used[i] )
+         if( rollinghorizon->distances[i] >= rollinghorizon->lastdistance
+               && rollinghorizon->distances[i] < minunuseddistance && ! rollinghorizon->used[i] )
          {
             minunuseddistance = rollinghorizon->distances[i];
             *selvar = vars[i];
@@ -1070,9 +1098,11 @@ SCIP_RETCODE selectNextVariable(
          rollinghorizon->nused++;
       }
 
-   } while( rollingHorizonRunAgain(scip, rollinghorizon) && (*selvar == NULL || *selvarmaxdistance ==0) );
+   } while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance ==0) );
 
-   /* breadth-first search determines the distances of all variables that are no more than maxdistance + 1 away from the start variable */
+   /* breadth-first search determines the distances of all variables that are no more than maxdistance + 1
+    * away from the start variable
+    */
    assert(*selvarmaxdistance <= rollinghorizon->lastmaxdistance + 1);
    *selvarmaxdistance = MIN(*selvarmaxdistance, rollinghorizon->lastmaxdistance);
    rollinghorizon->lastdistance = minunuseddistance;
@@ -1119,7 +1149,7 @@ SCIP_RETCODE determineVariableFixings(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    /* create variable graph */
-   SCIPdebugMessage("Creating variable constraint graph\n");
+   SCIPdebugMsg(scip, "Creating variable constraint graph\n");
 
    /* get the saved variable graph, or create a new one */
    if( rollinghorizon != NULL )
@@ -1148,10 +1178,10 @@ SCIP_RETCODE determineVariableFixings(
    {
       SCIP_CALL( selectInitialVariable(scip, heurdata, vargraph, distances, &selvar, &selvarmaxdistance) );
 
-      /* save the distances in the rolling horizon data structure */
-      /* collect distances in the variable graph of all variables to the selected variable */
+      /* collect and save the distances in the rolling horizon data structure */
       if( selvar != NULL && rollinghorizon != NULL )
       {
+         /* collect distances in the variable graph of all variables to the selected variable */
          SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, selvar, distances, INT_MAX) );
          rollingHorizonStoreDistances(scip, rollinghorizon, distances);
          rollinghorizon->lastmaxdistance = selvarmaxdistance;
@@ -1170,17 +1200,21 @@ SCIP_RETCODE determineVariableFixings(
    }
    else
    {
-      SCIPdebugMessage("Selected variable <%s> as central variable for a <%d>-neighborhood\n", SCIPvarGetName(selvar), selvarmaxdistance);
+      SCIPdebugMsg(scip, "Selected variable <%s> as central variable for a <%d>-neighborhood\n",
+         SCIPvarGetName(selvar), selvarmaxdistance);
 
       /* fix variables that are not in the neighborhood around the selected variable */
-      SCIP_CALL( fixNonNeighborhoodVariables(scip, heurdata, rollinghorizon, sol, vars, fixedvars, fixedvals, distances, selvarmaxdistance, nfixings) );
+      SCIP_CALL( fixNonNeighborhoodVariables(scip, heurdata, rollinghorizon, sol, vars, fixedvars, fixedvals, distances,
+            selvarmaxdistance, nfixings) );
 
       fixthreshold = (int)(heurdata->minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
 
-      /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here; we also terminate if no discrete variables are left */
+      /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here;
+       * we also terminate if no discrete variables are left
+       */
       if( *nfixings < fixthreshold )
       {
-         SCIPdebugMessage("Fixed %d < %d variables in gins heuristic, stopping", *nfixings, fixthreshold);
+         SCIPdebugMsg(scip, "Fixed %d < %d variables in gins heuristic, stopping", *nfixings, fixthreshold);
          *success = FALSE;
       }
    }
@@ -1201,7 +1235,7 @@ SCIP_RETCODE createNewSol(
    SCIP_HEUR*            heur,               /**< gins heuristic structure */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-)
+   )
 {
    SCIP_VAR** vars;                          /* the original problem's variables */
    int        nvars;
@@ -1269,12 +1303,12 @@ SCIP_RETCODE setupSubScip(
    SCIP_Real upperbound;
 
    heurdata = SCIPheurGetData(heur);
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
@@ -1379,6 +1413,7 @@ SCIP_RETCODE determineLimits(
    assert(runagain != NULL);
 
    heurdata = SCIPheurGetData(heur);
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &solvelimits->timelimit) );
    if( !SCIPisInfinity(scip, solvelimits->timelimit) )
@@ -1448,7 +1483,9 @@ void printHistogram(
    )
 {
    int i;
+
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Gins: %s", name);
+
    /* write out entries of this histogram */
    for( i = 0; i < NHISTOGRAMBINS; ++i )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %d", histogram[i]);
@@ -1518,14 +1555,14 @@ SCIP_DECL_HEURINIT(heurInitGins)
    heurdata->nfailures = 0;
    heurdata->nextnodenumber = 0;
 
+#ifdef SCIP_STATISTIC
    resetHistogram(heurdata->conscontvarshist);
    resetHistogram(heurdata->consdiscvarshist);
    resetHistogram(heurdata->conscontvarshist);
+#endif
 
    return SCIP_OKAY;
 }
-
-
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -1541,7 +1578,8 @@ SCIP_DECL_HEUREXIT(heurExitGins)
    assert(heurdata != NULL);
 
    SCIPstatistic(
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Gins: Avg Neighborhood size: %.1f Avg. discrete neighboorhood vars: %.1f\n", heurdataAvgNeighborhoodSize(heurdata), heurdataAvgDiscreteNeighborhoodSize(heurdata));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Gins: Avg Neighborhood size: %.1f Avg. discrete neighboorhood vars: %.1f\n",
+            heurdataAvgNeighborhoodSize(heurdata), heurdataAvgDiscreteNeighborhoodSize(heurdata));
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Gins: Max seen distance %d\n", heurdata->maxseendistance);
       printHistogram(scip, heurdata->consvarshist, "Constraint density histogram");
       printHistogram(scip, heurdata->conscontvarshist, "Constraint continuous density histogram");
@@ -1553,8 +1591,6 @@ SCIP_DECL_HEUREXIT(heurExitGins)
 
    return SCIP_OKAY;
 }
-
-
 
 /** execution method of primal heuristic */
 static
@@ -1617,6 +1653,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       return SCIP_OKAY;
 
    runagain = TRUE;
+
    /* determine solving limits for the sub-SCIP for the first time */
    SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain) );
 
@@ -1643,7 +1680,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       /* terminate if it was not possible to create the subproblem */
       if( !success )
       {
-         SCIPdebugMessage("Could not create the subproblem -> skip call\n");
+         SCIPdebugMsg(scip, "Could not create the subproblem -> skip call\n");
          goto TERMINATE;
       }
 
@@ -1656,7 +1693,8 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
       /* create a problem copy as sub SCIP */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars,
+            heurdata->uselprows, heurdata->copycuts, &success) );
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -1668,7 +1706,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       SCIP_CALL( setupSubScip(scip, subscip, &solvelimits, heur) );
 
       /* solve the subproblem */
-      SCIPdebugMessage("Solve Gins subMIP\n");
+      SCIPdebugMsg(scip, "Solve Gins subMIP\n");
       retcode = SCIPsolve(subscip);
 
       /* Errors in solving the subproblem should not kill the overall solving process
@@ -1679,7 +1717,8 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 #ifndef NDEBUG
          SCIP_CALL( retcode );
 #endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in Gins heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+         SCIPwarningMessage(scip, "Error while solving subproblem in Gins heuristic; sub-SCIP terminated with code <%d>\n",
+               retcode);
       }
       else
       {
@@ -1719,7 +1758,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       {
          assert(rollinghorizon != NULL);
          SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain ) );
-         runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon);
+         runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon, heurdata);
       }
 
    } while( runagain );
@@ -1729,6 +1768,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       updateFailureStatistic(scip, heurdata);
 
 TERMINATE:
+
    /* only free the rolling horizon data structure if we need to keep it */
    if( heurdata->userollinghorizon )
    {
@@ -1831,6 +1871,10 @@ SCIP_RETCODE SCIPincludeHeurGins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/relaxdenseconss",
          "should dense constraints (at least as dense as 1 - minfixingrate) be ignored by connectivity graph?",
          &heurdata->relaxdenseconss, TRUE, DEFAULT_RELAXDENSECONSS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/rollhorizonlimfac",
+         "limiting percentage for variables already used in sub-SCIPs to terminate rolling horizon approach",
+         &heurdata->rollhorizonlimfac, TRUE, DEFAULT_ROLLHORIZONLIMFAC, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
