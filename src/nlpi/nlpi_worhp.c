@@ -57,7 +57,7 @@ struct SCIP_NlpiProblem
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
    BMS_BLKMEM*                 blkmem;       /**< block memory */
 
-   /* Worhp data structures */
+   /* Worhp data structures (not used yet) */
    OptVar*                     opt;
    Workspace*                  wsp;
    Params*                     par;
@@ -69,7 +69,86 @@ struct SCIP_NlpiProblem
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** evaluates objective function and store the result in the corresponding WORHP data fields */
+static
+SCIP_RETCODE userF(OptVar *opt, Workspace *wsp, Params *par, Control *cnt, SCIP_NLPIPROBLEM* problem)
+{
+   SCIP_Real objval;
+
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+   assert(problem->blkmem != NULL);
+   assert(opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+   SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, opt->X, &objval) );
+   opt->F *= wsp->ScaleObj * objval;
+
+   return SCIP_OKAY;
+}
+
+/** evaluates objective function and store the result in the corresponding WORHP data fields */
+static
+SCIP_RETCODE userG(OptVar *opt, Workspace *wsp, Params *par, Control *cnt, SCIP_NLPIPROBLEM* problem)
+{
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+   assert(problem->blkmem != NULL);
+   assert(opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+   SCIP_CALL( SCIPnlpiOracleEvalConstraintValues(problem->oracle, opt->X, opt->G) );
+
+   return SCIP_OKAY;
+}
+
+/** computes objective gradient and store the result in the corresponding WORHP data fields */
+static
+SCIP_RETCODE userDF(OptVar *opt, Workspace *wsp, Params *par, Control *cnt, SCIP_NLPIPROBLEM* problem)
+{
+   SCIP_Real objval;
+
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+   assert(problem->blkmem != NULL);
+   assert(opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+   /* TODO this needs to be changed if we store the gradient of the objective function in a sparse format */
+   SCIP_CALL( SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, opt->X, TRUE, &objval, wsp->DF.val) );
+
+   /* scale gradient if necessary */
+   if( wsp->ScaleObj != 1.0 )
+   {
+      int i;
+      for( i = 0; i < opt->n; ++i )
+         wsp->DF.val[i] *= wsp->ScaleObj;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** computes jacobian matrix and store the result in the corresponding WORHP data fields */
+static
+SCIP_RETCODE userDG(OptVar *opt, Workspace *wsp, Params *par, Control *cnt, SCIP_NLPIPROBLEM* problem)
+{
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+   assert(problem->blkmem != NULL);
+   assert(opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+   SCIP_CALL( SCIPnlpiOracleEvalJacobian(problem->oracle, opt->X, TRUE, NULL, wsp->DG.val) );
+
+   return SCIP_OKAY;
+}
+
+/** computes hessian matrix and store the result in the corresponding WORHP data fields */
+static
+SCIP_RETCODE userHM(OptVar *opt, Workspace *wsp, Params *par, Control *cnt, SCIP_NLPIPROBLEM* problem)
+{
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -185,7 +264,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->wsp) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->par) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->cnt) );
-   WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
+   /* WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt); */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -215,7 +294,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       assert((*problem)->cnt != NULL);
 
       /* free WORHP data */
-      WorhpFree((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
+      /* WorhpFree((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt); */
       BMSfreeBlockMemory(data->blkmem, &(*problem)->cnt);
       BMSfreeBlockMemory(data->blkmem, &(*problem)->par);
       BMSfreeBlockMemory(data->blkmem, &(*problem)->wsp);
@@ -594,9 +673,211 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessWorhp )
 static
 SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 {
-   /* TODO */
+   const SCIP_Real* lbs;
+   const SCIP_Real* ubs;
+   const int* offset;
+   const int* cols;
+   int i;
 
-   return SCIP_OKAY;  /*lint !e527*/
+   /* TODO use data stored in nlpi problem data */
+   OptVar opt;
+   Workspace wsp;
+   Params par;
+   Control cnt;
+
+   assert(problem != NULL);
+
+   /* properly zeros everything */
+   WorhpPreInit(&opt, &wsp, &par, &cnt);
+   par.Infty = SCIP_DEFAULT_INFINITY;
+
+   /* set problem dimensions */
+   opt.n = SCIPnlpiOracleGetNVars(problem->oracle);
+   opt.m = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+   /* assume that objective function is dense TODO use sparse representation */
+   wsp.DF.nnz = opt.n;
+
+   /* get number of non-zero entries in Jacobian */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, NULL) );
+   wsp.DG.nnz = offset[opt.m];
+
+   /* get number of non-zero entries in Hessian */
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, NULL) );
+   wsp.HM.nnz = offset[opt.n];
+
+   /* initialize data in WORHP */
+   WorhpInit(&opt, &wsp, &par, &cnt);
+   if (cnt.status != FirstCall)
+   {
+      SCIPerrorMessage("Initialisation failed.\n");
+      return SCIP_ERROR;
+   }
+
+   /* set variable bounds */
+   lbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
+   ubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
+   for( i = 0; i < opt.n; ++i )
+   {
+      opt.XL[i] = lbs[i];
+      opt.XU[i] = ubs[i];
+   }
+
+   /* set constraint sides */
+   for( i = 0; i < opt.m; ++i )
+   {
+      opt.GL[i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+      opt.GU[i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+   }
+
+   /* set column indices of objective function; note that indices go from 1 to n */
+   if( wsp.DF.NeedStructure )
+   {
+      for( i = 0; i < opt.n; ++i )
+         wsp.DF.row[i] = i + 1;
+   }
+
+   /* set column and row indices of non-zero entries in Jacobian matrix */
+   if( wsp.DG.NeedStructure )
+   {
+      int nnonz;
+      int j;
+
+      SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, &cols) );
+
+      nnonz = 0;
+      j = offset[0];
+      for( i = 0; i < opt.m; ++i )
+      {
+         for( ; j < offset[i+1]; ++j )
+         {
+            /* note that column and row indices are shifted by one */
+            wsp.DG.row[nnonz] = i + 1;
+            wsp.DG.col[nnonz] = cols[j] + 1;
+         }
+      }
+      assert(nnonz == wsp.DG.nnz);
+   }
+
+   /* set column and row indices of non-zero entries in Jacobian matrix */
+   if( wsp.HM.NeedStructure )
+   {
+      int nnonz;
+      int j;
+
+      SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, &cols) );
+
+      nnonz = 0;
+      j = offset[0];
+      for( i = 0; i < opt.m; ++i )
+      {
+         for( ; j < offset[i+1]; ++j )
+         {
+            /* note that column and row indices are shifted by one */
+            wsp.HM.row[nnonz] = i + 1;
+            wsp.HM.col[nnonz] = cols[j] + 1;
+         }
+      }
+      assert(nnonz == wsp.HM.nnz);
+   }
+
+   /* TODO set a start point */
+
+   /*
+    * WORHP Reverse Communication loop.
+    * In every iteration poll GetUserAction for the requested action, i.e. one
+    * of {callWorhp, iterOutput, evalF, evalG, evalDF, evalDG, evalHM, fidif}.
+    *
+    * Make sure to reset the requested user action afterwards by calling
+    * DoneUserAction, except for 'callWorhp' and 'fidif'.
+    */
+   while( cnt.status < TerminateSuccess && cnt.status > TerminateError )
+   {
+      /*
+       * WORHP's main routine.
+       * Do not manually reset callWorhp, this is only done by the FD routines.
+       */
+      if( GetUserAction(&cnt, callWorhp) )
+      {
+         Worhp(&opt, &wsp, &par, &cnt);
+         /* No DoneUserAction! */
+      }
+
+      /*
+       * Show iteration output.
+       * The call to IterationOutput() may be replaced by user-defined code.
+       */
+      if( GetUserAction(&cnt, iterOutput) )
+      {
+         IterationOutput(&opt, &wsp, &par, &cnt);
+         DoneUserAction(&cnt, iterOutput);
+      }
+
+      /*
+       * Evaluate the objective function.
+       * The call to UserF may be replaced by user-defined code.
+       */
+      if( GetUserAction(&cnt, evalF) )
+      {
+         SCIP_CALL( userF(&opt, &wsp, &par, &cnt, problem) );
+         DoneUserAction(&cnt, evalF);
+      }
+
+      /*
+       * Evaluate the constraints.
+       * The call to UserG may be replaced by user-defined code.
+       */
+      if( GetUserAction(&cnt, evalG) )
+      {
+         SCIP_CALL( userG(&opt, &wsp, &par, &cnt, problem) );
+         DoneUserAction(&cnt, evalG);
+      }
+
+      /*
+       * Evaluate the gradient of the objective function.
+       * The call to UserDF may be replaced by user-defined code.
+       */
+      if( GetUserAction(&cnt, evalDF) )
+      {
+         SCIP_CALL( userDF(&opt, &wsp, &par, &cnt, problem) );
+         DoneUserAction(&cnt, evalDF);
+      }
+
+      /*
+       * Evaluate the Jacobian of the constraints.
+       * The call to UserDG may be replaced by user-defined code.
+       */
+      if( GetUserAction(&cnt, evalDG) )
+      {
+         SCIP_CALL( userDG(&opt, &wsp, &par, &cnt, problem) );
+         DoneUserAction(&cnt, evalDG);
+      }
+
+      /*
+       * Evaluate the Hessian matrix of the Lagrange function (L = f + mu*g)
+       * The call to UserHM may be replaced by user-defined code.
+       */
+      if( GetUserAction(&cnt, evalHM) )
+      {
+         SCIP_CALL( userHM(&opt, &wsp, &par, &cnt, problem) );
+         DoneUserAction(&cnt, evalHM);
+      }
+
+      /*
+       * Use finite differences with RC to determine derivatives
+       * Do not reset fidif, this is done by the FD routine.
+       */
+      if( GetUserAction(&cnt, fidif) )
+      {
+         WorhpFidif(&opt, &wsp, &par, &cnt);
+         /* No DoneUserAction! */
+      }
+   }
+
+   /* free memory allocated in WORHP */
+   WorhpFree(&opt, &wsp, &par, &cnt);
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gives solution status
@@ -894,7 +1175,7 @@ const char* SCIPgetSolverNameWorhp(void)
 {
    /* TODO maybe you can add this macro to worhp_version.h */
    /* return "WORHP " WORHP_VERSION; */
-   return "WORHP";
+   return "WORHP 1.9.1";
 }
 
 /** gets string that describes Worhp (version number) */
@@ -902,7 +1183,7 @@ extern
 const char* SCIPgetSolverDescWorhp(void)
 {
    /* TODO */
-   return "SQP solver developed by ...";
+   return "Sequential Quadratic Programming developed at Research Institute Steinbeis (www.worhp.de)";
 }
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
