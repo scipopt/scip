@@ -185,9 +185,13 @@ SCIP_RETCODE constructCompression(
    SCIP_CALL( sortIDs(scip, leaveids, nleaveids) );
 
    /* allocate memory to store the old tree */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, size) );
+
+   /* we use normal instead of buffer memory because we may need to reallocate the 2-dimensional arrays */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &vars, size) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &vals, size) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &boundtypes, size) );
+
+   /* allocate buffer memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_var, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_val, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_boundtypes, size) );
@@ -207,10 +211,10 @@ SCIP_RETCODE constructCompression(
 
       mem_vars = SCIPgetNBinVars(scip);
 
-      /* allocate memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
+      /* we use normal instead of buffer memory because we may need to reallocate the 2-dimensional arrays */
+      SCIP_CALL( SCIPallocMemoryArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
 
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
@@ -222,9 +226,9 @@ SCIP_RETCODE constructCompression(
       if( mem_vars < nvars2 + nafterdualvars )
       {
          mem_vars = nvars2 + nafterdualvars;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-         SCIP_CALL( SCIPreallocBufferArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
 
          /* get the branching path */
          SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], boundtypes[k], mem_vars, &nvars2, &nafterdualvars);
@@ -350,9 +354,9 @@ SCIP_RETCODE constructCompression(
       SCIPfreeBufferArray(scip, &conss_nvars[k]);
       SCIPfreeBufferArray(scip, &conss_val[k]);
       SCIPfreeBufferArray(scip, &conss_var[k]);
-      SCIPfreeBufferArray(scip, &boundtypes[k]);
-      SCIPfreeBufferArray(scip, &vals[k]);
-      SCIPfreeBufferArray(scip, &vars[k]);
+      SCIPfreeMemoryArray(scip, &boundtypes[k]);
+      SCIPfreeMemoryArray(scip, &vals[k]);
+      SCIPfreeMemoryArray(scip, &vars[k]);
    }
 
    SCIPfreeBufferArray(scip, &nconss);
@@ -360,9 +364,9 @@ SCIP_RETCODE constructCompression(
    SCIPfreeBufferArray(scip, &conss_nvars);
    SCIPfreeBufferArray(scip, &conss_val);
    SCIPfreeBufferArray(scip, &conss_var);
-   SCIPfreeBufferArray(scip, &boundtypes);
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeMemoryArray(scip, &boundtypes);
+   SCIPfreeMemoryArray(scip, &vals);
+   SCIPfreeMemoryArray(scip, &vars);
 
    SCIPfreeBlockMemoryArray(scip, &leaveids, nleaveids);
 

@@ -429,7 +429,7 @@ SCIP_RETCODE constructCompression(
        * 2. check if we need to reallocate the memory
        * 3. set the new representation
        */
-      if( SCIPisFeasGT(scip, score, comprdata->score) )
+      if( SCIPisSumGT(scip, score, comprdata->score) )
       {
          /* reset the current representation */
          SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
