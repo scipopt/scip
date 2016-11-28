@@ -92,7 +92,7 @@ typedef struct Component
 struct Problem
 {
    SCIP*                 scip;               /**< the SCIP instance this problem belongs to */
-   COMPONENT**           components;         /**< independent components into which the problem can be divided */
+   COMPONENT*            components;         /**< independent components into which the problem can be divided */
    SCIP_PQUEUE*          compqueue;          /**< priority queue for components */
    SCIP_SOL*             bestsol;            /**< best solution found so far for the problem */
    char*                 name;               /**< name of the problem */
@@ -206,9 +206,7 @@ SCIP_RETCODE initComponent(
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(problem->components[problem->ncomponents])) );
-   component = problem->components[problem->ncomponents];
-   assert(component != NULL);
+   component = &problem->components[problem->ncomponents];
 
    component->problem = problem;
    component->subscip = NULL;
@@ -238,49 +236,46 @@ SCIP_RETCODE initComponent(
 /** free component structure */
 static
 SCIP_RETCODE freeComponent(
-   COMPONENT**           component           /**< pointer to component structure */
+   COMPONENT*            component           /**< pointer to component structure */
    )
 {
    PROBLEM* problem;
    SCIP* scip;
 
    assert(component != NULL);
-   assert(*component != NULL);
 
-   problem = (*component)->problem;
+   problem = component->problem;
    assert(problem != NULL);
 
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPdebugMsg(scip, "freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
+   SCIPdebugMsg(scip, "freeing component %d of problem <%s>\n", component->number, component->problem->name);
 
-   assert(((*component)->vars != NULL) == ((*component)->subvars != NULL));
-   if( (*component)->vars != NULL )
+   assert((component->vars != NULL) == (component->subvars != NULL));
+   if( component->vars != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*component)->vars, (*component)->nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*component)->subvars, (*component)->nvars);
+      SCIPfreeBlockMemoryArray(scip, &component->vars, component->nvars);
+      SCIPfreeBlockMemoryArray(scip, &component->subvars, component->nvars);
    }
 
-   assert(((*component)->fixedvars != NULL) == ((*component)->fixedsubvars != NULL));
-   if( (*component)->fixedvars != NULL )
+   assert((component->fixedvars != NULL) == (component->fixedsubvars != NULL));
+   if( component->fixedvars != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*component)->fixedsubvars, (*component)->fixedvarssize);
-      SCIPfreeBlockMemoryArray(scip, &(*component)->fixedvars, (*component)->fixedvarssize);
+      SCIPfreeBlockMemoryArray(scip, &component->fixedsubvars, component->fixedvarssize);
+      SCIPfreeBlockMemoryArray(scip, &component->fixedvars, component->fixedvarssize);
    }
 
    /* free sub-SCIP belonging to this component and the working solution */
-   if( (*component)->subscip != NULL )
+   if( component->subscip != NULL )
    {
-      if( (*component)->workingsol != NULL )
+      if( component->workingsol != NULL )
       {
-         SCIP_CALL( SCIPfreeSol((*component)->subscip, &(*component)->workingsol) );
+         SCIP_CALL( SCIPfreeSol(component->subscip, &component->workingsol) );
       }
 
-      SCIP_CALL( SCIPfree(&(*component)->subscip) );
+      SCIP_CALL( SCIPfree(&component->subscip) );
    }
-
-   SCIPfreeBlockMemory(scip, component);
 
    return SCIP_OKAY;
 }
@@ -1515,6 +1510,7 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_VAR** compvars;
    SCIP_CONS** compconss;
    SCIP_Bool success;
+   int nfixedvars = SCIPgetNVars(scip) - compstartsvars[ncomponents];
    int ncompconss;
    int comp;
 
@@ -1523,22 +1519,22 @@ SCIP_RETCODE createAndSplitProblem(
    assert((*problem)->components != NULL);
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
-   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * compstartsconss[ncomponents]) );
+   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), compstartsconss[ncomponents]) );
 
    /* loop over all components */
    for( comp = 0; comp < ncomponents; comp++ )
    {
       SCIP_CALL( initComponent(*problem) );
+      assert((*problem)->ncomponents == comp);
 
-      assert((*problem)->components[comp] != NULL);
-      component = (*problem)->components[comp];
+      component = &(*problem)->components[comp];
 
       /* get component variables and store them in component structure */
       compvars = &(sortedvars[compstartsvars[comp]]);
       component->nvars = compstartsvars[comp + 1 ] - compstartsvars[comp];
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &component->vars, compvars, component->nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &component->subvars, component->nvars) );
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * component->nvars) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), component->nvars + nfixedvars) );
 
       /* get component constraints */
       compconss = &(sortedconss[compstartsconss[comp]]);
@@ -2279,7 +2275,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/" CONSHDLR_NAME "/propfreq", -1) );
 
       /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
-      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * nsortedconss) );
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), nsortedconss) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nsortedvars) );
 
@@ -2301,7 +2297,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             continue;
          }
 
-         SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * ncompvars) );
+         SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), ncompvars) );
 #ifdef DETAILED_OUTPUT
          {
             int nbinvars = 0;
