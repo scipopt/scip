@@ -14803,7 +14803,7 @@ SCIP_RETCODE freeReoptSolve(
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, FALSE) );
 
    /* free solution process data structures */
-   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
@@ -15230,12 +15230,12 @@ SCIP_RETCODE prepareReoptimization(
       SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
             scip->origprob->vars, scip->origprob->nvars) );
 
-      SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation) );
+      SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+            scip->tree) );
 
       /* mark statistics before solving */
       SCIPstatMark(scip->stat);
 
-//      SCIP_CALL( SCIPlpClear(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
       SCIPbranchcandInvalidate(scip->branchcand);
 
       /* install globally valid lower and upper bounds */
@@ -15664,7 +15664,7 @@ SCIP_RETCODE SCIPsolve(
             /* add solution to solution tree */
             else
             {
-               SCIPdebugMessage("try to add solution to the solution tree:\n");
+               SCIPdebugMsg(scip, "try to add solution to the solution tree:\n");
                SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
                      scip->transprob, NULL, FALSE) ); );
 
@@ -15674,7 +15674,7 @@ SCIP_RETCODE SCIPsolve(
          }
       }
 
-      SCIPdebugMessage("-> saved %d solution.\n", nsols);
+      SCIPdebugMsg(scip, "-> saved %d solution.\n", nsols);
 
       /* store variable history */
       if( scip->set->reopt_storevarhistory )
