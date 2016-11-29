@@ -324,32 +324,47 @@
 
 /* Reoptimization */
 
-#define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< reuse stored solutions only if the similarity of the new and the old objective
+#define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< re-use stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 #define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     0.8 /**< similarity of two sequential objective function to disable solving the root LP. */
-#define SCIP_DEFAULT_REOPT_OBJSIMDELAY     -1.0 /**< start reoptimzing the search if the new objective function has similarity of
+#define SCIP_DEFAULT_REOPT_OBJSIMDELAY     -1.0 /**< start reoptimizing the search if the new objective function has similarity of
                                                  *   at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
-#define SCIP_DEFAULT_REOPT_VARORDERINTERDICTION 'd' /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
+#define SCIP_DEFAULT_REOPT_VARORDERINTERDICTION 'd' /** use 'd'efault, 'r'andom or 'i'nference score for variable
+                                                     *  ordering when performing interdiction branching during
+                                                     *  reoptimization of nodes
+                                                     */
 #define SCIP_DEFAULT_REOPT_MAXSAVEDNODES  INT_MAX/**< maximum number of saved nodes */
 #define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
                                                   *  such that the path get not shrunk */
-#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
+#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by
+                                                 *   reoptsols heuristic
+                                                 */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
-#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
-#define SCIP_DEFAULT_REOPT_STOREVARHISTOTY FALSE/**< use the variable history of the previouse solve if the objective function has changed only slightly */
-#define SCIP_DEFAULT_REOPT_USEPSCOST      FALSE /**< reuse pseudo costs of the objective function changed only slightly */
+#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, e.g., for solving constraint shortest
+                                                 *   path problems
+                                                 */
+#define SCIP_DEFAULT_REOPT_STOREVARHISTOTY FALSE/**< use the variable history of the previous solve if the objective
+                                                 *   function has changed only slightly
+                                                 */
+#define SCIP_DEFAULT_REOPT_USEPSCOST      FALSE /**< re-use pseudo costs of the objective function changed only slightly */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT FALSE/**< is the given time limit for all reoptimization round? */
-#define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
-#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
+#define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number
+                                                 *   of bound changes is not to large
+                                                 */
+#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong
+                                                 *   branching
+                                                 */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
 #define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
-#define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
+#define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction
+                                                 *   when reactivating the node
+                                                 */
 #define SCIP_DEFAULT_REOPT_USECUTS        FALSE /**< reoptimize cuts found at the root node */
-#define SCIP_DEFAULT_REOPT_MAXCUTAGE          0 /**< maximal age of cuts the use them in reoptimization */
+#define SCIP_DEFAULT_REOPT_MAXCUTAGE          0 /**< maximal age of a cut to be use for reoptimization */
 
 /* Propagating */
 
@@ -1995,7 +2010,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/usepscost",
-         "reuse pseudo costs if the objective function changed only slightly ",
+         "re-use pseudo costs if the objective function changed only slightly ",
          &(*set)->reopt_usepscost, TRUE, SCIP_DEFAULT_REOPT_USEPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2020,7 +2035,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimsol",
-         "similarity of two objective functions to reuse stored solutions",
+         "similarity of two objective functions to re-use stored solutions",
          &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, -1.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2063,7 +2078,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_usesplitcons, TRUE, SCIP_DEFAULT_REOPT_USESPLITCONS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
-         "reoptimization/varorderinterdiction", "use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization",
+         "reoptimization/varorderinterdiction", "use 'd'efault, 'r'andom or a variable ordering based on 'i'nference score for interdiction branching used during reoptimization",
          &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dir",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -2073,7 +2088,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/maxcutage",
-         "maximal age of a cut to use them for reoptimization",
+         "maximal age of a cut to be use for reoptimization",
          &(*set)->reopt_maxcutage, TRUE, SCIP_DEFAULT_REOPT_MAXCUTAGE, 0, INT_MAX,
          NULL, NULL) );
 

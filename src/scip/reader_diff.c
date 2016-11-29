@@ -931,9 +931,13 @@ SCIP_RETCODE readDiffFile(
    }
 
    /* free transformed problem */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   if( SCIPisReoptEnabled(scip) && SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
    {
       SCIP_CALL( SCIPfreeReoptSolve(scip) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPfreeTransform(scip) );
    }
 
    /* parse the file */

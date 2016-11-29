@@ -20817,7 +20817,7 @@ SCIP_RETCODE SCIPlockVarCons(
    int nlocksdown;
    int nlocksup;
 
-   SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -20991,6 +20991,7 @@ SCIP_RETCODE SCIPchgVarObj(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPaddVarObj(
@@ -20999,7 +21000,7 @@ SCIP_RETCODE SCIPaddVarObj(
    SCIP_Real             addobj              /**< additional objective value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -21011,7 +21012,6 @@ SCIP_RETCODE SCIPaddVarObj(
             scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
-   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:

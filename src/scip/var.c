@@ -4212,8 +4212,8 @@ void SCIPvarMergeHistories(
    SCIPhistoryUnite(stat->glbhistory, othervar->historycrun, FALSE);
 }
 
-/** sets the history of a variable; this method is typacally used within reoptimization to keep and update the variable
- *  history over several iteraions
+/** sets the history of a variable; this method is typically used within reoptimization to keep and update the variable
+ *  history over several iterations
  */
 void SCIPvarSetHistory(
    SCIP_VAR*             var,                /**< variable */

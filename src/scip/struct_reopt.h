@@ -43,7 +43,7 @@ struct SCIP_SolNode
    SCIP_SOLNODE*         child;              /**< pointer to left most child node, i.e., node representing the variable
                                                *  with smallest solution value
                                                */
-   SCIP_SOLNODE*         sibling;            /**< pointer to next child node */
+   SCIP_SOLNODE*         sibling;            /**< pointer to next sibling node */
    SCIP_Real             value;              /**< solution value represented by this node */
    SCIP_Bool             updated;            /**< flag if the solution is already updated
                                               *   w.r.t. the new objective function */
@@ -147,7 +147,7 @@ struct SCIP_Reopt
    /* hashmaps to track global bound reductions and constraints deletion during presolving */
    SCIP_HASHMAP*         glblb;                   /**< global lower bounds after presolving of the first problem */
    SCIP_HASHMAP*         glbub;                   /**< global upper bounds after presolving of the first problem */
-   SCIP_HASHMAP*         activeconss;
+   SCIP_HASHMAP*         activeconss;             /**< set of all active constraints after presolving teh first problem */
 
    /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */

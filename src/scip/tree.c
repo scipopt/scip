@@ -783,7 +783,7 @@ SCIP_RETCODE nodeAssignParent(
    {
       assert(parent->lowerbound <= parent->estimate);
       node->lowerbound = parent->lowerbound;
-      node->prevlowerbound = parent->prevlowerbound;
+      node->prevlowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
       if( parent->depth >= SCIP_MAXTREEDEPTH-1 )
