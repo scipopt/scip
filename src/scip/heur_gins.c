@@ -1096,6 +1096,7 @@ SCIP_RETCODE selectNextVariable(
       {
          rollinghorizon->used[SCIPvarGetProbindex(*selvar)] = TRUE;
          rollinghorizon->nused++;
+         *selvar = NULL;
       }
 
    } while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance ==0) );
@@ -1343,11 +1344,11 @@ SCIP_RETCODE setupSubScip(
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {
