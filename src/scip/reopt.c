@@ -2697,7 +2697,7 @@ SCIP_RETCODE addNode(
       }
 #endif
 
-      /* update LPI state if node is pseudobranched or feasible */
+      /* update LPI state */
       switch( reopttype )
       {
       case SCIP_REOPTTYPE_TRANSIT:
@@ -2705,25 +2705,19 @@ SCIP_RETCODE addNode(
          {
             SCIP_CALL( shrinkNode(reopt, set, node, id, &shrank, blkmem) );
          }
-
          goto TRANSIT;
-         // why is there a goto and a break? the break can never be reached, can it? sometimes, lint warnings make sense ;-)
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_LOGICORNODE:
       case SCIP_REOPTTYPE_LEAF:
          goto TRANSIT;
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_INFSUBTREE:
          /* delete the whole subtree induced be the current node */
          SCIP_CALL( deleteChildrenBelow(reopt->reopttree, set, blkmem, id, FALSE, FALSE) );
          goto PSEUDO;
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_STRBRANCHED:
          goto PSEUDO;
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_FEASIBLE:
          /* delete the subtree */
@@ -2738,7 +2732,6 @@ SCIP_RETCODE addNode(
             SCIP_CALL( changeReopttypeOfSubtree(reopt->reopttree, id, SCIP_REOPTTYPE_PRUNED) );
          }
          goto FEASIBLE;
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_PRUNED:
          /* delete the subtree */
@@ -2758,7 +2751,6 @@ SCIP_RETCODE addNode(
          ++reopt->reopttree->ntotalcutoffreoptnodes;
 
          goto PRUNED;
-         break; /*lint !e527*/
 
       default:
          break;
@@ -2809,7 +2801,6 @@ SCIP_RETCODE addNode(
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          goto TRANSIT;
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_INFSUBTREE:
       case SCIP_REOPTTYPE_STRBRANCHED:
@@ -2832,7 +2823,6 @@ SCIP_RETCODE addNode(
                reopt->reopttree->reoptnodes[id]->lowerbound);
 
          goto PSEUDO;
-         break; /*lint !e527*/
 
       case SCIP_REOPTTYPE_FEASIBLE:
          ++reopt->reopttree->ntotalfeasnodes;
@@ -3814,9 +3804,8 @@ SCIP_RETCODE addSplitcons(
             break;
          case SCIP_VARTYPE_IMPLINT:
          case SCIP_VARTYPE_INTEGER:
-            // why are you using the lazy bound here?
-            if( SCIPisEQ(scip, SCIPvarGetLbLazy(reoptconsdata->vars[v]), 0.0)
-             && SCIPisEQ(scip, SCIPvarGetUbLazy(reoptconsdata->vars[v]), 1.0) )
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(reoptconsdata->vars[v]), 0.0)
+               && SCIPisEQ(scip, SCIPvarGetUbLocal(reoptconsdata->vars[v]), 1.0) )
                ++nbinvars;
             else
                ++nintvars;
@@ -4195,12 +4184,6 @@ SCIP_RETCODE addLocalConss(
    {
       SCIP_CONS* cons;
       SCIP_REOPTCONSDATA* reoptconsdata;
-#if 0 // remove all those #if 0 blocks or change it to #ifdef SCIP_DISABLED_CODE and add a comment on why it is disabled
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
-      SCIP_BOUNDTYPE* consboundtypes;
-      int v;
-#endif
 
       reoptconsdata = reopt->reopttree->reoptnodes[id]->conss[c];
       assert(reoptconsdata != NULL);
@@ -4210,123 +4193,12 @@ SCIP_RETCODE addLocalConss(
       if( reoptconsdata->constype == REOPT_CONSTYPE_CUT )
          continue;
 
-#if 0
-      int nbinvars = 0;
-      int nintvars = 0;
-      int ncontvars = 0;
-
-      /* count number of binary, integer, and continuous variables */
-      for( v = 0; v < reoptconsdata->nvars; v++ )
-      {
-         switch ( SCIPvarGetType(reoptconsdata->vars[v]) ) {
-         case SCIP_VARTYPE_BINARY:
-            ++nbinvars;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-         case SCIP_VARTYPE_INTEGER:
-            if( SCIPisEQ(scip, SCIPvarGetLbLazy(reoptconsdata->vars[v]), 0.0)
-             && SCIPisEQ(scip, SCIPvarGetUbLazy(reoptconsdata->vars[v]), 1.0) )
-               ++nbinvars;
-            else
-               ++nintvars;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            ++ncontvars;
-            break;
-         default:
-            SCIPerrorMessage("Variable <%s> has to be either binary, (implied) integer, or continuous.\n",
-               SCIPvarGetName(reoptconsdata->vars[v]));
-            return SCIP_INVALIDDATA;
-         }
-      }
-#endif
-
       if( reoptconsdata->constype == REOPT_CONSTYPE_INFSUBTREE )
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "reopt_inf");
       else if( reoptconsdata->constype == REOPT_CONSTYPE_DUALREDS )
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "reopt_dual");
       else
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "reopt_unkn");
-
-#if 0
-      /* allocate buffer */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, reoptconsdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, reoptconsdata->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consboundtypes, reoptconsdata->nvars) );
-
-      /* case 1: all variables are binary. we use a logic-or constraint. */
-      if( reoptconsdata->nvars == nbinvars )
-      {
-         /* iterate over all variable and transform them */
-         for( v = 0; v < reoptconsdata->nvars; v++ )
-         {
-            consvars[v] = reoptconsdata->vars[v];
-            consvals[v] = reoptconsdata->bounds[v];
-            consboundtypes[v] = reoptconsdata->boundtypes[v];
-            assert((SCIPsetIsFeasEQ(set, consvals[v], 0.0) && consboundtypes[v] == SCIP_BOUNDTYPE_UPPER)
-               || (SCIPsetIsFeasEQ(set, consvals[v], 1.0) && consboundtypes[v] == SCIP_BOUNDTYPE_LOWER));
-
-            assert(SCIPvarIsOriginal(consvars[v]));
-            SCIP_CALL( SCIPvarGetProbvarBound(&consvars[v], &consvals[v], &consboundtypes[v]) );
-            assert(SCIPvarIsTransformed(consvars[v]));
-            assert(SCIPvarGetStatus(consvars[v]) != SCIP_VARSTATUS_MULTAGGR);
-
-            if( SCIPsetIsFeasEQ(set, consvals[v], 1.0) )
-            {
-               SCIP_CALL( SCIPvarNegate(consvars[v], blkmem, set, stat, &consvars[v]) );
-               assert(SCIPvarIsNegated(consvars[v]));
-            }
-         }
-
-         /* create the constraints and add them to the corresponding nodes */
-         SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, reoptconsdata->nvars, consvars,
-               FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
-      }
-      /* case 2: at least one variable is integer or continuous. we use a bounddisjunction constraint. */
-      else
-      {
-         /* iterate over all variable and transform them */
-         for( v = 0; v < reoptconsdata->nvars; v++ )
-         {
-            consvars[v] = reoptconsdata->vars[v];
-            consvals[v] = reoptconsdata->bounds[v];
-            consboundtypes[v] = reoptconsdata->boundtypes[v];
-
-            /* we have to switch the bounds.
-             * case 1: integer variable with bound x <= u is transformed to u+1 <= x
-             *                                 and l <= x is transformed to   x <= l-1
-             * case 2: continuous variable with bound x <= u is transformed to u <= x
-             *                                    and l <= x is transformed to x <= l
-             */
-            if( SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_BINARY
-             || SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_INTEGER
-             || SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_IMPLINT )
-            {
-               if( consboundtypes[v] == SCIP_BOUNDTYPE_UPPER )
-               {
-                  consvals[v] += 1.0;
-                  assert(SCIPsetIsLE(set, consvals[v], SCIPvarGetUbLocal(consvars[v])));
-               }
-               else
-               {
-                  consvals[v] -= 1.0;
-                  assert(SCIPsetIsGE(set, consvals[v], SCIPvarGetLbLocal(consvars[v])));
-               }
-            }
-
-            consboundtypes[v] = (SCIP_BOUNDTYPE)(1 - consboundtypes[v]);
-
-            assert(SCIPvarIsOriginal(consvars[v]));
-            SCIP_CALL( SCIPvarGetProbvarBound(&consvars[v], &consvals[v], &consboundtypes[v]) );
-            assert(SCIPvarIsTransformed(consvars[v]));
-            assert(SCIPvarGetStatus(consvars[v]) != SCIP_VARSTATUS_MULTAGGR);
-         }
-
-         /* create the constraints and add them to the corresponding nodes */
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, reoptconsdata->nvars, consvars, consboundtypes,
-               consvals, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
-      }
-#endif
 
       if( reoptconsdata->linear )
       {
@@ -4344,15 +4216,6 @@ SCIP_RETCODE addLocalConss(
 #endif
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-
-#if 0
-      /* free buffer */
-      SCIPfreeBufferArray(scip, &consboundtypes);
-      SCIPfreeBufferArray(scip, &consvals);
-      SCIPfreeBufferArray(scip, &consvars);
-#endif
-
    }
 
    return SCIP_OKAY;
@@ -6779,20 +6642,6 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
       }
    }
 
-#if 0
-   /* optimal solution of the current run */
-   lastoptsol = reopt->prevbestsols[reopt->run-1];
-
-   /* the objective delta is defined as: new LP obj - old LP obj and has to be non-negative. for the reoptimization we
-    * are interested in the obj value of the best solution of the current iteration wrt the objective function of the
-    * previous iteration instead of the old LP obj.
-    * hence, c_{i}(s_{i-1}) <= c_{i-1}(s_{i-1}) <==> c_{i}(s_{i-1}) - c_{i-1}(s_{i-1}) <= 0 we multiply with -1.
-    */
-   objdelta = SCIPsolGetObj(lastoptsol, set, transprob, origprob) - oldobj;
-   objdelta *= -1.0;
-   assert(!SCIPsetIsNegative(set, objdelta));
-#endif
-
    /* update the history and scale them */
    for( v = 0; v < nvars; v++ )
    {
@@ -7892,7 +7741,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "glb_%s_%d_%d", reopt->glbconss[c]->constype == REOPT_CONSTYPE_CUT ? "cut" : "inf", reopt->run, c);
 
-      // @todo use active representatives!!!!
+      /* @todo use active representatives */
 
       /* all variables are binary, we can create a logic-or constraint */
       if( nbinvars == reopt->glbconss[c]->nvars )

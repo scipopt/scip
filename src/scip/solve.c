@@ -1072,11 +1072,11 @@ SCIP_RETCODE SCIPinitConssLP(
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
 
-   if( FALSE && set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
+   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
    {
       /* add stored cuts */
-      SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, cutpool, blkmem, set, stat, eventqueue, eventfilter, lp,
-            root) );
+      SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, cutpool, blkmem, set, stat, eventqueue,
+            eventfilter, lp, root) );
    }
 
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
