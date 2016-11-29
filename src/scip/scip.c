@@ -12190,7 +12190,7 @@ SCIP_RETCODE SCIPdelCons(
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_EXITSOLVE:
-      SCIP_CALL( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
+      SCIP_CALL( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->reopt) );
       return SCIP_OKAY;
 
    default:
