@@ -496,7 +496,7 @@ SCIP_RETCODE reoptnodeDelete(
       (*reoptnode)->dualredscur = NULL;
    }
 
-   // comment
+   /* delete dual constraint */
    if( (*reoptnode)->dualredsnex != NULL )
    {
       assert((*reoptnode)->dualredsnex->varssize > 0);
@@ -618,7 +618,7 @@ SCIP_RETCODE reoptnodeReset(
       reoptnode->dualredscur = NULL;
    }
 
-   // comment
+   /* delete dual constraint */
    if( reoptnode->dualredsnex != NULL )
    {
       assert(reoptnode->dualredsnex->varssize > 0);
@@ -1938,8 +1938,7 @@ SCIP_RETCODE reoptnodeUpdateDualConss(
 
    if( reoptnode->dualredscur != NULL )
    {
-      // this debug message looks strange, what is (1)
-      SCIPdebugMessage("reset dual (1) information\n");
+      SCIPdebugMessage("reset dual information (current run)\n");
 
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->boundtypes, reoptnode->dualredscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->vals, reoptnode->dualredscur->varssize);
@@ -1950,6 +1949,7 @@ SCIP_RETCODE reoptnodeUpdateDualConss(
 
    if( reoptnode->dualredsnex != NULL )
    {
+      SCIPdebugMessage("set dual information of next run to current run\n");
       reoptnode->dualredscur = reoptnode->dualredsnex;
       reoptnode->dualredsnex = NULL;
    }
@@ -3151,7 +3151,7 @@ SCIP_RETCODE reoptnodeResetDualConss(
    {
       SCIP_REOPTCONSDATA* reoptconsdata;
 
-      SCIPdebugMessage("reset dual (1) information\n");
+      SCIPdebugMessage("reset dual information (current run)\n");
 
       reoptconsdata = reoptnode->dualredscur;
 
@@ -3166,7 +3166,7 @@ SCIP_RETCODE reoptnodeResetDualConss(
    {
       SCIP_REOPTCONSDATA* reoptconsdata;
 
-      SCIPdebugMessage("reset dual (2) information\n");
+      SCIPdebugMessage("reset dual information (next run)\n");
 
       reoptconsdata = reoptnode->dualredsnex;
 
