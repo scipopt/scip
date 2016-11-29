@@ -488,7 +488,7 @@ SCIP_RETCODE extractCycle(
    SCIP_Real constant = 0.0;
    SCIP_Bool islower;
    SCIP_Real newbound;
-   int cycleidx = dfsstack[stacksize - 1];
+   int cycleidx;
    int startidx;
    int ntmpimpls;
    int j;
@@ -499,12 +499,23 @@ SCIP_RETCODE extractCycle(
 
    vars = propdata->vars;
 
+   /* the last element on the stack is the end-point of the cycle */
+   cycleidx = dfsstack[stacksize - 1];
+
+   /* the same bound of the variable was visited already earlier on the current path, so the start-point of the cycle
+    * has the same index
+    */
    if( samebound )
       startidx = cycleidx;
+   /* the other bound of the variable was visited earlier on the current path, so the start-point of the cycle
+    * has the index of the other bound
+    */
    else
       startidx = getOtherBoundIndex(cycleidx);
 
-   /* cycleidx is the element at position stacksize - 1; now search for startidx at a previous position */
+   /* search for the start-point of the cycle; since the endpoint is at position stacksize - 1 we start at stacksize - 2
+    * and go backwards
+    */
    for( j = stacksize - 2; dfsstack[j] != startidx && j >= 0; --j );
    assert(j >= 0);
 
