@@ -559,13 +559,14 @@ SCIP_RETCODE extractCycle(
          cliquevals = SCIPcliqueGetValues(tmpcliques[k]);
          ncliquevars = SCIPcliqueGetNVars(tmpcliques[k]);
 
+#ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "clique: ");
          for( v = 0; v < ncliquevars; ++v )
          {
             SCIPdebugMsg(scip, "%s%s ", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
          }
          SCIPdebugMsg(scip, "(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
-
+#endif
          for( v = 0; v < ncliquevars; ++v )
          {
             if( cliquevars[v] != nextvar )
