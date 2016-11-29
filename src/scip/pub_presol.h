@@ -91,18 +91,6 @@ void SCIPpresolSetTiming(
    SCIP_PRESOLTIMING     timing              /**< timing mask of the presolver */
    );
 
-/** should presolver be delayed, if other presolvers found reductions? */
-EXTERN
-SCIP_Bool SCIPpresolIsDelayed(
-   SCIP_PRESOL*          presol              /**< presolver */
-   );
-
-/** was presolver delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPpresolWasDelayed(
-   SCIP_PRESOL*          presol              /**< presolver */
-   );
-
 /** is presolver initialized? */
 EXTERN
 SCIP_Bool SCIPpresolIsInitialized(

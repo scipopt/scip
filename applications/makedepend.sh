@@ -3,7 +3,7 @@
 # This scripts generates the dependences for SCIP
 #
 
-APPLICATIONS=(Coloring Scheduler STP)
+APPLICATIONS=(Coloring MinIISC Scheduler STP)
 OPTS=(opt dbg opt-gccold)
 
 for APPLICATION in ${APPLICATIONS[@]}

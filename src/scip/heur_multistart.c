@@ -648,7 +648,7 @@ SCIP_RETCODE solveNLP(
       SCIP_CALL( SCIPsetSolVal(scip, refpoint, vars[i], val / npoints) );
    }
 
-   /** round point for sub-NLP heuristic */
+   /* round point for sub-NLP heuristic */
    SCIP_CALL( SCIProundSol(scip, refpoint, success) );
    SCIPdebugMessage("rounding of refpoint successfully? %d\n", *success);
 
@@ -727,7 +727,7 @@ SCIP_RETCODE applyHeur(
    SCIP_CALL( SCIPallocBufferArray(scip, &points, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &feasibilities, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &clusteridx, heurdata->nrndpoints) );
-   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* create an unique mapping of all variables to 0,..,SCIPgetNVars(scip)-1 */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
