@@ -1061,7 +1061,7 @@ SCIP_RETCODE selectNextVariable(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
    /* loop over the variables that are left and pick the variable with
-    * - the smallest, always nondecreasing instance
+    * - the smallest, always nondecreasing distance
     * - that was not used before in a neighborhood
     */
    do
@@ -1099,7 +1099,7 @@ SCIP_RETCODE selectNextVariable(
          *selvar = NULL;
       }
 
-   } while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance ==0) );
+   } while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance == 0) );
 
    /* breadth-first search determines the distances of all variables that are no more than maxdistance + 1
     * away from the start variable
