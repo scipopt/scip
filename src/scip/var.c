@@ -5823,7 +5823,7 @@ SCIP_RETCODE SCIPvarChgObj(
             assert(SCIPprobIsTransformed(prob));
 
             SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
-                  newobj/prob->objscale) );
+                  prob->objsense * newobj/prob->objscale) );
          }
          else
             assert(set->stage == SCIP_STAGE_PROBLEM);
