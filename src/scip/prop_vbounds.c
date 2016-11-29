@@ -355,7 +355,6 @@ SCIP_RETCODE catchEvents(
    return SCIP_OKAY;
 }
 
-
 /** drops events for variables */
 static
 SCIP_RETCODE dropEvents(
@@ -451,7 +450,6 @@ SCIP_RETCODE addVbound(
    return SCIP_OKAY;
 }
 
-
 /** comparison method for two indices in the topoorder array, preferring higher indices because the order is reverse
  *  topological
  */
@@ -464,7 +462,9 @@ SCIP_DECL_SORTPTRCOMP(compVarboundIndices)
    return idx2 - idx1;
 }
 
-
+/* extract bound changes or infeasibility information from a cycle in the variable bound graph detected during
+ * depth-first search
+ */
 static
 SCIP_RETCODE extractCycle(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -502,9 +502,9 @@ SCIP_RETCODE extractCycle(
    if( samebound )
       startidx = cycleidx;
    else
-      startidx = cycleidx % 2 == 0 ? cycleidx + 1 : cycleidx - 1;
+      startidx = getOtherBoundIndex(cycleidx);
 
-
+   /* cycleidx is the element at position stacksize - 1; now search for startidx at a previous position */
    for( j = stacksize - 2; dfsstack[j] != startidx && j >= 0; --j );
    assert(j >= 0);
 
@@ -993,7 +993,6 @@ SCIP_RETCODE dfs(
          if( *infeasible )
             break;
 
-
          /* we stopped because we found an unhandled node and not because we reached the end of the list */
          if( i < nvbounds )
          {
@@ -1029,7 +1028,6 @@ SCIP_RETCODE dfs(
 
    return SCIP_OKAY;
 }
-
 
 /** sort the bounds of variables topologically */
 static
@@ -1250,7 +1248,6 @@ SCIP_RETCODE initData(
    return SCIP_OKAY;
 }
 
-
 /** resolves a propagation by adding the variable which implied that bound change */
 static
 SCIP_RETCODE resolvePropagation(
@@ -1331,7 +1328,6 @@ SCIP_Real computeRelaxedLowerbound(
 
    return relaxedbd;
 }
-
 
 /** analyzes an infeasibility which was reached by updating the lower bound of the inference variable above its upper
  *  bound
@@ -1527,7 +1523,6 @@ SCIP_RETCODE analyzeConflictUpperbound(
 
    return SCIP_OKAY;
 }
-
 
 /* tries to tighten the (global) lower bound of the given variable to the given new bound */
 static
@@ -2076,7 +2071,6 @@ SCIP_DECL_PROPEXEC(propExecVbounds)
 
    return SCIP_OKAY;
 }
-
 
 /** propagation conflict resolving method of propagator */
 static
