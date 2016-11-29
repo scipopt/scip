@@ -261,7 +261,8 @@ SCIP_RETCODE createThreadPool(
    /* create the threads */
    for( i = 0; i < nthreads; i++ )
    {
-      SCIP_CALL( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)(size_t)i) );
+      if( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)(size_t)i) != thrd_success )
+         return SCIP_ERROR;
    }
 
    _threadnumber = nthreads;
@@ -446,9 +447,9 @@ SCIP_RETCODE freeThreadPool(
       int thrdretcode;
 
       if( thrd_join((*thrdpool)->threads[i], &thrdretcode) != thrd_success )
-         retcode = MIN(SCIP_ERROR, retcode);
+         retcode = (SCIP_RETCODE) MIN(SCIP_ERROR, retcode);
       else
-         retcode = MIN(thrdretcode, retcode);
+         retcode = (SCIP_RETCODE) MIN(thrdretcode, retcode);
    }
 
    /* freeing memory and data structures */

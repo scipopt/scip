@@ -7781,18 +7781,20 @@ SCIP_RETCODE SCIPincludeConcsolverType(
 {
    SCIP_CONCSOLVERTYPE* concsolvertype;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeConcsolver", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeConcsolverType", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* check whether heuristic is already present */
+   /* check whether concurrent solver type is already present */
    if( SCIPfindConcsolverType(scip, name) != NULL )
    {
       SCIPerrorMessage("concurrent solver type <%s> already included.\n", name);
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPconcsolverTypeCreate(&concsolvertype, scip->set, scip->messagehdlr, scip->mem->setmem, name, prefpriodefault,
-                                       concsolvercreateinst, concsolverdestroyinst, concsolverinitseeds, concsolverexec, concsolvercopysolvdata,
-                                       concsolverstop, concsolversyncwrite, concsolversyncread, concsolvertypefreedata, data) );
+   SCIP_CALL( SCIPconcsolverTypeCreate(&concsolvertype, scip->set, scip->messagehdlr, scip->mem->setmem,
+                                       name, prefpriodefault, concsolvercreateinst, concsolverdestroyinst,
+                                       concsolverinitseeds, concsolverexec, concsolvercopysolvdata,
+                                       concsolverstop, concsolversyncwrite, concsolversyncread,
+                                       concsolvertypefreedata, data) );
 
    SCIP_CALL( SCIPsetIncludeConcsolverType(scip->set, concsolvertype) );
 
@@ -15706,7 +15708,8 @@ SCIP_RETCODE SCIPsolveParallel(
       SCIP_Real             prefpriosum;
 
       /* check if concurrent solve is configured to presolve the problem
-       * before setting up the concurrent solvers */
+       * before setting up the concurrent solvers
+       */
       if( scip->set->concurrent_presolvebefore )
       {
          /* if yes, then presolve the problem */
@@ -15715,6 +15718,7 @@ SCIP_RETCODE SCIPsolveParallel(
       else
       {
          SCIP_Bool infeas;
+
          /* if not, transform the problem and switch stage to presolved */
          SCIP_CALL( SCIPtransformProb(scip) );
          SCIP_CALL( initPresolve(scip) );
@@ -15738,7 +15742,7 @@ SCIP_RETCODE SCIPsolveParallel(
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
          /* estimate maximum number of copies that be created based on memory limit */
          nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));
-         SCIPinfoMessage(scip, NULL, "estimated a maximum of %lli threads based on memory limit\n", nthreads);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %lli threads based on memory limit\n", nthreads);
       }
       nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
       concsolvertypes = SCIPgetConcsolverTypes(scip);
@@ -15760,7 +15764,7 @@ SCIP_RETCODE SCIPsolveParallel(
          return SCIPsolve(scip);
       }
       nthreads = MIN(nthreads, maxnthreads);
-      SCIPinfoMessage(scip, NULL, "using %lli threads for concurrent solve\n", nthreads);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "using %lli threads for concurrent solve\n", nthreads);
 
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver
@@ -15770,9 +15774,9 @@ SCIP_RETCODE SCIPsolveParallel(
          prefpriosum += SCIPconcsolverTypeGetPrefPrio(concsolvertypes[i]);
 
       ncandsolvertypes = 0;
-      SCIP_CALL( SCIPallocBufferArray(scip, &solvertypes, 2*nthreads) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &weights, 2*nthreads) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &prios, 2*nthreads) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &solvertypes, nthreads + nconcsolvertypes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &weights, nthreads + nconcsolvertypes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &prios, nthreads + nconcsolvertypes) );
       for( i = 0; i < nconcsolvertypes; ++i )
       {
          int j;
@@ -15790,7 +15794,7 @@ SCIP_RETCODE SCIPsolveParallel(
       }
       /* select nthreads many concurrent solver types to create instances
        * according to the preferred prioriteis the user has set
-       * This is basically corresponds to a knap sack problem
+       * This basically corresponds to a knapsack problem
        * with unit weights and capacity nthreads, where the profits are
        * the unrounded fraction of the total number of threads to be used.
        */
@@ -40478,7 +40482,7 @@ SCIP_SYNCSTORE* SCIPgetSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSPI", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSyncstore", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->syncstore;
 }

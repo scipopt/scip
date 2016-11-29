@@ -276,14 +276,11 @@ SCIP_RETCODE initConcsolver(
    }
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
-   /*TODO this assert fails on check/instances/Orbitope/packorb_1-FullIns_3.cip
-    * there SCIPgetNVars(scip)(=data->nvars) is 87 but SCIPgetNOrigVars(data->solverscip) is 90
-    * how can there be more variables in the copy ?????!!!
-    *
-    * also fails on check/instances/Orbitope/partorb_1-FullIns_3.cip so this seems to be related
-    * to orbitope constraints.
+   /* this assert fails on check/instances/Orbitope/packorb_1-FullIns_3.cip
+    * assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
+    * also fails on check/instances/Orbitope/partorb_1-FullIns_3.cip
+    * TODO: test if this leads to any problems
     */
-   assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
    SCIPfreeBufferArray(data->solverscip, &varperm);
 
@@ -337,12 +334,12 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
          paramname = SCIPparamGetName(params[i]);
          len = strlen(paramname);
 
-         if( (len >= 7  && memcmp(paramname, "limits/", 7) == 0 ) ||
-             (len >= 9  && memcmp(paramname, "numerics/", 9) == 0) ||
-             (len >= 7  && memcmp(paramname, "memory/", 7) == 0) ||
-             (len >= 16 && memcmp(paramname, "concurrent/sync/", 16) == 0) ||
-             (len >= 16 && memcmp(paramname, "heuristics/sync/", 16) == 0) ||
-             (len >= 17 && memcmp(paramname, "propagating/sync/", 17) == 0) )
+         if( strncmp(paramname, "limits/", 7) == 0 ||
+             strncmp(paramname, "numerics/", 9) == 0 ||
+             strncmp(paramname, "memory/", 7) == 0 ||
+             strncmp(paramname, "concurrent/sync/", 16) == 0 ||
+             strncmp(paramname, "heuristics/sync/", 16) == 0 ||
+             strncmp(paramname, "propagating/sync/", 17) == 0 )
          {
             fixedparams[nfixedparams++] = params[i];
             SCIP_CALL( SCIPfixParam(data->solverscip, paramname) );

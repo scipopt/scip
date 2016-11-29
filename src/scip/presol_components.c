@@ -479,7 +479,7 @@ SCIP_RETCODE copyAndSolveComponent(
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
                continue;
 
-            subvar = SCIPhashmapGetImage(varmap, vars[v]);
+            subvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[v]);
             assert(subvar != NULL);
 
             SCIP_CALL( SCIPsetSolVal(subscip, sol, subvar, solval) );
