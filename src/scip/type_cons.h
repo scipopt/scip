@@ -447,9 +447,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
+ *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
-#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, int nmarkedconss, \
-      SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
+#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      int nmarkedconss, SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 /** presolving method of constraint handler
  *

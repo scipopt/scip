@@ -50,10 +50,8 @@ SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
-#if 0 /* should the event handler be copied??? */
    /* call inclusion method of event handler */
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
-#endif
 
    return SCIP_OKAY;
 }
@@ -129,6 +127,7 @@ static
 SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_Real timelimit;
 
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -141,7 +140,12 @@ SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
 
    SCIPdebugMsg(scip, "exec method of event handler for soft time limit\n");
 
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", eventhdlrdata->softtimelimit) );
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   if( eventhdlrdata->softtimelimit < timelimit )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", eventhdlrdata->softtimelimit) );
+   }
 
    /* notify SCIP that your event handler wants to drop the event type best solution found */
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, eventhdlrdata->filterpos) );

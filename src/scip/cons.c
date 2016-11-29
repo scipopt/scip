@@ -2049,7 +2049,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", name);
@@ -2247,10 +2247,10 @@ SCIP_RETCODE SCIPconshdlrCreate(
          &(*conshdlr)->delayprop, TRUE, delayprop, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presoltiming", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the constraint handler's presolving method (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE)",
-      SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the constraint handler's presolving method (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
+      SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740 !e713*/
+         (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -3867,9 +3867,10 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
-               && *result != SCIP_DELAYED )
+               && *result != SCIP_DELAYED
+               && *result != SCIP_DELAYNODE )
             {
-               SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n", 
+               SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n",
                   conshdlr->name, *result);
                return SCIP_INVALIDRESULT;
             }
@@ -4292,7 +4293,7 @@ SCIP_RETCODE SCIPconshdlrSetPresol(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", conshdlr->name);
@@ -5745,14 +5746,6 @@ SCIP_RETCODE SCIPconsCreate(
    assert(name != NULL);
    assert(conshdlr != NULL);
    assert(!original || deleteconsdata);
-
-   /* constraints of constraint handlers that don't need constraints cannot be created */
-   if( !conshdlr->needscons )
-   {
-      SCIPerrorMessage("cannot create constraint <%s> of type [%s] - constraint handler does not need constraints\n",
-         name, conshdlr->name);
-      return SCIP_INVALIDCALL;
-   }
 
    /* create constraint data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, cons) );

@@ -118,6 +118,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool             postponed,          /**< was the current focus node postponed? */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    );
 
