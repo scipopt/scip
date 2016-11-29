@@ -14775,7 +14775,7 @@ SCIP_RETCODE freeReoptSolve(
 
       SCIP_CALL( SCIPnodeFocus(&node, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
             scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->conflict,
-            scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable, &cutoff, TRUE) );
+            scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable, &cutoff, FALSE, TRUE) );
       assert(!cutoff);
    }
 
