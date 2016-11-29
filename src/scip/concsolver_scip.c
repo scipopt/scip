@@ -137,7 +137,7 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
 /** includes event handler for synchronization found */
 static
 SCIP_RETCODE includeEventHdlrSync(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EVENTHDLR*     eventhdlr;
@@ -160,16 +160,16 @@ SCIP_RETCODE includeEventHdlrSync(
 /** data for a concurrent solver type */
 struct SCIP_ConcSolverTypeData
 {
-   SCIP_Bool          loademphasis;          /**< should emphasis settings be loaded whe ncreatig an instance of this concurrent solver */
-   SCIP_PARAMEMPHASIS emphasis;              /**< parameter emphasis that will be loaded if loademphasis is true */
+   SCIP_Bool             loademphasis;       /**< should emphasis settings be loaded whe ncreatig an instance of this concurrent solver */
+   SCIP_PARAMEMPHASIS    emphasis;           /**< parameter emphasis that will be loaded if loademphasis is true */
 };
 
 /** data for a concurrent solver */
 struct SCIP_ConcSolverData
 {
-   SCIP*              solverscip;            /**< the concurrent solvers private scip datastructure */
-   SCIP_VAR**         vars;                  /**< array of variables in the order of the main SCIP's variable array */
-   int                nvars;                 /**< number of variables in the above arrays */
+   SCIP*                 solverscip;         /**< the concurrent solvers private scip datastructure */
+   SCIP_VAR**            vars;               /**< array of variables in the order of the main SCIP's variable array */
+   int                   nvars;              /**< number of variables in the above arrays */
 };
 
 /** Disable dual reductions that might cut off optimal solutions. Although they keep at least
@@ -177,7 +177,7 @@ struct SCIP_ConcSolverData
  *  if different optimal solutions were kept in different concurrent solvers. */
 static
 SCIP_RETCODE disableConflictingDualReductions(
-   SCIP*              scip                   /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    SCIP_Bool commvarbnds;
@@ -216,7 +216,7 @@ SCIP_RETCODE disableConflictingDualReductions(
 /** sets the child selection rule based on the index of the concurrent solver */
 static
 SCIP_RETCODE setChildSelRule(
-   SCIP_CONCSOLVER*   concsolver             /**< the concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< the concurrent solver */
    )
 {
    SCIP_CONCSOLVERDATA*  data;
@@ -236,8 +236,8 @@ SCIP_RETCODE setChildSelRule(
  *  mapping of the variables */
 static
 SCIP_RETCODE initConcsolver(
-   SCIP*              scip,                  /**< the main SCIP instance */
-   SCIP_CONCSOLVER*   concsolver             /**< the concurrent solver to set up */
+   SCIP*                 scip,               /**< the main SCIP instance */
+   SCIP_CONCSOLVER*      concsolver          /**< the concurrent solver to set up */
    )
 {
    int                 i;
@@ -721,7 +721,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
 /** creates the concurrent SCIP solver plugins and includes them in SCIP */
 SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
-   SCIP*              scip                   /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    SCIP_CONCSOLVERTYPEDATA* data;

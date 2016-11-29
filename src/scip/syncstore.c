@@ -43,7 +43,7 @@
  *  not read by any thread */
 static
 int getNSyncdata(
-   SCIP*                    scip                 /**< SCIP main datastructure */
+   SCIP*                 scip                /**< SCIP main datastructure */
    )
 {
    int maxnsyncdelay;
@@ -54,7 +54,7 @@ int getNSyncdata(
 
 /** creates and captures a new synchronization store */
 SCIP_RETCODE SCIPsyncstoreCreate(
-   SCIP_SYNCSTORE**         syncstore            /**< pointer to return the created synchronization store */
+   SCIP_SYNCSTORE**      syncstore           /**< pointer to return the created synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPsyncstoreCreate(
 
 /** releases a synchronization store */
 SCIP_RETCODE SCIPsyncstoreRelease(
-   SCIP_SYNCSTORE**         syncstore            /**< pointer to the synchronization store */
+   SCIP_SYNCSTORE**      syncstore           /**< pointer to the synchronization store */
    )
 {
    int references;
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPsyncstoreRelease(
 
 /** captures a synchronization store */
 SCIP_RETCODE SCIPsyncstoreCapture(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    SCIP_CALL( SCIPtpiAcquireLock(&syncstore->lock) );
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPsyncstoreCapture(
 
 /** initialize the syncstore for the given SCIP instance */
 SCIP_RETCODE SCIPsyncstoreInit(
-   SCIP*                    scip                 /**< SCIP main datastructure */
+   SCIP*                 scip                /**< SCIP main datastructure */
    )
 {
    SCIP_SYNCSTORE* syncstore;
@@ -178,7 +178,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
 
 /** deinitializes the synchronization store */
 SCIP_RETCODE SCIPsyncstoreExit(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    int i;
@@ -215,8 +215,8 @@ SCIP_RETCODE SCIPsyncstoreExit(
 
 /** initialize the synchronization timing parameters for the first synchronization */
 void SCIPsyncstoreInitSyncTiming(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_Real                time                 /**< the time the solver spent before the first synchronization */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             time                /**< the time the solver spent before the first synchronization */
    )
 {
    assert(syncstore != NULL);
@@ -236,7 +236,7 @@ void SCIPsyncstoreInitSyncTiming(
 
 /** checks whether the solve-is-stopped flag in the syncstore has been set by any thread */
 SCIP_Bool SCIPsyncstoreSolveIsStopped(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    SCIP_Bool stopped;
@@ -254,8 +254,8 @@ SCIP_Bool SCIPsyncstoreSolveIsStopped(
  *  SCIPsyncstoreSolveIsStopped will return the given value in any thread
  */
 void SCIPsyncstoreSetSolveIsStopped(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_Bool                stopped              /**< flag if the solve is stopped */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Bool             stopped             /**< flag if the solve is stopped */
    )
 {
    SCIP_CALL_ABORT( SCIPtpiAcquireLock(&syncstore->lock) );
@@ -267,7 +267,7 @@ void SCIPsyncstoreSetSolveIsStopped(
 
 /** gets the upperbound from the last synchronization */
 SCIP_Real SCIPsyncstoreGetLastUpperbound(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -278,7 +278,7 @@ SCIP_Real SCIPsyncstoreGetLastUpperbound(
 
 /** gets the lowerbound from the last synchronization */
 SCIP_Real SCIPsyncstoreGetLastLowerbound(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -289,7 +289,7 @@ SCIP_Real SCIPsyncstoreGetLastLowerbound(
 
 /** gets the number of solutions from the last synchronization */
 int SCIPsyncstoreGetLastNSols(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -300,7 +300,7 @@ int SCIPsyncstoreGetLastNSols(
 
 /** gets the number of boundchanges from the last synchronization */
 int SCIPsyncstoreGetLastNBounds(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -311,7 +311,7 @@ int SCIPsyncstoreGetLastNBounds(
 
 /** gets total memory used by all solvers from the last synchronization */
 SCIP_Longint SCIPsyncstoreGetLastMemTotal(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -322,7 +322,7 @@ SCIP_Longint SCIPsyncstoreGetLastMemTotal(
 
 /** gets the synchronization frequency from the last synchronization */
 SCIP_Real SCIPsyncstoreGetLastSyncfreq(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -335,9 +335,9 @@ SCIP_Real SCIPsyncstoreGetLastSyncfreq(
  *  to only ask for a synchronization number that still exists, which is checked
  *  with an assert in debug mode. */
 SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_Longint             syncnum              /**< the number of the synchronization to start, which
-                                                  *   must be increasing between calls of the same thread */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Longint          syncnum             /**< the number of the synchronization to start, which
+                                              *   must be increasing between calls of the same thread */
    )
 {
    int j;
@@ -356,10 +356,10 @@ SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
 /** get the next synchronization data that should be read and
  *  adjust the delay. Returns NULL if no more data should be read due to minimum delay */
 SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data */
-   SCIP_Longint             writenum,            /**< number of synchronizations the solver has written to */
-   SCIP_Real*               delay                /**< pointer holding the current synchronization delay */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_Longint          writenum,           /**< number of synchronizations the solver has written to */
+   SCIP_Real*            delay               /**< pointer holding the current synchronization delay */
    )
 {
    SCIP_Real newdelay;
@@ -397,8 +397,8 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
 /** ensures that the given synchronization data has been written by
  *  all solvers upon return of this function and blocks the caller if necessary. */
 SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -426,10 +426,10 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
  *  the syncdata that is returned is not NULL
  */
 SCIP_RETCODE SCIPsyncstoreStartSync(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_Longint             syncnum,             /**< the number of the synchronization to start, which
-                                                  *   must be increasing between calls of the same thread */
-   SCIP_SYNCDATA**          syncdata             /**< pointer to return the synchronization data */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Longint          syncnum,            /**< the number of the synchronization to start, which
+                                              *   must be increasing between calls of the same thread */
+   SCIP_SYNCDATA**       syncdata            /**< pointer to return the synchronization data */
    )
 {
    int i;
@@ -469,8 +469,8 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
 
 /** finishes synchronization for the synchronization data */
 SCIP_RETCODE SCIPsyncstoreFinishSync(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_SYNCDATA**          syncdata             /**< the synchronization data */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA**       syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -503,7 +503,7 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
 
 /** gets status in synchronization data */
 SCIP_STATUS SCIPsyncdataGetStatus(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -513,7 +513,7 @@ SCIP_STATUS SCIPsyncdataGetStatus(
 
 /** gets the solver that had the best status, or -1 if solve is not stopped yet */
 int SCIPsyncstoreGetWinner(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -527,7 +527,7 @@ int SCIPsyncstoreGetWinner(
 
 /** how many solvers have already finished synchronizing on this sychronization data */
 int SCIPsyncdataGetNSynced(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -537,7 +537,7 @@ int SCIPsyncdataGetNSynced(
 
 /** how many solvers have are running concurrently */
 int SCIPsyncstoreGetNSolvers(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -549,7 +549,7 @@ int SCIPsyncstoreGetNSolvers(
 
 /** read amount total memory used from synchronization data */
 SCIP_Longint SCIPsyncdataGetMemTotal(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -559,7 +559,7 @@ SCIP_Longint SCIPsyncdataGetMemTotal(
 
 /** read the synchronization frequency from a synchronization data */
 SCIP_Real SCIPsyncdataGetSyncFreq(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -569,7 +569,7 @@ SCIP_Real SCIPsyncdataGetSyncFreq(
 
 /** read the upperbound stored in a synchronization data */
 SCIP_Real SCIPsyncdataGetUpperbound(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -579,7 +579,7 @@ SCIP_Real SCIPsyncdataGetUpperbound(
 
 /** read the lowerbound stored in a synchronization data */
 SCIP_Real SCIPsyncdataGetLowerbound(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -589,10 +589,10 @@ SCIP_Real SCIPsyncdataGetLowerbound(
 
 /** read the solutions stored in a synchronization data */
 void SCIPsyncdataGetSolutions(
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data */
-   SCIP_Real***             solvalues,           /**< array of buffers containing the solution values */
-   int**                    solowner,            /**< array of ownerids of solutions */
-   int*                     nsols                /**< pointer to return number of solutions */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_Real***          solvalues,          /**< array of buffers containing the solution values */
+   int**                 solowner,           /**< array of ownerids of solutions */
+   int*                  nsols               /**< pointer to return number of solutions */
    )
 {
    assert(syncdata != NULL);
@@ -607,7 +607,7 @@ void SCIPsyncdataGetSolutions(
 
 /** read bound changes stored in the synchronization data */
 SCIP_BOUNDSTORE* SCIPsyncdataGetBoundChgs(
-   SCIP_SYNCDATA*           syncdata             /**< the synchronization data */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )
 {
    assert(syncdata != NULL);
@@ -617,9 +617,9 @@ SCIP_BOUNDSTORE* SCIPsyncdataGetBoundChgs(
 
 /** write the synchronization frequency to a synchronization data */
 void SCIPsyncdataSetSyncFreq(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data */
-   SCIP_Real                syncfreq             /**< the synchronization frequency */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_Real             syncfreq            /**< the synchronization frequency */
    )
 {
    assert(syncstore != NULL);
@@ -631,9 +631,9 @@ void SCIPsyncdataSetSyncFreq(
 
 /** set status in the synchronization data */
 void SCIPsyncdataSetStatus(
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data the upperbound should be added to */
-   SCIP_STATUS              status,              /**< the status */
-   int                      solverid             /**< identifier of te solver that has this status */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the upperbound should be added to */
+   SCIP_STATUS           status,             /**< the status */
+   int                   solverid            /**< identifier of te solver that has this status */
    )
 {
    assert(syncdata != NULL);
@@ -663,8 +663,8 @@ void SCIPsyncdataSetStatus(
 
 /** adds memory used to the synchronization data */
 void SCIPsyncdataAddMemTotal(
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data the solution should be added to */
-   SCIP_Longint             memtotal             /**< the number of bytes used */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the solution should be added to */
+   SCIP_Longint          memtotal            /**< the number of bytes used */
    )
 {
    assert(syncdata != NULL);
@@ -674,8 +674,8 @@ void SCIPsyncdataAddMemTotal(
 
 /** set upperbound to the synchronization data */
 void SCIPsyncdataSetUpperbound(
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data the upperbound should be added to */
-   SCIP_Real                upperbound           /**< the upperbound */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the upperbound should be added to */
+   SCIP_Real             upperbound          /**< the upperbound */
    )
 {
    assert(syncdata != NULL);
@@ -685,8 +685,8 @@ void SCIPsyncdataSetUpperbound(
 
 /** set lowerbound to the synchronization data */
 void SCIPsyncdataSetLowerbound(
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data the lowerbound should be added to */
-   SCIP_Real                lowerbound           /**< the lowerbound */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the lowerbound should be added to */
+   SCIP_Real             lowerbound          /**< the lowerbound */
    )
 {
    assert(syncdata != NULL);
@@ -698,12 +698,12 @@ void SCIPsyncdataSetLowerbound(
  *  because there are already better solutions stored.
  */
 void SCIPsyncdataGetSolutionBuffer(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data the solution should be added to */
-   SCIP_Real                solobj,              /**< the objective value of the solution */
-   int                      ownerid,             /**< an identifier for the owner of the solution, e.g. the thread number */
-   SCIP_Real**              buffer               /**< pointer to return a buffer for the solution values, which must be set
-                                                  *   if the buffer is not NULL */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the solution should be added to */
+   SCIP_Real             solobj,             /**< the objective value of the solution */
+   int                   ownerid,            /**< an identifier for the owner of the solution, e.g. the thread number */
+   SCIP_Real**           buffer              /**< pointer to return a buffer for the solution values, which must be set
+                                              *   if the buffer is not NULL */
    )
 {
    int                  pos;
@@ -757,9 +757,9 @@ void SCIPsyncdataGetSolutionBuffer(
 
 /** adds bound changes to the synchronization data */
 SCIP_RETCODE SCIPsyncdataAddBoundChanges(
-   SCIP_SYNCSTORE*          syncstore,           /**< the synchronization store */
-   SCIP_SYNCDATA*           syncdata,            /**< the synchronization data */
-   SCIP_BOUNDSTORE*         boundstore           /**< bound store containing the bounds to add */
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_BOUNDSTORE*      boundstore          /**< bound store containing the bounds to add */
    )
 {
    assert(syncstore != NULL);
@@ -774,7 +774,7 @@ SCIP_RETCODE SCIPsyncdataAddBoundChanges(
 
 /** is synchronization store initialized */
 SCIP_Bool SCIPsyncstoreIsInitialized(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);
@@ -784,7 +784,7 @@ SCIP_Bool SCIPsyncstoreIsInitialized(
 
 /** returns the mode of the synchronization store */
 SCIP_PARALLELMODE SCIPsyncstoreGetMode(
-   SCIP_SYNCSTORE*          syncstore            /**< the synchronization store */
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )
 {
    assert(syncstore != NULL);

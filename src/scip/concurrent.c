@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
 
 /** get number of initialized concurrent solvers */
 int SCIPgetNConcurrentSolvers(
-   SCIP*                   scip        /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    assert(scip != NULL);
@@ -120,7 +120,7 @@ int SCIPgetNConcurrentSolvers(
 
 /** gets the initialized concurrent solvers */
 SCIP_CONCSOLVER** SCIPgetConcurrentSolvers(
-   SCIP*                     scip      /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    assert(scip != NULL);
@@ -131,8 +131,8 @@ SCIP_CONCSOLVER** SCIPgetConcurrentSolvers(
 
 /** adds an initialized concurrent solver */
 SCIP_RETCODE SCIPaddConcurrentSolver(
-   SCIP*                   scip,       /**< SCIP datastructure */
-   SCIP_CONCSOLVER*        concsolver  /**< concurrent solver of given SCIP instance */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver of given SCIP instance */
    )
 {
    assert(scip != NULL);
@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPaddConcurrentSolver(
 
 /** frees concurrent data */
 SCIP_RETCODE SCIPfreeConcurrent(
-   SCIP*                   scip        /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    assert(scip != NULL);
@@ -180,8 +180,8 @@ SCIP_RETCODE SCIPfreeConcurrent(
 
 /** increments the time counter for synchronization */
 SCIP_RETCODE SCIPincrementConcurrentTime(
-   SCIP*                   scip,       /**< SCIP datastructure */
-   SCIP_Real               val         /**< value by which the time counter for synchronization is incremented */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_Real             val                 /**< value by which the time counter for synchronization is incremented */
    )
 {
    SCIP_Real           syncfreq;
@@ -236,7 +236,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
 
 /** synchronize with other concurrent solvers */
 SCIP_RETCODE SCIPsynchronize(
-   SCIP*                   scip        /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    assert(scip != NULL);
@@ -254,7 +254,7 @@ SCIP_RETCODE SCIPsynchronize(
 
 /** disables storing global bound changes */
 void SCIPdisableConcurrentBoundStorage(
-   SCIP*                   scip        /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -266,7 +266,7 @@ void SCIPdisableConcurrentBoundStorage(
 
 /** enables storing global bound changes */
 void SCIPenableConcurrentBoundStorage(
-   SCIP*                   scip        /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -278,7 +278,7 @@ void SCIPenableConcurrentBoundStorage(
 
 /** gets total memory usage of all concurrent solvers together */
 SCIP_Longint SCIPgetConcurrentMemTotal(
-   SCIP*                     scip       /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -291,7 +291,7 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
 
 /** gets the dualbound in the last synchronization */
 SCIP_Real SCIPgetConcurrentDualbound(
-   SCIP*                   scip        /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_SYNCSTORE* syncstore;
@@ -306,7 +306,7 @@ SCIP_Real SCIPgetConcurrentDualbound(
 
 /** gets the primalbound in the last synchronization */
 SCIP_Real SCIPgetConcurrentPrimalbound(
-   SCIP*                   scip        /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_SYNCSTORE* syncstore;
@@ -335,7 +335,7 @@ SCIP_Real SCIPgetConcurrentGap(
 
 /** gives the total number of tightened bounds received from other concurrent solvers */
 SCIP_Longint SCIPgetConcurrentNTightenedBnds(
-   SCIP*                     scip       /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip->concurrent != NULL);
@@ -346,7 +346,7 @@ SCIP_Longint SCIPgetConcurrentNTightenedBnds(
 /** gives the total number of tightened bounds for integer variables received from
  *  other concurrent solvers */
 SCIP_Longint SCIPgetConcurrentNTightenedIntBnds(
-   SCIP*                     scip       /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip->concurrent != NULL);
@@ -357,8 +357,8 @@ SCIP_Longint SCIPgetConcurrentNTightenedIntBnds(
 /** pass a solution to the given SCIP instance using that was received via synchronization by using
  * the sync heuristic */
 SCIP_RETCODE SCIPaddConcurrentSol(
-   SCIP*                   scip,       /**< SCIP datastructure */
-   SCIP_SOL*               sol         /**< solution */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_SOL*             sol                 /**< solution */
    )
 {
    assert(scip != NULL);
@@ -372,10 +372,10 @@ SCIP_RETCODE SCIPaddConcurrentSol(
 
 /** adds a global boundchange to the given SCIP, by passing it to the sync propagator */
 SCIP_RETCODE SCIPaddConcurrentBndchg(
-   SCIP*                   scip,       /**< SCIP data structure */
-   SCIP_VAR*               var,        /**< variable for bound */
-   SCIP_Real               val,        /**< value of bound */
-   SCIP_BOUNDTYPE          bndtype     /**< type of bound */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for bound */
+   SCIP_Real             val,                /**< value of bound */
+   SCIP_BOUNDTYPE        bndtype             /**< type of bound */
    )
 {
    assert(scip != NULL);
@@ -390,8 +390,8 @@ SCIP_RETCODE SCIPaddConcurrentBndchg(
 
 /** copy the nodenumber, depth, time, and runnumber of one solution to another one */
 SCIP_RETCODE SCIPcopySolStats(
-   SCIP_SOL*               source,     /**< source for solution statistics */
-   SCIP_SOL*               target      /**< target for solution statistics */
+   SCIP_SOL*             source,             /**< source for solution statistics */
+   SCIP_SOL*             target              /**< target for solution statistics */
    )
 {
    assert(source != NULL);
@@ -408,8 +408,8 @@ SCIP_RETCODE SCIPcopySolStats(
 
 /** get variable index of original variable that is the same between concurrent solvers */
 int SCIPgetConcurrentVaridx(
-   SCIP*                   scip,       /**< SCIP data structure */
-   SCIP_VAR*               var         /**< variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable */
    )
 {
    assert(scip != NULL);
@@ -424,8 +424,8 @@ int SCIPgetConcurrentVaridx(
 
 /** is the solution new since the last synchronization point */
 SCIP_Bool SCIPIsConcurrentSolNew(
-   SCIP*                   scip,       /**< SCIP data structure */
-   SCIP_SOL*               sol         /**< the solution */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< the solution */
    )
 {
    assert(scip != NULL);
@@ -437,7 +437,7 @@ SCIP_Bool SCIPIsConcurrentSolNew(
 
 /** gets the global lower bound changes since the last synchronization point */
 SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
-   SCIP*                     scip      /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -452,7 +452,7 @@ SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
 /** executes the concurrent solver corresponding to the current thread */
 static
 SCIP_RETCODE execConcsolver(
-   void*                     args      /**< SCIP data structure passed in as a void pointer */
+   void*                 args                /**< SCIP data structure passed in as a void pointer */
    )
 {
    SCIP* scip;

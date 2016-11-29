@@ -28,9 +28,9 @@
 
 /** create bound store data structure */
 SCIP_RETCODE SCIPboundstoreCreate(
-   SCIP*                    scip,            /**< scip main datastructure */
-   SCIP_BOUNDSTORE**        boundstore,      /**< pointer to store the bound store datastructure */
-   int                      nvars            /**< number of variables for which bounds may be stored */
+   SCIP*                 scip,               /**< scip main datastructure */
+   SCIP_BOUNDSTORE**     boundstore,         /**< pointer to store the bound store datastructure */
+   int                   nvars               /**< number of variables for which bounds may be stored */
    )
 {
    assert(scip != NULL);
@@ -49,8 +49,8 @@ SCIP_RETCODE SCIPboundstoreCreate(
 
 /** free bound store data structure */
 void SCIPboundstoreFree(
-   SCIP*                    scip,            /**< scip main datastructure */
-   SCIP_BOUNDSTORE**        boundstore       /**< pointer to the bound store datastructure */
+   SCIP*                 scip,               /**< scip main datastructure */
+   SCIP_BOUNDSTORE**     boundstore          /**< pointer to the bound store datastructure */
    )
 {
    assert(scip != NULL);
@@ -64,12 +64,12 @@ void SCIPboundstoreFree(
 
 /** add bound change to bound store data structure */
 SCIP_RETCODE SCIPboundstoreAdd(
-   SCIP*                    scip,            /**< scip main datastructure */
-   SCIP_BOUNDSTORE*         boundstore,      /**< the bound store datastructure */
-   int                      varidx,          /**< variable index of bound change, must be smaller than the
+   SCIP*                 scip,               /**< scip main datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   int                   varidx,             /**< variable index of bound change, must be smaller than the
                                               *   number of variables given during creation of bound store */
-   SCIP_Real                newbound,        /**< bound value of variable */
-   SCIP_BOUNDTYPE           boundtype        /**< type of new bound */
+   SCIP_Real             newbound,           /**< bound value of variable */
+   SCIP_BOUNDTYPE        boundtype           /**< type of new bound */
    )
 {
    /* check if already stored a bound of same type for this variable */
@@ -111,9 +111,9 @@ SCIP_RETCODE SCIPboundstoreAdd(
 
 /** add all bound changes of source to target */
 SCIP_RETCODE SCIPboundstoreMerge(
-   SCIP*                    scip,            /**< scip main datastructure for target boundstore */
-   SCIP_BOUNDSTORE*         target,          /**< the bound store datastructure where the bounds get merged in */
-   SCIP_BOUNDSTORE*         source           /**< the bound store datastructure from which the bounds get merged in */
+   SCIP*                 scip,               /**< scip main datastructure for target boundstore */
+   SCIP_BOUNDSTORE*      target,             /**< the bound store datastructure where the bounds get merged in */
+   SCIP_BOUNDSTORE*      source              /**< the bound store datastructure from which the bounds get merged in */
    )
 {
    int i;
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPboundstoreMerge(
 
 /** remove all boundchanges from bound store */
 void SCIPboundstoreClear(
-   SCIP_BOUNDSTORE*         boundstore       /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
    )
 {
    assert(boundstore != NULL);
@@ -148,8 +148,8 @@ void SCIPboundstoreClear(
 
 /** gets variable index of the i'th stored boundchange */
 int SCIPboundstoreGetChgVaridx(
-   SCIP_BOUNDSTORE*         boundstore,      /**< the bound store datastructure */
-   int                      i                /**< the index of the bound change */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   int                   i                   /**< the index of the bound change */
    )
 {
    assert(boundstore != NULL);
@@ -160,8 +160,8 @@ int SCIPboundstoreGetChgVaridx(
 
 /** gets the type of the i'th stored boundchange */
 SCIP_BOUNDTYPE SCIPboundstoreGetChgType(
-   SCIP_BOUNDSTORE*         boundstore,      /**< the bound store datastructure */
-   int                      i                /**< the index of the bound change */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   int                   i                   /**< the index of the bound change */
    )
 {
    assert(boundstore != NULL);
@@ -172,8 +172,8 @@ SCIP_BOUNDTYPE SCIPboundstoreGetChgType(
 
 /** gets the bound value of the i'th stored boundchange */
 SCIP_Real SCIPboundstoreGetChgVal(
-   SCIP_BOUNDSTORE*         boundstore,      /**< the bound store datastructure */
-   int                      i                /**< the index of the bound change */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   int                   i                   /**< the index of the bound change */
    )
 {
    assert(boundstore != NULL);
@@ -184,7 +184,7 @@ SCIP_Real SCIPboundstoreGetChgVal(
 
 /** gets the number of stored bound changes */
 int SCIPboundstoreGetNChgs(
-   SCIP_BOUNDSTORE*         boundstore    /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
    )
 {
    assert(boundstore != NULL);

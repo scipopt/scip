@@ -26,10 +26,10 @@
 
 /** creates a job for parallel processing */
 SCIP_RETCODE SCIPtpiCreateJob(
-   SCIP_JOB**            job,                      /**< pointer to the job that will be created */
-   int                   jobid,                    /**< the id for the current job */
-   int                   (*jobfunc)(void* args),   /**< pointer to the job function */
-   void*                 jobarg                    /**< the job's argument */
+   SCIP_JOB**            job,                /**< pointer to the job that will be created */
+   int                   jobid,              /**< the id for the current job */
+   int                   (*jobfunc)(void* args),/**< pointer to the job function */
+   void*                 jobarg              /**< the job's argument */
    )
 {
    SCIP_UNUSED( job );
@@ -43,8 +43,8 @@ SCIP_RETCODE SCIPtpiCreateJob(
 /** submit a job for parallel processing */
 /* the return is a globally defined status */
 SCIP_RETCODE SCIPtpiSumbitJob(
-   SCIP_JOB*             job,                      /**< pointer to the job to be submitted */
-   SCIP_SUBMITSTATUS*    status                    /**< pointer to store the job's submit status */
+   SCIP_JOB*             job,                /**< pointer to the job to be submitted */
+   SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
    )
 {
    SCIP_UNUSED( job );
@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPtpiSumbitJob(
 /** Blocks until all jobs with the given jobid have finished
  * and then returns the smallest SCIP_RETCODE of all the jobs */
 SCIP_RETCODE SCIPtpiCollectJobs(
-   int                   jobid                     /**< the id of the jobs to collect */
+   int                   jobid               /**< the id of the jobs to collect */
    )
 {
    SCIP_UNUSED( jobid );
@@ -66,9 +66,9 @@ SCIP_RETCODE SCIPtpiCollectJobs(
 
 /** initializes tpi */
 SCIP_RETCODE SCIPtpiInit(
-   int         nthreads,                           /**< the number of threads to be used */
-   int         queuesize,                          /**< the size of the queue */
-   SCIP_Bool   blockwhenfull                       /**< should the queue block when full */
+   int         nthreads,                     /**< the number of threads to be used */
+   int         queuesize,                    /**< the size of the queue */
+   SCIP_Bool   blockwhenfull                 /**< should the queue block when full */
    )
 {
    SCIP_UNUSED( nthreads );

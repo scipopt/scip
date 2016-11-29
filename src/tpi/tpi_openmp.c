@@ -73,7 +73,8 @@ SCIP_RETCODE createJobQueue(
    assert(qsize >= 0);
    SCIP_UNUSED( blockwhenfull );
 
-   SCIP_ALLOC( BMSallocMemory(&_jobqueues) );  /** allocting memory for the job queue */
+   /* allocting memory for the job queue */
+   SCIP_ALLOC( BMSallocMemory(&_jobqueues) );
    _jobqueues->jobqueue.firstjob = NULL;
    _jobqueues->jobqueue.lastjob = NULL;
    _jobqueues->jobqueue.njobs = 0;
@@ -335,10 +336,10 @@ int SCIPtpiGetThreadNum(
 
 /** creates a job for parallel processing*/
 SCIP_RETCODE SCIPtpiCreateJob(
-   SCIP_JOB**            job,                      /**< pointer to the job that will be created */
-   int                   jobid,                    /**< the id for the current job */
-   int                   (*jobfunc)(void* args),   /**< pointer to the job function */
-   void*                 jobarg                    /**< the job's argument */
+   SCIP_JOB**            job,                /**< pointer to the job that will be created */
+   int                   jobid,              /**< the id for the current job */
+   int                   (*jobfunc)(void* args),/**< pointer to the job function */
+   void*                 jobarg              /**< the job's argument */
    )
 {
    SCIP_ALLOC( BMSallocMemory(job) );
@@ -368,8 +369,8 @@ int SCIPtpiGetNewJobID(
 /** submit a job for parallel processing */
 /* the return is a globally defined status */
 SCIP_RETCODE SCIPtpiSumbitJob(
-   SCIP_JOB*             job,                 /**< pointer to the job to be submitted */
-   SCIP_SUBMITSTATUS*    status               /**< pointer to store the submit status */
+   SCIP_JOB*             job,                /**< pointer to the job to be submitted */
+   SCIP_SUBMITSTATUS*    status              /**< pointer to store the submit status */
 
    )
 {

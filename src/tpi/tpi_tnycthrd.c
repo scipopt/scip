@@ -218,7 +218,8 @@ SCIP_RETCODE createThreadPool(
    assert(nthreads >= 0);
    assert(qsize >= 0);
 
-   SCIP_ALLOC( BMSallocMemory(thrdpool) );    /** @todo think about the correct memory here */
+   /* @todo think about the correct memory here */
+   SCIP_ALLOC( BMSallocMemory(thrdpool) );
    (*thrdpool)->currentid = 0;
    (*thrdpool)->queuesize = qsize;
    (*thrdpool)->nthreads = nthreads;
@@ -226,7 +227,8 @@ SCIP_RETCODE createThreadPool(
    (*thrdpool)->shutdown = FALSE;
    (*thrdpool)->queueopen = TRUE;
 
-   SCIP_ALLOC( BMSallocMemory(&(*thrdpool)->jobqueue) );  /** allocating memory for the job queue */
+   /* allocating memory for the job queue */
+   SCIP_ALLOC( BMSallocMemory(&(*thrdpool)->jobqueue) );
    (*thrdpool)->jobqueue->firstjob = NULL;
    (*thrdpool)->jobqueue->lastjob = NULL;
    (*thrdpool)->jobqueue->njobs = 0;
@@ -634,8 +636,9 @@ SCIP_RETCODE SCIPtpiCollectJobs(
       {
          SCIP_JOB* nextjob;
 
-         /** if the job has the right jobid collect its retcode,
-          *  remove it from the finished job list, and free it */
+         /* if the job has the right jobid collect its retcode,
+          * remove it from the finished job list, and free it
+          */
          retcode = MIN(retcode, currjob->retcode);
 
          /* removing the finished job from finished jobs list */
@@ -656,7 +659,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
       }
       else
       {
-         /** otherwise leave job untouched */
+         /* otherwise leave job untouched */
          prevjob = currjob;
          currjob = prevjob->nextjob;
       }

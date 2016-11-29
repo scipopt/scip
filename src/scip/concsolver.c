@@ -38,22 +38,22 @@
 
 /** creates a concurrent solver type */
 SCIP_RETCODE SCIPconcsolverTypeCreate(
-   SCIP_CONCSOLVERTYPE**               concsolvertype,             /**< pointer to concurrent solver data structure */
-   SCIP_SET*                           set,                        /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*                   messagehdlr,                /**< message handler */
-   BMS_BLKMEM*                         blkmem,                     /**< block memory for parameter settings */
-   const char*                         name,                       /**< name of concurrent solver */
-   SCIP_Real                           prefpriodefault,            /**< the default preferred priority of this concurrent solver type */
-   SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst)),  /**< data copy method of concurrent solver */
-   SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
-   SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
-   SCIP_DECL_CONCSOLVEREXEC            ((*concsolverexec)),        /**< execution method of concurrent solver */
+   SCIP_CONCSOLVERTYPE** concsolvertype,     /**< pointer to concurrent solver data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of concurrent solver */
+   SCIP_Real             prefpriodefault,    /**< the default preferred priority of this concurrent solver type */
+   SCIP_DECL_CONCSOLVERCREATEINST ((*concsolvercreateinst)),/**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERDESTROYINST ((*concsolverdestroyinst)),/**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERINITSEEDS ((*concsolverinitseeds)),/**< initialize random seeds of concurrent solver */
+   SCIP_DECL_CONCSOLVEREXEC ((*concsolverexec)),/**< execution method of concurrent solver */
    SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata)),/**< method to copy solving data */
-   SCIP_DECL_CONCSOLVERSTOP            ((*concsolverstop)),        /**< terminate solving in concurrent solver */
-   SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite)),   /**< synchronization method of concurrent solver */
-   SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread)),    /**< synchronization method of concurrent solver */
-   SCIP_DECL_CONCSOLVERTYPEFREEDATA    ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
-   SCIP_CONCSOLVERTYPEDATA*            data                        /**< the concurent solver type's data */
+   SCIP_DECL_CONCSOLVERSTOP ((*concsolverstop)),/**< terminate solving in concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCWRITE ((*concsolversyncwrite)),/**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCREAD ((*concsolversyncread)),/**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERTYPEFREEDATA ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
+   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurent solver type's data */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
 
 /** frees all memory of a concurrent solver type */
 void SCIPconcsolverTypeFree(
-   SCIP_CONCSOLVERTYPE**               concsolvertype              /**< pointer to concurrent solver data structure */
+   SCIP_CONCSOLVERTYPE** concsolvertype      /**< pointer to concurrent solver data structure */
    )
 {
    assert(concsolvertype != NULL);
@@ -112,7 +112,7 @@ void SCIPconcsolverTypeFree(
 
 /** gets the data of a concurrent solver type */
 SCIP_CONCSOLVERTYPEDATA* SCIPconcsolverTypeGetData(
-   SCIP_CONCSOLVERTYPE*                concsolvertype              /**< concurrent solver type */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
    )
 {
    assert(concsolvertype != NULL);
@@ -122,8 +122,8 @@ SCIP_CONCSOLVERTYPEDATA* SCIPconcsolverTypeGetData(
 
 /** sets the data of a concurrent solver type */
 void SCIPconcsolverTypeSetData(
-   SCIP_CONCSOLVERTYPE*                concsolvertype,             /**< concurrent solver type */
-   SCIP_CONCSOLVERTYPEDATA*            data                        /**< the concurrent solver's data */
+   SCIP_CONCSOLVERTYPE*  concsolvertype,     /**< concurrent solver type */
+   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurrent solver's data */
    )
 {
    assert(concsolvertype != NULL);
@@ -133,7 +133,7 @@ void SCIPconcsolverTypeSetData(
 
 /** gets the name of a concurrent solver type */
 char* SCIPconcsolverTypeGetName(
-   SCIP_CONCSOLVERTYPE*                concsolvertype              /**< concurrent solver type */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
    )
 {
    assert(concsolvertype != NULL);
@@ -143,7 +143,7 @@ char* SCIPconcsolverTypeGetName(
 
 /** gets the preferred priority from a concurrent solver type */
 SCIP_Real SCIPconcsolverTypeGetPrefPrio(
-   SCIP_CONCSOLVERTYPE*                concsolvertype              /**< concurrent solver type */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
    )
 {
    assert(concsolvertype != NULL);
@@ -153,9 +153,9 @@ SCIP_Real SCIPconcsolverTypeGetPrefPrio(
 
 /** creates an instance of the given concurrent solver type */
 SCIP_RETCODE SCIPconcsolverCreateInstance(
-   SCIP_SET*                           set,                        /**< global SCIP settings */
-   SCIP_CONCSOLVERTYPE*                concsolvertype,             /**< concurrent solver type to create */
-   SCIP_CONCSOLVER**                   concsolver                  /**< pointer to return concurrent solver instance */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVERTYPE*  concsolvertype,     /**< concurrent solver type to create */
+   SCIP_CONCSOLVER**     concsolver          /**< pointer to return concurrent solver instance */
    )
 {
    char instancename[SCIP_MAXSTRLEN];
@@ -180,7 +180,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    (*concsolver)->syncdelay = 0.0;
    (*concsolver)->syncdata = NULL;
 
-   /** register concurrent solver */
+   /* register concurrent solver */
    (*concsolver)->idx = SCIPgetNConcurrentSolvers(set->scip);
    SCIP_CALL( concsolvertype->concsolvercreateinst(set->scip, concsolvertype, *concsolver) );
    SCIP_CALL( SCIPaddConcurrentSolver(set->scip, *concsolver) );
@@ -190,8 +190,8 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
 
 /** destroys an instance of the given concurrent solver */
 SCIP_RETCODE SCIPconcsolverDestroyInstance(
-   SCIP_SET*                           set,                        /**< global SCIP settings */
-   SCIP_CONCSOLVER**                   concsolver                  /**< concurrent solver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER**     concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPconcsolverDestroyInstance(
 
 /** gets the data of a concurrent solver */
 SCIP_CONCSOLVERDATA* SCIPconcsolverGetData(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -222,8 +222,8 @@ SCIP_CONCSOLVERDATA* SCIPconcsolverGetData(
 
 /** sets the data of a concurrent solver */
 void SCIPconcsolverSetData(
-   SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
-   SCIP_CONCSOLVERDATA*                data                        /**< the concurrent solver's data */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_CONCSOLVERDATA*  data                /**< the concurrent solver's data */
    )
 {
    assert(concsolver != NULL);
@@ -233,7 +233,7 @@ void SCIPconcsolverSetData(
 
 /** gets the name of a concurrent solver */
 char* SCIPconcsolverGetName(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -243,8 +243,8 @@ char* SCIPconcsolverGetName(
 
 /** initializes the random seeds of a concurrent solver */
 SCIP_RETCODE SCIPconcsolverInitSeeds(
-   SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
-   unsigned int                        seed                        /**< seed for initializing the solver's internal random seeds */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   unsigned int          seed                /**< seed for initializing the solver's internal random seeds */
    )
 {
    assert(concsolver != NULL);
@@ -258,7 +258,7 @@ SCIP_RETCODE SCIPconcsolverInitSeeds(
 
 /** start the solving process of a concurrent solver */
 SCIP_RETCODE SCIPconcsolverExec(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -272,8 +272,8 @@ SCIP_RETCODE SCIPconcsolverExec(
 
 /** gets solving data of concurrent solver and stores it in the given SCIP instance */
 SCIP_RETCODE SCIPconcsolverGetSolvingData(
-   SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
-   SCIP*                               scip                        /**< SCIP datastructure */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP*                 scip                /**< SCIP datastructure */
    )
 {
    assert(concsolver != NULL);
@@ -285,7 +285,7 @@ SCIP_RETCODE SCIPconcsolverGetSolvingData(
 
 /** interrupt solving in a concurrent solver */
 SCIP_RETCODE SCIPconcsolverStop(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -301,8 +301,8 @@ SCIP_RETCODE SCIPconcsolverStop(
  *  the SPI.
  */
 SCIP_RETCODE SCIPconcsolverSync(
-   SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
-   SCIP_SET*                           set                         /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    SCIP_SYNCDATA*   syncdata;
@@ -444,7 +444,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
 /** gets the current synchronization frequency of the concurent solver */
 SCIP_Real SCIPconcsolverGetSyncFreq(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -454,7 +454,7 @@ SCIP_Real SCIPconcsolverGetSyncFreq(
 
 /** gets the total memory used by the concurent solver */
 SCIP_Longint SCIPconcsolverGetMemTotal(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -466,8 +466,8 @@ SCIP_Longint SCIPconcsolverGetMemTotal(
  *  started.
  */
 void SCIPconcsolverSetTimeSinceLastSync(
-   SCIP_CONCSOLVER*                    concsolver,                 /**< concurrent solver */
-   SCIP_Real                           time                        /**< the time passed since the last synchronization */
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Real             time                /**< the time passed since the last synchronization */
    )
 {
    assert(concsolver != NULL);
@@ -477,7 +477,7 @@ void SCIPconcsolverSetTimeSinceLastSync(
 
 /** gets the solving time of the concurrent solver */
 SCIP_Real SCIPconcsolverGetSolvingTime(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -487,7 +487,7 @@ SCIP_Real SCIPconcsolverGetSolvingTime(
 
 /** gets the time spent for synchronization for the concurrent solver */
 SCIP_Real SCIPconcsolverGetSyncTime(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -497,7 +497,7 @@ SCIP_Real SCIPconcsolverGetSyncTime(
 
 /** gets the number of lp iterations the concurrent solver used */
 SCIP_Longint SCIPconcsolverGetNLPIterations(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -507,7 +507,7 @@ SCIP_Longint SCIPconcsolverGetNLPIterations(
 
 /** gets the number of branch and bound nodes the concurrent solver used */
 SCIP_Longint SCIPconcsolverGetNNodes(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -517,7 +517,7 @@ SCIP_Longint SCIPconcsolverGetNNodes(
 
 /** gets the number of solutions the concurrent solver received during synchronization */
 SCIP_Longint SCIPconcsolverGetNSolsRecvd(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -527,7 +527,7 @@ SCIP_Longint SCIPconcsolverGetNSolsRecvd(
 
 /** gets the number of solutions the concurrent solver shared during synchronization */
 SCIP_Longint SCIPconcsolverGetNSolsShared(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -537,7 +537,7 @@ SCIP_Longint SCIPconcsolverGetNSolsShared(
 
 /** gets the number of tighter global variable bounds the solver received */
 SCIP_Longint SCIPconcsolverGetNTighterBnds(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -547,7 +547,7 @@ SCIP_Longint SCIPconcsolverGetNTighterBnds(
 
 /** gets the number of tighter global variable bounds of integer variables the solver received */
 SCIP_Longint SCIPconcsolverGetNTighterIntBnds(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
@@ -557,7 +557,7 @@ SCIP_Longint SCIPconcsolverGetNTighterIntBnds(
 
 /** gets index of concurrent solver */
 int SCIPconcsolverGetIdx(
-   SCIP_CONCSOLVER*                    concsolver                  /**< concurrent solver */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
 {
    assert(concsolver != NULL);
