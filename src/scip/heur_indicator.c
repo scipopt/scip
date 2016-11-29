@@ -108,7 +108,7 @@ SCIP_RETCODE tryOneOpt(
          continue;
 
       /* return if the we would exceed the depth limit of the tree */
-      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
 
       /* get rid of all bound changes */
@@ -225,7 +225,7 @@ SCIP_RETCODE trySolCandidate(
    SCIP_CALL( SCIPstartProbing(scip) );
 
    /* we can stop here if we have already reached the maximal depth */
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;

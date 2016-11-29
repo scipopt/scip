@@ -294,7 +294,7 @@ SCIP_RETCODE applyCliqueFixings(
       assert(c == cliquepartition[bestpos]);
 
       /* stop if we reached the depth limit */
-      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -845,7 +845,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
       SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 

@@ -36,7 +36,7 @@
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP | SCIP_PROPTIMING_DURINGLPLOOP
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY           3000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -1519,7 +1519,7 @@ SCIP_RETCODE propdataInit(
    nobjvars = 0;
    nbinobjvars = 0;
 
-   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNObjVars(scip) * 5)) );
+   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPgetNObjVars(scip)) );
 
    /* count and collect variable problem indices of variables with non-zero objective coefficient */
    for( v = 0; v < nvars; ++v )
@@ -1587,7 +1587,7 @@ SCIP_RETCODE propdataInit(
 
          if( ncliques > 0 )
          {
-            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), SCIPcalcHashtableSize(ncliques),
+            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), ncliques,
                   cliqueGetHashkey, cliqueIsHashkeyEq, cliqueGetHashkeyVal, NULL) );
          }
          else
@@ -1781,7 +1781,7 @@ SCIP_RETCODE propdataInit(
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&propdata->addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(5*nvars),
+      SCIP_CALL( SCIPhashtableCreate(&propdata->addedvars, SCIPblkmem(scip), nvars,
             SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
    }
    else
@@ -2383,7 +2383,7 @@ SCIP_RETCODE propagateCutoffboundBinvar(
          assert(SCIPgetDepth(scip) > 0);
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, TRUE) );
 
          /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
          SCIP_CALL( resolvePropagation(scip, propdata, pseudoobjval, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );
@@ -2732,8 +2732,8 @@ SCIP_RETCODE propagateCutoffbound(
 
    /* @note A new global pseudo objective value could be used to retrieve global fixings. There is, however, no need to
     *       check if a new global pseudo objective value is available. This is the case since a new (better) global
-    *       pseudo activity implicis that a global bound change was performed. That causes that the root node of the
-    *       search tree get marked for repropagation. That will result in propagation call of the pseudo objective
+    *       pseudo activity implies that a global bound change was performed. That causes that the root node of the
+    *       search tree gets marked for repropagation. That will result in a propagation call of the pseudo objective
     *       propagator.
     */
 
@@ -2788,9 +2788,9 @@ SCIP_RETCODE propagateCutoffbound(
          assert(SCIPgetDepth(scip) > 0);
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, TRUE) );
 
-         /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
+         /* add all variable whose best bound changes increased the pseudo objective value above the cutoff bound */
          SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );
 
          /* analyze the conflict */

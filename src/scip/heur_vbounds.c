@@ -383,7 +383,7 @@ SCIP_RETCODE applyVboundsFixings(
          continue;
 
       /* only open a new probing node if we will not exceed the maximal tree depth */
-      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
       }
@@ -689,7 +689,7 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
       SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 

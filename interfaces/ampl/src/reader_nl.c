@@ -1201,7 +1201,7 @@ SCIP_RETCODE setupConstraints(
             SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT,
             SCIPuserexprEvalAmpl, SCIPuserexprIntEvalAmpl,
             SCIPuserexprCurvAmpl, NULL, NULL,
-            SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl) );
+               SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl, NULL) );
 
          SCIPfreeBufferArray(scip, &childexprs);
 

@@ -116,8 +116,6 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
-/**@} */
-
 /**@defgroup Regression Regression methods for linear regression
  *
  * @{
@@ -459,6 +457,23 @@ void** SCIPpqueueElems(
  *@{
  */
 
+/* fast 2-universal hash functions for two and four elements */
+#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ull) * ((uint64_t)(b) + 0xe5fcc163aef32782ull) )>>32))
+
+#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ull) * ((uint64_t)(b) + 0xe5fcc163aef32782ull) + \
+                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ull) * ((uint64_t)(d) + 0x926f2d4dc4a67218ull))>>32 ))
+
+/* helpers to use above hashfuncions */
+#define SCIPcombineTwoInt(a, b)             (((uint64_t) (a) << 32) | (uint64_t) (b) )
+
+#define SCIPcombineThreeInt(a, b, c)        (((uint64_t) (a) << 43) + ((uint64_t) (b) << 21) + ((uint64_t) (c)) )
+
+#define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
+
+
+#define SCIPrealHashCode(x)                 ((int64_t) ((x)*256))
+
+
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
 EXTERN
 int SCIPcalcHashtableSize(
@@ -498,7 +513,7 @@ void SCIPhashtableClear(
 
 /** inserts element in hash table (multiple inserts of same element possible)
  *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
+ *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
  *        to the hash table, due to dynamic resizing.
  */
 EXTERN
@@ -509,7 +524,7 @@ SCIP_RETCODE SCIPhashtableInsert(
 
 /** inserts element in hash table (multiple insertion of same element is checked and results in an error)
  *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
+ *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
  *        element to the hash table, due to dynamic resizing.
  */
 EXTERN
@@ -528,12 +543,12 @@ void* SCIPhashtableRetrieve(
 /** retrieve element with key from hash table, returns NULL if not existing
  *  can be used to retrieve all entries with the same key (one-by-one)
  *
- *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
+ *  @note The returned multihashlist pointer might get invalid when adding a new element to the hash table.
  */
 EXTERN
 void* SCIPhashtableRetrieveNext(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
                                               *   output: entry in hash table list corresponding to element after
                                               *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
@@ -579,6 +594,110 @@ SCIP_Real SCIPhashtableGetLoad(
 EXTERN
 void SCIPhashtablePrintStatistics(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** creates a multihash table */
+EXTERN
+SCIP_RETCODE SCIPmultihashCreate(
+   SCIP_MULTIHASH**      multihash,          /**< pointer to store the created multihash table */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store multihash table entries */
+   int                   tablesize,          /**< size of the hash table */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr             /**< user pointer */
+   );
+
+/** frees the multihash table */
+EXTERN
+void SCIPmultihashFree(
+   SCIP_MULTIHASH**      multihash           /**< pointer to the multihash table */
+   );
+
+/** inserts element in multihash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
+EXTERN
+SCIP_RETCODE SCIPmultihashInsert(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to insert into the table */
+   );
+
+/** inserts element in multihash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding a new
+ *        element to the multihash table, due to dynamic resizing.
+ */
+EXTERN
+SCIP_RETCODE SCIPmultihashSafeInsert(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to insert into the table */
+   );
+
+/** retrieve element with key from multihash table, returns NULL if not existing */
+EXTERN
+void* SCIPmultihashRetrieve(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 key                 /**< key to retrieve */
+   );
+
+/** retrieve element with key from multihash table, returns NULL if not existing
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned multimultihashlist pointer might get invalid when adding a new element to the multihash table.
+ */
+EXTERN
+void* SCIPmultihashRetrieveNext(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
+   void*                 key                 /**< key to retrieve */
+   );
+
+/** returns whether the given element exists in the multihash table */
+EXTERN
+SCIP_Bool SCIPmultihashExists(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to search in the table */
+   );
+
+/** removes element from the multihash table, if it exists */
+EXTERN
+SCIP_RETCODE SCIPmultihashRemove(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to remove from the table */
+   );
+
+/** removes all elements of the multihash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+EXTERN
+void SCIPmultihashRemoveAll(
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
+   );
+
+/** returns number of multihash table elements */
+EXTERN
+SCIP_Longint SCIPmultihashGetNElements(
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
+   );
+
+/** returns the load of the given multihash table in percentage */
+EXTERN
+SCIP_Real SCIPmultihashGetLoad(
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
+   );
+
+/** prints statistics about multihash table usage */
+EXTERN
+void SCIPmultihashPrintStatistics(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
@@ -636,9 +755,24 @@ SCIP_RETCODE SCIPhashmapInsert(
    void*                 image               /**< new image for origin */
    );
 
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+EXTERN
+SCIP_RETCODE SCIPhashmapInsertReal(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Real             image               /**< new image for origin */
+   );
+
 /** retrieves image of given origin from the hash map, or NULL if no image exists */
 EXTERN
 void* SCIPhashmapGetImage(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   );
+
+/** retrieves image of given origin from the hash map, or NULL if no image exists */
+EXTERN
+SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    );
@@ -651,6 +785,16 @@ SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
+   );
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+EXTERN
+SCIP_RETCODE SCIPhashmapSetImageReal(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Real             image               /**< new image for origin */
    );
 
 /** checks whether an image to the given origin exists in the hash map */
@@ -680,47 +824,41 @@ SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
-/** gives the number of entries in a hash map */
+/** gives the number of elements in a hash map */
+EXTERN
+int SCIPhashmapGetNElements(
+   SCIP_HASHMAP*         hashmap             /**< hash map */
+   );
+
+/** gives the number of entries in the internal arrays of a hash map */
 EXTERN
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
-/** gives the number of lists (buckets) in a hash map */
+/** gives the hashmap entry at the given index or NULL if entry has no element */
 EXTERN
-int SCIPhashmapGetNLists(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
-   );
-
-/** gives a specific list (bucket) in a hash map */
-EXTERN
-SCIP_HASHMAPLIST* SCIPhashmapGetList(
+SCIP_HASHMAPENTRY* SCIPhashmapGetEntry(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
-   int                   listindex           /**< index of hash map list */
+   int                   entryidx            /**< index of hash map entry */
    );
 
-/** gives the number of entries in a list of a hash map */
+/** gives the origin of the hashmap entry */
 EXTERN
-int SCIPhashmapListGetNEntries(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
+void* SCIPhashmapEntryGetOrigin(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
-/** retrieves origin of given entry in a hash map */
+/** gives the image of the hashmap entry */
 EXTERN
-void* SCIPhashmapListGetOrigin(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
+void* SCIPhashmapEntryGetImage(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
-/** retrieves image of given entry in a hash map */
+/** gives the image of the hashmap entry */
 EXTERN
-void* SCIPhashmapListGetImage(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-   );
-
-/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */
-EXTERN
-SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
+SCIP_Real SCIPhashmapEntryGetImageReal(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
 /** removes all entries in a hash map. */
@@ -1535,11 +1673,14 @@ SCIP_RETCODE SCIPrandomCreate(
    unsigned int          initialseed         /**< initial random seed (> 0) */
    );
 
+
 /** frees a random number generator */
 extern
 void SCIPrandomFree(
    SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
+
+/**@} */
 
 /*
  * Additional math functions

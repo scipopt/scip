@@ -58,7 +58,7 @@
 #define HEUR_PRIORITY         10000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
-#define HEUR_MAXDEPTH         100000
+#define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_BEFOREPRESOL
 #define HEUR_USESSUBSCIP      FALSE      /**< does the heuristic use a secondary SCIP instance? */
 
@@ -728,7 +728,7 @@ SCIP_RETCODE executeHeuristic(
 
          SCIP_CALL( constructSolution(scip, sol, vars, starttimes, njobs) );
 
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          if( stored )
             *result = SCIP_FOUNDSOL;

@@ -109,7 +109,7 @@ SCIP_RETCODE setupProbingSCIP(
    )
 {
    /* check if we are already at the maximal tree depth */
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       *success = FALSE;
       return SCIP_OKAY;
@@ -243,11 +243,11 @@ SCIP_RETCODE setupSCIPparamsStage3(
    }
    if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
    {
@@ -857,7 +857,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPstartProbing(probingscip) );
 
          /* this should always be fulfilled */
-         assert(SCIPgetDepthLimit(probingscip) > SCIPgetDepth(probingscip));
+         assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(probingscip));
 
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
